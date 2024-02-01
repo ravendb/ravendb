@@ -63,7 +63,7 @@ public partial class ShardedDatabaseContext
             return (null, OngoingTaskConnectionStatus.None);
         }
 
-        protected override PeriodicBackupStatus GetBackupStatus(long taskId, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration, out string responsibleNodeTag,
+        protected override PeriodicBackupStatus GetBackupStatus(long taskId, PeriodicBackupConfiguration backupConfiguration, out string responsibleNodeTag,
             out NextBackup nextBackup, out RunningBackup onGoingBackup, out bool isEncrypted)
         {
             nextBackup = null;

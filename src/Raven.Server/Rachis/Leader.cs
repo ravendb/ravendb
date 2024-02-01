@@ -855,7 +855,7 @@ namespace Raven.Server.Rachis
                 RachisConsensus.ValidateNodeTag(nodeTag);
             }
 
-            using (_disposerLock.EnsureNotDisposed())
+            using (await _disposerLock.EnsureNotDisposedAsync())
             {
                 var topologyModification = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var existing = Interlocked.CompareExchange(ref _topologyModification, topologyModification, null);

@@ -158,7 +158,7 @@ export const DifferentNodeStates: ComponentStory<typeof DatabasesPage> = () => {
     return <DatabasesPage />;
 };
 
-export const WithOfflineNodes: StoryObj = {
+export const WithOfflineNodes: StoryObj<{ offlineNodes: string[] }> = {
     render: ({ offlineNodes }: { offlineNodes: string[] }) => {
         commonInit();
 

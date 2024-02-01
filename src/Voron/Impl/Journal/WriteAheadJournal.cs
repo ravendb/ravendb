@@ -56,11 +56,9 @@ namespace Voron.Impl.Journal
         private AbstractPager _compressionPager;
         private long _compressionPagerCounter;
 
-        private LazyTransactionBuffer _lazyTransactionBuffer;
         private readonly DiffPages _diffPage = new DiffPages();
         private readonly Logger _logger;
         private List<JournalSnapshot> _snapshotCache;
-        public bool HasDataInLazyTxBuffer() => _lazyTransactionBuffer?.HasDataInBuffer() ?? false;
 
         private readonly object _writeLock = new object();
         private int _maxNumberOfPagesRequiredForCompressionBuffer;
@@ -84,13 +82,6 @@ namespace Voron.Impl.Journal
 
             _disposeRunner = new DisposeOnce<SingleAttempt>(() =>
             {
-                // We cannot dispose the journal until we are done with all of
-                // the pending writes
-                if (_lazyTransactionBuffer != null)
-                {
-                    _lazyTransactionBuffer.WriteBufferToFile(CurrentFile, null);
-                    _lazyTransactionBuffer.Dispose();
-                }
                 _compressionPager.Dispose();
 
                 _journalApplicator.Dispose();
@@ -109,8 +100,6 @@ namespace Voron.Impl.Journal
         public ImmutableAppendOnlyList<JournalFile> Files => _files;
 
         public JournalApplicator Applicator => _journalApplicator;
-
-        public bool HasLazyTransactions { get; set; }
 
         private JournalFile NextFile(int numberOf4Kbs = 1)
         {
@@ -1065,11 +1054,6 @@ namespace Voron.Impl.Journal
                     {
                         jrnl.FreeScratchPagesOlderThan(txw, lastFlushedTransactionIdThatWontReadFromJournal);
                     }
-
-                    // by forcing a commit, we free the read transaction that held the lazy tx buffer (if existed)
-                    // and make those pages available in the scratch files
-                    txw.IsLazyTransaction = false;
-                    _waj.HasLazyTransactions = false;
                 }
                 finally
                 {
@@ -1269,18 +1253,14 @@ namespace Voron.Impl.Journal
 
                 private void CallPagerSync()
                 {
-                    // danger mode assumes that no OS crashes can happen, in order to get best performance
-
-                    if (_parent._waj._env.Options.TransactionsMode != TransactionsMode.Danger)
+                    // We do the sync _outside_ of the lock, letting the rest of the stuff proceed
+                    var sp = Stopwatch.StartNew();
+                    _parent._waj._dataPager.Sync(Interlocked.Read(ref _parent._totalWrittenButUnsyncedBytes));
+                    if (_parent._waj._logger.IsInfoEnabled)
                     {
-                        // We do the sync _outside_ of the lock, letting the rest of the stuff proceed
-                        var sp = Stopwatch.StartNew();
-                        _parent._waj._dataPager.Sync(Interlocked.Read(ref _parent._totalWrittenButUnsyncedBytes));
-                        if (_parent._waj._logger.IsInfoEnabled)
-                        {
-                            var sizeInKb = (_parent._waj._dataPager.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;
-                            _parent._waj._logger.Info($"Sync of {sizeInKb:#,#0} kb file with {_currentTotalWrittenBytes / Constants.Size.Kilobyte:#,#0} kb dirty in {sp.Elapsed}");
-                        }
+                        var sizeInKb = (_parent._waj._dataPager.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;
+                        _parent._waj._logger.Info(
+                            $"Sync of {sizeInKb:#,#0} kb file with {_currentTotalWrittenBytes / Constants.Size.Kilobyte:#,#0} kb dirty in {sp.Elapsed}");
                     }
                 }
 
@@ -1741,14 +1721,9 @@ namespace Voron.Impl.Journal
                             $"Preparing to write tx {tx.Id} to journal with {journalEntry.NumberOfUncompressedPages:#,#} pages ({new Size(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize, SizeUnit.Bytes)}) in {sp.Elapsed} with {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} compressed.");
                     }
 
-                    if (tx.IsLazyTransaction && _lazyTransactionBuffer == null)
-                    {
-                        _lazyTransactionBuffer = new LazyTransactionBuffer(_env.Options);
-                    }
 
                     if (CurrentFile == null || CurrentFile.Available4Kbs < journalEntry.NumberOf4Kbs)
                     {
-                        _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
                         CurrentFile = NextFile(journalEntry.NumberOf4Kbs);
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"New journal file created {CurrentFile.Number:D19}");
@@ -1757,7 +1732,7 @@ namespace Voron.Impl.Journal
                     tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
 
                     sp.Restart();
-                    journalEntry.UpdatePageTranslationTableAndUnusedPages = CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer);
+                    journalEntry.UpdatePageTranslationTableAndUnusedPages = CurrentFile.Write(tx, journalEntry);
                     sp.Stop();
                     _lastCompressionAccelerationInfo.WriteDuration = sp.Elapsed;
                     _lastCompressionAccelerationInfo.CalculateOptimalAcceleration();
@@ -1767,7 +1742,6 @@ namespace Voron.Impl.Journal
 
                     if (CurrentFile.Available4Kbs == 0)
                     {
-                        _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
                         CurrentFile = null;
                     }
 
@@ -2131,7 +2105,6 @@ namespace Voron.Impl.Journal
         {
             // switching transactions modes requires to close jounal,
             // truncate it (in case of recovery) and create next journal file
-            _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, null);
             CurrentFile?.JournalWriter.Truncate(Constants.Storage.PageSize * CurrentFile.WritePosIn4KbPosition);
             CurrentFile = null;
         }

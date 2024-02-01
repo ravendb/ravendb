@@ -127,11 +127,13 @@ namespace Raven.Client.Documents.Linq
             return this;
         }
 
+        /// <inheritdoc/>
         public IRavenQueryable<T> Highlight(string fieldName, int fragmentLength, int fragmentCount, out Highlightings highlightings)
         {
             return Highlight(fieldName, fragmentLength, fragmentCount, null, out highlightings);
         }
 
+        /// <inheritdoc/>
         public IRavenQueryable<T> Highlight(string fieldName, int fragmentLength, int fragmentCount, HighlightingOptions options,
             out Highlightings highlightings)
         {
@@ -139,11 +141,13 @@ namespace Raven.Client.Documents.Linq
             return this;
         }
 
+        /// <inheritdoc/>
         public IRavenQueryable<T> Highlight(Expression<Func<T, object>> path, int fragmentLength, int fragmentCount, out Highlightings highlightings)
         {
             return Highlight(path.ToPropertyPath(_conventions), fragmentLength, fragmentCount, out highlightings);
         }
 
+        /// <inheritdoc/>
         public IRavenQueryable<T> Highlight(Expression<Func<T, object>> path, int fragmentLength, int fragmentCount, HighlightingOptions options,
             out Highlightings highlightings)
         {

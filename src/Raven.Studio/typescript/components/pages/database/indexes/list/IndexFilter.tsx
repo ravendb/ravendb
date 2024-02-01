@@ -2,7 +2,7 @@
 import { shardingTodo } from "common/developmentHelper";
 import { IndexStatus, IndexFilterCriteria, IndexType, IndexGroupBy, IndexSortBy } from "components/models/indexes";
 import { Button, Input, PopoverBody, UncontrolledPopover } from "reactstrap";
-import produce from "immer";
+import { produce } from "immer";
 import { Icon } from "components/common/Icon";
 import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
 import { InputItem, SortDirection } from "components/models/common";

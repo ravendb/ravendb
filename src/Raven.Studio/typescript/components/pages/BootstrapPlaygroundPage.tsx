@@ -424,11 +424,11 @@ function AlertExample() {
 }
 
 function AccordionExample() {
-    const [open] = useState("1");
+    const [open, setOpen] = useState("some-id");
 
     return (
         <div>
-            <Accordion open={open}>
+            <Accordion open={open} toggle={() => setOpen(open ? null : "some-id")}>
                 <AccordionItem>
                     <AccordionHeader targetId="1">Accordion Item 1</AccordionHeader>
                     <AccordionBody accordionId="1">

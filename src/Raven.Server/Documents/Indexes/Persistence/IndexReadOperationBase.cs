@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
     {
         protected readonly QueryBuilderFactories QueryBuilderFactories;
         private readonly MemoryInfo _memoryInfo;
+        private static readonly long ThresholdForMemoryUsageLoggingInBytes = new Size(512, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
 
         protected IndexReadOperationBase(Index index, Logger logger, QueryBuilderFactories queryBuilderFactories, IndexQueryServerSide query) : base(index, logger)
         {
@@ -31,7 +32,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
                     AllocatedManagedBefore = GC.GetAllocatedBytesForCurrentThread(),
                     AllocatedUnmanagedBefore = NativeMemory.ThreadAllocations.Value.TotalAllocated,
                     ManagedThreadId = NativeMemory.CurrentThreadStats.ManagedThreadId,
-                    Query = query.Metadata.Query
+                    Query = query.Metadata.Query,
+                    PageSize = query.PageSize
                 };
             }
         }
@@ -73,7 +75,14 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 var mangedDiff = GC.GetAllocatedBytesForCurrentThread() - _memoryInfo.AllocatedManagedBefore;
                 var unmanagedDiff = Math.Max(0, NativeMemory.ThreadAllocations.Value.TotalAllocated - _memoryInfo.AllocatedUnmanagedBefore);
 
+                if (_logger.IsOperationsEnabled && mangedDiff < ThresholdForMemoryUsageLoggingInBytes && unmanagedDiff < ThresholdForMemoryUsageLoggingInBytes)
+                {
+                    // we don't want to spam the logs when we are in a low memory state and operations logs are enabled
+                    return;
+                }
+
                 var msg = $"Query for index `{_indexName}` for query: `{_memoryInfo.Query}`, " +
+                          $"page size: {_memoryInfo.PageSize:#,#;;0}, " +
                           $"allocated managed: {new Size(mangedDiff, SizeUnit.Bytes)}, " +
                           $"allocated unmanaged: {new Size(unmanagedDiff, SizeUnit.Bytes)}, " +
                           $"managed thread id: {_memoryInfo.ManagedThreadId}";
@@ -88,7 +97,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 }
             }
         }
-        
+
         public struct QueryResult
         {
             public Document Result;
@@ -102,6 +111,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
             public long AllocatedUnmanagedBefore { get; init; }
             public int ManagedThreadId { get; init; }
             public Queries.AST.Query Query { get; init; }
+            public long PageSize { get; init; }
         }
     }
 }

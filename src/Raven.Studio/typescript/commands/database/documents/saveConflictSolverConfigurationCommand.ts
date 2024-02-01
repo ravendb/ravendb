@@ -3,8 +3,13 @@ import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
 class saveConflictSolverConfigurationCommand extends commandBase {
-    constructor(private db: database, private configuration: Raven.Client.ServerWide.ConflictSolver) {
-        super(); 
+    private readonly db: database;
+    private readonly configuration: Raven.Client.ServerWide.ConflictSolver;
+
+    constructor(db: database, configuration: Raven.Client.ServerWide.ConflictSolver) {
+        super();
+        this.db = db;
+        this.configuration = configuration;
     }
 
     execute(): JQueryPromise<updateDatabaseConfigurationsResult> {

@@ -5,12 +5,11 @@ import DatabaseUtils from "components/utils/DatabaseUtils";
 import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
 
 export interface DatabasesState {
-    databases: EntityState<DatabaseSharedInfo>;
-
+    databases: EntityState<DatabaseSharedInfo, string>;
     activeDatabase: string;
 }
 
-const databasesAdapter = createEntityAdapter<DatabaseSharedInfo>({
+const databasesAdapter = createEntityAdapter<DatabaseSharedInfo, string>({
     selectId: (x) => x.name,
     sortComparer: (a, b) => genUtils.sortAlphaNumeric(a.name, b.name),
 });

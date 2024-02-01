@@ -105,7 +105,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                         );
 
                         return (
-                            <div className="vstack">
+                            <div key={transformationScriptProgress.transformationName} className="vstack">
                                 {transformationScriptProgress.transactionalId && (
                                     <div className="vstack">
                                         <div className="small-label d-flex align-items-center justify-content-center gap-1">
@@ -130,7 +130,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                                         </small>
                                     </div>
                                 )}
-                                <NamedProgress name={nameNode} key={transformationScriptProgress.transformationName}>
+                                <NamedProgress name={nameNode}>
                                     <NamedProgressItem progress={transformationScriptProgress.documents}>
                                         documents
                                     </NamedProgressItem>

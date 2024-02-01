@@ -16,7 +16,7 @@ using Sparrow.Json.Parsing;
 namespace Raven.Server.Documents.Handlers.Processors.Batches;
 
 internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
-    where TBatchCommand : IBatchCommand
+    where TBatchCommand : class, IBatchCommand
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
@@ -110,6 +110,10 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
 
                 if (indexBatchOptions != null)
                     command.ModifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                var noReply = RequestHandler.GetBoolValueQueryString("noreply", required: false);
+                if (noReply.HasValue)
+                    command.IncludeReply = noReply.Value == false;
 
                 var results = await HandleTransactionAsync(context, command, indexBatchOptions, replicationBatchOptions);
 

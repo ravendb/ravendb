@@ -6,7 +6,7 @@ import "./Select.scss";
 export default function SelectCreatable<
     Option,
     IsMulti extends boolean = false,
-    Group extends GroupBase<Option> = GroupBase<Option>
+    Group extends GroupBase<Option> = GroupBase<Option>,
 >(props: ComponentProps<typeof ReactSelectCreatable<Option, IsMulti, Group>>) {
     return (
         <ReactSelectCreatable

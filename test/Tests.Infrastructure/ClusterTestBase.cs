@@ -328,9 +328,12 @@ namespace Tests.Infrastructure
         protected async Task<RavenServer> ActionWithLeader(Func<RavenServer, Task> act, List<RavenServer> servers = null)
         {
             var retries = 5;
-            Exception err = null;
+            var exceptions = new List<Exception>();
+
             while (retries-- > 0)
             {
+                Exception err = null;
+
                 try
                 {
                     servers ??= Servers;
@@ -348,15 +351,18 @@ namespace Tests.Infrastructure
                     var leader = Servers.FirstOrDefault(s => s.ServerStore.IsLeader());
                     leader?.ServerStore.Engine.CurrentLeader?.StepDown();
                 }
-                catch (Exception e) when (e is NotLeadingException || e is ObjectDisposedException)
+                catch (Exception e)
                 {
                     err = e;
                 }
 
+                if(err != null)
+                    exceptions.Add(err);
+
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
 
-            throw new InvalidOperationException($"Failed to get leader after 5 retries. {Environment.NewLine}{GetNodesStatus(servers ?? Servers)}", err);
+            throw new AggregateException("Failed to get leader after 5 retries. {Environment.NewLine}{GetNodesStatus(servers ?? Servers)}", exceptions);
         }
 
         private string GetNodesStatus(List<RavenServer> servers)
@@ -849,6 +855,7 @@ namespace Tests.Infrastructure
                     // ReSharper disable once PossibleNullReferenceException
                     leader = await ActionWithLeader(l =>
                         l.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], nodeTag: allowedNodeTags[i], asWatcher: watcherCluster, token: cts.Token), clusterNodes);
+
                     if (watcherCluster)
                     {
                         await follower.ServerStore.WaitForTopology(Leader.TopologyModification.NonVoter, cts.Token);

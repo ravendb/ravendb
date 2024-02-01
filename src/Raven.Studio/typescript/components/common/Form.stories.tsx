@@ -18,7 +18,6 @@ import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { Label } from "reactstrap";
-import Select, { SelectOptionWithIconAndSeparator } from "components/common/select/Select";
 
 export default {
     title: "Bits/Form",

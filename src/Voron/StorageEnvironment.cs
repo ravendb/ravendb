@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
@@ -19,6 +20,10 @@ using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Compression;
+using Voron.Data.Fixed;
+using Voron.Data.Lookups;
+using Voron.Data.PostingLists;
+using Voron.Data.RawData;
 using Voron.Data.Tables;
 using Voron.Debugging;
 using Voron.Exceptions;
@@ -33,10 +38,6 @@ using Voron.Util;
 using Voron.Util.Conversion;
 using Constants = Voron.Global.Constants;
 using NativeMemory = Sparrow.Utils.NativeMemory;
-using Voron.Data.Fixed;
-using Voron.Data.Lookups;
-using System.Diagnostics.CodeAnalysis;using Voron.Data.RawData;using Voron.Data.PostingLists;
-using Container = Voron.Data.Containers.Container;
 
 namespace Voron
 {
@@ -52,7 +53,7 @@ namespace Voron
         }
 
         internal Table.CompressionDictionariesHolder CompressionDictionariesHolder = new Table.CompressionDictionariesHolder();
-        
+
         internal IndirectReference SelfReference = new IndirectReference();
 
         public void SuggestSyncDataFile()
@@ -194,7 +195,7 @@ namespace Voron
             }
             catch (Exception e)
             {
-                if (_log.IsOperationsEnabled) 
+                if (_log.IsOperationsEnabled)
                     _log.Operations($"Failed to dispose storage environment via finalizer. Env: {this}", e);
             }
         }
@@ -431,7 +432,9 @@ namespace Voron
             _options.SetEnvironmentId(databaseGuidId);
         }
 
-        public string Base64Id { get; } = new string(' ', 22);
+        public const int Base64IdLength = 22;
+
+        public string Base64Id { get; } = new string(' ', Base64IdLength);
 
         private void CreateNewDatabase()
         {
@@ -704,7 +707,7 @@ namespace Voron
 
                     if (Options.ManualFlushing == false && _idleFlushTimer.IsCompleted) // on storage environment creation or if the task has failed
                     {
-                        _idleFlushTimer = Task.Run(() => IdleFlushTimer(SelfReference.WeekReference, Token), Token); 
+                        _idleFlushTimer = Task.Run(() => IdleFlushTimer(SelfReference.WeekReference, Token), Token);
                     }
                 }
 
@@ -947,8 +950,7 @@ namespace Voron
 
                     Interlocked.Add(ref Journal.Applicator.TotalCommittedSinceLastFlushPages, totalPages);
 
-                    if (tx.IsLazyTransaction == false)
-                        GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                    GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                 }
 
                 if (tx.AsyncCommit != null)
@@ -1097,7 +1099,7 @@ namespace Voron
             var r = new Dictionary<long, string>();
             r[tx.LowLevelTransaction.RootObjects.State.RootPageNumber] = "RootObjects";
             RegisterPages(_freeSpaceHandling.AllPages(tx.LowLevelTransaction), "Freed Page");
-            for (long pageNumber = NextPageNumber ; pageNumber < _dataPager.NumberOfAllocatedPages; pageNumber++)
+            for (long pageNumber = NextPageNumber; pageNumber < _dataPager.NumberOfAllocatedPages; pageNumber++)
             {
                 r[pageNumber] = "Unused Page";
             }
@@ -1129,7 +1131,7 @@ namespace Voron
                                         do
                                         {
                                             var rootObjectType = (RootObjectType)it.CreateReaderForCurrent().ReadByte();
-                                             switch (rootObjectType)
+                                            switch (rootObjectType)
                                             {
                                                 case RootObjectType.Lookup:
                                                     var lookup = tree.LookupFor<Int64LookupKey>(it.CurrentKey);
@@ -1165,8 +1167,8 @@ namespace Voron
                                 var writtenSchemaDataSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
                                 var tableSchema = TableSchema.ReadFrom(tx.Allocator, writtenSchemaData, writtenSchemaDataSize);
                                 var table = tx.OpenTable(tableSchema, currentKey);
-                                RegisterPages(table.TablePageAllocator.GetAllocationStorageFst().AllPages(), name +"/PreAllocatedPages/Bitmaps");
-                                RegisterPages(table.TablePageAllocator.AllPages(), name +"/PreAllocatedPages");
+                                RegisterPages(table.TablePageAllocator.GetAllocationStorageFst().AllPages(), name + "/PreAllocatedPages/Bitmaps");
+                                RegisterPages(table.TablePageAllocator.AllPages(), name + "/PreAllocatedPages");
                                 if (tableSchema.Key is { IsGlobal: false })
                                 {
                                     Tree t = GetTableTree(tableTree, tableSchema, tableSchema.Key.Name);
@@ -1191,7 +1193,7 @@ namespace Voron
                                     RegisterPages(t.AllPages(), name + "/" + index.Name);
                                 }
 
-                                RegisterTableSection(tableTree, name,TableSchema.ActiveCandidateSectionSlice);
+                                RegisterTableSection(tableTree, name, TableSchema.ActiveCandidateSectionSlice);
                                 RegisterTableSection(tableTree, name, TableSchema.InactiveSectionSlice);
                                 var readResult = tableTree.Read(TableSchema.ActiveSectionSlice);
                                 long pageNumber = readResult.Reader.ReadLittleEndianInt64();
@@ -1217,10 +1219,10 @@ namespace Voron
                                 }
                                 break;
                             case RootObjectType.Lookup:
-                                 // Here is may be int64, double or compact key, we aren't sure
-                                 var numeric = tx.LookupFor<Int64LookupKey>(currentKey);
-                                 RegisterLookup(numeric, name);
-                                 break;
+                                // Here is may be int64, double or compact key, we aren't sure
+                                var numeric = tx.LookupFor<Int64LookupKey>(currentKey);
+                                RegisterLookup(numeric, name);
+                                break;
                             case RootObjectType.PersistentDictionary:
                                 var header = *(PersistentDictionaryRootHeader*)rootIterator.CreateReaderForCurrent().Base;
                                 Page dicPage = tx.LowLevelTransaction.GetPage(header.PageNumber);
@@ -1264,10 +1266,10 @@ namespace Voron
                     do
                     {
                         var section = new RawDataSection(tx.LowLevelTransaction, it.CurrentKey);
-                        r.Add(section.PageNumber , name + "/" + TableSchema.ActiveSectionSlice + "/header");
+                        r.Add(section.PageNumber, name + "/" + TableSchema.ActiveSectionSlice + "/header");
                         for (long page = 0; page < section.NumberOfPages; page++)
                         {
-                            r.Add(section.PageNumber + page+1, name + "/" + TableSchema.ActiveSectionSlice + "/page");
+                            r.Add(section.PageNumber + page + 1, name + "/" + TableSchema.ActiveSectionSlice + "/page");
                         }
                     } while (it.MoveNext());
                 }
@@ -1277,17 +1279,17 @@ namespace Voron
             {
                 r.Add(container, name);
                 var overflowName = $"{name}/OverflowPage";
-                var (allPages, freePages) = Container.GetPagesFor(tx.LowLevelTransaction, container);
+                var (allPages, freePages) = Voron.Data.Containers.Container.GetPagesFor(tx.LowLevelTransaction, container);
                 RegisterPages(allPages.AllPages(), name + "/AllPagesSet");
                 RegisterPages(freePages.AllPages(), name + "/FreePagesSet");
-                var iterator = Container.GetAllPagesIterator(tx.LowLevelTransaction, container);
+                var iterator = Voron.Data.Containers.Container.GetAllPagesIterator(tx.LowLevelTransaction, container);
                 while (iterator.MoveNext(out var page))
                 {
                     var pageObject = tx.LowLevelTransaction.GetPage(page);
                     r.Add(page, name);
                     if (pageObject.IsOverflow == false)
                         continue;
-                    
+
 
                     var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageObject.OverflowSize);
                     for (int overflowPage = 1; overflowPage < numberOfOverflowPages; ++overflowPage)
@@ -1304,7 +1306,7 @@ namespace Voron
                 }
             }
         }
-        
+
         public unsafe DetailedReportInput CreateDetailedReportInput(Transaction tx, bool includeDetails)
         {
             var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
@@ -1331,7 +1333,6 @@ namespace Voron
                 NumericLookups = new(),
                 TextualLookups = new(),
                 IncludeDetails = includeDetails,
-                ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction(tx.LowLevelTransaction)),
                 TempPath = Options.TempPath,
                 JournalPath = (Options as StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)?.JournalPath,
                 TotalEncryptionBufferSize = totalCryptoBufferSize,
@@ -1378,20 +1379,20 @@ namespace Voron
                                 detailedReportInput.PostingLists.Add(set);
                                 break;
                             case RootObjectType.Lookup:
-                                 // Here is may be int64, double or compact key, we aren't sure
-                                 var numeric = tx.LookupFor<Int64LookupKey>(currentKey);
-                                 if (numeric.State.DictionaryId == -1)
-                                 {
-                                     // we don't care if it is double or long, same size for the report
-                                     detailedReportInput.NumericLookups.Add(numeric);
-                                 }
-                                 else
-                                 {
-                                     tx.Forget(currentKey);
-                                     var txt = tx.LookupFor<CompactTree.CompactKeyLookup>(currentKey);
-                                     detailedReportInput.TextualLookups.Add(txt);
-                                 }
-                                 break;
+                                // Here is may be int64, double or compact key, we aren't sure
+                                var numeric = tx.LookupFor<Int64LookupKey>(currentKey);
+                                if (numeric.State.DictionaryId == -1)
+                                {
+                                    // we don't care if it is double or long, same size for the report
+                                    detailedReportInput.NumericLookups.Add(numeric);
+                                }
+                                else
+                                {
+                                    tx.Forget(currentKey);
+                                    var txt = tx.LookupFor<CompactTree.CompactKeyLookup>(currentKey);
+                                    detailedReportInput.TextualLookups.Add(txt);
+                                }
+                                break;
                             case RootObjectType.PersistentDictionary:
                                 var header = *(PersistentDictionaryRootHeader*)rootIterator.CreateReaderForCurrent().Base;
                                 detailedReportInput.PersistentDictionaries.Add(header);
@@ -1615,55 +1616,6 @@ namespace Voron
             return Hashing.Streamed.XXHash64.End(ref ctx);
         }
 
-        public TransactionsModeResult SetTransactionMode(TransactionsMode mode, TimeSpan duration)
-        {
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
-            {
-                var oldMode = Options.TransactionsMode;
-
-                if (_log.IsOperationsEnabled)
-                    _log.Operations($"Setting transaction mode to {mode}. Old mode is {oldMode}");
-
-                if (oldMode == mode)
-                    return TransactionsModeResult.ModeAlreadySet;
-
-                Options.TransactionsMode = mode;
-                if (duration == TimeSpan.FromMinutes(0)) // infinite
-                    Options.NonSafeTransactionExpiration = null;
-                else
-                    Options.NonSafeTransactionExpiration = DateTime.Now + duration;
-
-                if (oldMode == TransactionsMode.Lazy)
-                {
-
-                    tx.IsLazyTransaction = false;
-                    // we only commit here, the rest of the of the options are without
-                    // commit and we use the tx lock
-                    tx.Commit();
-                }
-
-                if (oldMode == TransactionsMode.Danger)
-                {
-                    Journal.TruncateJournal();
-                    _dataPager.Sync(Journal.Applicator.TotalWrittenButUnsyncedBytes);
-                }
-
-                if (mode == TransactionsMode.Danger)
-                    Journal.TruncateJournal();
-
-                if (mode != TransactionsMode.Lazy &&
-                    mode != TransactionsMode.Safe &&
-                    mode != TransactionsMode.Danger)
-                {
-                    throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + mode);
-                }
-
-
-                return TransactionsModeResult.SetModeSuccessfully;
-            }
-        }
-
         public void Cleanup(bool tryCleanupRecycledJournals = false)
         {
             CleanupMappedMemory();
@@ -1737,7 +1689,7 @@ namespace Voron
             DictionaryLocator.Set(dictionary.DictionaryId, dictionary);
 
             return dictionary;
-    }
+        }
     }
 
     public sealed class StorageEnvironmentWithType

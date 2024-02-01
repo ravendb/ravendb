@@ -137,7 +137,9 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
                 text-decoration: none;
                 padding-left: $gutter-sm;
                 padding-right: $gutter-sm;
-                transition: opacity $menu-transition-ease, padding $menu-transition-ease;
+                transition:
+                    opacity $menu-transition-ease,
+                    padding $menu-transition-ease;
                 &.active,
                 &:hover {
                     background-color: $base-panel-bg-1;

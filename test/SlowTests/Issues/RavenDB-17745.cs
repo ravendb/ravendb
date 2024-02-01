@@ -31,16 +31,16 @@ namespace SlowTests.Issues
                 var bulkInsertOptions = new BulkInsertOptions();
                 bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = _readTimeout;
 
-                var bulk = store.BulkInsert(bulkInsertOptions);
+                await using (var bulk = store.BulkInsert(bulkInsertOptions))
+                {
+                    await Task.Delay(_delay);
+                    await bulk.StoreAsync(new User { Name = "Daniel" }, "users/1");
+                    await bulk.StoreAsync(new User { Name = "Yael" }, "users/2");
 
-                await Task.Delay(_delay);
-                bulk.Store(new User { Name = "Daniel" }, "users/1");
-                bulk.Store(new User { Name = "Yael" }, "users/2");
-
-                await Task.Delay(_delay);
-                bulk.Store(new User { Name = "Ido" }, "users/3");
-                await Task.Delay(_delay);
-                bulk.Dispose();
+                    await Task.Delay(_delay);
+                    await bulk.StoreAsync(new User { Name = "Ido" }, "users/3");
+                    await Task.Delay(_delay);
+                }
 
                 using (var session = store.OpenSession())
                 {
@@ -63,6 +63,7 @@ namespace SlowTests.Issues
         public async Task StartStoreInTheMiddleOfAnHeartbeat()
         {
             DoNotReuseServer();
+
             using (var store = GetDocumentStore())
             {
                 var mre = new ManualResetEvent(false);
@@ -71,7 +72,7 @@ namespace SlowTests.Issues
                 var bulkInsertOptions = new BulkInsertOptions();
                 bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = _readTimeout;
 
-                using (var bulk = store.BulkInsert(bulkInsertOptions))
+                await using (var bulk = store.BulkInsert(bulkInsertOptions))
                 {
                     bulkInsertOptions.ForTestingPurposesOnly().OnSendHeartBeat_DoBulkStore = () =>
                     {

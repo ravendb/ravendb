@@ -1230,10 +1230,8 @@ namespace Voron
         public bool RunningOn32Bits => PlatformDetails.Is32Bits || ForceUsing32BitsPager;
 
 
-        public TransactionsMode TransactionsMode { get; set; }
         public PalFlags.DurabilityMode SupportDurabilityFlags { get; set; } = PalFlags.DurabilityMode.DurabililtySupported;
 
-        public DateTime? NonSafeTransactionExpiration { get; set; }
         public TimeSpan DisposeWaitTime { get; set; }
 
         public int TimeToSyncAfterFlushInSec

@@ -1,7 +1,6 @@
 ﻿/// <reference path="../../typings/tsd.d.ts" />
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import moment = require("moment");
-import d3 = require("d3");
 import { SyntheticEvent } from "react";
 
 type SelectionState = "AllSelected" | "SomeSelected" | "Empty";
@@ -320,19 +319,6 @@ class genUtils {
         return "giga";
     }
     
-    static siFormat(value: number) {
-        if (value <= 999) {
-            return value.toFixed(0);
-        }
-        const format = d3.formatPrefix(value);
-        let scaledValue = format.scale(value).toFixed(1);
-        if (scaledValue.endsWith(".0")) {
-            scaledValue = scaledValue.substring(0, scaledValue.length - 2);
-        }
-        // trim zeros
-        return scaledValue + format.symbol;
-    }
-
     static getCountPrefix(count: number): string {
         if (count < 100_000) {
             return count.toLocaleString();

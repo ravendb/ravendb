@@ -10,6 +10,13 @@ namespace Raven.Client.Documents.Session
 
         protected ExplanationToken ExplanationToken;
 
+        /// <summary>
+        /// Explanations gives context how document was matched by query and provide information about how the score was calculated.
+        /// </summary>
+        /// <param name="options" cref="ExplanationOptions">Additional explanation configuration.</param>
+        /// <param name="explanations">Out parameter where explanations will be returned.</param>
+        /// <exception cref="InvalidOperationException">Explanations should be included only once in the query.</exception>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.IncludeExplanations"/>
         public void IncludeExplanations(ExplanationOptions options, out Explanations explanations)
         {
             if (ExplanationToken != null)

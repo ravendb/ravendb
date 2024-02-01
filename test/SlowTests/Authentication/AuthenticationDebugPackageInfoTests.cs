@@ -57,7 +57,7 @@ namespace SlowTests.Authentication
         {
             var shouldContain = new[]
             {
-                "tasks.json", "indexes.json", "indexes.stats.json", "indexes.errors.json", "io-metrics.json", "perf-metrics.json",
+                "tasks.json", "indexes.json", "indexes.stats.json", "indexes.errors.json", "indexes.metadata.json", "io-metrics.json", "perf-metrics.json",
                 "replication.outgoing-failures.json", "replication.incoming-last-activity-time.json", "replication.incoming-rejection-info.json",
                 "replication.outgoing-reconnect-queue.json", "stats.json", "subscriptions.json", "tcp.json", "documents.huge.json", "identities.json",
                 "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json",
@@ -75,7 +75,7 @@ namespace SlowTests.Authentication
         {
             var shouldContain = new[]
             {
-                "tasks.json", "indexes.json", "indexes.stats.json", "indexes.errors.json", "io-metrics.json", "perf-metrics.json",
+                "tasks.json", "indexes.json", "indexes.stats.json", "indexes.errors.json", "indexes.metadata.json", "io-metrics.json", "perf-metrics.json",
                 "replication.outgoing-failures.json", "replication.incoming-last-activity-time.json", "replication.incoming-rejection-info.json",
                 "replication.outgoing-reconnect-queue.json", "stats.json", "subscriptions.json", "tcp.json", "documents.huge.json", "identities.json",
                 "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json",
@@ -93,7 +93,7 @@ namespace SlowTests.Authentication
         {
             var shouldContain = new[]
             {
-                "tasks.json", "indexes.json", "indexes.stats.json", "indexes.errors.json", "io-metrics.json", "perf-metrics.json",
+                "tasks.json", "indexes.json", "indexes.stats.json", "indexes.errors.json", "indexes.metadata.json", "io-metrics.json", "perf-metrics.json",
                 "replication.outgoing-failures.json", "replication.incoming-last-activity-time.json", "replication.incoming-rejection-info.json",
                 "replication.outgoing-reconnect-queue.json", "stats.json", "subscriptions.json", "tcp.json", "documents.huge.json", "identities.json",
                 "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json",
@@ -112,7 +112,7 @@ namespace SlowTests.Authentication
         {
             var shouldContain = new[]
             {
-                "tasks.json", "indexes.json", "indexes.stats.json", "indexes.errors.json", "io-metrics.json", "perf-metrics.json",
+                "tasks.json", "indexes.json", "indexes.stats.json", "indexes.errors.json", "indexes.metadata.json", "io-metrics.json", "perf-metrics.json",
                 "replication.outgoing-failures.json", "replication.incoming-last-activity-time.json", "replication.incoming-rejection-info.json",
                 "replication.outgoing-reconnect-queue.json", "stats.json", "subscriptions.json", "tcp.json", "documents.huge.json", "identities.json",
                 "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json",
