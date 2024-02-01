@@ -938,6 +938,9 @@ namespace Raven.Server.Documents
                 ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquired cluster lock");
             }
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing the cluster locker");
+            exceptionAggregator.Execute(() => _clusterLocker.Dispose());
+
             var indexStoreTask = _indexStoreTask;
             if (indexStoreTask != null)
             {
