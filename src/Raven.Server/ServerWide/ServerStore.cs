@@ -3025,6 +3025,12 @@ namespace Raven.Server.ServerWide
             {
                 Debug.Assert(topology != null);
 
+                foreach (var node in topology.AllNodes)
+                {
+                    if (string.IsNullOrEmpty(node))
+                        throw new InvalidOperationException($"Attempting to save the database record of '{databaseName}' but one of its specified topology nodes is null.");
+                }
+
                 if (string.IsNullOrEmpty(topology.DatabaseTopologyIdBase64))
                     topology.DatabaseTopologyIdBase64 = Guid.NewGuid().ToBase64Unpadded();
 

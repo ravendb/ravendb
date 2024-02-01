@@ -164,6 +164,48 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        public async Task EnsureValidationForRestoreFromShardedDatabaseConfiguration()
+        {
+            using (var store1 = Sharding.GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                var dirs = new []{ "dir$0", "dir$1", "dir$2"};
+                Assert.Equal(3, dirs.Length);
+
+                var sharding = await Sharding.GetShardingConfigurationAsync(store1);
+                var settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
+                
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                settings.Shards[0].NodeTag = null;
+                var error = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    Backup.RestoreDatabase(store2, new RestoreBackupConfiguration { DatabaseName = databaseName, ShardRestoreSettings = settings },
+                        timeout: TimeSpan.FromSeconds(60));
+                });
+                Assert.Contains("was not provided a node tag", error.Message);
+                settings.Shards[0].NodeTag = "A";
+
+                settings.Shards[0].ShardNumber = 1;
+                error = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    Backup.RestoreDatabase(store2, new RestoreBackupConfiguration { DatabaseName = databaseName, ShardRestoreSettings = settings },
+                        timeout: TimeSpan.FromSeconds(60));
+                });
+                Assert.Contains("there is a shard mismatch in the provided restore configuration", error.Message);
+                settings.Shards[0].ShardNumber = 0;
+
+                settings.Shards = null;
+                error = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    Backup.RestoreDatabase(store2, new RestoreBackupConfiguration { DatabaseName = databaseName, ShardRestoreSettings = settings },
+                        timeout: TimeSpan.FromSeconds(60));
+                });
+                Assert.Contains($"configuration for field '{nameof(RestoreBackupConfiguration.ShardRestoreSettings.Shards)}' is not set", error.Message);
+            }
+        }
+
         [AmazonS3RetryFact]
         public async Task CanBackupAndRestoreShardedDatabase_FromS3Backup()
         {
