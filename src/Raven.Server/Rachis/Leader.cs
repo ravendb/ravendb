@@ -361,9 +361,9 @@ namespace Raven.Server.Rachis
 
                         if (lowestIndexInEntireCluster > lastTruncated)
                         {
-                            var cmd = new LowestIndexUpdateCommand(leader: this, engine: _engine, lowestIndexInEntireCluster: lowestIndexInEntireCluster);
+                            var cmd = new LowestIndexUpdateCommand(engine: _engine, lowestIndexInEntireCluster: lowestIndexInEntireCluster);
                             _engine.TxMerger.EnqueueSync(cmd);
-                            LowestIndexInEntireCluster = _lowestIndexInEntireCluster;
+                            LowestIndexInEntireCluster = lowestIndexInEntireCluster;
                         }
                     }
                     catch (Exception ex)
