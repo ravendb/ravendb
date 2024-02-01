@@ -295,12 +295,22 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var collection = query.CollectionName;
             var buffer = stackalloc long[bufferSize];
 
+            long numberOfDocuments;
+
+            var isAllDocumentsCollection = collection == Constants.Documents.Collections.AllDocumentsCollection;
+            
+            if (isAllDocumentsCollection)
+                numberOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context.Documents);
+            else
+            {
+                var collectionStats = Database.DocumentsStorage.GetCollection(collection, context.Documents);
+                numberOfDocuments = collectionStats.Count;
+            }
+
             // If the query has include or load, it's too difficult to check the etags for just the included collections,
             // it's easier to just show etag for all docs instead.
-            if (collection == Constants.Documents.Collections.AllDocumentsCollection ||
-                query.HasIncludeOrLoad)
+            if (isAllDocumentsCollection || query.HasIncludeOrLoad)
             {
-                var numberOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context.Documents);
                 buffer[0] = DocumentsStorage.ReadLastDocumentEtag(context.Documents.Transaction.InnerTransaction);
                 buffer[1] = DocumentsStorage.ReadLastTombstoneEtag(context.Documents.Transaction.InnerTransaction);
                 buffer[2] = numberOfDocuments;
@@ -310,25 +320,22 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (hasTimeSeries)
                     buffer[hasCounters ? 4 : 3] = DocumentsStorage.ReadLastTimeSeriesEtag(context.Documents.Transaction.InnerTransaction);
-
-                resultToFill.TotalResults = (int)numberOfDocuments;
             }
             else
             {
-                var collectionStats = Database.DocumentsStorage.GetCollection(collection, context.Documents);
                 buffer[0] = Database.DocumentsStorage.GetLastDocumentEtag(context.Documents.Transaction.InnerTransaction, collection);
                 buffer[1] = Database.DocumentsStorage.GetLastTombstoneEtag(context.Documents.Transaction.InnerTransaction, collection);
-                buffer[2] = collectionStats.Count;
+                buffer[2] = numberOfDocuments;
 
                 if (hasCounters)
                     buffer[3] = Database.DocumentsStorage.CountersStorage.GetLastCounterEtag(context.Documents, collection);
 
                 if (hasTimeSeries)
                     buffer[hasCounters ? 4 : 3] = Database.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(context.Documents, collection);
-
-                resultToFill.TotalResults = (int)collectionStats.Count;
             }
 
+            resultToFill.TotalResults = numberOfDocuments;
+            
             if (hasCmpXchg)
                 buffer[bufferSize - 1] = Database.CompareExchangeStorage.GetLastCompareExchangeIndex(context.Server);
 
