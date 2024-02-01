@@ -156,7 +156,7 @@ namespace Raven.Server.NotificationCenter
                     _isCpuExhaustionWarningAdded = true;
                 }
                 
-                if (_warningIndexOutputsPerDocumentQueue.IsEmpty && _warningReferenceDocumentLoadsQueue.IsEmpty && _mismatchedReferencesLoadWarning == null && _warningComplexFieldAutoIndexing.IsEmpty && _cpuExhaustionWarningIndexNames.Count == 0)
+                if (_warningIndexOutputsPerDocumentQueue.IsEmpty && _warningReferenceDocumentLoadsQueue.IsEmpty && _mismatchedReferencesLoadWarning == null && _warningComplexFieldAutoIndexing.IsEmpty)
                     return;
 
                 PerformanceHint indexOutputPerDocumentHint = null;
