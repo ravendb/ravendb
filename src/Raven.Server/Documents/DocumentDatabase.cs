@@ -34,6 +34,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -1511,12 +1512,14 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        private bool CanSkipValueChange(long index, object changeState)
+        private bool CanSkipValueChange(long index, string type)
         {
-            if (changeState != null)
+            switch (type)
             {
-                // must set a specific state
-                return false;
+                case nameof(UpdateResponsibleNodeForTasksCommand):
+                case nameof(DelayBackupCommand):
+                    // both commands cannot be skipped and must be executed
+                    return false;
             }
 
             if (LastValueChangeIndex > index)
@@ -1532,7 +1535,7 @@ namespace Raven.Server.Documents
 
         private void NotifyFeaturesAboutValueChange(long index, string type, object changeState)
         {
-            if (CanSkipValueChange(index, changeState))
+            if (CanSkipValueChange(index, type))
                 return;
 
             var taken = false;
@@ -1542,7 +1545,7 @@ namespace Raven.Server.Documents
 
                 try
                 {
-                    if (CanSkipValueChange(index, changeState))
+                    if (CanSkipValueChange(index, type))
                         return;
 
                     if (DatabaseShutdown.IsCancellationRequested)
