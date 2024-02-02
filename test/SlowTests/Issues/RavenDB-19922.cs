@@ -95,7 +95,7 @@ namespace SlowTests.Issues
                 [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "0",
                 [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
-                [RavenConfiguration.GetKey(x => x.Backup.MoveToNewResponsibleNodeGracePeriod)] = "1"
+                [RavenConfiguration.GetKey(x => x.Backup.MoveToNewResponsibleNodeGracePeriod)] = "0"
             };
 
             var (nodes, leaderServer) = await CreateRaftCluster(clusterSize, customSettings: settings);
@@ -132,7 +132,7 @@ namespace SlowTests.Issues
 
                 Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, taskId);
 
-                CheckDecisionLog(leaderServer, new CurrentResponsibleNodeNotResponding(tag2, config.Name, tag1,TimeSpan.FromSeconds(1)).ReasonForDecisionLog);
+                CheckDecisionLog(leaderServer, new CurrentResponsibleNodeNotResponding(tag2, config.Name, tag1,TimeSpan.FromMinutes(0)).ReasonForDecisionLog);
 
                 settings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url;
                 nodes.Add(GetNewServer(new ServerCreationOptions
@@ -173,7 +173,7 @@ namespace SlowTests.Issues
                 [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "0",
                 [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
-                [RavenConfiguration.GetKey(x => x.Backup.MoveToNewResponsibleNodeGracePeriod)] = "1"
+                [RavenConfiguration.GetKey(x => x.Backup.MoveToNewResponsibleNodeGracePeriod)] = "0"
             };
 
             var (nodes, leaderServer) = await CreateRaftCluster(clusterSize, customSettings: settings);
@@ -248,7 +248,7 @@ namespace SlowTests.Issues
                 [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "0",
                 [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
-                [RavenConfiguration.GetKey(x => x.Backup.MoveToNewResponsibleNodeGracePeriod)] = "1"
+                [RavenConfiguration.GetKey(x => x.Backup.MoveToNewResponsibleNodeGracePeriod)] = "0"
             };
 
             var (nodes, leaderServer) = await CreateRaftCluster(clusterSize, customSettings: settings);
