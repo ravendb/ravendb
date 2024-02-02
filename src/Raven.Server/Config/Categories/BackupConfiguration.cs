@@ -84,10 +84,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.Snapshot.Compression.Level", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public CompressionLevel SnapshotCompressionLevel { get; set; }
 
-        [Description("Number of seconds, after which we will switch to a new responsible node for backup.")]
-        [DefaultValue(30 * 60)]
-        [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Backup.MoveToNewResponsibleNodeGracePeriodInSec", ConfigurationEntryScope.ServerWideOnly)]
+        [Description("Number of minutes, after which we will switch to a new responsible node for backup.")]
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Backup.MoveToNewResponsibleNodeGracePeriodInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting MoveToNewResponsibleNodeGracePeriod { get; set; }
 
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
