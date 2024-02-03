@@ -4,11 +4,16 @@ import LicenseLimitsUsage = Raven.Server.Commercial.LicenseLimitsUsage;
 
 interface LicenseState {
     status: LicenseStatus;
+    support: Raven.Server.Commercial.LicenseSupportInfo;
     limitsUsage: LicenseLimitsUsage;
 }
 
 const initialState: LicenseState = {
     status: null,
+    support: {
+        Status: "NoSupport",
+        EndsAt: undefined,
+    },
     limitsUsage: {
         NumberOfStaticIndexesInCluster: 0,
         NumberOfAutoIndexesInCluster: 0,
@@ -25,6 +30,9 @@ export const licenseSlice = createSlice({
         statusLoaded: (store, { payload: status }: PayloadAction<LicenseStatus>) => {
             store.status = status;
         },
+        supportLoaded: (store, { payload: status }: PayloadAction<Raven.Server.Commercial.LicenseSupportInfo>) => {
+            store.support = status;
+        },
         limitsUsageLoaded: (store, { payload: limitsUsage }: PayloadAction<LicenseLimitsUsage>) => {
             store.limitsUsage = limitsUsage;
         },
@@ -37,6 +45,11 @@ function statusValue<T extends keyof LicenseStatus>(key: T) {
     return (store: RootState) => store.license.status?.[key] ?? null;
 }
 
+const licenseRegistered = (store: RootState): boolean => {
+    const licenseStatus = licenseSelectors.status(store);
+    return !!licenseStatus && licenseStatus.Type !== "None" && licenseStatus.Type !== "Invalid";
+};
+
 const isEnterpriseOrDeveloper = (store: RootState): boolean => {
     const type = licenseSelectors.licenseType(store);
 
@@ -48,7 +61,10 @@ const isProfessionalOrAbove = (store: RootState): boolean => {
 };
 
 export const licenseSelectors = {
+    status: (store: RootState) => store.license.status,
+    licenseRegistered,
     statusValue,
+    support: (store: RootState) => store.license.support,
     licenseType: (store: RootState) => store.license.status?.Type,
     limitsUsage: (store: RootState) => store.license.limitsUsage,
     isEnterpriseOrDeveloper,

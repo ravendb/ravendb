@@ -1,79 +1,91 @@
 import {
-    databaseAccessArgType,
     licenseArgType,
-    statusArgType,
+    securityClearanceArgType,
+    supportStatusArgType,
     withBootstrap5,
     withStorybookContexts,
 } from "test/storybookTestUtils";
-import { Meta, Story, StoryObj } from "@storybook/react";
-import { AboutPage } from "./AboutPage";
+import { Meta, StoryObj } from "@storybook/react";
+import { AboutPage as AboutPageComponent } from "./AboutPage";
 import React from "react";
-import database from "models/resources/database";
-import { boundCopy } from "components/utils/common";
-import newVersionAvailableDetails from "viewmodels/common/notificationCenter/detailViewer/alerts/newVersionAvailableDetails";
+import { mockServices } from "test/mocks/services/MockServices";
+import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
     title: "Pages/About page",
-    component: AboutPage,
     decorators: [withStorybookContexts, withBootstrap5],
     argTypes: {
+        securityClearance: securityClearanceArgType,
         licenseType: licenseArgType,
-        status: statusArgType,
-        databaseAccess: databaseAccessArgType,
-        newVersionAvailable: {
-            options: ["6.0.2 (60002) - 12.11.2023", null],
-            control: { type: "select" },
-        },
+        supportStatus: supportStatusArgType,
     },
-} satisfies Meta<typeof AboutPage>;
+} satisfies Meta<AboutPageStoryProps>;
 
-interface DefaultAboutPageProps {
+interface AboutPageStoryProps {
     licenseType: Raven.Server.Commercial.LicenseType;
-    isCloud: boolean;
-    isEnabled: boolean;
-    isIsv: boolean;
-    status: Raven.Server.Commercial.Status;
+    securityClearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
     licenseServerConnection: boolean;
-    newVersionAvailable?: string;
-    databaseAccess: databaseAccessLevel;
-    canUpgrade: boolean;
+    passiveServer: boolean;
+    isIsv: boolean;
+    cloud: boolean;
+    supportStatus: Raven.Server.Commercial.Status;
 }
 
-export const AboutTemplate: StoryObj<DefaultAboutPageProps> = {
-    name: "About Page",
-    render: ({
-        licenseType,
-        isCloud,
-        isEnabled,
-        isIsv,
-        status,
-        licenseServerConnection,
-        newVersionAvailable,
-        canUpgrade,
-        databaseAccess,
-    }: DefaultAboutPageProps) => {
-        return (
-            <AboutPage
-                licenseType={licenseType}
-                isCloud={isCloud}
-                isEnabled={isEnabled}
-                isIsv={isIsv}
-                status={status}
-                licenseExpiration={Date()}
-                licenseServerConnection={licenseServerConnection}
-                newVersionAvailable={newVersionAvailable}
-                currentVersion="6.0.2 (60002) - 12.11.2023"
-                canUpgrade={canUpgrade}
-            />
-        );
-    },
+function commonInit(props: AboutPageStoryProps) {
+    const { licenseService } = mockServices;
+    const { license, accessManager, cluster } = mockStore;
+
+    accessManager.with_securityClearance(props.securityClearance);
+    cluster.with_ClientVersion();
+    cluster.with_ServerVersion();
+    cluster.with_PassiveServer(props.passiveServer);
+    license.with_License({
+        Type: props.licenseType,
+        IsIsv: props.isIsv,
+        IsCloud: props.cloud,
+    });
+    license.with_Support({
+        Status: props.supportStatus,
+    });
+
+    if (props.licenseServerConnection) {
+        licenseService.withConnectivityCheck();
+    } else {
+        licenseService.withConnectivityCheck({
+            connected: false,
+            exception: "Can't connect to api.ravendb.net",
+        });
+    }
+
+    licenseService.withLatestVersion();
+    licenseService.withGetConfigurationSettings();
+}
+
+const defaultArgs: AboutPageStoryProps = {
+    licenseType: "Enterprise",
+    isIsv: false,
+    cloud: false,
+    passiveServer: false,
+    supportStatus: "NoSupport",
+    licenseServerConnection: true,
+    securityClearance: "ClusterAdmin",
+};
+
+const render = (props: AboutPageStoryProps) => {
+    commonInit(props);
+
+    return <AboutPageComponent />;
+};
+
+export const AboutPage: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: defaultArgs,
+};
+
+export const ConnectionFailure: StoryObj<AboutPageStoryProps> = {
+    render,
     args: {
-        licenseType: "Enterprise",
-        isCloud: false,
-        isEnabled: true,
-        isIsv: false,
-        status: "NoSupport",
-        licenseServerConnection: true,
-        databaseAccess: "DatabaseAdmin",
+        ...defaultArgs,
+        licenseServerConnection: false,
     },
 };

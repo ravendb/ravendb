@@ -67,17 +67,16 @@ export const licenseArgType = {
     ] satisfies Raven.Server.Commercial.LicenseType[],
 };
 
-export const statusArgType = {
+export const supportStatusArgType = {
     control: {
         type: "select",
     },
     options: [
-        "InvalidStateSupportNotFound",
-        "LicenseNotFound",
         "NoSupport",
         "PartialSupport",
         "ProductionSupport",
         "ProfessionalSupport",
+        "LicenseNotFound",
     ] satisfies Raven.Server.Commercial.Status[],
 };
 

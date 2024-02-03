@@ -57,6 +57,9 @@ function initRedux() {
                     serverUrl: x.serverUrl(),
                 })) ?? [];
 
+        globalDispatch(
+            clusterActions.serverStateLoaded({ passive: clusterTopologyManager.default.topology()?.isPassive() })
+        );
         globalDispatch(clusterActions.nodesLoaded(clusterNodes));
     };
 
@@ -71,6 +74,9 @@ function initRedux() {
     licenseModel.licenseStatus.subscribe((licenseStatus) => {
         globalDispatch(licenseActions.statusLoaded(licenseStatus));
         throttledUpdateLicenseLimitsUsage();
+    });
+    licenseModel.supportCoverage.subscribe((supportCoverage) => {
+        globalDispatch(licenseActions.supportLoaded(supportCoverage));
     });
 
     collectionsTracker.default.collections.subscribe((collections) =>
