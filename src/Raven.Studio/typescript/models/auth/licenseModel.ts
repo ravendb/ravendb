@@ -12,8 +12,9 @@ class licenseModel {
 
     private static baseUrl = "https://ravendb.net/license/request";
 
-    static licenseTypeText = ko.pureComputed(() => {
-        const licenseStatus = licenseModel.licenseStatus();
+    static licenseTypeText = ko.pureComputed(() => licenseModel.licenseTypeTextProvider(licenseModel.licenseStatus())); 
+
+    static licenseTypeTextProvider(licenseStatus: LicenseStatus) {
         if (!licenseStatus || licenseStatus.Type === "None") {
             return "No license - AGPLv3 Restrictions Applied";
         }
@@ -32,10 +33,18 @@ class licenseModel {
         }
 
         return licenseType;
-    });
+    }
 
     static formattedExpiration = ko.pureComputed(() => {
-        const licenseStatus = licenseModel.licenseStatus();
+        const result =  licenseModel.formattedExpirationProvider(licenseModel.licenseStatus());
+        if (!result ) {
+            return null;
+        }
+
+        return `${result.formattedDate} <br /><small class="${result.timeClass}">(${result.relativeTime})</small>`;
+    });
+
+    static formattedExpirationProvider(licenseStatus: LicenseStatus): { formattedDate: string; timeClass: string; relativeTime: string } {
         if (!licenseStatus || !licenseStatus.Expiration) {
             return null;
         }
@@ -43,18 +52,28 @@ class licenseModel {
         const dateFormat = "YYYY MMMM Do";
         const expiration = moment(licenseStatus.Expiration);
         const now = moment();
-        const nextMonth = moment().add(1, 'month');
+        const month = 1 as const;
+        const nextMonth = moment().add(month, 'month');
         if (now.isBefore(expiration)) {
             const relativeDurationClass = nextMonth.isBefore(expiration) ? "" : "text-warning";
 
             const fromDuration = generalUtils.formatDurationByDate(expiration, true);
-            return `${expiration.format(dateFormat)} <br /><small class="${relativeDurationClass}">(${fromDuration})</small>`;
+            return {
+                formattedDate: expiration.format(dateFormat),
+                timeClass: relativeDurationClass, 
+                relativeTime: fromDuration
+            }
         }
 
         const expiredClass = licenseStatus.Expired ? "text-danger" : "";
         const duration = generalUtils.formatDurationByDate(expiration, true);
-        return `${expiration.format(dateFormat)} <br /><Small class="${expiredClass}">(${duration} ago)</Small>`;
-    });
+        return {
+            formattedDate: expiration.format(dateFormat),
+            timeClass: expiredClass,
+            relativeTime: duration + " ago"
+        }
+       
+    }
     
         
     static generateLicenseRequestUrl(limitType: Raven.Client.Exceptions.Commercial.LimitType = null): string {
@@ -190,12 +209,14 @@ class licenseModel {
     });
     
     static supportLabel = ko.pureComputed(() => {
-        const licenseStatus = licenseModel.licenseStatus();
+        return licenseModel.supportLabelProvider(licenseModel.licenseStatus(), licenseModel.supportCoverage());
+    });
+    
+    static supportLabelProvider(licenseStatus: LicenseStatus, supportInfo: Raven.Server.Commercial.LicenseSupportInfo) {
         if (!licenseStatus || licenseStatus.Type === "None") {
             return 'Community';
         }
-        
-        const supportInfo = licenseModel.supportCoverage();
+
         if (!supportInfo) {
             return 'Community';
         }
@@ -211,7 +232,7 @@ class licenseModel {
             default:
                 return 'Community';
         }
-    });
+    }
     
     static supportTableCssClass = ko.pureComputed(() => {
         const label = licenseModel.supportLabel();

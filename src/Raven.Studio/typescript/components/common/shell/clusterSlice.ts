@@ -11,6 +11,7 @@ interface ClusterState {
     nodes: EntityState<ClusterNode, string>;
     clientVersion: string;
     serverVersion: serverBuildVersionDto;
+    passive: boolean;
 }
 
 const clusterNodesAdapter = createEntityAdapter<ClusterNode, string>({
@@ -33,12 +34,16 @@ const initialState: ClusterState = {
     nodes: clusterNodesAdapter.getInitialState(),
     clientVersion: null,
     serverVersion: null,
+    passive: true,
 };
 
 export const clusterSlice = createSlice({
     initialState,
     name: "cluster",
     reducers: {
+        serverStateLoaded: (state, action: PayloadAction<{ passive: boolean }>) => {
+            state.passive = action.payload.passive;
+        },
         nodesLoaded: (state, action: PayloadAction<ClusterNode[]>) => {
             const bootstrapped = !action.payload.some((x) => x.nodeTag === "?");
             clusterNodesAdapter.setAll(state.nodes, bootstrapped ? action.payload : []);
@@ -65,4 +70,5 @@ export const clusterSelectors = {
     localNodeTag: selectLocalNodeTag,
     clientVersion: (store: RootState) => store.cluster.clientVersion,
     serverVersion: (store: RootState) => store.cluster.serverVersion,
+    isPassive: (store: RootState) => store.cluster.passive,
 };

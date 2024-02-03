@@ -18,4 +18,8 @@ export class MockLicenseManager {
         licenseService.withLimitsUsage({ ...LicenseStubs.limitsUsage(), ...override });
         globalDispatch(licenseActions.limitsUsageLoaded({ ...LicenseStubs.limitsUsage(), ...override }));
     }
+
+    with_Support(override?: Partial<Raven.Server.Commercial.LicenseSupportInfo>) {
+        globalDispatch(licenseActions.supportLoaded({ ...LicenseStubs.support(), ...override }));
+    }
 }

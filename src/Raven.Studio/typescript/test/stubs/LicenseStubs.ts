@@ -2,6 +2,20 @@
 import LicenseLimitsUsage = Raven.Server.Commercial.LicenseLimitsUsage;
 
 export class LicenseStubs {
+    static licenseServerConnectivityValid() {
+        return {
+            connected: true,
+            exception: null as string,
+        };
+    }
+
+    static licenseServerConnectivityException() {
+        return {
+            connected: false,
+            exception: "Unable to connected to api.ravendb.net",
+        };
+    }
+
     static getStatus(): LicenseStatus {
         return {
             Type: "Enterprise",
@@ -135,6 +149,30 @@ export class LicenseStubs {
             NumberOfCustomSortersInCluster: 4,
             NumberOfAnalyzersInCluster: 4,
             NumberOfSubscriptionsInCluster: 14,
+        };
+    }
+
+    static support(): Raven.Server.Commercial.LicenseSupportInfo {
+        return {
+            Status: "ProfessionalSupport",
+            EndsAt: moment()
+                .add(2 as const, "months")
+                .format() as any,
+        };
+    }
+
+    static configurationSettings(): Raven.Server.Config.Categories.LicenseConfiguration {
+        return {
+            License: "THIS IS LICENSE",
+            CanActivate: true,
+            CanRenew: true,
+            CanForceUpdate: true,
+            DisableAutoUpdate: false,
+            EulaAccepted: true,
+            DisableLicenseSupportCheck: false,
+            DisableAutoUpdateFromApi: false,
+            SkipLeasingErrorsLogging: false,
+            LicensePath: null,
         };
     }
 }
