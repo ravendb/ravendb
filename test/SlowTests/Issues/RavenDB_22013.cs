@@ -16,28 +16,24 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.None)]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task ValidateNodesNotNullInDatabaseRecordBeforeSavingRecordClusterWide()
         {
             var databaseName = GetDatabaseName();
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            
+            var databaseRecord = new DatabaseRecord(databaseName);
+            databaseRecord.Topology = new DatabaseTopology()
             {
-                context.OpenReadTransaction();
+                Members = new List<string>() { null }
+            };
+            await Server.ServerStore.EnsureNotPassiveAsync();
 
-                var databaseRecord = new DatabaseRecord(databaseName);
-                databaseRecord.Topology = new DatabaseTopology()
-                {
-                    Members = new List<string>() { null }
-                };
-                await Server.ServerStore.EnsureNotPassiveAsync();
-
-                var error = await Assert.ThrowsAnyAsync<InvalidOperationException>(async () =>
-                {
-                    var (etag, _) = await Server.ServerStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, Guid.NewGuid().ToString());
-                    await Server.ServerStore.Cluster.WaitForIndexNotification(etag);
-                });
-                Assert.Contains("but one of its specified topology nodes is null", error.Message);
-            }
+            var error = await Assert.ThrowsAnyAsync<InvalidOperationException>(async () =>
+            {
+                var (etag, _) = await Server.ServerStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, Guid.NewGuid().ToString());
+                await Server.ServerStore.Cluster.WaitForIndexNotification(etag);
+            });
+            Assert.Contains("but one of its specified topology nodes is null", error.Message);
         }
     }
 }
