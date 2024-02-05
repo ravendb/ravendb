@@ -26,28 +26,12 @@ namespace Raven.Client.ServerWide.Sharding
         {
             url = $"{node.Url}/databases/{node.Database}/admin/sharding/prefixes/{CommandType}";
 
-            HttpRequestMessage request;
-
-            if (CommandType == PrefixedCommandType.Delete)
+            return new HttpRequestMessage
             {
-                request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Delete
-                };
-                url = $"{url}?prefix={_setting.Prefix}";
-            }
-            else
-            {
-                request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream,
-                        DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_setting, ctx)).ConfigureAwait(false), _conventions)
-                };
-            }
-
-
-            return request;
+                Method = CommandType == PrefixedCommandType.Delete ? HttpMethod.Delete : HttpMethod.Post,
+                Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream,
+                    DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_setting, ctx)).ConfigureAwait(false), _conventions)
+            };
         }
 
         public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();

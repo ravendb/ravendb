@@ -69,23 +69,24 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var prefix = GetStringQueryString("prefix");
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), GetType().Name);
+                var setting = JsonDeserializationCluster.PrefixedShardingSetting(json);
 
                 var shardingConfiguration = ServerStore.Cluster.ReadShardingConfiguration(DatabaseName);
-                bool found = shardingConfiguration.Prefixed.Any(value => string.Equals(value.Prefix, prefix, StringComparison.OrdinalIgnoreCase));
+                bool found = shardingConfiguration.Prefixed.BinarySearch(setting, PrefixedSettingComparer.Instance) >= 0; 
                 if (found == false)
-                    throw new InvalidDataException($"Prefix '{prefix}' wasn't found in sharding configuration");
+                    throw new InvalidDataException($"Prefix '{setting.Prefix}' wasn't found in sharding configuration");
 
                 var clusterTopology = ServerStore.GetClusterTopology(context);
                 var urls = shardingConfiguration.Orchestrator.Topology.Members.Select(clusterTopology.GetUrlFromTag).ToArray();
 
-                if (await AssertNoDocumentsStartingWith(context, prefix, urls) == false)
+                if (await AssertNoDocumentsStartingWith(context, setting.Prefix, urls) == false)
                     throw new InvalidOperationException(
-                        $"Cannot remove prefix '{prefix}' from {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
-                        $"There are existing documents in database '{DatabaseName}' that start with '{prefix}'. " +
+                        $"Cannot remove prefix '{setting.Prefix}' from {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
+                        $"There are existing documents in database '{DatabaseName}' that start with '{setting.Prefix}'. " +
                         "In order to remove a sharding by prefix setting, you cannot have any documents in the database that starts with this prefix.");
 
-                var cmd = new DeletePrefixedSettingCommand(prefix, DatabaseName, GetRaftRequestIdFromQuery());
+                var cmd = new DeletePrefixedSettingCommand(setting, DatabaseName, GetRaftRequestIdFromQuery());
                 var (raftIndex, _) = await ServerStore.SendToLeaderAsync(cmd);
 
                 await DatabaseContext.ServerStore.WaitForExecutionOnRelevantNodesAsync(context, shardingConfiguration.Orchestrator.Topology.Members, raftIndex);

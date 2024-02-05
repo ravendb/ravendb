@@ -31,9 +31,6 @@ public class PrefixedSharding : ClusterTestBase
 {
     public PrefixedSharding(ITestOutputHelper output) : base(output)
     {
-        DoNotReuseServer();
-
-        Server.ServerStore.Sharding.BlockPrefixedSharding = false;
     }
 
     [RavenFact(RavenTestCategory.Sharding)]
@@ -172,7 +169,7 @@ public class PrefixedSharding : ClusterTestBase
     {
         using var store = Sharding.GetDocumentStore();
 
-        var e = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new AddPrefixedShardingSettingOperation(new PrefixedShardingSetting
+        await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new AddPrefixedShardingSettingOperation(new PrefixedShardingSetting
         {
             Prefix = "users/",
             Shards = []
@@ -183,7 +180,7 @@ public class PrefixedSharding : ClusterTestBase
             Prefix = "users/",
             Shards = [0]
         }));
-
+          
         Assert.Throws<RavenException>(() =>
         {
             using var newStore = Sharding.GetDocumentStore(new Options
@@ -202,7 +199,7 @@ public class PrefixedSharding : ClusterTestBase
                 }
             });
         });
-
+          
 
     }
 
@@ -2462,6 +2459,95 @@ public class PrefixedSharding : ClusterTestBase
                 }
             }
         }
+    }
+
+    [RavenFact(RavenTestCategory.Sharding)]
+    public async Task DeletingPrefixAfterShardsDistributionHasBeenUpdated()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed =
+                [
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/",
+                        Shards = [0]
+                    }
+                ];
+            }
+        });
+
+        var shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+        Assert.Equal(4, shardingConfiguration.BucketRanges.Count);
+
+        await store.Maintenance.SendAsync(new UpdatePrefixedShardingSettingOperation(new PrefixedShardingSetting
+        {
+            Prefix = "users/",
+            Shards = [0, 1, 2]
+        }));
+
+        shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+        Assert.Equal(4, shardingConfiguration.BucketRanges.Count);
+
+        await store.Maintenance.SendAsync(new DeletePrefixedShardingSettingOperation("users/"));
+
+        shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+
+        Assert.Equal(3, shardingConfiguration.BucketRanges.Count);
+    }
+
+    [RavenFact(RavenTestCategory.Sharding)]
+    public async Task DeletingPrefixAfterBucketMigration()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed =
+                [
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/",
+                        Shards = [0, 1, 2]
+                    }
+                ];
+            }
+        });
+
+        var shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+        Assert.Equal(6, shardingConfiguration.BucketRanges.Count);
+
+        var id = "users/2";
+        var originalShardForId = await Sharding.GetShardNumberForAsync(store, id);
+
+        Assert.Equal(0, originalShardForId);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new User(), id);
+            await session.SaveChangesAsync();
+        }
+
+        await Sharding.Resharding.MoveShardForId(store, id, toShard: 2);
+
+        shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+        Assert.Equal(8, shardingConfiguration.BucketRanges.Count);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            session.Delete(id);
+            await session.SaveChangesAsync();
+        }
+
+        // this should delete all 5 bucket ranges assigned for this prefix
+        await store.Maintenance.SendAsync(new DeletePrefixedShardingSettingOperation("users/"));
+
+        shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+        Assert.Equal(3, shardingConfiguration.BucketRanges.Count);
     }
 
     private class Item
