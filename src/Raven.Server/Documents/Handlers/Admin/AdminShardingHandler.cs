@@ -23,21 +23,20 @@ namespace Raven.Server.Documents.Handlers.Admin
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
         }
 
-        [RavenAction("/databases/*/admin/sharding/prefixes/add", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public Task AddPrefixConfiguration()
+        [RavenAction("/databases/*/admin/sharding/prefixed/add", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public Task AddPrefixedShardingSetting()
         {
             throw new NotSupportedInShardingException("This operation is not available from a specific shard");
         }
 
-        [RavenAction("/databases/*/admin/sharding/prefixes/delete", "DELETE", AuthorizationStatus.DatabaseAdmin)]
-        public Task DeletePrefixConfiguration()
+        [RavenAction("/databases/*/admin/sharding/prefixed/delete", "DELETE", AuthorizationStatus.DatabaseAdmin)]
+        public Task DeletePrefixedShardingSetting()
         {
             throw new NotSupportedInShardingException("This operation is not available from a specific shard");
-
         }
 
-        [RavenAction("/databases/*/admin/sharding/prefixes/update", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public Task UpdatePrefixConfiguration()
+        [RavenAction("/databases/*/admin/sharding/prefixed/update", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public Task UpdatePrefixedShardingSetting()
         {
             throw new NotSupportedInShardingException("This operation is not available from a specific shard");
         }

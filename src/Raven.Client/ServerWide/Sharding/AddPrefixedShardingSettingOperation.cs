@@ -9,7 +9,6 @@ namespace Raven.Client.ServerWide.Sharding
     {
         private readonly PrefixedShardingSetting _setting;
 
-
         public AddPrefixedShardingSettingOperation(PrefixedShardingSetting setting)
         {
             _setting = setting;

@@ -58,20 +58,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 }
             }
 
-            if (string.IsNullOrEmpty(Prefix) == false)
-            {
-                // prefixed bucket range
-                var index = record.Sharding.Prefixed.BinarySearch(new PrefixedShardingSetting(Prefix), PrefixedSettingComparer.Instance);
-                if (index < 0)
-                    throw new RachisApplyException($"Prefix {Prefix} doesn't exists");
-
-                var shards = record.Sharding.Prefixed[index].Shards;
-                if (shards == null || shards.Contains(DestinationShard) == false)
-                    throw new RachisApplyException($"Destination shard {DestinationShard} doesn't exists");
-            }
-
-            if (record.Sharding.Shards.ContainsKey(DestinationShard) == false)
-                throw new RachisApplyException($"Destination shard {DestinationShard} doesn't exists");
+            AssertDestinationShardExists(record.Sharding);
 
             _migration = new ShardBucketMigration
             {
@@ -127,6 +114,24 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                     ClusterStateMachine.UpdateValueForItemsTable(context, index, key, valueName, updated);
                 }
             }
+        }
+
+        private void AssertDestinationShardExists(ShardingConfiguration shardingConfiguration)
+        {
+            if (shardingConfiguration.Shards.ContainsKey(DestinationShard) == false)
+                throw new RachisApplyException($"Destination shard {DestinationShard} doesn't exists");
+
+            if (string.IsNullOrEmpty(Prefix)) 
+                return;
+
+            // prefixed bucket range
+            var index = shardingConfiguration.Prefixed.BinarySearch(new PrefixedShardingSetting(Prefix), PrefixedSettingComparer.Instance);
+            if (index < 0)
+                throw new RachisApplyException($"Prefix {Prefix} doesn't exists");
+
+            var shards = shardingConfiguration.Prefixed[index].Shards;
+            if (shards == null || shards.Contains(DestinationShard) == false)
+                throw new RachisApplyException($"Destination shard {DestinationShard} doesn't exists");
         }
 
         public override void FillJson(DynamicJsonValue json)

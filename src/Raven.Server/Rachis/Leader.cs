@@ -676,7 +676,7 @@ namespace Raven.Server.Rachis
             await _engine.TxMerger.Enqueue(rachisMergedCommand); //wait until 'rachisMergedCommand' is executed (until 'rachisMergedCommand.TaskResult' wont be null).
 
             var t = rachisMergedCommand.TaskResult;
-            if (await t.WaitWithTimeout(timeout.Add(TimeSpan.FromSeconds(45))) == false)
+            if (await t.WaitWithTimeout(timeout) == false)
             {
                 throw new TimeoutException($"Waited for {timeout} but the command {command.RaftCommandIndex} was not applied in this time.");
             }

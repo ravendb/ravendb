@@ -7,15 +7,15 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Sharding
 {
-    public sealed class DeletePrefixedSettingCommand : UpdateDatabaseCommand
+    public sealed class DeletePrefixedShardingSettingCommand : UpdateDatabaseCommand
     {
         public PrefixedShardingSetting Prefix;
 
-        public DeletePrefixedSettingCommand()
+        public DeletePrefixedShardingSettingCommand()
         {
         }
 
-        public DeletePrefixedSettingCommand(PrefixedShardingSetting prefix, string database, string raftId) : base(database, raftId)
+        public DeletePrefixedShardingSettingCommand(PrefixedShardingSetting prefix, string database, string raftId) : base(database, raftId)
         {
             Prefix = prefix;
         }

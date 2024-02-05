@@ -6,15 +6,15 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Sharding
 {
-    public sealed class UpdatePrefixedSettingCommand : UpdateDatabaseCommand
+    public sealed class UpdatePrefixedShardingSettingCommand : UpdateDatabaseCommand
     {
         public PrefixedShardingSetting Setting;
 
-        public UpdatePrefixedSettingCommand()
+        public UpdatePrefixedShardingSettingCommand()
         {
         }
 
-        public UpdatePrefixedSettingCommand(PrefixedShardingSetting setting, string database, string raftId) : base(database, raftId)
+        public UpdatePrefixedShardingSettingCommand(PrefixedShardingSetting setting, string database, string raftId) : base(database, raftId)
         {
             Setting = setting;
         }

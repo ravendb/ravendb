@@ -24,7 +24,7 @@ namespace Raven.Client.ServerWide.Sharding
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/admin/sharding/prefixes/{CommandType}";
+            url = $"{node.Url}/databases/{node.Database}/admin/sharding/prefixed/{CommandType}";
 
             return new HttpRequestMessage
             {
