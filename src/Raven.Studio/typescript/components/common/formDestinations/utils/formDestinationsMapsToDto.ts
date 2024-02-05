@@ -115,12 +115,14 @@ export function mapFtpToDto(destination: FtpDestination): Raven.Client.Documents
         return undefined;
     }
 
+    const certificateAsBase64 = destination.url.startsWith("ftps") ? destination.certificateAsBase64 : null;
+
     return {
         ...mapBackupSettingsToDto(destination),
         Url: destination.url,
         UserName: destination.userName,
         Password: destination.password,
-        CertificateAsBase64: destination.certificateAsBase64,
+        CertificateAsBase64: certificateAsBase64,
     };
 }
 
