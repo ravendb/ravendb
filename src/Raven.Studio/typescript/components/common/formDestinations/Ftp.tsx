@@ -160,8 +160,8 @@ export default function Ftp() {
                                     color="secondary"
                                     onClick={asyncTest.execute}
                                     isSpinning={asyncTest.loading}
+                                    icon="rocket"
                                 >
-                                    <Icon icon="rocket" />
                                     Test credentials
                                 </ButtonWithSpinner>
                             </div>
