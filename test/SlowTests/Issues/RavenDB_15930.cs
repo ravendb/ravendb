@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using FastTests.Voron;
 using Voron;
+using xRetry;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -42,7 +43,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RetryFact]
         public void ShouldNotReuseRecycledJournalIfItExceedMaxLogFileSizeOnSmallTxSize()
         {
             CreateAndPopulateTree(startWithBigTx: true);

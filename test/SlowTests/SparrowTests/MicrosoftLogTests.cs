@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
@@ -14,6 +15,7 @@ using Raven.Server.Utils.MicrosoftLogging;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -38,7 +40,7 @@ public class MicrosoftLogTests : RavenTestBase
             : base.GetNewServer(options, caller);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Logging)]
     public async Task EnableMicrosoftLogs_WhenDisabled_ShouldNotLogMicrosoftLogs()
     {
         bool Predicate(string m)
@@ -49,7 +51,7 @@ public class MicrosoftLogTests : RavenTestBase
         await Test(Predicate);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Logging)]
     public async Task EnableMicrosoftLogs_WhenEnabledAndConfigurationFileDoesNotExist_ShouldNotLogMicrosoftLogs()
     {
         _serverFactory = () =>
@@ -71,7 +73,7 @@ public class MicrosoftLogTests : RavenTestBase
         await Test(Predicate);
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Logging)]
     public async Task EnableMicrosoftLogs_WhenEnabledAndConfigureDefaultToInformation_ShouldLogMinimumInformationLevel()
     {
         var configurationFile = await CreateConfigurationFileAsync($@"
@@ -142,7 +144,7 @@ public class MicrosoftLogTests : RavenTestBase
     }
 
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Logging)]
     public async Task MicrosoftLoggerProvider_WhenDefineNestedCategory_ShouldHandleAsRootProp()
     {
         var loggingSource = new LoggingSource(LogMode.None, "", "", TimeSpan.Zero, 0);
@@ -168,7 +170,7 @@ public class MicrosoftLogTests : RavenTestBase
         Assert.Contains(configuration, x => x is { Category: "Key1.Key2", LogLevel: LogLevel.Error });
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Logging)]
     public async Task MicrosoftLoggerProvider_WhenErrorConfiguration_ShouldNotThrow()
     {
         var loggingSource = new LoggingSource(LogMode.None, "", "", TimeSpan.Zero, 0);
@@ -222,7 +224,7 @@ public class MicrosoftLogTests : RavenTestBase
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Logging)]
     public async Task MicrosoftLoggerProvider_WhenDisable_AllLogsLogLevelShouldBeNone()
     {
         var path = NewDataPath(forceCreateDir: true);
@@ -255,6 +257,24 @@ public class MicrosoftLogTests : RavenTestBase
         finally
         {
             loggingSource.EndLogging();
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Logging)]
+    public async Task ConfigureMicrosoftLogs_WhenLogLevelIsInvalid_ShouldThrow()
+    {
+        using var store = GetDocumentStore();
+        var httpClient = store.GetRequestExecutor().HttpClient;
+        var content = new StringContent("{ \"Configuration\" :  { \"Microsoft\" : \"InvalidLogLevel\" }}");
+        var responseMessage =  await httpClient.PostAsync($"{store.Urls[0]}/admin/logs/microsoft/configuration", content);
+        Assert.False(responseMessage.IsSuccessStatusCode);
+        var strMessage = await responseMessage.Content.ReadAsStringAsync();
+
+        using (JsonOperationContext context = JsonOperationContext.ShortTermSingleUse())
+        {
+            var response = await context.ReadForMemoryAsync(await responseMessage.Content.ReadAsStreamAsync(), "response");
+            Assert.True(response.TryGet("Message", out string errorMessage));
+            Assert.Equal("Invalid value in microsoft configuration. Path Microsoft, Value InvalidLogLevel", errorMessage);
         }
     }
     

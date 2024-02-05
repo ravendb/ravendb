@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using Voron;
 using Voron.Data.Containers;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Voron
+namespace FastTests.Voron.Containers
 {
     public class ContainerTests : StorageTest
     {

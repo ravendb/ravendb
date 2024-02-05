@@ -236,10 +236,10 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("IO write operations per second")]
             public const string StorageDiskIoWriteOperations = "1.10.6";
 
-            [Description("Read throughput in kilobytes pe second")]
+            [Description("Read throughput in kilobytes per second")]
             public const string StorageDiskReadThroughput = "1.10.7";
             
-            [Description("Write throughput in kilobytes pe second")]
+            [Description("Write throughput in kilobytes per second")]
             public const string StorageDiskWriteThroughput = "1.10.8";
             
             [Description("Queue length")]

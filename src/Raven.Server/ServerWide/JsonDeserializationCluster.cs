@@ -251,7 +251,8 @@ namespace Raven.Server.ServerWide
             [nameof(PutDatabaseSettingsCommand)] = GenerateJsonDeserializationRoutine<PutDatabaseSettingsCommand>(),
             [nameof(PutDatabaseClientConfigurationCommand)] = GenerateJsonDeserializationRoutine<PutDatabaseClientConfigurationCommand>(),
             [nameof(PutIndexHistoryCommand)] = GenerateJsonDeserializationRoutine<PutIndexHistoryCommand>(),
-            [nameof(DeleteIndexHistoryCommand)] = GenerateJsonDeserializationRoutine<DeleteIndexHistoryCommand>()
+            [nameof(DeleteIndexHistoryCommand)] = GenerateJsonDeserializationRoutine<DeleteIndexHistoryCommand>(),
+            [nameof(UpdateResponsibleNodeForTasksCommand)] = GenerateJsonDeserializationRoutine<UpdateResponsibleNodeForTasksCommand>()
         };
     }
 }

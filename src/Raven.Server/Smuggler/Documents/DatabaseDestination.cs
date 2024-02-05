@@ -1632,7 +1632,9 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    PutAttachments(context, document, isRevision: false, out _);
+                    PutAttachments(context, document, isRevision: false, out bool updateDocumentMetadata);
+                    if (updateDocumentMetadata)
+                        document.NonPersistentFlags |= NonPersistentDocumentFlags.ResolveAttachmentsConflict;
 
                     newEtag = _database.DocumentsStorage.GenerateNextEtag();
                     document.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
@@ -1699,6 +1701,7 @@ namespace Raven.Server.Smuggler.Documents
                     metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                     return;
 
+                var type = (document.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision : AttachmentType.Document;
                 var attachmentsStorage = _database.DocumentsStorage.AttachmentsStorage;
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
@@ -1707,23 +1710,24 @@ namespace Raven.Server.Smuggler.Documents
                     if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                         attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
                         attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
-                        throw new ArgumentException($"The attachment info in missing a mandatory value: {attachment}");
+                        throw new ArgumentException($"The attachment info is missing a mandatory value: {attachment}");
 
-                    var cv = Slices.Empty;
-                    var type = (document.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision : AttachmentType.Document;
-
-                    if (isRevision == false && attachmentsStorage.AttachmentExists(context, hash) == false)
+                    if (isRevision == false)
                     {
-                        _documentIdsOfMissingAttachments.Add(document.Id);
+                        if (attachmentsStorage.AttachmentExists(context, hash) == false)
+                            _documentIdsOfMissingAttachments.Add(document.Id);
+
+                        attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, updateDocument: false, fromSmuggler: true);
+                        continue;
                     }
 
                     using (DocumentIdWorker.GetSliceFromId(_context, document.Id, out Slice lowerDocumentId))
                     using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, name, out Slice lowerName, out Slice nameSlice))
                     using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
                     using (Slice.External(_context.Allocator, hash, out Slice base64Hash))
-                    using (type == AttachmentType.Revision ? Slice.From(_context.Allocator, document.ChangeVector, out cv) : (IDisposable)null)
+                    using (Slice.From(_context.Allocator, document.ChangeVector, out Slice cv))
                     using (attachmentsStorage.GetAttachmentKey(_context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
-                        base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, cv, out Slice keySlice))
+                               base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, cv, out Slice keySlice))
                     {
                         attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash);
                     }

@@ -20,12 +20,12 @@ public class TrafficWatchConfiguration : ConfigurationCategory
     [Description("A semicolon-separated list of database names by which the Traffic Watch logging entities will be filtered. If not specified, Traffic Watch entities of all databases will be included. Example list: \"test-database;another-database;the-third-database\".")]
     [DefaultValue(null)]
     [ConfigurationEntry("TrafficWatch.Databases", ConfigurationEntryScope.ServerWideOnly)]
-    public List<string> Databases { get; set; }
+    public string[] Databases { get; set; }
 
     [Description("A semicolon-separated list of response status codes by which the Traffic Watch logging entities will be filtered. If not specified, Traffic Watch entities with any response status code will be included. Example list: \"200;500;404\".")]
     [DefaultValue(null)]
     [ConfigurationEntry("TrafficWatch.StatusCodes", ConfigurationEntryScope.ServerWideOnly)]
-    public List<int> StatusCodes { get; set; }
+    public HashSet<int> StatusCodes { get; set; }
     
     [Description("Minimum response size by which the Traffic Watch logging entities will be filtered.")]
     [DefaultValue(0)]
@@ -50,15 +50,15 @@ public class TrafficWatchConfiguration : ConfigurationCategory
     [Description("A semicolon-separated list of request HTTP methods by which the Traffic Watch logging entities will be filtered. If not specified, Traffic Watch entities with any HTTP request method will be included. Example list: \"GET;POST\".")]
     [DefaultValue(null)]
     [ConfigurationEntry("TrafficWatch.HttpMethods", ConfigurationEntryScope.ServerWideOnly)]
-    public List<string> HttpMethods { get; set; }
+    public string[] HttpMethods { get; set; }
 
     [Description("A semicolon-separated list of Traffic Watch change types by which the Traffic Watch logging entities will be filtered. If not specified, Traffic Watch entities with any change type will be included. Example list: \"Queries;Documents\".")]
     [DefaultValue(null)]
     [ConfigurationEntry("TrafficWatch.ChangeTypes", ConfigurationEntryScope.ServerWideOnly)]
-    public List<TrafficWatchChangeType> ChangeTypes { get; set; }
+    public TrafficWatchChangeType[] ChangeTypes { get; set; }
 
     [Description("A semicolon-separated list of specific client certificate thumbprints by which the Traffic Watch logging entities will be filtered. If not specified, Traffic Watch entities with any certificate thumbprint will be included, including those without any thumbprint. Example list: \"0123456789ABCDEF0123456789ABCDEF01234567;FEDCBA9876543210FEDCBA9876543210FEDCBA98\".")]
     [DefaultValue(null)]
     [ConfigurationEntry("TrafficWatch.CertificateThumbprints", ConfigurationEntryScope.ServerWideOnly)]
-    public List<string> CertificateThumbprints { get; set; }
+    public string[] CertificateThumbprints { get; set; }
 }

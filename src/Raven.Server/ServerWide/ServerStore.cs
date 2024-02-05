@@ -83,6 +83,7 @@ using Sparrow.Server;
 using Sparrow.Server.LowMemory;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
+using Sparrow.Server.Utils.DiskStatsGetter;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -621,7 +622,12 @@ namespace Raven.Server.ServerWide
                 _fileLocker = new FileLocker(Path.Combine(path.FullPath, "system.lock"));
                 _fileLocker.TryAcquireWriteLock(Logger);
 
-                options = StorageEnvironmentOptions.ForPath(path.FullPath, null, null, IoChanges, CatastrophicFailureNotification);
+                string tempPath = null;
+
+                if (Configuration.Storage.TempPath != null)
+                    tempPath = Configuration.Storage.TempPath.Combine("System").FullPath;
+
+                options = StorageEnvironmentOptions.ForPath(path.FullPath, tempPath, null, IoChanges, CatastrophicFailureNotification);
                 var secretKey = Path.Combine(path.FullPath, "secret.key.encrypted");
                 if (File.Exists(secretKey))
                 {
@@ -1250,12 +1256,10 @@ namespace Raven.Server.ServerWide
             }
             
             PeriodicBackupConfiguration backupConfig;
-            DatabaseTopology topology;
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, db))
             {
-                topology = rawRecord.Topology;
                 backupConfig = rawRecord.GetPeriodicBackupConfiguration(taskId);
 
                 if (backupConfig == null)
@@ -1267,10 +1271,10 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            var tag = topology.WhoseTaskIsIt(Engine.CurrentState, backupConfig, null);
+            var tag = BackupUtils.GetResponsibleNodeTag(Server.ServerStore, db, backupConfig.TaskId);
             if (Engine.Tag != tag)
             {
-                if (Logger.IsOperationsEnabled)
+                if (Logger.IsOperationsEnabled && tag != null)
                     Logger.Operations($"Could not reschedule the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' belongs to node '{tag}' current node is '{Engine.Tag}'.");
                 return;
             }
@@ -1294,9 +1298,9 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-                wakeup = DateTime.SpecifyKind(wakeup, DateTimeKind.Utc);
-                var nextIdleDatabaseActivity = new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, wakeup);
-                DatabasesLandlord.RescheduleNextIdleDatabaseActivity(db, nextIdleDatabaseActivity);
+            wakeup = DateTime.SpecifyKind(wakeup, DateTimeKind.Utc);
+            var nextIdleDatabaseActivity = new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, wakeup);
+            DatabasesLandlord.RescheduleNextIdleDatabaseActivity(db, nextIdleDatabaseActivity);
 
             if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Rescheduling the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' which belongs to node '{Engine.Tag}', new timer is set to: '{nextIdleDatabaseActivity.DateTime}', with dueTime: {nextIdleDatabaseActivity.DueTime} ms.");
@@ -2236,7 +2240,17 @@ namespace Raven.Server.ServerWide
                     break;
 
                 case ConnectionStringType.Sql:
-                    command = new PutSqlConnectionStringCommand(JsonDeserializationCluster.SqlConnectionString(connectionString), databaseName, raftRequestId);
+                    // RavenDB-21784 - Replace obsolete MySql provider name
+                    var deserializedSqlConnectionString = JsonDeserializationCluster.SqlConnectionString(connectionString);
+                    if (deserializedSqlConnectionString.FactoryName == "MySql.Data.MySqlClient")
+                    {
+                        deserializedSqlConnectionString.FactoryName = "MySqlConnector.MySqlConnectorFactory";
+                        var alert = AlertRaised.Create(databaseName, "Deprecated MySql factory auto-updated", "MySql.Data.MySqlClient factory has been defaulted to MySqlConnector.MySqlConnectorFactory",
+                            AlertType.SqlConnectionString_DeprecatedFactoryReplaced, NotificationSeverity.Info);
+                        NotificationCenter.Add(alert);
+                    }
+                    
+                    command = new PutSqlConnectionStringCommand(deserializedSqlConnectionString, databaseName, raftRequestId);
                     break;
                 case ConnectionStringType.Olap:
                     command = new PutOlapConnectionStringCommand(JsonDeserializationCluster.OlapConnectionString(connectionString), databaseName, raftRequestId);

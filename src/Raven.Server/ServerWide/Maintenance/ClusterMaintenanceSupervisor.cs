@@ -391,6 +391,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
 
                     previous.LastSentEtag = dbReport.LastSentEtag;
+                    previous.LastCompareExchangeIndex = dbReport.LastCompareExchangeIndex;
                     previous.UpTime = dbReport.UpTime;
                     nodeReport.Report[dbName] = previous;
                 }

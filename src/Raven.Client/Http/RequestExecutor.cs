@@ -99,7 +99,7 @@ namespace Raven.Client.Http
 
         public IReadOnlyList<ServerNode> TopologyNodes => _nodeSelector?.Topology.Nodes;
 
-        private Timer _updateTopologyTimer;
+        private WeakReferencingTimer _updateTopologyTimer;
 
         protected internal NodeSelector _nodeSelector;
 
@@ -671,9 +671,11 @@ namespace Raven.Client.Http
             }
         }
 
-        internal async void UpdateTopologyCallback(object _)
+        internal static async void UpdateTopologyCallback(object state)
         {
-            var selector = _nodeSelector;
+            var requestExecutor = (RequestExecutor)state;
+
+            var selector = requestExecutor._nodeSelector;
             if (selector == null || selector.Topology == null)
                 return;
             
@@ -685,7 +687,7 @@ namespace Raven.Client.Http
                     if(serverNode.ServerRole != ServerNode.Role.Member)
                         continue;
 
-                    await UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) {TimeoutInMs = 0, DebugTag = $"timer-callback-node-{serverNode.ClusterTag}"})
+                    await requestExecutor.UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) {TimeoutInMs = 0, DebugTag = $"timer-callback-node-{serverNode.ClusterTag}"})
                         .ConfigureAwait(false);
                 }
                 catch (Exception e)
@@ -889,7 +891,7 @@ namespace Raven.Client.Http
                 if (_updateTopologyTimer != null)
                     return;
 
-                _updateTopologyTimer = new Timer(UpdateTopologyCallback, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+                _updateTopologyTimer = new WeakReferencingTimer(UpdateTopologyCallback, this, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
             }
         }
 
@@ -2235,7 +2237,7 @@ namespace Raven.Client.Http
             private readonly RequestExecutor _requestExecutor;
             public readonly int NodeIndex;
             public readonly ServerNode Node;
-            private Timer _timer;
+            private WeakReferencingTimer _timer;
 
             public NodeStatus(RequestExecutor requestExecutor, int nodeIndex, ServerNode node)
             {
@@ -2256,18 +2258,20 @@ namespace Raven.Client.Http
 
             public void StartTimer()
             {
-                _timer = new Timer(TimerCallback, null, _timerPeriod, Timeout.InfiniteTimeSpan);
+                _timer = new WeakReferencingTimer(TimerCallback, this, _timerPeriod, Timeout.InfiniteTimeSpan);
             }
 
-            private void TimerCallback(object state)
+            private static void TimerCallback(object state)
             {
-                if (_requestExecutor.Disposed)
+                var nodeStatus = (NodeStatus)state;
+
+                if (nodeStatus._requestExecutor.Disposed)
                 {
-                    Dispose();
+                    nodeStatus.Dispose();
                     return;
                 }
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                _requestExecutor.CheckNodeStatusCallback(this);
+                nodeStatus._requestExecutor.CheckNodeStatusCallback(nodeStatus);
 #pragma warning restore CS4014
             }
 

@@ -52,6 +52,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Voron;
 using Voron.Util.Settings;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
@@ -680,7 +681,7 @@ namespace Raven.Server.Web.System
                 DatabaseDoesNotExistException.Throw(databaseName);
 
             await database.PeriodicBackupRunner.DelayAsync(id, delay.Value, GetCurrentCertificate());
-            
+
             NoContentStatus();
         }
 
@@ -788,8 +789,8 @@ namespace Raven.Server.Web.System
 
                 var sp = Stopwatch.StartNew();
                 int databaseIndex = 0;
-                
-               
+
+
                 while (waitOnDeletion.Count > databaseIndex)
                 {
                     var databaseName = waitOnDeletion[databaseIndex];
@@ -1106,7 +1107,7 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-        
+
         [RavenAction("/admin/compact", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task CompactDatabase()
         {
@@ -1265,8 +1266,7 @@ namespace Raven.Server.Web.System
         {
             foreach (var id in unusedIds)
             {
-                if(IsBase64String(id)==false)
-                    throw new InvalidOperationException($"Database id '{id}' isn't valid because it isn't Base64String (it contains chars which cannot be in Base64String).");
+                ValidateDatabaseId(id);
             }
 
             DatabaseTopology topology;
@@ -1306,14 +1306,6 @@ namespace Raven.Server.Web.System
             }
 
         }
-
-        public static unsafe bool IsBase64String(string base64)
-        {
-            int base64Size = (int)Math.Ceiling((double)base64.Length / 3) * 4;
-            Span<byte> bytes = stackalloc byte[base64Size];
-            return Convert.TryFromBase64String(base64, bytes, out int bytesParsed);
-        }
-
 
         [RavenAction("/admin/migrate", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task MigrateDatabases()
@@ -1593,6 +1585,26 @@ namespace Raven.Server.Web.System
                 progressLine = await readline.WithCancellation(token);
             }
             return (false, progressLine);
+        }
+
+        private static unsafe void ValidateDatabaseId(string id)
+        {
+            const int fixedLength = StorageEnvironment.Base64IdLength + StorageEnvironment.Base64IdLength % 4;
+
+            if (id is not { Length: StorageEnvironment.Base64IdLength })
+                throw new InvalidOperationException($"Database ID '{id}' isn't valid because its length ({id.Length}) isn't {StorageEnvironment.Base64IdLength}.");
+
+            Span<byte> bytes = stackalloc byte[fixedLength / 3 * 4];
+            char* buffer = stackalloc char[fixedLength];
+            fixed (char* str = id)
+            {
+                Buffer.MemoryCopy(str, buffer, 24 * sizeof(char), StorageEnvironment.Base64IdLength * sizeof(char));
+                for (int i = StorageEnvironment.Base64IdLength; i < fixedLength; i++)
+                    buffer[i] = '=';
+
+                if (Convert.TryFromBase64Chars(new ReadOnlySpan<char>(buffer, fixedLength), bytes, out _) == false)
+                    throw new InvalidOperationException($"Database ID '{id}' isn't valid because it isn't Base64Id (it contains chars which cannot be in Base64String).");
+            }
         }
     }
 }

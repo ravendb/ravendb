@@ -34,6 +34,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -1324,14 +1325,7 @@ namespace Raven.Server.Documents
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                DatabaseRecord record;
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    record = _serverStore.Cluster.ReadDatabase(context, Name);
-                }
-
-                NotifyFeaturesAboutValueChange(record, index, type, changeState);
+                NotifyFeaturesAboutValueChange(index, type, changeState);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
@@ -1434,7 +1428,7 @@ namespace Raven.Server.Documents
                         IndexStore.HandleDatabaseRecordChange(record, index);
                         ReplicationLoader?.HandleDatabaseRecordChange(record, index);
                         EtlLoader?.HandleDatabaseRecordChange(record);
-                        SubscriptionStorage?.HandleDatabaseRecordChange(record);
+                        SubscriptionStorage?.HandleDatabaseRecordChange(record.Topology);
 
                         OnDatabaseRecordChanged(record);
 
@@ -1518,22 +1512,30 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        private bool CanSkipValueChange(string database, long index)
+        private bool CanSkipValueChange(long index, string type)
         {
+            switch (type)
+            {
+                case nameof(UpdateResponsibleNodeForTasksCommand):
+                case nameof(DelayBackupCommand):
+                    // both commands cannot be skipped and must be executed
+                    return false;
+            }
+
             if (LastValueChangeIndex > index)
             {
                 // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks.
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Skipping value change for index {index} (current {LastValueChangeIndex}) for {database} because it was already precessed.");
+                    _logger.Info($"Skipping value change for index {index} (current {LastValueChangeIndex}) for {Name} because it was already precessed.");
                 return true;
             }
 
             return false;
         }
 
-        private void NotifyFeaturesAboutValueChange(DatabaseRecord record, long index, string type, object changeState)
+        private void NotifyFeaturesAboutValueChange(long index, string type, object changeState)
         {
-            if (CanSkipValueChange(record.DatabaseName, index))
+            if (CanSkipValueChange(index, type))
                 return;
 
             var taken = false;
@@ -1543,7 +1545,7 @@ namespace Raven.Server.Documents
 
                 try
                 {
-                    if (CanSkipValueChange(record.DatabaseName, index))
+                    if (CanSkipValueChange(index, type))
                         return;
 
                     if (DatabaseShutdown.IsCancellationRequested)
@@ -1553,9 +1555,15 @@ namespace Raven.Server.Documents
                         continue;
 
                     DatabaseShutdown.ThrowIfCancellationRequested();
-                    SubscriptionStorage?.HandleDatabaseRecordChange(record);
-                    EtlLoader?.HandleDatabaseValueChanged(record);
-                    PeriodicBackupRunner?.HandleDatabaseValueChanged(type, changeState);
+
+                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, Name))
+                    {
+                        SubscriptionStorage?.HandleDatabaseRecordChange(rawRecord.Topology);
+                        EtlLoader?.HandleDatabaseValueChanged();
+                        PeriodicBackupRunner?.HandleDatabaseValueChanged(type, rawRecord, changeState);
+                    }
 
                     LastValueChangeIndex = index;
                 }
@@ -1592,7 +1600,7 @@ namespace Raven.Server.Documents
             DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(record);
             ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
             TimeSeriesPolicyRunner = TimeSeriesPolicyRunner.LoadConfigurations(this, record, TimeSeriesPolicyRunner);
-            PeriodicBackupRunner.UpdateConfigurations(record);
+            PeriodicBackupRunner.UpdateConfigurations(record.PeriodicBackups);
             UpdateCompressionConfigurationFromDatabaseRecord(record);
         }
 

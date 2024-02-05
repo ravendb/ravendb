@@ -123,10 +123,10 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 {
                     using (var session = dest.OpenSession())
                     {
-                        var user = session.Load<User>("users/1-A,Chicago");
-                        return user != null;
+                        var docs = session.Advanced.LoadStartingWith<User>("users/1-A");
+                        return docs.Length;
                     }
-                }, true);
+                }, expectedVal: 2);
 
                 string secondaryId; 
                 using (var session = dest.OpenSession())

@@ -1234,7 +1234,7 @@ namespace Raven.Server.Documents.Replication
                                 };
                                 var removedChangeVector = tss.DeleteTimestampRange(context, deletionRangeRequest, rcvdChangeVector, updateMetadata: false);
                                 if (removedChangeVector != null)
-                                    context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(removedChangeVector, rcvdChangeVector);
+                                    context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(removedChangeVector, context.LastDatabaseChangeVector);
 
                                 break;
 

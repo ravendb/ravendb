@@ -19,6 +19,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
+using Raven.Server.Web.Authentication;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.LowMemory;

@@ -37,7 +37,7 @@ namespace Raven.Server.Documents
         public CollectionName SourceCollectionName;
         public CollectionName DestinationCollectionName;
     }
-    
+
     public unsafe class AttachmentsStorage
     {
         private readonly DocumentDatabase _documentDatabase;
@@ -168,7 +168,7 @@ namespace Raven.Server.Documents
         }
 
         public AttachmentDetailsServer PutAttachment(DocumentsOperationContext context, string documentId, string name, string contentType,
-            string hash, string expectedChangeVector, Stream stream, bool updateDocument = true, bool extractCollectionName = false)
+            string hash, string expectedChangeVector = null, Stream stream = null, bool updateDocument = true, bool extractCollectionName = false, bool fromSmuggler = false)
         {
             if (context.Transaction == null)
             {
@@ -181,13 +181,17 @@ namespace Raven.Server.Documents
 
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerDocumentId))
             {
-                // This will validate that we cannot put an attachment on a conflicted document
-                var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out TableValueReader tvr);
-                if (hasDoc == false)
-                    throw new DocumentDoesNotExistException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
-                var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
-                if (flags.HasFlag(DocumentFlags.Artificial))
-                    throw new InvalidOperationException($"Cannot put attachment {name} on artificial document '{documentId}'.");
+                TableValueReader tvr = default;
+                if (fromSmuggler == false)
+                {
+                    // This will validate that we cannot put an attachment on a conflicted document
+                    var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out tvr);
+                    if (hasDoc == false)
+                        throw new DocumentDoesNotExistException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
+                    var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
+                    if (flags.HasFlag(DocumentFlags.Artificial))
+                        throw new InvalidOperationException($"Cannot put attachment {name} on artificial document '{documentId}'.");
+                }
 
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
@@ -251,16 +255,19 @@ namespace Raven.Server.Documents
                                         ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
                                 }
 
-                                var doc = _documentsStorage.TableValueToDocument(context, ref tvr);
-                                var collection = _documentsStorage.ExtractCollectionName(context, doc.Data);
-
-                                var configuration = _documentsStorage.RevisionsStorage.GetRevisionsConfiguration(collection.Name, doc.Flags);
-                                if (configuration != null)
+                                if (fromSmuggler == false)
                                 {
-                                    var shouldVersionOldDoc = _documentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, doc.Data, doc.ChangeVector, collection);
-                                    if (shouldVersionOldDoc)
+                                    var doc = _documentsStorage.TableValueToDocument(context, ref tvr);
+                                    var collection = _documentsStorage.ExtractCollectionName(context, doc.Data);
+
+                                    var configuration = _documentsStorage.RevisionsStorage.GetRevisionsConfiguration(collection.Name, doc.Flags);
+                                    if (configuration != null)
                                     {
-                                        _documentsStorage.RevisionsStorage.Put(context, documentId, doc.Data, flags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None, doc.ChangeVector, doc.LastModified.Ticks, configuration, collection);
+                                        var shouldVersionOldDoc = _documentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, doc.Flags, doc.Data, doc.ChangeVector, collection);
+                                        if (shouldVersionOldDoc)
+                                        {
+                                            _documentsStorage.RevisionsStorage.Put(context, documentId, doc.Data, doc.Flags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None, doc.ChangeVector, doc.LastModified.Ticks, configuration, collection);
+                                        }
                                     }
                                 }
 
@@ -296,7 +303,7 @@ namespace Raven.Server.Documents
                             table.Insert(tvb);
                         }
 
-                        if (putStream)
+                        if (putStream && fromSmuggler == false)
                         {
                             PutAttachmentStream(context, keySlice, base64Hash, stream);
                         }
@@ -306,10 +313,9 @@ namespace Raven.Server.Documents
 
                     CollectionName collectionName = null;
                     if (updateDocument)
-                        UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr, changeVector, extractCollectionName , out collectionName);
+                        UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr, changeVector, extractCollectionName, out collectionName);
                     else if (extractCollectionName)
                         collectionName = GetDocumentCollectionName(context, tvr);
-                    
 
                     return new AttachmentDetailsServer
                     {
@@ -1030,7 +1036,9 @@ namespace Raven.Server.Documents
 
             return new MoveAttachmentDetailsServer()
             {
-                Result = result, DestinationCollectionName = result.CollectionName, SourceCollectionName = sourceCollectionName
+                Result = result,
+                DestinationCollectionName = result.CollectionName,
+                SourceCollectionName = sourceCollectionName
             };
         }
 
@@ -1065,7 +1073,7 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Argument is null or whitespace", nameof(name));
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Get", nameof(context));
-            
+
             collectionName = null;
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerDocumentId))
             {

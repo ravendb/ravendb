@@ -616,6 +616,11 @@ namespace Raven.Server.Utils
 
             return CertificateLoaderUtil.CreateCertificate(certBytes, flags: CertificateLoaderUtil.FlagsForExport);
         }
+
+        public static string GetBasicCertificateInfo(this X509Certificate2 certificate)
+        {
+            return $"Thumbprint: {certificate.Thumbprint}, Subject: {certificate.Subject}";
+        }
     }
     public static class PublicKeyPinningHashHelpers
     {

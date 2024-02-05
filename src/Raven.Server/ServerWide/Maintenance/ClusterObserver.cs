@@ -21,6 +21,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -33,7 +34,7 @@ using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
-    internal class ClusterObserver : IDisposable
+    internal partial class ClusterObserver : IDisposable
     {
         private readonly PoolOfThreads.LongRunningWork _observe;
         private readonly CancellationTokenSource _cts;
@@ -189,6 +190,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 return;
 
             var updateCommands = new List<(UpdateTopologyCommand Update, string Reason)>();
+            var responsibleNodePerDatabase = new Dictionary<string, List<ResponsibleNodeInfo>>();
             var cleanUnusedAutoIndexesCommands = new List<(UpdateDatabaseCommand Update, string Reason)>();
             var cleanCompareExchangeTombstonesCommands = new List<CleanCompareExchangeTombstonesCommand>();
 
@@ -321,6 +323,10 @@ namespace Raven.Server.ServerWide.Maintenance
                                     throw new NotSupportedException($"Not supported state: '{cleanupState}'.");
                             }
                         }
+
+                        var responsibleNodeCommands = GetResponsibleNodesForBackupTasks(currentLeader, rawRecord, database, state.DatabaseTopology, context);
+                        if (responsibleNodeCommands is { Count: > 0 })
+                            responsibleNodePerDatabase[database] = responsibleNodeCommands;
                     }
                 }
             }
@@ -379,6 +385,21 @@ namespace Raven.Server.ServerWide.Maintenance
                     AddToDecisionLog(command.Update.DatabaseName,
                         $"Topology of database '{command.Update.DatabaseName}' was not changed, reason: {nameof(ConcurrencyException)}");
                 }
+            }
+
+            if (responsibleNodePerDatabase.Count > 0)
+            {
+                if (_engine.LeaderTag != _server.NodeTag)
+                {
+                    throw new NotLeadingException("This node is no longer the leader, so we abort updating the responsible node for backup tasks");
+                }
+
+                var command = new UpdateResponsibleNodeForTasksCommand(new UpdateResponsibleNodeForTasksCommand.Parameters
+                {
+                    ResponsibleNodePerDatabase = responsibleNodePerDatabase
+                }, RaftIdGenerator.NewId());
+
+                await _engine.PutAsync(command);
             }
 
             if (deletions != null)

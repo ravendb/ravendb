@@ -90,6 +90,11 @@ namespace Raven.Client.ServerWide.Operations.TrafficWatch
             /// Traffic Watch certificate thumbprints by which the Traffic Watch logging entities will be filtered.
             /// </summary>
             public List<string> CertificateThumbprints { get; set; }
+            
+            /// <summary>
+            /// Indicates if the configuration should be persisted to the configuration file
+            /// </summary>
+            public bool Persist { get; set; }
         }
     }
 }

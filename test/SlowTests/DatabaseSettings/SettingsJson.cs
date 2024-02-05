@@ -5,7 +5,7 @@ using Raven.Server.Config.Settings;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.DataBaseSettings
+namespace SlowTests.DatabaseSettings
 {
     public class SettingsJson : RavenTestBase
     {

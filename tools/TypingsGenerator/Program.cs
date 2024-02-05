@@ -99,6 +99,7 @@ using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
 using Raven.Server.Utils;
 using Raven.Server.Utils.IoMetrics;
+using Raven.Server.Web.Authentication;
 using Raven.Server.Web.Studio;
 using Raven.Server.Web.System;
 using Sparrow.Json;
@@ -606,6 +607,9 @@ namespace TypingsGenerator
 
             // version info
             scripter.AddType(typeof(LatestVersionCheck.VersionInfo));
+            
+            // two-factor
+            scripter.AddType(typeof(TwoFactorAuthenticationHandler.TotpServerConfiguration));
 
             // time series
             scripter.AddType(typeof(TimeSeriesStatistics));

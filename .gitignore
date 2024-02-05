@@ -113,6 +113,7 @@ src/Raven.Studio/junit.xml
 
 test/FastTests/Databases/
 /test/Tryouts/Logs
+/test/Tryouts/Properties/launchSettings.json
 /test/FastTests/Logs
 /test/SlowTests/test-timings.xml
 

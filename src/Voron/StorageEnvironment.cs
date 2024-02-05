@@ -6,7 +6,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -22,8 +21,6 @@ using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Compression;
-using Voron.Data.Fixed;
-using Voron.Data.PostingLists;
 using Voron.Data.Tables;
 using Voron.Debugging;
 using Voron.Exceptions;
@@ -37,9 +34,7 @@ using Voron.Schema;
 using Voron.Util;
 using Voron.Util.Conversion;
 using Constants = Voron.Global.Constants;
-using Container = Voron.Data.Containers.Container;
 using NativeMemory = Sparrow.Utils.NativeMemory;
-using Sparrow.Server.Collections;
 
 namespace Voron
 {
@@ -437,7 +432,9 @@ namespace Voron
             _options.SetEnvironmentId(databaseGuidId);
         }
 
-        public string Base64Id { get; } = new string(' ', 22);
+        public const int Base64IdLength = 22;
+
+        public string Base64Id { get; } = new string(' ', Base64IdLength);
 
         private void CreateNewDatabase()
         {
@@ -1118,7 +1115,6 @@ namespace Voron
                 PersistentDictionaries = new(),
                 CompactTrees = new(),
                 IncludeDetails = includeDetails,
-                ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction(tx.LowLevelTransaction)),
                 TempPath = Options.TempPath,
                 JournalPath = (Options as StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)?.JournalPath,
                 TotalEncryptionBufferSize = totalCryptoBufferSize,

@@ -18,7 +18,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                 case SqlProvider.Npgsql:
                     return NpgsqlFactory.Instance;
                 case SqlProvider.MySqlClient:
-                    return MySql.Data.MySqlClient.MySqlClientFactory.Instance;
                 case SqlProvider.MySqlConnectorFactory:
                     return MySqlConnector.MySqlConnectorFactory.Instance;
                 case SqlProvider.OracleClient:

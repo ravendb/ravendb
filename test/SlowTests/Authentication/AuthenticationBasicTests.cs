@@ -515,7 +515,7 @@ namespace SlowTests.Authentication
                 {
                     var certBytes = certificate.Export(X509ContentType.Cert);
                     var certDef = new CertificateDefinition { Name = name, Permissions = permissions, SecurityClearance = clearance };
-                    await AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, string.Empty, Server.ServerStore, ctx, RaftIdGenerator.NewId());
+                    await AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, string.Empty, Server.ServerStore, ctx, null, RaftIdGenerator.NewId());
                 }
             }
             {
@@ -1258,7 +1258,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        private void AssertServerRoutes(IEnumerable<RouteInformation> routes, HashSet<(string Method, string Path)> endpointsToIgnore, HttpClient httpClient, Action<RouteInformation, HttpStatusCode> assert)
+        private static void AssertServerRoutes(IEnumerable<RouteInformation> routes, HashSet<(string Method, string Path)> endpointsToIgnore, HttpClient httpClient, Action<RouteInformation, HttpStatusCode> assert)
         {
             foreach (var route in routes)
             {
@@ -1271,17 +1271,26 @@ namespace SlowTests.Authentication
                 if (endpointsToIgnore.Contains((route.Method, route.Path)))
                     continue;
 
-                var response = httpClient.Send(new HttpRequestMessage
+                var requestUri = new Uri(route.Path, UriKind.Relative);
+                HttpResponseMessage response;
+                try
                 {
-                    Method = new HttpMethod(route.Method),
-                    RequestUri = new Uri(route.Path, UriKind.Relative)
-                });
+                    response = httpClient.Send(new HttpRequestMessage
+                    {
+                        Method = new HttpMethod(route.Method),
+                        RequestUri = requestUri
+                    });
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Could not get response from {route.Method} '{requestUri}'.", e);
+                }
 
                 assert(route, response.StatusCode);
             }
         }
 
-        private void AssertDatabaseRoutes(IEnumerable<RouteInformation> routes, string databaseName, HttpClient httpClient, Action<RouteInformation, HttpStatusCode> assert)
+        private static void AssertDatabaseRoutes(IEnumerable<RouteInformation> routes, string databaseName, HttpClient httpClient, Action<RouteInformation, HttpStatusCode> assert)
         {
             foreach (var route in routes)
             {
@@ -1291,11 +1300,20 @@ namespace SlowTests.Authentication
                 if (route.Method == "OPTIONS")
                     continue; // artificially added routes for CORS
 
-                var response = httpClient.Send(new HttpRequestMessage
+                var requestUri = new Uri(route.Path.Replace("/databases/*/", $"/databases/{databaseName}/", StringComparison.OrdinalIgnoreCase), UriKind.Relative);
+                HttpResponseMessage response;
+                try
                 {
-                    Method = new HttpMethod(route.Method),
-                    RequestUri = new Uri(route.Path.Replace("/databases/*/", $"/databases/{databaseName}/", StringComparison.OrdinalIgnoreCase), UriKind.Relative)
-                });
+                    response = httpClient.Send(new HttpRequestMessage
+                    {
+                        Method = new HttpMethod(route.Method),
+                        RequestUri = requestUri
+                    });
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Could not get response from {route.Method} '{requestUri}'.", e);
+                }
 
                 assert(route, response.StatusCode);
             }

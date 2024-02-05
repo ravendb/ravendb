@@ -204,6 +204,7 @@ namespace RachisTests.DatabaseCluster
             {
                 var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 */12 * *" };
                 var backupTaskId = (await source.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, source.Database, backupTaskId);
 
                 using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide}))
                 {
@@ -330,6 +331,7 @@ namespace RachisTests.DatabaseCluster
             {
                 var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 */12 * *" };
                 var backupTaskId = (await source.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, source.Database, backupTaskId);
 
                 using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide}))
                 {
@@ -389,6 +391,7 @@ namespace RachisTests.DatabaseCluster
             {
                 var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 */12 * *" };
                 var backupTaskId = (await source.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, source.Database, backupTaskId);
 
                 using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide}))
                 {

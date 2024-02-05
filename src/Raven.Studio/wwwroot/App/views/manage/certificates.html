@@ -226,6 +226,9 @@
                                     <div title="This is the client certificate currently used by the browser" class="label label-success"
                                          data-bind="visible: _.includes(Thumbprints, $root.clientCertificateThumbprint())">current browser certificate
                                     </div>
+                                    <div title="This is the certificate which requires two-factor authentication" class="label label-2fa"
+                                         data-bind="visible: HasTwoFactor"> 2FA
+                                    </div>
                                 </a>
                                 <div class="thumbprint" title="Certificate thumbprint" data-bind="text: Thumbprints.join(', ')">
                                 </div>
@@ -474,12 +477,60 @@
                                         </a>
                                     </li>
                                 </ul>
-                                <div class="bg-info padding padding-sm flex-horizontal" data-bind="visible: !$root.showDatabasesSelector()">
+                                <div class="bg-info padding padding-sm flex-horizontal margin-bottom" data-bind="visible: !$root.showDatabasesSelector()">
                                     <div class="flex-start">
                                         <i class="icon-info"></i>
                                     </div>
                                     <div class="small">
                                         With security clearance set to <strong data-bind="text: securityClearanceLabel"></strong>, the user of this certificate will have access to all databases.
+                                    </div>
+                                </div>
+                            </div>
+                            <div data-bind="visible: mode() === 'editExisting' && hasTwoFactor()">
+                                <div class="form-group">
+                                    <label class="control-label">
+                                        Two-factor
+                                    </label>
+                                    <div class="btn-group btn-block">
+                                        <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                            <span data-bind="text: twoFactorActionOnEditLabel"></span> <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" data-bind="foreach: $data.constructor.twoFactorEditModes">
+                                            <li>
+                                                <a href="#" data-bind="text: label, click: _.partial($parent.twoFactorActionOnEdit, value)"></a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="bg-warning padding padding-sm flex-horizontal margin-bottom" data-bind="visible: twoFactorActionOnEdit() === 'delete'">
+                                    <div class="flex-start">
+                                        <i class="icon-info"></i>
+                                    </div>
+                                    <div class="small">
+                                        Two-Factor authentication (2FA) will be disabled for this certificate.
+                                    </div>
+                                </div>
+                            </div>
+                            <div data-bind="visible: mode() === 'generate' || mode() === 'upload' || mode() === 'editExisting'">
+                                <div class="checkbox" data-bind="visible: !hasTwoFactor()">
+                                    <input id="requireTwoFactor" type="checkbox" data-bind="checked: requireTwoFactor">
+                                    <label for="requireTwoFactor">Require two-factor authentication</label>
+                                </div>
+                                <div class="form-group" data-bind="visible: requireTwoFactor">
+                                    <label class="control-label">
+                                        Authentication Key
+                                    </label>
+                                    <input class="form-control" type="text" disabled data-bind="textInput: authenticationKey" />
+                                    <button class="btn btn-default" data-bind="click: _.partial($root.copyAuthenticationKeyToClipboard, authenticationKey())" title="Copy Authentication Key to clipboard">
+                                        <i class="icon-copy"></i>
+                                    </button>
+                                </div>
+                                <div data-bind="visible: requireTwoFactor() && authenticationKey()">
+                                    <p>QR Code:</p>
+                                    <div class="text-center">
+                                        <div id="encryption_qrcode">
+                                        </div>
                                     </div>
                                 </div>
                             </div>

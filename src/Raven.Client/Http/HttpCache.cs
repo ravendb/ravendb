@@ -93,8 +93,6 @@ namespace Raven.Client.Http
                 }
                 Allocation = null;
 
-                GC.SuppressFinalize(this);
-
                 if (Logger.IsInfoEnabled)
                 {
                     Logger.Info($"Released item from cache. Total cache size: {Cache._totalSize}");
@@ -118,18 +116,6 @@ namespace Raven.Client.Http
             {
                 ReleaseRefInternal();
             }
-#if !RELEASE
-            ~HttpCacheItem()
-            {
-                Allocation = null;
-
-                // Hitting this on DEBUG and/or VALIDATE and getting a higher number than 0 means we have a leak.
-                // On release we will leak, but wont crash. 
-                if (_usages > 0)
-                    throw new LowMemoryException("Detected a leak on HttpCache when running the finalizer. See: https://issues.hibernatingrhinos.com/issue/RavenDB-9737");
-
-            }
-#endif
         }
 
         /// <summary>

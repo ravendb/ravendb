@@ -166,8 +166,12 @@ namespace Raven.Server.Web.System
 
             if (authStatus == RavenServer.AuthenticationStatus.ClusterAdmin ||
                 authStatus == RavenServer.AuthenticationStatus.Operator ||
-                authStatus == RavenServer.AuthenticationStatus.Allowed)
+                authStatus == RavenServer.AuthenticationStatus.Allowed ||
+                authStatus == RavenServer.AuthenticationStatus.TwoFactorAuthFromInvalidLimit)
             {
+                // if we detect invalid limit to redirect to studio anyway 
+                // studio then checks 2fa status and redirects to 2fa if needed
+                
                 HttpContext.Response.Headers["Location"] = "/studio/index.html";
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Redirect;
                 return Task.CompletedTask;
@@ -210,6 +214,31 @@ namespace Raven.Server.Web.System
                     RouteMatch.MatchLength,
                     RouteMatch.Url.Length - RouteMatch.MatchLength
             );
+            return GetStudioFileInternal(serverRelativeFileName);
+        }
+        
+        [RavenAction("/2fa/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task GetTwoFactorIndexFile()
+        {
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            if (feature?.Status is RavenServer.AuthenticationStatus.TwoFactorAuthNotProvided or RavenServer.AuthenticationStatus.TwoFactorAuthFromInvalidLimit)
+            {
+                return GetStudioFileInternal("index.html");
+            }
+            
+            HttpContext.Response.Headers["Location"] = "/studio/index.html";
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
+            return Task.CompletedTask;
+        }
+        
+        [RavenAction("/2fa/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task GetTwoFactorFile()
+        {
+            var serverRelativeFileName = RouteMatch.Url.Substring(
+                RouteMatch.MatchLength,
+                RouteMatch.Url.Length - RouteMatch.MatchLength
+            );
+          
             return GetStudioFileInternal(serverRelativeFileName);
         }
 
@@ -256,6 +285,14 @@ namespace Raven.Server.Web.System
         [RavenAction("/studio/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetStudioIndexFile()
         {
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            if (feature?.Status == RavenServer.AuthenticationStatus.TwoFactorAuthNotProvided)
+            {
+                HttpContext.Response.Headers["Location"] = "/2fa/index.html";
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
+                return Task.CompletedTask;
+            }
+            
             if (ServerStore.LicenseManager.IsEulaAccepted == false)
             {
                 HttpContext.Response.Headers["Location"] = "/eula/index.html";
