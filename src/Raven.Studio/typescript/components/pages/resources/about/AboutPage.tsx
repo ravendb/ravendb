@@ -78,7 +78,7 @@ export function AboutPage() {
                                     margin="me-2"
                                 />
                                 <span className="fs-3">License details</span>
-                                {/* TODO 
+                                {/* TODO show if you some extra options to enable in cloud
                                 <Badge className="rounded-pill py-1 ms-1 align-self-start" color="primary">
                                     1
                                 </Badge> */}

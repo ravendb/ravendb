@@ -7,8 +7,6 @@ import { aboutPageUrls } from "components/pages/resources/about/partials/common"
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 
-//TODO: when license field isn't defined default to value from license?
-
 export function LicenseDetails() {
     const licenseId = useAppSelector(licenseSelectors.statusValue("Id"));
     const licenseTo = useAppSelector(licenseSelectors.statusValue("LicensedTo"));
@@ -63,15 +61,19 @@ function LicenseTable(props: LicenseTableProps) {
     const [searchText, setSearchText] = useState("");
     const [viewMode, setViewMode] = useState<"showDiff" | "showAll">("showAll");
 
-    const tableColCount = getColCount(licenseType);
+    const licenseStatus = useAppSelector(licenseSelectors.status);
+    const { columns, current: currentColumn } = getColumns(licenseType);
 
-    const filteredSections = featureAvailabilityData
+    const getEffectiveValue = (feature: FeatureAvailabilityItem, column: LicenseColumn) => {
+        const valueFromLicense = column === currentColumn ? (licenseStatus[feature.fieldInLicense] as any) : null;
+        return valueFromLicense ?? feature[column].value;
+    };
+
+    const filteredSectionsBySearchText = featureAvailabilityData
         .map((section) => {
             if (!searchText) {
                 return section;
             }
-
-            //TODO: viewMode
 
             const searchLower = searchText.toLocaleLowerCase();
 
@@ -82,6 +84,30 @@ function LicenseTable(props: LicenseTableProps) {
 
             const filteredItems = section.items.filter((x) => x.name.toLocaleLowerCase().includes(searchLower));
 
+            if (filteredItems.length === 0) {
+                // skip entire section
+                return null;
+            }
+
+            return {
+                ...section,
+                items: filteredItems,
+            };
+        })
+        .filter((x) => x);
+
+    // filter by second condition: 'view mode'
+    const filteredSections = filteredSectionsBySearchText
+        .map((section) => {
+            if (viewMode === "showAll") {
+                return section;
+            }
+
+            const filteredItems = section.items.filter((item) => {
+                const values = columns.map((x) => getEffectiveValue(item, x));
+                // show if has differences
+                return !values.every((x) => x === values[0]);
+            });
             if (filteredItems.length === 0) {
                 // skip entire section
                 return null;
@@ -110,6 +136,8 @@ function LicenseTable(props: LicenseTableProps) {
         iconName: "license",
     };
 
+    const showUpgradeButton = licenseType !== "Enterprise";
+
     return (
         <>
             <div className="px-4 pb-4">
@@ -137,47 +165,28 @@ function LicenseTable(props: LicenseTableProps) {
                     <thead>
                         <tr>
                             <th>License type</th>
-                            {tableColCount >= 3 && (
-                                <th className={classNames({ "bg-current": tableColCount === 3 })}>
+                            {columns.map((column) => (
+                                <th className={classNames({ "bg-current": column === currentColumn })}>
                                     <h4 className="fw-bolder text-uppercase m-0">
-                                        {" "}
-                                        {licenseType === "Essential" ? <>Essential</> : <>Community</>}
+                                        {column === "community" && licenseType === "Essential"
+                                            ? "Essential"
+                                            : column.toLocaleUpperCase()}
                                     </h4>
-                                    {tableColCount === 3 && <div className="text-primary">Current</div>}
+                                    {column === currentColumn && <div className="text-primary">Current</div>}
                                 </th>
-                            )}
-                            {tableColCount >= 2 && (
-                                <th
-                                    className={classNames({
-                                        "bg-current": tableColCount === 2,
-                                    })}
-                                >
-                                    <h4 className="fw-bolder text-uppercase text-professional m-0">PROFESSIONAL</h4>
-                                    {tableColCount === 2 && <div className="text-primary">Current</div>}
-                                </th>
-                            )}
-
-                            <th>
-                                <h4 className="fw-bolder text-uppercase text-enterprise m-0">ENTERPRISE</h4>
-                            </th>
-                            {tableColCount >= 4 && (
-                                <th className="bg-current">
-                                    <h4 className="fw-bolder text-uppercase text-developer m-0">DEVELOPER</h4>
-                                    <div className="text-primary">Current</div>
-                                </th>
-                            )}
+                            ))}
                         </tr>
-                        {tableColCount >= 2 && (
+                        {showUpgradeButton && (
                             <tr>
                                 <th></th>
-                                <th className={classNames({ "bg-current": tableColCount !== 4 })}></th>
-                                <th colSpan={tableColCount < 4 ? tableColCount - 1 : 2} className="px-3">
+                                <th className={classNames({ "bg-current": columns.length !== 4 })}></th>
+                                <th colSpan={columns.length < 4 ? columns.length - 1 : 2} className="px-3">
                                     <Button color="primary" className="w-100 rounded-pill">
                                         <Icon icon="upgrade-arrow" />
                                         Upgrade license
                                     </Button>
                                 </th>
-                                {tableColCount >= 4 && <th className="bg-current"></th>}
+                                {columns.length >= 4 && <th className="bg-current"></th>}
                             </tr>
                         )}
                     </thead>
@@ -201,49 +210,39 @@ function LicenseTable(props: LicenseTableProps) {
                                                     <div>{section.name}</div>
                                                 )}
                                             </th>
-                                            <td
-                                                className={classNames({
-                                                    "bg-current": tableColCount !== 4 && tableColCount !== 1,
-                                                })}
-                                            ></td>
-                                            {tableColCount > 1 && <td></td>}
-                                            {tableColCount > 2 && <td></td>}
-                                            {tableColCount > 3 && <td className="bg-current"></td>}
+                                            {columns.map((column) => (
+                                                <td
+                                                    key={column}
+                                                    className={classNames({
+                                                        "bg-current": column === currentColumn,
+                                                    })}
+                                                ></td>
+                                            ))}
                                         </React.Fragment>
                                     </tr>
                                 )}
 
-                                {section.items.map((feature) => {
-                                    return (
-                                        <tr key={feature.name}>
-                                            <th scope="row">{feature.name}</th>
-                                            {tableColCount >= 3 && (
-                                                <td className={classNames({ "bg-current": tableColCount === 3 })}>
-                                                    <FeatureValue value={feature.community.value} />
-                                                </td>
-                                            )}
-                                            {tableColCount >= 2 && (
-                                                <td className={classNames({ "bg-current": tableColCount === 2 })}>
-                                                    <FeatureValue value={feature.professional.value} />
-                                                </td>
-                                            )}
-                                            <td>
-                                                <FeatureValue value={feature.enterprise.value} />
+                                {section.items.map((feature) => (
+                                    <tr key={feature.name}>
+                                        <th scope="row">{feature.name}</th>
+                                        {columns.map((column) => (
+                                            <td
+                                                key={column}
+                                                className={classNames({
+                                                    "bg-current": column === currentColumn,
+                                                })}
+                                            >
+                                                <FeatureValue value={getEffectiveValue(feature, column)} />
                                             </td>
-                                            {tableColCount >= 4 && (
-                                                <td className="bg-current">
-                                                    <FeatureValue value={feature.developer.value} />
-                                                </td>
-                                            )}
-                                        </tr>
-                                    );
-                                })}
+                                        ))}
+                                    </tr>
+                                ))}
                             </React.Fragment>
                         ))}
                     </tbody>
                 </Table>
             </div>
-            {tableColCount > 1 && (
+            {columns.length > 1 && (
                 <div className="p-2">
                     <div className="well rounded-pill text-center p-1">
                         <RadioToggleWithIcon<"showDiff" | "showAll">
@@ -981,22 +980,33 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
     },
 ];
 
-function getColCount(license: Raven.Server.Commercial.LicenseType) {
+type LicenseColumn = "community" | "professional" | "enterprise" | "developer";
+
+function getColumns(license: Raven.Server.Commercial.LicenseType): {
+    columns: LicenseColumn[];
+    current: LicenseColumn;
+} {
     switch (license) {
         case "Developer":
-            return 4;
-        case "None":
-            return 3;
-        case "Essential":
-            return 3;
-        case "Community":
-            return 3;
+            return {
+                columns: ["community", "professional", "enterprise", "developer"],
+                current: "developer",
+            };
         case "Professional":
-            return 2;
+            return {
+                columns: ["professional", "enterprise"],
+                current: "professional",
+            };
         case "Enterprise":
-            return 1;
+            return {
+                columns: ["enterprise"],
+                current: "enterprise",
+            };
         default:
-            return 1;
+            return {
+                columns: ["community", "professional", "enterprise"],
+                current: "community",
+            };
     }
 }
 
