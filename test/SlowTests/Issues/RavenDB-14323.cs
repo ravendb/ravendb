@@ -127,9 +127,9 @@ namespace SlowTests.Issues
                     return stats.IsInvalidIndex;
                 }, TimeSpan.FromSeconds(10))); //precaution
 
-                var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
+                WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).State, IndexState.Error);
 
-                Assert.True(indexStats.IsInvalidIndex);
+                var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(IndexState.Error, indexStats.State);
 
                 Assert.Equal(numberOfReferencedDocuments, indexStats.MapAttempts);
