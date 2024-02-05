@@ -147,8 +147,8 @@ export default function GoogleCloud({ isForNewConnection }: GoogleCloudProps) {
                                     color="secondary"
                                     onClick={asyncTest.execute}
                                     isSpinning={asyncTest.loading}
+                                    icon="rocket"
                                 >
-                                    <Icon icon="rocket" />
                                     Test credentials
                                 </ButtonWithSpinner>
                             </div>

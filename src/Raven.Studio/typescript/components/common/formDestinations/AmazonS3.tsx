@@ -207,8 +207,8 @@ export default function AmazonS3() {
                                         color="secondary"
                                         onClick={asyncTest.execute}
                                         isSpinning={asyncTest.loading}
+                                        icon="rocket"
                                     >
-                                        <Icon icon="rocket" />
                                         Test credentials
                                     </ButtonWithSpinner>
                                 </div>
