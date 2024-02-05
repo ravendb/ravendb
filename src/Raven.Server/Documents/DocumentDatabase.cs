@@ -468,7 +468,7 @@ namespace Raven.Server.Documents
                     {
                         if (_logger.IsOperationsEnabled)
                         {
-                            _logger.Info("An unhandled exception closed the cluster transaction task", e);
+                            _logger.Operations("An unhandled exception closed the cluster transaction task", e);
                         }
                     }
                 }, null, ThreadNames.ForClusterTransactions(
@@ -776,7 +776,7 @@ namespace Raven.Server.Documents
                 // nothing we can do
                 if (_logger.IsOperationsEnabled)
                 {
-                    _logger.Info($"Failed to notify about transaction completion for database '{Name}'.", e);
+                    _logger.Operations($"Failed to notify about transaction completion for database '{Name}'.", e);
                 }
             }
         }
