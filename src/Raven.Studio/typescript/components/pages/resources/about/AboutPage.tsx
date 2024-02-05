@@ -51,6 +51,7 @@ export function AboutPage() {
                         <LicenseSummary
                             recheckConnectivity={refreshLicenseServerConnectivity}
                             asyncCheckLicenseServerConnectivity={asyncCheckLicenseServerConnectivity}
+                            asyncGetConfigurationSettings={asyncGetConfigurationSettings}
                         />
                         <VersionsSummary
                             refreshLatestVersion={refreshLatestVersion}

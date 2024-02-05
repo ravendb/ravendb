@@ -9,13 +9,6 @@ export class LicenseStubs {
         };
     }
 
-    static licenseServerConnectivityException() {
-        return {
-            connected: false,
-            exception: "Unable to connected to api.ravendb.net",
-        };
-    }
-
     static getStatus(): LicenseStatus {
         return {
             Type: "Enterprise",
@@ -173,6 +166,16 @@ export class LicenseStubs {
             DisableAutoUpdateFromApi: false,
             SkipLeasingErrorsLogging: false,
             LicensePath: null,
+        };
+    }
+
+    static latestVersion(): Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo {
+        return {
+            Version: "6.0.5",
+            BuildNumber: 60050,
+            BuildType: "Stable",
+            PublishedAt: "2024-01-19T12:58:07.0000000Z",
+            UpdateSeverity: "TODO",
         };
     }
 }

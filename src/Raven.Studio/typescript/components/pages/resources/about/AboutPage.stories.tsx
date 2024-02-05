@@ -12,7 +12,7 @@ import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/About page",
+    title: "Pages/About Page",
     decorators: [withStorybookContexts, withBootstrap5],
     argTypes: {
         securityClearance: securityClearanceArgType,
@@ -89,3 +89,107 @@ export const ConnectionFailure: StoryObj<AboutPageStoryProps> = {
         licenseServerConnection: false,
     },
 };
+
+export const DeveloperLicense: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        licenseType: "Developer",
+    },
+};
+
+export const CommunityLicense: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        licenseType: "Community",
+    },
+};
+
+export const ProfessionalLicense: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        licenseType: "Professional",
+    },
+};
+
+export const EnterpriseLicense: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        licenseType: "Enterprise",
+    },
+};
+
+export const EssentialLicense: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        licenseType: "Essential",
+    },
+};
+
+export const NoSupportOnPremise: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        cloud: false,
+        supportStatus: "NoSupport",
+    },
+};
+
+export const NoSupportCloud: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        cloud: true,
+        supportStatus: "NoSupport",
+    },
+};
+
+export const ProfessionalSupportOnPremise: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        cloud: false,
+        supportStatus: "ProfessionalSupport",
+    },
+};
+
+export const ProfessionalSupportCloud: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        cloud: true,
+        supportStatus: "ProfessionalSupport",
+    },
+};
+
+export const ProductionSupportOnPremise: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        cloud: false,
+        supportStatus: "ProductionSupport",
+    },
+};
+
+export const ProductionSupportCloud: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        cloud: true,
+        supportStatus: "ProductionSupport",
+    },
+};
+
+export const PartialSupportOnPremise: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        cloud: false,
+        supportStatus: "PartialSupport",
+    },
+};
+
