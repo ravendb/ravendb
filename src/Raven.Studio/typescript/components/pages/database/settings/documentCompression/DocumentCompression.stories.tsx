@@ -13,7 +13,7 @@ export default {
         licenseType: licenseArgType,
         databaseAccess: databaseAccessArgType,
     },
-} satisfies Meta<typeof DocumentCompression>;
+} satisfies Meta;
 
 const db = DatabasesStubs.nonShardedClusterDatabase();
 

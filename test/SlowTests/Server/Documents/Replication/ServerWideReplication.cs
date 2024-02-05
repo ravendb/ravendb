@@ -363,11 +363,7 @@ namespace SlowTests.Server.Documents.Replication
                     }
                 };
 
-                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
-
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var backup = record.PeriodicBackups.First();
-                var backupTaskId = backup.TaskId;
+                var backupTaskId = await Backup.UpdateServerWideConfigAsync(Server, serverWideBackupConfiguration, store);
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
 
@@ -474,11 +470,7 @@ namespace SlowTests.Server.Documents.Replication
                     }
                 };
 
-                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
-
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var backup = record.PeriodicBackups.First();
-                var backupTaskId = backup.TaskId;
+                var backupTaskId = await Backup.UpdateServerWideConfigAsync(Server, serverWideBackupConfiguration, store);
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
 

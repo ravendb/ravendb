@@ -54,7 +54,7 @@ namespace SlowTests.Issues
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/test/delay?value={(int)_value.TotalMilliseconds}";
+                url = $"{node.Url}/admin/test/delay?value={(int)_value.TotalMilliseconds}";
 
                 return new HttpRequestMessage
                 {

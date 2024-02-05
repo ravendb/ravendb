@@ -11,16 +11,18 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Sparrow.Json;
 using Xunit;
-using BackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace FastTests
 {
@@ -84,8 +86,44 @@ namespace FastTests
             public async Task<long> UpdateConfigAndRunBackupAsync(RavenServer server, PeriodicBackupConfiguration config, IDocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+
+                WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, result.TaskId);
+
                 await RunBackupAsync(server, result.TaskId, store, isFullBackup, opStatus, timeout);
                 return result.TaskId;
+            }
+
+            public async Task<long> UpdateConfigAsync(RavenServer server, PeriodicBackupConfiguration config, DocumentStore store)
+            {
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                
+                WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, result.TaskId);
+
+                return result.TaskId;
+            }
+            
+            public async Task<long> UpdateServerWideConfigAsync(RavenServer server, ServerWideBackupConfiguration config, DocumentStore store)
+            {
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(config));
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var backup = record.PeriodicBackups.First();
+                var backupTaskId = backup.TaskId;
+
+                WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, backupTaskId);
+
+                return backupTaskId;
+            }
+
+            public void WaitForResponsibleNodeUpdate(ServerStore serverStore, string databaseName, long taskId, string differentThan = null)
+            {
+                var value = WaitForValue(() =>
+                {
+                    var responsibleNode = BackupUtils.GetResponsibleNodeTag(serverStore, databaseName, taskId);
+                    return responsibleNode != differentThan;
+                }, true);
+
+                Assert.True(value);
             }
 
             /// <summary>
@@ -141,14 +179,15 @@ namespace FastTests
 
             public PeriodicBackupConfiguration CreateBackupConfiguration(string backupPath = null, BackupType backupType = BackupType.Backup, bool disabled = false, string fullBackupFrequency = "0 0 1 1 *",
                 string incrementalBackupFrequency = null, long? taskId = null, string mentorNode = null, BackupEncryptionSettings backupEncryptionSettings = null, AzureSettings azureSettings = null,
-                GoogleCloudSettings googleCloudSettings = null, S3Settings s3Settings = null, FtpSettings ftpSettings = null, RetentionPolicy retentionPolicy = null, string name = null, BackupUploadMode backupUploadMode = BackupUploadMode.Default)
+                GoogleCloudSettings googleCloudSettings = null, S3Settings s3Settings = null, FtpSettings ftpSettings = null, RetentionPolicy retentionPolicy = null, string name = null, BackupUploadMode backupUploadMode = BackupUploadMode.Default, bool pinToMentorNode = false)
             {
                 var config = new PeriodicBackupConfiguration()
                 {
                     BackupType = backupType,
                     FullBackupFrequency = fullBackupFrequency,
                     Disabled = disabled,
-                    BackupUploadMode = backupUploadMode
+                    BackupUploadMode = backupUploadMode,
+                    PinToMentorNode = pinToMentorNode
                 };
 
                 if (taskId.HasValue)
@@ -177,39 +216,41 @@ namespace FastTests
                 return config;
             }
 
-            public async Task<string> GetBackupResponsibleNode(RavenServer server, long taskId, string databaseName, bool keepTaskOnOriginalMemberNode = false)
+            public string GetBackupResponsibleNode(RavenServer server, long taskId, string databaseName, bool keepTaskOnOriginalMemberNode = false)
             {
-                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
-                    var rawRecord = server.ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName);
-                    var pbConfig = rawRecord.GetPeriodicBackupConfiguration(taskId);
-                    var backupStatus = db.PeriodicBackupRunner.GetBackupStatus(taskId);
-                    var node = BackupUtils.WhoseTaskIsIt(server.ServerStore, rawRecord.Topology, pbConfig, backupStatus, db.NotificationCenter, keepTaskOnOriginalMemberNode);
-
-                    return node;
-                }
+                var node = BackupUtils.GetResponsibleNodeTag(server.ServerStore, databaseName, taskId);
+                return node;
             }
 
             /// <summary>
             /// Create and run backup with provided task id in cluster.
             /// </summary>
             /// <returns>TaskId</returns>
-            public long CreateAndRunBackupInCluster(PeriodicBackupConfiguration config, IDocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
+            public long CreateAndRunBackupInCluster(PeriodicBackupConfiguration config, IDocumentStore store, List<RavenServer> nodes, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
-                return AsyncHelpers.RunSync(() => CreateAndRunBackupInClusterAsync(config, store, isFullBackup, opStatus, timeout));
+                return AsyncHelpers.RunSync(() => CreateAndRunBackupInClusterAsync(config, store, nodes, isFullBackup, opStatus, timeout));
             }
 
             /// <summary>
             /// Create and run backup with provided task id in cluster.
             /// </summary>
             /// <returns>TaskId</returns>
-            public async Task<long> CreateAndRunBackupInClusterAsync(PeriodicBackupConfiguration config, IDocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
+            public async Task<long> CreateAndRunBackupInClusterAsync(PeriodicBackupConfiguration config, IDocumentStore store, List<RavenServer> nodes, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+
+                WaitForResponsibleNodeUpdateInCluster(store, nodes, backupTaskId);
+
                 await RunBackupInClusterAsync(store, backupTaskId, isFullBackup, opStatus, timeout);
                 return backupTaskId;
+            }
+
+            public void WaitForResponsibleNodeUpdateInCluster(IDocumentStore store, List<RavenServer> nodes, long backupTaskId)
+            {
+                foreach (var server in nodes)
+                {
+                    WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, backupTaskId);
+                }
             }
 
             /// <summary>

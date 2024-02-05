@@ -23,6 +23,8 @@ import getServerCertificateRenewalDateCommand = require("commands/auth/getServer
 import fileImporter = require("common/fileImporter");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
+import generateTwoFactorSecretCommand from "commands/auth/generateTwoFactorSecretCommand";
+import { QRCode } from "qrcodejs";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import getAdminStatsCommand from "commands/resources/getAdminStatsCommand";
 import assertUnreachable from "components/utils/assertUnreachable";
@@ -119,6 +121,9 @@ class certificates extends viewModelBase {
     sortModeText: KnockoutComputed<string>;
 
     deleteExistingCertificate = ko.observable<boolean>(false);
+
+    // currently displayed QR Code
+    private qrCode: any;
     
     hasReadOnlyCertificates = licenseModel.getStatusValue("HasReadOnlyCertificates");
     infoHubView: ReactInKnockout<typeof CertificatesInfoHub>;
@@ -129,7 +134,7 @@ class certificates extends viewModelBase {
         this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", "enterRegenerateCertificateMode",
             "deletePermission", "fileSelected", "copyThumbprint",
             "deleteCertificateConfirm", "renewServerCertificate", "canBeAutomaticallyRenewed",
-            "sortCertificates", "clearAllFilters",
+            "sortCertificates", "clearAllFilters", "syncQrCode", 
             "addPermission","addPermissionWithBlink","addDatabase","addDatabaseWithBlink");
         
         this.initObservables();
@@ -183,10 +188,66 @@ class certificates extends viewModelBase {
         });
         
         this.model.subscribe(model => {
+            if (!model || !model.requireTwoFactor()) {
+                if (this.qrCode) {
+                    this.qrCode.clear();
+                    this.qrCode = null;
+                }
+            }
+            
             if (model) {
                 this.initPopover();
+                
+                model.name.subscribe(() => this.syncQrCode());
+                model.authenticationKey.subscribe(() => this.syncQrCode());
+                model.requireTwoFactor.subscribe(twoFactor => {
+                    if (twoFactor) {
+                        this.generateSecret(model);
+                    }
+                });
             }
         });
+    }
+    
+    syncQrCode(): void {
+        if (!this.model().requireTwoFactor() || !this.model().authenticationKey()) {
+            return;
+        }
+        
+        const secret = this.model().authenticationKey();
+        const encodedIssuer = encodeURIComponent(location.hostname);
+        const encodedName = encodeURIComponent(this.model().name() ?? "Client Certificate");
+        
+        const uri = `otpauth://totp/${encodedIssuer}:${encodedName}?secret=${secret}&issuer=${encodedIssuer}`;
+        
+        const qrContainer = document.getElementById("encryption_qrcode");
+
+        if (qrContainer.innerHTML && !this.qrCode) {
+            // clean up old instances
+            qrContainer.innerHTML = "";
+        }
+
+        if (!this.qrCode) {
+            this.qrCode = new QRCode(qrContainer, {
+                text: uri,
+                width: 256,
+                height: 256,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.Q
+            });
+        } else {
+            this.qrCode.clear();
+            this.qrCode.makeCode(uri);
+        }
+    }
+    
+    private generateSecret(model: certificateModel): void {
+        new generateTwoFactorSecretCommand()
+            .execute()
+            .done(key => {
+                model.authenticationKey(key.Secret);
+            });
     }
     
     private async loadCertificateLastUsedDates(): Promise<Record<string, string>> {
@@ -657,6 +718,8 @@ class certificates extends viewModelBase {
                 const secondaryCertificates: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition[] = [];
                 
                 certificatesInfo.Certificates.forEach(cert => {
+                    cert.HasTwoFactor = cert.HasTwoFactor ?? false; // force property to exist
+                    
                     if (cert.CollectionPrimaryKey) {
                         secondaryCertificates.push(cert);
                     } else {
@@ -781,6 +844,10 @@ class certificates extends viewModelBase {
     
     copyThumbprint(thumbprint: string): void {
         copyToClipboard.copy(thumbprint, "Thumbprint was copied to clipboard.");
+    }
+
+    copyAuthenticationKeyToClipboard(authenticationKey: string) {
+        copyToClipboard.copy(authenticationKey, "Authentication Key was copied to clipboard.");
     }
     
     canEdit(model: unifiedCertificateDefinition) {

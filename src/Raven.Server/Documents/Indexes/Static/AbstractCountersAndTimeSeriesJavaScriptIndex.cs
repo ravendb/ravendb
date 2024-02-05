@@ -113,9 +113,9 @@ function map() {{
 
                 if (map.HasProperty(MethodProperty) == false)
                     ThrowIndexCreationException($"map function #{i} is missing its {MethodProperty} property");
-                var funcInstance = map.Get(MethodProperty).As<FunctionInstance>();
+                var funcInstance = map.Get(MethodProperty).As<Function>();
                 if (funcInstance == null)
-                    ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");
+                    ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a 'Function'");
                 var operation = new JavaScriptMapOperation(_engine, resolver)
                 {
                     MapFunc = funcInstance,

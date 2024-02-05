@@ -32,7 +32,6 @@ namespace SlowTests.Issues
 
                 Etl.AddEtl(src, configuration, new RavenConnectionString { Name = "test", TopologyDiscoveryUrls = dst.Urls, Database = dst.Database, });
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LoadSuccesses == 3);
                 var loadDone = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LoadSuccesses == 2);
                 var deleteDone = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LoadSuccesses == 3);
 
@@ -40,6 +39,15 @@ namespace SlowTests.Issues
                 {
                     session.Store(new User(), "users/1");
                     session.SaveChanges();
+                }
+                
+                var etlDone = Etl.WaitForEtlToComplete(src);
+                if (etlDone.Wait(TimeSpan.FromSeconds(30)) == false)
+                {
+                    Etl.TryGetLoadError(src.Database, configuration, out var loadError);
+                    Etl.TryGetTransformationError(src.Database, configuration, out var transformationError);
+
+                    Assert.Fail($"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
                 }
 
                 using (var session = src.OpenSession())

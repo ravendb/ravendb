@@ -170,7 +170,7 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// write transaction's raw page data into journal
         /// </summary>
-        public UpdatePageTranslationTableAndUnusedPagesAction Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch)
+        public UpdatePageTranslationTableAndUnusedPagesAction Write(LowLevelTransaction tx, CompressedPagesResult pages)
         {
             var ptt = new Dictionary<long, PagePosition>();
             var cur4KbPos = _writePosIn4Kb;
@@ -179,49 +179,14 @@ namespace Voron.Impl.Journal
 
             UpdatePageTranslationTable(tx, _unusedPagesHashSetPool, ptt);
 
-            if (tx.IsLazyTransaction == false && (lazyTransactionScratch == null || lazyTransactionScratch.HasDataInBuffer() == false))
+            try
             {
-                try
-                {
-                    Write(cur4KbPos, pages.Base, pages.NumberOf4Kbs);
-                }
-                catch (Exception e)
-                {
-                    _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
-                    throw;
-                }
+                Write(cur4KbPos, pages.Base, pages.NumberOf4Kbs);
             }
-            else
+            catch (Exception e)
             {
-                if (lazyTransactionScratch == null)
-                    throw new InvalidOperationException("lazyTransactionScratch cannot be null if the transaction is lazy (or a previous one was)");
-
-                var sizeInBytes = _journalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte;
-
-                int sizeInPages = checked(sizeInBytes / Constants.Storage.PageSize +
-                                          sizeInBytes % Constants.Storage.PageSize == 0 ? 0 : 1);
-
-                lazyTransactionScratch.EnsureSize(sizeInPages);
-                lazyTransactionScratch.AddToBuffer(cur4KbPos, pages);
-
-                // non lazy tx will add itself to the buffer and then flush scratch to journal
-                if (tx.IsLazyTransaction == false ||
-                    lazyTransactionScratch.NumberOfPages > tx.Environment.ScratchBufferPool.GetAvailablePagesCount() / 2)
-                {
-                    try
-                    {
-                        lazyTransactionScratch.WriteBufferToFile(this, tx);
-                    }
-                    catch (Exception e)
-                    {
-                        _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
-                        throw;
-                    }
-                }
-                else
-                {
-                    lazyTransactionScratch.EnsureHasExistingReadTransaction(tx);
-                }
+                _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+                throw;
             }
 
             return new UpdatePageTranslationTableAndUnusedPagesAction(this, tx, ptt, pages.NumberOf4Kbs);

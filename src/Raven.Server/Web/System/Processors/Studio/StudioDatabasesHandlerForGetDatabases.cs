@@ -27,7 +27,7 @@ internal sealed class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesH
 
     protected override async ValueTask HandleCurrentNodeAsync()
     {
-        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())
         {
             var name = GetName();
@@ -48,7 +48,7 @@ internal sealed class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesH
                 {
                     var databaseName = record.DatabaseName;
 
-                    WriteStudioDatabaseInfo(databaseName, record, context, w);
+                    WriteStudioDatabaseInfo(record, context, w);
                 });
 
                 writer.WriteEndObject();
@@ -58,7 +58,7 @@ internal sealed class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesH
 
     protected override ValueTask<RavenCommand<StudioDatabasesInfo>> CreateCommandForNodeAsync(string nodeTag, JsonOperationContext context) => throw new NotSupportedException();
 
-    private void WriteStudioDatabaseInfo(string databaseName, RawDatabaseRecord record, TransactionOperationContext context, AbstractBlittableJsonTextWriter writer)
+    private void WriteStudioDatabaseInfo(RawDatabaseRecord record, ClusterOperationContext context, AbstractBlittableJsonTextWriter writer)
     {
         var studioEnvironment = GetStudioEnvironment(record);
         var info = StudioDatabaseInfo.From(record, studioEnvironment, context, ServerStore, HttpContext);
@@ -127,7 +127,7 @@ internal sealed class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesH
             };
         }
 
-        public static StudioDatabaseInfo From([NotNull] RawDatabaseRecord record, StudioConfiguration.StudioEnvironment studioEnvironment, [NotNull] TransactionOperationContext context, [NotNull] ServerStore serverStore, [NotNull] HttpContext httpContext)
+        public static StudioDatabaseInfo From([NotNull] RawDatabaseRecord record, StudioConfiguration.StudioEnvironment studioEnvironment, [NotNull] ClusterOperationContext context, [NotNull] ServerStore serverStore, [NotNull] HttpContext httpContext)
         {
             if (record == null)
                 throw new ArgumentNullException(nameof(record));
@@ -193,7 +193,7 @@ internal sealed class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesH
                 return result;
             }
 
-            public static ShardingInfo From([NotNull] RawDatabaseRecord record, [NotNull] TransactionOperationContext context, [NotNull] ServerStore serverStore, [NotNull] HttpContext httpContext)
+            public static ShardingInfo From([NotNull] RawDatabaseRecord record, [NotNull] ClusterOperationContext context, [NotNull] ServerStore serverStore, [NotNull] HttpContext httpContext)
             {
                 if (record == null)
                     throw new ArgumentNullException(nameof(record));

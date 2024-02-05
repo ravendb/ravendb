@@ -128,8 +128,7 @@ public class QueueSinkLoader : IDisposable
                 continue;
 
             var processState = GetProcessState(config.Scripts, _database, config.Name);
-            var whoseTaskIsIt = BackupUtils.WhoseTaskIsIt(_serverStore, _databaseRecord.Topology, config, processState,
-                _database.NotificationCenter);
+            var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, _databaseRecord.Topology, config, processState, _database.NotificationCenter);
             if (whoseTaskIsIt != _serverStore.NodeTag)
                 continue;
 
@@ -187,8 +186,7 @@ public class QueueSinkLoader : IDisposable
         where T : QueueSinkConfiguration
     {
         var processState = GetProcessState(queueSinkTask.Scripts, _database, queueSinkTask.Name);
-        var whoseTaskIsIt = BackupUtils.WhoseTaskIsIt(_serverStore, record.Topology, queueSinkTask, processState,
-            _database.NotificationCenter);
+        var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, record.Topology, queueSinkTask, processState, _database.NotificationCenter);
 
         responsibleNodes[queueSinkTask.Name] = whoseTaskIsIt;
 

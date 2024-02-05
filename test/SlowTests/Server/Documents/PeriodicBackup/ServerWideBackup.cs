@@ -490,12 +490,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "0 2 * * 1"
                 };
 
-                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration1));
-                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration2));
-
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var backup = record.PeriodicBackups.First();
-                var backupTaskId = backup.TaskId;
+                var backupTaskId = await Backup.UpdateServerWideConfigAsync(Server, serverWideBackupConfiguration1, store);
+                await Backup.UpdateServerWideConfigAsync(Server, serverWideBackupConfiguration2, store);
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
 
@@ -601,7 +597,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         throw new ArgumentOutOfRangeException(nameof(encryptionMode), encryptionMode, null);
                 }
 
-                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
+                var backupTaskId = await Backup.UpdateServerWideConfigAsync(Server, serverWideBackupConfiguration, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -611,10 +607,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }, "users/1");
                     await session.SaveChangesAsync();
                 }
-
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var backup = record.PeriodicBackups.First();
-                var backupTaskId = backup.TaskId;
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
 
@@ -959,11 +951,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 };
 
-                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
-
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var backup = record.PeriodicBackups.First();
-                var backupTaskId = backup.TaskId;
+                var backupTaskId = await Backup.UpdateServerWideConfigAsync(Server, serverWideBackupConfiguration, store);
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
 

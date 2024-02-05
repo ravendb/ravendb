@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -316,6 +316,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             writer.WriteEndArray();
             writer.WriteEndObject();
+        }
+
+        [RavenAction("/databases/*/debug/storage/environment/scratch-buffer-info", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task ScratchBufferPoolInfoReport()
+        {
+            using (var processor = new StorageHandlerProcessorForGetScratchBufferReport(this))
+                await processor.ExecuteAsync();
         }
     }
 }

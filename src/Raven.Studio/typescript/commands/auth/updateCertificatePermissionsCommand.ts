@@ -9,7 +9,11 @@ class updateCertificatePermissionsCommand extends commandBase {
     }
     
     execute(): JQueryPromise<void> {
-        const url = endpoints.global.adminCertificates.adminCertificatesEdit; 
+        const deleteExistingConfiguration = this.model.mode() === "editExisting" && this.model.twoFactorActionOnEdit() === "delete";
+        
+        const url = endpoints.global.adminCertificates.adminCertificatesEdit + this.urlEncodeArgs({
+            deleteTwoFactorConfiguration: deleteExistingConfiguration ? true : undefined
+        });
         
         const payload = this.model.toUpdatePermissionsDto();
         return this.post<void>(url, JSON.stringify(payload), null, { dataType: undefined })

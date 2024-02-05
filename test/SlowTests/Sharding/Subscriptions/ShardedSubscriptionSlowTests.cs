@@ -1485,8 +1485,17 @@ namespace SlowTests.Sharding.Subscriptions
                 Assert.Equal(3, states.Count);
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var result = await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                var backupTaskId = result.TaskId;
+
+                long backupTaskId;
+                if (fromSharded)
+                {
+                    backupTaskId = await Sharding.Backup.UpdateConfigAsync(Server, config, store1);
+                }
+                else
+                {
+                    backupTaskId = await Backup.UpdateConfigAsync(Server, config, store1);
+                }
+
                 var op = await store1.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
                 await op.WaitForCompletionAsync(_reasonableWaitTime);
                 // restore the database with a different name

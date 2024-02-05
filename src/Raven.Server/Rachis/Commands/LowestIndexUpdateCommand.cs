@@ -13,17 +13,14 @@ namespace Raven.Server.Rachis.Commands;
 
 public sealed class LowestIndexUpdateCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
 {
-    private readonly Leader _leader;
-
     private readonly RachisConsensus _engine;
 
     private long _lowestIndexInEntireCluster;
 
 
-    public LowestIndexUpdateCommand([NotNull] Leader leader, [NotNull] RachisConsensus engine, long lowestIndexInEntireCluster)
+    public LowestIndexUpdateCommand([NotNull] RachisConsensus engine, long lowestIndexInEntireCluster)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _leader = leader;
         _lowestIndexInEntireCluster = lowestIndexInEntireCluster;
     }
 

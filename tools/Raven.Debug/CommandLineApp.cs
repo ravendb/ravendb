@@ -132,6 +132,7 @@ namespace Raven.Debug
                 var pidOption = cmd.Option("--pid", "Process ID to which the tool will attach to", CommandOptionType.SingleValue);
                 var outputOption = cmd.Option("--output", "Output file path", CommandOptionType.SingleValue);
                 var typeOption = cmd.Option("--type", "Type of dump (Heap or Mini). ", CommandOptionType.SingleValue);
+                var outputOwnerOption = cmd.Option("--output-owner", "The owner of the output file (applicable only to Posix based OS)", CommandOptionType.SingleValue);
 
                 cmd.OnExecuteAsync(async (_) =>
                 {
@@ -151,10 +152,14 @@ namespace Raven.Debug
                     if (outputOption.HasValue())
                         output = outputOption.Value();
 
+                    string outputOwner = null;
+                    if (outputOwnerOption.HasValue())
+                        outputOwner = outputOwnerOption.Value();
+
                     try
                     {
                         var dumper = new Dumper();
-                        await dumper.Collect(cmd, pid, output, diag: false, type).ConfigureAwait(false);
+                        await dumper.Collect(cmd, pid, output, outputOwner, diag: false, type).ConfigureAwait(false);
                         return 0;
                     }
                     catch (Exception e)
@@ -173,6 +178,7 @@ namespace Raven.Debug
                 var outputOption = cmd.Option("--output", "Output file path", CommandOptionType.SingleValue);
                 var timeoutOption = cmd.Option("--timeout", "Give up on collecting the gcdump if it takes longer than this many seconds. The default value is. Default 30", CommandOptionType.SingleValue);
                 var verboseOption = cmd.Option("--verbose", "Output the log while collecting the gcdump.", CommandOptionType.NoValue);
+                var outputOwnerOption = cmd.Option("--output-owner", "The owner of the output file (applicable only to Posix based OS)", CommandOptionType.SingleValue);
 
                 cmd.OnExecuteAsync(async token =>
                 {
@@ -186,6 +192,10 @@ namespace Raven.Debug
                     if (outputOption.HasValue())
                         output = outputOption.Value();
 
+                    string outputOwner = null;
+                    if (outputOwnerOption.HasValue())
+                        outputOwner = outputOwnerOption.Value();
+
                     int timeout = 30;
                     if (timeoutOption.HasValue() && int.TryParse(timeoutOption.Value(), out timeout) == false)
                         return cmd.ExitWithError($"Could not parse --timeout with value '{timeoutOption.Value()}' to number.");
@@ -194,7 +204,7 @@ namespace Raven.Debug
 
                     try
                     {
-                        await GCHeapDumper.Collect(token, cmd, pid, output, timeout, verbose).ConfigureAwait(false);
+                        await GCHeapDumper.Collect(token, cmd, pid, output, outputOwner, timeout, verbose).ConfigureAwait(false);
                         return 0;
                     }
                     catch (Exception e)

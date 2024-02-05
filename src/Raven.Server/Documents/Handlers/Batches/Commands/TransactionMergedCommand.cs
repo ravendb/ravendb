@@ -23,9 +23,12 @@ public abstract class TransactionMergedCommand : DocumentMergedTransactionComman
 
     public bool IsClusterTransaction { get; set; }
 
+    public bool IncludeReply { get; set; }
+
     protected TransactionMergedCommand(DocumentDatabase database)
     {
         Database = database;
+        IncludeReply = true;
     }
 
     protected void AddPutResult(DocumentsStorage.PutOperationResults putResult)
@@ -34,6 +37,9 @@ public abstract class TransactionMergedCommand : DocumentMergedTransactionComman
         LastDocumentEtag = putResult.Etag;
         ModifiedCollections?.Add(putResult.Collection.Name);
 
+        if (IncludeReply == false)
+            return;
+        
         // Make sure all the metadata fields are always been add
         var putReply = new DynamicJsonValue
         {
@@ -52,21 +58,26 @@ public abstract class TransactionMergedCommand : DocumentMergedTransactionComman
 
     protected void AddDeleteResult(DocumentsStorage.DeleteOperationResult? deleted, string id)
     {
-        var reply = new DynamicJsonValue
-        {
-            [nameof(BatchRequestParser.CommandData.Id)] = id,
-            [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.DELETE),
-            ["Deleted"] = deleted != null
-        };
-
         if (deleted != null)
         {
             if (deleted.Value.Collection != null)
                 ModifiedCollections?.Add(deleted.Value.Collection.Name);
 
             LastTombstoneEtag = deleted.Value.Etag;
-            reply[nameof(BatchRequestParser.CommandData.ChangeVector)] = deleted.Value.ChangeVector;
         }
+
+        if (IncludeReply == false) 
+            return;
+
+        var reply = new DynamicJsonValue
+        {
+            [nameof(BatchRequestParser.CommandData.Id)] = id,
+            [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.DELETE),
+            ["Deleted"] = deleted != null,
+        };
+
+        if (deleted != null)
+            reply[nameof(BatchRequestParser.CommandData.ChangeVector)] = deleted.Value.ChangeVector;
 
         Reply.Add(reply);
     }
@@ -78,12 +89,15 @@ public abstract class TransactionMergedCommand : DocumentMergedTransactionComman
         var deleted = deleteResults.Count > 0;
         if (deleted)
         {
-            LastChangeVector = deleteResults[deleteResults.Count - 1].ChangeVector;
+            LastChangeVector = deleteResults[^1].ChangeVector;
             for (var j = 0; j < deleteResults.Count; j++)
             {
                 ModifiedCollections?.Add(deleteResults[j].Collection.Name);
             }
         }
+
+        if (IncludeReply == false)
+            return;
 
         Reply.Add(new DynamicJsonValue
         {

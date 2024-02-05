@@ -193,6 +193,18 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Csrf.AdditionalOriginHeaders", ConfigurationEntryScope.ServerWideOnly)]
         public string[] CsrfAdditionalOriginHeaders { get; set; }
+        
+        [Description("Default (in minutes) two-factor session duration")]
+        [DefaultValue(120)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Security.TwoFactor.DefaultSessionDurationInMin", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting DefaultTwoFactorSessionDuration { get; set; }
+        
+        [Description("Maximum (in minutes) two-factor session duration")]
+        [DefaultValue(1440)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Security.TwoFactor.MaxSessionDurationInMin", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting MaxTwoFactorSessionDuration { get; set; }
 
         [Description("The number of days before certificate expiration when it will be considered expiring. Default: 14")]
         [DefaultValue(14)]

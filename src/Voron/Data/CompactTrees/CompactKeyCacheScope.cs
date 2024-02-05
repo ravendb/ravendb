@@ -4,29 +4,30 @@ using Voron.Impl;
 
 namespace Voron.Data.CompactTrees;
 
-public readonly struct CompactKeyCacheScope : IDisposable
+public struct CompactKeyCacheScope : IDisposable
 {
     private readonly LowLevelTransaction _llt;
-    public readonly CompactKey Key;
+    private CompactKey _key;
+    public CompactKey Key => _key;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CompactKeyCacheScope(LowLevelTransaction tx)
     {
         _llt = tx;
-        Key = tx.AcquireCompactKey();
+        _key = tx.AcquireCompactKey();
     }
 
     public CompactKeyCacheScope(LowLevelTransaction tx, ReadOnlySpan<byte> key, long dictionaryId)
     {
         _llt = tx;
-        Key = tx.AcquireCompactKey();
-        Key.Set(key);
-        Key.ChangeDictionary(dictionaryId);
+        _key = tx.AcquireCompactKey();
+        _key.Set(key);
+        _key.ChangeDictionary(dictionaryId);
     }
 
     public void Dispose()
     {
         // We are getting an unsafe references on an scoped object because we are disposing anyways. 
-        _llt.ReleaseCompactKey(ref Unsafe.AsRef(Key));
+        _llt.ReleaseCompactKey(ref _key);
     }
 }

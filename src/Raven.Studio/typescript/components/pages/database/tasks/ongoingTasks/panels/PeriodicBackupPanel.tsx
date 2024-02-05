@@ -104,8 +104,10 @@ function Details(props: PeriodicBackupPanelProps) {
 
     const localNodeTag = useAppSelector(clusterSelectors.localNodeTag);
 
+    const isResponsible = data.shared.responsibleNodeTag === localNodeTag;
+
     const onGoingBackup = data.nodesInfo.map((x) => x.details?.onGoingBackup).find((x) => x);
-    const runningOnAnotherNode = onGoingBackup && data.shared.responsibleNodeTag !== localNodeTag;
+    const runningOnAnotherNode = onGoingBackup && !isResponsible;
 
     const onGoingBackupHumanized = useMemo(() => {
         if (!onGoingBackup) {
@@ -203,7 +205,7 @@ function Details(props: PeriodicBackupPanelProps) {
                         title={backupNowBlockReason ?? "Click to trigger the backup task now"}
                     >
                         <Icon icon="backup" />
-                        <span>{backupNowInProgress ? "Show backup progress" : "Backup now"}</span>
+                        <span>{isResponsible && backupNowInProgress ? "Show backup progress" : "Backup now"}</span>
                     </Badge>
                 )}
             </RichPanelDetailItem>

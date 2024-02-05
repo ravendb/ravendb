@@ -5,10 +5,10 @@ import StudioConfiguration = Raven.Client.Documents.Operations.Configuration.Stu
 
 class saveDatabaseStudioConfigurationCommand extends commandBase {
     
-    private readonly dto: StudioConfiguration;
+    private readonly dto: Partial<StudioConfiguration>;
     private readonly db: database;
 
-    constructor(dto: StudioConfiguration, db: database) {
+    constructor(dto: Partial<StudioConfiguration>, db: database) {
         super();
         this.dto = dto;
         this.db = db;

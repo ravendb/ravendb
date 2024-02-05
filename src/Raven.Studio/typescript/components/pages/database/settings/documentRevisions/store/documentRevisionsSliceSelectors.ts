@@ -4,6 +4,7 @@ import {
     DocumentRevisionsConfigName,
     documentRevisionsSliceInternal,
 } from "./documentRevisionsSlice";
+import { createSelector } from "@reduxjs/toolkit";
 
 const { configsSelectors } = documentRevisionsSliceInternal;
 
@@ -15,14 +16,15 @@ const defaultDocumentsConfig = (store: RootState) =>
 const defaultConflictsConfig = (store: RootState) =>
     configsSelectors.selectById(store.documentRevisions.configs, documentRevisionsConfigNames.defaultConflicts);
 
-const collectionConfigs = (store: RootState) =>
-    configsSelectors
-        .selectAll(store.documentRevisions.configs)
-        .filter(
+const collectionConfigs = createSelector(
+    (store: RootState) => configsSelectors.selectAll(store.documentRevisions.configs),
+    (configs) =>
+        configs.filter(
             (x) =>
                 x.Name !== documentRevisionsConfigNames.defaultConflicts &&
                 x.Name !== documentRevisionsConfigNames.defaultDocument
-        );
+        )
+);
 
 const allConfigsNames = (store: RootState) =>
     configsSelectors.selectIds(store.documentRevisions.configs) as DocumentRevisionsConfigName[];

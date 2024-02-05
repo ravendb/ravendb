@@ -11,7 +11,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.ETL
+namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class RavenDB_13220 : RavenTestBase
     {

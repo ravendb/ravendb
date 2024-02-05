@@ -20,18 +20,18 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Server.Extensions;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
-    internal sealed class ClusterObserver : IDisposable
+    internal partial class ClusterObserver : IDisposable
     {
         private readonly PoolOfThreads.LongRunningWork _observe;
         private readonly DatabaseTopologyUpdater _databaseTopologyUpdater;
@@ -161,6 +161,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 return;
 
             var updateCommands = new List<(UpdateTopologyCommand Update, string Reason)>();
+            var responsibleNodePerDatabase = new Dictionary<string, List<ResponsibleNodeInfo>>();
             var cleanUnusedAutoIndexesCommands = new List<(UpdateDatabaseCommand Update, string Reason)>();
             var cleanCompareExchangeTombstonesCommands = new List<CleanCompareExchangeTombstonesCommand>();
 
@@ -235,25 +236,33 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             var state = new DatabaseObservationState(topology.Name, rawRecord, topology.Topology, clusterTopology, newStats, prevStats, etag, _iteration);
 
-                            mergedState.AddState(state);
-
-                            if (SkipAnalyzingDatabaseGroup(state, currentLeader, now))
-                                continue;
-
-                            var updateReason = _databaseTopologyUpdater.Update(context, state, ref deletions);
-                            if (updateReason != null)
+                            try
                             {
-                                _observerLogger.AddToDecisionLog(state.Name, updateReason, state.ObserverIteration);
+                                mergedState.AddState(state);
 
-                                var cmd = new UpdateTopologyCommand(state.Name, now, RaftIdGenerator.NewId())
+                                if (SkipAnalyzingDatabaseGroup(state, currentLeader, now))
+                                    continue;
+
+                                var updateReason = _databaseTopologyUpdater.Update(context, state, ref deletions);
+                                if (updateReason != null)
                                 {
-                                    Topology = state.DatabaseTopology,
-                                    RaftCommandIndex = state.LastIndexModification,
-                                };
+                                    _observerLogger.AddToDecisionLog(state.Name, updateReason, state.ObserverIteration);
 
-                                updateCommands.Add((cmd, updateReason));
-                                //breaking here to only change the db record once in order to avoid concurrency exception
-                                break;
+                                    var cmd = new UpdateTopologyCommand(state.Name, now, RaftIdGenerator.NewId())
+                                    {
+                                        Topology = state.DatabaseTopology, RaftCommandIndex = state.LastIndexModification,
+                                    };
+
+                                    updateCommands.Add((cmd, updateReason));
+                                    //breaking here to only change the db record once in order to avoid concurrency exception
+                                    break;
+                                }
+                            }
+                            finally
+                            {
+                                var responsibleNodeCommands = GetResponsibleNodesForBackupTasks(currentLeader, rawRecord, topology.Name, state.DatabaseTopology, state.ObserverIteration, context);
+                                if (responsibleNodeCommands is { Count: > 0 })
+                                    responsibleNodePerDatabase[topology.Name] = responsibleNodeCommands;
                             }
                         }
 
@@ -349,6 +358,20 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
 
+            if (responsibleNodePerDatabase.Count > 0)
+            {
+                if (_engine.LeaderTag != _server.NodeTag)
+                {
+                    throw new NotLeadingException("This node is no longer the leader, so we abort updating the responsible node for backup tasks");
+                }
+
+                var command = new UpdateResponsibleNodeForTasksCommand(new UpdateResponsibleNodeForTasksCommand.Parameters
+                {
+                    ResponsibleNodePerDatabase = responsibleNodePerDatabase
+                }, RaftIdGenerator.NewId());
+
+                await _engine.PutAsync(command);
+            }
             if (deletions != null)
             {
                 foreach (var command in deletions)

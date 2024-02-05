@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics.Contracts;
+using Sparrow.Extensions;
 
 namespace Voron.Data.Lookups;
 
@@ -66,7 +67,7 @@ public struct DoubleLookupKey : ILookupKey
         }
 
         var o = (DoubleLookupKey)(object)k;
-        return Math.Abs(Value - o.Value) < double.Epsilon;
+        return Value.AlmostEquals(o.Value);
     }
 
     public void OnNewKeyAddition<T>(Lookup<T> parent) where T : struct, ILookupKey

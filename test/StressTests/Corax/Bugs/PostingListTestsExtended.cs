@@ -31,7 +31,7 @@ public class PostingListTestsExtended : NoDisposalNoOutputNeeded
     [MemberData("Configuration")]
     public void CanDeleteAndInsertInRandomOrder(int seed, int size)
     {
-        using var testClass = new FastTests.Voron.Sets.PostingListTests(Output);
+        using var testClass = new FastTests.Voron.PostingLists.PostingListTests(Output);
         testClass.CanDeleteAndInsertInRandomOrder(seed, size, 10);
     }
 
@@ -39,7 +39,7 @@ public class PostingListTestsExtended : NoDisposalNoOutputNeeded
     [InlineData(391060845, 31707323)]
     public void CanDeleteAndInsertInRandomOrderWindows(int seed, int size)
     {
-        using var testClass = new FastTests.Voron.Sets.PostingListTests(Output);
+        using var testClass = new FastTests.Voron.PostingLists.PostingListTests(Output);
         testClass.CanDeleteAndInsertInRandomOrder(seed, size, 10);
     }
 }

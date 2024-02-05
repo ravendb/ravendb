@@ -19,7 +19,9 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -354,6 +356,44 @@ public partial class RavenTestBase
             await RunBackupAsync(store.Database, result.TaskId, isFullBackup, servers);
 
             return result.TaskId;
+        }
+
+        public async Task<long> UpdateConfigAsync(RavenServer server, PeriodicBackupConfiguration config, DocumentStore store)
+        {
+            var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+
+            WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, result.TaskId);
+
+            return result.TaskId;
+        }
+
+        public void WaitForResponsibleNodeUpdate(ServerStore serverStore, string databaseName, long taskId, string differentThan = null)
+        {
+            using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                using (var rawRecord = serverStore.Engine.StateMachine.ReadRawDatabaseRecord(context, databaseName, out _))
+                {
+                    foreach (var (name, _) in rawRecord.Topologies)
+                    {
+                        var value = WaitForValue(() =>
+                        {
+                            var responsibleNode = BackupUtils.GetResponsibleNodeTag(serverStore, name, taskId);
+                            return responsibleNode != differentThan;
+                        }, true);
+
+                        Assert.True(value);
+                    }
+                }
+            }
+        }
+
+        public void WaitForResponsibleNodeUpdateInCluster(IDocumentStore store, List<RavenServer> nodes, long backupTaskId)
+        {
+            foreach (var server in nodes)
+            {
+                WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, backupTaskId);
+            }
         }
 
         public async Task RunBackupAsync(string database, long taskId, bool isFullBackup, List<RavenServer> servers = null)

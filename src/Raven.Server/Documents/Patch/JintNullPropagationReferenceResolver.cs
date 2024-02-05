@@ -2,7 +2,6 @@
 using Jint.Native;
 using Jint.Runtime;
 using Jint.Runtime.Interop;
-using Jint.Runtime.References;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Client;
 
@@ -92,23 +91,23 @@ namespace Raven.Server.Documents.Patch
                     {
                         case "reduce":
                         case "reduceRight":
-                            value = new ClrFunctionInstance(engine, name, static (_, arguments) => arguments.At(1, JsValue.Null));
+                            value = new ClrFunction(engine, name, static (_, arguments) => arguments.At(1, JsValue.Null));
                             return true;
                         case "concat":
-                            value = new ClrFunctionInstance(engine, name, static (_, arguments) => arguments.At(0));
+                            value = new ClrFunction(engine, name, static (_, arguments) => arguments.At(0));
                             return true;
                         case "includes":
                         case "some":
-                            value = new ClrFunctionInstance(engine, name, static (_, _) => JsBoolean.False);
+                            value = new ClrFunction(engine, name, static (_, _) => JsBoolean.False);
                             return true;
                         case "every":
-                            value = new ClrFunctionInstance(engine, name, static (_, _) => JsBoolean.True);
+                            value = new ClrFunction(engine, name, static (_, _) => JsBoolean.True);
                             return true;
                         case "findIndex":
                         case "findLastIndex":
                         case "indexOf":
                         case "lastIndexOf":
-                            value = new ClrFunctionInstance(engine, name, static (_, _) => _numberNegativeOne);
+                            value = new ClrFunction(engine, name, static (_, _) => _numberNegativeOne);
                             return true;
                         case "filter":
                         case "flat":
@@ -122,7 +121,7 @@ namespace Raven.Server.Documents.Patch
                         case "toSorted":
                         case "toSpliced":
                         case "with":
-                            value = new ClrFunctionInstance(engine, name, (_, _) => new JsArray(engine));
+                            value = new ClrFunction(engine, name, (_, _) => new JsArray(engine));
                             return true;
                     }
                 }
@@ -133,7 +132,7 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            value = new ClrFunctionInstance(engine, "function", static (_, _) => JsValue.Undefined);
+            value = new ClrFunction(engine, "function", static (_, _) => JsValue.Undefined);
             return true;
         }
 

@@ -6,7 +6,6 @@ using System.IO.Compression;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Smuggler;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
@@ -84,6 +83,12 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(CompressionLevel.Fastest)]
         [ConfigurationEntry("Backup.Snapshot.Compression.Level", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public CompressionLevel SnapshotCompressionLevel { get; set; }
+
+        [Description("Number of minutes, after which we will switch to a new responsible node for backup.")]
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Backup.MoveToNewResponsibleNodeGracePeriodInMin", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting MoveToNewResponsibleNodeGracePeriod { get; set; }
 
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {

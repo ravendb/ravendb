@@ -361,9 +361,9 @@ namespace Raven.Server.Rachis
 
                         if (lowestIndexInEntireCluster > lastTruncated)
                         {
-                            var cmd = new LowestIndexUpdateCommand(leader: this, engine: _engine, lowestIndexInEntireCluster: lowestIndexInEntireCluster);
+                            var cmd = new LowestIndexUpdateCommand(engine: _engine, lowestIndexInEntireCluster: lowestIndexInEntireCluster);
                             _engine.TxMerger.EnqueueSync(cmd);
-                            LowestIndexInEntireCluster = _lowestIndexInEntireCluster;
+                            LowestIndexInEntireCluster = lowestIndexInEntireCluster;
                         }
                     }
                     catch (Exception ex)
@@ -855,7 +855,7 @@ namespace Raven.Server.Rachis
                 RachisConsensus.ValidateNodeTag(nodeTag);
             }
 
-            using (_disposerLock.EnsureNotDisposed())
+            using (await _disposerLock.EnsureNotDisposedAsync())
             {
                 var topologyModification = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var existing = Interlocked.CompareExchange(ref _topologyModification, topologyModification, null);

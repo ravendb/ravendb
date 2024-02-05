@@ -81,7 +81,7 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
         OnCurrentWriteStreamSet(_currentWriteStream);
     }
 
-    public virtual async Task FlushIfNeeded(bool force = false)
+    public virtual async Task<bool> FlushIfNeeded(bool force = false)
     {
         if (_currentWriteStream.Position > MaxSizeInBuffer || _asyncWrite.IsCompleted || force)
         {
@@ -98,9 +98,12 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
             _memoryBuffer = _backgroundMemoryBuffer;
             _backgroundMemoryBuffer = tmpBuffer;
 
-            _asyncWrite = WriteToStreamAsync(tmp, _requestBodyStream, tmpBuffer, _isInitialWrite);
+            _asyncWrite = WriteToStreamAsync(tmp, _requestBodyStream, tmpBuffer, _isInitialWrite || force);
             _isInitialWrite = false;
+            return _isInitialWrite || force;
         }
+
+        return false;
     }
 
     protected virtual void OnCurrentWriteStreamSet(MemoryStream currentWriteStream)

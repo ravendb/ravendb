@@ -60,5 +60,6 @@ public enum RavenTestCategory : long
     Interversion = 1L << 44,
     Security = 1L << 45,
     Core = 1L << 46,
-    Intrinsics = 1L << 47
+    Intrinsics = 1L << 47,
+    Sinks = 1L << 48
 }

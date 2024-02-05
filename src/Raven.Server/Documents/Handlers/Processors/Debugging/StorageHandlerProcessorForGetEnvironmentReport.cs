@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Debugging;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Handlers.Processors.Debugging;
 
@@ -41,21 +43,7 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentReport : AbstractS
         {
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
-                writer.WriteStartObject();
-
-                writer.WritePropertyName("Name");
-                writer.WriteString(env.Name);
-                writer.WriteComma();
-
-                writer.WritePropertyName("Type");
-                writer.WriteString(env.Type.ToString());
-                writer.WriteComma();
-
-                var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(GetDetailedReport(env, details));
-                writer.WritePropertyName("Report");
-                writer.WriteObject(context.ReadObject(djv, env.Name));
-
-                writer.WriteEndObject();
+                WriteReport(writer, env, context, details);
             }
         }
     }
@@ -74,5 +62,10 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentReport : AbstractS
 
         var index = RequestHandler.Database.IndexStore.GetIndex(environment.Name);
         return index.GenerateStorageReport(details);
+    }
+
+    protected override DynamicJsonValue GetJsonReport(StorageEnvironmentWithType env, LowLevelTransaction lowTx, bool de)
+    {
+        return (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(GetDetailedReport(env, de));
     }
 }

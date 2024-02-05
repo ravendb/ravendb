@@ -85,6 +85,9 @@ namespace Raven.Server.Web.System
 
             var sb = new StringBuilder($"{args} --pid {processId} --output {CommandLineArgumentEscaper.EscapeSingleArg(output)}");
 
+            if (PlatformDetails.RunningOnPosix)
+                sb.Append($" --output-owner {Environment.UserName}"); // make sure we'll be able to download the output file and delete it once HTTP request completes
+
             var startup = new ProcessStartInfo
             {
                 Arguments = sb.ToString(),

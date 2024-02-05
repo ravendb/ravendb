@@ -33,6 +33,7 @@ using Raven.Server.Documents;
 using System.Text;
 using Newtonsoft.Json;
 using Raven.Client.Util;
+using Raven.Server;
 using Tests.Infrastructure;
 
 namespace FastTests
@@ -253,6 +254,12 @@ namespace FastTests
 
                 var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(tag, $"{config.Name}/{config.Transforms.First().Name}", AlertType.Etl_LoadError);
 
+                if (loadAlert is null)
+                {
+                    error = null;
+                    return false;
+                }
+
                 var details = (EtlErrorsDetails)loadAlert.Details;
 
                 if (details.Errors.Count != 0)
@@ -286,6 +293,12 @@ namespace FastTests
                     throw new NotSupportedException($"Unknown ETL type: {typeof(T)}");
 
                 var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(tag, $"{config.Name}/{config.Transforms.First().Name}", AlertType.Etl_TransformationError);
+                
+                if (loadAlert is null)
+                {
+                    error = null;
+                    return false;
+                }
 
                 var details = (EtlErrorsDetails)loadAlert.Details;
 
@@ -309,16 +322,16 @@ namespace FastTests
                 return await _parent.GetDocumentDatabaseInstanceFor(store, databaseName);
             }
 
-            public async Task<string> GetEtlDebugInfo(string database, TimeSpan timeout, RavenDatabaseMode databaseMode = RavenDatabaseMode.Single)
+            public async Task<string> GetEtlDebugInfo(string database, TimeSpan? timeout = null, RavenDatabaseMode databaseMode = RavenDatabaseMode.Single, RavenServer server = null)
             {
                 IEnumerable<DocumentDatabase> databases = databaseMode switch
                 {
-                    RavenDatabaseMode.Single => new[] { await _parent.GetDatabase(database) },
-                    RavenDatabaseMode.Sharded => await _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database).ToListAsync(),
+                    RavenDatabaseMode.Single => new[] { await GetDatabase(server ?? _parent.Server, database) },
+                    RavenDatabaseMode.Sharded => await _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database, server == null ? null : [server]).ToListAsync(),
                     _ => throw new ArgumentOutOfRangeException(nameof(databaseMode), databaseMode, null)
                 };
 
-                var sb = new StringBuilder($"ETL did not finish in {timeout.TotalSeconds} seconds.");
+                var sb = new StringBuilder($"ETL did not finish in {timeout?.TotalSeconds ?? 30} seconds.");
 
                 foreach (var documentDatabase in databases)
                 {

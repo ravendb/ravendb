@@ -1,7 +1,11 @@
-﻿namespace Tests.Infrastructure
+﻿using xRetry;
+
+namespace Tests.Infrastructure
 {
     public class NightlyBuildMultiplatformFactAttribute : NightlyBuildFactAttribute
     {
+        private string _skip;
+
         private readonly RavenPlatform _platform;
         private readonly RavenArchitecture _architecture;
         private readonly RavenIntrinsics _intrinsics;
@@ -36,12 +40,17 @@
         {
             get
             {
-                var skip = base.Skip;
+                var skip = _skip;
+                if (skip != null)
+                    return skip;
+
+                skip = base.Skip;
                 if (skip != null)
                     return skip;
 
                 return RavenMultiplatformFactAttribute.ShouldSkip(_platform, _architecture, _intrinsics, LicenseRequired, NightlyBuildOnly);
             }
+            set => _skip = value;
         }
     }
 }

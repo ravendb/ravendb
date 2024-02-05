@@ -515,15 +515,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                                         if (colParam is Npgsql.NpgsqlParameter || colParam is SqlParameter)
                                             colParam.Value = guid;
 
-                                        if (colParam is MySql.Data.MySqlClient.MySqlParameter mySqlParameter)
-                                        {
-                                            var arr = guid.ToByteArray();
-                                            mySqlParameter.Value = arr;
-                                            mySqlParameter.MySqlDbType = MySql.Data.MySqlClient.MySqlDbType.Binary;
-                                            mySqlParameter.Size = arr.Length;
-                                            break;
-                                        }
-                                        if (colParam is MySqlConnector.MySqlParameter mySqlConnectorParameter)
+                                        if (colParam is MySqlConnector.MySqlParameter mySqlConnectorParameter) 
                                         {
                                             var arr = guid.ToByteArray();
                                             mySqlConnectorParameter.Value = arr;
@@ -552,9 +544,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                                             ((Npgsql.NpgsqlParameter)colParam).NpgsqlDbType = npgsqlType;
                                             break;
                                         case SqlProvider.MySqlClient:
-                                            MySql.Data.MySqlClient.MySqlDbType mySqlDbType = ParseProviderSpecificParameterType<MySql.Data.MySqlClient.MySqlDbType>(dbTypeString);
-                                            ((MySql.Data.MySqlClient.MySqlParameter)colParam).MySqlDbType = mySqlDbType;
-                                            break;
                                         case SqlProvider.MySqlConnectorFactory:
                                             MySqlConnector.MySqlDbType mySqlConnectorDbType = ParseProviderSpecificParameterType<MySqlConnector.MySqlDbType>(dbTypeString);
                                             ((MySqlConnector.MySqlParameter)colParam).MySqlDbType = mySqlConnectorDbType;
@@ -713,15 +702,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     {
                         if (DateTime.TryParseExact(value, DefaultFormat.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime dateTime))
                         {
-                            switch (_providerFactory.GetType().Name)
-                            {
-                                case "MySqlClientFactory":
-                                    colParam.Value = dateTime.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
-                                    break;
-                                default:
-                                    colParam.Value = dateTime;
-                                    break;
-                            }
+                            colParam.Value = dateTime;
                             return true;
                         }
                     }
@@ -734,15 +715,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         if (DateTimeOffset.TryParseExact(value, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
                             DateTimeStyles.RoundtripKind, out DateTimeOffset dateTimeOffset))
                         {
-                            switch (_providerFactory.GetType().Name)
-                            {
-                                case "MySqlClientFactory":
-                                    colParam.Value = dateTimeOffset.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss.ffffff");
-                                    break;
-                                default:
-                                    colParam.Value = dateTimeOffset;
-                                    break;
-                            }
+                            colParam.Value = dateTimeOffset;
                             return true;
                         }
                     }

@@ -20,7 +20,7 @@ public sealed class ShardSubscriptionStorage : SubscriptionStorage
         _shardNumber = ShardHelper.GetShardNumberFromDatabaseName(_shardName);
     }
 
-    public override void HandleDatabaseRecordChange(DatabaseRecord databaseRecord)
+    public override void HandleDatabaseRecordChange()
     {
         using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())

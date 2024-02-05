@@ -12,4 +12,4 @@ const schema = yupObjectSchema<StudioConfiguration>({
 });
 
 export const studioDatabaseConfigurationYupResolver = yupResolver(schema);
-export type StudioDatabaseConfigurationFormData = Required<yup.InferType<typeof schema>>;
+export type StudioDatabaseConfigurationFormData = yup.InferType<typeof schema>;

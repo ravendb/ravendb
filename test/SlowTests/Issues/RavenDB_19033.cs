@@ -55,7 +55,7 @@ public class RavenDB_19033 : NoDisposalNeeded
         if (database1 == task1)
         {
             task1.Start();
-            task1.Wait();
+            await task1;
         }
 
         using (dbsCache.RemoveLockAndReturn(dbName, x => x.Dispose(), out _))
