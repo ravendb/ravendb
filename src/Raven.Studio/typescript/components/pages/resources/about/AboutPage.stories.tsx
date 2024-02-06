@@ -90,6 +90,14 @@ export const ConnectionFailure: StoryObj<AboutPageStoryProps> = {
     },
 };
 
+export const NoLicense: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        licenseType: "None",
+    },
+};
+
 export const DeveloperLicense: StoryObj<AboutPageStoryProps> = {
     render,
     args: {
@@ -192,4 +200,3 @@ export const PartialSupportOnPremise: StoryObj<AboutPageStoryProps> = {
         supportStatus: "PartialSupport",
     },
 };
-

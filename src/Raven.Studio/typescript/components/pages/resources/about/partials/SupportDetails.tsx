@@ -125,25 +125,26 @@ export function SupportDetails(props: SupportDetailsProps) {
                             </Col>
                             <Col xs={12} sm={6}>
                                 <div className="vstack gap-4">
-                                    <div className="hstack">
-                                        <Icon icon="clock" className="fs-2" />
+                                    {(supportType === "Professional" || supportType === "Production") && (
+                                        <div className="hstack">
+                                            <Icon icon="clock" className="fs-2" />
 
-                                        <div className="small">
-                                            {supportType === "Professional" && (
-                                                <>
-                                                    <strong>Next business day SLA</strong>
-                                                    <div>24/7 AVAILABILITY</div>
-                                                </>
-                                            )}
-                                            {supportType === "Production" && (
-                                                <>
-                                                    <strong>2 hour SLA</strong>
-                                                    <div>24/7 AVAILABILITY</div>
-                                                </>
-                                            )}
-                                            {/* TODO: what about different types of support? ex. partial */}
+                                            <div className="small">
+                                                {supportType === "Professional" && (
+                                                    <>
+                                                        <strong>Next business day SLA</strong>
+                                                        <div>24/7 AVAILABILITY</div>
+                                                    </>
+                                                )}
+                                                {supportType === "Production" && (
+                                                    <>
+                                                        <strong>2 hour SLA</strong>
+                                                        <div>24/7 AVAILABILITY</div>
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                     <div>
                                         <a href={aboutPageUrls.supportTerms} className="d-inline-flex">
                                             <Icon icon="terms" className="fs-2" />

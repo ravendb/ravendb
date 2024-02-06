@@ -69,56 +69,13 @@ function LicenseTable(props: LicenseTableProps) {
         return valueFromLicense ?? feature[column].value;
     };
 
-    const filteredSectionsBySearchText = featureAvailabilityData
-        .map((section) => {
-            if (!searchText) {
-                return section;
-            }
-
-            const searchLower = searchText.toLocaleLowerCase();
-
-            const sectionNameMatch = section.name.toLocaleLowerCase().includes(searchLower);
-            if (sectionNameMatch) {
-                return section;
-            }
-
-            const filteredItems = section.items.filter((x) => x.name.toLocaleLowerCase().includes(searchLower));
-
-            if (filteredItems.length === 0) {
-                // skip entire section
-                return null;
-            }
-
-            return {
-                ...section,
-                items: filteredItems,
-            };
-        })
-        .filter((x) => x);
-
-    // filter by second condition: 'view mode'
-    const filteredSections = filteredSectionsBySearchText
-        .map((section) => {
-            if (viewMode === "showAll") {
-                return section;
-            }
-
-            const filteredItems = section.items.filter((item) => {
-                const values = columns.map((x) => getEffectiveValue(item, x));
-                // show if has differences
-                return !values.every((x) => x === values[0]);
-            });
-            if (filteredItems.length === 0) {
-                // skip entire section
-                return null;
-            }
-
-            return {
-                ...section,
-                items: filteredItems,
-            };
-        })
-        .filter((x) => x);
+    const filteredSections = filterFeatureAvailabilitySection(
+        featureAvailabilityData,
+        searchText,
+        viewMode,
+        columns,
+        getEffectiveValue
+    );
 
     const onSearchTextChange = (searchText: string) => {
         setSearchText(searchText);
@@ -166,7 +123,7 @@ function LicenseTable(props: LicenseTableProps) {
                         <tr>
                             <th>License type</th>
                             {columns.map((column) => (
-                                <th className={classNames({ "bg-current": column === currentColumn })}>
+                                <th key={column} className={classNames({ "bg-current": column === currentColumn })}>
                                     <h4 className="fw-bolder text-uppercase m-0">
                                         {column === "community" && licenseType === "Essential"
                                             ? "Essential"
@@ -197,7 +154,7 @@ function LicenseTable(props: LicenseTableProps) {
                             </tr>
                         )}
                         {filteredSections.map((section) => (
-                            <React.Fragment>
+                            <React.Fragment key={section.name ?? "n/a"}>
                                 {section.name && (
                                     <tr key={section.name}>
                                         <React.Fragment key={section.name}>
@@ -1009,6 +966,70 @@ function getColumns(license: Raven.Server.Commercial.LicenseType): {
             };
     }
 }
+
+function filterFeatureAvailabilitySection(
+    features: FeatureAvailabilitySection[],
+    searchText: string,
+    viewMode: "showDiff" | "showAll",
+    columns: LicenseColumn[],
+    getEffectiveValue: (feature: FeatureAvailabilityItem, column: LicenseColumn) => any
+) {
+    const filteredSectionsBySearchText = features
+        .map((section) => {
+            if (!searchText) {
+                return section;
+            }
+
+            const searchLower = searchText.toLocaleLowerCase();
+
+            const sectionNameMatch = (section.name ?? "").toLocaleLowerCase().includes(searchLower);
+            if (sectionNameMatch) {
+                return section;
+            }
+
+            const filteredItems = section.items.filter((x) => x.name.toLocaleLowerCase().includes(searchLower));
+
+            if (filteredItems.length === 0) {
+                // skip entire section
+                return null;
+            }
+
+            return {
+                ...section,
+                items: filteredItems,
+            };
+        })
+        .filter((x) => x);
+
+    if (viewMode === "showAll") {
+        return filteredSectionsBySearchText;
+    }
+
+    // filter by second condition: 'view mode'
+    return filteredSectionsBySearchText
+        .map((section) => {
+            const filteredItems = section.items.filter((item) => {
+                const values = columns.map((x) => getEffectiveValue(item, x));
+                // show if has differences
+                return !values.every((x) => x === values[0]);
+            });
+            if (filteredItems.length === 0) {
+                // skip entire section
+                return null;
+            }
+
+            return {
+                ...section,
+                items: filteredItems,
+            };
+        })
+        .filter((x) => x);
+}
+
+export const forTesting = {
+    filterFeatureAvailabilitySection,
+    featureAvailabilityData,
+};
 
 function FeatureValue(props: { value: AvailabilityValue }) {
     const { value } = props;
