@@ -11,6 +11,7 @@ using Raven.Client.Exceptions;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.Stats;
+using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -115,7 +116,7 @@ public partial class RavenTestBase
 
                 var etag2 = storage.DocumentsStorage.GenerateNextEtag();
 
-                Assert.True(etag1 + 1 == etag2, "Replication loop found :(");
+                Assert.True(etag1 + 1 == etag2, GetReplicationLoopInfo(etag1, etag2));
 
                 var groups = collector.Pulses.GetAll().GroupBy(p => p.Direction);
                 foreach (var group in groups)
@@ -124,6 +125,21 @@ public partial class RavenTestBase
                     var count = group.Count();
                     Assert.True(count < 50, $"{key} seems to be excessive ({count})");
                 }
+            }
+
+            string GetReplicationLoopInfo(long etag1, long etag2)
+            {
+                var msg = $"Replication loop found :({Environment.NewLine}" +
+                          $"Expected: '{etag1 + 1}', Actual: '{etag2}'{Environment.NewLine}" +
+                          $"Database name: {storage.Name} on Node: {storage.ServerStore.NodeTag}. ";
+
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    msg += $"Database Change Vector: {DocumentsStorage.GetDatabaseChangeVector(ctx)}";
+                }
+
+                return msg;
             }
         }
         

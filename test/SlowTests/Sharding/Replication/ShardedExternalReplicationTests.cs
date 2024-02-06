@@ -635,7 +635,12 @@ namespace SlowTests.Sharding.Replication
                     u => u.Name.Equals("Karmel"),
                     TimeSpan.FromSeconds(60)));
 
-                Assert.True(WaitForDocument(src, "users/2$users/1", 30_000));
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    srcNodes,
+                    src.Database,
+                    "users/2$users/1",
+                    u => u.Name.Equals("Karmel"),
+                    TimeSpan.FromSeconds(60)));
 
                 var oldLocation = await Sharding.GetShardNumberForAsync(dst, "users/2$users/1");
                 var name1 = ShardHelper.ToShardName(dst.Database, oldLocation);
@@ -647,7 +652,7 @@ namespace SlowTests.Sharding.Replication
                 foreach (var server in dstNodes)
                 {
                     var db1 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name1);
-                    Assert.Equal(0, WaitForValue(() => db1.DocumentsStorage.GetNumberOfDocuments(), 2, 15_000, 333));
+                    Assert.Equal(0, WaitForValue(() => db1.DocumentsStorage.GetNumberOfDocuments(), 0, 15_000, 333));
 
                     using (db1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
@@ -659,23 +664,6 @@ namespace SlowTests.Sharding.Replication
 
                     var db2 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name2);
                     Assert.Equal(2, WaitForValue(() => db2.DocumentsStorage.GetNumberOfDocuments(), 2, 15_000, 333));
-                }
-
-                Assert.True(await WaitForDocumentInClusterAsync<User>(
-                    srcNodes,
-                    src.Database,
-                    "users/2$users/1",
-                    u => u.Name.Equals("Karmel"),
-                    TimeSpan.FromSeconds(60)));
-
-                foreach (var server in srcNodes)
-                {
-                    await Replication.EnsureNoReplicationLoopAsync(source.DatabaseMode, server, src.Database);
-                }
-
-                foreach (var server in dstNodes)
-                {
-                    await Replication.EnsureNoReplicationLoopAsync(destination.DatabaseMode, server, dst.Database);
                 }
             }
         }
