@@ -9,6 +9,7 @@ import {
 import { services } from "components/hooks/useServices";
 import { loadStatus } from "components/models/common";
 import { RootState } from "components/store";
+import database from "models/resources/database";
 
 export interface ConflictResolutionCollectionConfig {
     id: string;
@@ -158,10 +159,10 @@ export const conflictResolutionSlice = createSlice({
     },
 });
 
-const fetchConfig = createAsyncThunk<Raven.Client.ServerWide.ConflictSolver, string>(
+const fetchConfig = createAsyncThunk<Raven.Client.ServerWide.ConflictSolver, database>(
     "conflictResolution/fetchConfig",
-    async (databaseName) => {
-        return await services.databasesService.getConflictSolverConfiguration(databaseName);
+    async (db) => {
+        return await services.databasesService.getConflictSolverConfiguration(db);
     }
 );
 
@@ -170,17 +171,14 @@ export const conflictResolutionActions = {
     fetchConfig,
 };
 
-const usedCollectionNames = createSelector(
-    (store: RootState) => collectionConfigsSelectors.selectAll(store.conflictResolution.config.collectionConfigs),
-    (collectionConfigs) => collectionConfigs.map((x) => x.name)
-);
+const collectionConfigs = (store: RootState) =>
+    collectionConfigsSelectors.selectAll(store.conflictResolution.config.collectionConfigs);
 
 export const conflictResolutionSelectors = {
     loadStatus: (store: RootState) => store.conflictResolution.loadStatus,
     isResolveToLatest: (store: RootState) => store.conflictResolution.config.isResolveToLatest,
-    collectionConfigs: (store: RootState) =>
-        collectionConfigsSelectors.selectAll(store.conflictResolution.config.collectionConfigs),
-    usedCollectionNames: usedCollectionNames,
+    collectionConfigs,
+    usedCollectionNames: createSelector(collectionConfigs, (configs) => configs.map((x) => x.name)),
     isDirty: (store: RootState) => store.conflictResolution.isDirty,
     isSomeInEditMode: (store: RootState) =>
         collectionConfigsSelectors
