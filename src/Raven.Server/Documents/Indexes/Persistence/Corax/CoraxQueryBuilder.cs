@@ -354,7 +354,7 @@ public static class CoraxQueryBuilder
                                 right = ToCoraxQuery(builderParameters, ne1.Expression, ref builderParameters.StreamingDisabled, exact);
                                 TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged,
                                     ref builderParameters.StreamingDisabled,  requiredMaterialization: true);
-                                return indexSearcher.AndNot(right, left, token: builderParameters.Token);
+                                return indexSearcher.AndNot(left, right, token: builderParameters.Token);
                             }
 
                             if (@where.Right is TrueExpression)
