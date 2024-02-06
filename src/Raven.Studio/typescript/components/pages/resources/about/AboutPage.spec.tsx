@@ -4,7 +4,6 @@ import * as stories from "./AboutPage.stories";
 import React from "react";
 
 const {
-    AboutPage,
     ConnectionFailure,
     NoSupportOnPremise,
     NoSupportCloud,
@@ -12,23 +11,207 @@ const {
     ProfessionalSupportCloud,
     ProductionSupportCloud,
     ProductionSupportOnPremise,
+    NoLicense,
+    DeveloperLicense,
+    ProfessionalLicense,
+    EnterpriseLicense,
+    EssentialLicense,
+    CommunityLicense,
 } = composeStories(stories);
 
 describe("AboutPage", function () {
-    it("can retest connection to license server", async () => {
-        const screen = rtlRender(<ConnectionFailure />);
+    describe("Licenses", function () {
+        it("none - AGPL", async () => {
+            const { screen } = rtlRender(<NoLicense />);
 
-        expect(await screen.findByText(selectors.licenseServer.failure)).toBeInTheDocument();
-        expect(await screen.findByText(selectors.licenseServer.retestButton)).toBeInTheDocument();
+            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
+
+            expect(screen.queryAllByText(selectors.agplLicense)).toHaveLength(2);
+            expect(screen.queryByText(selectors.licenseId)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.renewLicense)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.registerLicense)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.forceUpdate)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.replaceLicense)).not.toBeInTheDocument();
+        });
+
+        it("enterprise", async () => {
+            const { screen } = rtlRender(<EnterpriseLicense />);
+
+            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
+
+            expect(screen.queryByText(selectors.agplLicense)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.licenseId)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.renewLicense)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.registerLicense)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.forceUpdate)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.replaceLicense)).toBeInTheDocument();
+        });
+
+        it("professional", async () => {
+            const { screen } = rtlRender(<ProfessionalLicense />);
+
+            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
+
+            expect(screen.queryByText(selectors.agplLicense)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.licenseId)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.renewLicense)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.registerLicense)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.forceUpdate)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.replaceLicense)).toBeInTheDocument();
+        });
+
+        it("community", async () => {
+            const { screen } = rtlRender(<CommunityLicense />);
+
+            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
+
+            expect(screen.queryByText(selectors.agplLicense)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.licenseId)).toBeInTheDocument();
+            expect(await screen.findByText(selectors.renewLicense)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.registerLicense)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.forceUpdate)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.replaceLicense)).toBeInTheDocument();
+        });
+
+        it("essential", async () => {
+            const { screen } = rtlRender(<EssentialLicense />);
+
+            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
+
+            expect(screen.queryByText(selectors.agplLicense)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.licenseId)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.renewLicense)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.registerLicense)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.forceUpdate)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.replaceLicense)).toBeInTheDocument();
+        });
+
+        it("developer", async () => {
+            const { screen } = rtlRender(<DeveloperLicense />);
+
+            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
+
+            expect(screen.queryByText(selectors.agplLicense)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.licenseId)).toBeInTheDocument();
+            expect(await screen.findByText(selectors.renewLicense)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.registerLicense)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.forceUpdate)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.replaceLicense)).toBeInTheDocument();
+        });
     });
 
-    //TODO: tests for license types
-    //TODO: tests for support types
+    describe("support", function () {
+        it("no support - on premise", async function () {
+            const { screen, fireClick } = rtlRender(<NoSupportOnPremise />);
+
+            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
+
+            await fireClick(screen.queryByText(selectors.support.supportPlanTab));
+
+            expect(screen.queryByText(selectors.support.productionSla)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.support.professionalSla)).not.toBeInTheDocument();
+
+            expect(screen.queryByText(selectors.support.upgradeYourSupport)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.support.upgradeToProduction)).not.toBeInTheDocument();
+        });
+
+        it("no support - cloud", async function () {
+            const { screen, fireClick } = rtlRender(<NoSupportCloud />);
+
+            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
+
+            await fireClick(screen.queryByText(selectors.support.supportPlanTab));
+
+            expect(screen.queryByText(selectors.support.productionSla)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.support.professionalSla)).not.toBeInTheDocument();
+
+            expect(screen.queryByText(selectors.support.upgradeYourSupport)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.support.upgradeToProduction)).not.toBeInTheDocument();
+        });
+
+        it("professional support - on premise", async function () {
+            const { screen, fireClick } = rtlRender(<ProfessionalSupportOnPremise />);
+
+            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
+
+            await fireClick(screen.queryByText(selectors.support.supportPlanTab));
+
+            expect(screen.queryByText(selectors.support.productionSla)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.support.professionalSla)).toBeInTheDocument();
+
+            expect(screen.queryByText(selectors.support.upgradeYourSupport)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.support.upgradeToProduction)).toBeInTheDocument();
+        });
+
+        it("professional support - cloud", async function () {
+            const { screen, fireClick } = rtlRender(<ProfessionalSupportCloud />);
+
+            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
+
+            await fireClick(screen.queryByText(selectors.support.supportPlanTab));
+
+            expect(screen.queryByText(selectors.support.productionSla)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.support.professionalSla)).toBeInTheDocument();
+
+            expect(screen.queryByText(selectors.support.upgradeYourSupport)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.support.upgradeToProduction)).toBeInTheDocument();
+        });
+
+        it("production support - on premise", async function () {
+            const { screen, fireClick } = rtlRender(<ProductionSupportOnPremise />);
+
+            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
+
+            await fireClick(screen.queryByText(selectors.support.supportPlanTab));
+
+            expect(screen.queryByText(selectors.support.productionSla)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.support.professionalSla)).not.toBeInTheDocument();
+
+            expect(screen.queryByText(selectors.support.upgradeYourSupport)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.support.upgradeToProduction)).not.toBeInTheDocument();
+        });
+
+        it("production support - cloud", async function () {
+            const { screen, fireClick } = rtlRender(<ProductionSupportCloud />);
+
+            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
+
+            await fireClick(screen.queryByText(selectors.support.supportPlanTab));
+
+            expect(screen.queryByText(selectors.support.productionSla)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.support.professionalSla)).not.toBeInTheDocument();
+
+            expect(screen.queryByText(selectors.support.upgradeYourSupport)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.support.upgradeToProduction)).not.toBeInTheDocument();
+        });
+    });
+
+    it("can retest connection to license server", async () => {
+        const { screen } = rtlRender(<ConnectionFailure />);
+
+        expect(await screen.findByText(selectors.licenseServer.retestButton)).toBeInTheDocument();
+        expect(screen.queryAllByText(selectors.licenseServer.failure)).toHaveLength(2);
+    });
 });
 
 const selectors = {
     licenseServer: {
         failure: /Unable to reach the RavenDB License Server/,
         retestButton: /Test again/,
+        connected: /Connected/,
+    },
+    agplLicense: /No license - AGPLv3 Restrictions/,
+    licenseId: /License ID/,
+    renewLicense: /Renew license/,
+    registerLicense: /Register license/,
+    forceUpdate: /Force Update/,
+    replaceLicense: "Replace",
+
+    support: {
+        supportPlanTab: /Support plan/,
+        productionSla: "2 hour SLA",
+        professionalSla: "Next business day SLA",
+        upgradeYourSupport: /Upgrade Your Support/,
+        upgradeToProduction: /Upgrade to Production/,
     },
 };
