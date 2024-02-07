@@ -1883,6 +1883,15 @@ namespace Raven.Server.Documents
                     documentFlags,
                     nonPersistentFlags).Etag;
 
+                // We've to add notification since we're updating last tombstone etag, and we can end up in situation when our indexes will be stale due unprocessed tombstones after replication.
+                context.Transaction.AddAfterCommitNotification(new DocumentChange
+                {
+                    Type = DocumentChangeTypes.Delete,
+                    Id = id,
+                    ChangeVector = changeVector,
+                    CollectionName = collectionName.Name,
+                });
+
                 return new DeleteOperationResult
                 {
                     Collection = collectionName,
