@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -65,7 +66,7 @@ public partial class RavenTestBase
             {
                 try
                 {
-                    await server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, moveToShard, prefixedSetting?.Prefix);
+                    await server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, moveToShard, prefix: prefixedSetting?.Prefix, raftId: RaftIdGenerator.NewId());
                     break;
                 }
                 catch

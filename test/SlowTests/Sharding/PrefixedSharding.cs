@@ -10,6 +10,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Rachis;
@@ -1558,7 +1559,7 @@ public class PrefixedSharding : ClusterTestBase
 
         // shard #2 is not a part of Prefixed['users/'].Shards 
         await Assert.ThrowsAsync<RachisApplyException>(async ()=> 
-            await Server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, toShard : 2, prefix: "users/"));
+            await Server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, toShard : 2, prefix: "users/", RaftIdGenerator.NewId()));
     }
 
     [RavenFact(RavenTestCategory.Sharding)]

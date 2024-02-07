@@ -30,7 +30,10 @@ namespace Raven.Server.ServerWide
             _serverStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
         }
 
-        public Task<(long Index, object Result)> StartBucketMigration(string database, int bucket, int toShard, string prefix = null, string raftId = null)
+        public Task<(long Index, object Result)> StartBucketMigration(string database, int bucket, int toShard, string raftId = null) =>
+            StartBucketMigration(database, bucket, toShard, prefix: null, raftId);
+
+        public Task<(long Index, object Result)> StartBucketMigration(string database, int bucket, int toShard, string prefix, string raftId)
         {
             var cmd = new StartBucketMigrationCommand(bucket, toShard, database, prefix, raftId ?? RaftIdGenerator.NewId());
             return _serverStore.SendToLeaderAsync(cmd);
