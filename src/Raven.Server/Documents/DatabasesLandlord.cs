@@ -190,7 +190,11 @@ namespace Raven.Server.Documents
                 }
                 catch (ObjectDisposedException)
                 {
-                    // the server is disposed when we are trying to access to database
+                    // the server is disposed when we are trying to access the database
+                }
+                catch (OperationCanceledException)
+                {
+                    // the server is disposed when we are trying to access the database
                 }
                 catch (DatabaseConcurrentLoadTimeoutException e)
                 {

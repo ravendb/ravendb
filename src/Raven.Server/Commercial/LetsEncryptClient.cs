@@ -66,6 +66,7 @@ namespace Raven.Server.Commercial
         private Jws _jws;
         private readonly string _path;
         private readonly string _url;
+        private readonly string _directoryPath;
         private string _nonce;
         private RSACryptoServiceProvider _accountKey;
         private RegistrationCache _cache;
@@ -77,23 +78,18 @@ namespace Raven.Server.Commercial
         public LetsEncryptClient(string url)
         {
             _url = url ?? throw new ArgumentNullException(nameof(url));
+            _directoryPath = new Uri(_url).LocalPath.TrimStart('/');
+            if(string.IsNullOrEmpty(_directoryPath))
+                throw new ArgumentNullException(nameof(_directoryPath), "Url does not contain directory path");
 
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
-                Environment.SpecialFolderOption.Create);
-
-            var hash = SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(url));
-            var file = Jws.Base64UrlEncoded(hash) + ".lets-encrypt.cache.json";
-            _path = Path.Combine(home, file);
+            _path = GetCachePath(_url);
         }
 
         public async Task Init(string email, CancellationToken token = default(CancellationToken))
         {
             _accountKey = new RSACryptoServiceProvider(4096);
             _client = GetCachedClient(_url);
-            (_directory, _) = await SendAsync<Directory>(HttpMethod.Get, new Uri("directory", UriKind.Relative), null, token);
-
-            // Use this when testing against pebble
-            //(_directory, _) = await SendAsync<Directory>(HttpMethod.Get, new Uri("dir", UriKind.Relative), null, token);
+            (_directory, _) = await SendAsync<Directory>(HttpMethod.Get, new Uri(_directoryPath, UriKind.Relative), null, token);
 
             if (File.Exists(_path))
             {
@@ -317,12 +313,9 @@ namespace Raven.Server.Commercial
                     // Then, all subsequent requests of AuthorizationChallenge (to get the status of the challenge) are POST-AS_GET with an empty body.
                     (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, "{}", token);
 
-                    while (result.Status == "pending")
+                    if (result.Status == "pending" || result.Status == "processing")
                     {
-                        // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
-                        (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, string.Empty, token);
-
-                        await Task.Delay(500, token);
+                        await WaitForStatusAsync(challenge.Url, new List<string> { "valid" }, token);
                     }
                 }
                 catch (Exception e)
@@ -362,17 +355,33 @@ namespace Raven.Server.Commercial
 
             csr.CertificateExtensions.Add(san.Build());
 
-            var (response, responseText) = await SendAsync<Order>(HttpMethod.Post, _currentOrder.Finalize, new FinalizeRequest
+            Order response;
+            string responseText;
+            // https://community.letsencrypt.org/t/acme-client-finalized-order-stuck-on-ready-state/165196/6
+            foreach (var authorization in _currentOrder.Authorizations)
             {
-                CSR = Jws.Base64UrlEncoded(csr.CreateSigningRequest())
-            }, token);
+                await WaitForStatusAsync(authorization, new List<string> { "valid" }, token);
+            }
+            
+            await WaitForStatusAsync(_currentOrder.Location, new List<string> { "ready" }, token);
 
-            var finalizeLocation = response.Location;
+            try
+            {
+                (response, _) = await SendAsync<Order>(HttpMethod.Post, _currentOrder.Finalize,
+                    new FinalizeRequest { CSR = Jws.Base64UrlEncoded(csr.CreateSigningRequest()) }, token);
+            }
+            catch (Exception)
+            {
+                (response, _) = await SendAsync<Order>(HttpMethod.Post, _currentOrder.Location, string.Empty, token);
+                if (response.Status != "processing" && response.Status != "valid")
+                    throw;
+            }
+
 
             while (true)
             {
                 // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
-                (response, responseText) = await SendAsync<Order>(HttpMethod.Post, finalizeLocation, string.Empty, token);
+                (response, responseText) = await SendAsync<Order>(HttpMethod.Post, _currentOrder.Location, string.Empty, token);
 
                 if (response.Status == "valid")
                 {
@@ -438,6 +447,19 @@ namespace Raven.Server.Commercial
             public X509Certificate2 Certificate;
         }
 
+        private async Task WaitForStatusAsync(Uri uri, List<string> statusesToWaitFor, CancellationToken token = default)
+        {
+            while (true)
+            {
+                // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
+                var (response, _) = await SendAsync<Order>(HttpMethod.Post, uri, string.Empty, token);
+                if (statusesToWaitFor.Contains(response.Status))
+                    break;
+
+                await Task.Delay(500, token);
+            }
+        }
+
         public bool TryGetCachedCertificate(string host, out CachedCertificateResult value)
         {
             value = null;
@@ -477,6 +499,15 @@ namespace Raven.Server.Commercial
             {
                 _cache.CachedCerts.Remove(host);
             }
+        }
+        
+        internal static string GetCachePath(string acmeUrl)
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
+                Environment.SpecialFolderOption.Create);
+            var hash = SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(acmeUrl));
+            var file = Jws.Base64UrlEncoded(hash) + ".lets-encrypt.cache.json";
+            return Path.Combine(home, file);
         }
 
         private sealed class RegistrationCache

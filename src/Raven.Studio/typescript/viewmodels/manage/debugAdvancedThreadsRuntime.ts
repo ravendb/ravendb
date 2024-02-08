@@ -26,7 +26,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
     isConnectedToWebSocket: KnockoutComputed<boolean>;
     
     threadsCount: KnockoutComputed<number>;
-    dedicatedThreadsCount: KnockoutComputed<number>;
+    dedicatedThreadsCount = ko.observable<number>(0);
     machineCpuUsage = ko.observable<number>(0);
     serverCpuUsage = ko.observable<number>(0);
 
@@ -44,15 +44,6 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
             
             if (data) {
                 return data.length;
-            }
-            return 0;
-        });
-        
-        this.dedicatedThreadsCount = ko.pureComputed(() => {
-            const data = this.filteredData();
-            
-            if (data) {
-                return data.filter(x => x.Name !== "Unknown" && x.Name !== "Unmanaged Thread").length;
             }
             return 0;
         });
@@ -170,8 +161,9 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         this.allData(data.List);
         this.machineCpuUsage(data.CpuUsage);
         this.serverCpuUsage(data.ProcessCpuUsage);
-        
-                this.filterEntries();
+        this.dedicatedThreadsCount(data.DedicatedThreadsCount);
+
+        this.filterEntries();
         
         this.gridController().reset(false);
     }

@@ -99,6 +99,7 @@ namespace Raven.Server.Utils
                             int? managedThreadId = null;
                             string threadName = null;
                             long? unmanagedAllocations = null;
+
                             if (threadAllocations.TryGetValue((ulong)thread.Id, out var threadStats))
                             {
                                 managedThreadId = threadStats.ManagedThreadId;
@@ -106,6 +107,7 @@ namespace Raven.Server.Utils
                                 if (ThreadNames.FullThreadNames.TryGetValue(managedThreadId.Value, out var fullThreadName))
                                 {
                                     threadName = fullThreadName;
+                                    threadsInfo.DedicatedThreadsCount++;
                                 }
                                 else
                                 {

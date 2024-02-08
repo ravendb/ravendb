@@ -142,6 +142,7 @@ namespace rvn
                 var certPath = ConfigureCertPath(cmd);
                 var certPass = ConfigureCertPassword(cmd);
                 var generateHelmValues = ConfigureGenerateValues(cmd);
+                var acmeUrl = ConfigureAcmeUrl(cmd);
 
                 cmd.OnExecuteAsync(async token =>
                 {
@@ -151,6 +152,7 @@ namespace rvn
                     var certPathVal = certPath.Value();
                     var certPassTuple = certPass.Value() ?? Environment.GetEnvironmentVariable("RVN_CERT_PASS");
                     var generateHelmValuesVal = generateHelmValues.HasValue() ? generateHelmValues.Value() is null ? "values.yaml": generateHelmValues.Value() : null;
+                    var acmeUrlVal = acmeUrl.Value();
 
                     return await CreateSetupPackage(new CreateSetupPackageParameters
                     {
@@ -160,6 +162,7 @@ namespace rvn
                         Mode = modeVal,
                         CertificatePath = certPathVal,
                         CertPassword = certPassTuple,
+                        AcmeUrl = acmeUrlVal,
                         HelmValuesOutputPath = generateHelmValuesVal,
                         Progress = new SetupProgressAndResult(tuple =>
                         {
@@ -618,6 +621,13 @@ namespace rvn
             return opt;
         }
         
+        private static CommandOption ConfigureAcmeUrl(CommandLineApplication cmd)
+        {
+            var opt = cmd.Option("--acme-url", "Specify acme url to use (default: 'https://acme-v02.api.letsencrypt.org/directory')", CommandOptionType.SingleValue);
+            opt.DefaultValue = "https://acme-v02.api.letsencrypt.org/directory";
+            return opt;
+        }
+
         private static CommandOption ConfigureModeOption(CommandLineApplication cmd)
         {
             return cmd.Option("-m|--mode", "Specify setup mode to use: 'lets-encrypt' or 'own-certificate'", CommandOptionType.SingleValue);

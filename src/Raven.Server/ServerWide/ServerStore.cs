@@ -2430,7 +2430,7 @@ namespace Raven.Server.ServerWide
                             AlertType.SqlConnectionString_DeprecatedFactoryReplaced, NotificationSeverity.Info);
                         NotificationCenter.Add(alert);
                     }
-                    
+
                     command = new PutSqlConnectionStringCommand(deserializedSqlConnectionString, databaseName, raftRequestId);
                     break;
                 case ConnectionStringType.Olap:
@@ -2988,18 +2988,18 @@ namespace Raven.Server.ServerWide
 
             if (record.IsSharded == false)
             {
-                InitializeTopology(record.Topology);
+                InitializeTopology(record.Topology, _engine, databaseName);
             }
             else
             {
                 if (Sharding.BlockPrefixedSharding && record.Sharding.Prefixed is { Count: > 0 })
                     throw new InvalidOperationException("Cannot use prefixed sharding, this feature is currently blocked");
 
-                InitializeTopology(record.Sharding.Orchestrator.Topology);
+                InitializeTopology(record.Sharding.Orchestrator.Topology, _engine, databaseName);
 
                 foreach (var (shardNumber, shardTopology) in record.Sharding.Shards)
                 {
-                    InitializeTopology(shardTopology);
+                    InitializeTopology(shardTopology, _engine, databaseName);
                 }
 
                 if (string.IsNullOrEmpty(record.Sharding.DatabaseId))
@@ -3021,7 +3021,7 @@ namespace Raven.Server.ServerWide
 
             return SendToLeaderAsync(addDatabaseCommand);
 
-            void InitializeTopology(DatabaseTopology topology)
+            static void InitializeTopology(DatabaseTopology topology, RachisConsensus<ClusterStateMachine> engine, string databaseName)
             {
                 Debug.Assert(topology != null);
 
@@ -3031,9 +3031,15 @@ namespace Raven.Server.ServerWide
                 if (string.IsNullOrEmpty(topology.ClusterTransactionIdBase64))
                     topology.ClusterTransactionIdBase64 = Guid.NewGuid().ToBase64Unpadded();
 
+                foreach (var node in topology.AllNodes)
+                {
+                    if (string.IsNullOrEmpty(node))
+                        throw new InvalidOperationException($"Attempting to save the database record of '{databaseName}' but one of its specified topology nodes is null.");
+                }
+
                 topology.Stamp ??= new LeaderStamp();
-                topology.Stamp.Term = _engine.CurrentTerm;
-                topology.Stamp.LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0;
+                topology.Stamp.Term = engine.CurrentTerm;
+                topology.Stamp.LeadersTicks = engine.CurrentLeader?.LeaderShipDuration ?? 0;
                 topology.NodesModifiedAt = SystemTime.UtcNow;
             }
         }
@@ -3408,7 +3414,7 @@ namespace Raven.Server.ServerWide
                 if (exceptions == null || exceptions.Count == 0)
                     return;
 
-                var allExceptionsAreTimeouts  = exceptions.All(exception => exception is OperationCanceledException);
+                var allExceptionsAreTimeouts = exceptions.All(exception => exception is OperationCanceledException);
                 var aggregateException = new RaftIndexWaitAggregateException(index, exceptions);
 
                 if (allExceptionsAreTimeouts)
