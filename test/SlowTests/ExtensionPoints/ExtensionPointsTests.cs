@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -14,6 +15,7 @@ using Raven.Client;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
 using Sparrow.Platform;
 using Sparrow.Utils;
@@ -357,6 +359,90 @@ exit 0";
             var serverMasterKey = (Lazy<byte[]>)typeof(SecretProtection).GetField("_serverMasterKey", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(secrets);
             Assert.True(serverMasterKey.Value.SequenceEqual(buffer));
             Assert.True(Server.Certificate.Certificate.Equals(serverCertificate));
+        }
+
+        [RavenFact(RavenTestCategory.Certificates)]
+        public async Task RenewCertificate_WhenGetTheSame_ShouldNotTriggerUpdatedServerCertificate()
+        {
+            var customSettings = new ConcurrentDictionary<string, string>();
+            var certificates = Certificates.GenerateAndSaveSelfSignedCertificate();
+
+            (string exe, string certArgs) certProcess;
+            if (PlatformDetails.RunningOnPosix)
+            {
+                var scriptPath = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".sh"));
+                certProcess.certArgs = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { scriptPath, certificates.ServerCertificatePath });
+                certProcess.exe = "bash";
+
+                var script = "#!/bin/bash\ncat \"$1\"";
+                await File.WriteAllTextAsync(scriptPath, script);
+                Process.Start("chmod", $"700 {scriptPath}");
+            }
+            else
+            {
+                var scriptPath = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+                certProcess.certArgs = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", scriptPath, certificates.ServerCertificatePath });
+
+                certProcess.exe = "powershell";
+                var script = @"param([string]$userArg)
+try {
+    $bytes = Get-Content -path $userArg -encoding Byte
+    $stdout = [System.Console]::OpenStandardOutput()
+    $stdout.Write($bytes, 0, $bytes.Length)
+}
+catch {
+    Write-Error $_.Exception
+    exit 1
+}
+exit 0";
+                await File.WriteAllTextAsync(scriptPath, script);
+            }
+
+            customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
+            customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certificates.ServerCertificatePath;
+            customSettings[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)] = certProcess.exe;
+            customSettings[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExecArguments)] = certProcess.certArgs;
+
+            UseNewLocalServer(customSettings: customSettings, runInMemory: false);
+            // The master key loading is lazy, let's put a database secret key to invoke it.
+            X509Certificate2 serverCertificate;
+            try
+            {
+                serverCertificate = new X509Certificate2(certificates.ServerCertificatePath, (string)null,
+                    CertificateLoaderUtil.FlagsForExport | X509KeyStorageFlags.MachineKeySet);
+            }
+            catch (CryptographicException e)
+            {
+                throw new CryptographicException($"Failed to load the test certificate from {certificates}.", e);
+            }
+
+            var ts = new TaskCompletionSource();
+            Server.ServerStore.Engine.StateMachine.Changes.ValueChanged += (index, type) =>
+            {
+                if (type == nameof(InstallUpdatedServerCertificateCommand))
+                {
+                    ts.SetResult();
+                }
+
+                return Task.CompletedTask;
+            };
+            
+            using (var store = GetDocumentStore(new Options
+                   {
+                       AdminCertificate = serverCertificate,
+                       ClientCertificate = serverCertificate,
+                   }))
+            {
+                var httpClient = store.GetRequestExecutor().HttpClient;
+                var response = await httpClient.SendAsync(new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post,
+                    RequestUri = new Uri($"{Server.WebUrl}/admin/certificates/refresh")
+                });
+                Assert.True(response.IsSuccessStatusCode);
+
+                Assert.NotEqual(ts.Task, await Task.WhenAny(ts.Task, Task.Delay(5 * 1000)));
+            }
         }
     }
 }

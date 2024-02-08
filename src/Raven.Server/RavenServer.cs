@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -64,6 +65,7 @@ using Sparrow.Logging;
 using Sparrow.Server.Debugging;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Utils;
+using Sparrow.Server.Utils.DiskStatsGetter;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -98,6 +100,9 @@ namespace Raven.Server
         private readonly Logger _tcpLogger;
         private readonly ExternalCertificateValidator _externalCertificateValidator;
         internal readonly JsonContextPool _tcpContextPool;
+
+        public TwoFactor TwoFactor;
+        
 
         public event Action AfterDisposal;
 
@@ -141,6 +146,7 @@ namespace Raven.Server
             ServerStore = new ServerStore(Configuration, this);
             Metrics = new MetricCounters();
             MetricCacher = new ServerMetricCacher(this);
+            TwoFactor = new TwoFactor(Time);
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("Server/TCP");
             _externalCertificateValidator = new ExternalCertificateValidator(this, Logger);
@@ -184,6 +190,8 @@ namespace Raven.Server
 
                 void ConfigureKestrel(KestrelServerOptions options)
                 {
+                    options.AddServerHeader = false;
+
                     options.AllowSynchronousIO = Configuration.Http.AllowSynchronousIo;
 
                     options.Limits.MaxRequestLineSize = (int)Configuration.Http.MaxRequestLineSize.GetValue(SizeUnit.Bytes);
@@ -1071,6 +1079,12 @@ namespace Raven.Server
                 if (newCertBytes == null)
                     return;
 
+                if (Logger.IsOperationsEnabled)
+                {
+                    var source = Configuration.Core.SetupMode == SetupMode.LetsEncrypt ? "Let's Encrypt" : $"executable configured by ({RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)})";
+                    Logger.Operations($"Got new certificate from {source}. Starting certificate replication.");
+                }
+                
                 await StartCertificateReplicationAsync(newCertBytes, false, raftRequestId);
             }
             catch (Exception e)
@@ -1240,12 +1254,20 @@ namespace Raven.Server
                     throw new InvalidOperationException("Failed to load (and validate) the new certificate which was received during the refresh process.", e);
                 }
 
+                if (Certificate.Certificate.Thumbprint == newCertificate.Thumbprint)
+                {
+                    if (Logger.IsOperationsEnabled)
+                    {
+                        Logger.Operations($"The new certificate matches the current one. No further steps needed. {Certificate.Certificate.GetBasicCertificateInfo()}");
+                    }
+                    return;
+                }
+                
                 if (Logger.IsOperationsEnabled)
                 {
-                    var source = string.IsNullOrEmpty(Configuration.Security.CertificateLoadExec) ? "Let's Encrypt" : $"executable ({Configuration.Security.CertificateLoadExec} {Configuration.Security.CertificateLoadExecArguments})";
-                    Logger.Operations($"Got new certificate from {source}. Starting certificate replication.");
+                    Logger.Operations($"Starting certificate replication. current:'{Certificate.Certificate.GetBasicCertificateInfo()}', new:'{newCertificate.GetBasicCertificateInfo()}'");
                 }
-
+                
                 // During replacement of a cluster certificate, we must have both the new and the old server certificates registered in the server store.
                 // This is needed for trust in the case where a node replaced its own certificate while another node still runs with the old certificate.
                 // Since both nodes use different certificates, they will only trust each other if the certs are registered in the server store.
@@ -1479,16 +1501,20 @@ namespace Raven.Server
 
         public class AuthenticateConnection : IHttpAuthenticationFeature
         {
+            public bool RequiresTwoFactor;
+            private TwoFactor _twoFactor;
+            
             public Dictionary<string, DatabaseAccess> AuthorizedDatabases = new Dictionary<string, DatabaseAccess>(StringComparer.OrdinalIgnoreCase);
             private Dictionary<string, DatabaseAccess> _caseSensitiveAuthorizedDatabases = new Dictionary<string, DatabaseAccess>();
             public X509Certificate2 Certificate;
             public CertificateDefinition Definition;
             public int WrittenToAuditLog;
-            public readonly DateTime CreatedAt;
+            
+            public readonly DateTime CreatedAt = SystemTime.UtcNow;
 
-            public AuthenticateConnection()
+            public AuthenticateConnection(TwoFactor twoFactor)
             {
-                CreatedAt = SystemTime.UtcNow;
+                _twoFactor = twoFactor;
             }
 
             public bool CanAccess(string database, bool requireAdmin, bool requireWrite)
@@ -1547,9 +1573,29 @@ namespace Raven.Server
             public string WrongProtocolMessage;
 
             private AuthenticationStatus _status;
+            private AuthenticationStatus? _statusAfterTwoFactorAuth;
 
             public AuthenticationStatus StatusForAudit => _status;
 
+            public TwoFactor.TwoFactorAuthRegistration TwoFactorAuthRegistration => _twoFactor.GetAuthRegistration(Certificate.Thumbprint); 
+            
+            public void WaitingForTwoFactorAuthentication()
+            {
+                _statusAfterTwoFactorAuth = _status;
+                _status = AuthenticationStatus.TwoFactorAuthNotProvided;
+            }
+
+            public void SuccessfulTwoFactorAuthentication()
+            {
+                // _statusAfterTwoFactorAuth is nullable
+                // when we override existing configuration we skip WaitingForTwoFactorAuthentication stage
+                
+                if (_statusAfterTwoFactorAuth.HasValue)
+                    _status = _statusAfterTwoFactorAuth.Value;
+
+                _statusAfterTwoFactorAuth = null;
+            }
+            
             public AuthenticationStatus Status
             {
                 get
@@ -1596,7 +1642,7 @@ namespace Raven.Server
 
         internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo)
         {
-            var authenticationStatus = new AuthenticateConnection
+            var authenticationStatus = new AuthenticateConnection(TwoFactor)
             {
                 Certificate = certificate
             };
@@ -1652,6 +1698,16 @@ namespace Raven.Server
                         var definition = JsonDeserializationServer.CertificateDefinition(cert);
 
                         authenticationStatus.SetBasedOnCertificateDefinition(definition);
+
+                        var hasTwoFactorKey = cert.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string _);
+
+                        authenticationStatus.RequiresTwoFactor = hasTwoFactorKey;
+                        
+                        if (authenticationStatus.RequiresTwoFactor && TwoFactor.ValidateTwoFactorConnectionLimits(certificate.Thumbprint) == false)
+                        {
+                            authenticationStatus.WaitingForTwoFactorAuthentication();
+                            return authenticationStatus;
+                        }
                     }
                 }
             }
@@ -2797,7 +2853,9 @@ namespace Raven.Server
             Operator,
             ClusterAdmin,
             Expired,
-            NotYetValid
+            NotYetValid,
+            TwoFactorAuthNotProvided,
+            TwoFactorAuthFromInvalidLimit
         }
 
         internal TestingStuff ForTestingPurposesOnly()
@@ -2904,5 +2962,6 @@ namespace Raven.Server
 
             ArrayPool<byte>.Shared.Return(buffer);
         }
+
     }
 }

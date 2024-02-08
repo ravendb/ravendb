@@ -5,7 +5,7 @@ using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.MailingList;
+namespace SlowTests.Issues;
 
 public class RavenDB_18414 : RavenTestBase
 {

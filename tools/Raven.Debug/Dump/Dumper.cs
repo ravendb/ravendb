@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
         }
 
-        public async Task<int> Collect(CommandLineApplication cmd, int processId, string output, bool diag, DumpTypeOption type)
+        public async Task<int> Collect(CommandLineApplication cmd, int processId, string output, string outputOwner, bool diag, DumpTypeOption type)
         {
             if (processId == 0)
             {
@@ -66,6 +66,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
                     // Send the command to the runtime to initiate the core dump
                     client.WriteDump(dumpType, output, diag);
+
+                    if (string.IsNullOrEmpty(outputOwner) == false)
+                        PosixFileExtensions.ChangeFileOwner(output, outputOwner);
                 }
                 else
                 {

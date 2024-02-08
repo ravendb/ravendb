@@ -2,10 +2,11 @@
 using FastTests.Utils;
 using Raven.Client.Documents.Operations.ETL;
 using SlowTests.Core.Utils.Entities;
+using SlowTests.Server.Documents.ETL;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.ETL
+namespace SlowTests.Issues
 {
     public class RavenDB_20136 : EtlTestBase
     {

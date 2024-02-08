@@ -1,0 +1,91 @@
+.tfa {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    .logo {
+        width: 184.32px;
+    }
+    .tfa-form {
+        display: flex;
+        flex-direction: column;
+        gap: @grid-gutter-width;
+        .btn {
+            width: 120px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    }
+    .tfa-input-wrap {
+        padding: 0;
+        display: flex;
+        position: relative;
+        justify-content: center;
+    }
+    .tfa-input-wrap {
+        &.field-real {
+            grid-column-gap: 10px;
+        }
+    }
+    .tfa-token-input {
+        z-index: 2;
+        width: 400px;
+        height: 50px;
+        text-align: left;
+        letter-spacing: 51.5px;
+        text-transform: uppercase;
+        background-color: transparent;
+        margin-bottom: 0;
+        padding: 0 0 0 20px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        outline: none;
+        border: none;
+    }
+    .tfa-input.field-fake {
+        width: 50px;
+        height: 50px;
+        background-color: @panel-bg;
+        border: 1px solid @gray-600;
+    }
+    .tfa-input {
+        min-height: 40px;
+        border-radius: 7.08px;
+        position: relative;
+    }
+    .faded-icon-lock {
+        width: 50.92px;
+        height: 50.92px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: @bg-faded-primary;
+        border-radius: 50rem;
+        i {
+            color: @text-faded-primary;
+        }
+    }
+    .panel {
+        border-radius: 7.08px;
+    }
+    .additional-settings-panel {
+        @media (min-width: @screen-xs) {
+            min-width: 420px;   
+        }
+    }
+    #sessionSettings {
+        cursor: pointer;
+        border-radius: 7.08px;
+        padding: 18.54px;
+        i {
+            transition: .2s transform ease;
+        }
+        &:not(.collapsed) {
+            i {
+                transform: rotate(180deg);
+            }
+        }
+    }
+}

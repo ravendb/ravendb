@@ -352,11 +352,7 @@ namespace Raven.Server.Utils.Cli
             Console.ResetColor();
 
             LoggingSource.Instance.DisableConsoleLogging();
-            var prevLogMode = LoggingSource.Instance.LogMode;
-            SetupLogMode(LogMode.None, cli._server.Configuration.Logs);
             Program.WriteServerStatsAndWaitForEsc(cli._server);
-            SetupLogMode(prevLogMode, cli._server.Configuration.Logs);
-            Console.WriteLine($"LogMode set back to {prevLogMode}.");
             return true;
         }
 
@@ -418,11 +414,7 @@ namespace Raven.Server.Utils.Cli
             Console.ResetColor();
 
             LoggingSource.Instance.DisableConsoleLogging();
-            var prevLogMode = LoggingSource.Instance.LogMode;
-            SetupLogMode(LogMode.None, cli._server.Configuration.Logs);
             Program.WriteThreadsInfoAndWaitForEsc(cli._server, maxTopThreads, updateIntervalInMs, cpuUsageThreshold);
-            SetupLogMode(prevLogMode, cli._server.Configuration.Logs);
-            Console.WriteLine($"LogMode set back to {prevLogMode}.");
             return true;
         }
 
@@ -784,7 +776,7 @@ namespace Raven.Server.Utils.Cli
 
                 try
                 {
-                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, password, cli._server.ServerStore, ctx, RaftIdGenerator.NewId()).Wait();
+                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, password, cli._server.ServerStore, ctx, null, RaftIdGenerator.NewId()).Wait();
                 }
                 catch (Exception e)
                 {
@@ -829,7 +821,7 @@ namespace Raven.Server.Utils.Cli
             byte[] outputBytes;
             try
             {
-                outputBytes = AdminCertificatesHandler.GenerateCertificateInternal(certDef, cli._server.ServerStore, RaftIdGenerator.NewId()).Result;
+                outputBytes = AdminCertificatesHandler.GenerateCertificateInternal(certDef, cli._server.ServerStore, null, RaftIdGenerator.NewId()).Result;
             }
             catch (Exception e)
             {
@@ -1253,7 +1245,7 @@ namespace Raven.Server.Utils.Cli
             [Command.TrustServerCert] = new SingleAction { NumOfArgs = 2, DelegateFunc = CommandTrustServerCert },
             [Command.TrustClientCert] = new SingleAction { NumOfArgs = 2, DelegateFunc = CommandTrustClientCert },
             [Command.GenerateClientCert] = new SingleAction { NumOfArgs = 3, DelegateFunc = CommandGenerateClientCert },
-            [Command.ReplaceClusterCert] = new SingleAction { NumOfArgs = 2, DelegateFunc = CommandReplaceClusterCert },
+            [Command.ReplaceClusterCert] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandReplaceClusterCert },
             [Command.TriggerCertificateRefresh] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandTriggerCertificateRefresh },
             [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandInfo },
             [Command.Logo] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandLogo },

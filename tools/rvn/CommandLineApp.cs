@@ -153,7 +153,7 @@ namespace rvn
                     var packageOutPathVal = packageOutPath.Value();
                     var certPathVal = certPath.Value();
                     var certPassTuple = certPass.Value() ?? Environment.GetEnvironmentVariable("RVN_CERT_PASS");
-                    var generateHelmValuesVal = generateHelmValues.HasValue() && generateHelmValues.Value() is null ? "values.yaml" : generateHelmValues.Value(); 
+                    var generateHelmValuesVal = generateHelmValues.HasValue() ? generateHelmValues.Value() is null ? "values.yaml": generateHelmValues.Value() : null;
 
                     return await CreateSetupPackage(new CreateSetupPackageParameters
                     {
@@ -656,7 +656,6 @@ namespace rvn
         private static CommandOption ConfigureGenerateValues(CommandLineApplication cmd)
         {
             var opt = cmd.Option("--generate-helm-values", "Path to values.yaml", CommandOptionType.SingleOrNoValue);
-            opt.DefaultValue = "values.yaml";
             return opt;
         }
 

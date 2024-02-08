@@ -294,7 +294,7 @@ namespace Raven.Server.Documents.ETL
                     continue;
 
                 var processState = GetProcessState(config.Transforms, _database, config.Name);
-                var whoseTaskIsIt = BackupUtils.WhoseTaskIsIt(_serverStore, _databaseRecord.Topology, config, processState, _database.NotificationCenter);
+                var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, _databaseRecord.Topology, config, processState, _database.NotificationCenter);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                     continue;
 
@@ -460,7 +460,7 @@ namespace Raven.Server.Documents.ETL
             where T : EtlConfiguration<TConnectionString>
         {
             var processState = GetProcessState(etlTask.Transforms, _database, etlTask.Name);
-            var whoseTaskIsIt = BackupUtils.WhoseTaskIsIt(_serverStore, record.Topology, etlTask, processState, _database.NotificationCenter);
+            var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, record.Topology, etlTask, processState, _database.NotificationCenter);
 
             responsibleNodes[etlTask.Name] = whoseTaskIsIt;
 
@@ -796,14 +796,14 @@ namespace Raven.Server.Documents.ETL
             return reason;
         }
 
-        public void HandleDatabaseValueChanged(DatabaseRecord record)
+        public void HandleDatabaseValueChanged()
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 foreach (var process in _processes)
                 {
-                    var state = _serverStore.Cluster.Read(context, EtlProcessState.GenerateItemName(record.DatabaseName, process.ConfigurationName, process.TransformationName));
+                    var state = _serverStore.Cluster.Read(context, EtlProcessState.GenerateItemName(_database.Name, process.ConfigurationName, process.TransformationName));
 
                     if (state == null)
                     {

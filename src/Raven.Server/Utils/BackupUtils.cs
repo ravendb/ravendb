@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
@@ -12,10 +11,8 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json.Serialization;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
-using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
@@ -25,6 +22,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Utils;
@@ -148,6 +146,45 @@ internal static class BackupUtils
 
         var periodicBackupStatusJson = JsonDeserializationClient.PeriodicBackupStatus(statusBlittable);
         return periodicBackupStatusJson;
+    }
+
+    internal static BlittableJsonReaderObject GetResponsibleNodeInfoFromCluster(ServerStore serverStore, TransactionOperationContext context, string databaseName, long taskId)
+    {
+        var responsibleNodeBlittable = serverStore.Cluster.Read(context, ResponsibleNodeInfo.GenerateItemName(databaseName, taskId));
+        return responsibleNodeBlittable;
+    }
+
+    internal static long GetTasksCountOnNode(ServerStore serverStore, string databaseName, TransactionOperationContext context)
+    {
+        var count = 0L;
+
+        var prefix = ResponsibleNodeInfo.GetPrefix(databaseName);
+        foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, prefix))
+        {
+            if (keyValue.Value.TryGet(nameof(ResponsibleNodeInfo.ResponsibleNode), out string currentResponsibleNode) == false)
+                continue;
+
+            if (currentResponsibleNode != serverStore.NodeTag)
+                continue;
+
+            count++;
+        }
+
+        return count;
+    }
+
+    internal static string GetResponsibleNodeTag(ServerStore serverStore, string databaseName, long taskId)
+    {
+        using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            var blittable = GetResponsibleNodeInfoFromCluster(serverStore, context, databaseName, taskId);
+            if (blittable == null)
+                return null;
+
+            blittable.TryGet(nameof(ResponsibleNodeInfo.ResponsibleNode), out string responsibleNodeTag);
+            return responsibleNodeTag;
+        }
     }
 
     internal static PeriodicBackupStatus ComparePeriodicBackupStatus(long taskId, PeriodicBackupStatus backupStatus, PeriodicBackupStatus inMemoryBackupStatus)
@@ -396,8 +433,7 @@ internal static class BackupUtils
             return new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, DateTime.UtcNow);
         }
 
-        var topology = parameters.ServerStore.LoadDatabaseTopology(parameters.DatabaseName);
-        var responsibleNodeTag = WhoseTaskIsIt(parameters.ServerStore, topology, parameters.Configuration, backupStatus, parameters.NotificationCenter, keepTaskOnOriginalMemberNode: true);
+        var responsibleNodeTag = GetResponsibleNodeTag(parameters.ServerStore, parameters.DatabaseName, parameters.Configuration.TaskId);
         if (responsibleNodeTag == null)
         {
             // cluster is down
@@ -522,83 +558,6 @@ internal static class BackupUtils
                 logger.Operations(message, e);
 
             backupResult?.AddError($"{message}{Environment.NewLine}{e}");
-        }
-    }
-
-    public static string WhoseTaskIsIt(
-            ServerStore serverStore,
-            DatabaseTopology databaseTopology,
-            IDatabaseTask configuration,
-            IDatabaseTaskStatus taskStatus,
-            NotificationCenter.NotificationCenter notificationCenter,
-            bool keepTaskOnOriginalMemberNode = false)
-    {
-        var whoseTaskIsIt = databaseTopology.WhoseTaskIsIt(
-            serverStore.Engine.CurrentState, configuration,
-            getLastResponsibleNode:
-            () =>
-            {
-                var lastResponsibleNode = taskStatus?.NodeTag;
-                if (lastResponsibleNode == null)
-                {
-                    // first time this task is assigned
-                    return null;
-                }
-
-                if (databaseTopology.AllNodes.Contains(lastResponsibleNode) == false)
-                {
-                    // the topology doesn't include the last responsible node anymore
-                    // we'll choose a different one
-                    return null;
-                }
-
-                if (taskStatus is PeriodicBackupStatus)
-                {
-                    if (databaseTopology.Rehabs.Contains(lastResponsibleNode) &&
-                        databaseTopology.PromotablesStatus.TryGetValue(lastResponsibleNode, out var status) &&
-                        (status == DatabasePromotionStatus.OutOfCpuCredits ||
-                         status == DatabasePromotionStatus.EarlyOutOfMemory ||
-                         status == DatabasePromotionStatus.HighDirtyMemory))
-                    {
-                        // avoid moving backup tasks when the machine is out of CPU credit
-                        return lastResponsibleNode;
-                    }
-                }
-
-                if (serverStore.LicenseManager.HasHighlyAvailableTasks() == false)
-                {
-                    // can't redistribute, keep it on the original node
-                    RaiseAlertIfNecessary(databaseTopology, configuration, lastResponsibleNode, serverStore, notificationCenter);
-                    return lastResponsibleNode;
-                }
-
-                if (keepTaskOnOriginalMemberNode &&
-                    databaseTopology.Members.Contains(lastResponsibleNode))
-                {
-                    // keep the task on the original node
-                    return lastResponsibleNode;
-                }
-
-                return null;
-            });
-
-        if (whoseTaskIsIt == null && taskStatus is PeriodicBackupStatus)
-            return taskStatus.NodeTag; // we don't want to stop backup process
-
-        return whoseTaskIsIt;
-    }
-
-    private static void RaiseAlertIfNecessary(DatabaseTopology databaseTopology, IDatabaseTask configuration, string lastResponsibleNode,
-        ServerStore serverStore, NotificationCenter.NotificationCenter notificationCenter)
-    {
-        // raise alert if redistribution is necessary
-        if (notificationCenter != null &&
-            databaseTopology.Count > 1 &&
-            serverStore.NodeTag != lastResponsibleNode &&
-            databaseTopology.Members.Contains(lastResponsibleNode) == false)
-        {
-            var alert = LicenseManager.CreateHighlyAvailableTasksAlert(databaseTopology, configuration, lastResponsibleNode);
-            notificationCenter.Add(alert);
         }
     }
 

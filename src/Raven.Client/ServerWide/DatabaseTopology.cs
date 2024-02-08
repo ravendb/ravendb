@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Replication;
@@ -462,6 +461,11 @@ namespace Raven.Client.ServerWide
             if (lastResponsibleNode != null)
                 return lastResponsibleNode;
 
+            return WhoseTaskIsIt(task);
+        }
+
+        internal string WhoseTaskIsIt(IDatabaseTask task)
+        {
             var topology = new List<string>(Members);
             topology.AddRange(Promotables);
             topology.AddRange(Rehabs);

@@ -142,6 +142,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.True(result);
 
                 cluster.Leader.ServerStore.Engine.HardResetToNewCluster(tag);
+                await AssertWaitForTrueAsync(() => Task.FromResult(node.ServerStore.Engine.CurrentState == RachisState.Passive));
 
                 var outgoingConnections = WaitForValue(() =>
                 {
@@ -159,6 +160,10 @@ namespace RachisTests.DatabaseCluster
                     await session.StoreAsync(new User { Name = "Karmel" }, "foo/bar/2");
                     await session.SaveChangesAsync();
                 }
+
+                await AssertWaitForValueAsync(() => GetTopologyNodesCount(store), 1);
+                await AssertWaitForValueAsync(() => GetTopologyNodesCount(store2), 1);
+
                 using (var session = store2.OpenAsyncSession())
                 {
                     var user = await session.LoadAsync<User>("foo/bar");
@@ -168,6 +173,12 @@ namespace RachisTests.DatabaseCluster
                     Assert.Null(user2);
                 }
             }
+        }
+
+        private static async Task<int> GetTopologyNodesCount(IDocumentStore store)
+        {
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            return record == null ? -1 : record.Topology.Members.Count + record.Topology.Promotables.Count + record.Topology.Rehabs.Count;
         }
 
         [Theory]

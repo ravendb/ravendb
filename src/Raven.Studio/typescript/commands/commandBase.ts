@@ -4,6 +4,7 @@ import messagePublisher = require("common/messagePublisher");
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
+import twoFactorHelper from "common/twoFactorHelper";
 
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
 class commandBase {
@@ -117,7 +118,7 @@ class commandBase {
             }, false);
         };
         
-        const defaultOptions = {
+        const defaultOptions: JQueryAjaxSettings = {
             url: url,
             data: args,
             dataType: "json",
@@ -128,6 +129,9 @@ class commandBase {
                 const xhr = new XMLHttpRequest();
                 xhrConfiguration(xhr);
                 return xhr;
+            },
+            statusCode: {
+                428: twoFactorHelper.twoFactorNeeded
             }
         };
         

@@ -19,6 +19,7 @@ namespace Raven.Client.ServerWide.Operations.Logs
             public TimeSpan? RetentionTime { get; set; }
             public Size? RetentionSize { get; set; }
             public bool Compress { get; set; }
+            public bool Persist { get; set; }
 
             public Parameters()
             {

@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Smuggler;
@@ -15,7 +13,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
-using Raven.Server.Config;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -495,12 +492,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "0 2 * * 1"
                 };
 
-                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration1));
-                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration2));
-
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var backup = record.PeriodicBackups.First();
-                var backupTaskId = backup.TaskId;
+                var backupTaskId = await Backup.UpdateServerWideConfigAsync(Server, serverWideBackupConfiguration1, store);
+                await Backup.UpdateServerWideConfigAsync(Server, serverWideBackupConfiguration2, store);
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
 
@@ -606,7 +599,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         throw new ArgumentOutOfRangeException(nameof(encryptionMode), encryptionMode, null);
                 }
 
-                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
+                var backupTaskId = await Backup.UpdateServerWideConfigAsync(Server, serverWideBackupConfiguration, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -616,10 +609,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }, "users/1");
                     await session.SaveChangesAsync();
                 }
-
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var backup = record.PeriodicBackups.First();
-                var backupTaskId = backup.TaskId;
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
 
@@ -964,11 +953,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 };
 
-                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
-
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var backup = record.PeriodicBackups.First();
-                var backupTaskId = backup.TaskId;
+                var backupTaskId = await Backup.UpdateServerWideConfigAsync(Server, serverWideBackupConfiguration, store);
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
 

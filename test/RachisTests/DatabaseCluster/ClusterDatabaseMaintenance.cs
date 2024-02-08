@@ -1203,7 +1203,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.True(selectorNodes.All(x => x.ServerRole == ServerNode.Role.Member));
 
                 //artificially call the timer func
-                re.UpdateTopologyCallback(null);
+                RequestExecutor.UpdateTopologyCallback(re);
 
                 //we expect a failover and an updated request executor
                 await WaitAndAssertForValueAsync(() =>

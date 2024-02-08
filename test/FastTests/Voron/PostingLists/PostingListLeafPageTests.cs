@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.PostingLists;
@@ -9,7 +8,7 @@ using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Voron.Sets
+namespace FastTests.Voron.PostingLists
 {
     public unsafe class PostingListLeafPageTests : NoDisposalNeeded
     {

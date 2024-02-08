@@ -61,7 +61,6 @@ namespace Voron.Debugging
         public List<PostingList> PostingLists;
         public List<PersistentDictionaryRootHeader> PersistentDictionaries;
         public List<CompactTree> CompactTrees;
-        public ScratchBufferPoolInfo ScratchBufferPoolInfo { get; set; }
         public bool IncludeDetails { get; set; }
         public VoronPathSetting TempPath { get; set; }
         public VoronPathSetting JournalPath { get; set; }
@@ -251,7 +250,6 @@ namespace Voron.Debugging
                 Tables = tables,
                 Journals = journals,
                 PreAllocatedBuffers = preAllocatedBuffers,
-                ScratchBufferPoolInfo = input.ScratchBufferPoolInfo,
                 TempBuffers = tempBuffers,
                 TotalEncryptionBufferSize = input.TotalEncryptionBufferSize.ToString()
             };

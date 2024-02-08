@@ -182,7 +182,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
         
-        private readonly Timer _timer;
+        private readonly WeakReferencingTimer _timer;
         private DateTime _lastWriteToStream;
         private readonly SemaphoreSlim _streamLock;
         private readonly TimeSpan _heartbeatCheckInterval = TimeSpan.FromSeconds(StreamWithTimeout.DefaultReadTimeout.TotalSeconds / 3);
@@ -286,32 +286,19 @@ namespace Raven.Client.Documents.BulkInsert
 
             _streamLock = new SemaphoreSlim(1, 1);
             _lastWriteToStream = DateTime.UtcNow;
-            var timerState = new TimerState { Parent = new(this) };
 
             if (_options.ForTestingPurposes?.OverrideHeartbeatCheckInterval > 0)
                 _heartbeatCheckInterval = TimeSpan.FromMilliseconds(_options.ForTestingPurposes.OverrideHeartbeatCheckInterval / 3);
 
-            _timer = new Timer(HandleHeartbeat,
-                timerState,
+            _timer = new WeakReferencingTimer(HandleHeartbeat,
+                this,
                 _heartbeatCheckInterval,
                 _heartbeatCheckInterval);
-            timerState.Timer = _timer;
-        }
-
-        private class TimerState
-        {
-            public WeakReference<BulkInsertOperation> Parent;
-            public Timer Timer;
         }
 
         private static void HandleHeartbeat(object state)
         {
-            var timerState = (TimerState)state;
-            if (timerState.Parent.TryGetTarget(out BulkInsertOperation bulkInsert) == false)
-            {
-                timerState.Timer.Dispose();
-                return;
-            }
+            var bulkInsert = (BulkInsertOperation)state;
             _ = bulkInsert.SendHeartBeatAsync();
         }
 
@@ -333,7 +320,6 @@ namespace Raven.Client.Documents.BulkInsert
 
                 if (_first == false)
                 {
-
                     WriteComma();
                 }
 
@@ -448,7 +434,6 @@ namespace Raven.Client.Documents.BulkInsert
         {
             using (await ConcurrencyCheckAsync().ConfigureAwait(false))
             {
-                _lastWriteToStream = DateTime.UtcNow;
                 VerifyValidId(id);
 
                 await ExecuteBeforeStore().ConfigureAwait(false);
@@ -568,6 +553,13 @@ namespace Raven.Client.Documents.BulkInsert
                 _currentWriter.BaseStream.SetLength(0);
                 ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
                 _asyncWrite = WriteToRequestBodyStreamAsync(buffer);
+
+                if (DateTime.UtcNow.Ticks - _lastWriteToStream.Ticks < _heartbeatCheckInterval.Ticks)
+                {
+                    await _asyncWrite.ConfigureAwait(false);
+                    await _requestBodyStream.FlushAsync(_token).ConfigureAwait(false);
+                    _lastWriteToStream = DateTime.UtcNow;
+                }
             }
         }
 
@@ -869,7 +861,6 @@ namespace Raven.Client.Documents.BulkInsert
                         if (_operation._inProgressCommand == CommandType.TimeSeries)
                             TimeSeriesBulkInsertBase.ThrowAlreadyRunningTimeSeries();
 
-                        _operation._lastWriteToStream = DateTime.UtcNow;
                         var isFirst = _id == null;
                         if (isFirst || _id.Equals(id, StringComparison.OrdinalIgnoreCase) == false)
                         {
@@ -969,7 +960,6 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     try
                     {
-                        _operation._lastWriteToStream = DateTime.UtcNow;
                         await _operation.ExecuteBeforeStore().ConfigureAwait(false);
 
                         if (_first)
@@ -1164,7 +1154,6 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     try
                     {
-                        _operation._lastWriteToStream = DateTime.UtcNow;
                         _operation.EndPreviousCommandIfNeeded();
 
                         await _operation.ExecuteBeforeStore().ConfigureAwait(false);

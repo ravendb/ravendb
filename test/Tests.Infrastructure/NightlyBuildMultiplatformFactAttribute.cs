@@ -2,6 +2,8 @@
 {
     public class NightlyBuildMultiplatformFactAttribute : NightlyBuildFactAttribute
     {
+        private string _skip;
+
         private readonly RavenPlatform _platform;
         private readonly RavenArchitecture _architecture;
 
@@ -27,12 +29,17 @@
         {
             get
             {
-                var skip = base.Skip;
+                var skip = _skip;
+                if (skip != null)
+                    return skip;
+
+                skip = base.Skip;
                 if (skip != null)
                     return skip;
 
                 return MultiplatformFactAttribute.ShouldSkip(_platform, _architecture, LicenseRequired);
             }
+            set => _skip = value;
         }
     }
 }

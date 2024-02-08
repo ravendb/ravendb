@@ -192,8 +192,9 @@ loadToTestGuidEtls(item);"
                     return @"Oracle.ManagedDataAccess.Client";
                 case MigrationProvider.MsSQL:
                     return @"System.Data.SqlClient";
+#pragma warning disable CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySql_Data:
-                    return @"MySql.Data.MySqlClient";
+#pragma warning restore CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySqlConnector:
                     return @"MySqlConnector.MySqlConnectorFactory";
                 case MigrationProvider.NpgSQL:
@@ -247,7 +248,9 @@ loadToTestGuidEtls(item);"
                         connection.Close();
                     }
                     return;
+#pragma warning disable CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySql_Data:
+#pragma warning restore CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySqlConnector:
                     using (var connection = GetMySqlConnection(provider, connectionString))
                     {
@@ -333,7 +336,9 @@ loadToTestGuidEtls(item);"
                         connection.Close();
                     }
                     return;
+#pragma warning disable CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySql_Data:
+#pragma warning restore CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySqlConnector:
                     using (var connection = GetMySqlConnection(provider, connectionString))
                     {
@@ -408,7 +413,9 @@ loadToTestGuidEtls(item);"
                         connection.Close();
                     }
                     return;
+#pragma warning disable CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySql_Data:
+#pragma warning restore CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySqlConnector:
                     using (var connection = GetMySqlConnection(provider, connectionString))
                     {
@@ -483,7 +490,9 @@ loadToTestGuidEtls(item);"
                         connection.Close();
                     }
                     return;
+#pragma warning disable CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySql_Data:
+#pragma warning restore CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySqlConnector:
                     using (var connection = GetMySqlConnection(provider, connectionString))
                     {
@@ -566,7 +575,9 @@ loadToTestGuidEtls(item);"
                         connection.Close();
                     }
                     return;
+#pragma warning disable CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySql_Data:
+#pragma warning restore CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySqlConnector:
                     using (var connection = GetMySqlConnection(provider, connectionString))
                     {
@@ -610,11 +621,10 @@ loadToTestGuidEtls(item);"
 
         private static DbConnection GetMySqlConnection(MigrationProvider provider, string connectionString)
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             Debug.Assert(provider is MigrationProvider.MySQL_MySql_Data or MigrationProvider.MySQL_MySqlConnector);
-
-            return provider == MigrationProvider.MySQL_MySql_Data
-                ? new MySql.Data.MySqlClient.MySqlConnection(connectionString)
-                : new MySqlConnector.MySqlConnection(connectionString);
+#pragma warning restore CS0618 // Type or member is obsolete
+            return new MySqlConnector.MySqlConnection(connectionString);
         }
     }
 }
