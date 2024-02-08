@@ -28,10 +28,11 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             var nodeTag = RequestHandler.Database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
             if (nodeTag == null)
             {
-                // this can happen for a new task that was just created
-                // we'll wait for the cluster observer to determine the responsible node for the backup
+                // this can happen if the database was just created or if a new task that was just created
+                // we'll wait for the cluster observer to give more time for the database stats to become stable,
+                // and then we'll wait for the cluster observer to determine the responsible node for the backup
 
-                var task = Task.Delay(RequestHandler.Database.Configuration.Cluster.StabilizationTime.AsTimeSpan);
+                var task = Task.Delay(RequestHandler.Database.Configuration.Cluster.StabilizationTime.AsTimeSpan + RequestHandler.Database.Configuration.Cluster.StabilizationTime.AsTimeSpan);
 
                 while (true)
                 {
