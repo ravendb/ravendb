@@ -6,7 +6,6 @@ using Microsoft.VisualBasic.CompilerServices;
 using Sparrow.Binary;
 using Sparrow.Compression;
 using Sparrow.Server;
-using Sparrow.Server.Platform;
 using Voron.Data.PostingLists;
 
 namespace Voron.Util.PFor;
@@ -201,9 +200,7 @@ public unsafe struct FastPForDecoder : IDisposable
                 var ptr = (byte*)bigDeltaOffsets.RawItems[index] + 1;
                 index++;
 
-                Vector256<int> highBitsDelta = PlatformSpecific.IsArm == false 
-                    ? Vector128.Load(ptr).AsInt32().ToVector256() 
-                    : Vector256.Create(*(int*)ptr, *(int*)(ptr + sizeof(int)), *(int*)(ptr + 2 * sizeof(int)), *(int*)(ptr + 3 * sizeof(int)), 0, 0, 0, 0);
+                Vector256<int> highBitsDelta = Vector128.Load(ptr).AsInt32().ToVector256();
 
                 if ((bigDeltaOffsets.Count - index) > 0)
                 {

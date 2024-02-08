@@ -21,6 +21,12 @@
         <ul class="dropdown-menu" data-bind="foreach: $data.constructor.sqlProviders">
             <li><a href="#" data-bind="text: $parent.fullNameFor(value), click: _.partial($parent.factoryName, value)"></a></li>
         </ul>
+        <span class="help-block" data-bind="validationMessage: factoryName"></span>
+        <div class="has-warning" data-bind="visible: factoryName() === 'MySql.Data.MySqlClient'">
+            <div class="help-block">
+                <i class="icon-warning"></i> <span> This connector is deprecated</span>
+            </div>
+        </div>
     </div>
 </div>
 <div class="form-group" data-bind="validationElement: connectionString">

@@ -1312,7 +1312,7 @@ namespace Corax.Indexing
                         recordedTerm.Long = entries.Long.Value;
 
                         // only if the double value can not be computed by casting from long, we store it 
-                        if (entries.Double != null && Math.Abs(entries.Double.Value - recordedTerm.Long) > double.Epsilon)
+                        if (entries.Double != null && entries.Double.Value.AlmostEquals(recordedTerm.Long) == false)
                         {
                             recordedTermContainerId |= 2; // marker!
                             recordedTerm.Double = entries.Double.Value;

@@ -1,7 +1,6 @@
 /*
 It's d3 with single change described here: https://stackoverflow.com/a/40617988/539830
 */
-
 !function() {
   var d3 = {
     version: "3.5.17"

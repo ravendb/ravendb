@@ -1,7 +1,7 @@
 ﻿<Project>
   <PropertyGroup>
     <Version></Version>
-    <LangVersion>11</LangVersion>
+    <LangVersion>preview</LangVersion>
     <DebugType>embedded</DebugType>
     <PackageIconUrl>http://static.ravendb.net/logo-for-nuget.png</PackageIconUrl>
     <PackageIcon>icon.png</PackageIcon>
@@ -25,7 +25,7 @@
 
     <NoWarn>CS0419,CS1591,CS1572,CS1573,CS1574,CS1723</NoWarn>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net6.0' OR '$(TargetFramework)' == 'net7.0'">
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net6.0' OR '$(TargetFramework)' == 'net7.0' OR '$(TargetFramework)' == 'net8.0'">
     <DefineConstants>$(DefineConstants);NETCOREAPP;FEATURE_DATEONLY_TIMEONLY_SUPPORT;FEATURE_ZSTD_SUPPORT</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == ''">

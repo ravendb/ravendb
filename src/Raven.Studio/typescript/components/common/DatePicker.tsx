@@ -3,12 +3,11 @@ import ReactDatePicker from "react-datepicker";
 import { Input } from "reactstrap";
 import "./ReactDatepicker.scss";
 
-const DatePickerInput = forwardRef<HTMLInputElement, ComponentProps<typeof Input>>(function DatePickerInput(
-    props,
-    ref
-) {
-    return <Input innerRef={ref} {...props} />;
-});
+const DatePickerInput = forwardRef<HTMLInputElement, ComponentProps<typeof Input>>(
+    function DatePickerInput(props, ref) {
+        return <Input innerRef={ref} {...props} />;
+    }
+);
 
 export default function DatePicker(props: ComponentProps<typeof ReactDatePicker> & { invalid?: boolean }) {
     const dateFormat = props.dateFormat ?? (props.showTimeSelect ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy");

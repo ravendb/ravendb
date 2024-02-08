@@ -3,6 +3,7 @@
 import messagePublisher = require("common/messagePublisher");
 import appUrl = require("common/appUrl");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
+import twoFactorHelper from "common/twoFactorHelper";
 import database from "models/resources/database";
 import { DatabaseSharedInfo } from "components/models/databases";
 
@@ -118,7 +119,7 @@ class commandBase {
             }, false);
         };
         
-        const defaultOptions = {
+        const defaultOptions: JQueryAjaxSettings = {
             url: url,
             data: args,
             dataType: "json",
@@ -129,6 +130,9 @@ class commandBase {
                 const xhr = new XMLHttpRequest();
                 xhrConfiguration(xhr);
                 return xhr;
+            },
+            statusCode: {
+                428: twoFactorHelper.twoFactorNeeded
             }
         };
         

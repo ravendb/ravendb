@@ -28,7 +28,7 @@ export type SelectOptionWithIconAndSeparator<T extends SelectValue = string> = S
 export default function Select<
     Option,
     IsMulti extends boolean = false,
-    Group extends GroupBase<Option> = GroupBase<Option>
+    Group extends GroupBase<Option> = GroupBase<Option>,
 >(props: ComponentProps<typeof ReactSelect<Option, IsMulti, Group>>) {
     return <ReactSelect {...props} className="bs5 react-select-container" classNamePrefix="react-select" />;
 }

@@ -1,7 +1,6 @@
 import { EntityState, PayloadAction, createAsyncThunk, createEntityAdapter, createSlice } from "@reduxjs/toolkit";
 import { services } from "hooks/useServices";
 import database from "models/resources/database";
-import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration;
 import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
 import { loadStatus } from "components/models/common";
 
@@ -21,11 +20,11 @@ export interface DocumentRevisionsConfig extends RevisionsCollectionConfiguratio
 export interface DocumentRevisionsState {
     loadStatus: loadStatus;
     selectedConfigNames: DocumentRevisionsConfigName[];
-    configs: EntityState<DocumentRevisionsConfig>;
-    originalConfigs: EntityState<DocumentRevisionsConfig>;
+    configs: EntityState<DocumentRevisionsConfig, string>;
+    originalConfigs: EntityState<DocumentRevisionsConfig, string>;
 }
 
-const configsAdapter = createEntityAdapter<DocumentRevisionsConfig>({
+const configsAdapter = createEntityAdapter<DocumentRevisionsConfig, string>({
     selectId: (config) => config.Name,
 });
 
@@ -160,13 +159,7 @@ export const documentRevisionsSlice = createSlice({
     },
 });
 
-const fetchConfigs = createAsyncThunk<
-    {
-        config: RevisionsConfiguration;
-        conflictsConfig: RevisionsCollectionConfiguration;
-    },
-    database
->(documentRevisionsSlice.name + "/fetchConfigs", async (db: database) => {
+const fetchConfigs = createAsyncThunk(documentRevisionsSlice.name + "/fetchConfigs", async (db: database) => {
     const config = await services.databasesService.getRevisionsConfiguration(db);
     const conflictsConfig = await services.databasesService.getRevisionsForConflictsConfiguration(db);
 

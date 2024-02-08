@@ -12,6 +12,7 @@ import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.Revi
 import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
+import document from "models/database/documents/document";
 
 export class DatabasesStubs {
     private static genericDatabaseInfo(name: string): StudioDatabaseInfo {
@@ -395,5 +396,107 @@ export class DatabasesStubs {
             CompressAllCollections: false,
             CompressRevisions: true,
         };
+    }
+
+    static conflictSolverConfiguration(): Raven.Client.ServerWide.ConflictSolver {
+        return {
+            ResolveByCollection: {
+                Categories: {
+                    Script: `
+var maxRecord = 0;
+for (var i = 0; i < docs.length; i++) {
+    maxRecord = Math.max(docs[i].MaxRecord, maxRecord);   
+}
+docs[0].MaxRecord = maxRecord;
+
+return docs[0];`,
+                    LastModifiedTime: "2024-01-03T12:13:16.7455603Z",
+                },
+                Shippers: {
+                    Script: `
+var maxPrice = 0;
+for (var i = 0; i < docs.length; i++) {
+    maxPrice = Math.max(docs[i].PricePerUnit, maxPrice);   
+}
+docs[0].PricePerUnit = maxPrice;
+
+return docs[0];`,
+                    LastModifiedTime: "2024-01-04T12:13:16.7455603Z",
+                },
+            },
+            ResolveToLatest: true,
+        };
+    }
+
+    static databaseRecord(): document {
+        return new document({
+            DatabaseName: "drec",
+            Disabled: false,
+            Encrypted: false,
+            EtagForBackup: 0,
+            DeletionInProgress: {},
+            RollingIndexes: {},
+            DatabaseState: "Normal",
+            LockMode: "Unlock",
+            Topology: {
+                Members: ["A"],
+                Promotables: [],
+                Rehabs: [],
+                PredefinedMentors: {},
+                DemotionReasons: {},
+                PromotablesStatus: {},
+                Stamp: {
+                    Index: 512,
+                    Term: 1,
+                    LeadersTicks: -2,
+                },
+                DynamicNodesDistribution: false,
+                ReplicationFactor: 1,
+                PriorityOrder: [],
+                NodesModifiedAt: "2024-01-02T12:47:22.6904463Z",
+                DatabaseTopologyIdBase64: "V/OB7JEtLEiazn6QID9RQw",
+                ClusterTransactionIdBase64: "VtiBjDGBe0uajuJ7lArnbw",
+            },
+            Sharding: null,
+            ConflictSolverConfig: null,
+            DocumentsCompression: {
+                Collections: [],
+                CompressAllCollections: false,
+                CompressRevisions: true,
+            },
+            Sorters: {},
+            Analyzers: {},
+            Indexes: {},
+            IndexesHistory: {},
+            AutoIndexes: {},
+            Settings: {},
+            Revisions: null,
+            TimeSeries: null,
+            RevisionsForConflicts: null,
+            Expiration: null,
+            Refresh: null,
+            DataArchival: null,
+            Integrations: null,
+            PeriodicBackups: [],
+            ExternalReplications: [],
+            SinkPullReplications: [],
+            HubPullReplications: [],
+            RavenConnectionStrings: {},
+            SqlConnectionStrings: {},
+            OlapConnectionStrings: {},
+            ElasticSearchConnectionStrings: {},
+            QueueConnectionStrings: {},
+            RavenEtls: [],
+            SqlEtls: [],
+            ElasticSearchEtls: [],
+            OlapEtls: [],
+            QueueEtls: [],
+            QueueSinks: [],
+            Client: null,
+            Studio: null,
+            TruncatedClusterTransactionCommandsCount: 0,
+            UnusedDatabaseIds: [],
+            Etag: 512,
+        });
     }
 }

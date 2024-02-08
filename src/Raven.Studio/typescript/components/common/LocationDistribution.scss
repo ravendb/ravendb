@@ -91,7 +91,9 @@
         }
         &.hovered {
             transition: none;
-            box-shadow: bs5variables.$box-shadow-sm, 0 0 20px 0 inset rgba(colors.$shard-color, 0.2);
+            box-shadow:
+                bs5variables.$box-shadow-sm,
+                0 0 20px 0 inset rgba(colors.$shard-color, 0.2);
         }
     }
 }

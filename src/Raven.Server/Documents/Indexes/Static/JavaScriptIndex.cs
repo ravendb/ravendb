@@ -54,14 +54,14 @@ function map(name, lambda) {
 
         protected override void OnInitializeEngine(Engine engine)
         {
-            engine.SetValue("getMetadata", new ClrFunctionInstance(_engine, "getMetadata", MetadataFor)); // for backward-compatibility only
-            engine.SetValue("metadataFor", new ClrFunctionInstance(_engine, "metadataFor", MetadataFor));
-            engine.SetValue("attachmentsFor", new ClrFunctionInstance(_engine, "attachmentsFor", AttachmentsFor));
-            engine.SetValue("timeSeriesNamesFor", new ClrFunctionInstance(_engine, "timeSeriesNamesFor", TimeSeriesNamesFor));
-            engine.SetValue("counterNamesFor", new ClrFunctionInstance(_engine, "counterNamesFor", CounterNamesFor));
-            engine.SetValue("loadAttachment", new ClrFunctionInstance(engine, "loadAttachment", LoadAttachment));
-            engine.SetValue("loadAttachments", new ClrFunctionInstance(engine, "loadAttachment", LoadAttachments));
-            engine.SetValue("id", new ClrFunctionInstance(_engine, "id", GetDocumentId));
+            engine.SetValue("getMetadata", new ClrFunction(_engine, "getMetadata", MetadataFor)); // for backward-compatibility only
+            engine.SetValue("metadataFor", new ClrFunction(_engine, "metadataFor", MetadataFor));
+            engine.SetValue("attachmentsFor", new ClrFunction(_engine, "attachmentsFor", AttachmentsFor));
+            engine.SetValue("timeSeriesNamesFor", new ClrFunction(_engine, "timeSeriesNamesFor", TimeSeriesNamesFor));
+            engine.SetValue("counterNamesFor", new ClrFunction(_engine, "counterNamesFor", CounterNamesFor));
+            engine.SetValue("loadAttachment", new ClrFunction(engine, "loadAttachment", LoadAttachment));
+            engine.SetValue("loadAttachments", new ClrFunction(engine, "loadAttachment", LoadAttachments));
+            engine.SetValue("id", new ClrFunction(_engine, "id", GetDocumentId));
         }
 
         protected override void ProcessMaps(ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList, List<MapMetadata> mapReferencedCollections, out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
@@ -96,7 +96,7 @@ function map(name, lambda) {
 
                 if (map.HasProperty(MethodProperty) == false)
                     ThrowIndexCreationException($"map function #{i} is missing its {MethodProperty} property");
-                var funcInstance = map.Get(MethodProperty).As<FunctionInstance>();
+                var funcInstance = map.Get(MethodProperty).As<Function>();
                 if (funcInstance == null)
                     ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");
                 var operation = new JavaScriptMapOperation(_engine, resolver)
@@ -326,8 +326,8 @@ function map(name, lambda) {
             if (reduceObj != null && reduceObj.IsObject())
             {
                 var reduceAsObj = reduceObj.AsObject();
-                var groupByKey = reduceAsObj.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
-                var reduce = reduceAsObj.GetProperty(AggregateByProperty).Value.As<ScriptFunctionInstance>();
+                var groupByKey = reduceAsObj.GetProperty(KeyProperty).Value.As<ScriptFunction>();
+                var reduce = reduceAsObj.GetProperty(AggregateByProperty).Value.As<ScriptFunction>();
                 ReduceOperation = new JavaScriptReduceOperation(reduce, groupByKey, _engine, resolver, indexVersion) { ReduceString = definition.Reduce };
                 GroupByFields = ReduceOperation.GetReduceFieldsNames();
                 Reduce = ReduceOperation.IndexingFunction;
@@ -375,16 +375,16 @@ function map(name, lambda) {
         {
             OnInitializeEngine(_engine);
 
-            var loadFunc = new ClrFunctionInstance(_engine, JavaScriptIndex.Load, LoadDocument);
+            var loadFunc = new ClrFunction(_engine, JavaScriptIndex.Load, LoadDocument);
 
             ObjectInstance noTrackingObject = new JsObject(_engine);
             noTrackingObject.FastSetProperty(JavaScriptIndex.Load, new PropertyDescriptor(loadFunc, false, false, false));
             _engine.SetValue(JavaScriptIndex.NoTracking, noTrackingObject);
 
             _engine.SetValue(JavaScriptIndex.Load, loadFunc);
-            _engine.SetValue(JavaScriptIndex.CmpXchg, new ClrFunctionInstance(_engine, JavaScriptIndex.CmpXchg, LoadCompareExchangeValue));
-            _engine.SetValue("tryConvertToNumber", new ClrFunctionInstance(_engine, "tryConvertToNumber", TryConvertToNumber));
-            _engine.SetValue("recurse", new ClrFunctionInstance(_engine, "recurse", Recurse));
+            _engine.SetValue(JavaScriptIndex.CmpXchg, new ClrFunction(_engine, JavaScriptIndex.CmpXchg, LoadCompareExchangeValue));
+            _engine.SetValue("tryConvertToNumber", new ClrFunction(_engine, "tryConvertToNumber", TryConvertToNumber));
+            _engine.SetValue("recurse", new ClrFunction(_engine, "recurse", Recurse));
 
             _engine.ExecuteWithReset(Code);
             _engine.ExecuteWithReset(mapCode);
@@ -431,7 +431,7 @@ function map(name, lambda) {
             }
 
             var item = args[0];
-            var func = args[1] as ScriptFunctionInstance;
+            var func = args[1] as ScriptFunction;
 
             if (func == null)
                 throw new ArgumentException("The second argument in recurse(item, func) must be an arrow function.");

@@ -37,7 +37,7 @@ public sealed class RabbitMqDocumentTransformer<T> : QueueDocumentTransformer<T,
     {
         base.Initialize(debugMode);
 
-        DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadTo, LoadToFunctionTranslatorWithRoutingKeyAndAttributes));
+        DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunction(DocumentScript.ScriptEngine, Transformation.LoadTo, LoadToFunctionTranslatorWithRoutingKeyAndAttributes));
 
         foreach (var exchangeName in LoadToDestinations)
         {
@@ -46,7 +46,7 @@ public sealed class RabbitMqDocumentTransformer<T> : QueueDocumentTransformer<T,
 
             var name = Transformation.LoadTo + exchangeName;
 
-            DocumentScript.ScriptEngine.SetValue(name, new ClrFunctionInstance(DocumentScript.ScriptEngine, name,
+            DocumentScript.ScriptEngine.SetValue(name, new ClrFunction(DocumentScript.ScriptEngine, name,
                 (self, args) => LoadToFunctionTranslatorWithRoutingKeyAndAttributes(exchangeName, args)));
         }
     }

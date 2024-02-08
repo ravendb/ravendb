@@ -375,9 +375,10 @@ namespace Raven.Server.Documents.TimeSeries
 
                         if (canDeleteEntireSegment && readOnlySegment.NumberOfLiveEntries > 1)
                         {
-                            deleted = readOnlySegment.NumberOfLiveEntries;
-                            holder.AddNewValue(baseline, new double[numberOfValues], Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
-                            holder.AddNewValue(readOnlySegment.GetLastTimestamp(baseline), new double[numberOfValues], Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
+                            deleted += readOnlySegment.NumberOfLiveEntries;
+                            Span<double> emptyValues = stackalloc double[numberOfValues];
+                            holder.AddNewValue(baseline, emptyValues, Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
+                            holder.AddNewValue(end, emptyValues, Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
                             holder.AppendDeadSegment(newSegment);
                             if (updateMetadata)
                             {
@@ -386,6 +387,7 @@ namespace Raven.Server.Documents.TimeSeries
                                 RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
                             }
 
+                            changeVector = holder.ChangeVector;
                             return true;
                         }
 
@@ -702,7 +704,6 @@ namespace Raven.Server.Documents.TimeSeries
                 else
                     holder.AppendExistingSegment(segment);
 
-
                 context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
                 {
                     CollectionName = collectionName.Name,
@@ -716,7 +717,6 @@ namespace Raven.Server.Documents.TimeSeries
 
                 return true;
             }
-
         }
 
         public bool EnsureNoOverlap(
@@ -884,7 +884,7 @@ namespace Raven.Server.Documents.TimeSeries
                 CollectionName collection,
                 DateTime timeStamp,
                 ChangeVector fromReplicationChangeVector = null
-                ) : this(tss, context, docId, name, collection, fromReplicationChangeVector)
+            ) : this(tss, context, docId, name, collection, fromReplicationChangeVector)
             {
                 SliceHolder = new TimeSeriesSliceHolder(_context, docId, name, _collection.Name).WithBaseline(timeStamp);
                 SliceHolder.CreateSegmentBuffer();
@@ -898,7 +898,7 @@ namespace Raven.Server.Documents.TimeSeries
                 string name,
                 CollectionName collection,
                 AppendOptions options
-                ) : this(tss, context, docId, name, collection, options.ChangeVectorFromReplication)
+            ) : this(tss, context, docId, name, collection, options.ChangeVectorFromReplication)
             {
                 FromSmuggler = options.FromSmuggler;
                 SliceHolder = allocator;

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Server;
 using Sparrow.Server.Exceptions;
@@ -81,10 +82,10 @@ namespace SlowTests.Issues
                 await AddErrorMessageAndClusterDebugLogs(nodes, 
                     new StringBuilder().AppendLine($"leader {leaderTag} did not have a state transition from 'Leader' to 'Candidate' after 15 seconds.")));
 
-            Assert.True(leaderSteppedDown.Wait(TimeSpan.FromSeconds(15)), 
+            Assert.True(await leaderSteppedDown.WaitWithTimeout(TimeSpan.FromSeconds(15)), 
                 await AddErrorMessageAndClusterDebugLogs(nodes, new StringBuilder().AppendLine($"leader {leaderTag} did not step down after 15 seconds")));
 
-            Assert.True(newLeaderElected.Wait(TimeSpan.FromSeconds(15)), 
+            Assert.True(await newLeaderElected.WaitWithTimeout(TimeSpan.FromSeconds(15)), 
                 await AddErrorMessageAndClusterDebugLogs(nodes, new StringBuilder().AppendLine($"old leader {leaderTag} stepped down, but no new leader was elected after 15 seconds")));
             
             await putConnectionStrings;

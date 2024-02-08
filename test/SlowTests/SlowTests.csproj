@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <RuntimeFrameworkVersion>7.0.14</RuntimeFrameworkVersion>
+    <TargetFramework>net8.0</TargetFramework>
+    <RuntimeFrameworkVersion>8.0.1</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>SlowTests</AssemblyName>
     <PackageId>SlowTests</PackageId>
@@ -45,6 +45,7 @@
     <None Remove="Data\RavenDB_15898\1.ravendbdump" />
     <None Remove="Data\RavenDB_16378\RavenDB-16401-NRE.ravendb-snapshot" />
     <None Remove="Data\RavenDB_18381\2022-03-27-12-38-05-8912792.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_21957\js_index_with_dates_601.ravendb-snapshot" />
     <None Remove="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
     <None Remove="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
   </ItemGroup>
@@ -128,6 +129,7 @@
     <EmbeddedResource Include="Data\RavenDB_17070\Precorax\Auto_Orders_ByOrderedAt.zip" />
     <EmbeddedResource Include="Data\RavenDB_17070\Precorax\Orders_ByOrderBy.zip" />
     <EmbeddedResource Include="Data\RavenDB_18381\2022-03-27-12-38-05-8912792.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_21957\js_index_with_dates_601.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />
@@ -163,12 +165,12 @@
     <PackageReference Include="FubarDev.FtpServer.FileSystem.DotNet" Version="3.1.2" />
     <PackageReference Include="FubarDev.FtpServer.FileSystem.InMemory" Version="3.1.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
-    <PackageReference Include="System.DirectoryServices.Protocols" Version="7.0.1" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.4">
+    <PackageReference Include="System.DirectoryServices.Protocols" Version="8.0.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.6">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="xunit" Version="2.6.2" />
+    <PackageReference Include="xunit" Version="2.6.5" />
     <DotNetCliToolReference Include="dotnet-xunit" Version="2.4.0-beta.1.build10001" />
   </ItemGroup>
   <ItemGroup>

@@ -287,16 +287,19 @@ namespace Raven.Server.Web
 
         public virtual long? GetLongFromHeaders(string name)
         {
-            var headers = HttpContext.Request.Headers[name];
+            HttpContext.Request.Headers.TryGetValue(name, out var headers);
             if (headers.Count == 0)
                 return null;
 
-            var raw = headers[0][0] == '\"'
-                ? headers[0].AsSpan().Slice(1, headers[0].Length - 2)
-                : headers[0].AsSpan();
+            var header = headers[0];
+            if (header == null)
+                return null;
+
+            var raw = header.AsSpan();
+            if (raw[0] == '\"')
+                raw = raw.Slice(1, raw.Length - 2);
 
             var success = long.TryParse(raw, out var result);
-
             if (success)
                 return result;
 
@@ -687,7 +690,7 @@ namespace Raven.Server.Web
         
         public static void SetupCORSHeaders(HttpContext httpContext, ServerStore serverStore, CorsMode corsMode)
         {
-            httpContext.Response.Headers.Add("Vary", "Origin");
+            httpContext.Response.Headers["Vary"] = "Origin";
 
             var requestedOrigin = httpContext.Request.Headers["Origin"];
 
@@ -710,10 +713,10 @@ namespace Raven.Server.Web
                     break;
             }
 
-            httpContext.Response.Headers.Add("Access-Control-Allow-Origin", allowedOrigin);
-            httpContext.Response.Headers.Add("Access-Control-Allow-Methods", "PUT, POST, GET, OPTIONS, DELETE");
-            httpContext.Response.Headers.Add("Access-Control-Allow-Headers", httpContext.Request.Headers["Access-Control-Request-Headers"]);
-            httpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
+            httpContext.Response.Headers["Access-Control-Allow-Origin"] = allowedOrigin;
+            httpContext.Response.Headers["Access-Control-Allow-Methods"] = "PUT, POST, GET, OPTIONS, DELETE";
+            httpContext.Response.Headers["Access-Control-Allow-Headers"] = httpContext.Request.Headers["Access-Control-Request-Headers"];
+            httpContext.Response.Headers["Access-Control-Max-Age"] = "86400";
         }
 
         private static bool IsOriginAllowed(string origin, ServerStore serverStore)
@@ -769,7 +772,7 @@ namespace Raven.Server.Web
             var leaderLocation = url + HttpContext.Request.Path + HttpContext.Request.QueryString;
             HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
             HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
-            HttpContext.Response.Headers.Add("Location", leaderLocation);
+            HttpContext.Response.Headers["Location"] = leaderLocation;
         }
 
         public virtual bool IsShutdownRequested() => ServerStore.ServerShutdown.IsCancellationRequested;

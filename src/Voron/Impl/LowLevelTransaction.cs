@@ -142,17 +142,6 @@ namespace Voron.Impl
         public TransactionPersistentContext PersistentContext { get; }
         public TransactionFlags Flags { get; }
 
-        public bool IsLazyTransaction
-        {
-            get { return _isLazyTransaction; }
-            set
-            {
-                _isLazyTransaction = value;
-                if (_isLazyTransaction)
-                    _env.Journal.HasLazyTransactions = true;
-            }
-        }
-
         public StorageEnvironment Environment => _env;
 
         public long Id => _id;
@@ -1235,11 +1224,7 @@ namespace Voron.Impl
 
         private bool WriteToJournalIsRequired()
         {
-            return _dirtyPages.Count > 0
-                   || _freedPages.Count > 0
-                   // nothing changed in this transaction
-                   // allow call to writeToJournal for flushing lazy tx
-                   || (IsLazyTransaction == false && _journal?.HasDataInLazyTxBuffer() == true);
+            return _dirtyPages.Count > 0 || _freedPages.Count > 0;
         }
 
         private void CommitStage2_WriteToJournal()
@@ -1401,7 +1386,6 @@ namespace Voron.Impl
         }
 
         private PagerState _lastState;
-        private bool _isLazyTransaction;
 
         internal bool FlushInProgressLockTaken;
         private ByteString _txHeaderMemory;

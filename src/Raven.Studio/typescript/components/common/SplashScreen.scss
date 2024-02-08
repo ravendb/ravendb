@@ -97,7 +97,8 @@
         height: $orbit-base-size * 2;
         background-color: fade-out($orbit-bg-color, 0.75);
         z-index: -1;
-        -webkit-animation: spin 3500ms cubic-bezier(0.4, 0, 0.2, 1) infinite,
+        -webkit-animation:
+            spin 3500ms cubic-bezier(0.4, 0, 0.2, 1) infinite,
             opacity-orbit-2 3500ms cubic-bezier(0.18, 0.89, 0.32, 1.28) infinite;
     }
 
@@ -106,7 +107,8 @@
         height: $orbit-base-size * 3;
         background-color: fade-out($orbit-bg-color, 0.9);
         z-index: -2;
-        -webkit-animation: spin 5000ms cubic-bezier(0.4, 0, 0.2, 1) infinite,
+        -webkit-animation:
+            spin 5000ms cubic-bezier(0.4, 0, 0.2, 1) infinite,
             opacity-orbit-3 5000ms cubic-bezier(0.18, 0.89, 0.32, 1.28) infinite;
     }
 

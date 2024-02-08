@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                 else if (property == nameof(IAttachmentObject.Size))
                     value = new PropertyDescriptor(_attachment.Size, writable: false, enumerable: false, configurable: false);
                 else if (property == GetContentAsStringMethodName)
-                    value = new PropertyDescriptor(new ClrFunctionInstance(Engine, GetContentAsStringMethodName, GetContentAsString), writable: false, enumerable: false, configurable: false);
+                    value = new PropertyDescriptor(new ClrFunction(Engine, GetContentAsStringMethodName, GetContentAsString), writable: false, enumerable: false, configurable: false);
 
                 if (value != null)
                     _properties[property] = value;

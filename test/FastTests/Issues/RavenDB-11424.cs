@@ -23,6 +23,7 @@ namespace FastTests.Issues
             {
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 3 */3 * *");
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, store.Database, result.TaskId);
 
                 var periodicBackupRunner = (await Databases.GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
                 var backups = periodicBackupRunner.PeriodicBackups;
@@ -45,6 +46,8 @@ namespace FastTests.Issues
             {
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 3 */3 * *");
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+
+                Sharding.Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, store.Database, result.TaskId);
 
                 var timers = new Dictionary<int, Timer>();
                 await foreach (var shard in Sharding.GetShardsDocumentDatabaseInstancesFor(store.Database))

@@ -79,7 +79,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(TxInfoResult.FlushInProgressLockTaken)] = lowLevelTransaction.FlushInProgressLockTaken,
                 [nameof(TxInfoResult.Flags)] = lowLevelTransaction.Flags,
                 [nameof(TxInfoResult.IsCloned)] = lowLevelTransaction.IsCloned,
-                [nameof(TxInfoResult.IsLazyTransaction)] = lowLevelTransaction.IsLazyTransaction,
                 [nameof(TxInfoResult.NumberOfModifiedPages)] = lowLevelTransaction.NumberOfModifiedPages,
                 [nameof(TxInfoResult.Committed)] = lowLevelTransaction.Committed,
                 [nameof(TxInfoResult.TotalEncryptionBufferSize)] = lowLevelTransaction.AdditionalMemoryUsageSize.ToString(),
@@ -97,7 +96,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public bool FlushInProgressLockTaken;
         public TransactionFlags Flags;
         public bool IsCloned;
-        public bool IsLazyTransaction;
         public long NumberOfModifiedPages;
         public bool Committed;
         public string TotalEncryptionBufferSize;

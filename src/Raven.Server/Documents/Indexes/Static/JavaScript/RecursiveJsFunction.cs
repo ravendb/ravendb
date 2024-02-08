@@ -11,11 +11,11 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
         private readonly List<JsValue> _result = new List<JsValue>();
         private readonly Engine _engine;
         private readonly JsValue _item;
-        private readonly ScriptFunctionInstance _func;
+        private readonly ScriptFunction _func;
         private readonly HashSet<JsValue> _results = new HashSet<JsValue>(JsValueComparer.Instance);
         private readonly Queue<object> _queue = new Queue<object>();
 
-        public RecursiveJsFunction(Engine engine, JsValue item, ScriptFunctionInstance func)
+        public RecursiveJsFunction(Engine engine, JsValue item, ScriptFunction func)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _item = item;

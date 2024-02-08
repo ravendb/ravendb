@@ -434,11 +434,18 @@ namespace Raven.Server.Documents.Patch
         }
     }
 
-    public class PatchDocumentCommand : PatchDocumentCommandBase
+    public class PatchDocumentCommand : PatchDocumentCommandBase, IDisposable
     {
         private readonly string _id;
         private readonly LazyStringValue _expectedChangeVector;
         private readonly bool _ignoreMaxStepsForScript;
+        private ScriptRunner.SingleRun _run;
+        private ScriptRunner.SingleRun _runIfMissing;
+        private ScriptRunner.ReturnRun _returnRun;
+        private IDisposable _disposableStatement;
+        private IDisposable _disposableScriptRunner;
+        private bool _isInitialized;
+
         public PatchResult PatchResult { get; private set; }
 
         public PatchDocumentCommand(
@@ -457,28 +464,47 @@ namespace Raven.Server.Documents.Patch
             bool ignoreMaxStepsForScript = false) : base(context, skipPatchIfChangeVectorMismatch, patch, patchIfMissing, createIfMissing, isTest, debugMode, collectResultsNeeded, returnDocument)
         {
             _id = id;
+            _isInitialized = false;
             _expectedChangeVector = expectedChangeVector;
             _ignoreMaxStepsForScript = ignoreMaxStepsForScript;
             if (string.IsNullOrEmpty(id) || id.EndsWith(identityPartsSeparator) || id.EndsWith('|'))
                 throw new ArgumentException($"The ID argument has invalid value: '{id}'", nameof(id));
+
+            // If the caller is a DocumentsOperationContext, then we can apply the optimization.
+            if (context is DocumentsOperationContext doContext)
+                InitializeCmd(doContext);
+        }
+
+        private void InitializeCmd(DocumentsOperationContext context)
+        {
+            _database = context.DocumentDatabase;
+            _returnRun = _database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out _run);
+            _disposableStatement = _ignoreMaxStepsForScript ? _run.ScriptEngine.DisableMaxStatements() : null;
+            _disposableScriptRunner = _patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out _runIfMissing) : null;
+            _isInitialized = true;
         }
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            ScriptRunner.SingleRun runIfMissing = null;
-            _database = context.DocumentDatabase;
+            // PERF: Since we were not able to apply the optimization of shifting the cost of the operations into the constructor
+            // we will do it here instead. 
+            if (_isInitialized == false)
+                InitializeCmd(context);
 
-            using (_database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out var run))
-            {
-                using (_ignoreMaxStepsForScript ? run.ScriptEngine.DisableMaxStatements() : null)
-                {
-                    using (_patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out runIfMissing) : (IDisposable)null)
-                    {
-                        PatchResult = ExecuteOnDocument(context, _id, _expectedChangeVector, run, runIfMissing);
-                        return 1;
-                    }
-                }
-            }
+            Debug.Assert(context.DocumentDatabase == _database);
+
+            PatchResult = ExecuteOnDocument(context, _id, _expectedChangeVector, _run, _runIfMissing);
+
+            _returnRun.Dispose();
+            _returnRun = default;
+
+            _disposableStatement?.Dispose();
+            _disposableStatement = null;
+
+            _disposableScriptRunner?.Dispose();
+            _disposableScriptRunner = null;
+
+            return 1;
         }
 
         public override string HandleReply(DynamicJsonArray reply, HashSet<string> modifiedCollections)
@@ -496,6 +522,15 @@ namespace Raven.Server.Documents.Patch
             dto.ReturnDocument = _returnDocument;
 
             return dto;
+        }
+
+        public void Dispose()
+        {
+            _returnRun.Dispose();
+            _disposableStatement?.Dispose();
+            _disposableScriptRunner?.Dispose();
+
+            PatchResult?.Dispose();
         }
     }
 

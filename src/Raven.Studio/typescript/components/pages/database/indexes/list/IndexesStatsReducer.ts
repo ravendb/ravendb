@@ -3,10 +3,9 @@ import { Reducer } from "react";
 import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
-import { produce } from "immer";
+import { produce, Draft } from "immer";
 import { databaseLocationComparator } from "components/utils/common";
 import IndexProgress = Raven.Client.Documents.Indexes.IndexProgress;
-import { WritableDraft } from "immer/dist/types/types-external";
 import genUtils = require("common/generalUtils");
 
 interface ActionStatsLoaded {
@@ -143,7 +142,7 @@ function initNodesInfo(locations: databaseLocationSpecifier[]): IndexNodeInfo[] 
     }));
 }
 
-function markProgressAsCompleted(progress: WritableDraft<IndexProgressInfo>) {
+function markProgressAsCompleted(progress: Draft<IndexProgressInfo>) {
     progress.global.processed = progress.global.total;
 
     progress.collections.forEach((c) => {

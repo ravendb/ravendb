@@ -31,11 +31,11 @@ internal sealed class BulkInsertWriter : BulkInsertWriterBase
             ThrowUnexpectedWriteStream();
     }
 
-    public override async Task FlushIfNeeded(bool force = false)
+    public override async Task<bool> FlushIfNeeded(bool force = false)
     {
         await StreamWriter.FlushAsync().ConfigureAwait(false);
 
-        await base.FlushIfNeeded(force).ConfigureAwait(false);
+        return await base.FlushIfNeeded(force).ConfigureAwait(false);
     }
 
     public void Write(string value)

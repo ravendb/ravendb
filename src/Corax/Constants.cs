@@ -107,7 +107,8 @@ namespace Corax
             {
                 TermMatch = 0,
                 StartsWith = 1,
-                EndsWith = 2,
+                EndsWith = 1 << 1,
+                Exists = 1 << 2,
                 Contains = StartsWith | EndsWith
             }
 

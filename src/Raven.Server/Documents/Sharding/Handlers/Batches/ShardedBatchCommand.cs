@@ -29,6 +29,8 @@ public sealed class ShardedBatchCommand : IBatchCommand
     public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
     public List<Stream> AttachmentStreams;
 
+    public bool IncludeReply { get; set; }
+
     public HashSet<string> ModifiedCollections { get; set; }
 
     public string LastChangeVector { get; set; }
@@ -41,6 +43,8 @@ public sealed class ShardedBatchCommand : IBatchCommand
     {
         _context = context;
         _databaseContext = databaseContext;
+        
+        IncludeReply = true;
     }
 
     public Dictionary<int, ShardedSingleNodeBatchCommand> GetCommands(ShardedBatchBehavior behavior, IndexBatchOptions indexBatchOptions, ReplicationBatchOptions replicationBatchOptions)

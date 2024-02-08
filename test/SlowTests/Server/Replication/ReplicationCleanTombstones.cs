@@ -99,6 +99,15 @@ namespace SlowTests.Server.Replication
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 1 *");
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
+                if (options.DatabaseMode == RavenDatabaseMode.Single)
+                {
+                    Backup.WaitForResponsibleNodeUpdateInCluster(store, cluster.Nodes, result.TaskId);
+                }
+                else
+                {
+                    Sharding.Backup.WaitForResponsibleNodeUpdateInCluster(store, cluster.Nodes, result.TaskId);
+                }
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Karmel" }, "foo/bar");
@@ -383,6 +392,8 @@ namespace SlowTests.Server.Replication
                     session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
                     session.Store(new User { Name = "Karmel" }, "foo/bar");
                     session.SaveChanges();
+
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "foo/bar", (u) => u.Name == "Karmel", TimeSpan.FromSeconds(15)));
                 }
 
                 if (sent.Wait(TimeSpan.FromSeconds(30)) == false)
@@ -441,6 +452,7 @@ namespace SlowTests.Server.Replication
 
                 var res = WaitForDocument(dest, "marker2");
                 Assert.True(res);
+                Assert.True(await WaitForChangeVectorInClusterAsync(cluster.Nodes.Where(s => (s.Disposed == false)).ToList(), store.Database));
 
                 string changeVectorMarker2;
 
@@ -461,18 +473,21 @@ namespace SlowTests.Server.Replication
                 {
                     if (server.Disposed)
                         continue;
+
                     var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                    var cleanerRes = await storage.TombstoneCleaner.ExecuteCleanup();
+                    long cleanerRes = 0;
                     using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        var val = await WaitForValueAsync(() =>
+                        var val = await WaitForValueAsync(async () =>
                         {
+                            cleanerRes = await storage.TombstoneCleaner.ExecuteCleanup();
                             using (context.OpenReadTransaction())
                             {
                                 return storage.DocumentsStorage.GetNumberOfTombstones(context);
                             }
                         }, 0);
-                        Assert.True(0 == val, $"TombstoneCleaner result = {cleanerRes},");
+                        Assert.True(0 == val, $"TombstoneCleaner result = {cleanerRes}, actual number of existing tombstones = {val}" +
+                                              $"{Environment.NewLine}current server: {server.ServerStore.NodeTag}");
                     }
                 }
             }

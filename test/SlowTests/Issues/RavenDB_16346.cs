@@ -40,7 +40,7 @@ function execute(doc, args)
             args[0] = JsValue.FromObject(engine, user);
 
             engine.Execute(script);
-            var call = (FunctionInstance) engine.GetValue("execute");
+            var call = (Function) engine.GetValue("execute");
             call.Call(JsValue.Undefined, args);
 
             Assert.Equal("ayende", user.Name);

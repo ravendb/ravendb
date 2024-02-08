@@ -11,15 +11,15 @@ export interface DatabasesViewState {
     /**
      * holds database info specific for given shard/node (document count, errors, etc)
      */
-    databaseDetailedInfo: EntityState<DatabaseLocalInfo>;
+    databaseDetailedInfo: EntityState<DatabaseLocalInfo, string>;
     /**
      * holds orchestrator info specific for given node (alert count, performance hints count etc)
      */
-    orchestratorDetailedInfo: EntityState<OrchestratorLocalInfo>;
+    orchestratorDetailedInfo: EntityState<OrchestratorLocalInfo, string>;
     /**
      * Data loading status per each node (applies to both db and orchestrator info)
      */
-    detailedLoadStatus: EntityState<perNodeTagLoadStatus>;
+    detailedLoadStatus: EntityState<perNodeTagLoadStatus, string>;
 }
 
 const selectDatabaseInfoId = (dbName: string, location: databaseLocationSpecifier) =>
@@ -27,15 +27,15 @@ const selectDatabaseInfoId = (dbName: string, location: databaseLocationSpecifie
 
 const selectOrchestratorInfoId = (dbName: string, nodeTag: string) => dbName + "_$$$_" + nodeTag;
 
-const databaseInfoAdapter = createEntityAdapter<DatabaseLocalInfo>({
+const databaseInfoAdapter = createEntityAdapter<DatabaseLocalInfo, string>({
     selectId: (x) => selectDatabaseInfoId(x.name, x.location),
 });
 
-const orchestratorInfoAdapter = createEntityAdapter<OrchestratorLocalInfo>({
+const orchestratorInfoAdapter = createEntityAdapter<OrchestratorLocalInfo, string>({
     selectId: (x) => selectOrchestratorInfoId(x.name, x.nodeTag),
 });
 
-const databaseDetailedLoadStatusAdapter = createEntityAdapter<perNodeTagLoadStatus>({
+const databaseDetailedLoadStatusAdapter = createEntityAdapter<perNodeTagLoadStatus, string>({
     selectId: (x) => x.nodeTag,
 });
 

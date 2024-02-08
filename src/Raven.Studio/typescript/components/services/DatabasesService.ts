@@ -49,6 +49,10 @@ import getDocumentsCompressionConfigurationCommand = require("commands/database/
 import saveDocumentsCompressionCommand = require("commands/database/documents/saveDocumentsCompressionCommand");
 import promoteDatabaseNodeCommand = require("commands/database/debug/promoteDatabaseNodeCommand");
 import revertRevisionsCommand = require("commands/database/documents/revertRevisionsCommand");
+import getConflictSolverConfigurationCommand = require("commands/database/documents/getConflictSolverConfigurationCommand");
+import getDatabaseRecordCommand = require("commands/resources/getDatabaseRecordCommand");
+import saveDatabaseRecordCommand = require("commands/resources/saveDatabaseRecordCommand");
+import saveConflictSolverConfigurationCommand = require("commands/database/documents/saveConflictSolverConfigurationCommand");
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -106,7 +110,7 @@ export default class DatabasesService {
         return new getDatabaseStudioConfigurationCommand(db).execute();
     }
 
-    async saveDatabaseStudioConfiguration(dto: StudioConfiguration, db: database) {
+    async saveDatabaseStudioConfiguration(dto: Partial<StudioConfiguration>, db: database) {
         return new saveDatabaseStudioConfigurationCommand(dto, db).execute();
     }
 
@@ -202,5 +206,21 @@ export default class DatabasesService {
 
     async promoteDatabaseNode(databaseName: string, nodeTag: string) {
         return new promoteDatabaseNodeCommand(databaseName, nodeTag).execute();
+    }
+
+    async getConflictSolverConfiguration(db: database) {
+        return new getConflictSolverConfigurationCommand(db).execute();
+    }
+
+    async saveConflictSolverConfiguration(db: database, dto: Raven.Client.ServerWide.ConflictSolver) {
+        return new saveConflictSolverConfigurationCommand(db, dto).execute();
+    }
+
+    async getDatabaseRecord(db: database, reportRefreshProgress = false) {
+        return new getDatabaseRecordCommand(db, reportRefreshProgress).execute();
+    }
+
+    async saveDatabaseRecord(db: database, databaseRecord: documentDto, etag: number) {
+        return new saveDatabaseRecordCommand(db, databaseRecord, etag).execute();
     }
 }

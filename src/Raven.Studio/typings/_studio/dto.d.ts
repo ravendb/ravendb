@@ -541,6 +541,7 @@ type dbCreationMode = "newDatabase" | "restore";
 interface unifiedCertificateDefinition extends Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition {
     Thumbprints: Array<string>;
     Visible: KnockoutObservable<boolean>;
+    HasTwoFactor: boolean;
     LastUsed: KnockoutObservable<string>;
 }
 
@@ -935,6 +936,12 @@ interface iconPlusText {
     text: string;
     textClass?: string;
     title?: string;
+}
+
+interface ConfigureMicrosoftLogsDialogResult {
+    isEnabled: boolean;
+    configuration: object;
+    persist: boolean;
 }
 
 interface columnPreviewFeature {

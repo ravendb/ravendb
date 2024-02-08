@@ -10,6 +10,7 @@ import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revi
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
 import DataArchival = Raven.Client.Documents.Operations.DataArchival.DataArchivalConfiguration;
+import document from "models/database/documents/document";
 
 interface WithGetDatabasesStateOptions {
     loadError?: string[];
@@ -114,5 +115,17 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
             dto,
             DatabasesStubs.documentsCompressionConfiguration()
         );
+    }
+
+    withConflictSolverConfiguration(dto?: Raven.Client.ServerWide.ConflictSolver) {
+        return this.mockResolvedValue(
+            this.mocks.getConflictSolverConfiguration,
+            dto,
+            DatabasesStubs.conflictSolverConfiguration()
+        );
+    }
+
+    withDatabaseRecord(dto?: document) {
+        return this.mockResolvedValue(this.mocks.getDatabaseRecord, dto, DatabasesStubs.databaseRecord());
     }
 }

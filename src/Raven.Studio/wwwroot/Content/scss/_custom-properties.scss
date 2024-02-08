@@ -13,6 +13,8 @@ $prefix: "bs-";
     --panel-bg-3: #{$base-panel-bg-3};
 
     --well-bg: #{$base-well-bg};
+    --pre-bg: #{$pre-bg};
+    --ace-gutter-bg: #{$ace-gutter-bg};
 
     --hover-filter: #{$hover-filter};
     --shadow-color: #{to-rgb($shadow-color)};
@@ -31,6 +33,10 @@ $prefix: "bs-";
 
     @each $key, $value in $zindexes {
         --zindex-#{$key}: #{$value};
+    }
+
+    @each $key, $value in $tokens {
+        --token-#{$key}: #{$value};
     }
 }
 

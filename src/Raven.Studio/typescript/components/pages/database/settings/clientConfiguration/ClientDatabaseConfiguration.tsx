@@ -235,7 +235,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                         <Icon icon="database" />
                                         Database Configuration
                                     </h4>
-                                    <Card className={!canEditDatabaseConfig && "item-disabled"}>
+                                    <Card className={classNames({ "item-disabled": !canEditDatabaseConfig })}>
                                         <div className="p-4">
                                             <div className="md-label">
                                                 Identity parts separator{" "}

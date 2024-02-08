@@ -2,9 +2,9 @@
 using System.Threading.Tasks;
 using Jint;
 using Jint.Native;
+using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
-using Jint.Runtime.References;
 
 namespace Raven.Server.Documents.Patch
 {

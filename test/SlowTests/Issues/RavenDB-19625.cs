@@ -47,14 +47,16 @@ public class RavenDB_19625 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Indexes)]
-    public void IndexBuiltBeforeJsDateIntroductionWillNotInsertTicks()
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [InlineData("SlowTests.Data.RavenDB_21957.js_index_with_dates_54112.ravendb-snapshot")]
+    [InlineData("SlowTests.Data.RavenDB_21957.js_index_with_dates_601.ravendb-snapshot")]
+    public void IndexBuiltBeforeJsDateIntroductionWillNotInsertTicks(string snapshotResourcePath)
     {
         var backupPath = NewDataPath(forceCreateDir: true);
-        var fullBackupPath = Path.Combine(backupPath, "54_001_index_ver.ravendb-snapshot");
+        var fullBackupPath = Path.Combine(backupPath, "backup.ravendb-snapshot");
 
         using (var file = File.Create(fullBackupPath))
-        using (var stream = typeof(RavenDB_19625).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_21957.js_index_with_dates_54112.ravendb-snapshot"))
+        using (var stream = typeof(RavenDB_19625).Assembly.GetManifestResourceStream(snapshotResourcePath))
         {
             stream.CopyTo(file);
         }

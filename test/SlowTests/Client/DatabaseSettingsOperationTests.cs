@@ -63,7 +63,7 @@ namespace SlowTests.Client
             store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, false));
         }
 
-        private static DatabaseSettings GetConfigurationSettings(DocumentStore store)
+        private static Raven.Client.ServerWide.Operations.Configuration.DatabaseSettings GetConfigurationSettings(DocumentStore store)
         {
             var settings = store.Maintenance.Send(new GetDatabaseSettingsOperation(store.Database));
             Assert.NotNull(settings);

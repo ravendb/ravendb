@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Sharding
 
             Indexes.Update(record, index);
 
-            SubscriptionsStorage.Update(record);
+            SubscriptionsStorage.Update();
 
             Interlocked.Exchange(ref _record, record);
         }

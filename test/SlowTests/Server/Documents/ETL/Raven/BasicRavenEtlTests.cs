@@ -92,10 +92,10 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
                 Etl.AddEtl(src, new RavenEtlConfiguration()
-                    {
-                        Name = "with prefix",
-                        ConnectionStringName = "my-con",
-                        Transforms =
+                {
+                    Name = "with prefix",
+                    ConnectionStringName = "my-con",
+                    Transforms =
                         {
                             new Transformation
                             {
@@ -116,7 +116,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                                 DocumentIdPostfix = ",Chicago"
                             }
                         },
-                    },
+                },
                     new RavenConnectionString
                     {
                         Name = "my-con",
@@ -124,7 +124,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                         TopologyDiscoveryUrls = dest.Urls,
                     }
                 );
-                
+
                 using (var session = src.OpenSession())
                 {
                     session.Store(new User()
@@ -136,18 +136,16 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 }
 
                 var timeout = 30_000;
-                var etlReachedDestination = WaitForValue(() =>
+                WaitForValue(() =>
                 {
                     using (var session = dest.OpenSession())
                     {
-                        var user = session.Load<User>("users/1-A,Chicago");
-                        return user != null;
+                        var docs = session.Advanced.LoadStartingWith<User>("users/1-A");
+                        return docs.Length;
                     }
-                }, true, timeout);
+                }, expectedVal: 2, timeout);
 
-                Assert.True(etlReachedDestination, await Etl.GetEtlDebugInfo(src.Database, TimeSpan.FromMilliseconds(timeout), srcDbMode));
-
-                string secondaryId; 
+                string secondaryId;
                 using (var session = dest.OpenSession())
                 {
                     var user = session.Load<User>("users/1-A,Chicago");
@@ -167,11 +165,11 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                etlReachedDestination = WaitForValue(() =>
+                var etlReachedDestination = WaitForValue(() =>
                 {
                     using (var session = dest.OpenSession())
                     {
-                        return session.Advanced.Exists("users/1-A,Chicago") == false && 
+                        return session.Advanced.Exists("users/1-A,Chicago") == false &&
                                session.Advanced.Exists(secondaryId) == false;
                     }
                 }, true, timeout);
@@ -183,7 +181,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     var user = session.Load<User>("users/1-A,Chicago");
 
                     Assert.Null(user);
-                    
+
                     var item = session.Advanced.RawQuery<object>("from Users2 where startsWith(id(), 'users/1-A/')")
                         .SingleOrDefault();
                     Assert.Null(item);
@@ -198,11 +196,11 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore(options))
             {
-                Etl.AddEtl(src, dest, "Users", script:null ,mentor: "C");
+                Etl.AddEtl(src, dest, "Users", script: null, mentor: "C");
 
                 var database = GetDatabase(src.Database).Result;
 
-                Assert.Equal("C",database.EtlLoader.RavenDestinations[0].MentorNode);
+                Assert.Equal("C", database.EtlLoader.RavenDestinations[0].MentorNode);
 
                 var etlDone = Etl.WaitForEtlToComplete(src);
 
@@ -816,8 +814,8 @@ loadToOrders(orderData);
 
             config.Initialize(new RavenConnectionString
             {
-                Database = "Foo", 
-                TopologyDiscoveryUrls = new []{"http://localhost:8080" }
+                Database = "Foo",
+                TopologyDiscoveryUrls = new[] { "http://localhost:8080" }
             });
 
             config.Validate(out List<string> errors);
@@ -850,7 +848,7 @@ loadToOrders(orderData);
 
             config.Initialize(new RavenConnectionString
             {
-                Database = "Foo", 
+                Database = "Foo",
                 TopologyDiscoveryUrls = new[] { "http://localhost:8080" }
             });
 

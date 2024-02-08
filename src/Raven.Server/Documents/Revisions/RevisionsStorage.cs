@@ -343,7 +343,7 @@ namespace Raven.Server.Documents.Revisions
                 if (table.VerifyKeyExists(changeVectorSlice)) // we might create
                     return true;
 
-                using var revision = AddCounterAndTimeSeriesSnapshotsIfNeeded(context, id, document.CloneOnTheSameContext());
+                using var revision = AddCounterAndTimeSeriesSnapshotsIfNeeded(context, id, document.Clone(context));
 
                 flags |= DocumentFlags.Revision;
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreation))

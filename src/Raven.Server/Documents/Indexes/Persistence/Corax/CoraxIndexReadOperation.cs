@@ -440,7 +440,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         var reader = _searcher.GetEntryTermsReader(id, ref page);
 
                         var key = _documentIdReader.GetTermFor(id);
-                        var retrieverInput = new RetrieverInput(_searcher, _fieldsMapping, reader, key);
+                        var retrieverInput = new RetrieverInput(_searcher, _fieldsMapping, reader, key, _index.IndexFieldsPersistence.HasTimeValues);
                         var result = retriever.Get(ref retrieverInput, token);
 
                         if (result.Document != null)
@@ -711,7 +711,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                         var key = _documentIdReader.GetTermFor(indexEntryId);
                         EntryTermsReader entryTermsReader = IndexSearcher.GetEntryTermsReader(indexEntryId, ref page);
-                        var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, in entryTermsReader, key, documentScore, documentDistance);
+                        var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, in entryTermsReader, key, _index.IndexFieldsPersistence.HasTimeValues, documentScore, documentDistance);
 
                         var filterResult = queryFilter.Apply(ref retrieverInput, key);
                         if (filterResult is not FilterResult.Accepted)
@@ -1293,7 +1293,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     if (ravenIds.Add(id) == false)
                         continue;
 
-                    var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, termsReader, id);
+                    var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, termsReader, id, _index.IndexFieldsPersistence.HasTimeValues);
                     var result = retriever.Get(ref retrieverInput, token);
                     if (result.Document != null)
                     {

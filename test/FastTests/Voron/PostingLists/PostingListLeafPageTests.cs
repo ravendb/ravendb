@@ -11,7 +11,7 @@ using Voron.Util.PFor;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Voron.Sets
+namespace FastTests.Voron.PostingLists
 {
     public unsafe class PostingListLeafPageTests : NoDisposalNeeded
     {

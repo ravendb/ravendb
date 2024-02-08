@@ -252,7 +252,8 @@
         }
 
         &.active {
-            box-shadow: 0px 0px 0px $border-offset rgba($body-bg-var, 1),
+            box-shadow:
+                0px 0px 0px $border-offset rgba($body-bg-var, 1),
                 0px 0px 0px ($border-offset + $border-width) $primary-var,
                 0px (($bulge-width + $border-offset)) 0px ($border-offset + $border-width) $primary-var;
         }
@@ -300,7 +301,9 @@ select {
 @each $key, $value in $theme-colors {
     .modal-border.bulge-#{$key} {
         --bulge-color: #{$value};
-        box-shadow: 0 0 0 3px rgba(var(--bs-body-bg-rgb), 1), 0px -4px 0px 2px var(--bulge-color);
+        box-shadow:
+            0 0 0 3px rgba(var(--bs-body-bg-rgb), 1),
+            0px -4px 0px 2px var(--bulge-color);
     }
 }
 
@@ -465,4 +468,18 @@ select {
             border-bottom-left-radius: 0;
         }
     }
+}
+
+//Better positioning for position absolute
+.top-gutter-xs {
+    top: $gutter-xs;
+}
+
+.end-gutter-xs {
+    right: $gutter-xs;
+}
+
+//Remove shadow from all btn-close on focus
+.btn-close:focus {
+    box-shadow: none;
 }

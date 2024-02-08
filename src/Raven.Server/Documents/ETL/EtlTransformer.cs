@@ -60,38 +60,38 @@ namespace Raven.Server.Documents.ETL
             if (debugMode)
                 DocumentScript.DebugMode = true;
 
-            DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadTo, LoadToFunctionTranslator));
+            DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunction(DocumentScript.ScriptEngine, Transformation.LoadTo, LoadToFunctionTranslator));
 
             foreach (var collection in LoadToDestinations)
             {
                 var name = Transformation.LoadTo + collection;
-                DocumentScript.ScriptEngine.SetValue(name, new ClrFunctionInstance(DocumentScript.ScriptEngine, name, 
+                DocumentScript.ScriptEngine.SetValue(name, new ClrFunction(DocumentScript.ScriptEngine, name,
                     (value, values) => LoadToFunctionTranslator(collection, value, values)));
             }
 
-            DocumentScript.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadAttachment, LoadAttachment));
+            DocumentScript.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunction(DocumentScript.ScriptEngine, Transformation.LoadAttachment, LoadAttachment));
 
             const string loadCounter = Transformation.CountersTransformation.Load;
-            DocumentScript.ScriptEngine.SetValue(loadCounter, new ClrFunctionInstance(DocumentScript.ScriptEngine, loadCounter, LoadCounter));
+            DocumentScript.ScriptEngine.SetValue(loadCounter, new ClrFunction(DocumentScript.ScriptEngine, loadCounter, LoadCounter));
 
             const string loadTimeSeries = Transformation.TimeSeriesTransformation.LoadTimeSeries.Name;
-            DocumentScript.ScriptEngine.SetValue(loadTimeSeries, new ClrFunctionInstance(DocumentScript.ScriptEngine, loadTimeSeries, LoadTimeSeries));
+            DocumentScript.ScriptEngine.SetValue(loadTimeSeries, new ClrFunction(DocumentScript.ScriptEngine, loadTimeSeries, LoadTimeSeries));
 
-            DocumentScript.ScriptEngine.SetValue("getAttachments", new ClrFunctionInstance(DocumentScript.ScriptEngine, "getAttachments", GetAttachments));
+            DocumentScript.ScriptEngine.SetValue("getAttachments", new ClrFunction(DocumentScript.ScriptEngine, "getAttachments", GetAttachments));
 
-            DocumentScript.ScriptEngine.SetValue("hasAttachment", new ClrFunctionInstance(DocumentScript.ScriptEngine, "hasAttachment", HasAttachment));
+            DocumentScript.ScriptEngine.SetValue("hasAttachment", new ClrFunction(DocumentScript.ScriptEngine, "hasAttachment", HasAttachment));
 
-            DocumentScript.ScriptEngine.SetValue("getCounters", new ClrFunctionInstance(DocumentScript.ScriptEngine, "getCounters", GetCounters));
+            DocumentScript.ScriptEngine.SetValue("getCounters", new ClrFunction(DocumentScript.ScriptEngine, "getCounters", GetCounters));
 
-            DocumentScript.ScriptEngine.SetValue("hasCounter", new ClrFunctionInstance(DocumentScript.ScriptEngine, "hasCounter", HasCounter));
+            DocumentScript.ScriptEngine.SetValue("hasCounter", new ClrFunction(DocumentScript.ScriptEngine, "hasCounter", HasCounter));
 
-            DocumentScript.ScriptEngine.SetValue("getRevisionsCount", new ClrFunctionInstance(DocumentScript.ScriptEngine, "getRevisionsCount", GetRevisionsCount));
-            
+            DocumentScript.ScriptEngine.SetValue("getRevisionsCount", new ClrFunction(DocumentScript.ScriptEngine, "getRevisionsCount", GetRevisionsCount));
+
             const string hasTimeSeries = Transformation.TimeSeriesTransformation.HasTimeSeries.Name;
-            DocumentScript.ScriptEngine.SetValue(hasTimeSeries, new ClrFunctionInstance(DocumentScript.ScriptEngine, hasTimeSeries, HasTimeSeries));
-            
+            DocumentScript.ScriptEngine.SetValue(hasTimeSeries, new ClrFunction(DocumentScript.ScriptEngine, hasTimeSeries, HasTimeSeries));
+
             const string getTimeSeries = Transformation.TimeSeriesTransformation.GetTimeSeries.Name;
-            DocumentScript.ScriptEngine.SetValue(getTimeSeries, new ClrFunctionInstance(DocumentScript.ScriptEngine, getTimeSeries, GetTimeSeries));
+            DocumentScript.ScriptEngine.SetValue(getTimeSeries, new ClrFunction(DocumentScript.ScriptEngine, getTimeSeries, GetTimeSeries));
         }
 
         private JsValue LoadToFunctionTranslator(JsValue self, JsValue[] args)

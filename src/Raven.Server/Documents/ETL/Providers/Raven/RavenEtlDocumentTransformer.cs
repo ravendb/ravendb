@@ -53,18 +53,18 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 return;
 
             if (_transformation.IsAddingAttachments)
-                _addAttachmentMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, "addAttachment", AddAttachment), null, null, null);
+                _addAttachmentMethod = new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "addAttachment", AddAttachment), null, null, null);
 
             if (_transformation.Counters.IsAddingCounters)
             {
                 const string addCounter = Transformation.CountersTransformation.Add;
-                _addCounterMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, addCounter, AddCounter), null, null, null);
+                _addCounterMethod = new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, addCounter, AddCounter), null, null, null);
             }
 
             if (_transformation.TimeSeries.IsAddingTimeSeries)
             {
                 const string addTimeSeries = Transformation.TimeSeriesTransformation.AddTimeSeries.Name;
-                _addTimeSeriesMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, addTimeSeries, AddTimeSeries), null, null, null);
+                _addTimeSeriesMethod = new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, addTimeSeries, AddTimeSeries), null, null, null);
             }
         }
 
@@ -93,11 +93,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             if (loadedToDifferentCollection || metadata.HasProperty(Constants.Documents.Metadata.Collection) == false)
                 metadata.Set(Constants.Documents.Metadata.Collection, collectionName, throwOnError: true);
 
-            if (metadata.HasProperty(Constants.Documents.Metadata.Attachments))
-                metadata.DeletePropertyOrThrow(Constants.Documents.Metadata.Attachments);
-
-            if (metadata.HasProperty(Constants.Documents.Metadata.Counters))
-                metadata.DeletePropertyOrThrow(Constants.Documents.Metadata.Counters);
+            metadata.Delete(Constants.Documents.Metadata.Attachments);
+            metadata.Delete(Constants.Documents.Metadata.Counters);
 
             var transformed = document.TranslateToObject(Context);
 
@@ -109,21 +106,21 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 var docInstance = (ObjectInstance)document.Instance;
 
-                docInstance.DefinePropertyOrThrow(Transformation.AddAttachment, _addAttachmentMethod);
+                docInstance.DefineOwnProperty(Transformation.AddAttachment, _addAttachmentMethod);
             }
 
             if (_transformation.Counters.IsAddingCounters)
             {
                 var docInstance = (ObjectInstance)document.Instance;
 
-                docInstance.DefinePropertyOrThrow(Transformation.CountersTransformation.Add, _addCounterMethod);
+                docInstance.DefineOwnProperty(Transformation.CountersTransformation.Add, _addCounterMethod);
             }
             
             if (_transformation.TimeSeries.IsAddingTimeSeries)
             {
                 var docInstance = (ObjectInstance)document.Instance;
 
-                docInstance.DefinePropertyOrThrow(Transformation.TimeSeriesTransformation.AddTimeSeries.Name, _addTimeSeriesMethod);
+                docInstance.DefineOwnProperty(Transformation.TimeSeriesTransformation.AddTimeSeries.Name, _addTimeSeriesMethod);
             }
         }
 
@@ -513,7 +510,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             TimeSeriesSegmentEntry segmentEntry, 
             string loadBehaviorFunction)
         {
-            if (ShouldFilterByScriptAndGetParams(docId, segmentEntry.Name, loadBehaviorFunction, out (DateTime begin, DateTime end)? toLoad)) 
+            var tsNameOriginalCasing = Database.DocumentsStorage.TimeSeriesStorage.Stats.GetTimeSeriesNameOriginalCasing(Context, segmentEntry.DocId, segmentEntry.Name);
+            if (ShouldFilterByScriptAndGetParams(docId, tsNameOriginalCasing, loadBehaviorFunction, out (DateTime begin, DateTime end)? toLoad)) 
                 return true;
 
             if (toLoad == null)

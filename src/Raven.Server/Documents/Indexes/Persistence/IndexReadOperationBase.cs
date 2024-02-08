@@ -32,7 +32,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
                     AllocatedManagedBefore = GC.GetAllocatedBytesForCurrentThread(),
                     AllocatedUnmanagedBefore = NativeMemory.ThreadAllocations.Value.TotalAllocated,
                     ManagedThreadId = NativeMemory.CurrentThreadStats.ManagedThreadId,
-                    Query = query.Metadata.Query
+                    Query = query.Metadata.Query,
+                    PageSize = query.PageSize
                 };
             }
         }
@@ -81,6 +82,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 }
 
                 var msg = $"Query for index `{_indexName}` for query: `{_memoryInfo.Query}`, " +
+                          $"page size: {_memoryInfo.PageSize:#,#;;0}, " +
                           $"allocated managed: {new Size(mangedDiff, SizeUnit.Bytes)}, " +
                           $"allocated unmanaged: {new Size(unmanagedDiff, SizeUnit.Bytes)}, " +
                           $"managed thread id: {_memoryInfo.ManagedThreadId}";
@@ -109,6 +111,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
             public long AllocatedUnmanagedBefore { get; init; }
             public int ManagedThreadId { get; init; }
             public Queries.AST.Query Query { get; init; }
+            public long PageSize { get; init; }
         }
     }
 }

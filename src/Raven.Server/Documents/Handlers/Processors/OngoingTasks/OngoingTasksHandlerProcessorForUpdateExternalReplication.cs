@@ -3,6 +3,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             {
                 var topology = RequestHandler.ServerStore.Cluster.ReadDatabaseTopology(context, databaseName);
                 var taskStatus = ReplicationLoader.GetExternalReplicationState(RequestHandler.ServerStore, databaseName, watcher.TaskId);
-                responseJson[nameof(OngoingTask.ResponsibleNode)] = RequestHandler.ServerStore.WhoseTaskIsIt(topology, watcher, taskStatus);
+                responseJson[nameof(OngoingTask.ResponsibleNode)] = OngoingTasksUtils.WhoseTaskIsIt(ServerStore, topology, watcher, taskStatus, RequestHandler.Database.NotificationCenter);
             }
         }
     }

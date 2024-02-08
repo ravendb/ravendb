@@ -281,38 +281,38 @@ namespace Raven.Server.Documents.Patch
                 });
 
                 JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
-                ScriptEngine.SetValue(GetMetadataMethod, new ClrFunctionInstance(ScriptEngine, GetMetadataMethod, JavaScriptUtils.GetMetadata));
-                ScriptEngine.SetValue("metadataFor", new ClrFunctionInstance(ScriptEngine, GetMetadataMethod, JavaScriptUtils.GetMetadata));
-                ScriptEngine.SetValue("id", new ClrFunctionInstance(ScriptEngine, "id", JavaScriptUtils.GetDocumentId));
-                ScriptEngine.SetValue("count", new ClrFunctionInstance(ScriptEngine, "count", JavaScriptUtils.Count));
-                ScriptEngine.SetValue("key", new ClrFunctionInstance(ScriptEngine, "key", JavaScriptUtils.Key));
-                ScriptEngine.SetValue("sum", new ClrFunctionInstance(ScriptEngine, "sum", JavaScriptUtils.Sum));
+                ScriptEngine.SetValue(GetMetadataMethod, new ClrFunction(ScriptEngine, GetMetadataMethod, JavaScriptUtils.GetMetadata));
+                ScriptEngine.SetValue("metadataFor", new ClrFunction(ScriptEngine, GetMetadataMethod, JavaScriptUtils.GetMetadata));
+                ScriptEngine.SetValue("id", new ClrFunction(ScriptEngine, "id", JavaScriptUtils.GetDocumentId));
+                ScriptEngine.SetValue("count", new ClrFunction(ScriptEngine, "count", JavaScriptUtils.Count));
+                ScriptEngine.SetValue("key", new ClrFunction(ScriptEngine, "key", JavaScriptUtils.Key));
+                ScriptEngine.SetValue("sum", new ClrFunction(ScriptEngine, "sum", JavaScriptUtils.Sum));
 
-                ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, "output", OutputDebug));
+                ScriptEngine.SetValue("output", new ClrFunction(ScriptEngine, "output", OutputDebug));
 
                 //console.log
                 ObjectInstance consoleObject = new JsObject(ScriptEngine);
-                consoleObject.FastSetProperty("log", new PropertyDescriptor(new ClrFunctionInstance(ScriptEngine, "log", OutputDebug), false, false, false));
+                consoleObject.FastSetProperty("log", new PropertyDescriptor(new ClrFunction(ScriptEngine, "log", OutputDebug), false, false, false));
                 ScriptEngine.SetValue("console", consoleObject);
 
                 //spatial.distance
                 ObjectInstance spatialObject = new JsObject(ScriptEngine);
-                var spatialFunc = new ClrFunctionInstance(ScriptEngine, "distance", Spatial_Distance);
+                var spatialFunc = new ClrFunction(ScriptEngine, "distance", Spatial_Distance);
                 spatialObject.FastSetProperty("distance", new PropertyDescriptor(spatialFunc, false, false, false));
                 ScriptEngine.SetValue("spatial", spatialObject);
                 ScriptEngine.SetValue("spatial.distance", spatialFunc);
 
                 // includes
-                var includeDocumentFunc = new ClrFunctionInstance(ScriptEngine, "include", IncludeDoc);
+                var includeDocumentFunc = new ClrFunction(ScriptEngine, "include", IncludeDoc);
                 ObjectInstance includesObject = new JsObject(ScriptEngine);
                 includesObject.FastSetProperty("document", new PropertyDescriptor(includeDocumentFunc, false, false, false));
-                includesObject.FastSetProperty("cmpxchg", new PropertyDescriptor(new ClrFunctionInstance(ScriptEngine, "cmpxchg", IncludeCompareExchangeValue), false, false, false));
-                includesObject.FastSetProperty("revisions", new PropertyDescriptor(new ClrFunctionInstance(ScriptEngine, "revisions", IncludeRevisions), false, false, false));
+                includesObject.FastSetProperty("cmpxchg", new PropertyDescriptor(new ClrFunction(ScriptEngine, "cmpxchg", IncludeCompareExchangeValue), false, false, false));
+                includesObject.FastSetProperty("revisions", new PropertyDescriptor(new ClrFunction(ScriptEngine, "revisions", IncludeRevisions), false, false, false));
                 ScriptEngine.SetValue("includes", includesObject);
 
                 // archived API
-                var unarchiveDocumentFunc = new ClrFunctionInstance(ScriptEngine, "unarchive", UnarchiveDoc);
-                var archiveAtDocumentFunc = new ClrFunctionInstance(ScriptEngine, "archiveAt", ArchiveAt);
+                var unarchiveDocumentFunc = new ClrFunction(ScriptEngine, "unarchive", UnarchiveDoc);
+                var archiveAtDocumentFunc = new ClrFunction(ScriptEngine, "archiveAt", ArchiveAt);
                 ObjectInstance archivedObject = new JsObject(ScriptEngine);
                 archivedObject.FastSetProperty("archiveAt", new PropertyDescriptor(archiveAtDocumentFunc, false, false, false));
                 archivedObject.FastSetProperty("unarchive", new PropertyDescriptor(unarchiveDocumentFunc, false, false, false));
@@ -321,41 +321,41 @@ namespace Raven.Server.Documents.Patch
                 // includes - backward compatibility
                 ScriptEngine.SetValue("include", includeDocumentFunc);
 
-                ScriptEngine.SetValue("load", new ClrFunctionInstance(ScriptEngine, "load", LoadDocument));
-                ScriptEngine.SetValue("LoadDocument", new ClrFunctionInstance(ScriptEngine, "LoadDocument", ThrowOnLoadDocument));
+                ScriptEngine.SetValue("load", new ClrFunction(ScriptEngine, "load", LoadDocument));
+                ScriptEngine.SetValue("LoadDocument", new ClrFunction(ScriptEngine, "LoadDocument", ThrowOnLoadDocument));
 
-                ScriptEngine.SetValue("loadPath", new ClrFunctionInstance(ScriptEngine, "loadPath", LoadDocumentByPath));
-                ScriptEngine.SetValue("del", new ClrFunctionInstance(ScriptEngine, "del", DeleteDocument));
-                ScriptEngine.SetValue("DeleteDocument", new ClrFunctionInstance(ScriptEngine, "DeleteDocument", ThrowOnDeleteDocument));
-                ScriptEngine.SetValue("put", new ClrFunctionInstance(ScriptEngine, "put", PutDocument));
-                ScriptEngine.SetValue("PutDocument", new ClrFunctionInstance(ScriptEngine, "PutDocument", ThrowOnPutDocument));
-                ScriptEngine.SetValue("cmpxchg", new ClrFunctionInstance(ScriptEngine, "cmpxchg", CompareExchange));
+                ScriptEngine.SetValue("loadPath", new ClrFunction(ScriptEngine, "loadPath", LoadDocumentByPath));
+                ScriptEngine.SetValue("del", new ClrFunction(ScriptEngine, "del", DeleteDocument));
+                ScriptEngine.SetValue("DeleteDocument", new ClrFunction(ScriptEngine, "DeleteDocument", ThrowOnDeleteDocument));
+                ScriptEngine.SetValue("put", new ClrFunction(ScriptEngine, "put", PutDocument));
+                ScriptEngine.SetValue("PutDocument", new ClrFunction(ScriptEngine, "PutDocument", ThrowOnPutDocument));
+                ScriptEngine.SetValue("cmpxchg", new ClrFunction(ScriptEngine, "cmpxchg", CompareExchange));
 
-                ScriptEngine.SetValue("counter", new ClrFunctionInstance(ScriptEngine, "counter", GetCounter));
-                ScriptEngine.SetValue("counterRaw", new ClrFunctionInstance(ScriptEngine, "counterRaw", GetCounterRaw));
-                ScriptEngine.SetValue("incrementCounter", new ClrFunctionInstance(ScriptEngine, "incrementCounter", IncrementCounter));
-                ScriptEngine.SetValue("deleteCounter", new ClrFunctionInstance(ScriptEngine, "deleteCounter", DeleteCounter));
+                ScriptEngine.SetValue("counter", new ClrFunction(ScriptEngine, "counter", GetCounter));
+                ScriptEngine.SetValue("counterRaw", new ClrFunction(ScriptEngine, "counterRaw", GetCounterRaw));
+                ScriptEngine.SetValue("incrementCounter", new ClrFunction(ScriptEngine, "incrementCounter", IncrementCounter));
+                ScriptEngine.SetValue("deleteCounter", new ClrFunction(ScriptEngine, "deleteCounter", DeleteCounter));
 
-                ScriptEngine.SetValue("lastModified", new ClrFunctionInstance(ScriptEngine, "lastModified", GetLastModified));
+                ScriptEngine.SetValue("lastModified", new ClrFunction(ScriptEngine, "lastModified", GetLastModified));
 
-                ScriptEngine.SetValue("startsWith", new ClrFunctionInstance(ScriptEngine, "startsWith", StartsWith));
-                ScriptEngine.SetValue("endsWith", new ClrFunctionInstance(ScriptEngine, "endsWith", EndsWith));
-                ScriptEngine.SetValue("regex", new ClrFunctionInstance(ScriptEngine, "regex", Regex));
+                ScriptEngine.SetValue("startsWith", new ClrFunction(ScriptEngine, "startsWith", StartsWith));
+                ScriptEngine.SetValue("endsWith", new ClrFunction(ScriptEngine, "endsWith", EndsWith));
+                ScriptEngine.SetValue("regex", new ClrFunction(ScriptEngine, "regex", Regex));
 
-                ScriptEngine.SetValue("Raven_ExplodeArgs", new ClrFunctionInstance(ScriptEngine, "Raven_ExplodeArgs", ExplodeArgs));
-                ScriptEngine.SetValue("Raven_Min", new ClrFunctionInstance(ScriptEngine, "Raven_Min", Raven_Min));
-                ScriptEngine.SetValue("Raven_Max", new ClrFunctionInstance(ScriptEngine, "Raven_Max", Raven_Max));
+                ScriptEngine.SetValue("Raven_ExplodeArgs", new ClrFunction(ScriptEngine, "Raven_ExplodeArgs", ExplodeArgs));
+                ScriptEngine.SetValue("Raven_Min", new ClrFunction(ScriptEngine, "Raven_Min", Raven_Min));
+                ScriptEngine.SetValue("Raven_Max", new ClrFunction(ScriptEngine, "Raven_Max", Raven_Max));
 
-                ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, "convertJsTimeToTimeSpanString", ConvertJsTimeToTimeSpanString));
-                ScriptEngine.SetValue("convertToTimeSpanString", new ClrFunctionInstance(ScriptEngine, "convertToTimeSpanString", ConvertToTimeSpanString));
-                ScriptEngine.SetValue("compareDates", new ClrFunctionInstance(ScriptEngine, "compareDates", CompareDates));
+                ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunction(ScriptEngine, "convertJsTimeToTimeSpanString", ConvertJsTimeToTimeSpanString));
+                ScriptEngine.SetValue("convertToTimeSpanString", new ClrFunction(ScriptEngine, "convertToTimeSpanString", ConvertToTimeSpanString));
+                ScriptEngine.SetValue("compareDates", new ClrFunction(ScriptEngine, "compareDates", CompareDates));
 
-                ScriptEngine.SetValue("toStringWithFormat", new ClrFunctionInstance(ScriptEngine, "toStringWithFormat", ToStringWithFormat));
+                ScriptEngine.SetValue("toStringWithFormat", new ClrFunction(ScriptEngine, "toStringWithFormat", ToStringWithFormat));
 
-                ScriptEngine.SetValue("scalarToRawString", new ClrFunctionInstance(ScriptEngine, "scalarToRawString", ScalarToRawString));
+                ScriptEngine.SetValue("scalarToRawString", new ClrFunction(ScriptEngine, "scalarToRawString", ScalarToRawString));
 
                 //TimeSeries
-                ScriptEngine.SetValue("timeseries", new ClrFunctionInstance(ScriptEngine, "timeseries", TimeSeries));
+                ScriptEngine.SetValue("timeseries", new ClrFunction(ScriptEngine, "timeseries", TimeSeries));
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
 
                 foreach (var script in scriptsSource)
@@ -435,19 +435,19 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 2)
                     throw new ArgumentException($"{_timeSeriesSignature}: This method requires 2 arguments but was called with {args.Length}");
 
-                var append = new ClrFunctionInstance(ScriptEngine, "append", (thisObj, values) =>
+                var append = new ClrFunction(ScriptEngine, "append", (thisObj, values) =>
                     AppendTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
-                var increment = new ClrFunctionInstance(ScriptEngine, "increment", (thisObj, values) =>
+                var increment = new ClrFunction(ScriptEngine, "increment", (thisObj, values) =>
                     IncrementTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
-                var delete = new ClrFunctionInstance(ScriptEngine, "delete", (thisObj, values) =>
+                var delete = new ClrFunction(ScriptEngine, "delete", (thisObj, values) =>
                     DeleteRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
-                var get = new ClrFunctionInstance(ScriptEngine, "get", (thisObj, values) =>
+                var get = new ClrFunction(ScriptEngine, "get", (thisObj, values) =>
                     GetRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
-                var getStats = new ClrFunctionInstance(ScriptEngine, "getStats", (thisObj, values) =>
+                var getStats = new ClrFunction(ScriptEngine, "getStats", (thisObj, values) =>
                     GetStatsTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
                 var obj = new JsObject(ScriptEngine);
@@ -817,7 +817,7 @@ namespace Raven.Server.Documents.Patch
 
                 switch (args[0].Type)
                 {
-                    case Jint.Runtime.Types.None:
+                    case Jint.Runtime.Types.Empty:
                     case Jint.Runtime.Types.Undefined:
                     case Jint.Runtime.Types.Null:
                         // null sorts lowers, so that is fine (either the other one is null or
@@ -833,7 +833,7 @@ namespace Raven.Server.Documents.Patch
                     case Jint.Runtime.Types.String:
                         switch (args[1].Type)
                         {
-                            case Jint.Runtime.Types.None:
+                            case Jint.Runtime.Types.Empty:
                             case Jint.Runtime.Types.Undefined:
                             case Jint.Runtime.Types.Null:
                                 Swap();// a value is bigger than no value
@@ -1611,10 +1611,9 @@ namespace Raven.Server.Documents.Patch
                 return JsBoolean.True;
             }
 
-            private ClrFunctionInstance NamedInvokeTimeSeriesFunction(string name)
+            private ClrFunction NamedInvokeTimeSeriesFunction(string name)
             {
-                return new ClrFunctionInstance(ScriptEngine, name,
-                    (self, args) => InvokeTimeSeriesFunction(name, args));
+                return new ClrFunction(ScriptEngine, name, (self, args) => InvokeTimeSeriesFunction(name, args));
             }
 
             private JsValue InvokeTimeSeriesFunction(string name, JsValue[] args)
@@ -1995,7 +1994,7 @@ namespace Raven.Server.Documents.Patch
                 if (firstParam.IsObject() && args[0].AsObject() is BlittableObjectInstance selfInstance)
                 {
                     JsValue secondParam = args[1];
-                    if (secondParam.IsObject() && secondParam.AsObject() is ScriptFunctionInstance lambda)
+                    if (secondParam.IsObject() && secondParam.AsObject() is ScriptFunction lambda)
                     {
                         var functionAst = lambda.FunctionDeclaration;
                         var propName = functionAst.TryGetFieldFromSimpleLambdaExpression();
@@ -2111,7 +2110,7 @@ namespace Raven.Server.Documents.Patch
                 try
                 {
                     JavaScriptUtils.CurrentlyProcessedObject = _args[0];
-                    var call = (FunctionInstance)ScriptEngine.GetValue(method);
+                    var call = (Function)ScriptEngine.GetValue(method);
                     var result = call.Call(JsValue.Undefined, _args);
 
                     return new ScriptRunnerResult(this, result);
@@ -2204,8 +2203,8 @@ namespace Raven.Server.Documents.Patch
                 PutOrDeleteCalled = false;
                 OriginalDocumentId = null;
                 RefreshOriginalDocument = false;
-                ScriptEngine.ResetCallStack();
-                ScriptEngine.ResetConstraints();
+                ScriptEngine.Advanced.ResetCallStack();
+                ScriptEngine.Constraints.Reset();
             }
 
             public JsValue Translate(JsonOperationContext context, object o)

@@ -21,6 +21,7 @@ import app from "durandal/app";
 
 require("prismjs/components/prism-javascript");
 require("prismjs/components/prism-csharp");
+require("prismjs/components/prism-json");
 
 overrideSystem();
 overrideComposition();
@@ -61,6 +62,9 @@ app.start().then(() => {
         } else if (window.location.pathname.startsWith("/eula")) {
             const eulaShell = require("viewmodels/eulaShell");
             app.setRoot(eulaShell);
+        } else if (window.location.pathname.startsWith("/2fa")) {
+            const twoFactorShell = require("viewmodels/twoFactorShell");
+            app.setRoot(twoFactorShell);
         } else {
             const setupShell = require("viewmodels/wizard/setupShell");
             app.setRoot(setupShell);

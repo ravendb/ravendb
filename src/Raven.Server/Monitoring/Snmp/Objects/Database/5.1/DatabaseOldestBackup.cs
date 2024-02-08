@@ -26,7 +26,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 
         private static TimeSpan GetTimeSinceOldestBackup(ServerStore serverStore)
         {
-            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var databaseNames = serverStore.Cluster.GetDatabaseNames(context);
@@ -59,7 +59,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             return now - oldestBackup;
         }
 
-        private static DateTime? GetLastBackup(TransactionOperationContext context, ServerStore serverStore, string databaseName)
+        private static DateTime? GetLastBackup(ClusterOperationContext context, ServerStore serverStore, string databaseName)
         {
             using (var databaseRecord = serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName, out _))
             {

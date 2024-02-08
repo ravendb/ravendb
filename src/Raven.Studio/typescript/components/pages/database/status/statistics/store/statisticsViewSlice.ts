@@ -14,16 +14,16 @@ import {
     databaseLocationComparator,
 } from "components/utils/common";
 import { IndexItem, PerLocationIndexStats } from "components/pages/database/status/statistics/store/models";
-import { WritableDraft } from "immer/dist/types/types-external";
+import { Draft } from "immer";
 import { DatabaseSharedInfo } from "components/models/databases";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 interface StatisticsState {
     databaseName: string;
     essentialStats: loadableData<EssentialDatabaseStatistics>;
-    databaseDetails: EntityState<locationAwareLoadableData<DetailedDatabaseStatistics>>;
+    databaseDetails: EntityState<locationAwareLoadableData<DetailedDatabaseStatistics>, string>;
     indexDetailsLoadStatus: Array<{ location: databaseLocationSpecifier; status: loadStatus }>;
-    indexDetails: EntityState<IndexItem>;
+    indexDetails: EntityState<IndexItem, string>;
     ui: {
         detailsVisible: boolean;
         refreshing: boolean;
@@ -34,11 +34,11 @@ function selectId(location: databaseLocationSpecifier) {
     return location.nodeTag + "__" + (location.shardNumber ?? "n-a");
 }
 
-const databaseStatsAdapter = createEntityAdapter<locationAwareLoadableData<DetailedDatabaseStatistics>>({
+const databaseStatsAdapter = createEntityAdapter<locationAwareLoadableData<DetailedDatabaseStatistics>, string>({
     selectId: (x) => selectId(x.location),
 });
 
-const indexStatsAdapter = createEntityAdapter<IndexItem>({
+const indexStatsAdapter = createEntityAdapter<IndexItem, string>({
     selectId: (x) => x.sharedInfo.name,
     sortComparer: (a, b) => (a.sharedInfo.name > b.sharedInfo.name ? 1 : -1),
 });
@@ -154,7 +154,7 @@ export const statisticsViewSlice = createSlice({
             action.payload.forEach((indexStat) => {
                 const existingIndex = state.indexDetails.entities[indexStat.Name];
 
-                let indexToUse: WritableDraft<IndexItem>;
+                let indexToUse: Draft<IndexItem>;
 
                 if (!existingIndex) {
                     // create entry for new index

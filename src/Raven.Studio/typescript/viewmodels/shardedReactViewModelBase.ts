@@ -36,7 +36,7 @@ abstract class shardedReactViewModelBase extends shardViewModelBase {
         this.reactOptions = this.createReactOptions(this.reactView, reactProps, reactDirtyFlag);
     }
 
-    createReactOptions<TProps = unknown>(component: (props?: TProps) => JSX.Element, props?: TProps, dirtyFlag?: ReactDirtyFlag) {
+    createReactOptions<TProps = unknown>(component: React.FC<TProps>, props?: TProps, dirtyFlag?: ReactDirtyFlag) {
         return ko.pureComputed(() => ({
             component,
             props,

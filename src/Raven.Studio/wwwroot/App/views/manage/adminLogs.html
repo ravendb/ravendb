@@ -1,6 +1,7 @@
 <div class="flex-vertical absolute-fill content-margin admin-logs">
-    <div class="form-inline hstack gap-4 flex-wrap">
-        <div class="btn-group-label" data-label="Log on this view" role="group">
+    <div class="form-inline flex-vertical gap-4">
+        <div class="flex-horizontal">
+            <div class="btn-group-label" data-label="Log on this view" role="group">
             <button class="btn btn-primary" data-bind="click: pauseLogs, visible: liveClient">
                 <i class="icon-pause"></i> <span>Pause</span>
             </button>
@@ -72,7 +73,9 @@
                 <label for="onlyErrors"><small>Show errors only</small></label>
             </div>
         </div>
-        <div class="btn-group-label" data-label="Logs on disk" role="group">
+        </div>
+        <div class="flex-horizontal">
+            <div class="btn-group-label" data-label="Logs on disk" role="group">
             <div class="btn-group dropdown-menu-right">
                 <button class="btn btn-info dropdown-toggle" id="js-settings-btn" type="button" data-toggle="dropdown" data-bind="click: onOpenSettings">
                     <i class="icon-config"></i><span>Settings</span>
@@ -80,7 +83,6 @@
                 </button>
                 <div class="dropdown-menu colselect-dropdown slidein-style" data-bind="dropdownPanel: true">
                         <div class="dropdown-extended padding" data-bind="with: onDiskConfiguration" id="settingsContainer">
-                            <div class="bg-warning padding padding-xs margin-bottom text-center"><i class="icon-warning"></i> <span>Logs settings will reset to default values after a server restart</span></div>
                             <form class="d-flex gap-3 flex-vertical" role="form">
                                 <div class="flex-vertical">
                                     <label class="small-label margin-bottom-xxs">Logs Path</label>
@@ -217,6 +219,7 @@
                     <span>No log messages are being written to disk</span>
                 </small>
             </small>
+        </div>
         </div>
     </div>
     <div class="flex-horizontal flex-shrink-0">

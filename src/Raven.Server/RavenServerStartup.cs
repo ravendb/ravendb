@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Queries.Timings;
@@ -154,6 +155,12 @@ namespace Raven.Server
             $"Please find the RavenDB settings file *settings.json* in the server directory and fill in your certificate information in either { RavenConfiguration.GetKey(x => x.Security.CertificatePath) } or { RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec) }",
             $"If you would rather like to keep your server unsecured, please relax the { RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed) } setting to match the { RavenConfiguration.GetKey(x => x.Core.ServerUrls) } setting value."
         };
+        
+        private static readonly StringValues CacheControlHeaderValues = new[] { "must-revalidate", "no-cache" };
+
+        private static readonly StringValues ContentTypeHeaderValue = "application/json; charset=utf-8";
+
+        internal static readonly StringValues ServerVersionHeaderValue = RavenVersionAttribute.Instance.AssemblyVersion;
 
         private async Task RequestHandler(HttpContext context)
         {
@@ -167,8 +174,7 @@ namespace Raven.Server
             try
             {
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
-                context.Response.Headers[Constants.Headers.ContentType] = "application/json; charset=utf-8";
-                context.Response.Headers[Constants.Headers.ServerVersion] = RavenVersionAttribute.Instance.AssemblyVersion;
+                context.Response.Headers[Constants.Headers.ContentType] = ContentTypeHeaderValue;
 
                 if (_server.ServerStore.Initialized == false)
                     await _server.ServerStore.InitializationCompleted.WaitAsync();
@@ -436,7 +442,7 @@ namespace Raven.Server
             if (exception is DatabaseNotRelevantException)
             {
                 response.StatusCode = (int)HttpStatusCode.Gone;
-                response.Headers.Add("Cache-Control", new Microsoft.Extensions.Primitives.StringValues(new[] { "must-revalidate", "no-cache" }));
+                response.Headers["Cache-Control"] = CacheControlHeaderValues;
                 return;
             }
 

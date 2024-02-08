@@ -1,7 +1,7 @@
 import { Icon } from "components/common/Icon";
 import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
 import { InputItem } from "components/models/common";
-import produce from "immer";
+import { produce } from "immer";
 import React from "react";
 import { Input, Button } from "reactstrap";
 

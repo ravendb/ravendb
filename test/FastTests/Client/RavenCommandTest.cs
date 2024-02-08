@@ -60,7 +60,7 @@ namespace FastTests.Client
                 "DeleteServerWideAnalyzerCommand", "PutServerWideAnalyzersCommand",
                 "DeleteServerWideSorterCommand", "PutServerWideSortersCommand",
                 "SetDatabasesLockCommand",
-                "GetDatabaseSettingsCommand", "PutDatabaseConfigurationSettingsCommand", "ConfigurePostgreSqlCommand",
+                "GetDatabaseSettingsCommand", "PutDatabaseConfigurationSettingsCommand", "ConfigurePostgreSqlCommand", "ValidateTwoFactorAuthenticationTokenCommand",
                 "GetTrafficWatchConfigurationCommand", "SetTrafficWatchConfigurationCommand",
                 "GetNextServerOperationIdCommand", "KillServerOperationCommand", "ModifyDatabaseTopologyCommand",
                 "PutDatabaseClientConfigurationCommand", "PutDatabaseSettingsCommand", "PutDatabaseStudioConfigurationCommand",

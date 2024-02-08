@@ -213,6 +213,10 @@ namespace Raven.Server.Documents.Patch
                         {
                             SetValue(ref value, d);
                         }
+                        else if (_parent.IndexRetriever.HasTime(property))
+                        {
+                            SetValue(ref value, span.ToStringValue());
+                        }
                         else
                         {
                             throw new InvalidOperationException($"Recognized field '{property}' as numeric but was unable to parse its value to 'long' or 'double'. " +
