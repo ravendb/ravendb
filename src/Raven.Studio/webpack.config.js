@@ -230,7 +230,9 @@ module.exports = (env, args) => {
                         },
                         {
                             loader: "sass-loader",
-                            options: {}
+                            options: {
+                                sourceMap: true, 
+                            }
                         }
                     ]
                 },
