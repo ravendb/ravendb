@@ -105,6 +105,10 @@ interface updateDatabaseConfigurationsResult {
     RaftCommandIndex: number;
 }
 
+interface updateConflictSolverConfigurationResponse extends updateDatabaseConfigurationsResult {
+    ConflictSolverConfig: Raven.Client.ServerWide.ConflictSolver;
+}
+
 interface nodeCounterValue {
     nodeTag: string;
     databaseId: string;
