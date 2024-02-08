@@ -1004,7 +1004,7 @@ namespace Raven.Server.Documents
 
         public bool UnloadDirectly(StringSegment databaseName, DateTime? wakeup = null, [CallerMemberName] string caller = null)
         {
-            var nextScheduledAction = new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, wakeup);
+            var nextScheduledAction = new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase);
             return UnloadDirectly(databaseName, nextScheduledAction, caller);
         }
 
@@ -1039,7 +1039,8 @@ namespace Raven.Server.Documents
                 UnloadDatabaseInternal(databaseName.Value, caller);
                 LastRecentlyUsed.TryRemove(databaseName, out _);
 
-                if (idleDatabaseActivity != null)
+                // DateTime should be only null in tests
+                if (idleDatabaseActivity is { DateTime: not null })
                     _wakeupTimers.TryAdd(databaseName.Value, new Timer(
                         callback: _ => NextScheduledActivityCallback(databaseName.Value, idleDatabaseActivity),
                         state: null,
@@ -1270,14 +1271,24 @@ namespace Raven.Server.Documents
             ? (int)Math.Min(int.MaxValue, (DateTime.Value - System.DateTime.UtcNow).TotalMilliseconds)
             : 0;
 
-        public IdleDatabaseActivity(IdleDatabaseActivityType type, DateTime? timeOfActivity, long taskId = 0, long lastEtag = 0)
+        public IdleDatabaseActivity(IdleDatabaseActivityType type)
+        {
+            LastEtag = 0;
+            Type = type;
+            TaskId = 0;
+
+            // DateTime should be only null in tests
+            DateTime = null;
+        }
+
+        public IdleDatabaseActivity(IdleDatabaseActivityType type, DateTime timeOfActivity, long taskId = 0, long lastEtag = 0)
         {
             LastEtag = lastEtag;
             Type = type;
             TaskId = taskId;
 
-            Debug.Assert(timeOfActivity?.Kind != DateTimeKind.Unspecified);
-            DateTime = timeOfActivity?.ToUniversalTime();
+            Debug.Assert(timeOfActivity.Kind != DateTimeKind.Unspecified);
+            DateTime = timeOfActivity.ToUniversalTime();
         }
     }
 

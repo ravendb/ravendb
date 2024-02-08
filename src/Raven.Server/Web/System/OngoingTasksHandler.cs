@@ -398,10 +398,11 @@ namespace Raven.Server.Web.System
             var nodeTag = Database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
             if (nodeTag == null)
             {
-                // this can happen for a new task that was just created
-                // we'll wait for the cluster observer to determine the responsible node for the backup
+                // this can happen if the database was just created or if a new task that was just created
+                // we'll wait for the cluster observer to give more time for the database stats to become stable,
+                // and then we'll wait for the cluster observer to determine the responsible node for the backup
 
-                var task = Task.Delay(Database.Configuration.Cluster.StabilizationTime.AsTimeSpan);
+                var task = Task.Delay(Database.Configuration.Cluster.StabilizationTime.AsTimeSpan + Database.Configuration.Cluster.StabilizationTime.AsTimeSpan);
                 
                 while (true)
                 {
