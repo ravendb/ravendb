@@ -38,11 +38,19 @@ export function SupportDetails(props: SupportDetailsProps) {
     }
 
     if (asyncCheckLicenseServerConnectivity.status === "error") {
-        return <LoadError />;
+        return (
+            <div className="m-3">
+                <LoadError />
+            </div>
+        );
     }
 
     if (!asyncCheckLicenseServerConnectivity.result.connected) {
-        return <LoadError error="Please check connection to license server." />;
+        return (
+            <div className="m-3">
+                <LoadError error="Please check connection to license server." />
+            </div>
+        );
     }
 
     return (
@@ -55,7 +63,9 @@ export function SupportDetails(props: SupportDetailsProps) {
                     <RichPanelHeader className="text-center p-4">
                         You are using
                         <h2 className="text-info">Free Community Support</h2>
-                        <p>Get help and connect with fellow users and RavenDB developers through our community forum</p>
+                        <p>
+                            Get help and connect with fellow users and RavenDB developers through our community forum.
+                        </p>
                         <Button
                             outline
                             href={aboutPageUrls.gitHubDiscussions}
@@ -80,14 +90,14 @@ export function SupportDetails(props: SupportDetailsProps) {
                         </div>
                         <Row className="support-advantages">
                             <SupportAdvantage icon="phone">Phone & Email support</SupportAdvantage>
-                            <SupportAdvantage icon="notifications">
-                                Request support directly from RavenDB Studio
-                            </SupportAdvantage>
+                            {/* <SupportAdvantage icon="notifications"> TODO we hide this for now*/}
+                            {/*    Request support directly from RavenDB Studio*/}
+                            {/*</SupportAdvantage>*/}
                             <SupportAdvantage icon="user">Access to RavenDB core developers</SupportAdvantage>
                             <SupportAdvantage icon="clock">
                                 Up to 2 hour SLA
                                 <br />
-                                24/7 AVAILABILITY
+                                24/7 availability
                             </SupportAdvantage>
                         </Row>
                         <Button
@@ -133,20 +143,20 @@ export function SupportDetails(props: SupportDetailsProps) {
                                                 {supportType === "Professional" && (
                                                     <>
                                                         <strong>Next business day SLA</strong>
-                                                        <div>24/7 AVAILABILITY</div>
+                                                        <div>24/7 availability</div>
                                                     </>
                                                 )}
                                                 {supportType === "Production" && (
                                                     <>
                                                         <strong>2 hour SLA</strong>
-                                                        <div>24/7 AVAILABILITY</div>
+                                                        <div>24/7 availability</div>
                                                     </>
                                                 )}
                                             </div>
                                         </div>
                                     )}
                                     <div>
-                                        <a href={aboutPageUrls.supportTerms} className="d-inline-flex">
+                                        <a href={aboutPageUrls.supportTerms} className="d-inline-flex no-decor">
                                             <Icon icon="terms" className="fs-2" />
                                             <div className="small">Terms and conditions</div>
                                         </a>
@@ -155,9 +165,9 @@ export function SupportDetails(props: SupportDetailsProps) {
                             </Col>
                         </Row>
                         <Row className="g-md">
-                            <Col className="text-center">
+                            <Col className="text-right">
                                 Get help and connect with fellow users and RavenDB developers through our community
-                                forum
+                                forum.
                             </Col>
                             <Col>
                                 <Button
@@ -171,8 +181,8 @@ export function SupportDetails(props: SupportDetailsProps) {
                             </Col>
                         </Row>
                         <Row className="g-md">
-                            <Col className="text-center">
-                                Message support directly, with access to RavenDB core developers
+                            <Col className="text-right">
+                                Message support directly, with access to RavenDB core developers.
                             </Col>
                             <Col>
                                 {/* TODO we hide this for now 

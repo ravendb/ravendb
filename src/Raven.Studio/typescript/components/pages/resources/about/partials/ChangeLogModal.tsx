@@ -38,7 +38,7 @@ export function ChangeLogModal(props: ChangelogModalProps) {
                     <h3>
                         <strong className="text-warning">NEW</strong> - 6.0.0 (60002) - 2023/10/02{" "}
                         <a href={aboutPageUrls.changeLog}>
-                            <Icon icon="newtab" />
+                            <Icon icon="newtab" margin="m-0" />
                         </a>
                     </h3>
                     <div className="d-flex gap-3">
@@ -90,7 +90,7 @@ export function ChangeLogModal(props: ChangelogModalProps) {
                     Version history <Icon icon="newtab" margin="ms-1" />
                 </Button>
                 <Button color="primary" className="rounded-pill px-3" href={aboutPageUrls.updateInstructions}>
-                    Update instructions <Icon icon="newtab" margin="ms-1" />
+                    Update instructions <Icon icon="newtab" margin="m-0" />
                 </Button>
             </ModalFooter>
         </Modal>

@@ -7,6 +7,7 @@ import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import licenseModel from "models/auth/licenseModel";
 import { AsyncState } from "react-async-hook";
+import useId from "hooks/useId";
 
 interface SupportSummaryProps {
     asyncCheckLicenseServerConnectivity: AsyncState<ConnectivityStatus>;
@@ -16,7 +17,7 @@ export function SupportSummary(props: SupportSummaryProps) {
     const license = useAppSelector(licenseSelectors.status);
     const support = useAppSelector(licenseSelectors.support);
     const supportType = licenseModel.supportLabelProvider(license, support);
-
+    const uniqueId = useId("supportConnectivityException");
     const { asyncCheckLicenseServerConnectivity } = props;
 
     const hideSupportStatus =
@@ -31,7 +32,7 @@ export function SupportSummary(props: SupportSummaryProps) {
                 <Row>
                     <OverallInfoItem icon="support" label="Support type">
                         {hideSupportStatus ? (
-                            <span className="text-warning" id="connectivityException">
+                            <span className="text-warning" id={uniqueId}>
                                 <Icon icon="warning" />
                                 <small>
                                     Unable to reach the RavenDB License Server at <code>api.ravendb.net</code>
