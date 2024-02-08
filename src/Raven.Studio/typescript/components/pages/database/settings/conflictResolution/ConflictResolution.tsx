@@ -46,8 +46,11 @@ export default function ConflictResolution({ db }: NonShardedViewProps) {
     const asyncSave = useAsyncCallback(async () => {
         reportEvent("conflict-resolution", "save");
 
-        await databasesService.saveConflictSolverConfiguration(db, mapToDto(isResolveToLatest, collectionConfigs));
-        dispatch(conflictResolutionActions.saveAll());
+        const response = await databasesService.saveConflictSolverConfiguration(
+            db,
+            mapToDto(isResolveToLatest, collectionConfigs)
+        );
+        dispatch(conflictResolutionActions.allSaved(response.ConflictSolverConfig));
     });
 
     if (loadStatus === "failure") {

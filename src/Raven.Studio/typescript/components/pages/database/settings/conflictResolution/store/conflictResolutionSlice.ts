@@ -1,9 +1,8 @@
-import { EntityState, createAsyncThunk, createEntityAdapter, createSlice } from "@reduxjs/toolkit";
+import { EntityState, createAsyncThunk, createEntityAdapter, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { services } from "components/hooks/useServices";
 import { loadStatus } from "components/models/common";
 import { RootState } from "components/store";
 import database from "models/resources/database";
-import moment from "moment";
 
 export interface ConflictResolutionCollectionConfig {
     id: string;
@@ -28,7 +27,7 @@ interface ConflictResolutionState {
 
 const collectionConfigsAdapter = createEntityAdapter<ConflictResolutionCollectionConfig, string>({
     selectId: (collection) => collection.id,
-    sortComparer: (a, b) => (moment(a.lastModifiedTime) > moment(b.lastModifiedTime) ? -1 : 1),
+    sortComparer: (a, b) => (a.lastModifiedTime ?? "").localeCompare(b.lastModifiedTime ?? ""),
 });
 
 const collectionConfigsSelectors = collectionConfigsAdapter.getSelectors();
@@ -40,6 +39,23 @@ const initialState: ConflictResolutionState = {
         isResolveToLatest: false,
         collectionConfigs: collectionConfigsAdapter.getInitialState(),
     },
+};
+
+const setAll = (state: ConflictResolutionState, payload: Raven.Client.ServerWide.ConflictSolver) => {
+    state.config.isResolveToLatest = payload.ResolveToLatest;
+
+    collectionConfigsAdapter.setAll(
+        state.config.collectionConfigs,
+        Object.keys(payload.ResolveByCollection).map((collectionName) => ({
+            id: _.uniqueId(),
+            name: collectionName,
+            script: payload.ResolveByCollection[collectionName].Script,
+            lastModifiedTime: payload.ResolveByCollection[collectionName].LastModifiedTime,
+            isNewUnsaved: false,
+            isInEditMode: false,
+            isEdited: false,
+        }))
+    );
 };
 
 export const conflictResolutionSlice = createSlice({
@@ -55,7 +71,7 @@ export const conflictResolutionSlice = createSlice({
                 id: _.uniqueId(),
                 name: "",
                 script: "",
-                lastModifiedTime: moment().format(),
+                lastModifiedTime: null,
                 isNewUnsaved: true,
                 isInEditMode: true,
                 isEdited: false,
@@ -98,7 +114,6 @@ export const conflictResolutionSlice = createSlice({
                 id: payload.id,
                 changes: {
                     ...payload.newConfig,
-                    lastModifiedTime: moment().format(),
                     isInEditMode: false,
                     isEdited: true,
                     isNewUnsaved: false,
@@ -106,18 +121,8 @@ export const conflictResolutionSlice = createSlice({
             });
             state.isDirty = true;
         },
-        saveAll: (state) => {
-            collectionConfigsAdapter.updateMany(
-                state.config.collectionConfigs,
-                collectionConfigsSelectors.selectIds(state.config.collectionConfigs).map((x) => ({
-                    id: x,
-                    changes: {
-                        isInEditMode: false,
-                        isEdited: false,
-                        isNewUnsaved: false,
-                    },
-                }))
-            );
+        allSaved: (state, action: PayloadAction<Raven.Client.ServerWide.ConflictSolver>) => {
+            setAll(state, action.payload);
             state.isDirty = false;
         },
         delete: (state, { payload: id }: { payload: string }) => {
@@ -134,20 +139,7 @@ export const conflictResolutionSlice = createSlice({
                     return;
                 }
 
-                state.config.isResolveToLatest = payload.ResolveToLatest;
-
-                collectionConfigsAdapter.setAll(
-                    state.config.collectionConfigs,
-                    Object.keys(payload.ResolveByCollection).map((collectionName) => ({
-                        id: _.uniqueId(),
-                        name: collectionName,
-                        script: payload.ResolveByCollection[collectionName].Script,
-                        lastModifiedTime: payload.ResolveByCollection[collectionName].LastModifiedTime,
-                        isNewUnsaved: false,
-                        isInEditMode: false,
-                        isEdited: false,
-                    }))
-                );
+                setAll(state, payload);
 
                 state.loadStatus = "success";
             })
