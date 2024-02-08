@@ -18,8 +18,6 @@ import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import licenseModel from "models/auth/licenseModel";
 
-const logoUrl = require("Content/img/ravendb_logo.svg");
-
 export function AboutPage() {
     const licenseRegistered = useAppSelector(licenseSelectors.licenseRegistered);
     const license = useAppSelector(licenseSelectors.status);
@@ -42,75 +40,82 @@ export function AboutPage() {
     }, []);
 
     return (
-        <>
-            <div className="hstack flex-wrap gap-5 flex-grow-1 align-items-stretch justify-content-evenly about-page">
-                <div className="vstack gap-4 align-items-center justify-content-around" style={{ maxWidth: "800px" }}>
-                    <img alt="RavenDB Logo" src={logoUrl} width="200" />
-                    <div className="vstack gap-3 flex-grow-0">
-                        <PassiveState />
-                        <LicenseSummary
-                            recheckConnectivity={refreshLicenseServerConnectivity}
-                            asyncCheckLicenseServerConnectivity={asyncCheckLicenseServerConnectivity}
-                            asyncGetConfigurationSettings={asyncGetConfigurationSettings}
-                        />
-                        <VersionsSummary
-                            refreshLatestVersion={refreshLatestVersion}
-                            asyncLatestVersion={asyncFetchLatestVersion}
-                            toggleShowChangelogModal={toggleShowChangelogModal}
-                        />
-                        <SupportSummary asyncCheckLicenseServerConnectivity={asyncCheckLicenseServerConnectivity} />
+        <div className="d-flex flex-column">
+            <div className="m-4 vstack flex-wrap gap-4 flex-grow-1 align-items-stretch justify-content-evenly about-page">
+                <div className="hstack flex-wrap gap-4 flex-grow-1 align-items-stretch justify-content-evenly">
+                    <div
+                        className="vstack gap-3 align-items-center justify-content-center"
+                        style={{ maxWidth: "650px" }}
+                    >
+                        <div className="vstack gap-3 flex-grow-0">
+                            <PassiveState />
+                            <LicenseSummary
+                                recheckConnectivity={refreshLicenseServerConnectivity}
+                                asyncCheckLicenseServerConnectivity={asyncCheckLicenseServerConnectivity}
+                                asyncGetConfigurationSettings={asyncGetConfigurationSettings}
+                            />
+                            <VersionsSummary
+                                refreshLatestVersion={refreshLatestVersion}
+                                asyncLatestVersion={asyncFetchLatestVersion}
+                                toggleShowChangelogModal={toggleShowChangelogModal}
+                            />
+                            <SupportSummary asyncCheckLicenseServerConnectivity={asyncCheckLicenseServerConnectivity} />
+                        </div>
                     </div>
-                    <AboutFooter />
-                </div>
-                <Card className="flex-grow" style={{ maxWidth: "1100px" }}>
-                    <Row className="about-page-tabs g-xxs">
-                        <Col>
-                            <a
-                                className={classNames("p-3", {
-                                    "active bg-faded-primary": activeTab === "license",
-                                })}
-                                onClick={() => setActiveTab("license")}
-                            >
-                                <Icon
-                                    icon="license"
-                                    className="circle-border fs-2"
-                                    color={licenseRegistered ? "success" : "warning"}
-                                    margin="me-2"
-                                />
-                                <span className="fs-3">License details</span>
-                                {/* TODO show if you some extra options to enable in cloud
+                    <Card className="flex-grow" style={{ maxWidth: "1100px" }}>
+                        <Row className="about-page-tabs">
+                            <Col>
+                                <a
+                                    className={classNames("p-3 no-decor", {
+                                        "active bg-faded-primary": activeTab === "license",
+                                    })}
+                                    onClick={() => setActiveTab("license")}
+                                >
+                                    <Icon
+                                        icon="license"
+                                        className="circle-border fs-2"
+                                        color={licenseRegistered ? "success" : "warning"}
+                                        margin="me-2"
+                                    />
+                                    <span className="fs-3">License details</span>
+                                    {/* TODO show if you some extra options to enable in cloud
                                 <Badge className="rounded-pill py-1 ms-1 align-self-start" color="primary">
                                     1
                                 </Badge> */}
-                            </a>
-                        </Col>
-                        <Col>
-                            <a
-                                className={classNames("p-3", { "active bg-faded-info": activeTab === "support" })}
-                                onClick={() => setActiveTab("support")}
-                            >
-                                <Icon icon="support" className="circle-border" margin="fs-2 me-2" />
-                                <span className="fs-3">Support plan</span>
-                                {paidSupportAvailable && (
-                                    <Badge className="rounded-pill py-1 ms-1 align-self-start" color="primary">
-                                        1
-                                    </Badge>
-                                )}
-                            </a>
-                        </Col>
-                    </Row>
+                                </a>
+                            </Col>
+                            <Col>
+                                <a
+                                    className={classNames("p-3 no-decor", {
+                                        "active bg-faded-info": activeTab === "support",
+                                    })}
+                                    onClick={() => setActiveTab("support")}
+                                >
+                                    <Icon icon="support" className="circle-border" margin="fs-2 me-2" />
+                                    <span className="fs-3">Support plan</span>
+                                    {paidSupportAvailable && (
+                                        <Badge className="rounded-pill py-1 ms-1 align-self-start" color="primary">
+                                            1
+                                        </Badge>
+                                    )}
+                                </a>
+                            </Col>
+                        </Row>
 
-                    <TabContent activeTab={activeTab} className="flex-grow-1">
-                        <TabPane tabId="license">
-                            <LicenseDetails />
-                        </TabPane>
-                        <TabPane tabId="support">
-                            <SupportDetails asyncCheckLicenseServerConnectivity={asyncCheckLicenseServerConnectivity} />
-                        </TabPane>
-                    </TabContent>
-                </Card>
+                        <TabContent activeTab={activeTab} className="flex-grow-1">
+                            <TabPane tabId="license">
+                                <LicenseDetails />
+                            </TabPane>
+                            <TabPane tabId="support">
+                                <SupportDetails
+                                    asyncCheckLicenseServerConnectivity={asyncCheckLicenseServerConnectivity}
+                                />
+                            </TabPane>
+                        </TabContent>
+                    </Card>
+                </div>
             </div>
-
+            <AboutFooter />
             <ChangeLogModal visible={showChangelogModal} toggle={toggleShowChangelogModal} />
 
             {/* TODO we hide this for now
@@ -120,6 +125,6 @@ export function AboutPage() {
                 supportId={supportId}
                 licenseId={licenseId}
             />*/}
-        </>
+        </div>
     );
 }

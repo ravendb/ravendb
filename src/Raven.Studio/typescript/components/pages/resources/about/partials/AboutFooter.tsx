@@ -17,8 +17,8 @@ export function AboutFooter() {
     };
 
     return (
-        <div>
-            <div className="hstack justify-content-center">
+        <div className="hstack align-items-center gap-4 flex-wrap justify-content-center mb-4">
+            <div className="hstack">
                 <Button
                     color="info"
                     className="d-flex rounded-pill align-items-center py-1 ps-3 pe-4"
@@ -45,7 +45,7 @@ export function AboutFooter() {
                     </a>
                 </div>
             </div>
-            <div className="small text-muted mt-3 text-center">
+            <div className="small text-muted text-center">
                 Copyright © 2009 - 2024 Hibernating Rhinos. All rights reserved.
             </div>
         </div>

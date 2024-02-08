@@ -115,7 +115,7 @@ function LatestVersion(props: {
                 </span>
                 <div className="small text-muted fw-light">{latestVersion}</div>
                 <a href={aboutPageUrls.updateInstructions} className="small" target="_blank">
-                    Update instructions <Icon icon="newtab" margin="ms-1" />
+                    Update instructions <Icon icon="newtab" margin="m-0" />
                 </a>
             </>
         );

@@ -2,6 +2,13 @@
 @use "Content/scss/sizes";
 
 .about-page {
+    min-height: calc(100vh - 228px);
+
+    .card {
+        overflow: hidden;
+        border-radius: sizes.$border-radius;
+    }
+
     .support-character-img {
         max-width: 300px;
     }
@@ -39,6 +46,7 @@
     }
 
     .about-page-tabs {
+        --bs-gutter-x: 0;
         a {
             color: colors.$text-muted-var;
             display: flex;
@@ -70,6 +78,7 @@
     .license-feature-availability-table {
         flex-basis: 10px;
         flex-grow: 1;
+        min-height: 330px;
 
         .bg-current {
             background: colors.$panel-bg-2-var;
@@ -86,7 +95,7 @@
                 box-shadow: 0 sizes.$border-width 0 colors.$border-color-light;
 
                 th {
-                    padding: sizes.$gutter-sm 0;
+                    padding: sizes.$gutter-sm sizes.$gutter-xxs;
                     vertical-align: top;
                 }
             }
@@ -97,7 +106,7 @@
                     font-weight: normal;
                     text-align: right;
                     width: 16em;
-                    padding-right: sizes.$gutter;
+                    padding: 0 sizes.$gutter-sm;
                     vertical-align: middle;
                 }
                 td {

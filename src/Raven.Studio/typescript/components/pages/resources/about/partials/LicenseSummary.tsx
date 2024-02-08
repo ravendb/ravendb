@@ -16,6 +16,7 @@ import { useAccessManager } from "hooks/useAccessManager";
 import forceLicenseUpdateCommand from "commands/licensing/forceLicenseUpdateCommand";
 import licenseModel from "models/auth/licenseModel";
 import useConfirm from "components/common/ConfirmDialog";
+import useId from "hooks/useId";
 
 interface LicenseSummaryProps {
     asyncCheckLicenseServerConnectivity: AsyncState<ConnectivityStatus>;
@@ -58,12 +59,18 @@ export function LicenseSummary(props: LicenseSummaryProps) {
                     </OverallInfoItem>
                     {expiration && (
                         <OverallInfoItem icon="calendar" label={isIsv ? "Updates Expiration" : "Expires"}>
-                            {expiration.formattedDate} <br />
+                            {expiration.formattedDate}
+                            <br />
                             <small className={expiration.timeClass}>{expiration.relativeTime}</small>
                             {isCloud && (
-                                <div>
-                                    <small>Cloud licenses are automatically renewed</small>
-                                </div>
+                                <>
+                                    <UncontrolledTooltip target="cloudRenewalTooltip">
+                                        Cloud licenses are automatically renewed
+                                    </UncontrolledTooltip>
+                                    <small>
+                                        <Icon icon="info" className="text-info" id="cloudRenewalTooltip" />
+                                    </small>
+                                </>
                             )}
                         </OverallInfoItem>
                     )}
@@ -88,6 +95,7 @@ function ConnectivityStatusComponent(props: {
     refresh: () => void;
 }) {
     const { status, refresh, refreshing } = props;
+    const uniqueId = useId("licenseConnectivityException");
 
     if (status.loading) {
         return (
@@ -98,7 +106,11 @@ function ConnectivityStatusComponent(props: {
     }
 
     if (status.status === "error") {
-        return <LoadError />;
+        return (
+            <div className="m-3">
+                <LoadError />
+            </div>
+        );
     }
 
     if (status.result.connected) {
@@ -111,18 +123,18 @@ function ConnectivityStatusComponent(props: {
     }
 
     return (
-        <span className="text-warning" id="connectivityException">
-            <Icon icon="warning" />
-            <small>
-                Unable to reach the RavenDB License Server at <code>api.ravendb.net</code>
-            </small>
-            <ButtonWithSpinner isSpinning={refreshing} outline className="ms-2 rounded-pill" onClick={refresh}>
+        <div>
+            <span className="text-warning" id={uniqueId}>
+                <Icon icon="warning" />
+                <small>
+                    Unable to reach the RavenDB License Server at <code>api.ravendb.net</code>
+                </small>
+                <UncontrolledTooltip target={uniqueId}>Exception: {status.result.exception}</UncontrolledTooltip>
+            </span>
+            <ButtonWithSpinner isSpinning={refreshing} outline className="mt-2 rounded-pill" onClick={refresh}>
                 <Icon icon="refresh" title="Click to check connection" /> Test again
             </ButtonWithSpinner>
-            <UncontrolledTooltip target="connectivityException">
-                Exception: {status.result.exception}
-            </UncontrolledTooltip>
-        </span>
+        </div>
     );
 }
 
@@ -157,8 +169,11 @@ function LicenseActions(props: LicenseActionsProps) {
 
         const forceUpdate = async () => {
             const confirmed = await confirm({
+                icon: "force",
                 title: "Force License Update",
-                message: "Are you sure that you want to force license update?",
+                message: <p className="text-center">Are you sure that you want to force license update?</p>,
+                actionColor: "primary",
+                confirmText: "Update",
             });
 
             if (!confirmed) {
@@ -198,7 +213,7 @@ function LicenseActions(props: LicenseActionsProps) {
                             target="renew-license-btn"
                             operationEnabledInConfiguration={licenseConfiguration.CanRenew}
                             hasPrivileges={isClusterAdminOrClusterNode()}
-                            operationAction="renew license. Expiration date will be extended"
+                            operationAction="Renew the current license (expiration date will be extended)"
                             operationTitle="Renew"
                         />
                     </React.Fragment>
@@ -223,7 +238,6 @@ function LicenseActions(props: LicenseActionsProps) {
                         onClick={forceUpdate}
                     >
                         <Icon icon="force" /> Force Update
-                        <Icon icon="info" color="info" margin="ms-1" />
                     </ButtonWithSpinner>
                 </span>
 
@@ -231,14 +245,14 @@ function LicenseActions(props: LicenseActionsProps) {
                     target="replace-license-btn"
                     operationEnabledInConfiguration={licenseConfiguration.CanActivate}
                     hasPrivileges={isClusterAdminOrClusterNode()}
-                    operationAction="replace the current license with another license"
+                    operationAction="Replace the current license with another license"
                     operationTitle="Replacing license"
                 />
                 <LicenseTooltip
                     target="force-update-license-btn"
                     operationEnabledInConfiguration={licenseConfiguration.CanForceUpdate}
                     hasPrivileges={isClusterAdminOrClusterNode()}
-                    operationAction="apply the license that was set for you"
+                    operationAction="Apply the license that was set for you"
                     operationTitle="Force license update"
                 />
             </Col>
@@ -262,7 +276,7 @@ function LicenseActions(props: LicenseActionsProps) {
                 target="replace-license-btn"
                 operationEnabledInConfiguration={licenseConfiguration.CanActivate}
                 hasPrivileges={isClusterAdminOrClusterNode()}
-                operationAction="register a new license"
+                operationAction="Register a new license"
                 operationTitle="Registering new license"
             />
         </Col>
@@ -278,7 +292,7 @@ function LicenseTooltip(props: {
 }) {
     const { target, operationEnabledInConfiguration, operationTitle, operationAction, hasPrivileges } = props;
 
-    let msg = operationEnabledInConfiguration && hasPrivileges ? `Click to ${operationAction}` : "";
+    let msg = operationEnabledInConfiguration && hasPrivileges ? `${operationAction}` : "";
 
     if (!operationEnabledInConfiguration) {
         msg = `${operationTitle} is disabled in the server configuration.`;

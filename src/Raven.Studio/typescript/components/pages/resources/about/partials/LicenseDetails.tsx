@@ -17,11 +17,11 @@ export function LicenseDetails() {
             <div className="bg-faded-primary mb-4">
                 {licenseType !== "None" ? (
                     <Row className="text-center py-4">
-                        <Col>
+                        <Col className="px-4">
                             <div className="small text-muted">License ID</div>
                             <h4 className="fw-bolder text-emphasis m-0">{licenseId}</h4>
                         </Col>
-                        <Col>
+                        <Col className="px-4">
                             <div className="small text-muted">License To</div>
                             <h4 className="fw-bolder text-emphasis m-0">{licenseTo}</h4>
                         </Col>
@@ -160,11 +160,11 @@ function LicenseTable(props: LicenseTableProps) {
                                         <React.Fragment key={section.name}>
                                             <th scope="row">
                                                 {section.link ? (
-                                                    <a href={section.link} target="_blank">
-                                                        {section.name} <Icon icon="newtab" />
+                                                    <a href={section.link} target="_blank" className="fw-bold">
+                                                        {section.name} <Icon icon="newtab" margin="m-0" />
                                                     </a>
                                                 ) : (
-                                                    <div>{section.name}</div>
+                                                    <div className="fw-bold text-light">{section.name}</div>
                                                 )}
                                             </th>
                                             {columns.map((column) => (
@@ -323,7 +323,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: null,
             },
             {
-                name: "Static indexes limit per database",
+                name: "Static indexes per database",
                 community: { value: 12 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -331,7 +331,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: "MaxNumberOfStaticIndexesPerDatabase",
             },
             {
-                name: "Static indexes limit per cluster",
+                name: "Static indexes per cluster",
                 community: { value: 60 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -339,7 +339,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: "MaxNumberOfStaticIndexesPerCluster",
             },
             {
-                name: "Auto indexes limit per database",
+                name: "Auto indexes per database",
                 community: { value: 24 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -347,7 +347,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: "MaxNumberOfAutoIndexesPerDatabase",
             },
             {
-                name: "Auto indexes limit per cluster",
+                name: "Auto indexes per cluster",
                 community: { value: 120 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -529,7 +529,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: null,
             },
             {
-                name: "Min refresh frequency limit (hours)",
+                name: "Min refresh frequency (hrs)",
                 community: { value: 36 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -537,7 +537,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: "MinPeriodForRefreshInHours",
             },
             {
-                name: "Min expiration frequency limit (hours)",
+                name: "Min expiration frequency (hrs)",
                 community: { value: 36 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -808,7 +808,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: "HasRevisionsInSubscriptions",
             },
             {
-                name: "Subscriptions limit per database",
+                name: "Subscriptions per database",
                 community: { value: 3 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -816,7 +816,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: "MaxNumberOfSubscriptionsPerDatabase",
             },
             {
-                name: "Subscriptions limit per cluster",
+                name: "Subscriptions per cluster",
                 community: { value: 15 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -881,7 +881,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: null,
             },
             {
-                name: "Custom Sorters limit per database",
+                name: "Custom Sorters per database",
                 community: { value: 1 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -889,7 +889,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: "MaxNumberOfCustomSortersPerDatabase",
             },
             {
-                name: "Custom Sorters limit per cluster",
+                name: "Custom Sorters per cluster",
                 community: { value: 5 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -902,7 +902,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: null,
             },
             {
-                name: "Custom Analyzers limit per database",
+                name: "Custom Analyzers per database",
                 community: { value: 1 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -910,7 +910,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: "MaxNumberOfCustomAnalyzersPerDatabase",
             },
             {
-                name: "Custom Analyzers limit per cluster",
+                name: "Custom Analyzers per cluster",
                 community: { value: 5 },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
@@ -1035,11 +1035,11 @@ function FeatureValue(props: { value: AvailabilityValue }) {
     const { value } = props;
     switch (value) {
         case true:
-            return <Icon icon="check" color="success" />;
+            return <Icon icon="check" color="success" margin="m-0" />;
         case false:
-            return <Icon icon="close" color="muted" />;
+            return <Icon icon="close" color="secondary" margin="m-0" />;
         case Infinity:
-            return <Icon icon="infinity" />;
+            return <Icon icon="infinity" margin="m-0" />;
         default:
             return value;
     }
