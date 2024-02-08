@@ -1290,19 +1290,17 @@ namespace Raven.Server.Documents
                 UnloadDatabaseInternal(databaseName.Value, caller);
                 LastRecentlyUsed.TryRemove(databaseName, out _);
 
-                if (idleDatabaseActivity?.DueTime > 0)
+                if (idleDatabaseActivity != null)
                     _wakeupTimers.TryAdd(databaseName.Value, new Timer(
                         callback: _ => NextScheduledActivityCallback(databaseName.Value, idleDatabaseActivity),
                         state: null,
-                        dueTime: idleDatabaseActivity.DueTime,
+                        // in case the DueTime is negative or zero, the callback will be called immediately and database will be loaded.
+                        dueTime: idleDatabaseActivity.DueTime > 0 ? idleDatabaseActivity.DueTime : 0,
                         period: Timeout.Infinite));
 
                 if (_logger.IsOperationsEnabled)
                 {
-                    var msg = idleDatabaseActivity?.DueTime > 0
-                        ? $"wakeup timer set to: {idleDatabaseActivity.DateTime.Value}, which will happen in {idleDatabaseActivity.DueTime} ms."
-                        : "without setting a wakeup timer.";
-
+                    var msg = idleDatabaseActivity == null ? "without setting a wakeup timer." : $"wakeup timer set to: '{idleDatabaseActivity.DateTime.GetValueOrDefault()}', which will happen in '{idleDatabaseActivity.DueTime}' ms.";
                     _logger.Operations($"Unloading directly database '{databaseName}', {msg}");
                 }
 
