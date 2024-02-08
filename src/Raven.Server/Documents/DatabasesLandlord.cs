@@ -1144,12 +1144,13 @@ namespace Raven.Server.Documents
                                 if (ex is DatabaseConcurrentLoadTimeoutException e)
                                 {
                                     // database failed to load, retry after 1 min
-                                    ForTestingPurposes?.RescheduleDatabaseWakeupMre?.Set();
 
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Failed to start database '{databaseName}' on timer, will retry the wakeup in '{_dueTimeOnRetry}' ms", e);
 
                                     nextIdleDatabaseActivity.DateTime = DateTime.UtcNow.AddMilliseconds(_dueTimeOnRetry);
+                                    ForTestingPurposes?.RescheduleDatabaseWakeupMre?.Set();
+
                                     RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
                                 }
                             }, TaskContinuationOptions.OnlyOnFaulted);
