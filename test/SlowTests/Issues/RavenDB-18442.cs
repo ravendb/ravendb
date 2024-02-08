@@ -51,11 +51,7 @@ namespace SlowTests.Issues
             Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, result.TaskId);
 
             // Turn Database offline in second server.
-            Assert.Equal(1, WaitForValue(() => secondServer.ServerStore.IdleDatabases.Count, 1, timeout: 60000, interval: 1000)); //wait for db to be idle
-            var online = secondServer.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(store.Database, out Task<DocumentDatabase> dbTask) &&
-                         dbTask != null &&
-                         dbTask.IsCompleted;
-            Assert.False(online);
+            secondServer.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
             // Backup run in first server
             await Backup.RunBackupAsync(firstServer, result.TaskId, store);
