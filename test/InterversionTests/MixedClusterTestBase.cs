@@ -41,8 +41,7 @@ namespace InterversionTests
             return base.GetNewServer(options, caller);
         }
 
-        protected async Task<List<ProcessNode>> CreateCluster(string[] peers, X509Certificate2 certificate = null
-            , bool watcherCluster = false)
+        protected async Task<List<ProcessNode>> CreateCluster(string[] peers, IDictionary<string, string> customSettings = null, X509Certificate2 certificate = null)
         {
             var processes = new List<ProcessNode>();
             foreach (var peer in peers)
@@ -50,31 +49,28 @@ namespace InterversionTests
                 processes.Add(await GetServerAsync(peer));
             }
 
-            var leader = processes[0];
+            var chosenOne = processes[0];
 
-            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(leader.Url, certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(chosenOne.Url, certificate, DocumentConventions.DefaultForServer))
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 foreach (var processNode in processes)
                 {
-                    if (processNode == leader)
+                    if (processNode == chosenOne)
                         continue;
 
-                    var addCommand = new AddClusterNodeCommand(processNode.Url, watcher: watcherCluster);
+                    var addCommand = new AddClusterNodeCommand(processNode.Url);
                     await requestExecutor.ExecuteAsync(addCommand, context);
                 }
 
-                var result = watcherCluster ? (1, peers.Length - 1) : (peers.Length, 0);
                 var clusterCreated = await WaitForValueAsync(async () =>
                 {
                     var clusterTopology = new GetClusterTopologyCommand();
                     await requestExecutor.ExecuteAsync(clusterTopology, context);
-                    var clusterTopology1 = clusterTopology.Result.Topology;
+                    return clusterTopology.Result.Topology.Members.Count;
+                }, peers.Length);
 
-                    return (clusterTopology1.Members.Count, clusterTopology1.Watchers.Count);
-                }, result);
-
-                Assert.True(clusterCreated == result, "Failed to create initial cluster");
+                Assert.True(clusterCreated == peers.Length, "Failed to create initial cluster");
             }
 
             return processes;
@@ -222,9 +218,9 @@ namespace InterversionTests
             }), stores);
         }
 
-        protected static async Task<string> CreateDatabase(IDocumentStore store, int replicationFactor = 1, [CallerMemberName] string dbName = null, DatabaseRecord record = null)
+        protected static async Task<string> CreateDatabase(IDocumentStore store, int replicationFactor = 1, [CallerMemberName] string dbName = null)
         {
-            var doc = record ?? new DatabaseRecord(dbName)
+            var doc = new DatabaseRecord(dbName)
             {
                 Settings =
                 {

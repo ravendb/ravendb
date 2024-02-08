@@ -52,7 +52,6 @@ using Sparrow.Server;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
-using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
@@ -362,13 +361,6 @@ namespace Raven.Server.Documents
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
 
-                using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-                    var lastCompletedClusterTransactionIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(ctx.Transaction.InnerTransaction);
-                    Interlocked.Exchange(ref LastCompletedClusterTransactionIndex, lastCompletedClusterTransactionIndex);
-                }
-
                 ThreadPool.QueueUserWorkItem(_ =>
                 {
                     try
@@ -459,8 +451,6 @@ namespace Raven.Server.Documents
         private long? _nextClusterCommand;
         private long _lastCompletedClusterTransaction;
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
-
-        public long LastCompletedClusterTransactionIndex;
         public bool IsEncrypted => MasterKey != null;
 
         private PoolOfThreads.LongRunningWork _clusterTransactionsThread;
@@ -585,7 +575,7 @@ namespace Raven.Server.Documents
                     if (command.Processed)
                         continue;
 
-                    OnClusterTransactionCompletion(command, exception);
+                    ClusterTransactionWaiter.SetException(command.Options.TaskId, command.Index, exception);
                 }
             }
             finally
@@ -616,7 +606,7 @@ namespace Raven.Server.Documents
                 }
                 catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
                 {
-                    OnClusterTransactionCompletion(command, exception: e);
+                    OnClusterTransactionCompletion(command, mergedCommand, exception: e);
                     NotificationCenter.Add(AlertRaised.Create(
                         Name,
                         "Cluster transaction failed to execute",
@@ -636,38 +626,35 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command, BatchHandler.ClusterTransactionMergedCommand mergedCommands)
+        private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command,
+            BatchHandler.ClusterTransactionMergedCommand mergedCommands, Exception exception = null)
         {
             try
             {
                 var index = command.Index;
                 var options = mergedCommands.Options[index];
-
-                ClusterTransactionWaiter.TrySetResult(options.TaskId, index, mergedCommands.ModifiedCollections);
-
-                ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
-
-                _nextClusterCommand = command.PreviousCount + command.Commands.Length;
-                _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
-            }
-            catch (Exception e)
-            {
-                // nothing we can do
-                if (_logger.IsInfoEnabled)
+                if (exception == null)
                 {
-                    _logger.Info($"Failed to notify about transaction completion for database '{Name}'.", e);
+                    Task indexTask = null;
+                    if (options.WaitForIndexesTimeout != null)
+                    {
+                        indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
+                            options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
+                            mergedCommands.LastDocumentEtag, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
+                    }
+
+                    var result = new BatchHandler.ClusterTransactionCompletionResult
+                    {
+                        Array = mergedCommands.Replies[index],
+                        IndexTask = indexTask,
+                    };
+                    ClusterTransactionWaiter.SetResult(options.TaskId, index, result);
+                    _nextClusterCommand = command.PreviousCount + command.Commands.Length;
+                    _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
+                    return;
                 }
-            }
-        }
 
-        private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command, Exception exception)
-        {
-            try
-            {
-                var index = command.Index;
-                var options = command.Options;
-
-                ClusterTransactionWaiter.TrySetException(options.TaskId, index, exception);
+                ClusterTransactionWaiter.SetException(options.TaskId, index, exception);
             }
             catch (Exception e)
             {

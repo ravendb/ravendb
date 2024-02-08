@@ -1,79 +1,57 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents
 {
-    public sealed class ClusterTransactionWaiter : AsyncWaiter<HashSet<string>>
+    public class ClusterTransactionWaiter
     {
         internal readonly DocumentDatabase Database;
+        private readonly ConcurrentDictionary<string, TaskCompletionSource<object>> _results = new ConcurrentDictionary<string, TaskCompletionSource<object>>();
 
         public ClusterTransactionWaiter(DocumentDatabase database)
         {
             Database = database;
         }
 
-        public RemoveTask CreateTask(string id, out TaskCompletionSource<HashSet<string>> tcs)
-        {
-            tcs = _results.GetOrAdd(id, static (key) => new TaskCompletionSource<HashSet<string>>(TaskCreationOptions.RunContinuationsAsynchronously));
-            return new RemoveTask(this, id);
-        }
-
-        public void TrySetException(string id, long index, Exception e)
-        {
-            Database.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
-            TrySetException(id, e);
-        }
-
-        public void TrySetResult(string id, long index, HashSet<string> result)
-        {
-            Database.RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-            TrySetResult(id, result);
-        }
-    }
-
-    public class AsyncWaiter<T>
-    {
-        protected readonly ConcurrentDictionary<string, TaskCompletionSource<T>> _results = new ConcurrentDictionary<string, TaskCompletionSource<T>>();
-
         public RemoveTask CreateTask(out string id)
         {
             id = Guid.NewGuid().ToString();
-            _results.TryAdd(id, new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously));
+            _results.TryAdd(id, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
             return new RemoveTask(this, id);
         }
 
-        public TaskCompletionSource<T> Get(string id)
+        public TaskCompletionSource<object> Get(string id)
         {
             _results.TryGetValue(id, out var val);
             return val;
         }
 
-        public void TrySetResult(string id, T result)
+        public void SetResult(string id, long index, object result)
         {
+            Database.RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             if (_results.TryGetValue(id, out var task))
             {
-                task.TrySetResult(result);
+                task.SetResult(result);
             }
         }
 
-        public void TrySetException(string id, Exception e)
+        public void SetException(string id, long index, Exception e)
         {
+            Database.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
             if (_results.TryGetValue(id, out var task))
             {
-                task.TrySetException(e);
+                task.SetException(e);
             }
         }
 
-        public readonly struct RemoveTask : IDisposable
+        public struct RemoveTask : IDisposable
         {
-            private readonly AsyncWaiter<T> _parent;
+            private readonly ClusterTransactionWaiter _parent;
             private readonly string _id;
 
-            public RemoveTask(AsyncWaiter<T> parent, string id)
+            public RemoveTask(ClusterTransactionWaiter parent, string id)
             {
                 _parent = parent;
                 _id = id;
@@ -83,11 +61,11 @@ namespace Raven.Server.Documents
             {
                 _parent._results.TryRemove(_id, out var task);
                 // cancel it, if someone still awaits
-                task?.TrySetCanceled();
+                task.TrySetCanceled();
             }
         }
 
-        public async Task<T> WaitForResults(string id, CancellationToken token)
+        public async Task<object> WaitForResults(string id, CancellationToken token)
         {
             if (_results.TryGetValue(id, out var task) == false)
             {

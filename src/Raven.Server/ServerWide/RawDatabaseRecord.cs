@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
@@ -140,11 +139,6 @@ namespace Raven.Server.ServerWide
 
                 return _topology;
             }
-        }
-
-        public string GetClusterTransactionId()
-        {
-            return _materializedRecord != null ? _materializedRecord.Topology.ClusterTransactionIdBase64 : Topology.ClusterTransactionIdBase64;
         }
 
         private DatabaseStateStatus? _databaseState;
