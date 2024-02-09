@@ -10,6 +10,7 @@ using Jint.Native.Object;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Queries.TimeSeries;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
@@ -141,14 +142,16 @@ namespace Raven.Server.Documents.Patch
             !(args[0].AsObject() is BlittableObjectInstance boi)) 
                 throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
 
-            var modifiedMetadata = new DynamicJsonValue
-            {
-                [Constants.Documents.Metadata.ChangeVector] = boi.ChangeVector,
-                [Constants.Documents.Metadata.Id] = boi.DocumentId,
-                [Constants.Documents.Metadata.LastModified] = boi.LastModified,
-            };
+            var modifiedMetadata = new DynamicJsonValue();
 
-            
+            // we need to set the metadata on the blittable itself, because we are might get the actual blittable here instead of Document
+            if (string.IsNullOrEmpty(boi.ChangeVector) == false)
+                modifiedMetadata[Constants.Documents.Metadata.ChangeVector] = boi.ChangeVector;
+            if (string.IsNullOrEmpty(boi.DocumentId) == false)
+                modifiedMetadata[Constants.Documents.Metadata.Id] = boi.DocumentId;
+            if (boi.LastModified != null)
+                modifiedMetadata[Constants.Documents.Metadata.LastModified] = boi.LastModified;
+
             if (boi.Blittable.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
             {
                 metadata.Modifications = modifiedMetadata;

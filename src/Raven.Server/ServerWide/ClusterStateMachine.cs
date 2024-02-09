@@ -781,7 +781,9 @@ namespace Raven.Server.ServerWide
 
             T updateCommand = null;
             Exception exception = null;
-            var actionsByDatabase = new Dictionary<string, List<Func<Task>>>();
+            var actions = new List<Func<Task>>();
+            var databases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             try
             {
@@ -800,20 +802,16 @@ namespace Raven.Server.ServerWide
                     var id = updateCommand.FindFreeId(context, index);
                     updateCommand.Execute(context, items, id, record: null, _parent.CurrentState, out _);
 
-                    if (actionsByDatabase.ContainsKey(database) == false)
+                    if (databases.Add(database))
                     {
-                        actionsByDatabase[database] = new List<Func<Task>>();
-                    }
-
-                    actionsByDatabase[database].Add(() =>
+                        actions.Add(() =>
                         Changes.OnDatabaseChanges(database, index, nameof(T), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, changeState: null));
                 }
-
-                foreach (var action in actionsByDatabase)
-                {
-                    ExecuteManyOnDispose(context, index, type, action.Value);
                 }
-            }
+
+                ExecuteManyOnDispose(context, index, type, actions);
+
+                }
             catch (Exception e)
             {
                 exception = e;

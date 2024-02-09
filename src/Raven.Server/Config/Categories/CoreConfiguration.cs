@@ -84,7 +84,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue("https://acme-v02.api.letsencrypt.org/directory")]
         [ConfigurationEntry("AcmeUrl", ConfigurationEntryScope.ServerWideOnly)]
         public string AcmeUrl { get; set; }
-
+        
         [Description("Indicates if we should throw an exception if any index could not be opened")]
         [DefaultValue(false)]
         [ConfigurationEntry("ThrowIfAnyIndexCannotBeOpened", ConfigurationEntryScope.ServerWideOrPerDatabase)]
