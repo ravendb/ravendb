@@ -20,6 +20,8 @@ export const DefaultCreateDatabase: StoryObj = {
         resourcesService.withValidateNameCommand(ResourcesStubs.invalidValidateName());
         resourcesService.withDatabaseLocation();
         resourcesService.withValidateNameCommand();
+        resourcesService.withFolderPathOptions_ServerLocal();
+        resourcesService.withRestorePoints_Local();
 
         license.with_License({
             HasEncryption: true,

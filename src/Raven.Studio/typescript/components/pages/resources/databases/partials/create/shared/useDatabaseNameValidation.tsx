@@ -3,7 +3,9 @@ import { useEffect } from "react";
 import { UseFormSetError, UseFormClearErrors } from "react-hook-form";
 
 interface FormData {
-    databaseName: string;
+    basicInfo: {
+        databaseName: string;
+    };
 }
 
 export const useDatabaseNameValidation = (
@@ -31,9 +33,9 @@ const debouncedValidateName = _.debounce(
         const result = await validateName();
 
         if (result.IsValid) {
-            clearErrors("databaseName");
+            clearErrors("basicInfo.databaseName");
         } else {
-            setError("databaseName", {
+            setError("basicInfo.databaseName", {
                 type: "manual",
                 message: result.ErrorMessage,
             });

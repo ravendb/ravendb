@@ -31,7 +31,8 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
         control,
     });
 
-    const isReplicationFactorDisabled = formValues.isManualReplication && !formValues.isSharded;
+    const isReplicationFactorDisabled =
+        formValues.replicationAndSharding.isManualReplication && !formValues.replicationAndSharding.isSharded;
 
     return (
         <div>
@@ -101,7 +102,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                 <FormInput
                                     type="number"
                                     control={control}
-                                    name="replicationFactor"
+                                    name="replicationAndSharding.replicationFactor"
                                     className="replication-input"
                                     disabled={isReplicationFactorDisabled}
                                 />
@@ -111,7 +112,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                             <FormInput
                                 type="range"
                                 control={control}
-                                name="replicationFactor"
+                                name="replicationAndSharding.replicationFactor"
                                 min="1"
                                 max={availableNodesCount}
                                 className="mt-1"
@@ -135,7 +136,12 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                 }
                                 className="d-inline-block"
                             >
-                                <FormSwitch control={control} name="isSharded" color="shard" className="mt-1">
+                                <FormSwitch
+                                    control={control}
+                                    name="replicationAndSharding.isSharded"
+                                    color="shard"
+                                    className="mt-1"
+                                >
                                     Enable{" "}
                                     <strong className="text-shard">
                                         <Icon icon="sharding" margin="m-0" /> Sharding
@@ -144,13 +150,13 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                             </LicenseRestrictions>
                         </Col>
                         <Col sm="auto">
-                            <Collapse isOpen={formValues.isSharded}>
+                            <Collapse isOpen={formValues.replicationAndSharding.isSharded}>
                                 <InputGroup>
                                     <InputGroupText>Number of shards</InputGroupText>
                                     <FormInput
                                         type="number"
                                         control={control}
-                                        name="shardsCount"
+                                        name="replicationAndSharding.shardsCount"
                                         className="replication-input"
                                     />
                                 </InputGroup>
@@ -158,21 +164,23 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                         </Col>
                     </Row>
                     <Alert color="info" className="text-center mt-2">
-                        <Collapse isOpen={formValues.isSharded}>
+                        <Collapse isOpen={formValues.replicationAndSharding.isSharded}>
                             <>
                                 Data will be divided into{" "}
                                 <strong>
-                                    {formValues.shardsCount}
+                                    {formValues.replicationAndSharding.shardsCount}
                                     <Icon icon="shard" margin="m-0" /> Shards
                                 </strong>
                                 .<br />
                             </>
                         </Collapse>
-                        {formValues.replicationFactor > 1 ? (
+                        {formValues.replicationAndSharding.replicationFactor > 1 ? (
                             <>
-                                {formValues.isSharded ? <>Each shard</> : <>Data</>} will be replicated to{" "}
+                                {formValues.replicationAndSharding.isSharded ? <>Each shard</> : <>Data</>} will be
+                                replicated to{" "}
                                 <strong>
-                                    {formValues.replicationFactor} <Icon icon="node" margin="m-0" /> Nodes
+                                    {formValues.replicationAndSharding.replicationFactor}{" "}
+                                    <Icon icon="node" margin="m-0" /> Nodes
                                 </strong>
                                 .
                             </>
@@ -187,15 +195,15 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                 <Col>
                     {hasDynamicNodesDistribution ? (
                         <LicenseRestrictions
-                            isAvailable={formValues.replicationFactor > 1}
+                            isAvailable={formValues.replicationAndSharding.replicationFactor > 1}
                             message="Replication factor is set to 1"
                             className="d-inline-block"
                         >
                             <FormSwitch
                                 control={control}
-                                name="isDynamicDistribution"
+                                name="replicationAndSharding.isDynamicDistribution"
                                 color="primary"
-                                disabled={formValues.replicationFactor <= 1}
+                                disabled={formValues.replicationAndSharding.replicationFactor <= 1}
                             >
                                 Allow dynamic database distribution
                                 <br />
@@ -222,7 +230,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                     )}
                 </Col>
                 <Col>
-                    <FormSwitch control={control} name="isManualReplication" color="primary">
+                    <FormSwitch control={control} name="replicationAndSharding.isManualReplication" color="primary">
                         Set replication nodes manually
                         <br />
                         <small className="text-muted">Select nodes from the list in the next step</small>
