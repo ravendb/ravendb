@@ -238,9 +238,12 @@ namespace SlowTests.Authentication
         [RavenFact(RavenTestCategory.Certificates | RavenTestCategory.Sharding)]
         public async Task CertificateReplaceSharded()
         {
+            var acmeStagingUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
+            RemoveAcmeCache(acmeStagingUrl);
+
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var clusterSize = 3;
-            var (leader, nodes, serverCert) = await CreateLetsEncryptCluster(clusterSize);
+            var (leader, nodes, serverCert) = await CreateLetsEncryptCluster(clusterSize, acmeStagingUrl);
             Assert.Equal(serverCert.Thumbprint, nodes[0].Certificate.Certificate.Thumbprint);
             var databaseName = GetDatabaseName();
 
@@ -314,17 +317,15 @@ namespace SlowTests.Authentication
             }
         }
 
-        public async Task<(RavenServer Leader, List<RavenServer> Nodes, X509Certificate2 Cert)> CreateLetsEncryptCluster(int clutserSize)
+        public async Task<(RavenServer Leader, List<RavenServer> Nodes, X509Certificate2 Cert)> CreateLetsEncryptCluster(int clutserSize, string acmeStagingUrl)
         {
             var settingPath = Path.Combine(NewDataPath(forceCreateDir: true), "settings.json");
             var defaultSettingsPath = new PathSetting("settings.default.json").FullPath;
             File.Copy(defaultSettingsPath, settingPath, true);
 
             UseNewLocalServer(customConfigPath: settingPath);
-
-            var acmeStaging = "https://acme-staging-v02.api.letsencrypt.org/";
-
-            Server.Configuration.Core.AcmeUrl = acmeStaging;
+            
+            Server.Configuration.Core.AcmeUrl = acmeStagingUrl;
             Server.ServerStore.Configuration.Core.SetupMode = SetupMode.Initial;
 
             var domain = "RavenClusterTest" + Environment.MachineName.Replace("-", "");
@@ -429,7 +430,7 @@ namespace SlowTests.Authentication
                         [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl,
                         [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
                         [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
-                        [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = acmeStaging
+                        [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = acmeStagingUrl
                     };
                     customSettings.Add(settings);
                 }
