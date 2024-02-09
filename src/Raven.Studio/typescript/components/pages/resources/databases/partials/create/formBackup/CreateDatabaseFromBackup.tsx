@@ -147,16 +147,16 @@ export default function CreateDatabaseFromBackup({
                 <hr />
                 <ModalFooter>
                     {isFirstStep ? (
-                        <Button type="button" onClick={changeCreateModeToRegular} className="rounded-pill">
-                            <Icon icon="database" addon="star" /> Create new database
-                        </Button>
-                    ) : (
                         <Button
                             type="button"
-                            onClick={prevStep}
+                            onClick={changeCreateModeToRegular}
                             className="rounded-pill"
                             disabled={formState.isSubmitting}
                         >
+                            <Icon icon="database" addon="star" /> Create new database
+                        </Button>
+                    ) : (
+                        <Button type="button" onClick={prevStep} className="rounded-pill">
                             <Icon icon="arrow-thin-left" /> Back
                         </Button>
                     )}
