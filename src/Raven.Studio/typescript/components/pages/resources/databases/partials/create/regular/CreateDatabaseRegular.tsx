@@ -147,8 +147,6 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
         ),
     };
 
-    console.log("kalczur formState.isSubmitting", formState.isSubmitting);
-
     return (
         <FormProvider {...form}>
             <Form onSubmit={handleSubmit(onFinish)}>
@@ -172,7 +170,12 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
                 <hr />
                 <ModalFooter>
                     {isFirstStep ? (
-                        <Button type="button" onClick={changeCreateModeToBackup} className="rounded-pill">
+                        <Button
+                            type="button"
+                            onClick={changeCreateModeToBackup}
+                            className="rounded-pill"
+                            disabled={formState.isSubmitting}
+                        >
                             <Icon icon="database" addon="arrow-up" /> Create from backup
                         </Button>
                     ) : (
@@ -208,19 +211,6 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
         </FormProvider>
     );
 }
-
-// replicationFactor,
-// databaseName: "",
-// isEncrypted: false,
-// isEncryptionKeySaved: false,
-// isSharded: false,
-// shardsCount: 1,
-// isDynamicDistribution: false,
-// isManualReplication: false,
-// manualNodes: [],
-// manualShard: [],
-// isPathDefault: true,
-// path: "",
 
 const getDefaultValues = (replicationFactor: number): FormData => {
     return {
