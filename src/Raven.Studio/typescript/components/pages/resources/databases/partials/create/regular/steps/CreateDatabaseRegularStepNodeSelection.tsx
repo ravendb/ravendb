@@ -19,6 +19,12 @@ export default function CreateDatabaseRegularStepNodeSelection() {
         control,
     });
 
+    // TODO use just watch?
+    const manualNodes = formValues.manualNodeSelection.nodes;
+    const isSharded = formValues.replicationAndSharding.isSharded;
+    const shardsCount = formValues.replicationAndSharding.shardsCount;
+    const replicationFactor = formValues.replicationAndSharding.replicationFactor;
+
     // const availableNodes = useAppSelector(clusterSelectors.allNodes);
     // TODO show node url?
     const availableNodeTags = useAppSelector(clusterSelectors.allNodeTags);
@@ -43,131 +49,120 @@ export default function CreateDatabaseRegularStepNodeSelection() {
     ];
 
     const toggleNodeTag = (nodeTag: string) => {
-        if (formValues.manualNodes.includes(nodeTag)) {
+        if (manualNodes.includes(nodeTag)) {
             setValue(
-                "manualNodes",
-                formValues.manualNodes.filter((x) => x !== nodeTag)
+                "manualNodeSelection.nodes",
+                manualNodes.filter((x) => x !== nodeTag)
             );
         } else {
-            setValue("manualNodes", [...formValues.manualNodes, nodeTag]);
+            setValue("manualNodeSelection.nodes", [...manualNodes, nodeTag]);
         }
     };
 
-    const isSelectAllNodesIndeterminate =
-        formValues.manualNodes.length > 0 && formValues.manualNodes.length < availableNodeTags.length;
+    const isSelectAllNodesIndeterminate = manualNodes.length > 0 && manualNodes.length < availableNodeTags.length;
 
-    const isSelectedAllNodes = formValues.manualNodes.length === availableNodeTags.length;
+    const isSelectedAllNodes = manualNodes.length === availableNodeTags.length;
 
     const toggleAllNodeTags = () => {
-        if (formValues.manualNodes.length === 0) {
-            setValue("manualNodes", availableNodeTags);
+        if (manualNodes.length === 0) {
+            setValue("manualNodeSelection.nodes", availableNodeTags);
         } else {
-            setValue("manualNodes", []);
+            setValue("manualNodeSelection.nodes", []);
         }
     };
 
     useEffect(() => {
-        if (!formValues.isSharded) {
-            setValue("replicationFactor", formValues.manualNodes.length);
+        if (!isSharded) {
+            setValue("replicationAndSharding.replicationFactor", manualNodes.length);
         }
-    }, [formValues.isSharded, formValues.manualNodes, setValue]);
+    }, [isSharded, manualNodes.length, setValue]);
 
-    const shardNumbers = new Array(formValues.shardsCount).fill(0).map((_, i) => i);
-    const replicationNumbers = new Array(formValues.replicationFactor).fill(0).map((_, i) => i);
+    const shardNumbers = new Array(shardsCount).fill(0).map((_, i) => i);
+    const replicationNumbers = new Array(replicationFactor).fill(0).map((_, i) => i);
 
     return (
         <div className="text-center">
             <h2 className="text-center">Manual Node Selection</h2>
 
-            {formValues.isSharded && (
-                <>
-                    {/* TODO @damian
-                    <div className="text-end">
-                        <Button type="button" color="info" size="sm" outline className="rounded-pill mb-2">
-                            Auto fill
-                        </Button>
-                    </div> */}
+            {isSharded && (
+                <Table bordered>
+                    <thead>
+                        <tr>
+                            {shardsCount > 1 && <th />}
+                            {replicationNumbers.map((replicationNumber) => (
+                                <th key={replicationNumber}>
+                                    Replica <strong>{replicationNumber + 1}</strong>
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
 
-                    <Table bordered>
-                        <thead>
-                            <tr>
-                                {formValues.shardsCount > 1 && <th />}
-                                {replicationNumbers.map((replicationNumber) => (
-                                    <th key={replicationNumber}>
-                                        Replica <strong>{replicationNumber + 1}</strong>
+                    <tbody>
+                        {shardNumbers.map((shardNumber) => (
+                            <tr key={shardNumber}>
+                                {shardsCount > 1 && (
+                                    <th scope="row">
+                                        <Icon icon="shard" color="shard" margin="m-0" /> {shardNumber}
                                     </th>
+                                )}
+
+                                {replicationNumbers.map((replicationNumber) => (
+                                    <td key={`${shardNumber}-${replicationNumber}`} className="p-0">
+                                        <FormSelect
+                                            control={control}
+                                            name={`manualNodeSelection.shards.${shardNumber}.${replicationNumber}`}
+                                            options={nodeOptions}
+                                            isSearchable={false}
+                                            components={{
+                                                Option: OptionWithIcon,
+                                                SingleValue: SingleValueWithIcon,
+                                            }}
+                                        ></FormSelect>
+                                    </td>
                                 ))}
                             </tr>
-                        </thead>
-
-                        <tbody>
-                            {shardNumbers.map((shardNumber) => (
-                                <tr key={shardNumber}>
-                                    {formValues.shardsCount > 1 && (
-                                        <th scope="row">
-                                            <Icon icon="shard" color="shard" margin="m-0" /> {shardNumber}
-                                        </th>
-                                    )}
-
-                                    {replicationNumbers.map((replicationNumber) => (
-                                        <td key={`${shardNumber}-${replicationNumber}`} className="p-0">
-                                            <FormSelect
-                                                control={control}
-                                                name={`manualShard.${shardNumber}.${replicationNumber}`}
-                                                options={nodeOptions}
-                                                isSearchable={false}
-                                                components={{
-                                                    Option: OptionWithIcon,
-                                                    SingleValue: SingleValueWithIcon,
-                                                }}
-                                            ></FormSelect>
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </Table>
-                </>
+                        ))}
+                    </tbody>
+                </Table>
             )}
-
-            <div id="DropdownContainer"></div>
-
-            <h3 className="mb-1">{formValues.isSharded ? "Orchestrator nodes" : "Available nodes"}</h3>
+            <h3 className="mb-1">{isSharded ? "Orchestrator nodes" : "Available nodes"}</h3>
             <div className="mb-2">
                 <small>minimum 1</small>
             </div>
-            <NodeSet>
-                <NodeSetLabel>
-                    <Checkbox
-                        size="lg"
-                        toggleSelection={toggleAllNodeTags}
-                        indeterminate={isSelectAllNodesIndeterminate}
-                        selected={isSelectedAllNodes}
-                        title="Select all or none"
-                    />
-                </NodeSetLabel>
-                <NodeSetList>
-                    {availableNodeTags.map((nodeTag) => (
-                        <NodeSetItem key={nodeTag}>
-                            <Label title={"Node " + nodeTag}>
-                                <Icon icon="node" color="node" />
-                                {nodeTag}
-                                <div className="d-flex justify-content-center">
-                                    <Checkbox
-                                        toggleSelection={() => toggleNodeTag(nodeTag)}
-                                        selected={formValues.manualNodes.includes(nodeTag)}
-                                    />
-                                </div>
-                            </Label>
-                        </NodeSetItem>
-                    ))}
-                </NodeSetList>
-                {formState.errors.manualNodes && (
-                    <div className="badge bg-danger rounded-pill margin-top-xxs">
-                        {formState.errors.manualNodes.message}
-                    </div>
-                )}
-            </NodeSet>
+            <div>
+                <NodeSet>
+                    <NodeSetLabel>
+                        <Checkbox
+                            size="lg"
+                            toggleSelection={toggleAllNodeTags}
+                            indeterminate={isSelectAllNodesIndeterminate}
+                            selected={isSelectedAllNodes}
+                            title="Select all or none"
+                        />
+                    </NodeSetLabel>
+                    <NodeSetList>
+                        {availableNodeTags.map((nodeTag) => (
+                            <NodeSetItem key={nodeTag}>
+                                <Label title={"Node " + nodeTag}>
+                                    <Icon icon="node" color="node" />
+                                    {nodeTag}
+                                    <div className="d-flex justify-content-center">
+                                        <Checkbox
+                                            toggleSelection={() => toggleNodeTag(nodeTag)}
+                                            selected={manualNodes.includes(nodeTag)}
+                                        />
+                                    </div>
+                                </Label>
+                            </NodeSetItem>
+                        ))}
+                    </NodeSetList>
+                </NodeSet>
+            </div>
+            {formState.errors.manualNodeSelection?.nodes && (
+                <div className="badge bg-danger rounded-pill margin-top-xxs">
+                    {formState.errors.manualNodeSelection.nodes.message}
+                </div>
+            )}
         </div>
     );
 }

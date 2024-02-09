@@ -14,7 +14,28 @@ export default {
 
 export function StepsExample() {
     const [currentStep, setCurrentStep] = useState(0);
-    const stepsList = ["Setup", "Encryption", "Replication & Sharding", "Manual Node Selection", "Paths Configuration"];
+    const stepsList = [
+        {
+            label: "Setup",
+            isInvalid: true,
+        },
+        {
+            label: "Encryption",
+            isInvalid: true,
+        },
+        {
+            label: "Replication & Sharding",
+            isInvalid: false,
+        },
+        {
+            label: "Manual Node Selection",
+            isInvalid: false,
+        },
+        {
+            label: "Paths Configuration",
+            isInvalid: true,
+        },
+    ];
 
     const isLastStep = stepsList.length - 2 < currentStep;
     const isFirstStep = currentStep < 1;

@@ -1,4 +1,3 @@
-import { PathsConfigurations } from "./createDatabaseSharedValidation";
 import React from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Alert, InputGroup, InputGroupText, Spinner } from "reactstrap";
@@ -6,76 +5,65 @@ import { FormCheckbox, FormSelectCreatable } from "components/common/Form";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useServices } from "components/hooks/useServices";
-import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
-import { UseAsyncReturn, useAsync } from "react-async-hook";
 import { InputActionMeta } from "react-select";
 import { InputNotHidden, SelectOption } from "components/common/select/Select";
+import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
+import { UseAsyncReturn } from "react-async-hook";
+import { CreateDatabaseFromBackupFormData } from "components/pages/resources/databases/partials/create/formBackup/createDatabaseFromBackupValidation";
+import { CreateDatabaseRegularFormData } from "components/pages/resources/databases/partials/create/regular/createDatabaseRegularValidation";
 
-interface CreateDatabaseStepPathsProps {
+interface CreateDatabaseStepPathProps {
     manualSelectedNodes: string[];
     isBackupFolder: boolean;
-    databaseName: string;
 }
 
-export default function CreateDatabaseStepPaths({
-    databaseName,
-    manualSelectedNodes,
-    isBackupFolder,
-}: CreateDatabaseStepPathsProps) {
-    const { control, setValue } = useFormContext<PathsConfigurations>();
+export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFolder }: CreateDatabaseStepPathProps) {
+    const { control, setValue } = useFormContext<CreateDatabaseRegularFormData | CreateDatabaseFromBackupFormData>();
     const formValues = useWatch({ control });
     const { resourcesService } = useServices();
 
     const allNodeTags = useAppSelector(clusterSelectors.allNodeTags);
     const selectedNodeTags = manualSelectedNodes ?? allNodeTags;
 
-    // TODO debounce
-    const asyncGetLocalFolderPathOptions = useAsync(
-        () =>
-            resourcesService.getLocalFolderPathOptions(
-                formValues.path,
-                isBackupFolder,
-                activeDatabaseTracker.default.database()
-            ),
-        [formValues.path]
-    );
+    const asyncGetFolderOptions = useAsyncDebounce(resourcesService.getFolderPathOptions_ServerLocal, [
+        formValues.pathsConfigurations.path,
+        isBackupFolder,
+    ]);
 
-    // TODO debounce
-    const asyncGetDatabaseLocation = useAsync(() => {
-        const path = formValues.isPathDefault || !formValues.path ? "" : formValues.path;
-
-        return resourcesService.getDatabaseLocation(databaseName, path);
-    }, [formValues.isPathDefault, formValues.path]);
+    const asyncGetDatabaseLocation = useAsyncDebounce(resourcesService.getDatabaseLocation, [
+        formValues.basicInfo.databaseName,
+        formValues.pathsConfigurations.path,
+    ]);
 
     // TODO make autocomplete component?
     const onPathChange = (value: string, action: InputActionMeta) => {
         if (action?.action !== "input-blur" && action?.action !== "menu-close") {
-            setValue("path", value);
+            setValue("pathsConfigurations.path", value);
         }
     };
 
-    const pathOptions = getAvailableFolderOptions(asyncGetLocalFolderPathOptions.result?.List);
+    const pathOptions = getAvailableFolderOptions(asyncGetFolderOptions.result?.List);
 
     return (
         <div>
             <h2 className="text-center">Path Configuration</h2>
             <InputGroup className="my-4">
                 <InputGroupText>
-                    <FormCheckbox control={control} name="isPathDefault">
+                    <FormCheckbox control={control} name="pathsConfigurations.isDefault">
                         Use server directory
                     </FormCheckbox>
                 </InputGroupText>
                 <FormSelectCreatable
                     control={control}
-                    name="path"
-                    placeholder={formValues.isPathDefault ? "" : "Enter database directory"}
+                    name="pathsConfigurations.path"
+                    placeholder={formValues.pathsConfigurations.isDefault ? "" : "Enter database directory"}
                     options={pathOptions}
-                    inputValue={formValues.path ?? ""}
+                    inputValue={formValues.pathsConfigurations.path ?? ""}
                     onInputChange={onPathChange}
                     components={{ Input: InputNotHidden }}
                     tabSelectsValue
                     blurInputOnSelect={false}
-                    isDisabled={formValues.isPathDefault}
+                    isDisabled={formValues.pathsConfigurations.isDefault}
                 />
             </InputGroup>
             <PathInfo asyncGetDatabaseLocation={asyncGetDatabaseLocation} nodeTagsToDisplay={selectedNodeTags} />

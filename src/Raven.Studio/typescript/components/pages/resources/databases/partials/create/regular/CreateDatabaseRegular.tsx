@@ -9,16 +9,15 @@ import {
     createDatabaseRegularSchema,
 } from "./createDatabaseRegularValidation";
 import StepBasicInfo from "./steps/CreateDatabaseRegularStepBasicInfo";
-import StepEncryption from "./steps/CreateDatabaseRegularStepEncryption";
+import StepEncryption from "../shared/CreateDatabaseStepEncryption";
 import StepReplicationAndSharding from "./steps/CreateDatabaseRegularStepReplicationAndSharding";
 import StepNodeSelection from "./steps/CreateDatabaseRegularStepNodeSelection";
-import StepPaths from "../shared/CreateDatabaseStepPaths";
+import StepPath from "../shared/CreateDatabaseStepPath";
 import { DevTool } from "@hookform/devtools";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { CreateDatabaseDto } from "commands/resources/createDatabaseCommand";
 import { useServices } from "components/hooks/useServices";
-import { useAsyncCallback } from "react-async-hook";
 import databasesManager from "common/shell/databasesManager";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
@@ -32,12 +31,13 @@ interface CreateDatabaseRegularProps {
     changeCreateModeToBackup: () => void;
 }
 
-type StepId = "createNew" | "encryption" | "replicationAndSharding" | "nodeSelection" | "paths";
+type StepId = "createNew" | "encryption" | "replicationAndSharding" | "nodeSelection" | "path";
 
-interface StepItem {
+interface StepsListItem {
     id: StepId;
     label: string;
     active: boolean;
+    isInvalid?: boolean;
 }
 
 // TODO google events
@@ -49,68 +49,67 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
     const form = useForm<FormData>({
         mode: "all",
         defaultValues: getDefaultValues(allNodeTags.length),
-        resolver: yupResolver(createDatabaseRegularSchema),
-        context: {
-            usedDatabaseNames,
-        },
+        resolver: (data, _, options) =>
+            yupResolver(createDatabaseRegularSchema)(
+                data,
+                {
+                    usedDatabaseNames,
+                    isSharded: data.replicationAndSharding.isSharded,
+                    isManualReplication: data.replicationAndSharding.isManualReplication,
+                    isEncrypted: data.basicInfo.isEncrypted,
+                },
+                options
+            ),
     });
     const { control, handleSubmit, formState, setError, clearErrors } = form;
 
-    if (formState.errors) {
-        console.log("kalczur errors", formState.errors);
-    }
     const formValues = useWatch({
         control,
     });
 
-    useDatabaseNameValidation(formValues.databaseName, setError, clearErrors);
+    useDatabaseNameValidation(formValues.basicInfo.databaseName, setError, clearErrors);
 
     const { databasesService } = useServices();
 
-    const asyncCreateDatabase = useAsyncCallback(
-        async (dto: CreateDatabaseDto, replicationFactor: number) => {
-            return databasesService.createDatabase(dto, replicationFactor);
-        },
-        {
-            onSuccess: () => {
-                closeModal();
-            },
-        }
-    );
-
     const selectedOrchestrators =
-        formValues.isSharded && formValues.isManualReplication ? formValues.manualNodes : allNodeTags;
+        formValues.replicationAndSharding.isSharded && formValues.replicationAndSharding.isManualReplication
+            ? formValues.manualNodeSelection.nodes
+            : allNodeTags;
 
     const onFinish: SubmitHandler<FormData> = async (formValues) => {
-        tryHandleSubmit(async () => {
-            databasesManager.default.activateAfterCreation(formValues.databaseName);
-
+        return tryHandleSubmit(async () => {
+            databasesManager.default.activateAfterCreation(formValues.basicInfo.databaseName);
             const dto = mapToDto(formValues, selectedOrchestrators);
-            await asyncCreateDatabase.execute(dto, formValues.replicationFactor);
+            await databasesService.createDatabase(dto, formValues.replicationAndSharding.replicationFactor);
+            closeModal();
         });
     };
 
-    const [currentStep, setCurrentStep] = useState(0);
-
-    const stepsList: StepItem[] = [
-        { id: "createNew", label: "Name", active: true },
+    const stepsList: StepsListItem[] = [
+        { id: "createNew", label: "Name", active: true, isInvalid: !!formState.errors.basicInfo },
         {
             id: "encryption",
             label: "Encryption",
-            active: formValues.isEncrypted,
+            active: formValues.basicInfo.isEncrypted,
+            isInvalid: !!formState.errors.encryption,
         },
         {
             id: "replicationAndSharding",
             label: "Replication & Sharding",
             active: true,
+            isInvalid: !!formState.errors.replicationAndSharding,
         },
         {
             id: "nodeSelection",
             label: "Manual Node Selection",
-            active: formValues.isManualReplication,
+            active: formValues.replicationAndSharding.isManualReplication,
+            isInvalid: !!formState.errors.manualNodeSelection,
         },
-        { id: "paths", label: "Paths Configuration", active: true },
+        { id: "path", label: "Paths Configuration", active: true, isInvalid: !!formState.errors.pathsConfigurations },
     ];
+
+    // TODO -- move to hook
+    const [currentStep, setCurrentStep] = useState(0);
 
     const activeSteps = stepsList.filter((step) => step.active);
     const isFirstStep = currentStep === 0;
@@ -131,30 +130,37 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
             setCurrentStep((step) => step - 1);
         }
     };
+    // --
 
     const stepViews: Record<StepId, JSX.Element> = {
         createNew: <StepBasicInfo />,
         encryption: <StepEncryption />,
         replicationAndSharding: <StepReplicationAndSharding />,
         nodeSelection: <StepNodeSelection />,
-        paths: (
-            <StepPaths
-                databaseName={formValues.databaseName}
-                manualSelectedNodes={formValues.isManualReplication ? formValues.manualNodes : null}
+        path: (
+            <StepPath
                 isBackupFolder={false}
+                manualSelectedNodes={
+                    formValues.replicationAndSharding.isManualReplication ? formValues.manualNodeSelection.nodes : null
+                }
             />
         ),
     };
 
+    console.log("kalczur formState.isSubmitting", formState.isSubmitting);
+
     return (
         <FormProvider {...form}>
             <Form onSubmit={handleSubmit(onFinish)}>
-                <DevTool control={control} />
                 <ModalBody>
+                    <DevTool control={control} />
                     <div className="d-flex  mb-5">
                         <Steps
                             current={currentStep}
-                            steps={activeSteps.map((step) => step.label)}
+                            steps={activeSteps.map((step) => ({
+                                label: step.label,
+                                isInvalid: step.isInvalid,
+                            }))}
                             onClick={goToStep}
                             className="flex-grow me-4"
                         ></Steps>
@@ -203,63 +209,76 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
     );
 }
 
+// replicationFactor,
+// databaseName: "",
+// isEncrypted: false,
+// isEncryptionKeySaved: false,
+// isSharded: false,
+// shardsCount: 1,
+// isDynamicDistribution: false,
+// isManualReplication: false,
+// manualNodes: [],
+// manualShard: [],
+// isPathDefault: true,
+// path: "",
+
 const getDefaultValues = (replicationFactor: number): FormData => {
     return {
-        replicationFactor,
-        databaseName: "",
-        isEncrypted: false,
-        isEncryptionKeySaved: false,
-        isSharded: false,
-        shardsCount: 1,
-        isDynamicDistribution: false,
-        isManualReplication: false,
-        manualNodes: [],
-        manualShard: [],
-        isPathDefault: true,
-        path: "",
+        basicInfo: {
+            databaseName: "",
+            isEncrypted: false,
+        },
+        encryption: {
+            key: "",
+            isKeySaved: false,
+        },
+        replicationAndSharding: {
+            replicationFactor,
+            isSharded: false,
+            shardsCount: 1,
+            isDynamicDistribution: false,
+            isManualReplication: false,
+        },
+        manualNodeSelection: {
+            nodes: [],
+            shards: [],
+        },
+        pathsConfigurations: {
+            isDefault: true,
+            path: "",
+        },
     };
 };
 
 function mapToDto(formValues: FormData, selectedOrchestrators: string[]): CreateDatabaseDto {
-    const {
-        databaseName,
-        isSharded,
-        isManualReplication,
-        manualNodes,
-        manualShard,
-        shardsCount,
-        isPathDefault,
-        path,
-        isEncrypted,
-        isDynamicDistribution,
-    } = formValues;
+    const { basicInfo, replicationAndSharding, manualNodeSelection, pathsConfigurations } = formValues;
 
-    const Settings: CreateDatabaseDto["Settings"] = isPathDefault
+    const Settings: CreateDatabaseDto["Settings"] = pathsConfigurations.isDefault
         ? {}
         : {
-              DataDir: _.trim(path),
+              DataDir: _.trim(pathsConfigurations.path),
           };
 
-    const Topology: CreateDatabaseDto["Topology"] = isSharded
+    const Topology: CreateDatabaseDto["Topology"] = replicationAndSharding.isSharded
         ? null
         : {
-              Members: isManualReplication ? manualNodes : null,
-              DynamicNodesDistribution: isDynamicDistribution,
+              Members: replicationAndSharding.isManualReplication ? manualNodeSelection.nodes : null,
+              DynamicNodesDistribution: replicationAndSharding.isDynamicDistribution,
           };
 
     const Shards: CreateDatabaseDto["Sharding"]["Shards"] = {};
 
-    if (isSharded) {
-        for (let i = 0; i < shardsCount; i++) {
-            Shards[i] = isManualReplication
+    if (replicationAndSharding.isSharded) {
+        for (let i = 0; i < replicationAndSharding.shardsCount; i++) {
+            Shards[i] = replicationAndSharding.isManualReplication
                 ? {
-                      Members: manualShard[i],
+                      Members: manualNodeSelection.shards[i],
                   }
                 : {};
         }
     }
 
-    const Sharding: CreateDatabaseDto["Sharding"] = isSharded
+    const Sharding: CreateDatabaseDto["Sharding"] = replicationAndSharding.isSharded
         ? {
               Shards,
               Orchestrator: {
@@ -270,11 +289,13 @@ function mapToDto(formValues: FormData, selectedOrchestrators: string[]): Create
           }
         : null;
 
+    // TODO encription key?
+
     return {
-        DatabaseName: databaseName,
+        DatabaseName: basicInfo.databaseName,
         Settings,
         Disabled: false,
-        Encrypted: isEncrypted,
+        Encrypted: basicInfo.isEncrypted,
         Topology,
         Sharding,
     };

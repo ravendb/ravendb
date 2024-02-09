@@ -11,19 +11,10 @@ interface CreateDatabaseProps {
 }
 
 export default function CreateDatabase({ closeModal }: CreateDatabaseProps) {
-    const [createMode, setCreateMode] = useState<CreateMode>("regular");
+    const [createMode, setCreateMode] = useState<CreateMode>("fromBackup");
 
     return (
-        <Modal
-            isOpen
-            wrapClassName="bs5"
-            toggle={closeModal}
-            size="lg"
-            centered
-            autoFocus
-            fade
-            className="create-database"
-        >
+        <Modal isOpen wrapClassName="bs5" size="lg" centered autoFocus fade className="create-database">
             {createMode === "regular" && (
                 <CreateDatabaseRegular
                     closeModal={closeModal}

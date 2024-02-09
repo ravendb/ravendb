@@ -15,7 +15,7 @@ import classNames from "classnames";
 
 export type SelectValue = string | number | boolean;
 
-export interface SelectOption<T extends SelectValue = string> {
+export interface SelectOption<T = string> {
     value: T;
     label: string;
 }
