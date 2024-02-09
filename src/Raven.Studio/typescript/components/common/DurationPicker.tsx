@@ -13,10 +13,11 @@ export interface DurationPickerProps {
     totalSeconds: number;
     showDays?: boolean;
     showSeconds?: boolean;
+    disabled?: boolean;
 }
 
 export default function DurationPicker(props: DurationPickerProps) {
-    const { totalSeconds, onChange, showDays, showSeconds } = props;
+    const { totalSeconds, onChange, showDays, showSeconds, disabled } = props;
 
     const initialValues = getInitialValues(totalSeconds, showDays);
 
@@ -44,21 +45,45 @@ export default function DurationPicker(props: DurationPickerProps) {
             {showDays && (
                 <Label>
                     <span className="small-label">Days</span>
-                    <Input type="number" min={0} value={days} onChange={(e) => setDays(getInputValue(e))} />
+                    <Input
+                        type="number"
+                        min={0}
+                        value={days}
+                        onChange={(e) => setDays(getInputValue(e))}
+                        disabled={disabled}
+                    />
                 </Label>
             )}
             <Label>
                 <span className="small-label">Hours</span>
-                <Input type="number" min={0} value={hours} onChange={(e) => setHours(getInputValue(e))} />
+                <Input
+                    type="number"
+                    min={0}
+                    value={hours}
+                    onChange={(e) => setHours(getInputValue(e))}
+                    disabled={disabled}
+                />
             </Label>
             <Label>
                 <span className="small-label">Minutes</span>
-                <Input type="number" min={0} value={minutes} onChange={(e) => setMinutes(getInputValue(e))} />
+                <Input
+                    type="number"
+                    min={0}
+                    value={minutes}
+                    onChange={(e) => setMinutes(getInputValue(e))}
+                    disabled={disabled}
+                />
             </Label>
             {showSeconds && (
                 <Label>
                     <span className="small-label">Seconds</span>
-                    <Input type="number" min={0} value={seconds} onChange={(e) => setSeconds(getInputValue(e))} />
+                    <Input
+                        type="number"
+                        min={0}
+                        value={seconds}
+                        onChange={(e) => setSeconds(getInputValue(e))}
+                        disabled={disabled}
+                    />
                 </Label>
             )}
         </div>
