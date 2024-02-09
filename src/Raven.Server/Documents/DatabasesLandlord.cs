@@ -1259,7 +1259,7 @@ namespace Raven.Server.Documents
 
         public bool UnloadDirectly(StringSegment databaseName, DateTime? wakeup = null, [CallerMemberName] string caller = null)
         {
-            var nextScheduledAction = new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, wakeup);
+            var nextScheduledAction = new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase);
             return UnloadDirectly(databaseName, nextScheduledAction, caller);
         }
 
@@ -1294,19 +1294,18 @@ namespace Raven.Server.Documents
                 UnloadDatabaseInternal(databaseName.Value, caller);
                 LastRecentlyUsed.TryRemove(databaseName, out _);
 
-                if (idleDatabaseActivity?.DueTime > 0)
+                // DateTime should be only null in tests
+                if (idleDatabaseActivity is { DateTime: not null })
                     _wakeupTimers.TryAdd(databaseName.Value, new Timer(
                         callback: _ => NextScheduledActivityCallback(databaseName.Value, idleDatabaseActivity),
                         state: null,
-                        dueTime: idleDatabaseActivity.DueTime,
+                        // in case the DueTime is negative or zero, the callback will be called immediately and database will be loaded.
+                        dueTime: idleDatabaseActivity.DueTime > 0 ? idleDatabaseActivity.DueTime : 0,
                         period: Timeout.Infinite));
 
                 if (_logger.IsOperationsEnabled)
                 {
-                    var msg = idleDatabaseActivity?.DueTime > 0
-                        ? $"wakeup timer set to: {idleDatabaseActivity.DateTime.Value}, which will happen in {idleDatabaseActivity.DueTime} ms."
-                        : "without setting a wakeup timer.";
-
+                    var msg = idleDatabaseActivity == null ? "without setting a wakeup timer." : $"wakeup timer set to: '{idleDatabaseActivity.DateTime.GetValueOrDefault()}', which will happen in '{idleDatabaseActivity.DueTime}' ms.";
                     _logger.Operations($"Unloading directly database '{databaseName}', {msg}");
                 }
 
@@ -1395,12 +1394,13 @@ namespace Raven.Server.Documents
                                 if (ex is DatabaseConcurrentLoadTimeoutException e)
                                 {
                                     // database failed to load, retry after 1 min
-                                    ForTestingPurposes?.RescheduleDatabaseWakeupMre?.Set();
 
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Failed to start database '{databaseName}' on timer, will retry the wakeup in '{_dueTimeOnRetry}' ms", e);
 
                                     nextIdleDatabaseActivity.DateTime = DateTime.UtcNow.AddMilliseconds(_dueTimeOnRetry);
+                                    ForTestingPurposes?.RescheduleDatabaseWakeupMre?.Set();
+
                                     RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
                                 }
                             }, TaskContinuationOptions.OnlyOnFaulted);
@@ -1649,14 +1649,24 @@ namespace Raven.Server.Documents
             ? (int)Math.Min(int.MaxValue, (DateTime.Value - System.DateTime.UtcNow).TotalMilliseconds)
             : 0;
 
-        public IdleDatabaseActivity(IdleDatabaseActivityType type, DateTime? timeOfActivity, long taskId = 0, long lastEtag = 0)
+        public IdleDatabaseActivity(IdleDatabaseActivityType type)
+        {
+            LastEtag = 0;
+            Type = type;
+            TaskId = 0;
+
+            // DateTime should be only null in tests
+            DateTime = null;
+        }
+
+        public IdleDatabaseActivity(IdleDatabaseActivityType type, DateTime timeOfActivity, long taskId = 0, long lastEtag = 0)
         {
             LastEtag = lastEtag;
             Type = type;
             TaskId = taskId;
 
-            Debug.Assert(timeOfActivity?.Kind != DateTimeKind.Unspecified);
-            DateTime = timeOfActivity?.ToUniversalTime();
+            Debug.Assert(timeOfActivity.Kind != DateTimeKind.Unspecified);
+            DateTime = timeOfActivity.ToUniversalTime();
         }
     }
 

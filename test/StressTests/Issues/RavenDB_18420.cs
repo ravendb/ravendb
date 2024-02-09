@@ -60,7 +60,11 @@ public class RavenDB_18420 : RavenTestBase
 
                 var mre = server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().RescheduleDatabaseWakeupMre = new ManualResetEventSlim();
 
-                // enable backup
+                // we wait here for UpdateResponsibleNodeForTasksCommand, it won't wake up the database since the db task is faulted with DatabaseConcurrentLoadTimeoutException
+                Backup.WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, putConfiguration.TaskId);
+                Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
+
+                // enable backup and this will set wakeup timer
                 await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
 
                 Assert.True(mre.Wait(TimeSpan.FromSeconds(65)));
