@@ -61,6 +61,9 @@ import saveCustomSorterCommand = require("commands/database/settings/saveCustomS
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import saveUnusedDatabaseIDsCommand = require("commands/database/settings/saveUnusedDatabaseIDsCommand");
 import { CreateDatabaseDto, createDatabaseCommand } from "commands/resources/createDatabaseCommand";
+import { createDatabaseCommand } from "commands/resources/createDatabaseCommand";
+import restoreDatabaseFromBackupCommand = require("commands/resources/restoreDatabaseFromBackupCommand");
+import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -290,8 +293,16 @@ export default class DatabasesService {
         return new saveDatabaseRecordCommand(databaseName, databaseRecord, etag).execute();
     }
 
-    async createDatabase(dto: CreateDatabaseDto, replicationFactor: number) {
-        return new createDatabaseCommand(dto, replicationFactor).execute();
+    async createDatabase(...args: ConstructorParameters<typeof createDatabaseCommand>) {
+        return new createDatabaseCommand(...args).execute();
+    }
+
+    async restoreDatabaseFromBackup(...args: ConstructorParameters<typeof restoreDatabaseFromBackupCommand>) {
+        return new restoreDatabaseFromBackupCommand(...args).execute();
+    }
+
+    async generateSecret(...args: ConstructorParameters<typeof generateSecretCommand>) {
+        return new generateSecretCommand(...args).execute();
     }
 
     async getDatabaseStats(...args: ConstructorParameters<typeof getDatabaseStatsCommand>) {

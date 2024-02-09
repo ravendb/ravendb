@@ -15,11 +15,15 @@ export default class MockResourcesService extends AutoMockService<ResourcesServi
         return this.mockResolvedValue(this.mocks.getDatabaseLocation, dto, ResourcesStubs.databaseLocation());
     }
 
-    withLocalFolderPathOptions(dto?: Raven.Server.Web.Studio.FolderPathOptions) {
+    withFolderPathOptions_ServerLocal(dto?: Raven.Server.Web.Studio.FolderPathOptions) {
         return this.mockResolvedValue(
-            this.mocks.getLocalFolderPathOptions,
+            this.mocks.getFolderPathOptions_ServerLocal,
             dto,
-            ResourcesStubs.localFolderPathOptions()
+            ResourcesStubs.folderPathOptions_ServerLocal()
         );
+    }
+
+    withRestorePoints_Local(dto?: any) {
+        return this.mockResolvedValue(this.mocks.getRestorePoints_Local, dto, ResourcesStubs.restorePoints_Local());
     }
 }

@@ -8,6 +8,7 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { useFormContext } from "react-hook-form";
 import { Col, FormGroup, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
+import { Switch } from "components/common/Checkbox";
 
 const newDatabaseImg = require("Content/img/createDatabase/new-database.svg");
 
@@ -30,7 +31,7 @@ export default function CreateDatabaseRegularStepBasicInfo() {
                         <FormInput
                             type="text"
                             control={control}
-                            name="databaseName"
+                            name="basicInfo.databaseName"
                             placeholder="Database Name"
                             id="DbName"
                         />
@@ -56,7 +57,7 @@ export default function CreateDatabaseRegularStepBasicInfo() {
                             >
                                 <FormSwitch
                                     control={control}
-                                    name="isEncrypted"
+                                    name="basicInfo.isEncrypted"
                                     size="lg"
                                     color="primary"
                                     disabled={!isSecureServer}
@@ -76,18 +77,18 @@ export default function CreateDatabaseRegularStepBasicInfo() {
                                     </strong>
                                 }
                             >
-                                <FormSwitch
-                                    control={control}
-                                    name="isEncrypted"
+                                <Switch
+                                    selected={false}
+                                    disabled={true}
+                                    toggleSelection={null}
                                     size="lg"
                                     color="primary"
-                                    disabled={true}
                                 >
                                     <span className="lead">
                                         <Icon icon="encryption" />
                                         Encrypt at Rest
                                     </span>
-                                </FormSwitch>
+                                </Switch>
                             </LicenseRestrictions>
                         )}
 
