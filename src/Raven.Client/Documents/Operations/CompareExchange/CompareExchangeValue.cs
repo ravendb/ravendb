@@ -7,12 +7,18 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 {
     public sealed class CompareExchangeValue<T> : ICompareExchangeValue
     {
+        /// <inheritdoc cref="ICompareExchangeValue.Key"/>
         public string Key { get; }
+
+        /// <inheritdoc cref="ICompareExchangeValue.Index"/>
         public long Index { get; internal set; }
+
+        /// <inheritdoc cref="ICompareExchangeValue.Value"/>
         public T Value { get; set; }
 
         public string ChangeVector { get; internal set; }
 
+        /// <inheritdoc cref="ICompareExchangeValue.Metadata"/>
         public IMetadataDictionary Metadata => _metadataAsDictionary ??= new MetadataAsDictionary();
 
         private IMetadataDictionary _metadataAsDictionary;
@@ -65,9 +71,24 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
     internal interface ICompareExchangeValue
     {
+        /// <summary>
+        /// The unique key of the compare request entry
+        /// </summary>
         public string Key { get; }
+
+        /// <summary>
+        /// Current index of the entry, used for concurrency checks.<br/>
+        /// </summary>
         public long Index { get; internal set; }
+        
+        /// <summary>
+        /// The value of the entry
+        /// </summary>
         public object Value { get; }
+
+        /// <summary>
+        /// Access to the metadata of the compare exchange value
+        /// </summary>
         public IMetadataDictionary Metadata { get; }
         public bool HasMetadata { get; }
     }

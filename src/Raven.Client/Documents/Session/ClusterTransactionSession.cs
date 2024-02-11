@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Session
         protected TSession Session { get; }
     }
 
-    public abstract class ClusterTransactionOperationsBase
+    public abstract class ClusterTransactionOperationsBase : IClusterTransactionOperationsBase
     {
         internal readonly InMemoryDocumentSessionOperations _session;
 
@@ -581,54 +581,129 @@ namespace Raven.Client.Documents.Session
 
     public interface IClusterTransactionOperationsBase
     {
+        /// <summary>
+        /// Register a request to delete the compare exchange entry in the cluster as part of cluster-wide transaction.<br/>
+        /// </summary>
+        /// <param name="key">The key of the compare exchange entry</param>
+        /// <param name="index">The index of the current entry, used for concurrency check.<br/>
+        /// calling <see cref="IDocumentSession.SaveChanges"/> will throw <see cref="Exceptions.ClusterTransactionConcurrencyException"/> in case of a mismatch
+        /// </param>
         void DeleteCompareExchangeValue(string key, long index);
 
+        /// <summary>
+        /// Register a request to delete the compare exchange entry in the cluster as part of cluster-wide transaction.<br/>
+        /// calling <see cref="IDocumentSession.SaveChanges"/> will throw <see cref="Exceptions.ClusterTransactionConcurrencyException"/> in case of <see cref="CompareExchangeValue{T}.Index"/> mismatch
+        /// </summary>
+        /// <param name="item">The entry to delete</param>
         void DeleteCompareExchangeValue<T>(CompareExchangeValue<T> item);
 
+        /// <summary>
+        /// Register a request to create new compare exchange entry in the cluster as part of cluster-wide transaction.<br/>
+        /// If the key already exists, calling <see cref="IDocumentSession.SaveChanges"/> will throw <see cref="Exceptions.ClusterTransactionConcurrencyException"/>
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="key">Cross cluster unique key</param>
+        /// <param name="item">The Value to be stored</param>
         CompareExchangeValue<T> CreateCompareExchangeValue<T>(string key, T value);
     }
 
     public interface IClusterTransactionOperations : IClusterTransactionOperationsBase
     {
+        /// <summary>
+        /// Issues an HTTP request to get the compare exchange entry
+        /// </summary>
+        /// <param name="key">The compare exchange key</param>
+        /// <returns>
+        /// <see cref="CompareExchangeValue{T}"/> entry will be tracked by the session
+        /// </returns>
         CompareExchangeValue<T> GetCompareExchangeValue<T>(string key);
 
+        /// <summary>
+        /// Issues a single HTTP request to get multiple compare exchange entries
+        /// </summary>
+        /// <param name="keys">The keys of the requested compare exchange entries</param>
+        /// <returns>
+        /// Dictionary of <see cref="CompareExchangeValue{T}"/>, all values are tracked by the session
+        /// </returns>
         Dictionary<string, CompareExchangeValue<T>> GetCompareExchangeValues<T>(string[] keys);
 
+        /// <summary>
+        /// Issues a single HTTP request to list compare exchange entries
+        /// </summary>
+        /// <param name="startsWith">Prefix of the compare exchange keys</param>
+        /// <param name="start"></param>
+        /// <param name="pageSize"></param>
+        /// <returns>
+        /// Dictionary of <see cref="CompareExchangeValue{T}"/>, all values are tracked by the session
+        /// </returns>
         Dictionary<string, CompareExchangeValue<T>> GetCompareExchangeValues<T>(string startsWith, int start = 0, int pageSize = 25);
 
+        /// <summary>
+        /// Defer requests to be executed in a single trip to the server
+        /// </summary>
         ILazyClusterTransactionOperations Lazily { get; }
     }
 
     public interface ILazyClusterTransactionOperations
     {
+        /// <summary>
+        /// Deferred request to get the compare exchange entry
+        /// </summary>
+        /// <param name="key">The compare exchange key</param>
+        /// <returns></returns>
         Lazy<CompareExchangeValue<T>> GetCompareExchangeValue<T>(string key);
 
+        /// <summary>
+        /// Deferred request to get the compare exchange entry 
+        /// </summary>
+        /// <param name="key">The compare exchange key</param>
+        /// <param name="onEval">Action to be performed on the value on the client</param>
+        /// <returns></returns>
         Lazy<CompareExchangeValue<T>> GetCompareExchangeValue<T>(string key, Action<CompareExchangeValue<T>> onEval);
-
+        
+        /// <summary>
+        /// Deferred request to get multiple compare exchange entries
+        /// </summary>
+        /// <param name="keys">The keys of the requested compare exchange entries</param>
+        /// <returns></returns>
         Lazy<Dictionary<string, CompareExchangeValue<T>>> GetCompareExchangeValues<T>(string[] keys);
 
+        /// <summary>
+        /// Deferred request to get multiple compare exchange entries
+        /// </summary>
+        /// <param name="keys">The keys of the requested compare exchange entries</param>
+        /// <param name="onEval">Action to be performed on the returned values on the client</param>
+        /// <returns></returns>
         Lazy<Dictionary<string, CompareExchangeValue<T>>> GetCompareExchangeValues<T>(string[] keys, Action<Dictionary<string, CompareExchangeValue<T>>> onEval);
     }
 
     public interface IClusterTransactionOperationsAsync : IClusterTransactionOperationsBase
     {
+        /// <inheritdoc cref="IClusterTransactionOperations.GetCompareExchangeValue{T}"/> 
         Task<CompareExchangeValue<T>> GetCompareExchangeValueAsync<T>(string key, CancellationToken token = default);
 
+        /// <inheritdoc cref="IClusterTransactionOperations.GetCompareExchangeValues{T}(string[])"/> 
         Task<Dictionary<string, CompareExchangeValue<T>>> GetCompareExchangeValuesAsync<T>(string[] keys, CancellationToken token = default);
 
+        /// <inheritdoc cref="IClusterTransactionOperations.GetCompareExchangeValues{T}(string, int, int)"/> 
         Task<Dictionary<string, CompareExchangeValue<T>>> GetCompareExchangeValuesAsync<T>(string startsWith, int start = 0, int pageSize = 25, CancellationToken token = default);
 
+        /// <inheritdoc cref="IClusterTransactionOperations.Lazily"/> 
         ILazyClusterTransactionOperationsAsync Lazily { get; }
     }
 
     public interface ILazyClusterTransactionOperationsAsync
     {
+        /// <inheritdoc cref="ILazyClusterTransactionOperations.GetCompareExchangeValue{T}(string)"/> 
         Lazy<Task<CompareExchangeValue<T>>> GetCompareExchangeValueAsync<T>(string key, CancellationToken token = default);
 
+        /// <inheritdoc cref="ILazyClusterTransactionOperations.GetCompareExchangeValue{T}(string, Action{CompareExchangeValue{T}})"/> 
         Lazy<Task<CompareExchangeValue<T>>> GetCompareExchangeValueAsync<T>(string key, Action<CompareExchangeValue<T>> onEval, CancellationToken token = default);
 
+        /// <inheritdoc cref="ILazyClusterTransactionOperations.GetCompareExchangeValues{T}(string[])"/> 
         Lazy<Task<Dictionary<string, CompareExchangeValue<T>>>> GetCompareExchangeValuesAsync<T>(string[] keys, CancellationToken token = default);
 
+        /// <inheritdoc cref="ILazyClusterTransactionOperations.GetCompareExchangeValues{T}(string[], Action{Dictionary{string, CompareExchangeValue{T}}})"/> 
         Lazy<Task<Dictionary<string, CompareExchangeValue<T>>>> GetCompareExchangeValuesAsync<T>(string[] keys, Action<Dictionary<string, CompareExchangeValue<T>>> onEval, CancellationToken token = default);
     }
 
