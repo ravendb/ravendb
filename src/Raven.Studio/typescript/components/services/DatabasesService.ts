@@ -62,7 +62,6 @@ import deleteConnectionStringCommand = require("commands/database/settings/delet
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
-import { CreateDatabaseDto, createDatabaseCommand } from "commands/resources/createDatabaseCommand";
 import { createDatabaseCommand } from "commands/resources/createDatabaseCommand";
 import restoreDatabaseFromBackupCommand = require("commands/resources/restoreDatabaseFromBackupCommand");
 import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");

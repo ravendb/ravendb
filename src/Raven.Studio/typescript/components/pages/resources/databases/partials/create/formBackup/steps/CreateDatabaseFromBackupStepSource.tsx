@@ -30,7 +30,6 @@ export default function CreateDatabaseFromBackupStepSource() {
     const { control } = useFormContext<FormData>();
 
     const hasEncryption = useAppSelector(licenseSelectors.statusValue("HasEncryption"));
-
     const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
 
     const formValues = useWatch({
