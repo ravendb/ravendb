@@ -76,7 +76,6 @@ namespace SlowTests.Sharding.BucketMigration
         [RavenFact(RavenTestCategory.Sharding)]
         public async Task DocumentsMigratorShouldWork_MultipleWrongBuckets()
         {
-            Server.ServerStore.Sharding.BlockPrefixedSharding = false;
             using var store = Sharding.GetDocumentStore(new Options
             {
                 ModifyDatabaseRecord = record =>

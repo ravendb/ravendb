@@ -38,7 +38,7 @@ public partial class RavenTestBase
                     prefixedSetting = setting;
                     break;
                 }
-            }
+            }  
 
             var shardNumber = ShardHelper.GetShardNumberFor(record.Sharding, bucket);
             var shards = prefixedSetting != null ? prefixedSetting.Shards : record.Sharding.Shards.Keys.ToList();
@@ -86,19 +86,6 @@ public partial class RavenTestBase
             {
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);
                 while (record.Sharding.BucketMigrations.ContainsKey(bucket))
-                {
-                    await Task.Delay(250, cts.Token);
-                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);
-                }
-            }
-        }
-
-        public async Task WaitForNoActiveMigrations(IDocumentStore store, int timeout = 60_000)
-        {
-            using (var cts = new CancellationTokenSource(timeout))
-            {
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);
-                while (record.Sharding.BucketMigrations.Count > 0)
                 {
                     await Task.Delay(250, cts.Token);
                     record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);

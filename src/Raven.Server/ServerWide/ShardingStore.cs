@@ -8,7 +8,6 @@ using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -16,18 +15,13 @@ using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Sharding;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
 using Sparrow.Server.Collections;
-using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide
 {
     public sealed class ShardingStore
     {
-        public bool BlockPrefixedSharding = false;
-
         private readonly ServerStore _serverStore;
         public bool ManualMigration = false;
 

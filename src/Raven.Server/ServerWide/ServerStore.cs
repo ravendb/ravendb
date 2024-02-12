@@ -2992,9 +2992,6 @@ namespace Raven.Server.ServerWide
             }
             else
             {
-                if (Sharding.BlockPrefixedSharding && record.Sharding.Prefixed is { Count: > 0 })
-                    throw new InvalidOperationException("Cannot use prefixed sharding, this feature is currently blocked");
-
                 InitializeTopology(record.Sharding.Orchestrator.Topology, _engine, databaseName);
 
                 foreach (var (shardNumber, shardTopology) in record.Sharding.Shards)
