@@ -50,10 +50,10 @@ const config: StorybookConfig = {
                 (x.test && x.test.toString().includes(".font\\.js")) ||
                 (x.test && x.test.toString().includes(".scss"))
         );
-        
-        const scssRule = incomingRules.find(x => x.test && x.test.toString().includes(".scss"));
+
+        const scssRule = incomingRules.find((x) => x.test && x.test.toString().includes(".scss"));
         scssRule.use[0].options = {
-            publicPath: "/"
+            publicPath: "/",
         };
 
         config.plugins?.push(webpackConfig.plugins[0]); // MiniCssExtractPlugin
@@ -82,7 +82,7 @@ const config: StorybookConfig = {
     },
 
     docs: {
-        autodocs: false
-    }
+        autodocs: false,
+    },
 };
 export default config;
