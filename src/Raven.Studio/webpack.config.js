@@ -48,11 +48,6 @@ module.exports = (env, args) => {
     });
     
     const plugins = [
-        new ForkTsCheckerWebpackPlugin({
-            typescript: {
-                configFile: path.resolve(__dirname, "tsconfig.json")
-            }
-        }),
         miniCssExtractPlugin,
         htmlPlugin,
         copyPlugin,
@@ -80,6 +75,11 @@ module.exports = (env, args) => {
             'window.ko': "knockout"
         }),
         new webpack.ContextReplacementPlugin(/moment[\/\\]locale$/, /(en)$/),
+        new ForkTsCheckerWebpackPlugin({
+            typescript: {
+                configFile: path.resolve(__dirname, "tsconfig.json")
+            }
+        }),
         //new BundleAnalyzerPlugin()
     ];
     
@@ -278,14 +278,12 @@ module.exports = (env, args) => {
                 },
                 {
                     test: /\.tsx?$/,
-                    use: [
-                        {
-                            loader: 'ts-loader',
-                            options: {
-                                transpileOnly: true,
-                            },
+                    use: {
+                        loader: 'ts-loader',
+                        options: {
+                            transpileOnly: true,
                         },
-                    ],
+                    },
                 },
                 {
                     test: /\.html$/,
