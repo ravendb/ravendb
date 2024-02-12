@@ -8,8 +8,9 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const CopyPlugin = require("copy-webpack-plugin");
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const ZipPlugin = require("zip-webpack-plugin");
+const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+// const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 module.exports = (env, args) => {
     const isProductionMode = args && args.mode === 'production';
@@ -47,6 +48,11 @@ module.exports = (env, args) => {
     });
     
     const plugins = [
+        new ForkTsCheckerWebpackPlugin({
+            typescript: {
+                configFile: path.resolve(__dirname, "tsconfig.json")
+            }
+        }),
         miniCssExtractPlugin,
         htmlPlugin,
         copyPlugin,
@@ -272,7 +278,14 @@ module.exports = (env, args) => {
                 },
                 {
                     test: /\.tsx?$/,
-                    use: 'ts-loader'
+                    use: [
+                        {
+                            loader: 'ts-loader',
+                            options: {
+                                transpileOnly: true,
+                            },
+                        },
+                    ],
                 },
                 {
                     test: /\.html$/,

@@ -76,6 +76,7 @@
         "eslint-plugin-react-hooks": "^4.6.0",
         "eslint-plugin-storybook": "^0.6.15",
         "exports-loader": "^4.0.0",
+        "fork-ts-checker-webpack-plugin": "^9.0.2",
         "glob": "^8.0.3",
         "html-loader": "^4.1.0",
         "html-webpack-plugin": "^5.4.0",
