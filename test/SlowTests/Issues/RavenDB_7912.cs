@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
@@ -28,13 +29,13 @@ namespace SlowTests.Issues
 
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120)))
             {
-                await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
 
-                using (var leaderStore = new DocumentStore
-                {
-                    Urls = new[] { leader.WebUrl },
-                    Database = databaseName
-                })
+                using (var leaderStore = GetDocumentStore(new Options()
+                       {
+                           Server = leader,
+                           ModifyDatabaseName = s => databaseName,
+                           ReplicationFactor = 3
+                       }))
                 {
                     leaderStore.Initialize();
 
@@ -43,15 +44,19 @@ namespace SlowTests.Issues
 
                     var result = await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[1]);
 
-                    await leaderStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true), cts.Token);
+                    await Assert.ThrowsAsync<RavenTimeoutException>(async () =>
+                    {
+                        await leaderStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true), cts.Token);
+                        // Throws because it's trying to wait for RemoveNodeFromDatabase of 'Servers[1]' in the EP but the command isn't created because the server is down.
+                    });
 
                     Servers[1] = GetNewServer(new ServerCreationOptions
                     {
                         CustomSettings = new Dictionary<string, string>
-                            {
-                                {RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), result.Url},
-                                {RavenConfiguration.GetKey(x => x.Core.ServerUrls), result.Url}
-                            },
+                        {
+                            { RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), result.Url },
+                            { RavenConfiguration.GetKey(x => x.Core.ServerUrls), result.Url }
+                        },
                         RunInMemory = false,
                         DeletePrevious = false,
                         DataDirectory = result.DataDirectory
@@ -59,6 +64,7 @@ namespace SlowTests.Issues
 
                     Assert.True(await WaitForDatabaseToBeDeleted(Servers[1], databaseName, TimeSpan.FromSeconds(30), cts.Token));
                 }
+
             }
         }
 

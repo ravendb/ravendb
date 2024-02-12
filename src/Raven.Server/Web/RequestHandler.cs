@@ -8,13 +8,18 @@ using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -762,5 +767,70 @@ namespace Raven.Server.Web
         {
             HttpContext.Items["TrafficWatch"] = (str, type);
         }
+
+        public async Task WaitForDatabaseNotificationOnCluster(string databaseName, 
+            long index,
+            Dictionary<string, string> clusterNodes, // (nodeTag, url)
+            HashSet<string> databaseNodes, // nodeTags
+            Dictionary<string, ClusterRequestExecutor> reqExecutors,
+            CancellationToken token)
+        {
+
+            foreach (var tag in databaseNodes)
+            {
+                var nodeUrl = clusterNodes[tag];
+
+                if (databaseNodes.Contains(tag) == false)
+                    continue;
+
+                // if node is part of db topology - wait for commit and database notification
+                try
+                {
+                    ClusterRequestExecutor requestExecutor;
+                    if (reqExecutors.TryGetValue(tag, out requestExecutor) == false)
+                    {
+                        requestExecutor = reqExecutors[tag] =
+                            ClusterRequestExecutor.CreateForSingleNode(nodeUrl, Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
+                    }
+
+                    using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+                    {
+                        var cmd = new WaitForDatabaseIndexNotificationCommand(index, databaseName);
+                        await requestExecutor.ExecuteAsync(cmd, context, token: token);
+                    }
+                }
+                catch (Exception e) when (e is InvalidOperationException or AllTopologyNodesDownException)
+                {
+                    // from request executor (ThrowFailedToContactAllNodes)
+                }
+                catch (DatabaseDoesNotExistException)
+                {
+                    // from request executor (ExecuteAsync, you check if `HandleUnsuccessfulResponse` is false, and then DatabaseDoesNotExistException.Throw).
+                }
+                catch (UnsuccessfulRequestException)
+                {
+                    // database is not relevant for this node anymore. Request to a server has failed.
+                }
+                catch (DatabaseDisabledException)
+                {
+                    // when the db is being deleted
+                }
+                catch (OperationCanceledException)
+                {
+                }
+                catch (RavenException e)
+                {
+                    if (e.InnerException is HttpRequestException)
+                        return;
+
+                    if (e.InnerException != null)
+                        throw e.InnerException;
+
+                    throw;
+                }
+            }
+        }
+
+
     }
 }

@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
@@ -287,9 +288,12 @@ namespace FastTests
             {
 
             }
+            catch (RavenTimeoutException)
+            {
+            }
             catch (Exception e)
             {
-                if (e is RavenException && (e.InnerException is TimeoutException || e.InnerException is OperationCanceledException))
+                if (e is RavenException && (e.InnerException is TimeoutException or OperationCanceledException or TaskCanceledException))
                     return null;
 
                 if (Servers.Contains(serverToUse))
@@ -900,6 +904,16 @@ namespace FastTests
             }
 
             return sb.ToString();
+        }
+
+        public static IDocumentStore GetDocumentStoreForSpecificServer(RavenServer server, string database)
+        {
+            return new DocumentStore()
+            {
+                Database = database,
+                Urls = new[] { server.WebUrl },
+                Conventions = new DocumentConventions { DisableTopologyUpdates = true }
+            }.Initialize();
         }
     }
 }
