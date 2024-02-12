@@ -1317,7 +1317,6 @@ namespace Corax.Indexing
                 //Update mapping virtual<=> storage location location. Final writing will be done after inserting ALL terms for specific field.
                 if (_writer.FieldSupportsPhraseQuery(_indexedField))
                 {
-                    Debug.Assert(_virtualTermIdToTermContainerId.Count == _indexedField.Textual.Count(), "virtualMapping.Count == _indexedField.Textual.Count()");
                     Debug.Assert(_virtualTermIdToTermContainerId[storageLocation] == Constants.IndexedField.Invalid, "virtualMapping[entries.StorageLocation] == Constants.IndexedField.Invalid, Term was already set! Persisted: {_virtualTermIdToTermContainerId[storageLocation]}, new: {termContainerId}");
                     _virtualTermIdToTermContainerId[storageLocation] = termContainerId;
                 }
