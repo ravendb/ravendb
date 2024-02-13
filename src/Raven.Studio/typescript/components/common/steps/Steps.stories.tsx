@@ -3,8 +3,8 @@ import Steps from "./Steps";
 import React, { useState } from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { Button, Card } from "reactstrap";
-import { FlexGrow } from "./FlexGrow";
-import { Icon } from "./Icon";
+import { FlexGrow } from "../FlexGrow";
+import { Icon } from "../Icon";
 
 export default {
     title: "Bits/Steps",
