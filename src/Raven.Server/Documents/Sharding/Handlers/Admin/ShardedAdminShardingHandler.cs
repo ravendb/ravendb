@@ -15,6 +15,8 @@ using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Sharding;
 using Raven.Server.Utils;
+using Sparrow.Json;
+using ShardingConfiguration = Raven.Client.ServerWide.Sharding.ShardingConfiguration;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin
 {
@@ -32,12 +34,11 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
         public async Task AddPrefixedShardingSetting()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), GetType().Name);
                 var setting = JsonDeserializationCluster.PrefixedShardingSetting(json);
-
                 var shardingConfiguration = ServerStore.Cluster.ReadShardingConfiguration(DatabaseName);
+
                 ShardingStore.AssertValidPrefix(setting, shardingConfiguration);
 
                 var exists = shardingConfiguration.Prefixed.BinarySearch(setting, PrefixedSettingComparer.Instance) >= 0;
@@ -45,8 +46,12 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
                     throw new InvalidOperationException(
                         $"Prefix '{setting.Prefix}' already exists in {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. please use '{nameof(UpdatePrefixedShardingSettingOperation)} operation'");
 
-                var clusterTopology = ServerStore.GetClusterTopology(context);
-                var urls = shardingConfiguration.Orchestrator.Topology.Members.Select(clusterTopology.GetUrlFromTag).ToArray();
+                string[] urls;
+                using (context.OpenReadTransaction())
+                {
+                    var clusterTopology = ServerStore.GetClusterTopology(context);
+                    urls = shardingConfiguration.Orchestrator.Topology.Members.Select(clusterTopology.GetUrlFromTag).ToArray();
+                }
 
                 if (await AssertNoDocumentsStartingWith(context, setting.Prefix, urls) == false)
                     throw new InvalidOperationException(
@@ -66,8 +71,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
         [RavenShardedAction("/databases/*/admin/sharding/prefixed/delete", "DELETE")]
         public async Task DeletePrefixedShardingSetting()
         {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context)) 
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), GetType().Name);
                 var setting = JsonDeserializationCluster.PrefixedShardingSetting(json);
@@ -77,8 +81,12 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
                 if (found == false)
                     throw new InvalidDataException($"Prefix '{setting.Prefix}' wasn't found in sharding configuration");
 
-                var clusterTopology = ServerStore.GetClusterTopology(context);
-                var urls = shardingConfiguration.Orchestrator.Topology.Members.Select(clusterTopology.GetUrlFromTag).ToArray();
+                string[] urls;
+                using (context.OpenReadTransaction())
+                {
+                    var clusterTopology = ServerStore.GetClusterTopology(context);
+                    urls = shardingConfiguration.Orchestrator.Topology.Members.Select(clusterTopology.GetUrlFromTag).ToArray();
+                }
 
                 if (await AssertNoDocumentsStartingWith(context, setting.Prefix, urls) == false)
                     throw new InvalidOperationException(
@@ -99,7 +107,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
         public async Task UpdatePrefixedShardingSetting()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), GetType().Name);
                 var setting = JsonDeserializationCluster.PrefixedShardingSetting(json);
@@ -188,7 +195,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
             }
         }
 
-        private async Task<bool> AssertNoDocumentsStartingWith(TransactionOperationContext context, string prefix, string[] urls, string database = null)
+        private async Task<bool> AssertNoDocumentsStartingWith(JsonOperationContext context, string prefix, string[] urls, string database = null)
         {
             using (var requestExecutor = RequestExecutor.CreateForServer(urls, database ?? DatabaseName, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
             {
