@@ -5,13 +5,11 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Json;
-using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -125,16 +123,6 @@ namespace Raven.Server.Documents
             {
                 await ServerStore.Cluster.WaitForIndexNotification(index);
             }
-        }
-
-        public bool IsShutdownRequested() =>  ServerStore.ServerShutdown.IsCancellationRequested || Database.DatabaseShutdown.IsCancellationRequested;
-
-        public void ThrowShutdownException(Exception inner = null) => throw new DatabaseDisabledException("The database " + Database.Name + " is shutting down", inner);
-
-        public void ThrowShutdownExceptionIfNeeded()
-        {
-            if (IsShutdownRequested())
-                ThrowShutdownException();
         }
 
         protected OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationToken()
