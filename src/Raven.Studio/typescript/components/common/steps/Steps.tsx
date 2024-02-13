@@ -1,7 +1,7 @@
 ﻿import * as React from "react";
 import classNames from "classnames";
 import "./Steps.scss";
-import { Icon } from "./Icon";
+import { Icon } from "../Icon";
 import { todo } from "common/developmentHelper";
 
 export interface StepItem {
@@ -27,7 +27,7 @@ export default function Steps(props: StepsProps) {
                     step={step}
                     onClick={() => onClick(idx)}
                     isCurrent={idx === current}
-                    isDone={idx < current}
+                    isDone={current > idx}
                     isLast={idx === steps.length - 1}
                 />
             ))}
