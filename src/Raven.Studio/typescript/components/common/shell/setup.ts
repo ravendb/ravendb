@@ -83,6 +83,7 @@ function initRedux() {
 declare module "yup" {
     interface StringSchema {
         basicUrl(msg?: string): this;
+        base64(msg?: string): this;
     }
 }
 
@@ -126,6 +127,10 @@ function initYup() {
 
     yup.addMethod<yup.StringSchema>(yup.string, "basicUrl", function (msg = genUtils.invalidUrlMessage) {
         return this.matches(genUtils.urlRegex, msg);
+    });
+
+    yup.addMethod<yup.StringSchema>(yup.string, "base64", function (msg = "Invalid base64 string") {
+        return this.matches(/^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/, msg);
     });
 }
 
