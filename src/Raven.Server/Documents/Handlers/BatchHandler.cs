@@ -57,88 +57,95 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/bulk_docs", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task BulkDocs()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var token = new OperationCancelToken(ServerStore.ServerShutdown, HttpContext.RequestAborted))
-            using (var command = new MergedBatchCommand(Database))
+            try
             {
-                var contentType = HttpContext.Request.ContentType;
-                try
+                using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (var token = CreateHttpRequestBoundOperationToken())
+                using (var command = new MergedBatchCommand(Database))
                 {
-                    if (contentType == null ||
-                        contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
+                    var contentType = HttpContext.Request.ContentType;
+                    try
                     {
-                        await BatchRequestParser.BuildCommandsAsync(context, command, RequestBodyStream(), Database, ServerStore, token.Token);
+                        if (contentType == null ||
+                            contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
+                        {
+                            await BatchRequestParser.BuildCommandsAsync(context, command, RequestBodyStream(), Database, ServerStore, token.Token);
+                        }
+                        else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
+                                 contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+                        {
+                            await ParseMultipart(context, command, token.Token);
+                        }
+                        else
+                            ThrowNotSupportedType(contentType);
                     }
-                    else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
-                             contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+                    finally
                     {
-                        await ParseMultipart(context, command, token.Token);
+                        if (TrafficWatchManager.HasRegisteredClients)
+                        {
+                            BatchTrafficWatch(command.ParsedCommands);
+                        }
                     }
-                    else
-                        ThrowNotSupportedType(contentType);
-                }
-                finally
-                {
-                    if (TrafficWatchManager.HasRegisteredClients)
+
+                    var disableAtomicDocumentWrites = GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ??
+                                                      Database.Configuration.Cluster.DisableAtomicDocumentWrites;
+
+                    CheckBackwardCompatibility(ref disableAtomicDocumentWrites);
+
+                    var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
+                    var waitForIndexThrow = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
+                    var specifiedIndexesQueryString = HttpContext.Request.Query["waitForSpecificIndex"];
+
+                    if (command.IsClusterTransaction)
                     {
-                        BatchTrafficWatch(command.ParsedCommands);
+                        await HandleClusterTransaction(context, command, disableAtomicDocumentWrites, specifiedIndexesQueryString, waitForIndexesTimeout,
+                            waitForIndexThrow,
+                            token.Token);
+
+                        return;
+                    }
+
+                    if (waitForIndexesTimeout != null)
+                        command.ModifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    try
+                    {
+                        await Database.TxMerger.Enqueue(command);
+                    }
+                    catch (ConcurrencyException)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                        throw;
+                    }
+
+                    var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
+                    if (waitForReplicasTimeout != null)
+                    {
+                        var numberOfReplicasStr = GetStringQueryString("numberOfReplicasToWaitFor", required: false) ?? "1";
+                        var throwOnTimeoutInWaitForReplicas = GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas", required: false) ?? true;
+
+                        await WaitForReplicationAsync(Database, waitForReplicasTimeout.Value, numberOfReplicasStr, throwOnTimeoutInWaitForReplicas,
+                            command.LastChangeVector);
+                    }
+
+                    if (waitForIndexesTimeout != null)
+                    {
+                        long lastEtag = ChangeVectorUtils.GetEtagById(command.LastChangeVector, Database.DbBase64Id);
+                        await WaitForIndexesAsync(Database, waitForIndexesTimeout.Value, specifiedIndexesQueryString.ToList(), waitForIndexThrow,
+                            lastEtag, command.LastTombstoneEtag, command.ModifiedCollections);
+                    }
+
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, new DynamicJsonValue { [nameof(BatchCommandResult.Results)] = command.Reply });
                     }
                 }
-
-                var disableAtomicDocumentWrites = GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ??
-                                                  Database.Configuration.Cluster.DisableAtomicDocumentWrites;
-
-                CheckBackwardCompatibility(ref disableAtomicDocumentWrites);
-
-                var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
-                var waitForIndexThrow = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
-                var specifiedIndexesQueryString = HttpContext.Request.Query["waitForSpecificIndex"];
-
-                if (command.IsClusterTransaction)
-                {
-                    await HandleClusterTransaction(context, command, disableAtomicDocumentWrites, specifiedIndexesQueryString, waitForIndexesTimeout, waitForIndexThrow,
-                        token.Token);
-
-                    return;
-                }
-
-                if (waitForIndexesTimeout != null)
-                    command.ModifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                try
-                {
-                    await Database.TxMerger.Enqueue(command);
-                }
-                catch (ConcurrencyException)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                    throw;
-                }
-
-                var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
-                if (waitForReplicasTimeout != null)
-                {
-                    var numberOfReplicasStr = GetStringQueryString("numberOfReplicasToWaitFor", required: false) ?? "1";
-                    var throwOnTimeoutInWaitForReplicas = GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas", required: false) ?? true;
-
-                    await WaitForReplicationAsync(Database, waitForReplicasTimeout.Value, numberOfReplicasStr, throwOnTimeoutInWaitForReplicas, command.LastChangeVector);
-                }
-
-                if (waitForIndexesTimeout != null)
-                {
-                    long lastEtag = ChangeVectorUtils.GetEtagById(command.LastChangeVector, Database.DbBase64Id);
-                    await WaitForIndexesAsync(Database, waitForIndexesTimeout.Value, specifiedIndexesQueryString.ToList(), waitForIndexThrow,
-                        lastEtag, command.LastTombstoneEtag, command.ModifiedCollections);
-                }
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(BatchCommandResult.Results)] = command.Reply
-                    });
-                }
+            }
+            catch (OperationCanceledException)
+            {
+                ThrowShutdownExceptionIfNeeded();
+                throw;
             }
         }
 
