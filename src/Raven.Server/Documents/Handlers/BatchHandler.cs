@@ -298,6 +298,16 @@ namespace Raven.Server.Documents.Handlers
                 return clusterTxResult.GeneratedResult;
             }
 
+            // leader isn't updated (thats why the result is empty),
+            // so we'll try to take the result from the local history log.
+            await ServerStore.Engine.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, token);
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                if (ServerStore.Engine.LogHistory.TryGetResultByGuid<ClusterTransactionResult>(ctx, options.TaskId, out var clusterTxLocalResult))
+                    return clusterTxLocalResult.GeneratedResult;
+            }
+
             throw new InvalidOperationException(
                 "Cluster-transaction was succeeded, but Leader is outdated and its results are inaccessible (the command has been already deleted from the history log).  We recommend you to update all nodes in the cluster to the last stable version.");
         }

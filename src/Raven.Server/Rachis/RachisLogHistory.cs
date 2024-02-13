@@ -493,5 +493,40 @@ namespace Raven.Server.Rachis
                 return true;
             }
         }
+
+        public unsafe bool TryGetResultByGuid<T>(ClusterOperationContext context, string guid, out T result)
+        {
+            result = default(T);
+
+            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
+            using (Slice.From(context.Allocator, guid, out var guidSlice))
+            {
+                if (table.ReadByKey(guidSlice, out var reader) == false)
+                    return false;
+
+                var bytes = reader.Read((int)LogHistoryColumn.Result, out int size);
+                if (size == 0)
+                    return false;
+
+                var cmd = new BlittableJsonReaderObject(bytes, size, context);
+
+                if (typeof(T) == typeof(ClusterTransactionResult))
+                {
+                    if (cmd.TryGet(nameof(LogHistoryColumn.Result), out BlittableJsonReaderObject resultAsBlt) == false)
+                        // Should never happen! (we are getting here after the command is completed int the db, so it ha been applied and should have results).
+                        throw new InvalidOperationException($"'Results' field is inaccessible in '{cmd}' for type {typeof(T).FullName}");
+
+                    result = (T)(object)ClusterTransactionCommand.GetResults(resultAsBlt);
+                }
+                else
+                {
+                    if (cmd.TryGet(nameof(LogHistoryColumn.Result), out result) == false)
+                        // Should never happen! (we are getting here after the command is completed int the db, so it ha been applied and should have results).
+                        throw new InvalidOperationException($"'Results' field is inaccessible in '{cmd}' for type {typeof(T).FullName}");
+                }
+
+                return result != null;
+            }
+        }
     }
 }
