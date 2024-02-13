@@ -23,7 +23,7 @@ import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { tryHandleSubmit } from "components/utils/common";
 import QuickCreateButton from "components/pages/resources/databases/partials/create/regular/QuickCreateButton";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useDatabaseNameValidation } from "components/pages/resources/databases/partials/create/shared/useDatabaseNameValidation";
+import { useCreateDatabaseAsyncValidation } from "components/pages/resources/databases/partials/create/shared/useCreateDatabaseAsyncValidation";
 import { FormProvider, FormState, SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { useCreateDatabase } from "components/pages/resources/databases/partials/create/shared/useCreateDatabase";
 import { useSteps } from "components/common/steps/useSteps";
@@ -50,7 +50,7 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
     const allNodeTags = useAppSelector(clusterSelectors.allNodeTags);
 
     const form = useForm<FormData>({
-        mode: "all",
+        mode: "onChange",
         defaultValues: getDefaultValues(allNodeTags.length),
         resolver: (data, _, options) =>
             yupResolver(createDatabaseRegularSchema)(
@@ -65,12 +65,10 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
             ),
     });
 
-    const { control, handleSubmit, formState, setError, clearErrors, setValue, trigger } = form;
+    const { control, handleSubmit, formState, setError, setValue, trigger } = form;
     const formValues = useWatch({
         control,
     });
-
-    useDatabaseNameValidation(formValues.basicInfo.databaseName, setError, clearErrors);
 
     const { encryptionKeyFileName, encryptionKeyText } = useCreateDatabase(formValues);
     const activeSteps = getActiveStepsList(formValues, formState);
@@ -104,12 +102,19 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
         ),
     };
 
+    const debouncedValidationResult = useCreateDatabaseAsyncValidation(formValues.basicInfo.databaseName, setError);
+
     const onFinish: SubmitHandler<FormData> = async (formValues) => {
         return tryHandleSubmit(async () => {
+            if (debouncedValidationResult !== "valid") {
+                return;
+            }
+
             databasesManager.default.activateAfterCreation(formValues.basicInfo.databaseName);
 
             const dto = mapToDto(formValues, allNodeTags);
             await databasesService.createDatabase(dto, formValues.replicationAndSharding.replicationFactor);
+
             closeModal();
         });
     };
@@ -207,6 +212,33 @@ const getDefaultValues = (replicationFactor: number): FormData => {
     };
 };
 
+function getActiveStepsList(formValues: FormData, formState: FormState<FormData>): StepsListItem[] {
+    const steps: StepsListItem[] = [
+        { id: "createNew", label: "Name", active: true, isInvalid: !!formState.errors.basicInfo },
+        {
+            id: "encryption",
+            label: "Encryption",
+            active: formValues.basicInfo.isEncrypted,
+            isInvalid: !!formState.errors.encryption,
+        },
+        {
+            id: "replicationAndSharding",
+            label: "Replication & Sharding",
+            active: true,
+            isInvalid: !!formState.errors.replicationAndSharding,
+        },
+        {
+            id: "nodeSelection",
+            label: "Manual Node Selection",
+            active: formValues.replicationAndSharding.isManualReplication,
+            isInvalid: !!formState.errors.manualNodeSelection,
+        },
+        { id: "path", label: "Paths Configuration", active: true, isInvalid: !!formState.errors.pathsConfigurations },
+    ];
+
+    return steps.filter((step) => step.active);
+}
+
 function mapToDto(formValues: FormData, allNodeTags: string[]): CreateDatabaseDto {
     const { basicInfo, replicationAndSharding, manualNodeSelection, pathsConfigurations } = formValues;
 
@@ -261,31 +293,4 @@ function mapToDto(formValues: FormData, allNodeTags: string[]): CreateDatabaseDt
         Topology,
         Sharding,
     };
-}
-
-function getActiveStepsList(formValues: FormData, formState: FormState<FormData>): StepsListItem[] {
-    const steps: StepsListItem[] = [
-        { id: "createNew", label: "Name", active: true, isInvalid: !!formState.errors.basicInfo },
-        {
-            id: "encryption",
-            label: "Encryption",
-            active: formValues.basicInfo.isEncrypted,
-            isInvalid: !!formState.errors.encryption,
-        },
-        {
-            id: "replicationAndSharding",
-            label: "Replication & Sharding",
-            active: true,
-            isInvalid: !!formState.errors.replicationAndSharding,
-        },
-        {
-            id: "nodeSelection",
-            label: "Manual Node Selection",
-            active: formValues.replicationAndSharding.isManualReplication,
-            isInvalid: !!formState.errors.manualNodeSelection,
-        },
-        { id: "path", label: "Paths Configuration", active: true, isInvalid: !!formState.errors.pathsConfigurations },
-    ];
-
-    return steps.filter((step) => step.active);
 }

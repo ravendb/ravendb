@@ -10,7 +10,7 @@ import {
 } from "./createDatabaseFromBackupValidation";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { useDatabaseNameValidation } from "../shared/useDatabaseNameValidation";
+import { useCreateDatabaseAsyncValidation } from "../shared/useCreateDatabaseAsyncValidation";
 import { FormProvider, FormState, SubmitHandler, useForm, useWatch } from "react-hook-form";
 import StepBasicInfo from "./steps/CreateDatabaseFromBackupStepBasicInfo";
 import StepPath from "../shared/CreateDatabaseStepPath";
@@ -63,12 +63,12 @@ export default function CreateDatabaseFromBackup({
             ),
     });
 
-    const { control, setError, clearErrors, handleSubmit, formState, setValue, trigger } = form;
+    const { control, setError, handleSubmit, formState, setValue, trigger } = form;
     const formValues = useWatch({
         control,
     });
 
-    useDatabaseNameValidation(formValues.basicInfo.databaseName, setError, clearErrors);
+    const debouncedValidationResult = useCreateDatabaseAsyncValidation(formValues.basicInfo.databaseName, setError);
 
     const activeSteps = getActiveStepsList(formValues, formState);
 
@@ -96,7 +96,10 @@ export default function CreateDatabaseFromBackup({
 
     const onFinish: SubmitHandler<FormData> = async (formValues) => {
         return tryHandleSubmit(async () => {
-            console.log("kalczur formValues", formValues);
+            if (debouncedValidationResult !== "valid") {
+                return;
+            }
+
             databasesManager.default.activateAfterCreation(formValues.basicInfo.databaseName);
             await databasesService.restoreDatabaseFromBackup(mapToDto(formValues));
 
