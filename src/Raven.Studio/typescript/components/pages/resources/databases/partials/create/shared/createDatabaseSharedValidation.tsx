@@ -9,10 +9,9 @@ export const pathsConfigurationsSchema = yup.object({
 });
 
 export const encryptionSchema = yup.object({
-    // TODO base64
     key: yup.string().when("$isEncrypted", {
         is: true,
-        then: (schema) => schema.required(),
+        then: (schema) => schema.base64().required(),
     }),
     isKeySaved: yup.boolean().when("$isEncrypted", {
         is: true,
