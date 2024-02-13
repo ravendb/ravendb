@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React from "react";
 import { Button, CloseButton, Form, ModalBody, ModalFooter } from "reactstrap";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
-import Steps from "components/common/Steps";
+import Steps from "components/common/steps/Steps";
 import { useAppSelector } from "components/store";
 import {
     CreateDatabaseFromBackupFormData as FormData,
@@ -11,16 +11,18 @@ import {
 import { yupResolver } from "@hookform/resolvers/yup";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useDatabaseNameValidation } from "../shared/useDatabaseNameValidation";
-import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
+import { FormProvider, FormState, SubmitHandler, useForm, useWatch } from "react-hook-form";
 import StepBasicInfo from "./steps/CreateDatabaseFromBackupStepBasicInfo";
 import StepPath from "../shared/CreateDatabaseStepPath";
-import StepEncryption from "../shared/CreateDatabaseStepEncryption";
+import StepEncryption from "../../../../../../common/FormEncryption";
 import StepSource from "./steps/CreateDatabaseFromBackupStepSource";
 import { tryHandleSubmit } from "components/utils/common";
 import { DevTool } from "@hookform/devtools";
 import { useServices } from "components/hooks/useServices";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import databasesManager from "common/shell/databasesManager";
+import { useCreateDatabase } from "components/pages/resources/databases/partials/create/shared/useCreateDatabase";
+import { useSteps } from "components/common/steps/useSteps";
 
 interface CreateDatabaseFromBackupProps {
     closeModal: () => void;
@@ -43,6 +45,7 @@ export default function CreateDatabaseFromBackup({
     closeModal,
     changeCreateModeToRegular,
 }: CreateDatabaseFromBackupProps) {
+    const { databasesService } = useServices();
     const usedDatabaseNames = useAppSelector(databaseSelectors.allDatabases).map((db) => db.name);
 
     const form = useForm<FormData>({
@@ -60,19 +63,36 @@ export default function CreateDatabaseFromBackup({
             ),
     });
 
-    const { control, setError, clearErrors, handleSubmit, formState } = form;
-
+    const { control, setError, clearErrors, handleSubmit, formState, setValue, trigger } = form;
     const formValues = useWatch({
         control,
     });
 
-    console.log("kalczur errors", form.formState.errors);
-
     useDatabaseNameValidation(formValues.basicInfo.databaseName, setError, clearErrors);
 
-    const [currentStep, setCurrentStep] = useState(1);
+    const activeSteps = getActiveStepsList(formValues, formState);
 
-    const { databasesService } = useServices();
+    const { currentStep, isFirstStep, isLastStep, goToStep, nextStep, prevStep } = useSteps(activeSteps.length);
+    const { encryptionKeyFileName, encryptionKeyText } = useCreateDatabase(formValues);
+
+    // TODO to function
+    const stepViews: Record<StepId, JSX.Element> = {
+        basicInfo: <StepBasicInfo />,
+        backupSource: <StepSource />,
+        encryption: (
+            <StepEncryption
+                control={control}
+                encryptionKey={formValues.encryption.key}
+                fileName={encryptionKeyFileName}
+                keyText={encryptionKeyText}
+                setValue={setValue}
+                triggerDatabaseName={() => trigger("basicInfo.databaseName")}
+                encryptionKeyFieldName="encryption.key"
+                isSavedFieldName="encryption.isKeySaved"
+            />
+        ),
+        path: <StepPath isBackupFolder manualSelectedNodes={null} />,
+    };
 
     const onFinish: SubmitHandler<FormData> = async (formValues) => {
         return tryHandleSubmit(async () => {
@@ -82,49 +102,6 @@ export default function CreateDatabaseFromBackup({
 
             closeModal();
         });
-    };
-
-    // TODO isInvalid
-
-    const stepsList: StepsListItem[] = [
-        {
-            id: "basicInfo",
-            label: "Select backup",
-            active: true,
-            isInvalid: !!formState.errors.basicInfo,
-        },
-        { id: "backupSource", label: "Backup Source", active: true, isInvalid: !!formState.errors.source },
-        {
-            id: "encryption",
-            label: "Encryption",
-            active: formValues.source.isEncrypted,
-            isInvalid: !!formState.errors.encryption,
-        },
-        { id: "path", label: "Paths Configuration", active: true, isInvalid: !!formState.errors.pathsConfigurations },
-    ];
-
-    const activeSteps = stepsList.filter((step) => step.active);
-
-    const isLastStep = activeSteps.length - 2 < currentStep;
-    const isFirstStep = currentStep < 1;
-
-    const goToStep = (stepNum: number) => {
-        setCurrentStep(stepNum);
-    };
-
-    const nextStep = () => {
-        if (!isLastStep) setCurrentStep(currentStep + 1);
-    };
-
-    const prevStep = () => {
-        if (!isFirstStep) setCurrentStep(currentStep - 1);
-    };
-
-    const stepViews: Record<StepId, JSX.Element> = {
-        basicInfo: <StepBasicInfo />,
-        backupSource: <StepSource />,
-        encryption: <StepEncryption />,
-        path: <StepPath isBackupFolder manualSelectedNodes={null} />,
     };
 
     return (
@@ -312,3 +289,24 @@ function mapToDto({ basicInfo, source, encryption, pathsConfigurations }: FormDa
 //         };
 //     }
 // }
+
+function getActiveStepsList(formValues: FormData, formState: FormState<FormData>): StepsListItem[] {
+    const allSteps: StepsListItem[] = [
+        {
+            id: "basicInfo",
+            label: "Select backup",
+            active: true,
+            isInvalid: !!formState.errors.basicInfo,
+        },
+        { id: "backupSource", label: "Backup Source", active: true, isInvalid: !!formState.errors.source },
+        {
+            id: "encryption",
+            label: "Encryption",
+            active: formValues.source.isEncrypted,
+            isInvalid: !!formState.errors.encryption,
+        },
+        { id: "path", label: "Paths Configuration", active: true, isInvalid: !!formState.errors.pathsConfigurations },
+    ];
+
+    return allSteps.filter((step) => step.active);
+}
