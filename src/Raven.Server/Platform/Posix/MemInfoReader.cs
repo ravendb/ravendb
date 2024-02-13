@@ -289,6 +289,9 @@ namespace Raven.Server.Platform.Posix
         [SnmpIndex(57)]
         public Size SecPageTables { get; set; }
 
+        [SnmpIndex(58)]
+        public Size Unaccepted { get; set; }
+
         public Dictionary<string, Size> Other { get; set; }
 
         public void Set(string name, long value, SizeUnit unit)
