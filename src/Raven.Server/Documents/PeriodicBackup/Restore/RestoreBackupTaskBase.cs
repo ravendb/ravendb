@@ -832,7 +832,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     if (executed.Count == 0)
                         break;
 
-                    totalExecutedCommands += executed.Sum(x => x.Commands.Length);
+                    totalExecutedCommands += executed.Sum(x => x.Commands.Count);
                     result.AddInfo($"Executed {totalExecutedCommands:#,#;;0} cluster transaction commands.");
                     onProgress.Invoke(result.Progress);
                 }

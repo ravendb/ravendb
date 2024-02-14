@@ -2136,7 +2136,7 @@ namespace Raven.Server.Documents
                     {
                         if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)
                         {
-                            Debug.Assert(false, $"flags must set FromClusterTransaction for the change vector: {changeVector}");
+                            Debug.Assert(false, $"flags: '{flags}' must set FromClusterTransaction for the change vector: {changeVector}");
                         }
                     }
                     break;

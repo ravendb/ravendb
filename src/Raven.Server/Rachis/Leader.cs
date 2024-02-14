@@ -17,6 +17,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
@@ -674,9 +675,10 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private class RachisMergedCommand
+        public class RachisMergedCommand
         {
             public CommandBase Command;
+            public BlittableJsonReaderObject CommandAsJson;
             public TaskCompletionSource<Task<(long Index, object Result)>> Tcs;
             public readonly MultipleUseFlag Consumed = new MultipleUseFlag();
             public BlittableResultWriter BlittableResultWriter { get; init; }
@@ -688,54 +690,60 @@ namespace Raven.Server.Rachis
 
         public async Task<(long Index, object Result)> PutAsync(CommandBase command, TimeSpan timeout)
         {
-            using var blittableResultWriter = command is IBlittableResultCommand crCommand ? new BlittableResultWriter(crCommand.WriteResult) : null; 
-            var rachisMergedCommand = new RachisMergedCommand
-            {
-                Command = command,
-                Tcs = new TaskCompletionSource<Task<(long, object)>>(TaskCreationOptions.RunContinuationsAsynchronously),
-                BlittableResultWriter = blittableResultWriter
-            };
-            _commandsQueue.Enqueue(rachisMergedCommand);
+            using var blittableResultWriter = command is IBlittableResultCommand crCommand ? new BlittableResultWriter(crCommand.WriteResult) : null;
 
-            while (rachisMergedCommand.Tcs.Task.IsCompleted == false)
+            using (_engine.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var lockTaken = false;
-                try
+                var djv = command.ToJson(context);
+                var rachisMergedCommand = new RachisMergedCommand
                 {
-                    var waitAsync = _waitForCommit.WaitAsync(timeout);
-                    Monitor.TryEnter(_commandsQueue, ref lockTaken);
-                    if (lockTaken)
-                    {
-                        EmptyQueue();
-                    }
-                    else
-                    {
-                        if (await waitAsync == false)
-                        {
-                            if (rachisMergedCommand.Consumed.Raise())
-                                throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
+                    Command = command,
+                    CommandAsJson = context.ReadObject(djv, "raft/command"),
+                    Tcs = new TaskCompletionSource<Task<(long, object)>>(TaskCreationOptions.RunContinuationsAsynchronously),
+                    BlittableResultWriter = blittableResultWriter
+                };
+                _commandsQueue.Enqueue(rachisMergedCommand);
 
-                            // if the command is already dequeued we must let it continue to keep its context valid.
-                            await rachisMergedCommand.Tcs.Task;
+                while (rachisMergedCommand.Tcs.Task.IsCompleted == false)
+                {
+                    var lockTaken = false;
+                    try
+                    {
+                        var waitAsync = _waitForCommit.WaitAsync(timeout);
+                        Monitor.TryEnter(_commandsQueue, ref lockTaken);
+                        if (lockTaken)
+                        {
+                            EmptyQueue();
+                        }
+                        else
+                        {
+                            if (await waitAsync == false)
+                            {
+                                if (rachisMergedCommand.Consumed.Raise())
+                                    throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
+
+                                // if the command is already dequeued we must let it continue to keep its context valid.
+                                await rachisMergedCommand.Tcs.Task;
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        if (lockTaken)
+                        {
+                            Monitor.Exit(_commandsQueue);
+                            _waitForCommit.SetAndResetAtomically();
                         }
                     }
                 }
-                finally
-                {
-                    if (lockTaken)
-                    {
-                        Monitor.Exit(_commandsQueue);
-                        _waitForCommit.SetAndResetAtomically();
-                    }
-                }
+
+                var inner = await rachisMergedCommand.Tcs.Task;
+                if (await inner.WaitWithTimeout(timeout) == false)
+                    throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
+
+                var result = await inner;
+                return blittableResultWriter == null ? result : (result.Index, blittableResultWriter.Result);
             }
-
-            var inner = await rachisMergedCommand.Tcs.Task;
-            if (await inner.WaitWithTimeout(timeout) == false)
-                throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
-
-            var result = await inner;
-            return blittableResultWriter == null ? result : (result.Index, blittableResultWriter.Result);
         }
 
         private void EmptyQueue()
@@ -744,7 +752,6 @@ namespace Raven.Server.Rachis
             var tasks = new List<Task<(long, object)>>();
             const string leaderDisposedMessage = "We are no longer the leader, this leader is disposed";
             var lostLeadershipException = new NotLeadingException(leaderDisposedMessage);
-
             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 try
@@ -769,7 +776,7 @@ namespace Raven.Server.Rachis
                             }
 
                             list.Add(cmd.Tcs);
-                            _engine.InvokeBeforeAppendToRaftLog(context, cmd.Command);
+                            _engine.InvokeBeforeAppendToRaftLog(context, cmd);
 
                             if (_engine.LogHistory.HasHistoryLog(context, cmd.Command.UniqueRequestId, out var index, out var result, out var exception))
                             {
@@ -805,9 +812,7 @@ namespace Raven.Server.Rachis
                             }
                             else
                             {
-                                var djv = cmd.Command.ToJson(context);
-                                var cmdJson = context.ReadObject(djv, "raft/command");
-                                index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
+                                index = _engine.InsertToLeaderLog(context, Term, cmd.CommandAsJson, RachisEntryFlags.StateMachineCommand);
                             }
 
                             if (_entries.TryGetValue(index, out var state) == false)
