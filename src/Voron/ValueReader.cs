@@ -18,6 +18,7 @@ namespace Voron
         }
 
         private int _pos = 0;
+        private readonly int _len = len;
 
         public byte* Base { get; } = val;
 
@@ -31,7 +32,7 @@ namespace Voron
 
         public Stream AsStream()
         {
-            return new UnmanagedMemoryStream(Base, len, len, FileAccess.Read);
+            return new UnmanagedMemoryStream(Base, _len, _len, FileAccess.Read);
         }
 
         public int Read(byte[] buffer, int offset, int count)
@@ -47,7 +48,7 @@ namespace Voron
 
         public int Read(byte* buffer, int count)
         {
-            count = Math.Min(count, len - _pos);
+            count = Math.Min(count, _len - _pos);
             if (count <= 0)
                 return 0;
             Memory.Copy(buffer, Base + _pos, count);
@@ -58,7 +59,7 @@ namespace Voron
 
         public int ReadLittleEndianInt32()
         {
-            if (len - _pos < sizeof (int))
+            if (_len - _pos < sizeof (int))
                 throw new EndOfStreamException();
             var val = *(int*) (Base + _pos);
 
@@ -70,7 +71,7 @@ namespace Voron
         public T ReadStructure<T>()
             where T : unmanaged
         {
-            if (len - _pos < sizeof (int))
+            if (_len - _pos < sizeof (int))
                 throw new EndOfStreamException();
             var val = *(T*) (Base + _pos);
 
@@ -83,7 +84,7 @@ namespace Voron
 
         public long ReadLittleEndianInt64()
         {
-            if (len - _pos < sizeof (long))
+            if (_len - _pos < sizeof (long))
                 throw new EndOfStreamException();
             var val = *(long*) (Base + _pos);
 
@@ -94,7 +95,7 @@ namespace Voron
 
         public int ReadBigEndianInt32()
         {
-            if (len - _pos < sizeof (int))
+            if (_len - _pos < sizeof (int))
                 throw new EndOfStreamException();
 
             int val = *(int*) (Base + _pos);
@@ -106,7 +107,7 @@ namespace Voron
 
         public byte ReadByte()
         {
-            if (len - _pos < sizeof(byte))
+            if (_len - _pos < sizeof(byte))
                 throw new EndOfStreamException();
 
             byte val = *(Base + _pos);
@@ -118,7 +119,7 @@ namespace Voron
 
         public long ReadBigEndianInt64()
         {
-            if (len - _pos < sizeof (long))
+            if (_len - _pos < sizeof (long))
                 throw new EndOfStreamException();
             
             var val = *(long*) (Base + _pos);
@@ -144,7 +145,7 @@ namespace Voron
 
         public string ToStringValue()
         {
-            int length = len - _pos;
+            int length = _len - _pos;
             var arraySegment = ReadBytes(length);
             return Encodings.Utf8.GetString(arraySegment.Array, arraySegment.Offset, arraySegment.Count);
         }
@@ -159,7 +160,7 @@ namespace Voron
 
         public ArraySegment<byte> ReadBytes(int length)
         {
-            int size = Math.Min(length, len - _pos);
+            int size = Math.Min(length, _len - _pos);
             var buffer = EnsureTempBuffer(length);
             var used = Read(buffer, 0, size);
             return new ArraySegment<byte>(buffer, 0, used);
@@ -192,15 +193,15 @@ namespace Voron
 
         public ByteStringContext.InternalScope AsSlice(ByteStringContext context, out Slice str)
         {
-            if (len >= ushort.MaxValue)
-                throw new InvalidOperationException("Cannot convert to slice, len is too big: " + len);
+            if (_len >= ushort.MaxValue)
+                throw new InvalidOperationException("Cannot convert to slice, len is too big: " + _len);
 
-            return Slice.From(context, Base, len, out str);
+            return Slice.From(context, Base, _len, out str);
         }
 
         public Span<byte> AsSpan()
         {
-            return new Span<byte>(Base, len);
+            return new Span<byte>(Base, _len);
         }
     }
 }

@@ -55,14 +55,16 @@ namespace Sparrow
 
             uint matches;
 
+            int N = Vector256<byte>.Count;
+
             // PERF: The alignment unit will be decided in terms of the total size, because we can use the exact same code
             // for a length smaller than a vector or to force alignment to a certain memory boundary. This will cause some
             // multi-modal behavior to appear (specially close to the vector size) because we will become dependent on
             // the input. The biggest gains will be seen when the compares are several times bigger than the vector size,
             // where the aligned memory access (no penalty) will dominate the runtime. So this formula will calculate how
             // many bytes are required to get to an aligned pointer.
-            nuint alignmentUnit = length >= (nuint)Vector256<byte>.Count ? (nuint)(Vector256<byte>.Count - (long)bpx % Vector256<byte>.Count) : length;
-            if ((alignmentUnit & (nuint)(Vector256<byte>.Count - 1)) == 0 || length is >= 32 and <= 512)
+            nuint alignmentUnit = length >= (nuint)N ? (nuint)(N - (long)bpx % N) : length;
+            if ((alignmentUnit & (nuint)(N - 1)) == 0 || length is >= 32 and <= 512)
                 goto ProcessAligned;
 
             // Check if we are completely aligned, in that case just skip everything and go straight to the
@@ -94,7 +96,7 @@ namespace Sparrow
                 goto Equals;
 
             // PERF: From now on, at least 1 of the two memory sites will be 4 bytes aligned. Improving the chances to
-            // hit a 16 bytes (128-bits alignment) and also give us access to performed a single masked load to ensure
+            // hit 16 bytes (128-bits alignment) and also give us access to perform a single masked load to ensure
             // 128-bits alignment. The reason why we want that is because natural alignment can impact the L1 data cache
             // latency. 
 
@@ -106,7 +108,7 @@ namespace Sparrow
 
             // Now we know we are 4 bytes aligned. So now we can actually use this knowledge to perform a masked load
             // of the leftovers to achieve 32 bytes alignment. In the case that we are smaller, this will just find the
-            // difference and we will jump to difference. Masked loads and stores will not cause memory access violations
+            // difference, and we will jump to difference. Masked loads and stores will not cause memory access violations
             // because no memory access happens per presentation from Intel.
             // https://llvm.org/devmtg/2015-04/slides/MaskedIntrinsics.pdf
 
@@ -131,7 +133,7 @@ namespace Sparrow
             bpx += alignmentUnit & unchecked((nuint)~3);
 
         ProcessAligned:
-            byte* loopEnd = bpxEnd - (nuint)Vector256<byte>.Count;
+            byte* loopEnd = bpxEnd - (nuint)N;
             while (bpx <= loopEnd)
             {
                 matches = (uint)Avx2.MoveMask(
@@ -148,13 +150,13 @@ namespace Sparrow
                 if (matches == uint.MaxValue)
                 {
                     // All matched
-                    bpx += (nuint)Vector256<byte>.Count;
+                    bpx += (nuint)N;
                     continue;
                 }
                 goto Difference;
             }
 
-            // If can happen that we are done so we can avoid the last unaligned access. 
+            // If it can happen that we are done, we can avoid the last unaligned access. 
             if (bpx == bpxEnd)
                 goto Equals;
 
@@ -737,8 +739,9 @@ namespace Sparrow
             }
 
             return new ReadOnlySpan<byte>(p1, size).SequenceCompareTo(new ReadOnlySpan<byte>(p2, size));
-#endif
+#else
             return CompareInlineNet6OorLesser(p1, p2, size);
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
