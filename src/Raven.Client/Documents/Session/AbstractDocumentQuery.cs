@@ -223,11 +223,7 @@ namespace Raven.Client.Documents.Session
             DefaultOperator = @operator;
         }
 
-        /// <summary>
-        ///   Instruct the query to wait for non stale results.
-        ///   This shouldn't be used outside of unit tests unless you are well aware of the implications
-        /// </summary>
-        /// <param name = "waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown. Default: 15 seconds.</param>
+        /// <inheritdoc cref="IDocumentQueryCustomization.WaitForNonStaleResults" />
         public void WaitForNonStaleResults(TimeSpan? waitTimeout = null)
         {
             if (TheWaitForNonStaleResults)
