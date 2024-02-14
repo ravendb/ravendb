@@ -262,7 +262,7 @@ namespace Raven.Server.Documents.Handlers
             using (Database.ClusterTransactionWaiter.CreateTask(id: options.TaskId, out var tcs))
             await using (token.Register(() => tcs.TrySetCanceled()))
             {
-                (index, object result) = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
+                (index, object result) = await ServerStore.SendToLeaderAsync(clusterTransactionCommand, token);
                 array = await GetClusterTransactionDatabaseCommandsResults(result, clusterTransactionCommand.DatabaseCommandsCount, index, options, onDatabaseCompletionTask: tcs.Task, token);
             }
 
