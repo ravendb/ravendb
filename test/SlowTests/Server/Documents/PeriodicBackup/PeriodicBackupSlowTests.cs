@@ -2985,6 +2985,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(database);
                 database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = new TaskCompletionSource<object>();
 
+                WaitForValue(() =>
+                    {
+                        var now = DateTime.Now;
+                        return now.Minute % 2 == 0 && now.Second <= 10;
+                    },
+                    expectedVal: true,
+                    timeout: (int)TimeSpan.FromMinutes(2).TotalMilliseconds,
+                    interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds
+                );
+
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: fullBackupFrequency);
                 var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
 

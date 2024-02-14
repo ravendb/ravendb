@@ -104,6 +104,16 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
             return clusterTxResult.GeneratedResult;
         }
 
+        // leader isn't updated (thats why the result is empty),
+        // so we'll try to take the result from the local history log.
+        await RequestHandler.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, token);
+        using (RequestHandler.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+        using (ctx.OpenReadTransaction())
+        {
+            if (RequestHandler.ServerStore.Engine.LogHistory.TryGetResultByGuid<ClusterTransactionResult>(ctx, options.TaskId, out var clusterTxLocalResult))
+                return clusterTxLocalResult.GeneratedResult;
+        }
+
         throw new InvalidOperationException(
             "Cluster-transaction was succeeded, but Leader is outdated and its results are inaccessible (the command has been already deleted from the history log).  We recommend you to update all nodes in the cluster to the last stable version.");
     }
