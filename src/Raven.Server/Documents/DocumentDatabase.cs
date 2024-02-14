@@ -672,9 +672,9 @@ namespace Raven.Server.Documents
             catch (Exception e)
             {
                 // nothing we can do
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsOperationsEnabled)
                 {
-                    _logger.Info($"Failed to notify about transaction completion for database '{Name}'.", e);
+                    _logger.Operations($"Failed to notify about transaction completion for database '{Name}'.", e);
                 }
             }
         }

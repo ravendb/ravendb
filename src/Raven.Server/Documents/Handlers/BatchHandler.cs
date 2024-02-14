@@ -250,7 +250,12 @@ namespace Raven.Server.Documents.Handlers
                 };
 
 
-            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology, command.ParsedCommands, options, raftRequestId);
+            var clusterTransactionCommand =
+                new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology, command.ParsedCommands, options, raftRequestId)
+                {
+                    Timeout = Timeout.InfiniteTimeSpan // we rely on the http token to cancel the command
+                };
+
             DynamicJsonArray array;
             long index;
 
@@ -302,7 +307,7 @@ namespace Raven.Server.Documents.Handlers
 
             // leader isn't updated (thats why the result is empty),
             // so we'll try to take the result from the local history log.
-            await ServerStore.Engine.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, token);
+            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, Timeout.InfiniteTimeSpan, token);
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
