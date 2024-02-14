@@ -694,11 +694,10 @@ namespace Raven.Server.Documents.Handlers
 
                     if (commands != null)
                     {
-                        foreach (BlittableJsonReaderObject blittableCommand in commands)
+                        foreach (var cmd in commands)
                         {
                             count++;
                             var changeVector = ChangeVectorUtils.GetClusterWideChangeVector(Database.DatabaseGroupId, count, options.DisableAtomicDocumentWrites == false, command.Index, Database.ClusterTransactionId);
-                            var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
 
                             switch (cmd.Type)
                             {
@@ -717,10 +716,10 @@ namespace Raven.Server.Documents.Handlers
                                             }
                                         }
 
-                                        var document = cmd.Document.Clone(context);
-                                        var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, document, changeVector: changeVector,
+                                        //var document = cmd.Document.Clone(context);
+                                        var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document, changeVector: changeVector,
                                             flags: DocumentFlags.FromClusterTransaction);
-                                        context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, document.Size);
+                                        context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
                                         AddPutResult(putResult);
                                     }
                                     else
