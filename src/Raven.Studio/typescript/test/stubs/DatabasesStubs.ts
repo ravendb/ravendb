@@ -776,4 +776,8 @@ return docs[0];`,
             ],
         };
     }
+
+    static generateSecret(): string {
+        return "01K5U7yPCyZexoQr+Dx7hyEbJm/reIbSfDhP/PELUDo=";
+    }
 }

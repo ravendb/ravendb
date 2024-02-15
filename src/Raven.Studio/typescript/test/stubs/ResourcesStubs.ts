@@ -40,7 +40,7 @@ export class ResourcesStubs {
 
     static folderPathOptions_ServerLocal(): Raven.Server.Web.Studio.FolderPathOptions {
         return {
-            List: ["/bin", "/boot", "/data", "/dev", "/etc"],
+            List: ["/backup_test", "/other"],
         };
     }
 
@@ -59,30 +59,30 @@ export class ResourcesStubs {
                     DatabaseName: "db1",
                     NodeTag: "C",
                 },
-                // {
-                //     DateTime: "2024-01-02T13:24:21.1651104",
-                //     Location: "C:\\backup_test\\2024-01-02-13-24-21-1477372.ravendb-d2-C-backup",
-                //     FileName:
-                //         "C:\\backup_test\\2024-01-02-13-24-21-1477372.ravendb-d2-C-backup\\2024-01-02-13-24-21-1477372.ravendb-full-backup",
-                //     IsSnapshotRestore: true,
-                //     IsEncrypted: true,
-                //     IsIncremental: false,
-                //     FilesToRestore: 1,
-                //     DatabaseName: "d2",
-                //     NodeTag: "C",
-                // },
-                // {
-                //     DateTime: "2024-01-02T13:21:06.7835361",
-                //     Location: "C:\\backup_test\\2024-01-02-13-21-06-2303869.ravendb-db1-A-backup",
-                //     FileName:
-                //         "C:\\backup_test\\2024-01-02-13-21-06-2303869.ravendb-db1-A-backup\\2024-01-02-13-21-06-2303869.ravendb-full-backup",
-                //     IsSnapshotRestore: false,
-                //     IsEncrypted: false,
-                //     IsIncremental: true,
-                //     FilesToRestore: 1,
-                //     DatabaseName: "db1",
-                //     NodeTag: "A",
-                // },
+                {
+                    DateTime: "2024-01-02T13:24:21.1651104",
+                    Location: "C:\\backup_test\\2024-01-02-13-24-21-1477372.ravendb-d2-C-backup",
+                    FileName:
+                        "C:\\backup_test\\2024-01-02-13-24-21-1477372.ravendb-d2-C-backup\\2024-01-02-13-24-21-1477372.ravendb-full-backup",
+                    IsSnapshotRestore: true,
+                    IsEncrypted: true,
+                    IsIncremental: false,
+                    FilesToRestore: 1,
+                    DatabaseName: "d2",
+                    NodeTag: "C",
+                },
+                {
+                    DateTime: "2024-01-02T13:21:06.7835361",
+                    Location: "C:\\backup_test\\2024-01-02-13-21-06-2303869.ravendb-db1-A-backup",
+                    FileName:
+                        "C:\\backup_test\\2024-01-02-13-21-06-2303869.ravendb-db1-A-backup\\2024-01-02-13-21-06-2303869.ravendb-full-backup",
+                    IsSnapshotRestore: false,
+                    IsEncrypted: false,
+                    IsIncremental: true,
+                    FilesToRestore: 1,
+                    DatabaseName: "db1",
+                    NodeTag: "A",
+                },
             ],
         };
     }
