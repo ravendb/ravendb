@@ -32,7 +32,7 @@ namespace Raven.Server.Web.System
         public async Task Databases()
         {
             using (var processor = new DatabasesHandlerProcessorForGet(this))
-                await processor.ExecuteAsync();
+                await processor.ExecuteAsync().ConfigureAwait(false);
         }
 
         [RavenAction("/admin/databases/topology/modify", "POST", AuthorizationStatus.Operator)]

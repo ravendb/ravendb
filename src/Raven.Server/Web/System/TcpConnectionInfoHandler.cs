@@ -38,7 +38,8 @@ namespace Raven.Server.Web.System
             var databaseGroupId = GetStringQueryString("groupId");
             var remoteTask = GetStringQueryString("remote-task");
 
-            if (await AuthenticateAsync(HttpContext, ServerStore, database, remoteTask) == false)
+            var authResult = await AuthenticateAsync(HttpContext, ServerStore, database, remoteTask).ConfigureAwait(false);
+            if (authResult == false)
                 return;
 
             List<string> nodes;
@@ -97,7 +98,8 @@ namespace Raven.Server.Web.System
                 }
             }
 
-            if (await AuthenticateAsync(HttpContext, ServerStore, database, remoteTask) == false)
+            var authResult = await AuthenticateAsync(HttpContext, ServerStore, database, remoteTask).ConfigureAwait(false);
+            if (authResult == false)
                 return;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -127,11 +129,13 @@ namespace Raven.Server.Web.System
                     if (feature.CanAccess(database, requireAdmin: false, requireWrite: false))
                         return true;
 
-                    await RequestRouter.UnlikelyFailAuthorizationAsync(httpContext, database, feature, AuthorizationStatus.RestrictedAccess);
+                    await RequestRouter.UnlikelyFailAuthorizationAsync(httpContext, database, feature, AuthorizationStatus.RestrictedAccess)
+                                       .ConfigureAwait(false);
                     return false;
 
                 case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
-                    await RequestRouter.UnlikelyFailAuthorizationAsync(httpContext, database, feature, AuthorizationStatus.RestrictedAccess);
+                    await RequestRouter.UnlikelyFailAuthorizationAsync(httpContext, database, feature, AuthorizationStatus.RestrictedAccess)
+                                       .ConfigureAwait(false);
                     return false;
 
                 case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
@@ -149,7 +153,8 @@ namespace Raven.Server.Web.System
                                 return true;
                         }
 
-                        await RequestRouter.UnlikelyFailAuthorizationAsync(httpContext, database, feature, AuthorizationStatus.RestrictedAccess);
+                        await RequestRouter.UnlikelyFailAuthorizationAsync(httpContext, database, feature, AuthorizationStatus.RestrictedAccess)
+                                           .ConfigureAwait(false);
                         return false;
                     }
 

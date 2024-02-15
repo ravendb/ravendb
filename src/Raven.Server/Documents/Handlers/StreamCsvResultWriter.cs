@@ -82,10 +82,10 @@ namespace Raven.Server.Documents.Handlers
         public async ValueTask DisposeAsync()
         {
             if (_csvWriter != null)
-                await _csvWriter.DisposeAsync();
+                await _csvWriter.DisposeAsync().ConfigureAwait(false);
 
             if (_writer != null)
-                await _writer.DisposeAsync();
+                await _writer.DisposeAsync().ConfigureAwait(false);
         }
 
         public void StartResponse()
@@ -151,12 +151,12 @@ namespace Raven.Server.Documents.Handlers
 
         public async ValueTask WriteErrorAsync(Exception e)
         {
-            await _writer.WriteLineAsync(e.ToString());
+            await _writer.WriteLineAsync(e.ToString()).ConfigureAwait(false);
         }
 
         public async ValueTask WriteErrorAsync(string error)
         {
-            await _writer.WriteLineAsync(error);
+            await _writer.WriteLineAsync(error).ConfigureAwait(false);
         }
 
         public void WriteQueryStatistics(long resultEtag, bool isStale, string indexName, long totalResults, DateTime timestamp)

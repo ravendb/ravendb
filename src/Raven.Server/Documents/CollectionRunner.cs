@@ -141,7 +141,7 @@ namespace Raven.Server.Documents
                             maxTransactionSize: 16 * Voron.Global.Constants.Size.Megabyte,
                             batchSize: OperationBatchSize);
 
-                        await Database.TxMerger.Enqueue(command);
+                        await Database.TxMerger.Enqueue(command).ConfigureAwait(false);
 
                         progress.Processed += command.Processed;
 

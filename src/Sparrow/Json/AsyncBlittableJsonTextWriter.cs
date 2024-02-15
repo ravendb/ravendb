@@ -17,6 +17,13 @@ namespace Sparrow.Json
             _cancellationToken = cancellationToken;
         }
 
+
+        public static ConfiguredAsyncDisposable Create(JsonOperationContext context, Stream stream, out AsyncBlittableJsonTextWriter writer, CancellationToken cancellationToken = default)
+        {
+            writer = new AsyncBlittableJsonTextWriter(context, stream, cancellationToken);
+            return writer.ConfigureAwait(false);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<int> MaybeOuterFlushAsync()
         {

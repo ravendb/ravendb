@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Queries
             }
 
             Writer.WriteObject(res);
-            await Writer.MaybeFlushAsync(token);
+            await Writer.MaybeFlushAsync(token).ConfigureAwait(false);
         }
     }
 }

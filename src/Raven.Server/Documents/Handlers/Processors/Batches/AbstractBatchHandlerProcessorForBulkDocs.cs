@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
@@ -68,12 +68,12 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                 if (contentType == null ||
                     contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
                 {
-                    await commandsReader.BuildCommandsAsync(context, RequestHandler.RequestBodyStream(), GetIdentityPartsSeparator(), token.Token);
+                    await commandsReader.BuildCommandsAsync(context, RequestHandler.RequestBodyStream(), GetIdentityPartsSeparator(), token.Token).ConfigureAwait(false);
                 }
                 else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
                          contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                 {
-                    await commandsReader.ParseMultipart(context, RequestHandler.RequestBodyStream(), HttpContext.Request.ContentType, GetIdentityPartsSeparator(), token.Token);
+                    await commandsReader.ParseMultipart(context, RequestHandler.RequestBodyStream(), HttpContext.Request.ContentType, GetIdentityPartsSeparator(), token.Token).ConfigureAwait(false);
                 }
                 else
                     ThrowNotSupportedType(contentType);
@@ -88,16 +88,17 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                 }
             }
 
-            using (var command = await commandsReader.GetCommandAsync(context))
+            using (var command = await commandsReader.GetCommandAsync(context).ConfigureAwait(false))
             {
                 if (command.IsClusterTransaction)
                 {
                     var processor = GetClusterTransactionRequestProcessor();
-                    (long index, DynamicJsonArray clusterResults) = await processor.ProcessAsync(context, command, token.Token);
+                    (long index, DynamicJsonArray clusterResults) = await processor.ProcessAsync(context, command, token.Token)
+                                                                                   .ConfigureAwait(false);
 
                     RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                    await using (AsyncBlittableJsonTextWriter.Create(context, RequestHandler.ResponseBodyStream(), out var writer))
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
@@ -116,21 +117,21 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                 if (noReply.HasValue)
                     command.IncludeReply = noReply.Value == false;
 
-                var results = await HandleTransactionAsync(context, command, indexBatchOptions, replicationBatchOptions);
+                var results = await HandleTransactionAsync(context, command, indexBatchOptions, replicationBatchOptions).ConfigureAwait(false);
 
                 if (replicationBatchOptions != null)
                 {
-                    await WaitForReplicationAsync(context, replicationBatchOptions, command.LastChangeVector);
+                    await WaitForReplicationAsync(context, replicationBatchOptions, command.LastChangeVector).ConfigureAwait(false);
                 }
 
                 if (indexBatchOptions != null)
                 {
-                    await WaitForIndexesAsync(indexBatchOptions, command.LastChangeVector, command.LastTombstoneEtag, command.ModifiedCollections);
+                    await WaitForIndexesAsync(indexBatchOptions, command.LastChangeVector, command.LastTombstoneEtag, command.ModifiedCollections).ConfigureAwait(false);
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                await using (AsyncBlittableJsonTextWriter.Create(context, RequestHandler.ResponseBodyStream(), out var writer))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {

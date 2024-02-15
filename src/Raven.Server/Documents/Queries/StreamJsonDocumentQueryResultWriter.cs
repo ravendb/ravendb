@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Queries
             }
             
             Writer.WriteDocument(Context, res, metadataOnly: false);
-            await Writer.MaybeFlushAsync(token);
+            await Writer.MaybeFlushAsync(token).ConfigureAwait(false);
         }
     }
 }
