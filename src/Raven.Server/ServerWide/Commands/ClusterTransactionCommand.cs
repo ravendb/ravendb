@@ -686,7 +686,7 @@ namespace Raven.Server.ServerWide.Commands
             foreach (BlittableJsonReaderObject blittableCommand in array)
             {
                 var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
-                cmd.Document = cmd.Document.CloneOnTheSameContext(); // we need to get it out of the array
+                cmd.Document = cmd.Document?.CloneOnTheSameContext(); // we need to get it out of the array
                 databaseCommands.Add(cmd);
             }
 
