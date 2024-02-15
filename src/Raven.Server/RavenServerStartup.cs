@@ -262,10 +262,10 @@ namespace Raven.Server
             }
         }
 
-        private static void CheckDatabaseShutdownAndThrowIfNeeded(DocumentDatabase database, ref Exception e)
+        private static void CheckDatabaseShutdownAndThrowIfNeeded(DocumentDatabase database, ref Exception e) 
         {
-            if(database != null && database.DatabaseShutdown.IsCancellationRequested && e is TaskCanceledException)
-                e = new DatabaseDisabledException("The database " + database.Name + " is shutting down");
+            if(e is OperationCanceledException && database != null && database.DatabaseShutdown.IsCancellationRequested)
+                e = new DatabaseDisabledException("The database " + database.Name + " is shutting down", e);
         }
 
         private static void CheckVersionAndWrapException(HttpContext context, ref Exception e)
