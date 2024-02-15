@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using Corax;
+using Corax.Indexing;
 using Corax.Querying;
 using Corax.Mappings;
 using Corax.Querying.Matches;
@@ -551,20 +553,23 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
         //So let's add it directly ;-) When something will change about data structure remember to update this as well.
         public void Init(IndexFieldsMapping mapping, bool hasMultipleValues)
         {
-            if (hasMultipleValues == false)
-                return;
-
             TransactionPersistentContext transactionPersistentContext = new(true);
             using (var transaction = Env.WriteTransaction(transactionPersistentContext))
             {
-                var indexMetadata = transaction.CreateTree(Constants.IndexMetadataSlice);
-                foreach (var binding in mapping)
+                using (var indexWriter = new IndexWriter(transaction, mapping))
                 {
-                    Tree tree = transaction.CreateTree(Constants.IndexWriter.MultipleTermsInField);
+                    const string someValue = "3.14";
                     
-                    tree.Add(binding.FieldName, 1);
-                    tree.Add(binding.FieldNameDouble, 1);
-                    tree.Add(binding.FieldNameLong, 1);
+                    using (var builder = indexWriter.Index("entryKey"))
+                    {
+                        foreach (var field in mapping)
+                        {
+                            builder.Write(field.FieldId, Encoding.UTF8.GetBytes(someValue), 3, 3.14D);
+                            if (hasMultipleValues)
+                                builder.Write(field.FieldId, Encoding.UTF8.GetBytes(someValue), 3, 3.14D);
+                        }
+                    }
+                    indexWriter.Commit();
                 }
 
                 transaction.Commit();

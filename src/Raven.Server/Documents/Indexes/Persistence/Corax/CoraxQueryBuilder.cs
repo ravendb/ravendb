@@ -107,7 +107,7 @@ public static class CoraxQueryBuilder
                     break;
             }
             
-            if (orderMetadata is null
+            if (orderMetadata is null or {Length: 0}
                 || hasSpecialSorter
                 || searcher.HasMultipleTermsInField(orderMetadata[0].Field) 
                 || hasBoosting)
@@ -1305,12 +1305,16 @@ public static class CoraxQueryBuilder
 
                 continue;
             }
-
+            
+            var fieldMetadata = QueryBuilderHelper.GetFieldIdForOrderBy(allocator, field.Name, index, builderParameters.HasDynamics,
+                builderParameters.DynamicFields, indexMapping, queryMapping, false);
+            
+            if (builderParameters.IndexSearcher.GetTermAmountInField(fieldMetadata) == 0)
+                continue;
+            
             if (field.OrderingType == OrderByFieldType.Distance)
             {
                 var spatialField = getSpatialField(field.Name);
-                var fieldMetadata = QueryBuilderHelper.GetFieldIdForOrderBy(allocator, field.Name, index, builderParameters.HasDynamics,
-                    builderParameters.DynamicFields, indexMapping, queryMapping, false);
 
                 int lastArgument;
                 IPoint point;
