@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using CsvHelper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -98,7 +99,7 @@ namespace Raven.Server
         {
             if (RoutesAllowedInUnsafeMode.Contains(context.Request.Path.Value))
             {
-                await RequestHandler(context);
+                await RequestHandler(context).ConfigureAwait(false);
                 return;
             }
 
@@ -107,7 +108,9 @@ namespace Raven.Server
             if (IsHtmlAcceptable(context))
             {
                 context.Response.Headers[Constants.Headers.ContentType] = "text/html; charset=utf-8";
-                await context.Response.WriteAsync(HtmlUtil.RenderUnsafePage());
+
+                await context.Response.WriteAsync(HtmlUtil.RenderUnsafePage())
+                                      .ConfigureAwait(false);
                 return;
             }
 
@@ -131,6 +134,9 @@ namespace Raven.Server
                 }
                 writer.WriteEndArray();
                 writer.WriteEndObject();
+
+                await writer.FlushAsync()
+                            .ConfigureAwait(false);
             }
         }
 
@@ -179,10 +185,12 @@ namespace Raven.Server
                 context.Response.Headers[Constants.Headers.ContentType] = ContentTypeHeaderValue;
 
                 if (_server.ServerStore.Initialized == false)
-                    await _server.ServerStore.InitializationCompleted.WaitAsync();
+                    await _server.ServerStore.InitializationCompleted.WaitAsync()
+                                                                     .ConfigureAwait(false);
 
                 sp = Stopwatch.StartNew();
-                await _router.HandlePath(requestHandlerContext);
+                await _router.HandlePath(requestHandlerContext)
+                             .ConfigureAwait(false);
                 sp.Stop();
             }
             catch (Exception e)

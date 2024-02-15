@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RequestRouter.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -159,7 +159,8 @@ namespace Raven.Server.Routing
                 }
 
 
-                await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus);
+                await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus)
+                            .ConfigureAwait(false);
                 return (false, feature.Status, feature.Certificate?.Thumbprint);
             }
 
@@ -173,7 +174,8 @@ namespace Raven.Server.Routing
 
                 feature.WaitingForTwoFactorAuthentication();
 
-                await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus);
+                await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus)
+                            .ConfigureAwait(false);
 
                 return (false, AuthenticationStatus.TwoFactorAuthFromInvalidLimit, feature.Certificate?.Thumbprint);
             }
@@ -278,7 +280,7 @@ namespace Raven.Server.Routing
             reqCtx.CheckForChanges = tryMatch.Value.CheckForChanges;
 
             var tuple = tryMatch.Value.TryGetHandler(reqCtx);
-            var handler = tuple.Item1 ?? await tuple.Item2;
+            var handler = tuple.Item1 ?? await tuple.Item2.ConfigureAwait(false);
 
             reqCtx.DatabaseMetrics?.Requests.RequestsPerSec.Mark();
             _serverMetrics.Requests.RequestsPerSec.Mark();
@@ -335,7 +337,7 @@ namespace Raven.Server.Routing
                 {
                     if (_ravenServer.Configuration.Security.AuthenticationEnabled && skipAuthorization == false)
                     {
-                        var (authorized, authorizationStatus, thumbprint) = await TryAuthorizeAsync(tryMatch.Value, context, reqCtx.DatabaseName);
+                        var (authorized, authorizationStatus, thumbprint) = await TryAuthorizeAsync(tryMatch.Value, context, reqCtx.DatabaseName).ConfigureAwait(false);
                         status = authorizationStatus;
                         certificateThumbprint = thumbprint;
 
@@ -395,7 +397,7 @@ namespace Raven.Server.Routing
                     if (tryMatch.Value.DisableOnCpuCreditsExhaustion &&
                         _ravenServer.CpuCreditsBalance.FailoverAlertRaised.IsRaised())
                     {
-                        await RejectRequestBecauseOfCpuThresholdAsync(context);
+                        await RejectRequestBecauseOfCpuThresholdAsync(context).ConfigureAwait(false);
                         return;
                     }
 
@@ -405,15 +407,15 @@ namespace Raven.Server.Routing
                             && long.TryParse(value, out var index)
                             && index > reqCtx.Database.RachisLogIndexNotifications.LastModifiedIndex)
                         {
-                            await reqCtx.Database.RachisLogIndexNotifications.WaitForIndexNotification(index, context.RequestAborted);
+                            await reqCtx.Database.RachisLogIndexNotifications.WaitForIndexNotification(index, context.RequestAborted).ConfigureAwait(false);
                         }
 
-                        await handler(reqCtx);
+                        await handler(reqCtx).ConfigureAwait(false);
                     }
                 }
                 else
                 {
-                    await handler(reqCtx);
+                    await handler(reqCtx).ConfigureAwait(false);
                 }
             }
             finally
@@ -432,7 +434,7 @@ namespace Raven.Server.Routing
                 var requestBody = context.Request.Body;
                 while (true)
                 {
-                    var read = await requestBody.ReadAsync(buffer.Memory.Memory);
+                    var read = await requestBody.ReadAsync(buffer.Memory.Memory).ConfigureAwait(false);
                     if (read == 0)
                         break;
                 }
@@ -532,7 +534,7 @@ namespace Raven.Server.Routing
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             await using (var writer = new AsyncBlittableJsonTextWriter(ctx, context.Response.Body))
             {
-                await DrainRequestAsync(ctx, context);
+                await DrainRequestAsync(ctx, context).ConfigureAwait(false);
 
                 if (RavenServerStartup.IsHtmlAcceptable(context))
                 {

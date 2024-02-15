@@ -1155,7 +1155,8 @@ namespace Raven.Server
                         // to nudge all the nodes in the cluster to check the replacement state.
                         // If a node confirmed but failed with the actual replacement (e.g. file permissions)
                         // this will make sure it will try again in the next round (1 hour).
-                        await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateCommand());
+                        await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateCommand())
+                            .ConfigureAwait(false);
                         return null;
                     }
 
@@ -1166,7 +1167,8 @@ namespace Raven.Server
                     {
                         // This is for the case where all nodes confirmed they received the replacement cert but
                         // not all nodes have made the actual change yet.
-                        await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateReplacementCommand());
+                        await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateReplacementCommand())
+                                         .ConfigureAwait(false);
                     }
 
                     return null;
@@ -2007,7 +2009,7 @@ namespace Raven.Server
         {
             Task.Factory.StartNew(async () =>
             {
-                var tcpClient = await AcceptTcpClientAsync(listener);
+                var tcpClient = await AcceptTcpClientAsync(listener).ConfigureAwait(false);
                 if (tcpClient == null)
                     return;
 
@@ -2015,7 +2017,8 @@ namespace Raven.Server
                 ListenToNewTcpConnection(listener);
 
                 if (ServerStore.Initialized == false)
-                    await ServerStore.InitializationCompleted.WaitAsync();
+                    await ServerStore.InitializationCompleted.WaitAsync()
+                                                             .ConfigureAwait(false);
 
                 EndPoint remoteEndPoint = null;
                 X509Certificate2 cert = null;
@@ -2036,7 +2039,7 @@ namespace Raven.Server
                     tcpClient.ReceiveTimeout = tcpClient.SendTimeout = sendTimeout;
 
                     Stream stream = tcpClient.GetStream();
-                    (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream);
+                    (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream).ConfigureAwait(false);
 
                     if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInListenToNewTcpConnection)
                         throw new Exception("Simulated TCP failure.");
@@ -2057,7 +2060,7 @@ namespace Raven.Server
                             if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInTrafficWatchTcp)
                                 throw new Exception("Simulated TCP failure.");
 
-                            header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
+                            header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp).ConfigureAwait(false);
 
                             if (ShouldUseDataCompression(header))
                             {
@@ -2065,7 +2068,7 @@ namespace Raven.Server
                                 tcp.Stream = stream;
                             }
 
-                            await DispatchTcpConnection(header, tcp, buffer, cert);
+                            await DispatchTcpConnection(header, tcp, buffer, cert).ConfigureAwait(false);
 
                             if (TrafficWatchManager.HasRegisteredClients)
                                 DispatchTcpMessageToTrafficWatch(remoteEndPoint, header, cert);
@@ -2078,7 +2081,7 @@ namespace Raven.Server
                             if (_tcpLogger.IsInfoEnabled)
                                 _tcpLogger.Info("Failed to process TCP connection run", e);
 
-                            await SendErrorIfPossible(tcp, e);
+                            await SendErrorIfPossible(tcp, e).ConfigureAwait(false);
                             try
                             {
                                 tcp?.Dispose();
@@ -2127,13 +2130,13 @@ namespace Raven.Server
                 return;
             }
 
-            if (await DispatchServerWideTcpConnection(tcp, header, buffer))
+            if (await DispatchServerWideTcpConnection(tcp, header, buffer).ConfigureAwait(false))
             {
                 tcp = null; //do not keep reference -> tcp will be disposed by server-wide connection handlers
                 return;
             }
 
-            await DispatchDatabaseTcpConnection(tcp, header, buffer, certificate);
+            await DispatchDatabaseTcpConnection(tcp, header, buffer, certificate).ConfigureAwait(false);
         }
 
         private async Task<TcpConnectionHeaderMessage> NegotiateOperationVersion(
@@ -2162,8 +2165,7 @@ namespace Raven.Server
                         // we don't want to allow external (and anonymous) users to send us unlimited data
                         // a maximum of 2 KB for the header is big enough to include any valid header that
                         // we can currently think of
-                        maxSize: 1024 * 2
-                    ))
+                        maxSize: 1024 * 2).ConfigureAwait(false))
                     {
                         if (count++ > maxRetries)
                         {
@@ -2221,8 +2223,7 @@ namespace Raven.Server
                             $"Didn't agree on {header.Operation} protocol version: {header.OperationVersion} will request to use version: {supported}.");
                     }
 
-                    await RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch,
-                        supported);
+                    await RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch, supported).ConfigureAwait(false);
                 }
 
                 bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, tcpClient, out var err, out TcpConnectionStatus statusResult);
@@ -2236,7 +2237,7 @@ namespace Raven.Server
 
                 await RespondToTcpConnection(stream, context, err,
                     authSuccessful ? TcpConnectionStatus.Ok : statusResult,
-                    supported, licensedFeatures: header.LicensedFeatures);
+                    supported, licensedFeatures: header.LicensedFeatures).ConfigureAwait(false);
 
                 tcp.ProtocolVersion = supported;
 
@@ -2276,7 +2277,7 @@ namespace Raven.Server
             {
                 try
                 {
-                    return await listener.AcceptTcpClientAsync();
+                    return await listener.AcceptTcpClientAsync().ConfigureAwait(false);
                 }
                 catch (ObjectDisposedException)
                 {
@@ -2306,7 +2307,7 @@ namespace Raven.Server
 
                     try
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(backoffSecondsDelay), ServerStore.ServerShutdown);
+                        await Task.Delay(TimeSpan.FromSeconds(backoffSecondsDelay), ServerStore.ServerShutdown).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException)
                     {
@@ -2382,6 +2383,8 @@ namespace Raven.Server
                         ["Exception"] = e.ToString(),
                         ["Message"] = e.Message
                     });
+                    
+                    await errorWriter.FlushAsync().ConfigureAwait(false);
                 }
 
             }
@@ -2426,7 +2429,8 @@ namespace Raven.Server
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
             {
                 var tcpClient = tcp.TcpClient.Client;
-                await ServerStore.ClusterAcceptNewConnectionAsync(tcp, header, tcp.Dispose, tcpClient.RemoteEndPoint);
+                await ServerStore.ClusterAcceptNewConnectionAsync(tcp, header, tcp.Dispose, tcpClient.RemoteEndPoint)
+                                 .ConfigureAwait(false);
                 return true;
             }
 
@@ -2439,7 +2443,7 @@ namespace Raven.Server
                     "maintenance-heartbeat-header",
                     BlittableJsonDocumentBuilder.UsageMode.None,
                     buffer
-                ))
+                ).ConfigureAwait(false))
                 {
                     var maintenanceHeader = JsonDeserializationRachis<ClusterMaintenanceSupervisor.ClusterMaintenanceConnectionHeader>.Deserialize(headerJson);
 

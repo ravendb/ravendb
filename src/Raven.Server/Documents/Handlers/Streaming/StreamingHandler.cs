@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
         public async Task StreamDocsGet()
         {
             using (var processor = new StreamingHandlerProcessorForGetDocs(this))
-                await processor.ExecuteAsync();
+                await processor.ExecuteAsync().ConfigureAwait(false);
         }
 
         [RavenAction("/databases/*/streams/timeseries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
         {
             using (var processor = new StreamingHandlerProcessorForGetTimeSeries(this))
             {
-                await processor.ExecuteAsync();
+                await processor.ExecuteAsync().ConfigureAwait(false);
             }
         }
 
@@ -33,14 +33,14 @@ namespace Raven.Server.Documents.Handlers.Streaming
         public async Task StreamQueryGet()
         {
             using (var processor = new StreamingHandlerProcessorForGetStreamQuery(this, HttpMethod.Get))
-                await processor.ExecuteAsync();
+                await processor.ExecuteAsync().ConfigureAwait(false);
         }
 
         [RavenAction("/databases/*/streams/queries", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task StreamQueryPost()
         {
             using (var processor = new StreamingHandlerProcessorForGetStreamQuery(this, HttpMethod.Post))
-                await processor.ExecuteAsync();
+                await processor.ExecuteAsync().ConfigureAwait(false);
         }
     }
 }

@@ -28,12 +28,12 @@ namespace Raven.Server.Platform.Posix
             if (PlatformDetails.RunningOnPosix == false)
                 throw new InvalidOperationException("Cannot read Current Limits because it requires POSIX");
 
-            if (await _lock.WaitAsync(0) == false)
+            if (await _lock.WaitAsync(0).ConfigureAwait(false) == false)
                 return LimitsInfo.Current;
 
             try
             {
-                LimitsInfo.Current.MapCountCurrent = await GetCurrentMapCountAsync();
+                LimitsInfo.Current.MapCountCurrent = await GetCurrentMapCountAsync().ConfigureAwait(false);
                 LimitsInfo.Current.ThreadsCurrent = GetCurrentThreadsCount();
                 LimitsInfo.Current.SetValues();
             }
@@ -107,7 +107,8 @@ namespace Raven.Server.Platform.Posix
             long currentMapCount;
             await using (FileStream stream = File.OpenRead(CurrentMapCountFilePath))
             {
-                currentMapCount = await GetEolCountAsync(stream);
+                currentMapCount = await GetEolCountAsync(stream).ConfigureAwait(false);
+                ;
             }
 
             return currentMapCount;
@@ -119,7 +120,8 @@ namespace Raven.Server.Platform.Posix
             long eolCount = 0L;
             while (true)
             {
-                var result = await reader.ReadAsync();
+                var result = await reader.ReadAsync().ConfigureAwait(false);
+                ;
                 var buffer = result.Buffer;
 
                 while (TryReadLine(ref buffer))

@@ -383,8 +383,10 @@ namespace Raven.Server
         {
             try
             {
-                var response = await LicenseManager.GetUpdatedLicenseResponseMessage(license, contextPool);
-                var leasedLicense = await LicenseManager.ConvertResponseToLeasedLicense(response);
+                var response = await LicenseManager.GetUpdatedLicenseResponseMessage(license, contextPool)
+                                                   .ConfigureAwait(false);
+                var leasedLicense = await LicenseManager.ConvertResponseToLeasedLicense(response)
+                                                        .ConfigureAwait(false);
                 return leasedLicense.License;
             }
             catch

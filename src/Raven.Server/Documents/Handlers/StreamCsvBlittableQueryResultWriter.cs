@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers
                 GetCsvWriter().WriteField(o?.ToString());
             }
 
-            await GetCsvWriter().NextRecordAsync();
+            await GetCsvWriter().NextRecordAsync().ConfigureAwait(false);
         }
 
         public StreamCsvBlittableQueryResultWriter(HttpResponse response, Stream stream, string[] properties = null,

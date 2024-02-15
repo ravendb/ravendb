@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.TransactionMerger
 
             try
             {
-                await cmd.TaskCompletionSource.Task;
+                await cmd.TaskCompletionSource.Task.ConfigureAwait(false);
             }
             finally
             {
