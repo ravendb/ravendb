@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -7,6 +8,9 @@ namespace Raven.Server.Documents.Sharding
 {
     public static class ShardLocator
     {
+        public static Dictionary<int, IdsByShard<string>> GetDocumentIdsByShards(TransactionOperationContext context, ShardedDatabaseContext databaseContext, IEnumerable<ReadOnlyMemory<char>> ids) =>
+            GetDocumentIdsByShardsGeneric(context, databaseContext, ConvertToStringEnumerable(ids));
+
         public static Dictionary<int, IdsByShard<string>> GetDocumentIdsByShards(TransactionOperationContext context, ShardedDatabaseContext databaseContext, IEnumerable<string> ids) =>
             GetDocumentIdsByShardsGeneric(context, databaseContext, ids);
 
@@ -68,6 +72,12 @@ namespace Raven.Server.Documents.Sharding
                 Ids.Add(id);
                 Positions.Add(position);
             }
+        }
+
+        private static IEnumerable<string> ConvertToStringEnumerable(IEnumerable<ReadOnlyMemory<char>> items)
+        {
+            foreach (var item in items)
+                yield return item.ToString();
         }
     }
 }

@@ -514,6 +514,11 @@ namespace Raven.Server.ServerWide.Commands
             return Constants.CompareExchange.RvnAtomicPrefix + docId;
         }
 
+        public static string GetAtomicGuardKey(ReadOnlyMemory<char> docId)
+        {
+            return Constants.CompareExchange.RvnAtomicPrefix + docId;
+        }
+
         private struct CommandsPerShard
         {
             private readonly RawDatabaseRecord _record;

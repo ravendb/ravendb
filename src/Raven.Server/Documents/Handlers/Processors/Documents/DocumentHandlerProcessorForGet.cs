@@ -31,8 +31,17 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
 
     protected override CancellationToken CancellationToken => RequestHandler.Database.DatabaseShutdown;
 
-    protected override ValueTask<DocumentsByIdResult<Document>> GetDocumentsByIdImplAsync(DocumentsOperationContext context, StringValues ids, StringValues includePaths,
-        RevisionIncludeField revisions, StringValues counters, HashSet<AbstractTimeSeriesRange> timeSeries, StringValues compareExchangeValues, bool metadataOnly, bool clusterWideTx, string etag)
+    protected override ValueTask<DocumentsByIdResult<Document>> GetDocumentsByIdImplAsync(
+        DocumentsOperationContext context,
+        List<ReadOnlyMemory<char>> ids,
+        StringValues includePaths,
+        RevisionIncludeField revisions,
+        StringValues counters,
+        HashSet<AbstractTimeSeriesRange> timeSeries,
+        StringValues compareExchangeValues,
+        bool metadataOnly,
+        bool clusterWideTx,
+        string etag)
     {
         var documents = new List<Document>(ids.Count);
         var includes = new List<Document>(includePaths.Count * ids.Count);
@@ -70,7 +79,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         {
             Document document = null;
 
-            if (string.IsNullOrEmpty(id) == false)
+            if (id.IsEmpty == false)
             {
                 document = RequestHandler.Database.DocumentsStorage.Get(context, id);
             }
