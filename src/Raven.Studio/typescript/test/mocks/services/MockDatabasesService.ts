@@ -128,4 +128,8 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
     withDatabaseRecord(dto?: document) {
         return this.mockResolvedValue(this.mocks.getDatabaseRecord, dto, DatabasesStubs.databaseRecord());
     }
+
+    withGenerateSecret(dto?: string) {
+        return this.mockResolvedValue(this.mocks.generateSecret, dto, DatabasesStubs.generateSecret());
+    }
 }

@@ -4,7 +4,6 @@ import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
-import { ResourcesStubs } from "test/stubs/ResourcesStubs";
 
 export default {
     title: "Pages/Databases/Create Database/Create Database",
@@ -15,13 +14,15 @@ export const DefaultCreateDatabase: StoryObj = {
     name: "Create Database",
     render: () => {
         const { license, accessManager, cluster } = mockStore;
-        const { resourcesService } = mockServices;
+        const { resourcesService, databasesService } = mockServices;
 
-        resourcesService.withValidateNameCommand(ResourcesStubs.invalidValidateName());
+        resourcesService.withValidateNameCommand();
         resourcesService.withDatabaseLocation();
         resourcesService.withValidateNameCommand();
         resourcesService.withFolderPathOptions_ServerLocal();
         resourcesService.withRestorePoints_Local();
+
+        databasesService.withGenerateSecret();
 
         license.with_License({
             HasEncryption: true,
