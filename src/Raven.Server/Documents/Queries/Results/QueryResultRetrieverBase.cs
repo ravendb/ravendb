@@ -71,9 +71,11 @@ namespace Raven.Server.Documents.Queries.Results
 
         private TimeSeriesRetriever _timeSeriesRetriever;
 
+        protected readonly DocumentsOperationContext DocumentContext;
+
         protected QueryResultRetrieverBase(
             DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage,
-            JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand,
+            JsonOperationContext context, DocumentsOperationContext documentContext, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand,
             IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
         {
             _database = database;
@@ -84,6 +86,8 @@ namespace Raven.Server.Documents.Queries.Results
             _includeCompareExchangeValuesCommand = includeCompareExchangeValuesCommand;
             SearchEngineType = searchEngineType;
 
+            DocumentContext = documentContext;
+            
             ValidateFieldsToFetch(fieldsToFetch);
             FieldsToFetch = fieldsToFetch;
 
@@ -135,6 +139,7 @@ namespace Raven.Server.Documents.Queries.Results
             using (_projectionScope = _projectionScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Projection)))
             {
                 Document doc = null;
+
                 if (FieldsToFetch.AnyExtractableFromIndex == false)
                 {
                     using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
@@ -883,7 +888,12 @@ namespace Raven.Server.Documents.Queries.Results
             if (_loadedDocumentIds == null)
             {
                 _loadedDocumentIds = new HashSet<string>();
-                _loadedDocuments = new LruDictionary<string, Document>(LoadedDocumentsCacheSize);
+                
+                //Cleaner can be injected only in case when we perform streaming operation since we write to buffer just after projection of each document.
+                //In case of non-streaming query we store references to docs inside a list, so we've to be careful not to dispose it before writing.
+                _loadedDocuments =  _query.IsStream && DocumentContext != null 
+                    ? new (LoadedDocumentsCacheSize, new LruCacheHelpers.DocumentReleaser(DocumentContext)) 
+                    : new LruDictionary<string, Document>(LoadedDocumentsCacheSize);
                 _loadedDocumentsByAliasName = new Dictionary<string, Document>();
             }
             _loadedDocumentIds.Clear();
