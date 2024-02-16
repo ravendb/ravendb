@@ -26,7 +26,6 @@ namespace Raven.Server.Documents.Queries
     {
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documents;
-        private readonly SearchEngineType _searchEngineType;
         private readonly FieldsToFetch _fieldsToFetch;
         private readonly DocumentsOperationContext _context;
         private readonly IncludeDocumentsCommand _includeDocumentsCommand;
@@ -41,14 +40,13 @@ namespace Raven.Server.Documents.Queries
         private readonly QueryTimingsScope _queryTimings;
         private readonly bool _isAllDocsCollection;
 
-        public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, string collection,
+        public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection,
             IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
             IncludeRevisionsCommand includeRevisionsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<long> totalResults,
             Reference<int> scannedResults, Reference<long> skippedResults, CancellationToken token)
         {
             _database = database;
             _documents = documents;
-            _searchEngineType = searchEngineType;
             _fieldsToFetch = fieldsToFetch;
             _collection = collection;
             _isAllDocsCollection = collection == Constants.Documents.Collections.AllDocumentsCollection;
