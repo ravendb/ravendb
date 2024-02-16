@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Corax;
 using Corax.Mappings;
+using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Raven.Client.Documents.Indexes;
@@ -51,8 +52,9 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
     private ShardedQueryResultDocument AddOrderByFields(Document queryResult, IndexQueryServerSide query, ref EntryTermsReader reader, OrderMetadata[] orderByFields)
     {
         var result = ShardedQueryResultDocument.From(queryResult);
+        var currentCoraxOrderIndex = 0;
 
-        for (int i = 0; i < query.Metadata.OrderBy.Length; i++)
+        for (int i = 0; i < query.Metadata.OrderBy.Length && currentCoraxOrderIndex < orderByFields.Length; i++)
         {
             var orderByField = query.Metadata.OrderBy[i];
 
@@ -65,7 +67,19 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
                 throw new NotSupportedInShardingException("Ordering by score is not supported in sharding");
             }
 
-            var orderByFieldMetadata = orderByFields[i];
+            var orderByFieldMetadata = orderByFields[currentCoraxOrderIndex];
+            
+            if (orderByFieldMetadata.Field.FieldName.ToString() != orderByField.Name)
+                continue;
+                
+            if (orderByFieldMetadata.Ascending != orderByField.Ascending)
+                continue;
+
+            if (CompareCoraxAndQueryOrderFieldType(orderByFieldMetadata.FieldType, orderByField.OrderingType) == false)
+                continue;
+
+            currentCoraxOrderIndex++;
+            
             reader.Reset();
             long fieldRootPage = IndexSearcher.FieldCache.GetLookupRootPage(orderByFieldMetadata.Field.FieldName);
             // Note that in here we have to check for the *lowest* value of the field, if there are multiple terms
@@ -128,6 +142,22 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
                 }
             }
         }
+
+        return result;
+    }
+
+    private static bool CompareCoraxAndQueryOrderFieldType(MatchCompareFieldType corax, OrderByFieldType query)
+    {
+        bool result = (corax, query) switch
+        {
+            (MatchCompareFieldType.Random, OrderByFieldType.Random) => true,
+            (MatchCompareFieldType.Alphanumeric, OrderByFieldType.AlphaNumeric) => true,
+            (MatchCompareFieldType.Score, OrderByFieldType.Score) => true,
+            (MatchCompareFieldType.Integer, OrderByFieldType.Long) => true,
+            (MatchCompareFieldType.Floating, OrderByFieldType.Double) => true,
+            (MatchCompareFieldType.Spatial, OrderByFieldType.Distance) => true,
+            (_, _) => false
+        };
 
         return result;
     }

@@ -564,9 +564,16 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
                     {
                         foreach (var field in mapping)
                         {
-                            builder.Write(field.FieldId, Encoding.UTF8.GetBytes(someValue), 3, 3.14D);
                             if (hasMultipleValues)
+                                builder.IncrementList();
+
+                            builder.Write(field.FieldId, Encoding.UTF8.GetBytes(someValue), 3, 3.14D);
+                            
+                            if (hasMultipleValues)
+                            {
                                 builder.Write(field.FieldId, Encoding.UTF8.GetBytes(someValue), 3, 3.14D);
+                                builder.DecrementList();
+                            }
                         }
                     }
                     indexWriter.Commit();
