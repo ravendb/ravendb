@@ -8,6 +8,7 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 using Constants = Raven.Client.Constants;
@@ -16,13 +17,11 @@ namespace Raven.Server.Documents.Queries.Results
 {
     public class MapQueryResultRetriever : QueryResultRetrieverBase
     {
-        private readonly DocumentsOperationContext _context;
         private QueryTimingsScope _storageScope;
 
         public MapQueryResultRetriever(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsStorage documentsStorage, DocumentsOperationContext context, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
-            : base(database, query, queryTimings, searchEngineType, fieldsToFetch, documentsStorage, context, false, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand: includeRevisionsCommand)
+            : base(database, query, queryTimings, searchEngineType, fieldsToFetch, documentsStorage, context, documentContext: context, false, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand: includeRevisionsCommand)
         {
-            _context = context;
         }
 
         public override (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token)
@@ -71,17 +70,17 @@ namespace Raven.Server.Documents.Queries.Results
 
         public override Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
         {
-            return DocumentsStorage.Get(_context, id, fields);
+            return DocumentsStorage.Get(DocumentContext, id, fields);
         }
 
         protected override Document LoadDocument(string id)
         {
-            return DocumentsStorage.Get(_context, id);
+            return DocumentsStorage.Get(DocumentContext, id);
         }
 
         protected override long? GetCounter(string docId, string name)
         {
-            var value = DocumentsStorage.CountersStorage.GetCounterValue(_context, docId, name);
+            var value = DocumentsStorage.CountersStorage.GetCounterValue(DocumentContext, docId, name);
             return value?.Value;
         }
 
@@ -89,7 +88,7 @@ namespace Raven.Server.Documents.Queries.Results
         {
             var djv = new DynamicJsonValue();
 
-            foreach (var partialValue in DocumentsStorage.CountersStorage.GetCounterPartialValues(_context, docId, name))
+            foreach (var partialValue in DocumentsStorage.CountersStorage.GetCounterPartialValues(DocumentContext, docId, name))
             {
                 djv[partialValue.ChangeVector] = partialValue.PartialValue;
             }
