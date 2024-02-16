@@ -422,7 +422,12 @@ namespace Raven.Server.Documents.Queries.Results
                         LastModified = doc.LastModified,
                         LowerId = doc.IgnoreDispose ? doc.LowerId?.CloneOnSameContext() : doc.LowerId,
                         NonPersistentFlags = doc.NonPersistentFlags,
-                        StorageId = doc.StorageId,
+                        
+                        // https://issues.hibernatingrhinos.com/issue/RavenDB-21900
+                        // In case when document reference itself we cannot release the storage
+                        // and we do not want to made this object non-disposable (via IgnoreDispose) either since we want to release
+                        // some clones of it.
+                        StorageId = doc.IgnoreDispose ?  Voron.Global.Constants.Compression.NonReturnableStorageId : doc.StorageId,
                         TransactionMarker = doc.TransactionMarker
                     }, null);
 
@@ -440,7 +445,7 @@ namespace Raven.Server.Documents.Queries.Results
                         LastModified = doc.LastModified,
                         LowerId = doc.IgnoreDispose ? doc.LowerId?.CloneOnSameContext() : doc.LowerId,
                         NonPersistentFlags = doc.NonPersistentFlags,
-                        StorageId = doc.StorageId,
+                        StorageId = doc.IgnoreDispose ?  Voron.Global.Constants.Compression.NonReturnableStorageId : doc.StorageId,
                         TransactionMarker = doc.TransactionMarker,
                         TimeSeriesStream = new TimeSeriesStream
                         {
