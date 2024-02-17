@@ -157,7 +157,7 @@ namespace Raven.Server
             $"Please find the RavenDB settings file *settings.json* in the server directory and fill in your certificate information in either { RavenConfiguration.GetKey(x => x.Security.CertificatePath) } or { RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec) }",
             $"If you would rather like to keep your server unsecured, please relax the { RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed) } setting to match the { RavenConfiguration.GetKey(x => x.Core.ServerUrls) } setting value."
         };
-        
+
         private static readonly StringValues CacheControlHeaderValues = new[] { "must-revalidate", "no-cache" };
 
         private static readonly StringValues ContentTypeHeaderValue = "application/json; charset=utf-8";
@@ -192,7 +192,7 @@ namespace Raven.Server
                     sp?.Stop();
                     exception = e;
 
-                    CheckDatabaseShutdownAndThrowIfNeeded(requestHandlerContext.Database, ref e);
+                    CheckDatabaseShutdownAndThrowIfNeeded(requestHandlerContext, ref e);
 
                     CheckVersionAndWrapException(context, ref e);
 
@@ -263,10 +263,14 @@ namespace Raven.Server
             }
         }
 
-        private static void CheckDatabaseShutdownAndThrowIfNeeded(DocumentDatabase database, ref Exception e) 
+        private static void CheckDatabaseShutdownAndThrowIfNeeded(RequestHandlerContext context, ref Exception e)
         {
-            if(e is OperationCanceledException && database != null && database.DatabaseShutdown.IsCancellationRequested)
-                e = new DatabaseDisabledException("The database " + database.Name + " is shutting down", e);
+            if (e is not OperationCanceledException) 
+                return;
+
+            var databaseShutdown = context.Database?.DatabaseShutdown ?? context.DatabaseContext?.DatabaseShutdown;
+            if (databaseShutdown is { IsCancellationRequested: true })
+                e = new DatabaseDisabledException("The database " + context.DatabaseName + " is shutting down", e);
         }
 
         private static void CheckVersionAndWrapException(HttpContext context, ref Exception e)
