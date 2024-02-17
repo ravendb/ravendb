@@ -97,7 +97,7 @@ namespace Raven.Client.Documents.Session
 
         private Dictionary<string, object> _externalState;
 
-        public IDictionary<string, object> ExternalState => _externalState ?? (_externalState = new Dictionary<string, object>());
+        public IDictionary<string, object> ExternalState => _externalState ??= new Dictionary<string, object>();
 
         public async Task<ServerNode> GetCurrentSessionNode()
         {
@@ -139,12 +139,12 @@ namespace Raven.Client.Documents.Session
         /// hold the data required to manage Counters tracking for RavenDB's Unit of Work
         /// </summary>
         protected internal Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)> CountersByDocId =>
-            _countersByDocId ?? (_countersByDocId = new Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)>(StringComparer.OrdinalIgnoreCase));
+            _countersByDocId ??= new Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)>(StringComparer.OrdinalIgnoreCase);
 
         private Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)> _countersByDocId;
 
         protected internal Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> TimeSeriesByDocId =>
-            _timeSeriesByDocId ?? (_timeSeriesByDocId = new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase));
+            _timeSeriesByDocId ??= new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase);
 
         private Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> _timeSeriesByDocId;
 
@@ -222,7 +222,7 @@ namespace Raven.Client.Documents.Session
         public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; }
         public ISessionBlittableJsonConverter JsonConverter { get; }
 
-        protected internal IJsonSerializer JsonSerializer => _jsonSerializer ?? (_jsonSerializer = RequestExecutor.Conventions.Serialization.CreateSerializer());
+        protected internal IJsonSerializer JsonSerializer => _jsonSerializer ??= RequestExecutor.Conventions.Serialization.CreateSerializer();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
@@ -254,16 +254,16 @@ namespace Raven.Client.Documents.Session
             if (shardedBatchOptions != null)
                 _saveChangesOptions = new BatchOptions { ShardedOptions = shardedBatchOptions };
 
-            _javascriptCompilationOptions = new JavascriptCompilationOptions(
+            _javascriptCompilationOptions = new Lazy<JavascriptCompilationOptions>(() => new JavascriptCompilationOptions(
                 flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
-                extensions: new JavascriptConversionExtension[]
-                {
+                extensions:
+                [
                     JavascriptConversionExtensions.LinqMethodsSupport.Instance,
                     JavascriptConversionExtensions.NullableSupport.Instance
-                })
+                ])
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(RequestExecutor.Conventions)
-            };
+            });
         }
 
         /// <summary>

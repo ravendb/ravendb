@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Session
     {
         private int _valsCount;
         private int _customCount;
-        private readonly JavascriptCompilationOptions _javascriptCompilationOptions;
+        private readonly Lazy<JavascriptCompilationOptions> _javascriptCompilationOptions;
 
         public void Increment<T, U>(T entity, Expression<Func<T, U>> path, U valToAdd)
         {
@@ -36,11 +36,11 @@ namespace Raven.Client.Documents.Session
 
         public void Increment<T, U>(string id, Expression<Func<T, U>> path, U valToAdd)
         {
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
 
             var variable = $"this.{pathScript}";
             var value = $"args.val_{_valsCount}";
-             
+
             var patchRequest = new PatchRequest
             {
                 Script = $"{variable} = {variable} ? {variable} + {value} : {value};",
@@ -63,12 +63,12 @@ namespace Raven.Client.Documents.Session
 
         public void AddOrIncrement<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU valueToAdd)
         {
-            
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
-            
+
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
+
             var variable = $"this.{pathScript}";
             var value = $"args.val_{_valsCount}";
-            
+
             var patchRequest = new PatchRequest
             {
                 Script = $"{variable} = {variable} ? {variable} + {value} : {value};",
@@ -77,7 +77,7 @@ namespace Raven.Client.Documents.Session
                     [$"val_{_valsCount}"] = valueToAdd
                 }
             };
-            
+
             string collectionName = _requestExecutor.Conventions.GetCollectionName(entity);
             string clrType = _requestExecutor.Conventions.GetClrTypeName(entity);
             var newInstance = JsonConverter.ToBlittable(
@@ -92,21 +92,21 @@ namespace Raven.Client.Documents.Session
                         [Constants.Documents.Metadata.RavenClrType] = clrType
                     }
                 });
-            
+
             _valsCount++;
 
             Defer(new PatchCommandData(id,
                 null,
                 patchRequest)
-                {
+            {
                 CreateIfMissing = newInstance
             });
         }
 
         public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, List<TU>>> path, Expression<Func<JavaScriptArray<TU>, object>> arrayAdder)
         {
-            var extension = new JavascriptConversionExtensions.CustomMethods {Suffix = _customCount++};
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
+            var extension = new JavascriptConversionExtensions.CustomMethods { Suffix = _customCount++ };
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
             var adderScript = arrayAdder.CompileToJavascript(
                 new JavascriptCompilationOptions(
                     JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
@@ -126,18 +126,19 @@ namespace Raven.Client.Documents.Session
                     Collection = collectionName,
                     MetadataInstance = new MetadataAsDictionary
                     {
-                        [Constants.Documents.Metadata.Collection] = collectionName, [Constants.Documents.Metadata.RavenClrType] = clrType
+                        [Constants.Documents.Metadata.Collection] = collectionName,
+                        [Constants.Documents.Metadata.RavenClrType] = clrType
                     }
                 });
-            
+
             _valsCount++;
 
-            Defer(new PatchCommandData(id, null, patchRequest) {CreateIfMissing = newInstance});
+            Defer(new PatchCommandData(id, null, patchRequest) { CreateIfMissing = newInstance });
         }
 
         public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU value)
         {
-            var patchScript = path.CompileToJavascript(_javascriptCompilationOptions);
+            var patchScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
             var valueToUse = AddTypeNameToValueIfNeeded(path.Body.Type, value);
             var patchRequest = new PatchRequest
             {
@@ -157,10 +158,11 @@ namespace Raven.Client.Documents.Session
                     Collection = collectionName,
                     MetadataInstance = new MetadataAsDictionary
                     {
-                        [Constants.Documents.Metadata.Collection] = collectionName, [Constants.Documents.Metadata.RavenClrType] = clrType
+                        [Constants.Documents.Metadata.Collection] = collectionName,
+                        [Constants.Documents.Metadata.RavenClrType] = clrType
                     }
                 });
-            
+
             _valsCount++;
 
             Defer(new PatchCommandData(id,
@@ -180,11 +182,11 @@ namespace Raven.Client.Documents.Session
 
         public void Patch<T, U>(string id, Expression<Func<T, U>> path, U value)
         {
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
 
             var valueToUse = AddTypeNameToValueIfNeeded(path.Body.Type, value);
 
-            var patchRequest = new PatchRequest {Script = $"this.{pathScript} = args.val_{_valsCount};", Values = {[$"val_{_valsCount}"] = valueToUse}};
+            var patchRequest = new PatchRequest { Script = $"this.{pathScript} = args.val_{_valsCount};", Values = { [$"val_{_valsCount}"] = valueToUse } };
 
             _valsCount++;
 
@@ -205,8 +207,8 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, U>(string id, Expression<Func<T, IEnumerable<U>>> path,
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder)
         {
-            var extension = new JavascriptConversionExtensions.CustomMethods {Suffix = _customCount++};
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
+            var extension = new JavascriptConversionExtensions.CustomMethods { Suffix = _customCount++ };
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
             var adderScript = arrayAdder.CompileToJavascript(
                 new JavascriptCompilationOptions(
                     JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
@@ -226,7 +228,7 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, TKey, TValue>(string id, Expression<Func<T, IDictionary<TKey, TValue>>> path,
             Expression<Func<JavaScriptDictionary<TKey, TValue>, object>> dictionaryAdder)
         {
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
 
             if (!(dictionaryAdder.Body is MethodCallExpression call))
             {
@@ -278,7 +280,7 @@ namespace Raven.Client.Documents.Session
                 script = $"this.{pathScript} = {script}";
             }
 
-            return new PatchRequest {Script = script, Values = extension.Parameters};
+            return new PatchRequest { Script = script, Values = extension.Parameters };
         }
 
         private bool TryMergePatches(string id, PatchRequest patchRequest)
@@ -299,12 +301,12 @@ namespace Raven.Client.Documents.Session
                 newVals[kvp.Key] = kvp.Value;
             }
 
-            Defer(new PatchCommandData(id, null, new PatchRequest {Script = newScript, Values = newVals}, null));
+            Defer(new PatchCommandData(id, null, new PatchRequest { Script = newScript, Values = newVals }, null));
 
             return true;
         }
 
-        private static readonly CreateSerializerOptions SerializerOptions = new CreateSerializerOptions {TypeNameHandling = TypeNameHandling.Auto};
+        private static readonly CreateSerializerOptions SerializerOptions = new CreateSerializerOptions { TypeNameHandling = TypeNameHandling.Auto };
 
         private object AddTypeNameToValueIfNeeded(Type propertyType, object value)
         {
@@ -314,8 +316,8 @@ namespace Raven.Client.Documents.Session
             var typeOfValue = value.GetType();
             if (
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
-                value is not (DateOnly or TimeOnly) 
-                &&  
+                value is not (DateOnly or TimeOnly)
+                &&
 #endif
                 (propertyType == typeOfValue || typeOfValue.IsClass == false))
                 return value;
