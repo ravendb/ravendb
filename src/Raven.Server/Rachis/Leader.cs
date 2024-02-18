@@ -666,14 +666,17 @@ namespace Raven.Server.Rachis
         public async Task<(long Index, object Result)> PutAsync(CommandBase command, TimeSpan timeout)
         {
             using var blittableResultWriter = command is IBlittableResultCommand crCommand ? new BlittableResultWriter(crCommand.WriteResult) : null;
+            using var _ = _engine.ContextPool.AllocateOperationContext(out JsonOperationContext context);
+            var djv = command.ToJson(context);
 
             var rachisMergedCommand = new RachisMergedCommand(leader: this, engine: _engine)
             {
                 Command = command,
+                CommandAsJson = context.ReadObject(djv, "raft/command"),
                 BlittableResultWriter = blittableResultWriter
             };
 
-            await _engine.TxMerger.Enqueue(rachisMergedCommand); //wait until 'rachisMergedCommand' is executed (until 'rachisMergedCommand.TaskResult' wont be null).
+            await _engine.TxMerger.Enqueue(rachisMergedCommand);
 
             var t = rachisMergedCommand.TaskResult;
             if (await t.WaitWithTimeout(timeout) == false)

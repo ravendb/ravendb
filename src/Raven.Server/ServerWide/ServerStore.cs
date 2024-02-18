@@ -961,9 +961,9 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void BeforeAppendToRaftLog(ClusterOperationContext ctx, CommandBase cmd)
+        private void BeforeAppendToRaftLog(ClusterOperationContext ctx, Leader.RachisMergedCommand rachisMergedCommand)
         {
-            switch (cmd)
+            switch (rachisMergedCommand.Command)
             {
                 case AddDatabaseCommand addDatabase:
                     var clusterTopology = GetClusterTopology(ctx);
@@ -977,12 +977,17 @@ namespace Raven.Server.ServerWide
                                 addDatabase.Record.Topology);
                         }
                         Debug.Assert(addDatabase.Record.Topology.Count != 0, "Empty topology after AssignNodesToDatabase");
-
                     }
                     else
                     {
                         Sharding.FillShardingConfiguration(addDatabase, clusterTopology);
+                        AssignNodesToDatabase(clusterTopology,
+                            addDatabase.Record.DatabaseName,
+                            addDatabase.Encrypted,
+                            addDatabase.Record.Topology);
                     }
+                    
+                    rachisMergedCommand.CommandAsJson = ctx.ReadObject(rachisMergedCommand.Command.ToJson(ctx), "topology-modified");
                     break;
             }
         }
