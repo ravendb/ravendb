@@ -95,46 +95,48 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        
+        /// <inheritdoc/>
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncRawDocumentQuery<T> query, CancellationToken token = default)
         {
             return StreamAsync((IAsyncDocumentQuery<T>)query, token);
         }
-
+        /// <inheritdoc/>
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncRawDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default)
         {
             return StreamAsync((IAsyncDocumentQuery<T>)query, out streamQueryStats, token);
         }
-
+        /// <inheritdoc/>
         public Task StreamIntoAsync<T>(IAsyncRawDocumentQuery<T> query, Stream output, CancellationToken token = default)
         {
             return StreamIntoAsync((IAsyncDocumentQuery<T>)query, output, token);
         }
-
+        /// <inheritdoc/>
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default)
         {
             return PerformQueryStreamOperation(query, null, token);
         }
-
+        /// <inheritdoc/>
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default)
         {
             streamQueryStats = new StreamQueryStatistics();
             return PerformQueryStreamOperation(query, streamQueryStats, token);
         }
-
+        /// <inheritdoc/>
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, CancellationToken token = default)
         {
             var queryInspector = (IRavenQueryProvider)query.Provider;
             var indexQuery = queryInspector.ToAsyncDocumentQuery<T>(query.Expression);
             return StreamAsync(indexQuery, token);
         }
-
+        /// <inheritdoc/>
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default)
         {
             var queryInspector = (IRavenQueryProvider)query.Provider;
             var indexQuery = queryInspector.ToAsyncDocumentQuery<T>(query.Expression);
             return StreamAsync(indexQuery, out streamQueryStats, token);
         }
-
+        /// <inheritdoc/>
         public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0,
                                    int pageSize = int.MaxValue, string startAfter = null, CancellationToken token = default)
         {
@@ -147,7 +149,7 @@ namespace Raven.Client.Documents.Session
                 return new YieldStream<T>(this, result, null, null, token);
             }
         }
-
+        /// <inheritdoc/>
         public async Task StreamIntoAsync<T>(IAsyncDocumentQuery<T> query, Stream output, CancellationToken token = default)
         {
             using (AsyncTaskHolder())

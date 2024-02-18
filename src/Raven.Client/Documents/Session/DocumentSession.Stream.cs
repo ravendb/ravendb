@@ -10,6 +10,7 @@ namespace Raven.Client.Documents.Session
 {
     public partial class DocumentSession
     {
+        /// <inheritdoc/>
         public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query)
         {
             var queryProvider = (IRavenQueryProvider)query.Provider;
@@ -17,6 +18,7 @@ namespace Raven.Client.Documents.Session
             return Stream(docQuery);
         }
 
+        /// <inheritdoc/>
         public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out StreamQueryStatistics streamQueryStats)
         {
             var queryProvider = (IRavenQueryProvider)query.Provider;
@@ -24,6 +26,7 @@ namespace Raven.Client.Documents.Session
             return Stream(docQuery, out streamQueryStats);
         }
 
+        /// <inheritdoc/>
         public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
         {
             var streamOperation = new StreamOperation(this);
@@ -37,16 +40,19 @@ namespace Raven.Client.Documents.Session
             return YieldResults(query, result);
         }
 
+        /// <inheritdoc/>
         public IEnumerator<StreamResult<T>> Stream<T>(IRawDocumentQuery<T> query)
         {
             return Stream((IDocumentQuery<T>)query);
         }
 
+        /// <inheritdoc/>
         public IEnumerator<StreamResult<T>> Stream<T>(IRawDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats)
         {
             return Stream((IDocumentQuery<T>)query, out streamQueryStats);
         }
 
+        /// <inheritdoc/>
         public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats)
         {
             var stats = new StreamQueryStatistics();
@@ -82,11 +88,13 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        /// <inheritdoc/>
         public void StreamInto<T>(IRawDocumentQuery<T> query, Stream output)
         {
             StreamInto((IDocumentQuery<T>)query, output);
         }
 
+        /// <inheritdoc/>
         public void StreamInto<T>(IDocumentQuery<T> query, Stream output)
         {
             var streamOperation = new StreamOperation(this);
@@ -102,6 +110,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        /// <inheritdoc/>
         public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue,
              string startAfter = null)
         {
