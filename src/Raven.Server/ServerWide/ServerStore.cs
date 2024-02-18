@@ -3253,20 +3253,20 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd)
+        public async Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd, CancellationToken? token = null)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                return await SendToLeaderAsyncInternal(context, cmd);
+                return await SendToLeaderAsyncInternal(context, cmd, token ?? _shutdownNotification.Token);
         }
 
-        private async Task<(long Index, object Result)> SendToLeaderAsyncInternal(TransactionOperationContext context, CommandBase cmd)
+        private async Task<(long Index, object Result)> SendToLeaderAsyncInternal(TransactionOperationContext context, CommandBase cmd, CancellationToken token)
         {
             //I think it is reasonable to expect timeout twice of error retry
-            var timeoutTask = TimeoutManager.WaitFor(Engine.OperationTimeout, _shutdownNotification.Token);
+            var timeoutTask = TimeoutManager.WaitFor(Engine.OperationTimeout, token);
             Exception requestException = null;
             while (true)
             {
-                _shutdownNotification.Token.ThrowIfCancellationRequested();
+                token.ThrowIfCancellationRequested();
 
                 if (_engine.CurrentState == RachisState.Leader && _engine.CurrentLeader?.Running == true)
                 {
@@ -3294,13 +3294,15 @@ namespace Raven.Server.ServerWide
                     if (cachedLeaderTag == null)
                     {
                         await Task.WhenAny(logChange, timeoutTask);
+                        token.ThrowIfCancellationRequested();
+
                         if (timeoutTask.IsCompleted)
                             ThrowTimeoutException(cmd, requestException);
 
                         continue;
                     }
 
-                    var response = await SendToNodeAsync(context, cachedLeaderTag, cmd, reachedLeader);
+                    var response = await SendToNodeAsync(context, cachedLeaderTag, cmd, reachedLeader, token);
                     return (response.Index, cmd.FromRemote(response.Result));
                 }
                 catch (Exception ex)
@@ -3315,7 +3317,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 await Task.WhenAny(logChange, timeoutTask);
-                _shutdownNotification.Token.ThrowIfCancellationRequested();
+                token.ThrowIfCancellationRequested();
 
                 if (timeoutTask.IsCompleted)
                 {
@@ -3339,7 +3341,8 @@ namespace Raven.Server.ServerWide
                                        $"and we timed out waiting for one after {Engine.OperationTimeout}", requestException);
         }
 
-        private async Task<(long Index, object Result)> SendToNodeAsync(TransactionOperationContext context, string engineLeaderTag, CommandBase cmd, Reference<bool> reachedLeader)
+        private async Task<(long Index, object Result)> SendToNodeAsync(TransactionOperationContext context, string engineLeaderTag, CommandBase cmd,
+            Reference<bool> reachedLeader, CancellationToken token)
         {
             var djv = cmd.ToJson(context);
             var cmdJson = context.ReadObject(djv, "raft/command");
@@ -3351,8 +3354,6 @@ namespace Raven.Server.ServerWide
             if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
                 throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
 
-            cmdJson.TryGet("Type", out string commandType);
-
             var serverCertificateChanged = Interlocked.Exchange(ref _serverCertificateChanged, 0) == 1;
 
             if (_leaderRequestExecutor == null
@@ -3363,11 +3364,15 @@ namespace Raven.Server.ServerWide
                 Interlocked.Exchange(ref _leaderRequestExecutor, newExecutor);
             }
 
-            var command = new PutRaftCommand(_leaderRequestExecutor.Conventions, cmdJson, _engine.Url, commandType);
+            cmdJson.TryGet("Type", out string commandType);
+            var command = new PutRaftCommand(_leaderRequestExecutor.Conventions, cmdJson, _engine.Url, commandType)
+            {
+                Timeout = cmd.Timeout
+            };
 
             try
             {
-                await _leaderRequestExecutor.ExecuteAsync(command, context, token: ServerShutdown);
+                await _leaderRequestExecutor.ExecuteAsync(command, context, token: token);
             }
             catch
             {
