@@ -73,7 +73,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         using (RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(id: options.TaskId, out var tcs))
         await using (token.Register(() => tcs.TrySetCanceled()))
         {
-            (index, object result) = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
+            (index, object result) = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand, token);
             array = await GetClusterTransactionDatabaseCommandsResults(result, clusterTransactionCommand.DatabaseCommandsCount, index, options, onDatabaseCompletionTask: tcs.Task, token);
         }
 
