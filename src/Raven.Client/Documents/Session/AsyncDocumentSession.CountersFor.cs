@@ -6,16 +6,15 @@
 
 namespace Raven.Client.Documents.Session
 {
-    /// <summary>
-    /// Implements Unit of Work for accessing the RavenDB server
-    /// </summary>
     public partial class AsyncDocumentSession
     {
+        /// <inheritdoc cref="IAsyncDocumentSession.CountersFor(string)"/>
         public IAsyncSessionDocumentCounters CountersFor(string documentId)
         {
             return new AsyncSessionDocumentCounters(this, documentId);
         }
 
+        /// <inheritdoc cref="IAsyncDocumentSession.CountersFor(object)"/>
         public IAsyncSessionDocumentCounters CountersFor(object entity)
         {
             return new AsyncSessionDocumentCounters(this, entity);
