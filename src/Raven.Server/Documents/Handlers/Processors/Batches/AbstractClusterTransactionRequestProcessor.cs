@@ -65,6 +65,8 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
             };
 
         ClusterTransactionCommand clusterTransactionCommand = CreateClusterTransactionCommand(parsedCommands, options, raftRequestId);
+        clusterTransactionCommand.Timeout = Timeout.InfiniteTimeSpan; // we rely on the http token to cancel the command
+
         DynamicJsonArray array;
         long index;
 
@@ -108,7 +110,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
         // leader isn't updated (thats why the result is empty),
         // so we'll try to take the result from the local history log.
-        await RequestHandler.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, token);
+        await RequestHandler.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, Timeout.InfiniteTimeSpan, token);
         using (RequestHandler.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
         using (ctx.OpenReadTransaction())
         {
