@@ -110,7 +110,7 @@ namespace SlowTests.Voron.Storage
         // The problem was when sync operates while there is no data to sync
         // the sync operation continued with default properties
         // and at the end, it updated the state with those properties
-        public void Sync_WhenThereIsNoJournalToSync_ShouldNotUpdateHeaderToDefault()
+        public Task Sync_WhenThereIsNoJournalToSync_ShouldNotUpdateHeaderToDefault()
         {
             for (var i = 0; i < 100; i++)
             {
@@ -137,6 +137,8 @@ namespace SlowTests.Voron.Storage
 
             Assert.NotEqual(-1, journalInfo.LastSyncedJournal);
             Assert.NotEqual(-1, journalInfo.LastSyncedTransactionId);
+
+            return Task.CompletedTask;
         }
 
         [Fact]
