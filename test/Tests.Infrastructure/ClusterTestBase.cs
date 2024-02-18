@@ -866,7 +866,7 @@ namespace Tests.Infrastructure
                     }
 
                     leader.ServerStore.Engine.GetLastCommitIndex(out var index, out _);
-                    await follower.ServerStore.Engine.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, cts.Token);
+                    await follower.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, cts.Token);
                 }
             }
 
