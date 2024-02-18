@@ -9,24 +9,21 @@ using System.Collections.Generic;
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
-    ///     Counters advanced synchronous session operations
+    /// Provides synchronous client API for counter operations on a specific entity
     /// </summary>
     public interface ISessionDocumentCounters : ISessionDocumentCountersBase
     {
-        /// <summary>
-        /// Returns all the counters for a document.
-        /// </summary>
+        /// <inheritdoc cref="IAsyncSessionDocumentCounters.GetAllAsync"/> 
         Dictionary<string, long?> GetAll();
 
-        /// <summary>
-        /// Returns the counter by the  counter name.
-        /// </summary>
+        /// <inheritdoc cref="IAsyncSessionDocumentCounters.GetAsync"/> 
         long? Get(string counter);
 
         /// <summary>
-        /// Returns the a dictionary of counter values by counter names
-        /// <param name="counters">counters names</param>
+        /// Get values of multiple counters of the same document
         /// </summary>
+        /// <param name="counters">Names of the counters to get</param>
+        /// <returns>A dictionary of counter values by counter names</returns>
         Dictionary<string, long?> Get(IEnumerable<string> counters);
 
     }

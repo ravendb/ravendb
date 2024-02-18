@@ -40,6 +40,7 @@ namespace Raven.Client.Documents.Session
             Session = session;
         }
 
+        /// <inheritdoc cref="ISessionDocumentCountersBase.Increment(string, long)"/> 
         public void Increment(string counter, long delta = 1)
         {
             if (string.IsNullOrWhiteSpace(counter))
@@ -71,6 +72,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        /// <inheritdoc cref="ISessionDocumentCountersBase.Delete(string)"/> 
         public void Delete(string counter)
         {
             if (string.IsNullOrWhiteSpace(counter))
