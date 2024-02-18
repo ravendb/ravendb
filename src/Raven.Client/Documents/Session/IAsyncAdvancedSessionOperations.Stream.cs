@@ -75,89 +75,33 @@ namespace Raven.Client.Documents.Session
 
     public interface IAsyncAdvancedDocumentsSessionOperations
     {
-        /// <summary>
-        ///     Stream the results on the query to the client, converting them to
-        ///     CLR types along the way.
-        ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
-        /// </summary>
-        /// <param name="query">Query to stream results for</param>
-        /// <param name="token">The cancellation token.</param>
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IDocumentQuery{T}) "/>
         Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default);
 
-        /// <summary>
-        ///     Stream the results on the query to the client, converting them to
-        ///     CLR types along the way.
-        ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
-        /// </summary>
-        /// <param name="query">Query to stream results for</param>
-        /// <param name="streamQueryStats">Information about the performed query</param>
-        /// <param name="token">The cancellation token.</param>
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IDocumentQuery{T}, out StreamQueryStatistics) "/>
         Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default);
 
-        /// <summary>
-        ///     Stream the results on the query to the client, converting them to
-        ///     CLR types along the way.
-        ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
-        /// </summary>
-        /// <param name="query">Query to stream results for</param>
-        /// <param name="token">The cancellation token.</param>
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IRawDocumentQuery{T}) "/>
         Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncRawDocumentQuery<T> query, CancellationToken token = default);
 
-        /// <summary>
-        ///     Stream the results on the query to the client, converting them to
-        ///     CLR types along the way.
-        ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
-        /// </summary>
-        /// <param name="query">Query to stream results for</param>
-        /// <param name="streamQueryStats">Information about the performed query</param>
-        /// <param name="token">The cancellation token.</param>
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IRawDocumentQuery{T}, out StreamQueryStatistics) "/>
         Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncRawDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default);
 
-        /// <summary>
-        ///     Stream the results on the query to the client, converting them to
-        ///     CLR types along the way.
-        ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
-        /// </summary>
-        /// <param name="query">Query to stream results for</param>
-        /// <param name="token">The cancellation token.</param>
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IQueryable{T}) "/>
         Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, CancellationToken token = default);
 
-        /// <summary>
-        ///     Stream the results on the query to the client, converting them to
-        ///     CLR types along the way.
-        ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
-        /// </summary>
-        /// <param name="query">Query to stream results for</param>
-        /// <param name="streamQueryStats">Information about the performed query</param>
-        /// <param name="token">The cancellation token.</param>
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IQueryable{T}, out StreamQueryStatistics) "/>
         Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default);
 
-        /// <summary>
-        ///     Stream the results of documents search to the client, converting them to CLR types along the way.
-        ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
-        /// </summary>
-        /// <param name="startsWith">prefix for which documents should be returned e.g. "products/"</param>
-        /// <param name="matches">
-        ///     pipe ('|') separated values for which document IDs (after 'idPrefix') should be matched ('?'
-        ///     any single character, '*' any characters)
-        /// </param>
-        /// <param name="start">number of documents that should be skipped</param>
-        /// <param name="pageSize">maximum number of documents that will be retrieved</param>
-        /// <param name="startAfter">
-        ///     skip document fetching until given ID is found and return documents after that ID (default:
-        ///     null)
-        /// </param>
-        /// <param name="token">The cancellation token.</param>
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(string, string, int, int, string) "/>
         Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, string startAfter = null, CancellationToken token = default);
 
-        /// <summary>
-        ///     Returns the results of a query directly into stream
-        /// </summary>
+        /// <inheritdoc cref="IDocumentsSessionOperations.StreamInto{T}(IDocumentQuery{T}, Stream) "/>
+        /// <returns>A task responsible for feeding the results into the given stream</returns>
         Task StreamIntoAsync<T>(IAsyncDocumentQuery<T> query, Stream output, CancellationToken token = default);
 
-        /// <summary>
-        ///     Returns the results of a query directly into stream
-        /// </summary>
+        /// <inheritdoc cref="IDocumentsSessionOperations.StreamInto{T}(IRawDocumentQuery{T}, Stream) "/>
+        /// <returns>A task responsible for feeding the results into the given stream</returns>
         Task StreamIntoAsync<T>(IAsyncRawDocumentQuery<T> query, Stream output, CancellationToken token = default);
     }
 }
