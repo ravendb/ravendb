@@ -707,7 +707,7 @@ namespace Raven.Server.Documents
                 var commandsCount = 0;
                 foreach (var command in batch)
                 {
-                    commandsCount += command.Commands.Length;
+                    commandsCount += command.Commands.Count;
 
                     OnClusterTransactionCompletion(command, mergedCommands);
                 }
@@ -743,7 +743,7 @@ namespace Raven.Server.Documents
                         Name,
                         "Cluster transaction failed to execute",
                         $"Failed to execute cluster transactions with raft index: {command.Index}. {Environment.NewLine}" +
-                        $"With the following document ids involved: {string.Join(", ", command.Commands.Select(item => JsonDeserializationServer.ClusterTransactionDataCommand((BlittableJsonReaderObject)item).Id))} {Environment.NewLine}" +
+                        $"With the following document ids involved: {string.Join(", ", command.Commands.Select(item => item.Id))} {Environment.NewLine}" +
                         "Performing cluster transactions on this database will be stopped until the issue is resolved.",
                         AlertType.ClusterTransactionFailure,
                         NotificationSeverity.Error,
@@ -771,15 +771,15 @@ namespace Raven.Server.Documents
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                 ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
 
-                _nextClusterCommand = command.PreviousCount + command.Commands.Length;
+                _nextClusterCommand = command.PreviousCount + command.Commands.Count;
                 _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
             }
             catch (Exception e)
             {
                 // nothing we can do
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsOperationsEnabled)
                 {
-                    _logger.Info($"Failed to notify about transaction completion for database '{Name}'.", e);
+                    _logger.Operations($"Failed to notify about transaction completion for database '{Name}'.", e);
                 }
             }
         }

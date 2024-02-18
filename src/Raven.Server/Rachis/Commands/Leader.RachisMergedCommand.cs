@@ -5,15 +5,17 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using System.Diagnostics.CodeAnalysis;
+using Sparrow.Json;
 using Voron.Impl;
 
 namespace Raven.Server.Rachis
 {
     public partial class Leader
     {
-        internal sealed class RachisMergedCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
+        public sealed class RachisMergedCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
         {
             public CommandBase Command;
+            public BlittableJsonReaderObject CommandAsJson;
             public Task<(long Index, object Result)> TaskResult { get; private set; }
             public BlittableResultWriter BlittableResultWriter { get; init; }
 
@@ -92,12 +94,8 @@ namespace Raven.Server.Rachis
                 }
                 else
                 {
-                    _engine.InvokeBeforeAppendToRaftLog(context, Command);
-
-                    var djv = Command.ToJson(context);
-                    var commandJson = context.ReadObject(djv, "raft/command");
-
-                    index = _engine.InsertToLeaderLog(context, _leader.Term, commandJson, RachisEntryFlags.StateMachineCommand);
+                    _engine.InvokeBeforeAppendToRaftLog(context, this);
+                    index = _engine.InsertToLeaderLog(context, _leader.Term, CommandAsJson, RachisEntryFlags.StateMachineCommand);
                 }
                
                 if (_leader._entries.TryGetValue(index, out var state) == false)
