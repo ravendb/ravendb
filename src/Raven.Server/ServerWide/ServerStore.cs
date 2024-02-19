@@ -857,7 +857,6 @@ namespace Raven.Server.ServerWide
 
             _sharding = new ShardingStore(this);
             _engine = new RachisConsensus<ClusterStateMachine>(this);
-            _engine.BeforeAppendToRaftLog = BeforeAppendToRaftLog;
 
             var myUrl = GetNodeHttpServerUrl();
             _engine.Initialize(_env, Configuration, clusterChanges, myUrl, Server.Time, out _lastClusterTopologyIndex, ServerShutdown);
@@ -958,37 +957,6 @@ namespace Raven.Server.ServerWide
                         "Your system has no PageFile. It is recommended to have a PageFile in order for Server to work properly",
                         AlertType.LowSwapSize,
                         NotificationSeverity.Warning));
-            }
-        }
-
-        private void BeforeAppendToRaftLog(ClusterOperationContext ctx, Leader.RachisMergedCommand rachisMergedCommand)
-        {
-            switch (rachisMergedCommand.Command)
-            {
-                case AddDatabaseCommand addDatabase:
-                    var clusterTopology = GetClusterTopology(ctx);
-                    if (addDatabase.Record.IsSharded == false)
-                    {
-                        if (addDatabase.Record.Topology.Count == 0)
-                        {
-                            AssignNodesToDatabase(clusterTopology,
-                                addDatabase.Record.DatabaseName,
-                                addDatabase.Encrypted,
-                                addDatabase.Record.Topology);
-                        }
-                        Debug.Assert(addDatabase.Record.Topology.Count != 0, "Empty topology after AssignNodesToDatabase");
-                    }
-                    else
-                    {
-                        Sharding.FillShardingConfiguration(addDatabase, clusterTopology);
-                        AssignNodesToDatabase(clusterTopology,
-                            addDatabase.Record.DatabaseName,
-                            addDatabase.Encrypted,
-                            addDatabase.Record.Topology);
-                    }
-                    
-                    rachisMergedCommand.CommandAsJson = ctx.ReadObject(rachisMergedCommand.Command.ToJson(ctx), "topology-modified");
-                    break;
             }
         }
 

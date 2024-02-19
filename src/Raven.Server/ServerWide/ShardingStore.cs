@@ -156,9 +156,9 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        public void FillShardingConfiguration(AddDatabaseCommand addDatabase, ClusterTopology clusterTopology)
+        public void FillShardingConfiguration(DatabaseRecord record, ClusterTopology clusterTopology, long? index)
         {
-            var shardingConfiguration = addDatabase.Record.Sharding;
+            var shardingConfiguration = record.Sharding;
             if (shardingConfiguration.BucketRanges == null ||
                 shardingConfiguration.BucketRanges.Count == 0)
             {
@@ -176,7 +176,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            if (addDatabase.RaftCommandIndex == null)
+            if (index is null or 0)
             {
                 FillPrefixedSharding(shardingConfiguration);
             }
@@ -184,19 +184,19 @@ namespace Raven.Server.ServerWide
             var orchestratorTopology = shardingConfiguration.Orchestrator.Topology;
             if (orchestratorTopology.Count == 0)
             {
-                _serverStore.AssignNodesToDatabase(clusterTopology, addDatabase.Record.DatabaseName, addDatabase.Encrypted, orchestratorTopology);
+                _serverStore.AssignNodesToDatabase(clusterTopology, record.DatabaseName, record.Encrypted, orchestratorTopology);
             }
 
             Debug.Assert(orchestratorTopology.Count != 0, "Empty orchestrator topology after AssignNodesToDatabase");
 
             var pool = GetNodesDistribution(clusterTopology, shardingConfiguration.Shards);
-            var index = 0;
+            var i = 0;
             var keys = pool.Keys.ToList();
             foreach (var (_, shardTopology) in shardingConfiguration.Shards)
             {
                 while (shardTopology.ReplicationFactor > shardTopology.Count)
                 {
-                    var tag = keys[index++ % keys.Count];
+                    var tag = keys[i++ % keys.Count];
 
                     if (pool[tag] > 0 && shardTopology.AllNodes.Contains(tag) == false)
                     {
