@@ -29,15 +29,17 @@ class getRestorePointsCommand extends commandBase {
     }
 
     private preparePayload() {
-        switch (this.connectionType) {
-            case "Local":
-                return {
-                    FolderPath: this.path,
-                    ShardNumber: this.shardNumber
-                };
-            default:
-                return this.credentials;
+        if (this.connectionType === "Local") {
+            return {
+                FolderPath: this.path,
+                ShardNumber: this.shardNumber
+            };
         }
+        
+        return {
+            ...this.credentials,
+            ShardNumber: this.shardNumber
+        };
     }
     
     execute(): JQueryPromise<Raven.Server.Documents.PeriodicBackup.Restore.RestorePoints> {
