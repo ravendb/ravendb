@@ -239,9 +239,7 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<TResult>)results;
         }
 
-        /// <summary>
-        /// Suggest alternative values for the queried term
-        /// </summary>
+        /// <inheritdoc cref="ISuggestionQuery{T}.AndSuggestUsing(SuggestionBase)"/>
         public static ISuggestionQuery<T> SuggestUsing<T>(this IQueryable<T> source, SuggestionBase suggestion)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -254,9 +252,7 @@ namespace Raven.Client.Documents
             return new SuggestionQuery<T>(source, ConvertExpressionIfNecessary, ConvertMethodIfNecessary, currentMethod);
         }
 
-        /// <summary>
-        /// Suggest alternative values for the queried term
-        /// </summary>
+        /// <inheritdoc cref="ISuggestionQuery{T}.AndSuggestUsing(Action{ISuggestionBuilder{T}})"/>
         public static ISuggestionQuery<T> SuggestUsing<T>(this IQueryable<T> source, Action<ISuggestionBuilder<T>> builder)
         {
             var f = new SuggestionBuilder<T>(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions);

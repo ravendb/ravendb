@@ -23,6 +23,9 @@ internal static class DocumentationUrls
             
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/Csharp/client-api/session/querying/how-to-use-morelikethis"/></remarks>
             public const string MoreLikeThisQuery = nameof(MoreLikeThisQuery);
+            
+            ///<remarks><seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-work-with-suggestions"/></remarks>
+            public const string SuggestionsQuery = nameof(SuggestionsQuery);
         }
 
         internal static class Transactions

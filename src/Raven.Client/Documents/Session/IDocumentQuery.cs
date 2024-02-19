@@ -198,8 +198,10 @@ namespace Raven.Client.Documents.Session
 
         IAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentId);
 
+        /// <inheritdoc cref="ISuggestionQuery{T}.AndSuggestUsing(SuggestionBase)"/>
         ISuggestionDocumentQuery<T> SuggestUsing(SuggestionBase suggestion);
 
+        /// <inheritdoc cref="ISuggestionQuery{T}.AndSuggestUsing(Action{ISuggestionBuilder{T}})"/>
         ISuggestionDocumentQuery<T> SuggestUsing(Action<ISuggestionBuilder<T>> builder);
 
         /// <summary>
