@@ -159,6 +159,7 @@ namespace Raven.Client.Documents.Session
 
         IAsyncGroupByDocumentQuery<T> GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields);
 
+        /// <inheritdoc cref="IDocumentQuery{T}.MoreLikeThis(System.Action{Raven.Client.Documents.Queries.MoreLikeThis.IMoreLikeThisBuilderForDocumentQuery{T}})"/>
         IAsyncDocumentQuery<T> MoreLikeThis(Action<IMoreLikeThisBuilderForAsyncDocumentQuery<T>> builder);
 
         /// <summary>

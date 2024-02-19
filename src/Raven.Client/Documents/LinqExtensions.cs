@@ -1454,6 +1454,8 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="MoreLikeThisBase" />
+        /// <param name="moreLikeThis">Configure MoreLikeThis. You can use: <see cref="MoreLikeThisUsingDocumentForQuery{T}"/>, <see cref="MoreLikeThisUsingDocumentForDocumentQuery{T}"/>, <see cref="MoreLikeThisUsingAnyDocument"/> or <see cref="MoreLikeThisUsingDocument"/>.</param>
         public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, MoreLikeThisBase moreLikeThis)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1465,6 +1467,8 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="IMoreLikeThisBuilder{T}" />
+        /// <param name="builder">Configure MoreLikeThis by builder.</param>
         public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, Action<IMoreLikeThisBuilder<T>> builder)
         {
             var f = new MoreLikeThisBuilder<T>();
