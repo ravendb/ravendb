@@ -101,7 +101,7 @@ namespace Sparrow.Server
                 if (_parent._token.IsCancellationRequested)
                     return false;
 
-                var result = await Task.WhenAny(waitAsync, TimeoutManager.WaitFor(timeout, _parent._token)).ConfigureAwait(false);
+                var result = await waitAsync.WaitFor(timeout, _parent._token).ConfigureAwait(false);
 
                 if (result.IsFaulted)
                     throw result.Exception;
