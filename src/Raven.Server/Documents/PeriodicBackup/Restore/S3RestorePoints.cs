@@ -30,10 +30,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             if (folders.Count == 0)
             {
-                return await FetchRestorePointsForPath(path, assertLegacyBackups: true);
+                return await FetchRestorePointsForPath(path, assertLegacyBackups: true, shardNumber);
             }
 
-            return await FetchRestorePointsForPaths(folders, assertLegacyBackups: true);
+            return await FetchRestorePointsForPaths(folders, assertLegacyBackups: true, shardNumber);
 
         }
 
