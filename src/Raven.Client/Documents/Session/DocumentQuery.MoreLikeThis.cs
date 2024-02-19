@@ -5,6 +5,7 @@ namespace Raven.Client.Documents.Session
 {
     public partial class DocumentQuery<T>
     {
+        /// <inheritdoc/>
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.MoreLikeThis(MoreLikeThisBase moreLikeThis)
         {
             using (var mlt = MoreLikeThis())
@@ -18,6 +19,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+        /// <inheritdoc/>
         IDocumentQuery<T> IDocumentQuery<T>.MoreLikeThis(Action<IMoreLikeThisBuilderForDocumentQuery<T>> builder)
         {
             var f = new MoreLikeThisBuilder<T>();

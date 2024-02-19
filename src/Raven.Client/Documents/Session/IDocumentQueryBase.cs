@@ -396,6 +396,8 @@ namespace Raven.Client.Documents.Session
 
         TSelf Spatial(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
+        /// <inheritdoc cref="MoreLikeThisBase"/>
+        /// <param name="moreLikeThis">Specify MoreLikeThisQuery.</param>
         TSelf MoreLikeThis(MoreLikeThisBase moreLikeThis);
 
     }
