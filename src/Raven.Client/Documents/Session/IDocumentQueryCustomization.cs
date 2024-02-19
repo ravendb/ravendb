@@ -27,22 +27,21 @@ namespace Raven.Client.Documents.Session
         ///     Allows to modify the index query before it is executed.
         /// </summary>
         /// <param name="action">Action with index query parameter. Defines the method that will be executed before query execution.</param>
-        /// <seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-customize-query#beforequeryexecuted"/>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToCustomizeQuery.BeforeQueryExecuted"/>
         IDocumentQueryCustomization BeforeQueryExecuted(Action<IndexQuery> action);
 
         /// <summary>
         ///     Allows to access raw query result after the execution.
         /// </summary>
         /// <param name="action">Action with query result parameter. Defines the method that will be executed after query execution.</param>
-        /// <seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-customize-query#afterqueryexecuted"/>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToCustomizeQuery.AfterQueryExecuted"/>
         IDocumentQueryCustomization AfterQueryExecuted(Action<QueryResult> action);
 
         /// <summary>
         ///     Allows to access raw streaming query result (in form of BlittableJsonReaderObject) after the query execution.
         /// </summary>
         /// <param name="action">Action with stream result parameter. Defines the method that will be executed after streaming query execution.</param>
-        /// <seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-customize-query#afterstreamexecuted"/>
-        /// <seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/glossary/blittable-json-reader-object"/>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToCustomizeQuery.AfterStreamExecuted"/>
         IDocumentQueryCustomization AfterStreamExecuted(Action<BlittableJsonReaderObject> action);
 
         /// <summary>
@@ -50,8 +49,7 @@ namespace Raven.Client.Documents.Session
         ///     Forces RavenDB to always fetch query results from the server.
         ///     By default query results are cached.
         /// </summary>
-        /// <seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-customize-query#nocaching"/>
-        /// <seealso ref="https://ravendb.net/articles/caching-data-automatic-database-caching"/>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToCustomizeQuery.NoCaching"/>
         IDocumentQueryCustomization NoCaching();
 
         /// <summary>
@@ -59,15 +57,13 @@ namespace Raven.Client.Documents.Session
         ///     Any changes made to them will be ignored by RavenDB.
         ///     Usage of this option will prevent holding query results in memory.
         /// </summary>
-        /// <seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-customize-query#notracking"/>
-        /// <seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/configuration/how-to-disable-tracking"/>
-        /// <seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/what-is-a-session-and-how-does-it-work#unit-of-work-pattern"/>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToCustomizeQuery.NoTracking"/>
         IDocumentQueryCustomization NoTracking();
 
         /// <summary>
         ///     Orders the query results randomly.
         /// </summary>
-        /// <seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/sort-query-results#order-by-random"/>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults.OrderByRandom"/>
         IDocumentQueryCustomization RandomOrdering();
 
         /// <summary>
@@ -75,7 +71,7 @@ namespace Raven.Client.Documents.Session
         ///     Allows to repeat random query results.
         /// </summary>
         /// <param name="seed">Seed to be used for pseudorandom number generator.</param>
-        /// <seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/sort-query-results#order-by-random"/>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults.OrderByRandom"/>
         IDocumentQueryCustomization RandomOrdering(string seed);
 
 #if FEATURE_CUSTOM_SORTING
@@ -84,7 +80,7 @@ namespace Raven.Client.Documents.Session
         ///     Requires custom sorting feature to be enabled.
         /// </summary>
         /// <param name="typeName">Name of the custom sorter to be used.</param>
-        /// <seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/sort-query-results#custom-sorters"/>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults.CustomSorters"/>
         IDocumentQueryCustomization CustomSortUsing(string typeName);
 
         /// <inheritdoc cref="CustomSortUsing(string)" />
@@ -109,7 +105,7 @@ namespace Raven.Client.Documents.Session
         ///     Allows to execute query only on relevant shards.
         /// </summary>
         /// <param name="builder">Action with shard context parameter. Defines on which shards the query will be executed.</param>
-        /// <seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/sharding/querying#querying-a-selected-shard"/>
+        /// <inheritdoc cref="DocumentationUrls.Session.Sharding.QueryingASelectedShard"/>
         IDocumentQueryCustomization ShardContext(Action<IQueryShardedContextBuilder> builder);
     }
 }
