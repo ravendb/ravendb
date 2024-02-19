@@ -12,22 +12,53 @@ namespace Raven.Server.Rachis
 {
     public partial class Leader
     {
-        public sealed class RachisMergedCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
+        public sealed class RachisMergedCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>, IDisposable
         {
-            public CommandBase Command;
-            public BlittableJsonReaderObject CommandAsJson;
-            public Task<(long Index, object Result)> TaskResult { get; private set; }
-            public BlittableResultWriter BlittableResultWriter { get; init; }
-
-            private readonly Leader _leader;
-            private readonly RachisConsensus _engine;
             private const string _leaderDisposedMessage = "We are no longer the leader, this leader is disposed";
 
-            public RachisMergedCommand([NotNull] Leader leader, [NotNull] RachisConsensus engine)
+            public CommandBase Command;
+            private readonly TimeSpan _timeout;
+            public BlittableResultWriter BlittableResultWriter { get; private set; }
+            private TaskCompletionSource<Task<(long Index, object Result)>> _tcs = new TaskCompletionSource<Task<(long Index, object Result)>>(TaskCreationOptions.RunContinuationsAsynchronously);
+            private readonly Leader _leader;
+            private readonly RachisConsensus _engine;
+            private readonly ClusterContextPool _pool;
+            private IDisposable _ctxReturn;
+
+            public RachisMergedCommand([NotNull] Leader leader, CommandBase command, TimeSpan timeout)
             {
                 _leader = leader ?? throw new ArgumentNullException(nameof(leader));
-                _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+                _engine = _leader._engine;
+                _pool = _engine.ContextPool;
+                Command = command;
+                _timeout = timeout;
             }
+
+            public void Initialize()
+            {
+                BlittableResultWriter = Command is IBlittableResultCommand crCommand ? new BlittableResultWriter(crCommand.WriteResult) : null;
+
+                // we prepare the command _not_ under the write lock
+                if (Command.Raw == null)
+                {
+                    _ctxReturn = _pool.AllocateOperationContext(out JsonOperationContext context);
+                    var djv = Command.ToJson(context);
+                    Command.Raw = context.ReadObject(djv, "prepare-raw-command");
+                }
+            }
+
+            public async Task<(long Index, object Result)> Result()
+            {
+                var inner = await _tcs.Task;
+
+                if (await inner.WaitWithTimeout(_timeout) == false)
+                {
+                    throw new TimeoutException($"Waited for {_timeout} but the command {Command.RaftCommandIndex} was not applied in this time.");
+                }
+
+                var r = await inner;
+                return BlittableResultWriter == null ? r : (r.Index, BlittableResultWriter.Result);
+            } 
 
             protected override long ExecuteCmd(ClusterOperationContext context)
             {
@@ -45,7 +76,7 @@ namespace Raven.Server.Rachis
 
                     _leader._errorOccurred.TrySetException(e);
 
-                    TaskResult = Task.FromException<(long, object)>(e);
+                    _tcs.TrySetResult(Task.FromException<(long, object)>(e));
                 }
 
                 return 1;
@@ -56,8 +87,7 @@ namespace Raven.Server.Rachis
                 _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
                 if (_leader._running.IsRaised() == false) // not longer leader
                 {
-                    // throw lostLeadershipException;
-                    TaskResult = Task.FromException<(long, object)>(new NotLeadingException(_leaderDisposedMessage));
+                    _tcs.TrySetResult(Task.FromException<(long, object)>(new NotLeadingException(_leaderDisposedMessage)));
                     return;
                 }
 
@@ -68,7 +98,7 @@ namespace Raven.Server.Rachis
                     {
                         if (exception != null)
                         {
-                            TaskResult = Task.FromException<(long, object)>(exception);
+                            _tcs.TrySetResult(Task.FromException<(long, object)>(exception));
                         }
                         else
                         {
@@ -87,7 +117,7 @@ namespace Raven.Server.Rachis
                                 }
                             }
 
-                            TaskResult = Task.FromResult<(long, object)>((index, result));
+                            _tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
                         }
                         return;
                     }
@@ -95,7 +125,7 @@ namespace Raven.Server.Rachis
                 else
                 {
                     _engine.InvokeBeforeAppendToRaftLog(context, this);
-                    index = _engine.InsertToLeaderLog(context, _leader.Term, CommandAsJson, RachisEntryFlags.StateMachineCommand);
+                    index = _engine.InsertToLeaderLog(context, _leader.Term, Command.Raw, RachisEntryFlags.StateMachineCommand);
                 }
                
                 if (_leader._entries.TryGetValue(index, out var state) == false)
@@ -114,7 +144,7 @@ namespace Raven.Server.Rachis
                     context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += AfterCommit;
                 }
 
-                TaskResult = state.TaskCompletionSource.Task;
+                _tcs.TrySetResult(state.TaskCompletionSource.Task);
 
                 if (BlittableResultWriter != null)
                     //If we need to return a blittable as a result the context must be valid for each command that tries to read from it.
@@ -141,7 +171,12 @@ namespace Raven.Server.Rachis
             {
                 throw new NotImplementedException();
             }
-        }
 
+            public void Dispose()
+            {
+                BlittableResultWriter?.Dispose();
+                _ctxReturn?.Dispose();
+            }
+        }
     }
 }
