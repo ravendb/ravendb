@@ -11,7 +11,8 @@ namespace Raven.Client.Documents.Queries.Facets
         {
             _source = source;
         }
-
+        
+        /// <inheritdoc/>
         public IAsyncAggregationDocumentQuery<T> AndAggregateBy(Action<IFacetBuilder<T>> builder = null)
         {
             var f = new FacetBuilder<T>(_source.Conventions);
@@ -20,6 +21,7 @@ namespace Raven.Client.Documents.Queries.Facets
             return AndAggregateBy(f.Facet);
         }
 
+        /// <inheritdoc/>
         public IAsyncAggregationDocumentQuery<T> AndAggregateBy(FacetBase facet)
         {
             _source.AggregateBy(facet);

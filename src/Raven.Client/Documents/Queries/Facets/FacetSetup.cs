@@ -4,6 +4,10 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
+    /// <summary>
+    /// The facets definitions can be stored in a document. That document can then be used by a faceted search query.
+    /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Session.Querying.AggregationQuerySetup"/>
     public class FacetSetup
     {
         /// <summary>
