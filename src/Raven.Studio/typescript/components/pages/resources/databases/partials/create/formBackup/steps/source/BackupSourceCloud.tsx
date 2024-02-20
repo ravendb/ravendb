@@ -3,13 +3,15 @@ import { Row, Col, Label, UncontrolledPopover, PopoverBody } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
-import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/CreateDatabaseFromBackupRestorePoint";
+import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
 import { useServices } from "components/hooks/useServices";
 import { FormInput } from "components/common/Form";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
 import { mapRestorePointDtoToSelectOptions } from "components/pages/resources/databases/partials/create/formBackup/steps/source/backupSourceUtils";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
 import RestorePointsFields from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointsFields";
+import moment from "moment";
+import generalUtils from "common/generalUtils";
 
 export default function BackupSourceCloud() {
     const { control } = useFormContext<FormData>();
@@ -23,7 +25,7 @@ export default function BackupSourceCloud() {
         control,
     });
 
-    // TODO Link expiration and other info
+    const expireDateMoment = cloudData.awsSettings?.expireDate ? moment.utc(cloudData.awsSettings.expireDate) : null;
 
     return (
         <>
@@ -58,6 +60,18 @@ export default function BackupSourceCloud() {
                     />
                 </Col>
             </Row>
+            {expireDateMoment && (
+                <Row className="mt-2">
+                    <Col lg="3">
+                        <Label className="col-form-label">Link will expire in</Label>
+                    </Col>
+                    <Col>
+                        {expireDateMoment.isBefore()
+                            ? "Link has expired"
+                            : generalUtils.formatDurationByDate(expireDateMoment)}
+                    </Col>
+                </Row>
+            )}
             <RestorePointsFields
                 isSharded={isSharded}
                 restorePointsFieldName="source.sourceData.cloud.restorePoints"
@@ -99,6 +113,7 @@ function CloudSourceRestorePoint({ index, isSharded, link }: CloudSourceRestoreP
                 regionName: credentials.AwsRegionName,
                 remoteFolderName: credentials.RemoteFolderName,
                 bucketName: credentials.BucketName,
+                expireDate: credentials.Expires,
                 disabled: false,
                 getBackupConfigurationScript: null,
                 customServerUrl: null, // TODO RavenDB-14716
