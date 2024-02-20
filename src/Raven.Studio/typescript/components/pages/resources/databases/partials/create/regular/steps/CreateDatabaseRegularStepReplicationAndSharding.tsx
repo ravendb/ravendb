@@ -51,7 +51,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                 </Col>
             </Row>
 
-            <UncontrolledPopover target="ReplicationInfo" placement="top" trigger="hover" container="PopoverContainer">
+            <UncontrolledPopover target="ReplicationInfo" placement="top" trigger="hover">
                 <PopoverBody>
                     <div>
                         Add more{" "}
@@ -63,7 +63,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                 </PopoverBody>
             </UncontrolledPopover>
 
-            <UncontrolledPopover target="ShardingInfo" placement="top" trigger="hover" container="PopoverContainer">
+            <UncontrolledPopover target="ShardingInfo" placement="top" trigger="hover">
                 <PopoverBody>
                     <p>
                         <strong className="text-shard">

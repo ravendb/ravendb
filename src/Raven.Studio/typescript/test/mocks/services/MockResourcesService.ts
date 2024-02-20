@@ -23,7 +23,10 @@ export default class MockResourcesService extends AutoMockService<ResourcesServi
         );
     }
 
-    withRestorePoints_Local(dto?: any) {
-        return this.mockResolvedValue(this.mocks.getRestorePoints_Local, dto, ResourcesStubs.restorePoints_Local());
+    withRestorePoints(dto?: any) {
+        this.mockResolvedValue(this.mocks.getRestorePoints_Local, dto, ResourcesStubs.restorePoints());
+        this.mockResolvedValue(this.mocks.getRestorePoints_S3Backup, dto, ResourcesStubs.restorePoints());
+        this.mockResolvedValue(this.mocks.getRestorePoints_AzureBackup, dto, ResourcesStubs.restorePoints());
+        this.mockResolvedValue(this.mocks.getRestorePoints_GoogleCloudBackup, dto, ResourcesStubs.restorePoints());
     }
 }

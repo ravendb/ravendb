@@ -18,9 +18,8 @@ export const DefaultCreateDatabase: StoryObj = {
 
         resourcesService.withValidateNameCommand();
         resourcesService.withDatabaseLocation();
-        resourcesService.withValidateNameCommand();
         resourcesService.withFolderPathOptions_ServerLocal();
-        resourcesService.withRestorePoints_Local();
+        resourcesService.withRestorePoints();
 
         databasesService.withGenerateSecret();
 

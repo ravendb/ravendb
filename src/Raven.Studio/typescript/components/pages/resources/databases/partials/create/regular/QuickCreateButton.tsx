@@ -16,19 +16,14 @@ export default function QuickCreateButton({ formValues, isSubmitting }: QuickCre
             <ButtonWithSpinner
                 type="submit"
                 className="rounded-pill me-1"
-                id="QuickCreateButton"
+                id="quickCreateButton"
                 icon="star"
                 isSpinning={isSubmitting}
             >
                 Quick Create
             </ButtonWithSpinner>
 
-            <UncontrolledPopover
-                placement="top"
-                target="QuickCreateButton"
-                trigger="hover"
-                container="PopoverContainer"
-            >
+            <UncontrolledPopover placement="top" target="quickCreateButton" trigger="hover">
                 <PropSummary>
                     <PropSummaryItem>
                         <PropSummaryName>

@@ -35,7 +35,7 @@ interface CreateDatabaseRegularProps {
 
 type StepId = "createNew" | "encryption" | "replicationAndSharding" | "nodeSelection" | "path";
 
-interface StepsListItem {
+interface Step {
     id: StepId;
     label: string;
     active: boolean;
@@ -212,8 +212,8 @@ const getDefaultValues = (replicationFactor: number): FormData => {
     };
 };
 
-function getActiveStepsList(formValues: FormData, formState: FormState<FormData>): StepsListItem[] {
-    const steps: StepsListItem[] = [
+function getActiveStepsList(formValues: FormData, formState: FormState<FormData>): Step[] {
+    const steps: Step[] = [
         { id: "createNew", label: "Name", active: true, isInvalid: !!formState.errors.basicInfo },
         {
             id: "encryption",

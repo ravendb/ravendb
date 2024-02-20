@@ -94,12 +94,7 @@ export default function CreateDatabaseRegularStepBasicInfo() {
 
                         <Icon icon="info" color="info" id="encryptionInfo" margin="ms-1" />
                     </div>
-                    <UncontrolledPopover
-                        target="encryptionInfo"
-                        placement="top"
-                        trigger="hover"
-                        container="PopoverContainer"
-                    >
+                    <UncontrolledPopover target="encryptionInfo" placement="top" trigger="hover">
                         <PopoverBody>
                             Data will be encrypted at the storage engine layer, using <code>XChaCha20-Poly1305</code>{" "}
                             authenticated encryption algorithm.
