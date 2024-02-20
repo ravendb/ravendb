@@ -15,7 +15,7 @@ import { FormProvider, FormState, SubmitHandler, useForm, useWatch } from "react
 import StepBasicInfo from "./steps/CreateDatabaseFromBackupStepBasicInfo";
 import StepPath from "../shared/CreateDatabaseStepPath";
 import StepEncryption from "../../../../../../common/FormEncryption";
-import StepSource from "./steps/CreateDatabaseFromBackupStepSource";
+import StepSource from "./steps/source/CreateDatabaseFromBackupStepSource";
 import { tryHandleSubmit } from "components/utils/common";
 import { DevTool } from "@hookform/devtools";
 import { useServices } from "components/hooks/useServices";
@@ -23,6 +23,8 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import databasesManager from "common/shell/databasesManager";
 import { useCreateDatabase } from "components/pages/resources/databases/partials/create/shared/useCreateDatabase";
 import { useSteps } from "components/common/steps/useSteps";
+import { createDatabaseFromBackupDataUtils } from "components/pages/resources/databases/partials/create/formBackup/createDatabaseFromBackupDataUtils";
+import notificationCenter from "common/notifications/notificationCenter";
 
 interface CreateDatabaseFromBackupProps {
     closeModal: () => void;
@@ -32,7 +34,7 @@ interface CreateDatabaseFromBackupProps {
 type StepId = "basicInfo" | "backupSource" | "encryption" | "path";
 
 // TODO move to shared
-interface StepsListItem {
+interface Step {
     id: StepId;
     label: string;
     active: boolean;
@@ -49,8 +51,8 @@ export default function CreateDatabaseFromBackup({
     const usedDatabaseNames = useAppSelector(databaseSelectors.allDatabases).map((db) => db.name);
 
     const form = useForm<FormData>({
-        mode: "all",
-        defaultValues,
+        mode: "onChange",
+        defaultValues: createDatabaseFromBackupDataUtils.defaultValues,
         resolver: (data, _, options) =>
             yupResolver(createDatabaseFromBackupSchema)(
                 data,
@@ -58,6 +60,7 @@ export default function CreateDatabaseFromBackup({
                     usedDatabaseNames: usedDatabaseNames,
                     sourceType: data.source.sourceType,
                     isEncrypted: data.source.isEncrypted,
+                    isSharded: data.basicInfo.isSharded,
                 },
                 options
             ),
@@ -67,6 +70,8 @@ export default function CreateDatabaseFromBackup({
     const formValues = useWatch({
         control,
     });
+
+    console.log("kalczur FromBackup errors", formState.errors);
 
     const debouncedValidationResult = useCreateDatabaseAsyncValidation(formValues.basicInfo.databaseName, setError);
 
@@ -101,7 +106,11 @@ export default function CreateDatabaseFromBackup({
             }
 
             databasesManager.default.activateAfterCreation(formValues.basicInfo.databaseName);
-            await databasesService.restoreDatabaseFromBackup(mapToDto(formValues));
+
+            const resultDto = await databasesService.restoreDatabaseFromBackup(
+                createDatabaseFromBackupDataUtils.mapToDto(formValues)
+            );
+            notificationCenter.instance.openDetailsForOperationById(null, resultDto.OperationId);
 
             closeModal();
         });
@@ -115,7 +124,7 @@ export default function CreateDatabaseFromBackup({
                     <div className="d-flex  mb-5">
                         <Steps
                             current={currentStep}
-                            steps={activeSteps.map((step) => ({ label: step.label }))}
+                            steps={activeSteps.map((step) => ({ label: step.label, isInvalid: step.isInvalid }))}
                             onClick={goToStep}
                             className="flex-grow me-4"
                         ></Steps>
@@ -162,139 +171,8 @@ export default function CreateDatabaseFromBackup({
     );
 }
 
-const defaultRestorePoints: TODO = [
-    {
-        restorePoint: null,
-        nodeTag: "",
-    },
-];
-
-const defaultValues: FormData = {
-    basicInfo: {
-        databaseName: "",
-        isSharded: false,
-    },
-    source: {
-        isDisableOngoingTasksAfterRestore: false,
-        isSkipIndexes: false,
-        isEncrypted: false,
-        sourceType: "local",
-        sourceData: {
-            local: {
-                directory: "",
-                restorePoints: defaultRestorePoints,
-            },
-            cloud: {
-                link: "",
-                restorePoints: [],
-            },
-            amazonS3: {
-                isUseCustomHost: false,
-                isForcePathStyle: false,
-                customHost: "",
-                accessKey: "",
-                secretKey: "",
-                awsRegion: "",
-                bucketName: "",
-                remoteFolderName: "",
-                restorePoints: [],
-            },
-            azure: {
-                accountKey: "",
-                accountName: "",
-                container: "",
-                remoteFolderName: "",
-                restorePoints: [],
-            },
-            googleCloud: {
-                bucketName: "",
-                credentialsJson: "",
-                remoteFolderName: "",
-                restorePoints: [],
-            },
-        },
-    },
-    encryption: {
-        isKeySaved: false,
-        key: "",
-    },
-    pathsConfigurations: {
-        isDefault: true,
-        path: "",
-    },
-};
-
-// TODO rename path to dataDirectory?
-
-function mapToDto({ basicInfo, source, encryption, pathsConfigurations }: FormData): TODO {
-    return {
-        DatabaseName: basicInfo.databaseName,
-        DisableOngoingTasks: source.isDisableOngoingTasksAfterRestore,
-        SkipIndexes: source.isSkipIndexes,
-        DataDirectory: _.trim(pathsConfigurations.path),
-        EncryptionKey: encryption.key, // todo conditional
-        BackupEncryptionSettings: null,
-        Type: source.sourceType,
-    };
-}
-
-// function getS3Settings(formValues: FormData): Raven.Client.Documents.Operations.Backups.S3Settings {
-//     return {
-//         AwsAccessKey: formValues.awsAccessKey,
-//         AwsSecretKey: formValues.awsSecretKey,
-//         AwsRegionName: "us-east-1",
-//         BucketName: "damian-test-backup",
-//         AwsSessionToken: "",
-//         RemoteFolderName: null,
-//         Disabled: false,
-//         GetBackupConfigurationScript: null,
-//         CustomServerUrl: null,
-//         ForcePathStyle: false,
-//     };
-// }
-
-// function getRestorePointsData(formValues: FormData): TODO {
-//     let restorePoints: TODO[] = [];
-
-//     if (formValues.source === "local") {
-//         restorePoints = formValues.localRestorePoints;
-//     } else if (formValues.source === "ravenCloud") {
-//         restorePoints = formValues.ravenCloudRestorePoints;
-//     } else if (formValues.source === "aws") {
-//         restorePoints = formValues.awsRestorePoints;
-//     } else if (formValues.source === "azure") {
-//         restorePoints = formValues.azureRestorePoints;
-//     } else if (formValues.source === "gcp") {
-//         restorePoints = formValues.gcpRestorePoints;
-//     }
-
-//     if (formValues.isSharded) {
-//         return {
-//             ShardRestoreSettings: {
-//                 Shards: restorePoints.reduce((acc, restorePoint, index) => {
-//                     acc[index] = {
-//                         FolderName: restorePoint.restorePoint.location,
-//                         LastFileNameToRestore: restorePoint.restorePoint.fileName,
-//                         NodeTag: restorePoint.nodeTag,
-//                         ShardNumber: index,
-//                     };
-//                     return acc;
-//                 }, {}),
-//             },
-//             LastFileNameToRestore: null,
-//             BackupLocation: null,
-//         };
-//     } else {
-//         return {
-//             LastFileNameToRestore: restorePoints[0].restorePoint.fileName,
-//             BackupLocation: restorePoints[0].restorePoint.location,
-//             ShardRestoreSettings: null,
-//         };
-//     }
-// }
-
-function getActiveStepsList(formValues: FormData, formState: FormState<FormData>): StepsListItem[] {
-    const allSteps: StepsListItem[] = [
+function getActiveStepsList(formValues: FormData, formState: FormState<FormData>): Step[] {
+    const allSteps: Step[] = [
         {
             id: "basicInfo",
             label: "Select backup",

@@ -181,7 +181,7 @@ export function FormSelect<
                             Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options)
                         );
                     }}
-                    disabled={formState.isSubmitting}
+                    isDisabled={formState.isSubmitting}
                     {...rest}
                 />
             </div>

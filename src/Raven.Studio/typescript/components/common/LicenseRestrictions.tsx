@@ -19,42 +19,37 @@ export function LicenseRestrictions(props: LicenseRestrictionsProps): JSX.Elemen
     const containerId = useId("Info");
     const buyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
 
-    if (!isAvailable) {
-        return (
-            <>
-                <div id={containerId} className={classNames("item-disabled", className)}>
-                    {children}
-                </div>
-                <UncontrolledPopover
-                    target={containerId}
-                    trigger="hover"
-                    placement="top"
-                    container="PopoverContainer" //TODO add containers in main layout or remove this part
-                >
-                    <PopoverBody>
-                        {message ? (
-                            <>{message}</>
-                        ) : (
-                            <>
-                                Current license doesn&apos;t include {featureName ?? "this feature"}.<br />
-                                <div className="text-center mt-1">
-                                    <Button
-                                        href={buyLink}
-                                        target="_blank"
-                                        color="primary"
-                                        size="xs"
-                                        className="rounded-pill"
-                                    >
-                                        Licensing options <Icon icon="newtab" margin="ms-1" />
-                                    </Button>
-                                </div>
-                            </>
-                        )}
-                    </PopoverBody>
-                </UncontrolledPopover>
-            </>
-        );
+    if (isAvailable) {
+        return <>{children}</>;
     }
 
-    return <>{children}</>;
+    return (
+        <>
+            <div id={containerId} className={classNames("item-disabled", className)}>
+                {children}
+            </div>
+            <UncontrolledPopover target={containerId} trigger="hover" placement="top">
+                <PopoverBody>
+                    {message ? (
+                        <>{message}</>
+                    ) : (
+                        <>
+                            Current license doesn&apos;t include {featureName ?? "this feature"}.<br />
+                            <div className="text-center mt-1">
+                                <Button
+                                    href={buyLink}
+                                    target="_blank"
+                                    color="primary"
+                                    size="xs"
+                                    className="rounded-pill"
+                                >
+                                    Licensing options <Icon icon="newtab" margin="ms-1" />
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </PopoverBody>
+            </UncontrolledPopover>
+        </>
+    );
 }

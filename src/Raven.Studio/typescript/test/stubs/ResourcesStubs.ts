@@ -44,7 +44,7 @@ export class ResourcesStubs {
         };
     }
 
-    static restorePoints_Local(): Raven.Server.Documents.PeriodicBackup.Restore.RestorePoints {
+    static restorePoints(): Raven.Server.Documents.PeriodicBackup.Restore.RestorePoints {
         return {
             List: [
                 {
