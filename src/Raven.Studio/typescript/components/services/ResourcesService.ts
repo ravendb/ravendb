@@ -1,3 +1,4 @@
+import getCloudBackupCredentialsFromLinkCommand from "commands/resources/getCloudBackupCredentialsFromLinkCommand";
 import getDatabaseLocationCommand from "commands/resources/getDatabaseLocationCommand";
 import getFolderPathOptionsCommand from "commands/resources/getFolderPathOptionsCommand";
 import getRestorePointsCommand from "commands/resources/getRestorePointsCommand";
@@ -17,11 +18,28 @@ export default class ResourcesService {
     }
 
     async getDatabaseLocation(...args: ConstructorParameters<typeof getDatabaseLocationCommand>) {
-        console.log("kalczur getDatabaseLocation args", args);
         return new getDatabaseLocationCommand(...args).execute();
     }
 
     async getRestorePoints_Local(...args: Parameters<typeof getRestorePointsCommand.forServerLocal>) {
         return getRestorePointsCommand.forServerLocal(...args).execute();
+    }
+
+    async getRestorePoints_S3Backup(...args: Parameters<typeof getRestorePointsCommand.forS3Backup>) {
+        return getRestorePointsCommand.forS3Backup(...args).execute();
+    }
+
+    async getRestorePoints_AzureBackup(...args: Parameters<typeof getRestorePointsCommand.forAzureBackup>) {
+        return getRestorePointsCommand.forAzureBackup(...args).execute();
+    }
+
+    async getRestorePoints_GoogleCloudBackup(...args: Parameters<typeof getRestorePointsCommand.forGoogleCloudBackup>) {
+        return getRestorePointsCommand.forGoogleCloudBackup(...args).execute();
+    }
+
+    async getCloudBackupCredentialsFromLink(
+        ...args: ConstructorParameters<typeof getCloudBackupCredentialsFromLinkCommand>
+    ) {
+        return new getCloudBackupCredentialsFromLinkCommand(...args).execute();
     }
 }

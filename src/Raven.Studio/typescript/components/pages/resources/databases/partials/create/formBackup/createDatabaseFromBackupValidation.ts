@@ -2,21 +2,8 @@ import {
     encryptionSchema,
     pathsConfigurationsSchema,
 } from "components/pages/resources/databases/partials/create/shared/createDatabaseSharedValidation";
-import { yupObjectSchema } from "components/utils/yupUtils";
+import { restorePointSchema } from "components/utils/common";
 import * as yup from "yup";
-
-export interface RestorePoint {
-    dateTime: string;
-    location: string;
-    fileName: string;
-    isSnapshotRestore: boolean;
-    isIncremental: boolean;
-    isEncrypted: boolean;
-    filesToRestore: number;
-    databaseName: string;
-    nodeTag: string;
-    backupType: string;
-}
 
 const basicInfoSchema = yup.object({
     databaseName: yup
@@ -28,38 +15,67 @@ const basicInfoSchema = yup.object({
     isSharded: yup.boolean(),
 });
 
-const restorePointsSchema = yup.array().of(
-    yup.object({
-        nodeTag: yup.string().required(),
-        restorePoint: yupObjectSchema<RestorePoint | null>({
-            dateTime: yup.string().required(),
-            location: yup.string().required(),
-            fileName: yup.string().required(),
-            isSnapshotRestore: yup.boolean().required(),
-            isIncremental: yup.boolean().required(),
-            isEncrypted: yup.boolean().required(),
-            filesToRestore: yup.number().required(),
-            databaseName: yup.string().required(),
-            nodeTag: yup.string().required(),
-            backupType: yup.string().required(),
-        }),
-    })
-);
+function getRestorePointsSchema(sourceType: restoreSource) {
+    return yup
+        .array()
+        .of(
+            yup.object({
+                nodeTag: yup.string().when(["$sourceType", "$isSharded"], {
+                    is: (currentSourceType: restoreSource, isSharded: boolean) =>
+                        currentSourceType === sourceType && isSharded,
+                    then: (schema) => schema.required(),
+                }),
+                restorePoint: restorePointSchema.nullable().when("$sourceType", {
+                    is: (currentSourceType: restoreSource) => currentSourceType === sourceType,
+                    then: (schema) => schema.required(),
+                }),
+            })
+        )
+        .min(1);
+}
+
+type RestorePoints = yup.InferType<ReturnType<typeof getRestorePointsSchema>>;
+
+function getEncryptionKeySchema(sourceType: restoreSource) {
+    return yup.string().when(["$sourceType", "restorePoints"], {
+        is: (currentSourceType: restoreSource, restorePoints: RestorePoints) =>
+            currentSourceType === sourceType &&
+            restorePoints[0]?.restorePoint?.isEncrypted &&
+            !restorePoints[0]?.restorePoint?.isSnapshotRestore,
+        then: (schema) => schema.base64().required(),
+    });
+}
 
 const localSource = yup.object({
     directory: yup.string().when("$sourceType", {
         is: "local",
         then: (schema) => schema.required(),
     }),
-    restorePoints: restorePointsSchema.min(1),
+    restorePoints: getRestorePointsSchema("local"),
+    encryptionKey: getEncryptionKeySchema("local"),
 });
 
 const ravenCloudSource = yup.object({
     link: yup.string().when("$sourceType", {
-        is: "ravenCloud",
+        is: "cloud",
         then: (schema) => schema.required(),
     }),
-    restorePoints: restorePointsSchema.min(1),
+    restorePoints: getRestorePointsSchema("cloud"),
+    encryptionKey: getEncryptionKeySchema("cloud"),
+    awsSettings: yup
+        .object({
+            sessionToken: yup.string(),
+            accessKey: yup.string(),
+            secretKey: yup.string(),
+            regionName: yup.string(),
+            remoteFolderName: yup.string(),
+            bucketName: yup.string(),
+            disabled: yup.boolean(),
+            getBackupConfigurationScript: yup.string(),
+            customServerUrl: yup.string(),
+            forcePathStyle: yup.boolean(),
+        })
+        .nullable(),
 });
 
 const amazonS3Source = yup.object({
@@ -70,23 +86,24 @@ const amazonS3Source = yup.object({
         then: (schema) => schema.required(),
     }),
     accessKey: yup.string().when("$sourceType", {
-        is: "aws",
+        is: "amazonS3",
         then: (schema) => schema.required(),
     }),
     secretKey: yup.string().when("$sourceType", {
-        is: "aws",
+        is: "amazonS3",
         then: (schema) => schema.required(),
     }),
-    awsRegion: yup.string().when("$sourceType", {
-        is: "aws",
+    awsRegion: yup.string().when(["isUseCustomHost", "$sourceType"], {
+        is: (isUseCustomHost: boolean, sourceType: restoreSource) => !isUseCustomHost && sourceType === "amazonS3",
         then: (schema) => schema.required(),
     }),
     bucketName: yup.string().when("$sourceType", {
-        is: "aws",
+        is: "amazonS3",
         then: (schema) => schema.required(),
     }),
     remoteFolderName: yup.string(),
-    restorePoints: restorePointsSchema.min(1),
+    restorePoints: getRestorePointsSchema("amazonS3"),
+    encryptionKey: getEncryptionKeySchema("amazonS3"),
 });
 
 const azureSource = yup.object({
@@ -103,25 +120,23 @@ const azureSource = yup.object({
         then: (schema) => schema.required(),
     }),
     remoteFolderName: yup.string(),
-    restorePoints: restorePointsSchema.min(1),
+    restorePoints: getRestorePointsSchema("azure"),
+    encryptionKey: getEncryptionKeySchema("azure"),
 });
 
 const googleCloudSource = yup.object({
     bucketName: yup.string().when("$sourceType", {
-        is: "gcp",
+        is: "googleCloud",
         then: (schema) => schema.required(),
     }),
     credentialsJson: yup.string().when("$sourceType", {
-        is: "gcp",
+        is: "googleCloud",
         then: (schema) => schema.required(),
     }),
     remoteFolderName: yup.string(),
-    restorePoints: restorePointsSchema.min(1),
+    restorePoints: getRestorePointsSchema("googleCloud"),
+    encryptionKey: getEncryptionKeySchema("googleCloud"),
 });
-
-// type SourceData = yup.InferType<
-//     typeof localSource | typeof ravenCloudSource | typeof amazonS3Source | typeof azureSource | typeof googleCloudSource
-// >;
 
 const sourceSchema = yup.object({
     isDisableOngoingTasksAfterRestore: yup.boolean(),

@@ -1,11 +1,13 @@
 import commandBase = require("commands/commandBase");
+import { CreateDatabaseFromBackupDto } from "components/pages/resources/databases/partials/create/formBackup/createDatabaseFromBackupDataUtils";
 import endpoints = require("endpoints");
 
 class restoreDatabaseFromBackupCommand extends commandBase {
 
-    private restoreConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase;
+    // TODO use CreateDatabaseFromBackupDto
+    private restoreConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase | CreateDatabaseFromBackupDto;
 
-    constructor(restoreConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase) {
+    constructor(restoreConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase | CreateDatabaseFromBackupDto) {
         super();
         this.restoreConfiguration = restoreConfiguration;
     }

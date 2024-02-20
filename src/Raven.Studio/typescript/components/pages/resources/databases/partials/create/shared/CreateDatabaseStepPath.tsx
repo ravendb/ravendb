@@ -6,7 +6,7 @@ import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useServices } from "components/hooks/useServices";
 import { InputActionMeta } from "react-select";
-import { InputNotHidden, SelectOption } from "components/common/select/Select";
+import { InputNotHidden } from "components/common/select/Select";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
 import { UseAsyncReturn } from "react-async-hook";
 import { CreateDatabaseFromBackupFormData } from "components/pages/resources/databases/partials/create/formBackup/createDatabaseFromBackupValidation";
@@ -25,10 +25,13 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
     const allNodeTags = useAppSelector(clusterSelectors.allNodeTags);
     const selectedNodeTags = manualSelectedNodes ?? allNodeTags;
 
-    const asyncGetFolderOptions = useAsyncDebounce(resourcesService.getFolderPathOptions_ServerLocal, [
-        formValues.pathsConfigurations.path,
-        isBackupFolder,
-    ]);
+    const asyncGetFolderOptions = useAsyncDebounce(
+        async (path, isBackupFolder) => {
+            const dto = await resourcesService.getFolderPathOptions_ServerLocal(path, isBackupFolder);
+            return dto?.List.map((x) => ({ value: x, label: x }));
+        },
+        [formValues.pathsConfigurations.path, isBackupFolder]
+    );
 
     const asyncGetDatabaseLocation = useAsyncDebounce(resourcesService.getDatabaseLocation, [
         formValues.basicInfo.databaseName,
@@ -41,8 +44,6 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
             setValue("pathsConfigurations.path", value);
         }
     };
-
-    const pathOptions = getAvailableFolderOptions(asyncGetFolderOptions.result?.List);
 
     return (
         <div>
@@ -57,7 +58,8 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
                     control={control}
                     name="pathsConfigurations.path"
                     placeholder={formValues.pathsConfigurations.isDefault ? "" : "Enter database directory"}
-                    options={pathOptions}
+                    options={asyncGetFolderOptions.result ?? []}
+                    isLoading={asyncGetFolderOptions.loading}
                     inputValue={formValues.pathsConfigurations.path ?? ""}
                     onInputChange={onPathChange}
                     components={{ Input: InputNotHidden }}
@@ -71,14 +73,6 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
     );
 }
 
-function getAvailableFolderOptions(backupLocation: string[]): SelectOption[] {
-    if (!backupLocation) {
-        return [];
-    }
-
-    return backupLocation.map((x) => ({ value: x, label: x }));
-}
-
 function PathInfo({
     asyncGetDatabaseLocation,
     nodeTagsToDisplay,
@@ -86,7 +80,11 @@ function PathInfo({
     asyncGetDatabaseLocation: UseAsyncReturn<Raven.Server.Web.Studio.DataDirectoryResult, (string | boolean)[]>;
     nodeTagsToDisplay?: string[];
 }) {
-    if (asyncGetDatabaseLocation.status === "not-requested" || asyncGetDatabaseLocation.status === "error") {
+    if (
+        asyncGetDatabaseLocation.status === "not-requested" ||
+        asyncGetDatabaseLocation.status === "error" ||
+        asyncGetDatabaseLocation.result?.List?.length === 0
+    ) {
         return null;
     }
 
@@ -98,48 +96,46 @@ function PathInfo({
         );
     }
 
-    if (asyncGetDatabaseLocation.status === "success" && asyncGetDatabaseLocation.result?.List?.length > 0) {
-        const filteredLocations = nodeTagsToDisplay
-            ? asyncGetDatabaseLocation.result.List.filter((x) => nodeTagsToDisplay.includes(x.NodeTag))
-            : asyncGetDatabaseLocation.result.List;
+    const filteredLocations = nodeTagsToDisplay
+        ? asyncGetDatabaseLocation.result.List.filter((x) => nodeTagsToDisplay.includes(x.NodeTag))
+        : asyncGetDatabaseLocation.result.List;
 
-        return (
-            <Alert color="info" className="mt-2">
-                {filteredLocations.map((location) => (
-                    <div key={location.FullPath}>
-                        <small>
-                            <span>
-                                Node tag: <strong>{location.NodeTag}</strong>
-                            </span>
-                            <br />
-                            <span>
-                                Path: <strong>{location.FullPath}</strong>
-                            </span>
-                            <br />
-                            {location.Error ? (
-                                <strong>{location.Error}</strong>
-                            ) : (
-                                <>
-                                    {location.FreeSpaceHumane ? (
-                                        <span>
-                                            Free space: <strong>{location.FreeSpaceHumane}</strong>{" "}
-                                            {location.TotalSpaceHumane && (
-                                                <span>
-                                                    {"(Total: "}
-                                                    <strong>{location.TotalSpaceHumane}</strong>
-                                                    {")"}
-                                                </span>
-                                            )}
-                                        </span>
-                                    ) : (
-                                        <strong>(Path is unreachable)</strong>
-                                    )}
-                                </>
-                            )}
-                        </small>
-                    </div>
-                ))}
-            </Alert>
-        );
-    }
+    return (
+        <Alert color="info" className="mt-2">
+            {filteredLocations.map((location) => (
+                <div key={location.FullPath}>
+                    <small>
+                        <span>
+                            Node tag: <strong>{location.NodeTag}</strong>
+                        </span>
+                        <br />
+                        <span>
+                            Path: <strong>{location.FullPath}</strong>
+                        </span>
+                        <br />
+                        {location.Error ? (
+                            <strong>{location.Error}</strong>
+                        ) : (
+                            <>
+                                {location.FreeSpaceHumane ? (
+                                    <span>
+                                        Free space: <strong>{location.FreeSpaceHumane}</strong>{" "}
+                                        {location.TotalSpaceHumane && (
+                                            <span>
+                                                {"(Total: "}
+                                                <strong>{location.TotalSpaceHumane}</strong>
+                                                {")"}
+                                            </span>
+                                        )}
+                                    </span>
+                                ) : (
+                                    <strong>(Path is unreachable)</strong>
+                                )}
+                            </>
+                        )}
+                    </small>
+                </div>
+            ))}
+        </Alert>
+    );
 }

@@ -187,7 +187,7 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                             <Icon icon="info" margin="m-0" /> what&apos;s this?
                         </small>
                     </div>
-                    <UncontrolledPopover target="qrInfo" placement="top" trigger="hover" container="PopoverContainer">
+                    <UncontrolledPopover target="qrInfo" placement="top" trigger="hover">
                         <PopoverBody>TODO: write info about qr code</PopoverBody>
                     </UncontrolledPopover>
                 </Col>
