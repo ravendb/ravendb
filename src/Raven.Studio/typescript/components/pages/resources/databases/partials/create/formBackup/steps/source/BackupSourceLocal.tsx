@@ -6,7 +6,7 @@ import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { InputActionMeta } from "react-select";
 import { Col, Row } from "reactstrap";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
-import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/CreateDatabaseFromBackupRestorePoint";
+import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
 import { mapRestorePointDtoToSelectOptions } from "components/pages/resources/databases/partials/create/formBackup/steps/source/backupSourceUtils";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
