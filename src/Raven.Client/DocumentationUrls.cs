@@ -14,6 +14,12 @@ internal static class DocumentationUrls
 
             ///<remarks><seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/text-search/highlight-query-results"/></remarks>
             public const string HighlightQueryResults = nameof(HighlightQueryResults);
+
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/indexes/querying/faceted-search"/></remarks>
+            public const string AggregationQuery = nameof(AggregationQuery);
+
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/indexes/querying/faceted-search#storing-facets-definition-in-a-document"/></remarks>
+            public const string AggregationQuerySetup = nameof(AggregationQuerySetup);
         }
 
         internal static class Transactions
