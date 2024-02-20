@@ -160,20 +160,14 @@ namespace Raven.Server.Documents.Indexes.Static
                     case CallExpression ce:
 
                         if (IsBoostExpression(ce))
-                            HasBoostedFields = true;
-                        else if (IsArrowFunctionExpressionWithObjectExpressionBody(ce, out var oea))
                         {
-                            foreach (var prop in oea.Properties)
-                            {
-                                if (prop is Property property)
-                                {
-                                    var fieldName = property.GetKey(engine);
-                                    var fieldNameAsString = fieldName.AsString();
+                            HasBoostedFields = true;
 
-                                    Fields.Add(fieldNameAsString);
-                                }
-                            }
+                            if (ce.Arguments[0] is ObjectExpression oe)
+                                AddObjectFieldsToIndexFields(oe);
                         }
+                        else if (IsArrowFunctionExpressionWithObjectExpressionBody(ce, out var oea))
+                            AddObjectFieldsToIndexFields(oea);
                         else
                             HasDynamicReturns = true;
                         break;
@@ -196,6 +190,20 @@ namespace Raven.Server.Documents.Indexes.Static
                     oea = _oea;
                 
                 return oea != null;
+            }
+
+            void AddObjectFieldsToIndexFields(ObjectExpression oe)
+            {
+                foreach (var prop in oe.Properties)
+                {
+                    if (prop is Property property)
+                    {
+                        var fieldName = property.GetKey(engine);
+                        var fieldNameAsString = fieldName.AsString();
+
+                        Fields.Add(fieldNameAsString);
+                    }
+                }
             }
         }
 
