@@ -5,7 +5,7 @@ import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import { FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
-import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/CreateDatabaseFromBackupRestorePoint";
+import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
 import { mapRestorePointDtoToSelectOptions } from "components/pages/resources/databases/partials/create/formBackup/steps/source/backupSourceUtils";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
 import { availableS3Regions } from "components/utils/common";

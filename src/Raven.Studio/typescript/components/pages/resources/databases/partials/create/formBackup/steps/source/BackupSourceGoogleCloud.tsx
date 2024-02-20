@@ -1,13 +1,12 @@
-import React, { ReactNode } from "react";
-import { useFormContext, useWatch, useFieldArray, FieldArrayWithId } from "react-hook-form";
-import { Row, Col, Label, Button } from "reactstrap";
+import React from "react";
+import { useFormContext, useWatch, useFieldArray } from "react-hook-form";
+import { Row, Col, Label } from "reactstrap";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import { FormInput } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
-import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/CreateDatabaseFromBackupRestorePoint";
+import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
 import { mapRestorePointDtoToSelectOptions } from "components/pages/resources/databases/partials/create/formBackup/steps/source/backupSourceUtils";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
-import { Icon } from "components/common/Icon";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
 import RestorePointsFields from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointsFields";
 

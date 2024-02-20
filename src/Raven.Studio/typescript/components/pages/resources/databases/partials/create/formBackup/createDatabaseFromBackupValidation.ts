@@ -74,6 +74,7 @@ const ravenCloudSource = yup.object({
             getBackupConfigurationScript: yup.string(),
             customServerUrl: yup.string(),
             forcePathStyle: yup.boolean(),
+            expireDate: yup.string(),
         })
         .nullable(),
 });
