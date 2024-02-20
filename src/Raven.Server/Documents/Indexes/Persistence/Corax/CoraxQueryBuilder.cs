@@ -1299,9 +1299,9 @@ public static class CoraxQueryBuilder
             if (field.OrderingType == OrderByFieldType.Score)
             {
                 if (field.Ascending)
-                    sortArray[sortIndex++] = new OrderMetadata(true, MatchCompareFieldType.Score, true);
-                else
                     sortArray[sortIndex++] = new OrderMetadata(true, MatchCompareFieldType.Score);
+                else
+                    sortArray[sortIndex++] = new OrderMetadata(true, MatchCompareFieldType.Score, ascending: false);
 
                 continue;
             }
