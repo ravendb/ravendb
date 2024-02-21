@@ -73,8 +73,6 @@ export default function CreateDatabaseFromBackup({
 
     console.log("kalczur FromBackup errors", formState.errors);
 
-    const debouncedValidationResult = useCreateDatabaseAsyncValidation(formValues.basicInfo.databaseName, setError);
-
     const activeSteps = getActiveStepsList(formValues, formState);
 
     const { currentStep, isFirstStep, isLastStep, goToStep, nextStep, prevStep } = useSteps(activeSteps.length);
@@ -99,9 +97,12 @@ export default function CreateDatabaseFromBackup({
         path: <StepPath isBackupFolder manualSelectedNodes={null} />,
     };
 
+    const asyncDatabaseNameValidation = useCreateDatabaseAsyncValidation(formValues.basicInfo.databaseName, setError);
+
     const onFinish: SubmitHandler<FormData> = async (formValues) => {
         return tryHandleSubmit(async () => {
-            if (debouncedValidationResult !== "valid") {
+            asyncDatabaseNameValidation.execute(formValues.basicInfo.databaseName);
+            if (!asyncDatabaseNameValidation.result) {
                 return;
             }
 
