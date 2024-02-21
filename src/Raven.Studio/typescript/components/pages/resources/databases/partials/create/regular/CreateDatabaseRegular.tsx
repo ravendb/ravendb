@@ -23,10 +23,10 @@ import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { tryHandleSubmit } from "components/utils/common";
 import QuickCreateButton from "components/pages/resources/databases/partials/create/regular/QuickCreateButton";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useCreateDatabaseAsyncValidation } from "components/pages/resources/databases/partials/create/shared/useCreateDatabaseAsyncValidation";
 import { FormProvider, FormState, SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { useCreateDatabase } from "components/pages/resources/databases/partials/create/shared/useCreateDatabase";
 import { useSteps } from "components/common/steps/useSteps";
+import { useCreateDatabaseAsyncValidation } from "components/pages/resources/databases/partials/create/shared/useCreateDatabaseAsyncValidation";
 
 interface CreateDatabaseRegularProps {
     closeModal: () => void;
@@ -65,7 +65,7 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
             ),
     });
 
-    const { control, handleSubmit, formState, setError, setValue, trigger } = form;
+    const { control, handleSubmit, formState, setValue, setError, trigger } = form;
     const formValues = useWatch({
         control,
     });
@@ -102,11 +102,12 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
         ),
     };
 
-    const debouncedValidationResult = useCreateDatabaseAsyncValidation(formValues.basicInfo.databaseName, setError);
+    const asyncDatabaseNameValidation = useCreateDatabaseAsyncValidation(formValues.basicInfo.databaseName, setError);
 
     const onFinish: SubmitHandler<FormData> = async (formValues) => {
         return tryHandleSubmit(async () => {
-            if (debouncedValidationResult !== "valid") {
+            asyncDatabaseNameValidation.execute(formValues.basicInfo.databaseName);
+            if (!asyncDatabaseNameValidation.result) {
                 return;
             }
 
