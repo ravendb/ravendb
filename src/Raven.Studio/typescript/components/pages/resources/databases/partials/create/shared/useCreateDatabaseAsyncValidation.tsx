@@ -1,48 +1,31 @@
 import { useServices } from "components/hooks/useServices";
-import { useEffect, useState } from "react";
 import { UseFormSetError } from "react-hook-form";
+import { CreateDatabaseRegularFormData } from "../regular/createDatabaseRegularValidation";
+import { CreateDatabaseFromBackupFormData } from "../formBackup/createDatabaseFromBackupValidation";
+import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
 
-interface FormData {
-    basicInfo: {
-        databaseName: string;
-    };
-}
-
-type ValidationResult = "valid" | "loading" | "error";
-
-export const useCreateDatabaseAsyncValidation = (databaseName: string, setError: UseFormSetError<FormData>) => {
-    const [result, setResult] = useState<ValidationResult>("loading");
+export const useCreateDatabaseAsyncValidation = (
+    databaseName: string,
+    setError: UseFormSetError<CreateDatabaseRegularFormData | CreateDatabaseFromBackupFormData>
+) => {
     const { resourcesService } = useServices();
 
-    useEffect(() => {
-        if (!databaseName) {
-            return;
-        }
+    return useAsyncDebounce(
+        async (databaseName) => {
+            if (!databaseName) {
+                return;
+            }
 
-        debouncedValidate(() => resourcesService.validateName("Database", databaseName), setError, setResult);
-    }, [databaseName, resourcesService, setError]);
+            const result = await resourcesService.validateName("Database", databaseName);
+            if (!result.IsValid) {
+                setError("basicInfo.databaseName", {
+                    type: "manual",
+                    message: result.ErrorMessage,
+                });
+            }
 
-    return result;
+            return result.IsValid;
+        },
+        [databaseName]
+    );
 };
-
-const debouncedValidate = _.debounce(
-    async (
-        validateName: () => Promise<Raven.Client.Util.NameValidation>,
-        setError: UseFormSetError<FormData>,
-        setResult: (result: ValidationResult) => void
-    ) => {
-        setResult("loading");
-        const result = await validateName();
-
-        if (result.IsValid) {
-            setResult("valid");
-        } else {
-            setError("basicInfo.databaseName", {
-                type: "manual",
-                message: result.ErrorMessage,
-            });
-            setResult("error");
-        }
-    },
-    500
-);
