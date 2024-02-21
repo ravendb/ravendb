@@ -225,6 +225,18 @@ namespace Raven.Server.Documents.Replication.Incoming
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Connection error {FromToString}: an exception was thrown during receiving incoming document replication batch.", e);
 
+                    var stats = _lastStats = new IncomingReplicationStatsAggregator(GetNextReplicationStatsId(), _lastStats);
+                    try
+                    {
+                        AddReplicationPerformance(stats);
+                        using (var scope = stats.CreateScope())
+                            scope.AddError(e);
+                    }
+                    finally
+                    {
+                        stats.Complete();
+                    }
+                    
                     InvokeOnFailed(e);
                 }
             }
@@ -266,16 +278,16 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 }
                                 catch (Exception e)
                                 {
-                                    AddReplicationPulse(ReplicationPulseDirection.IncomingError, e.Message);
                                     scope.AddError(e);
+                                    AddReplicationPulse(ReplicationPulseDirection.IncomingError, e.Message);
                                     throw;
                                 }
                             }
                         }
                         finally
                         {
-                            AddReplicationPulse(ReplicationPulseDirection.IncomingEnd);
                             stats.Complete();
+                            AddReplicationPulse(ReplicationPulseDirection.IncomingEnd);
                         }
                     case ReplicationMessageType.Heartbeat:
                         AddReplicationPulse(ReplicationPulseDirection.IncomingHeartbeat);
