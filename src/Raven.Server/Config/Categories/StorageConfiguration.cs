@@ -20,8 +20,9 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(DefaultValueSetInConstructor)]
         [ConfigurationEntry("Storage.DiscardVirtualMemory", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool DiscardVirtualMemory { get; set; }
-        
-        [Description("You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.")]
+
+        [Description("Use this setting to customize the path for the temporary files of the 'Databases' and the 'System' directories. " + 
+                     "By default, these files are written to the same location as the Raven.voron data file under the 'Temp' folder in those directories.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Storage.TempPath", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public PathSetting TempPath { get; set; }
