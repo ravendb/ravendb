@@ -2551,6 +2551,155 @@ public class PrefixedSharding : ClusterTestBase
         Assert.Equal(3, shardingConfiguration.BucketRanges.Count);
     }
 
+    [RavenFact(RavenTestCategory.Sharding)]
+    public void PrefixedSharding_CanQueryWithSpecifiedShardContext()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed =
+                [
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/us/",
+                        Shards = [0]
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/eu/",
+                        Shards = [1]
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/asia/",
+                        Shards = [2]
+                    }
+                ];
+            }
+        });
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User(), "users/us/1");
+                session.Store(new User(), "users/us/2");
+                session.Store(new User(), "users/us/3");
+
+                session.Store(new User(), "users/eu/1");
+                session.Store(new User(), "users/eu/2");
+
+                session.Store(new User(), "users/asia/1");
+
+
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var results = session.Query<User>()
+                    .Customize(x => x.ShardContext(s => s.ByDocumentId("users/us/1")))
+                    .ToList();
+
+                Assert.Equal(3, results.Count);
+
+                var results2 = session.Query<User>()
+                    .Customize(x => x.ShardContext(s => s.ByDocumentIds(new[] { "users/us/1", "users/eu/1" })))
+                    .Select(x => x.Id)
+                    .ToList();
+
+                Assert.Equal(5, results2.Count);
+                Assert.Contains("users/us/1", results2);
+                Assert.Contains("users/us/2", results2);
+                Assert.Contains("users/us/3", results2);
+                Assert.Contains("users/eu/1", results2);
+                Assert.Contains("users/eu/2", results2);
+
+                var results3 = session.Query<User>()
+                    .Customize(x => x.ShardContext(s => s.ByDocumentId("users/asia/")))
+                    .ToList();
+
+                Assert.Equal(1, results3.Count);
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var results = session.Advanced.DocumentQuery<User>()
+                    .ShardContext(s => s.ByDocumentId("users/us/1"))
+                    .ToList();
+
+                Assert.Equal(3, results.Count);
+
+                var results2 = session.Advanced.DocumentQuery<User>()
+                    .ShardContext(s => s.ByDocumentIds(new[] { "users/us/1", "users/eu/2" }))
+                    .ToList();
+
+                Assert.Equal(5, results2.Count);
+                var results3 = session.Advanced.DocumentQuery<User>()
+                    .ShardContext(s => s.ByDocumentId("users/asia/1"))
+                    .ToList();
+
+                Assert.Equal(1, results3.Count);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Sharding)]
+    public async Task PrefixesShouldGetPrecedenceOverAnchoring()
+    {
+        const string companyId = "companies/1";
+        const string relatedDocId = $"products/1${companyId}";
+        const int productsShard = 0;
+
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed =
+                [
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "products/",
+                        Shards = [productsShard]
+                    }
+                ];
+            }
+        });
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Company(), companyId);
+                session.SaveChanges();
+            }
+
+            var companyShardNumber = await Sharding.GetShardNumberForAsync(store, companyId);
+            Assert.Equal(1, companyShardNumber);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Product(), relatedDocId);
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession(ShardHelper.ToShardName(store.Database, companyShardNumber)))
+            {
+                var product = session.Query<Product>()
+                    .FirstOrDefault();
+
+                Assert.Null(product);
+            }
+
+            using (var session = store.OpenSession(ShardHelper.ToShardName(store.Database, productsShard)))
+            {
+                var product = session.Query<Product>()
+                    .FirstOrDefault();
+
+                Assert.NotNull(product);
+            }
+        }
+    }
+
     private class Item
     {
 #pragma warning disable CS0649
