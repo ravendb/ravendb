@@ -247,9 +247,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
                             }
                             catch (Exception e)
                             {
-                                AddReplicationPulse(ReplicationPulseDirection.OutgoingError, e.Message);
-
                                 scope.AddError(e);
+                                AddReplicationPulse(ReplicationPulseDirection.OutgoingError, e.Message);
                                 throw;
                             }
                         }
