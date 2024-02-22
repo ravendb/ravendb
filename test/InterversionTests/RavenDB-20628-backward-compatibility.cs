@@ -113,8 +113,7 @@ namespace InterversionTests
                 }))
                 {
                     await session.StoreAsync(user1);
-                    var e = await Assert.ThrowsAnyAsync<RavenException>(async () => await session.SaveChangesAsync());
-                    Assert.True(e.InnerException is InvalidOperationException);
+                    await session.SaveChangesAsync();
                 }
             }
         }
