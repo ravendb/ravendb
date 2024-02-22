@@ -27,9 +27,9 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             var identities = step.ReadTx.ReadTree(ClusterStateMachine.Identities);
             step.WriteTx.DeleteTree(ClusterStateMachine.Identities);
 
-            using (var items = step.ReadTx.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items))
             using (Slice.From(step.ReadTx.Allocator, dbKey, out Slice loweredPrefix))
             {
+                var items = step.ReadTx.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items);
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
                     dbs.Add(ClusterStateMachine.GetCurrentItemKey(result.Value).Substring(dbKey.Length));
@@ -86,7 +86,8 @@ namespace Raven.Server.Storage.Schema.Updates.Server
 
                 // update db backup status
                 var dbLower = db.ToLowerInvariant();
-                using (var items = step.WriteTx.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items))
+                var items = step.WriteTx.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items);
+
                 using (Slice.From(step.ReadTx.Allocator, $"{dbKey}{dbLower}", out Slice lowerKey))
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {

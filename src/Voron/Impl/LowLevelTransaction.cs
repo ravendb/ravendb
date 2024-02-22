@@ -930,6 +930,14 @@ namespace Voron.Impl
         
         public PageLocator PageLocator => _pageLocator;
 
+
+        private readonly UnguardedDisposableScope _disposableScope = new();
+
+        internal void RegisterDisposable<T>(T disposable) where T : IDisposable
+        {
+            _disposableScope.EnsureDispose(disposable);
+        }
+
         public void Dispose()
         {
             if (_txState.HasFlag(TxState.Disposed))
@@ -946,6 +954,8 @@ namespace Voron.Impl
             }
             finally
             {
+                // After the transaction is completed, we will move on into disposing all resources used by this
+                // transaction. First the pagers and internal resources, then registered ones by external parties.
                 _env.TransactionCompleted(this);
 
                 foreach (var pagerState in _pagerStates)
@@ -961,6 +971,7 @@ namespace Voron.Impl
                     }
                 }
 
+                _disposableScope.Dispose();
                 _root?.Dispose();
 
                 _allocator.AllocationFailed -= MarkTransactionAsFailed;

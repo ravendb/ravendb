@@ -33,7 +33,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                     Name = ClusterStateMachine.IdentitiesIndex
                 });
 
-            using (var items = step.ReadTx.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items))
+            var items = step.ReadTx.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items);
             using (Slice.From(step.ReadTx.Allocator, dbKey, out Slice loweredPrefix))
             {
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
