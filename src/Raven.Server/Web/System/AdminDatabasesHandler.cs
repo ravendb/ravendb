@@ -408,17 +408,16 @@ namespace Raven.Server.Web.System
             ValidateClusterMembers(clusterTopology, databaseRecord);
             UpdateDatabaseTopology(databaseRecord, clusterTopology, replicationFactor);
 
-            if (dbRecordExist && databaseRecord.IsSharded)
+            if (databaseRecord.IsSharded)
             {
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
-                    "remove this and introduce a dedicated command for updating Sharding.Prefixed");
-                await ServerStore.Sharding.UpdatePrefixedShardingIfNeeded(context, databaseRecord, clusterTopology);
-
+                if (dbRecordExist)
+                {
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
+                        "remove this and introduce a dedicated command for updating Sharding.Prefixed");
+                    await ServerStore.Sharding.UpdatePrefixedShardingIfNeeded(context, databaseRecord, clusterTopology);
+                }
+                
                 Server.ServerStore.Sharding.FillShardingConfiguration(databaseRecord, clusterTopology, index);
-                Server.ServerStore.AssignNodesToDatabase(clusterTopology,
-                    databaseRecord.DatabaseName,
-                    databaseRecord.Encrypted,
-                    databaseRecord.Sharding.Orchestrator.Topology);
             }
             else
             {
