@@ -14,7 +14,10 @@ using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.Server;
+using Sparrow.Threading;
 using Sparrow.Utils;
+using Voron;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Sharding.Persistence.Corax;
@@ -54,6 +57,8 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
         var result = ShardedQueryResultDocument.From(queryResult);
         var currentCoraxOrderIndex = 0;
 
+        // Number of order by fields in Corax index can be smaller than in query metadata
+        // because we don't create OrderMetadata for fields with zero indexed terms
         for (int i = 0; i < query.Metadata.OrderBy.Length && currentCoraxOrderIndex < orderByFields.Length; i++)
         {
             var orderByField = query.Metadata.OrderBy[i];
@@ -68,9 +73,14 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
             }
 
             var orderByFieldMetadata = orderByFields[currentCoraxOrderIndex];
-            
-            if (orderByFieldMetadata.Field.FieldName.ToString() != orderByField.Name)
-                continue;
+
+            using (var byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None))
+            {
+                Slice.From(byteStringContext, orderByField.Name.Value, ByteStringType.Immutable, out var orderByFieldNameSlice);
+                
+                if (SliceComparer.Compare(orderByFieldMetadata.Field.FieldName, orderByFieldNameSlice) != 0)
+                    continue;
+            }
                 
             if (orderByFieldMetadata.Ascending != orderByField.Ascending)
                 continue;
