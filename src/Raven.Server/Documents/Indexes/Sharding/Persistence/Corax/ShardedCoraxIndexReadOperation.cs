@@ -75,7 +75,7 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
             if (orderByFieldMetadata.Ascending != orderByField.Ascending)
                 continue;
 
-            if (CompareCoraxAndQueryOrderFieldType(orderByFieldMetadata.FieldType, orderByField.OrderingType) == false)
+            if (IsSameOrderType(orderByFieldMetadata.FieldType, orderByField.OrderingType) == false)
                 continue;
 
             currentCoraxOrderIndex++;
@@ -146,9 +146,9 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
         return result;
     }
 
-    private static bool CompareCoraxAndQueryOrderFieldType(MatchCompareFieldType corax, OrderByFieldType query)
+    private static bool IsSameOrderType(MatchCompareFieldType coraxOrderField, OrderByFieldType queryOrderField)
     {
-        bool result = (corax, query) switch
+        bool result = (coraxOrderField, queryOrderField) switch
         {
             (MatchCompareFieldType.Random, OrderByFieldType.Random) => true,
             (MatchCompareFieldType.Alphanumeric, OrderByFieldType.AlphaNumeric) => true,
@@ -156,7 +156,10 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
             (MatchCompareFieldType.Integer, OrderByFieldType.Long) => true,
             (MatchCompareFieldType.Floating, OrderByFieldType.Double) => true,
             (MatchCompareFieldType.Spatial, OrderByFieldType.Distance) => true,
-            (_, _) => false
+            (MatchCompareFieldType.Sequence, OrderByFieldType.String) => true,
+            (MatchCompareFieldType.Sequence, OrderByFieldType.Implicit) => true,
+            (MatchCompareFieldType.Integer, OrderByFieldType.Implicit) => true,
+            _ => false
         };
 
         return result;
