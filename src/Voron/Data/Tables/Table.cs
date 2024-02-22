@@ -24,7 +24,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Tables
 {
-    public sealed unsafe class Table : IDisposable
+    public sealed unsafe class Table
     {
         private readonly bool _forGlobalReadsOnly;
         private readonly TableSchema _schema;
@@ -48,8 +48,6 @@ namespace Voron.Data.Tables
         private long _overflowPageCount;
         private NewPageAllocator _tablePageAllocator;
         private NewPageAllocator _globalPageAllocator;
-
-        private bool _isDisposed;
 
         public NewPageAllocator TablePageAllocator
         {
@@ -1209,7 +1207,8 @@ namespace Voron.Data.Tables
                 throw new VoronErrorException($"Cannot find tree {name} in table {Name}");
 
             tree = Tree.Open(_tx.LowLevelTransaction, _tx, name, (TreeRootHeader*)treeHeader, isIndexTree: isIndexTree, newPageAllocator: TablePageAllocator);
-
+            _tx.LowLevelTransaction.RegisterDisposable(tree);
+            
             _treesBySliceCache ??= new Dictionary<Slice, Tree>(SliceStructComparer.Instance);
             _treesBySliceCache[name] = tree;
 
@@ -1645,7 +1644,6 @@ namespace Voron.Data.Tables
 
         public void DeleteByPrimaryKey(Slice value, Func<TableValueHolder, bool> deletePredicate)
         {
-            AssertNotDisposed();
             AssertWritableTable();
 
             var pk = _schema.Key;
@@ -1665,8 +1663,8 @@ namespace Voron.Data.Tables
                         {
                             var id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
                             var ptr = DirectRead(id, out int size);
-                            if (tableValueHolder == null)
-                                tableValueHolder = new TableValueHolder();
+
+                            tableValueHolder ??= new TableValueHolder();
                             tableValueHolder.Reader = new TableValueReader(id, ptr, size);
                             if (deletePredicate(tableValueHolder))
                             {
@@ -1690,8 +1688,6 @@ namespace Voron.Data.Tables
 
         public TableValueHolder ReadFirst(TableSchema.FixedSizeKeyIndexDef index)
         {
-            AssertNotDisposed();
-
             var fst = GetFixedSizeTree(index);
 
             using (var it = fst.Iterate())
@@ -1799,8 +1795,6 @@ namespace Voron.Data.Tables
 
         public IEnumerable<(long Key, TableValueHolder TableValueHolder)> IterateForDictionaryTraining(FixedSizeKeyIndexDef index, long skip = 1, long seek = 0)
         {
-            AssertNotDisposed();
-
             if (skip < 1)
                 throw new ArgumentOutOfRangeException(nameof(skip), "The skip must be positive and non zero.");
 
@@ -1823,7 +1817,7 @@ namespace Voron.Data.Tables
 
             int ReadChunked(FixedSizeTree<long>.IFixedSizeIterator it, ByteString chunk, out bool hasMore)
             {
-                // We will fill the buffer of the chunk expecting to have many documents in the chunk that end up 
+                // We will fill the buffer with the chunk expecting to have many documents in the chunk that end up 
                 // being stored in segments that are close to each other.
                 var chunkSpan = new Span<long>(chunk.Ptr, ChunkSize);
                 var keySpan = new Span<long>(chunk.Ptr + ChunkSize * sizeof(long), ChunkSize);
@@ -1916,8 +1910,6 @@ namespace Voron.Data.Tables
 
         public IEnumerable<TableValueHolder> SeekForwardFrom(FixedSizeKeyIndexDef index, long key, long skip)
         {
-            AssertNotDisposed();
-
             var fst = GetFixedSizeTree(index);
 
             using (var it = fst.Iterate())
@@ -1962,8 +1954,6 @@ namespace Voron.Data.Tables
 
         public TableValueHolder ReadLast(TableSchema.FixedSizeKeyIndexDef index)
         {
-            AssertNotDisposed();
-
             var fst = GetFixedSizeTree(index);
 
             using (var it = fst.Iterate())
@@ -1979,8 +1969,6 @@ namespace Voron.Data.Tables
         
         public IEnumerable<TableValueHolder> SeekBackwardFromLast(TableSchema.FixedSizeKeyIndexDef index, long skip = 0)
         {
-            AssertNotDisposed();
-
             var fst = GetFixedSizeTree(index);
             using (var it = fst.Iterate())
             {
@@ -2001,8 +1989,6 @@ namespace Voron.Data.Tables
 
         public IEnumerable<TableValueHolder> SeekBackwardFrom(TableSchema.FixedSizeKeyIndexDef index, long key, long skip = 0)
         {
-            AssertNotDisposed();
-
             var fst = GetFixedSizeTree(index);
             using (var it = fst.Iterate())
             {
@@ -2024,8 +2010,6 @@ namespace Voron.Data.Tables
 
         public bool HasEntriesGreaterThanStartAndLowerThanOrEqualToEnd(TableSchema.FixedSizeKeyIndexDef index, long start, long end)
         {
-            AssertNotDisposed();
-
             var fst = GetFixedSizeTree(index);
 
             using (var it = fst.Iterate())
@@ -2056,7 +2040,6 @@ namespace Voron.Data.Tables
 
         public bool Set(TableValueBuilder builder, bool forceUpdate = false)
         {
-            AssertNotDisposed();
             AssertWritableTable();
 
             // The ids returned from this function MUST NOT be stored outside of the transaction.
@@ -2081,7 +2064,6 @@ namespace Voron.Data.Tables
 
         public long DeleteBackwardFrom(TableSchema.FixedSizeKeyIndexDef index, long value, long numberOfEntriesToDelete)
         {
-            AssertNotDisposed();
             AssertWritableTable();
 
             if (numberOfEntriesToDelete < 0)
@@ -2111,7 +2093,6 @@ namespace Voron.Data.Tables
 
         public bool FindByIndex(TableSchema.FixedSizeKeyIndexDef index, long value, out TableValueReader reader)
         {
-            AssertNotDisposed();
             AssertWritableTable();
 
             reader = default;
@@ -2132,7 +2113,6 @@ namespace Voron.Data.Tables
 
         public bool DeleteByIndex(TableSchema.FixedSizeKeyIndexDef index, long value)
         {
-            AssertNotDisposed();
             AssertWritableTable();
 
             var fst = GetFixedSizeTree(index);
@@ -2282,8 +2262,6 @@ namespace Voron.Data.Tables
 
         public void PrepareForCommit()
         {
-            AssertNotDisposed();
-
             AssertValidTable();
 
             AssertValidIndexes();
@@ -2299,8 +2277,7 @@ namespace Voron.Data.Tables
 
                 var treeName = item.Key;
 
-                byte* ptr;
-                using (_tableTree.DirectAdd(treeName, sizeof(TreeRootHeader), out ptr))
+                using (_tableTree.DirectAdd(treeName, sizeof(TreeRootHeader), out byte* ptr))
                 {
                     var header = (TreeRootHeader*)ptr;
                     tree.State.CopyTo(header);
@@ -2379,28 +2356,6 @@ namespace Voron.Data.Tables
                 else if (globalDocsCount != pkIndexNumberOfEntries)
                     ThrowInconsistentItemsCountInIndexes(_schema.Key.Name.ToString(), NumberOfEntries, pkIndexNumberOfEntries);
             }
-        }
-
-        [Conditional("DEBUG")]
-        internal void AssertNotDisposed()
-        {
-            if (_isDisposed)
-                throw new InvalidOperationException("Cannot call this operation on a disposed instance.");
-        }
-
-        public void Dispose()
-        {
-            // During DEBUG runs we will actively check that Tables are not used after disposing. 
-            // https://issues.hibernatingrhinos.com/issue/RavenDB-22090
-            _isDisposed = true;
-            
-            if (_treesBySliceCache != null)
-            {
-                foreach (var item in _treesBySliceCache)
-                    item.Value.Dispose();
-            }
-
-            _tableTree?.Dispose();
         }
 
         public TableReport GetReport(bool includeDetails, StorageReportGenerator generatorInstance = null)
