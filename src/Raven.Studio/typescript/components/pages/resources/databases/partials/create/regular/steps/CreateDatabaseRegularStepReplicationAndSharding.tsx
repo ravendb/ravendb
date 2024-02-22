@@ -1,8 +1,5 @@
-import { Switch } from "components/common/Checkbox";
 import { FormInput, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
-import { LicenseRestrictions } from "components/common/LicenseRestrictions";
-import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { CreateDatabaseRegularFormData } from "../createDatabaseRegularValidation";
 import { useAppSelector } from "components/store";
 import React from "react";
@@ -13,23 +10,12 @@ import { clusterSelectors } from "components/common/shell/clusterSlice";
 const shardingImg = require("Content/img/createDatabase/sharding.svg");
 
 export default function CreateDatabaseRegularStepReplicationAndSharding() {
-    const availableNodesCount = useAppSelector(clusterSelectors.allNodes).length;
-
-    // TODO
-    // const maxReplicationFactorForSharding = useAppSelector(
-    //     licenseSelectors.statusValue("MaxReplicationFactorForSharding")
-    // );
-    // const hasMultiNodeSharding = useAppSelector(licenseSelectors.statusValue("HasMultiNodeSharding"));
-
-    // TODO remove shard number range input
-
-    const hasDynamicNodesDistribution = useAppSelector(licenseSelectors.statusValue("HasDynamicNodesDistribution"));
-
     const { control } = useFormContext<CreateDatabaseRegularFormData>();
-
     const formValues = useWatch({
         control,
     });
+
+    const availableNodesCount = useAppSelector(clusterSelectors.allNodes).length;
 
     const isReplicationFactorDisabled =
         formValues.replicationAndSharding.isManualReplication && !formValues.replicationAndSharding.isSharded;
@@ -51,47 +37,20 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                 </Col>
             </Row>
 
-            <UncontrolledPopover target="ReplicationInfo" placement="top" trigger="hover">
-                <PopoverBody>
-                    <div>
-                        Add more{" "}
-                        <strong className="text-node">
-                            <Icon icon="node" margin="m-0" /> Instance nodes
-                        </strong>{" "}
-                        in <a href="#">Manage cluster</a> view
-                    </div>
-                </PopoverBody>
-            </UncontrolledPopover>
-
-            <UncontrolledPopover target="ShardingInfo" placement="top" trigger="hover">
-                <PopoverBody>
-                    <p>
-                        <strong className="text-shard">
-                            <Icon icon="sharding" margin="m-0" /> Sharding
-                        </strong>{" "}
-                        is a database partitioning technique that breaks up large databases into smaller, more
-                        manageable pieces called{" "}
-                        <strong className="text-shard">
-                            {" "}
-                            <Icon icon="shard" margin="m-0" />
-                            shards
-                        </strong>
-                        .
-                    </p>
-                    <p>
-                        Each shard contains a subset of the data and can be stored on a separate server, allowing for{" "}
-                        <strong>horizontal scalability and improved performance</strong>.
-                    </p>
-                    <a href="#">
-                        Learn more TODO <Icon icon="newtab" margin="m-0" />
-                    </a>
-                </PopoverBody>
-            </UncontrolledPopover>
             <Row>
                 <Col lg={{ offset: 2, size: 8 }}>
                     <Row className="pt-2">
-                        <span id="ReplicationInfo">
-                            <Icon icon="info" color="info" margin="m-0" /> Available nodes:{" "}
+                        <span>
+                            <Icon id="ReplicationInfo" icon="info" color="info" margin="m-0" /> Available nodes:{" "}
+                            <UncontrolledPopover target="ReplicationInfo" placement="left" trigger="hover">
+                                <PopoverBody>
+                                    Add more{" "}
+                                    <strong className="text-node">
+                                        <Icon icon="node" margin="m-0" /> Instance nodes
+                                    </strong>{" "}
+                                    in <a href="#">Manage cluster</a> view
+                                </PopoverBody>
+                            </UncontrolledPopover>
                             <Icon icon="node" color="node" margin="ms-1" /> <strong>{availableNodesCount}</strong>
                         </span>
                     </Row>
@@ -104,6 +63,8 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                     control={control}
                                     name="replicationAndSharding.replicationFactor"
                                     className="replication-input"
+                                    min="1"
+                                    max={availableNodesCount}
                                     disabled={isReplicationFactorDisabled}
                                 />
                             </InputGroup>
@@ -121,33 +82,47 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                         </Col>
                     </Row>
                     <Row className="pt-2">
-                        <span id="ShardingInfo">
-                            <Icon icon="info" color="info" margin="m-0" /> What is sharding?
+                        <span>
+                            <Icon id="ShardingInfo" icon="info" color="info" margin="m-0" /> What is sharding?
+                            <UncontrolledPopover target="ShardingInfo" placement="left" trigger="hover">
+                                <PopoverBody>
+                                    <p>
+                                        <strong className="text-shard">
+                                            <Icon icon="sharding" margin="m-0" /> Sharding
+                                        </strong>{" "}
+                                        is a database partitioning technique that breaks up large databases into
+                                        smaller, more manageable pieces called{" "}
+                                        <strong className="text-shard">
+                                            {" "}
+                                            <Icon icon="shard" margin="m-0" />
+                                            shards
+                                        </strong>
+                                        .
+                                    </p>
+                                    <p>
+                                        Each shard contains a subset of the data and can be stored on a separate server,
+                                        allowing for <strong>horizontal scalability and improved performance</strong>.
+                                    </p>
+                                    <a href="#">
+                                        Learn more TODO <Icon icon="newtab" margin="m-0" />
+                                    </a>
+                                </PopoverBody>
+                            </UncontrolledPopover>
                         </span>
                     </Row>
                     <Row className="pt-2">
                         <Col>
-                            <LicenseRestrictions
-                                isAvailable={true} // TODO
-                                featureName={
-                                    <strong className="text-shard">
-                                        <Icon icon="sharding" margin="m-0" /> Sharding
-                                    </strong>
-                                }
-                                className="d-inline-block"
+                            <FormSwitch
+                                control={control}
+                                name="replicationAndSharding.isSharded"
+                                color="shard"
+                                className="mt-1"
                             >
-                                <FormSwitch
-                                    control={control}
-                                    name="replicationAndSharding.isSharded"
-                                    color="shard"
-                                    className="mt-1"
-                                >
-                                    Enable{" "}
-                                    <strong className="text-shard">
-                                        <Icon icon="sharding" margin="m-0" /> Sharding
-                                    </strong>
-                                </FormSwitch>
-                            </LicenseRestrictions>
+                                Enable{" "}
+                                <strong className="text-shard">
+                                    <Icon icon="sharding" margin="m-0" /> Sharding
+                                </strong>
+                            </FormSwitch>
                         </Col>
                         <Col sm="auto">
                             <Collapse isOpen={formValues.replicationAndSharding.isSharded}>
@@ -193,41 +168,11 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
 
             <Row className="mt-2">
                 <Col>
-                    {hasDynamicNodesDistribution ? (
-                        <LicenseRestrictions
-                            isAvailable={formValues.replicationAndSharding.replicationFactor > 1}
-                            message="Replication factor is set to 1"
-                            className="d-inline-block"
-                        >
-                            <FormSwitch
-                                control={control}
-                                name="replicationAndSharding.isDynamicDistribution"
-                                color="primary"
-                                disabled={formValues.replicationAndSharding.replicationFactor <= 1}
-                            >
-                                Allow dynamic database distribution
-                                <br />
-                                <small className="text-muted">Maintain replication factor upon node failure</small>
-                            </FormSwitch>
-                        </LicenseRestrictions>
-                    ) : (
-                        <LicenseRestrictions
-                            isAvailable={hasDynamicNodesDistribution}
-                            featureName="dynamic database distribution"
-                            className="d-inline-block"
-                        >
-                            <Switch
-                                color="primary"
-                                selected={false}
-                                toggleSelection={null}
-                                disabled={hasDynamicNodesDistribution}
-                            >
-                                Allow dynamic database distribution
-                                <br />
-                                <small className="text-muted">Maintain replication factor upon node failure</small>
-                            </Switch>
-                        </LicenseRestrictions>
-                    )}
+                    <FormSwitch control={control} name="replicationAndSharding.isDynamicDistribution" color="primary">
+                        Allow dynamic database distribution
+                        <br />
+                        <small className="text-muted">Maintain replication factor upon node failure</small>
+                    </FormSwitch>
                 </Col>
                 <Col>
                     <FormSwitch control={control} name="replicationAndSharding.isManualReplication" color="primary">
@@ -240,3 +185,53 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
         </div>
     );
 }
+
+// const shardedFieldId = "sharded";
+// const dynamicDistributionFieldId = "dynamic-distribution";
+
+// function ShardingUnavailablePopover() {
+//     return (
+//         <UncontrolledPopover target={shardedFieldId} placement="left" trigger="hover">
+//             <PopoverBody>
+//                 <LicenseRestrictedMessage
+//                     featureName={
+//                         <strong className="text-primary">
+//                             <Icon icon="sharding" />
+//                             Sharding
+//                         </strong>
+//                     }
+//                 />
+//             </PopoverBody>
+//         </UncontrolledPopover>
+//     );
+// }
+
+// function getDynamicDistributionDisabledPopover(hasDynamicNodesDistribution: boolean, replicationFactor: number) {
+//     if (!hasDynamicNodesDistribution) {
+//         return <DynamicNodesDistributionUnavailablePopover />;
+//     }
+
+//     if (replicationFactor === 1) {
+//         return <ReplicationFactorPopover />;
+//     }
+
+//     return null;
+// }
+
+// function DynamicNodesDistributionUnavailablePopover() {
+//     return (
+//         <UncontrolledPopover target={dynamicDistributionFieldId} placement="left" trigger="hover">
+//             <PopoverBody>
+//                 <LicenseRestrictedMessage featureName="dynamic database distribution" />
+//             </PopoverBody>
+//         </UncontrolledPopover>
+//     );
+// }
+
+// function ReplicationFactorPopover() {
+//     return (
+//         <UncontrolledPopover target={dynamicDistributionFieldId} placement="left" trigger="hover">
+//             <PopoverBody>Replication factor is set to 1</PopoverBody>
+//         </UncontrolledPopover>
+//     );
+// }
