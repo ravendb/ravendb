@@ -90,6 +90,7 @@ export default function CreateDatabaseFromBackup({
                 keyText={encryptionKeyText}
                 setValue={setValue}
                 triggerDatabaseName={() => trigger("basicInfo.databaseName")}
+                triggerEncryptionKey={() => trigger("encryption.key")}
                 encryptionKeyFieldName="encryption.key"
                 isSavedFieldName="encryption.isKeySaved"
             />

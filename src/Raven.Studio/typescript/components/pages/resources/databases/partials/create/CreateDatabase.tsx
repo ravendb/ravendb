@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Modal } from "reactstrap";
 import CreateDatabaseRegular from "./regular/CreateDatabaseRegular";
-import "./CreateDatabase.scss";
 import CreateDatabaseFromBackup from "./formBackup/CreateDatabaseFromBackup";
+import "./CreateDatabase.scss";
 
 type CreateMode = "regular" | "fromBackup";
 
@@ -11,7 +11,7 @@ interface CreateDatabaseProps {
 }
 
 export default function CreateDatabase({ closeModal }: CreateDatabaseProps) {
-    const [createMode, setCreateMode] = useState<CreateMode>("fromBackup");
+    const [createMode, setCreateMode] = useState<CreateMode>("regular");
 
     return (
         <Modal isOpen wrapClassName="bs5" size="lg" centered autoFocus fade className="create-database">
@@ -27,9 +27,6 @@ export default function CreateDatabase({ closeModal }: CreateDatabaseProps) {
                     changeCreateModeToRegular={() => setCreateMode("regular")}
                 />
             )}
-
-            {/* TODO remove? */}
-            <div id="PopoverContainer" className="popover-container-fix"></div>
         </Modal>
     );
 }

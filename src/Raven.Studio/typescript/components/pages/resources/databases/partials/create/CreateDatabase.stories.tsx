@@ -12,7 +12,7 @@ export default {
 
 export const DefaultCreateDatabase: StoryObj = {
     name: "Create Database",
-    render: () => {
+    render: (props: { isSecureServer: boolean; hasEncryption: boolean; hasDynamicNodesDistribution: boolean }) => {
         const { license, accessManager, cluster } = mockStore;
         const { resourcesService, databasesService } = mockServices;
 
@@ -24,12 +24,18 @@ export const DefaultCreateDatabase: StoryObj = {
         databasesService.withGenerateSecret();
 
         license.with_License({
-            HasEncryption: true,
+            HasEncryption: props.hasEncryption,
+            HasDynamicNodesDistribution: props.hasDynamicNodesDistribution,
         });
 
-        accessManager.with_isServerSecure(true);
+        accessManager.with_isServerSecure(props.isSecureServer);
         cluster.with_Cluster();
 
         return <CreateDatabase closeModal={() => null} />;
+    },
+    args: {
+        isSecureServer: true,
+        hasEncryption: true,
+        hasDynamicNodesDistribution: true,
     },
 };

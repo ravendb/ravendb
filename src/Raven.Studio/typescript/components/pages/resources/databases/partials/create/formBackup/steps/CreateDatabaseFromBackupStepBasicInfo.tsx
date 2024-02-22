@@ -1,5 +1,4 @@
 import { Icon } from "components/common/Icon";
-import { LicenseRestrictions } from "components/common/LicenseRestrictions";
 import React from "react";
 import { Row, Col, Button } from "reactstrap";
 import { CreateDatabaseFromBackupFormData } from "../createDatabaseFromBackupValidation";
@@ -10,11 +9,7 @@ const fromBackupImg = require("Content/img/createDatabase/from-backup.svg");
 
 export default function CreateDatabaseFromBackupStepBasicInfo() {
     const { control, setValue } = useFormContext<CreateDatabaseFromBackupFormData>();
-
     const formValues = useWatch({ control });
-
-    // TODO
-    const licenseIncludesSharding = true;
 
     return (
         <>
@@ -51,28 +46,17 @@ export default function CreateDatabaseFromBackupStepBasicInfo() {
                     </Button>
                 </Col>
                 <Col sm="6" lg="4">
-                    <LicenseRestrictions
-                        isAvailable={licenseIncludesSharding}
-                        featureName={
-                            <strong className="text-shard">
-                                <Icon icon="sharding" margin="m-0" /> Sharding
-                            </strong>
-                        }
-                        className="d-inline-block"
+                    <Button
+                        active={formValues.basicInfo.isSharded}
+                        onClick={() => setValue("basicInfo.isSharded", true)}
+                        color="shard"
+                        outline
+                        className="px-4 pt-3 w-100"
                     >
-                        <Button
-                            active={formValues.basicInfo.isSharded}
-                            onClick={() => setValue("basicInfo.isSharded", true)}
-                            color="shard"
-                            outline
-                            className="px-4 pt-3 w-100"
-                            disabled={!licenseIncludesSharding}
-                        >
-                            <Icon icon="sharding" margin="m-0" className="fs-2" />
-                            <br />
-                            Sharded database
-                        </Button>
-                    </LicenseRestrictions>
+                        <Icon icon="sharding" margin="m-0" className="fs-2" />
+                        <br />
+                        Sharded database
+                    </Button>
                 </Col>
             </Row>
         </>
