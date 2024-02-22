@@ -1,13 +1,14 @@
 import { FormCheckbox, FormInput } from "components/common/Form";
 import { Icon } from "components/common/Icon";
-import React, { useEffect, useRef, useState, ElementRef } from "react";
+import React, { useEffect, useRef, useState, ElementRef, PropsWithChildren } from "react";
 import { FieldPath, FieldValues, Control } from "react-hook-form";
-import { Row, Col, InputGroup, Button, Alert, UncontrolledPopover, PopoverBody, UncontrolledTooltip } from "reactstrap";
+import { Row, Col, InputGroup, Button, Alert, UncontrolledPopover, PopoverBody } from "reactstrap";
 import { useServices } from "components/hooks/useServices";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { QRCode } from "qrcodejs";
 import copyToClipboard from "common/copyToClipboard";
 import fileDownloader from "common/fileDownloader";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 const encryptionImg = require("Content/img/createDatabase/encryption.svg");
 
@@ -19,8 +20,8 @@ export interface FormEncryptionProps<TFieldValues extends FieldValues, TName ext
     keyText: string;
     fileName: string;
     setValue: (name: TName, value: FieldValues[TName]) => void;
+    triggerEncryptionKey: () => Promise<boolean>;
     triggerDatabaseName?: () => Promise<boolean>;
-    triggerEncryptionKey?: () => Promise<boolean>;
 }
 
 export default function FormEncryption<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>({
@@ -97,12 +98,12 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
         };
     }, [encryptionKey, isEncryptionKeyValid, qrCode]);
 
-    const buttonsDisabledReason = getButtonsDisabledReason(isDatabaseNameValid, isEncryptionKeyValid);
+    const isActionButtonDisabled = !isDatabaseNameValid || !isEncryptionKeyValid;
 
     return (
         <div>
             <div className="d-flex justify-content-center">
-                <img src={encryptionImg} alt="TODO" className="step-img" />
+                <img src={encryptionImg} alt="Encryption" className="step-img" />
             </div>
             <h2 className="text-center">Encryption at Rest</h2>
             <Row className="mt-4">
@@ -113,46 +114,45 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                         <Button type="button" title="Regenerate key" onClick={() => asyncGenerateSecret.execute(true)}>
                             <Icon icon="reset" margin="m-0" />
                         </Button>
-                        <div id="copy-key-button">
+                        <ActionButton
+                            isDatabaseNameValid={isDatabaseNameValid}
+                            isEncryptionKeyValid={isEncryptionKeyValid}
+                        >
                             <Button
                                 type="button"
                                 title="Copy to clipboard"
                                 onClick={() =>
                                     copyToClipboard.copy(keyText, "Encryption key data was copied to clipboard")
                                 }
-                                disabled={!!buttonsDisabledReason}
+                                disabled={isActionButtonDisabled}
                             >
                                 <Icon icon="copy-to-clipboard" margin="m-0" />
                             </Button>
-                        </div>
-                        {buttonsDisabledReason && (
-                            <UncontrolledTooltip target="copy-key-button" placement="top">
-                                {buttonsDisabledReason}
-                            </UncontrolledTooltip>
-                        )}
+                        </ActionButton>
                     </InputGroup>
                     <Row className="mt-2">
                         <Col>
-                            <div id="download-key-button">
+                            <ActionButton
+                                isDatabaseNameValid={isDatabaseNameValid}
+                                isEncryptionKeyValid={isEncryptionKeyValid}
+                            >
                                 <Button
                                     type="button"
                                     block
                                     color="primary"
                                     size="sm"
                                     onClick={() => fileDownloader.downloadAsTxt(keyText, fileName)}
-                                    disabled={!!buttonsDisabledReason}
+                                    disabled={isActionButtonDisabled}
                                 >
                                     <Icon icon="download" /> Download encryption key
                                 </Button>
-                            </div>
-                            {buttonsDisabledReason && (
-                                <UncontrolledTooltip target="download-key-button" placement="top">
-                                    {buttonsDisabledReason}
-                                </UncontrolledTooltip>
-                            )}
+                            </ActionButton>
                         </Col>
                         <Col>
-                            <div id="print-key-button">
+                            <ActionButton
+                                isDatabaseNameValid={isDatabaseNameValid}
+                                isEncryptionKeyValid={isEncryptionKeyValid}
+                            >
                                 <Button
                                     type="button"
                                     block
@@ -160,16 +160,11 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                                     onClick={() =>
                                         printEncryptionKey(keyText, fileName, qrContainerRef.current.innerHTML)
                                     }
-                                    disabled={!!buttonsDisabledReason}
+                                    disabled={isActionButtonDisabled}
                                 >
                                     <Icon icon="print" /> Print encryption key
                                 </Button>
-                            </div>
-                            {buttonsDisabledReason && (
-                                <UncontrolledTooltip target="print-key-button" placement="top">
-                                    {buttonsDisabledReason}
-                                </UncontrolledTooltip>
-                            )}
+                            </ActionButton>
                         </Col>
                     </Row>
                     <Alert color="warning" className="d-flex align-items-center mt-2">
@@ -256,12 +251,27 @@ const printEncryptionKey = (keyText: string, fileName: string, qrCodeHtml: strin
     }, 50);
 };
 
-const getButtonsDisabledReason = (isDatabaseNameValid: boolean, isEncryptionKeyValid: boolean): string | boolean => {
-    if (!isDatabaseNameValid) {
-        return "Database name is not valid";
-    }
-    if (!isEncryptionKeyValid) {
-        return "Encryption key is not valid";
-    }
-    return null;
-};
+interface ActionButtonProps {
+    isEncryptionKeyValid: boolean;
+    isDatabaseNameValid: boolean;
+}
+
+function ActionButton({ children, isEncryptionKeyValid, isDatabaseNameValid }: PropsWithChildren<ActionButtonProps>) {
+    return (
+        <ConditionalPopover
+            conditions={[
+                {
+                    isActive: !isEncryptionKeyValid,
+                    message: "Encryption key is not valid",
+                },
+                {
+                    isActive: !isDatabaseNameValid,
+                    message: "Database name is not valid",
+                },
+            ]}
+            popoverPlacement="top"
+        >
+            {children}
+        </ConditionalPopover>
+    );
+}
