@@ -1,4 +1,3 @@
-using FastTests;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
 

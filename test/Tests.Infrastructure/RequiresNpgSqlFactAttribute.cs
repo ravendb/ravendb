@@ -1,5 +1,4 @@
 ﻿using System;
-using FastTests;
 using Npgsql;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
