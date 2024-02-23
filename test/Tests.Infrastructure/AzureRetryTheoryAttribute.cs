@@ -41,6 +41,12 @@ namespace Tests.Infrastructure
         public AzureRetryTheoryAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
             : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
         {
+            if (RavenTestHelper.SkipIntegrationTests)
+            {
+                Skip = RavenTestHelper.SkipIntegrationMessage;
+                return;
+            }
+
             if (RavenTestHelper.IsRunningOnCI)
                 return;
 

@@ -11,6 +11,12 @@ namespace Tests.Infrastructure
     {
         public RequiresNpgSqlInlineData()
         {
+            if (RavenTestHelper.SkipIntegrationTests)
+            {
+                Skip = RavenTestHelper.SkipIntegrationMessage;
+                return;
+            }
+
             if (RavenTestHelper.IsRunningOnCI)
                 return;
 

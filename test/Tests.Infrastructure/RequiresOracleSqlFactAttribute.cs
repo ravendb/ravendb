@@ -8,6 +8,12 @@ namespace Tests.Infrastructure
     {
         public RequiresOracleSqlFactAttribute()
         {
+            if (RavenTestHelper.SkipIntegrationTests)
+            {
+                Skip = RavenTestHelper.SkipIntegrationMessage;
+                return;
+            }
+
             if (RavenTestHelper.IsRunningOnCI)
                 return;
 

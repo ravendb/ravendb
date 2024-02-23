@@ -11,6 +11,12 @@ namespace Tests.Infrastructure
     {
         public RequiresOracleSqlInlineData()
         {
+            if (RavenTestHelper.SkipIntegrationTests)
+            {
+                Skip = RavenTestHelper.SkipIntegrationMessage;
+                return;
+            }
+
             if (RavenTestHelper.IsRunningOnCI)
                 return;
 
