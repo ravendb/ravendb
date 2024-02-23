@@ -492,22 +492,20 @@ namespace Raven.Server
 
         private static void InitializeThreadPoolThreads(RavenConfiguration configuration)
         {
-            if (configuration.Server.ThreadPoolMinWorkerThreads != null || configuration.Server.ThreadPoolMinCompletionPortThreads != null)
-            {
-                ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
+            ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
 
-                int effectiveMinWorkerThreads = configuration.Server.ThreadPoolMinWorkerThreads ?? workerThreads;
-                int effectiveMinCompletionPortThreads = configuration.Server.ThreadPoolMinCompletionPortThreads ?? completionPortThreads;
+            int effectiveMinWorkerThreads = configuration.Server.ThreadPoolMinWorkerThreads ?? 2 * workerThreads;
+            int effectiveMinCompletionPortThreads = configuration.Server.ThreadPoolMinCompletionPortThreads ?? 2 * completionPortThreads;
 
-                ThreadPool.SetMinThreads(effectiveMinWorkerThreads, effectiveMinCompletionPortThreads);
+            ThreadPool.SetMinThreads(effectiveMinWorkerThreads, effectiveMinCompletionPortThreads);
 
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Thread Pool configuration was modified by calling {nameof(ThreadPool.SetMinThreads)}. Current values: workerThreads - {effectiveMinWorkerThreads}, completionPortThreads - {effectiveMinCompletionPortThreads}.");
-            }
+            if ((configuration.Server.ThreadPoolMinWorkerThreads != null || configuration.Server.ThreadPoolMinCompletionPortThreads != null) && Logger.IsInfoEnabled)
+                Logger.Info($"Thread Pool configuration was modified by calling {nameof(ThreadPool.SetMinThreads)}. Current values: workerThreads - {effectiveMinWorkerThreads}, completionPortThreads - {effectiveMinCompletionPortThreads}.");
+
 
             if (configuration.Server.ThreadPoolMaxWorkerThreads != null || configuration.Server.ThreadPoolMaxCompletionPortThreads != null)
             {
-                ThreadPool.GetMaxThreads(out var workerThreads, out var completionPortThreads);
+                ThreadPool.GetMaxThreads(out workerThreads, out completionPortThreads);
 
                 int effectiveMaxWorkerThreads = configuration.Server.ThreadPoolMaxWorkerThreads ?? workerThreads;
                 int effectiveMaxCompletionPortThreads = configuration.Server.ThreadPoolMaxCompletionPortThreads ?? completionPortThreads;

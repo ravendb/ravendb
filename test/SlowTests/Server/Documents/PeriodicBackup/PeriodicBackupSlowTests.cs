@@ -3096,7 +3096,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task CanDelayBackupTask()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
             using (var server = GetNewServer())
             using (var store = GetDocumentStore(new Options { Server = server }))
             {
@@ -3111,7 +3111,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
 
                 // The backup task is running, and the next backup should be scheduled for the next minute (based on the backup configuration)
-                var taskBackupInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+                var taskBackupInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup), cts.Token) as OngoingTaskBackup;
                 Assert.NotNull(taskBackupInfo);
                 Assert.NotNull(taskBackupInfo.OnGoingBackup);
                 var expectedNextBackupDateTime = DateTime.UtcNow.Date
@@ -3122,16 +3122,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // Let's delay the backup task to 1 hour
                 var delayDuration = TimeSpan.FromHours(1);
                 var sw = Stopwatch.StartNew();
-                await store.Maintenance.SendAsync(new DelayBackupOperation(taskBackupInfo.OnGoingBackup.RunningBackupTaskId, delayDuration));
+                await store.Maintenance.SendAsync(new DelayBackupOperation(taskBackupInfo.OnGoingBackup.RunningBackupTaskId, delayDuration), cts.Token);
 
                 // There should be no OnGoingBackup operation in the OngoingTaskBackup
                 // The next backup should be scheduled in almost 1 hour
                 OngoingTaskBackup afterDelayTaskBackupInfo = null;
-                await WaitForValueAsync(async () =>
+                Assert.True(await WaitForValueAsync(async () =>
                 {
-                    afterDelayTaskBackupInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+                    afterDelayTaskBackupInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup), cts.Token) as OngoingTaskBackup;
                     return afterDelayTaskBackupInfo is { OnGoingBackup: null };
-                }, true);
+                }, true));
+
+                cts.Token.ThrowIfCancellationRequested();
                 Assert.Null(afterDelayTaskBackupInfo.LastFullBackup);
                 Assert.True(afterDelayTaskBackupInfo.NextBackup.TimeSpan > delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000)) &&
                             afterDelayTaskBackupInfo.NextBackup.TimeSpan <= delayDuration,
@@ -3139,7 +3141,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     $"delayDuration: `{delayDuration}`");
 
                 // DelayUntil value in backup status and the time of scheduled next backup should be equal
-                var backupStatus = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
+                var backupStatus = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(taskId), cts.Token)).Status;
                 Assert.NotNull(backupStatus);
                 Assert.NotNull(backupStatus.DelayUntil);
                 Assert.Equal(backupStatus.DelayUntil, afterDelayTaskBackupInfo.NextBackup.DateTime);
