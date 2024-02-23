@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Reflection;
-using FastTests;
 using Raven.Server.SqlMigration;
 using Tests.Infrastructure.ConnectionString;
 using Xunit.Sdk;

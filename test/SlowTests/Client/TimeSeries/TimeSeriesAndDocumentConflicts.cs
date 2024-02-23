@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;

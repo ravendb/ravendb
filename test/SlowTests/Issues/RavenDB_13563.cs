@@ -8,6 +8,7 @@ using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

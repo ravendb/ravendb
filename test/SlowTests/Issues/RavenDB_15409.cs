@@ -6,7 +6,6 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Sparrow.Json;

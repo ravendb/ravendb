@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.ServerWide;
@@ -11,6 +10,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

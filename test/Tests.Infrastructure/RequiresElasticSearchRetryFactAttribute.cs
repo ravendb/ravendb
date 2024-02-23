@@ -1,5 +1,4 @@
 ﻿using System;
-using FastTests;
 using Tests.Infrastructure.ConnectionString;
 using xRetry;
 

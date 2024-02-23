@@ -20,7 +20,7 @@ using Xunit.Sdk;
 using ExceptionAggregator = Raven.Server.Utils.ExceptionAggregator;
 using System.Runtime.CompilerServices;
 
-namespace FastTests
+namespace Tests.Infrastructure
 {
     public static class RavenTestHelper
     {
@@ -72,7 +72,7 @@ namespace FastTests
                 }
             }
 
-            Xunit.Assert.True(condition, failureMessage);
+            Assert.True(condition, failureMessage);
         }
 
         public static void DeletePaths(ConcurrentSet<string> pathsToDelete, ExceptionAggregator exceptionAggregator)
@@ -171,7 +171,7 @@ namespace FastTests
         {
             var convertedExpected = ConvertRespectingNewLines(expected);
             var convertedActual = ConvertRespectingNewLines(actual);
-            
+
             Assert.StartsWith(convertedExpected, convertedActual);
         }
 
@@ -213,7 +213,7 @@ namespace FastTests
                 throw new XunitException(await massageFactory() + Environment.NewLine + e.Message);
             }
         }
-        
+
         private static string ConvertRespectingNewLines(string toConvert)
         {
             if (string.IsNullOrEmpty(toConvert))
