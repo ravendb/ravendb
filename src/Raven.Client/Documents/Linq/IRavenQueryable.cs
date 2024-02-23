@@ -13,22 +13,23 @@ using Raven.Client.Documents.Session;
 namespace Raven.Client.Documents.Linq
 {
     /// <summary>
-    /// An implementation of <see cref="IOrderedQueryable{T}"/> with Raven specific operation
+    /// An implementation of <see cref="IOrderedQueryable{T}"/> with Raven specific operations
     /// </summary>
     public interface IRavenQueryable<T> : IOrderedQueryable<T>
     {
         /// <summary>
-        /// Provide statistics about the query, such as duration, total number of results, staleness information, etc.
+        ///     Provide statistics about the query, such as duration, total number of results, staleness information, etc.
         /// </summary>
         IRavenQueryable<T> Statistics(out QueryStatistics stats);
 
         /// <summary>
-        /// Customizes the query using the specified action
+        ///     Customizes the query using one of the available methods from IDocumentQueryCustomization.
         /// </summary>
+        /// <param name="action">Action wrapping one of IDocumentQueryCustomization methods.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToCustomizeQuery"/>
         IRavenQueryable<T> Customize(Action<IDocumentQueryCustomization> action);
 
-
-        /// <inheritdoc cref="IRavenQueryable{T}.Highlight(string,int,int, HighlightingOptions, out Highlightings)"/>
+        /// <inheritdoc cref="IRavenQueryable{T}.Highlight(string, int, int, HighlightingOptions, out Highlightings)"/>
         IRavenQueryable<T> Highlight(string fieldName, int fragmentLength, int fragmentCount, out Highlightings highlightings);
 
         /// <summary>
@@ -43,7 +44,7 @@ namespace Raven.Client.Documents.Linq
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.HighlightQueryResults"/>
         IRavenQueryable<T> Highlight(string fieldName, int fragmentLength, int fragmentCount, HighlightingOptions options, out Highlightings highlightings);
 
-        /// <inheritdoc cref="IRavenQueryable{T}.Highlight(Expression{Func{T, object}},int,int, HighlightingOptions, out Highlightings)"/>
+        /// <inheritdoc cref="IRavenQueryable{T}.Highlight(Expression{Func{T, object}}, int, int, HighlightingOptions, out Highlightings)"/>
         IRavenQueryable<T> Highlight(Expression<Func<T, object>> path, int fragmentLength, int fragmentCount, out Highlightings highlightings);
 
         /// <summary>
