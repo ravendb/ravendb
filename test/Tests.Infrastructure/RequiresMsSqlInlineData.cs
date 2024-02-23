@@ -11,6 +11,12 @@ public class RequiresMsSqlInlineData : DataAttribute
 {
     public RequiresMsSqlInlineData()
     {
+        if (RavenTestHelper.SkipIntegrationTests)
+        {
+            Skip = RavenTestHelper.SkipIntegrationMessage;
+            return;
+        }
+
         if (RavenTestHelper.IsRunningOnCI)
             return;
 
