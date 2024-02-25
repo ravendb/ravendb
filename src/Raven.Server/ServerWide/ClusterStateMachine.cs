@@ -945,14 +945,15 @@ namespace Raven.Server.ServerWide
         {
             ClusterTransactionCommand clusterTransaction = null;
             Exception exception = null;
+            RawDatabaseRecord rawRecord = null;
             try
             {
                 clusterTransaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
-                using var rawRecord = ReadRawDatabaseRecord(context, clusterTransaction.DatabaseName);
+                rawRecord = ReadRawDatabaseRecord(context, clusterTransaction.DatabaseName);
                 if (rawRecord == null)
                     throw DatabaseDoesNotExistException.CreateWithMessage(clusterTransaction.DatabaseName, $"Could not execute update command of type '{nameof(ClusterTransactionCommand)}'.");
 
-                UpdateDatabaseRecordId(context, index, clusterTransaction);
+                UpdateDatabaseRecordId(context, index, clusterTransaction, ref rawRecord);
 
                 if (clusterTransaction.SerializedDatabaseCommands != null &&
                     clusterTransaction.SerializedDatabaseCommands.TryGet(nameof(ClusterTransactionCommand.Options), out BlittableJsonReaderObject blittableOptions))
@@ -991,14 +992,14 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
+                rawRecord?.Dispose();
                 LogCommand(nameof(ClusterTransactionCommand), index, exception, clusterTransaction);
             }
         }
 
-        private void UpdateDatabaseRecordId(ClusterOperationContext context, long index, ClusterTransactionCommand clusterTransaction)
+        private void UpdateDatabaseRecordId(ClusterOperationContext context, long index,
+            ClusterTransactionCommand clusterTransaction, ref RawDatabaseRecord rawRecord)
         {
-            var rawRecord = ReadRawDatabaseRecord(context, clusterTransaction.DatabaseName);
-
             if (rawRecord == null)
                 throw DatabaseDoesNotExistException.CreateWithMessage(clusterTransaction.DatabaseName, $"Could not execute update command of type '{nameof(ClusterTransactionCommand)}'.");
 
@@ -1018,12 +1019,13 @@ namespace Raven.Server.ServerWide
                         [nameof(DatabaseRecord.Topology)] = topology.ToJson()
                     };
 
-                    using (var old = databaseRecordJson)
+                    using (rawRecord)
                     {
                         databaseRecordJson = context.ReadObject(databaseRecordJson, dbKey);
                     }
 
                     UpdateValue(index, items, valueNameLowered, valueName, databaseRecordJson);
+                    rawRecord = new RawDatabaseRecord(databaseRecordJson);
                 }
             }
         }
