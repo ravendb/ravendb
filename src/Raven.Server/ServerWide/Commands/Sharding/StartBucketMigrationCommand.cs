@@ -119,7 +119,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
         private void AssertDestinationShardExists(ShardingConfiguration shardingConfiguration)
         {
             if (shardingConfiguration.Shards.ContainsKey(DestinationShard) == false)
-                throw new RachisApplyException($"Destination shard {DestinationShard} doesn't exists");
+                throw new RachisApplyException($"Database '{DatabaseName}' : Failed to start migration of bucket '{Bucket}'. Destination shard {DestinationShard} doesn't exist");
 
             if (string.IsNullOrEmpty(Prefix)) 
                 return;
@@ -127,11 +127,11 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             // prefixed bucket range
             var index = shardingConfiguration.Prefixed.BinarySearch(new PrefixedShardingSetting(Prefix), PrefixedSettingComparer.Instance);
             if (index < 0)
-                throw new RachisApplyException($"Prefix {Prefix} doesn't exists");
+                throw new RachisApplyException($"Database '{DatabaseName}' : Failed to start migration of bucket '{Bucket}'. Prefix {Prefix} doesn't exist");
 
             var shards = shardingConfiguration.Prefixed[index].Shards;
             if (shards == null || shards.Contains(DestinationShard) == false)
-                throw new RachisApplyException($"Destination shard {DestinationShard} doesn't exists");
+                throw new RachisApplyException($"Database '{DatabaseName}' : Failed to start migration of bucket '{Bucket}'. Destination shard {DestinationShard} doesn't exist");
         }
 
         public override void FillJson(DynamicJsonValue json)

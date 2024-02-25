@@ -1,6 +1,6 @@
-﻿using System.Diagnostics;
-using Raven.Client.ServerWide;
+﻿using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Sharding;
 using Raven.Server.Utils;  
 using Sparrow.Json.Parsing;
@@ -9,21 +9,22 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 {
     public sealed class DeletePrefixedShardingSettingCommand : UpdateDatabaseCommand
     {
-        public PrefixedShardingSetting Prefix;
+        public PrefixedShardingSetting Setting;
 
         public DeletePrefixedShardingSettingCommand()
         {
         }
 
-        public DeletePrefixedShardingSettingCommand(PrefixedShardingSetting prefix, string database, string raftId) : base(database, raftId)
+        public DeletePrefixedShardingSettingCommand(PrefixedShardingSetting setting, string database, string raftId) : base(database, raftId)
         {
-            Prefix = prefix;
+            Setting = setting;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            int prefixIndex = record.Sharding.Prefixed.BinarySearch(Prefix, PrefixedSettingComparer.Instance);
-            Debug.Assert(prefixIndex >= 0, $"prefix {Prefix.Prefix} doesn't exist");
+            int prefixIndex = record.Sharding.Prefixed.BinarySearch(Setting, PrefixedSettingComparer.Instance);
+            if (prefixIndex < 0)
+                throw new RachisApplyException($"Prefixed setting '{Setting.Prefix}' was not found in sharding configuration");
 
             var prefixRangeStart = record.Sharding.Prefixed[prefixIndex].BucketRangeStart;
             var nextPrefixRangeStart = prefixRangeStart + ShardHelper.NumberOfBuckets;
@@ -52,7 +53,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(Prefix)] = Prefix.ToJson();
+            json[nameof(Setting)] = Setting.ToJson();
         }
     }
 }
