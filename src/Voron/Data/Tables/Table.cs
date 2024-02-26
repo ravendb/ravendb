@@ -2400,8 +2400,6 @@ namespace Voron.Data.Tables
                     item.Value.Dispose();
             }
 
-            _activeDataSmallSection?.Dispose();
-
             _tableTree?.Dispose();
         }
 

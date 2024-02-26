@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Raven.Server.Utils
+namespace Sparrow.Server.Utils
 {
     public sealed class DisposableScope : IDisposable
     {
-        private readonly LinkedList<IDisposable> _disposables = new LinkedList<IDisposable>();
+        private readonly LinkedList<IDisposable> _disposables = new();
         private int _delayedDispose;
 
         public void EnsureDispose(IDisposable toDispose)
@@ -19,7 +19,6 @@ namespace Raven.Server.Utils
                 return;
 
             List<Exception> errors = null; 
-
             foreach (var disposable in _disposables)
             {
                 try
@@ -28,9 +27,7 @@ namespace Raven.Server.Utils
                 }
                 catch (Exception e)
                 {
-                    if (errors == null)
-                        errors = new List<Exception>();
-                    
+                    errors ??= new List<Exception>();
                     errors.Add(e);
                 }
             }
