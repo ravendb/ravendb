@@ -2,23 +2,41 @@ import { FormInput, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { CreateDatabaseRegularFormData } from "../createDatabaseRegularValidation";
 import { useAppSelector } from "components/store";
-import React from "react";
+import React, { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Alert, Col, Collapse, InputGroup, InputGroupText, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMessage";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 const shardingImg = require("Content/img/createDatabase/sharding.svg");
 
 export default function CreateDatabaseRegularStepReplicationAndSharding() {
-    const { control } = useFormContext<CreateDatabaseRegularFormData>();
-    const formValues = useWatch({
+    const hasDynamicNodesDistribution = useAppSelector(licenseSelectors.statusValue("HasDynamicNodesDistribution"));
+    const maxReplicationFactorForSharding =
+        useAppSelector(licenseSelectors.statusValue("MaxReplicationFactorForSharding")) ?? Infinity;
+
+    const { control, setValue } = useFormContext<CreateDatabaseRegularFormData>();
+    const {
+        replicationAndSharding: { isSharded, shardsCount, replicationFactor, isManualReplication },
+    } = useWatch({
         control,
     });
 
     const availableNodesCount = useAppSelector(clusterSelectors.allNodes).length;
 
-    const isReplicationFactorDisabled =
-        formValues.replicationAndSharding.isManualReplication && !formValues.replicationAndSharding.isSharded;
+    const maxReplicationFactor = isSharded
+        ? Math.min(maxReplicationFactorForSharding, availableNodesCount)
+        : availableNodesCount;
+
+    const isReplicationFactorDisabled = isManualReplication && !isSharded;
+
+    useEffect(() => {
+        if (isSharded && replicationFactor > maxReplicationFactorForSharding) {
+            setValue("replicationAndSharding.replicationFactor", maxReplicationFactorForSharding);
+        }
+    }, [replicationFactor, isSharded, maxReplicationFactorForSharding, setValue]);
 
     return (
         <div>
@@ -42,16 +60,30 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                     <Row className="pt-2">
                         <span>
                             <Icon id="ReplicationInfo" icon="info" color="info" margin="m-0" /> Available nodes:{" "}
-                            <UncontrolledPopover target="ReplicationInfo" placement="left" trigger="hover">
-                                <PopoverBody>
-                                    Add more{" "}
-                                    <strong className="text-node">
-                                        <Icon icon="node" margin="m-0" /> Instance nodes
-                                    </strong>{" "}
-                                    in <a href="#">Manage cluster</a> view
-                                </PopoverBody>
+                            <UncontrolledPopover
+                                target="ReplicationInfo"
+                                placement="left"
+                                trigger="hover"
+                                className="bs5"
+                            >
+                                {isSharded && maxReplicationFactorForSharding < availableNodesCount ? (
+                                    <PopoverBody>
+                                        <LicenseRestrictedMessage>
+                                            Your license doesn&apos;t allow replication factor higher than{" "}
+                                            {maxReplicationFactorForSharding} for sharded database.
+                                        </LicenseRestrictedMessage>
+                                    </PopoverBody>
+                                ) : (
+                                    <PopoverBody>
+                                        Add more{" "}
+                                        <strong className="text-node">
+                                            <Icon icon="node" margin="m-0" /> Instance nodes
+                                        </strong>{" "}
+                                        in <a href="#">Manage cluster</a> view
+                                    </PopoverBody>
+                                )}
                             </UncontrolledPopover>
-                            <Icon icon="node" color="node" margin="ms-1" /> <strong>{availableNodesCount}</strong>
+                            <Icon icon="node" color="node" margin="ms-1" /> <strong>{maxReplicationFactor}</strong>
                         </span>
                     </Row>
                     <Row className="pt-2">
@@ -64,7 +96,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                     name="replicationAndSharding.replicationFactor"
                                     className="replication-input"
                                     min="1"
-                                    max={availableNodesCount}
+                                    max={maxReplicationFactor}
                                     disabled={isReplicationFactorDisabled}
                                 />
                             </InputGroup>
@@ -75,7 +107,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                 control={control}
                                 name="replicationAndSharding.replicationFactor"
                                 min="1"
-                                max={availableNodesCount}
+                                max={maxReplicationFactor}
                                 className="mt-1"
                                 disabled={isReplicationFactorDisabled}
                             />
@@ -125,7 +157,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                             </FormSwitch>
                         </Col>
                         <Col sm="auto">
-                            <Collapse isOpen={formValues.replicationAndSharding.isSharded}>
+                            <Collapse isOpen={isSharded}>
                                 <InputGroup>
                                     <InputGroupText>Number of shards</InputGroupText>
                                     <FormInput
@@ -139,23 +171,21 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                         </Col>
                     </Row>
                     <Alert color="info" className="text-center mt-2">
-                        <Collapse isOpen={formValues.replicationAndSharding.isSharded}>
+                        <Collapse isOpen={isSharded}>
                             <>
                                 Data will be divided into{" "}
                                 <strong>
-                                    {formValues.replicationAndSharding.shardsCount}
+                                    {shardsCount}
                                     <Icon icon="shard" margin="m-0" /> Shards
                                 </strong>
                                 .<br />
                             </>
                         </Collapse>
-                        {formValues.replicationAndSharding.replicationFactor > 1 ? (
+                        {replicationFactor > 1 ? (
                             <>
-                                {formValues.replicationAndSharding.isSharded ? <>Each shard</> : <>Data</>} will be
-                                replicated to{" "}
+                                {isSharded ? <>Each shard</> : <>Data</>} will be replicated to{" "}
                                 <strong>
-                                    {formValues.replicationAndSharding.replicationFactor}{" "}
-                                    <Icon icon="node" margin="m-0" /> Nodes
+                                    {replicationFactor} <Icon icon="node" margin="m-0" /> Nodes
                                 </strong>
                                 .
                             </>
@@ -168,11 +198,28 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
 
             <Row className="mt-2">
                 <Col>
-                    <FormSwitch control={control} name="replicationAndSharding.isDynamicDistribution" color="primary">
-                        Allow dynamic database distribution
-                        <br />
-                        <small className="text-muted">Maintain replication factor upon node failure</small>
-                    </FormSwitch>
+                    <ConditionalPopover
+                        conditions={{
+                            isActive: !hasDynamicNodesDistribution,
+                            message: (
+                                <LicenseRestrictedMessage>
+                                    Current license doesn&apos;t include{" "}
+                                    <strong>Dynamic database distribution feature</strong>.
+                                </LicenseRestrictedMessage>
+                            ),
+                        }}
+                    >
+                        <FormSwitch
+                            control={control}
+                            name="replicationAndSharding.isDynamicDistribution"
+                            color="primary"
+                            disabled={!hasDynamicNodesDistribution}
+                        >
+                            Allow dynamic database distribution
+                            <br />
+                            <small className="text-muted">Maintain replication factor upon node failure</small>
+                        </FormSwitch>
+                    </ConditionalPopover>
                 </Col>
                 <Col>
                     <FormSwitch control={control} name="replicationAndSharding.isManualReplication" color="primary">
@@ -185,53 +232,3 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
         </div>
     );
 }
-
-// const shardedFieldId = "sharded";
-// const dynamicDistributionFieldId = "dynamic-distribution";
-
-// function ShardingUnavailablePopover() {
-//     return (
-//         <UncontrolledPopover target={shardedFieldId} placement="left" trigger="hover">
-//             <PopoverBody>
-//                 <LicenseRestrictedMessage
-//                     featureName={
-//                         <strong className="text-primary">
-//                             <Icon icon="sharding" />
-//                             Sharding
-//                         </strong>
-//                     }
-//                 />
-//             </PopoverBody>
-//         </UncontrolledPopover>
-//     );
-// }
-
-// function getDynamicDistributionDisabledPopover(hasDynamicNodesDistribution: boolean, replicationFactor: number) {
-//     if (!hasDynamicNodesDistribution) {
-//         return <DynamicNodesDistributionUnavailablePopover />;
-//     }
-
-//     if (replicationFactor === 1) {
-//         return <ReplicationFactorPopover />;
-//     }
-
-//     return null;
-// }
-
-// function DynamicNodesDistributionUnavailablePopover() {
-//     return (
-//         <UncontrolledPopover target={dynamicDistributionFieldId} placement="left" trigger="hover">
-//             <PopoverBody>
-//                 <LicenseRestrictedMessage featureName="dynamic database distribution" />
-//             </PopoverBody>
-//         </UncontrolledPopover>
-//     );
-// }
-
-// function ReplicationFactorPopover() {
-//     return (
-//         <UncontrolledPopover target={dynamicDistributionFieldId} placement="left" trigger="hover">
-//             <PopoverBody>Replication factor is set to 1</PopoverBody>
-//         </UncontrolledPopover>
-//     );
-// }
