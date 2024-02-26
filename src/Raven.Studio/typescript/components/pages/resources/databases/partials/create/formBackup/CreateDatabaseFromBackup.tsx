@@ -11,7 +11,16 @@ import {
 import { yupResolver } from "@hookform/resolvers/yup";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useCreateDatabaseAsyncValidation } from "../shared/useCreateDatabaseAsyncValidation";
-import { FormProvider, FormState, SubmitHandler, useForm, useWatch } from "react-hook-form";
+import {
+    Control,
+    FormProvider,
+    FormState,
+    SubmitHandler,
+    UseFormSetValue,
+    UseFormTrigger,
+    useForm,
+    useWatch,
+} from "react-hook-form";
 import StepBasicInfo from "./steps/CreateDatabaseFromBackupStepBasicInfo";
 import StepPath from "../shared/CreateDatabaseStepPath";
 import StepEncryption from "../../../../../../common/FormEncryption";
@@ -21,24 +30,17 @@ import { DevTool } from "@hookform/devtools";
 import { useServices } from "components/hooks/useServices";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import databasesManager from "common/shell/databasesManager";
-import { useCreateDatabase } from "components/pages/resources/databases/partials/create/shared/useCreateDatabase";
 import { useSteps } from "components/common/steps/useSteps";
 import { createDatabaseFromBackupDataUtils } from "components/pages/resources/databases/partials/create/formBackup/createDatabaseFromBackupDataUtils";
 import notificationCenter from "common/notifications/notificationCenter";
+import {
+    CreateDatabaseStep,
+    createDatabaseUtils,
+} from "components/pages/resources/databases/partials/create/shared/createDatabaseUtils";
 
 interface CreateDatabaseFromBackupProps {
     closeModal: () => void;
     changeCreateModeToRegular: () => void;
-}
-
-type StepId = "basicInfo" | "backupSource" | "encryption" | "path";
-
-// TODO move to shared
-interface Step {
-    id: StepId;
-    label: string;
-    active: boolean;
-    isInvalid?: boolean;
 }
 
 // TODO google events
@@ -70,35 +72,22 @@ export default function CreateDatabaseFromBackup({
     const formValues = useWatch({
         control,
     });
-
-    console.log("kalczur FromBackup errors", formState.errors);
+    console.log("kalczur FromBackup errors", formState.errors); // TODO remove
 
     const activeSteps = getActiveStepsList(formValues, formState);
-
-    const { currentStep, isFirstStep, isLastStep, goToStep, nextStep, prevStep } = useSteps(activeSteps.length);
-    const { encryptionKeyFileName, encryptionKeyText } = useCreateDatabase(formValues);
-
-    // TODO to function
-    const stepViews: Record<StepId, JSX.Element> = {
-        basicInfo: <StepBasicInfo />,
-        backupSource: <StepSource />,
-        encryption: (
-            <StepEncryption
-                control={control}
-                encryptionKey={formValues.encryption.key}
-                fileName={encryptionKeyFileName}
-                keyText={encryptionKeyText}
-                setValue={setValue}
-                triggerDatabaseName={() => trigger("basicInfo.databaseName")}
-                triggerEncryptionKey={() => trigger("encryption.key")}
-                encryptionKeyFieldName="encryption.key"
-                isSavedFieldName="encryption.isKeySaved"
-            />
-        ),
-        path: <StepPath isBackupFolder manualSelectedNodes={null} />,
-    };
+    const { currentStep, isFirstStep, isLastStep, goToStepWithValidation, nextStepWithValidation, prevStep } = useSteps(
+        activeSteps.length
+    );
+    const stepViews = getStepViews(control, formValues, setValue, trigger);
 
     const asyncDatabaseNameValidation = useCreateDatabaseAsyncValidation(formValues.basicInfo.databaseName, setError);
+
+    const stepValidation = createDatabaseUtils.getStepValidation(
+        activeSteps[currentStep].id,
+        trigger,
+        asyncDatabaseNameValidation,
+        formValues.basicInfo.databaseName
+    );
 
     const onFinish: SubmitHandler<FormData> = async (formValues) => {
         return tryHandleSubmit(async () => {
@@ -118,6 +107,8 @@ export default function CreateDatabaseFromBackup({
         });
     };
 
+    // TODO add step validation spinner
+
     return (
         <FormProvider {...form}>
             <Form onSubmit={handleSubmit(onFinish)}>
@@ -127,7 +118,7 @@ export default function CreateDatabaseFromBackup({
                         <Steps
                             current={currentStep}
                             steps={activeSteps.map((step) => ({ label: step.label, isInvalid: step.isInvalid }))}
-                            onClick={goToStep}
+                            onClick={(step) => goToStepWithValidation(step, stepValidation)}
                             className="flex-grow me-4"
                         ></Steps>
                         <CloseButton onClick={closeModal} />
@@ -163,7 +154,12 @@ export default function CreateDatabaseFromBackup({
                             Finish
                         </ButtonWithSpinner>
                     ) : (
-                        <Button type="button" color="primary" className="rounded-pill" onClick={nextStep}>
+                        <Button
+                            type="button"
+                            color="primary"
+                            className="rounded-pill"
+                            onClick={() => nextStepWithValidation(stepValidation)}
+                        >
                             Next <Icon icon="arrow-thin-right" margin="ms-1" />
                         </Button>
                     )}
@@ -173,6 +169,8 @@ export default function CreateDatabaseFromBackup({
     );
 }
 
+type Step = CreateDatabaseStep<FormData>;
+
 function getActiveStepsList(formValues: FormData, formState: FormState<FormData>): Step[] {
     const allSteps: Step[] = [
         {
@@ -181,15 +179,51 @@ function getActiveStepsList(formValues: FormData, formState: FormState<FormData>
             active: true,
             isInvalid: !!formState.errors.basicInfo,
         },
-        { id: "backupSource", label: "Backup Source", active: true, isInvalid: !!formState.errors.source },
+        { id: "source", label: "Backup Source", active: true, isInvalid: !!formState.errors.source },
         {
             id: "encryption",
             label: "Encryption",
             active: formValues.source.isEncrypted,
             isInvalid: !!formState.errors.encryption,
         },
-        { id: "path", label: "Paths Configuration", active: true, isInvalid: !!formState.errors.pathsConfigurations },
+        {
+            id: "pathsConfigurations",
+            label: "Paths Configuration",
+            active: true,
+            isInvalid: !!formState.errors.pathsConfigurations,
+        },
     ];
 
     return allSteps.filter((step) => step.active);
+}
+
+function getStepViews(
+    control: Control<FormData>,
+    formValues: FormData,
+    setValue: UseFormSetValue<FormData>,
+    trigger: UseFormTrigger<FormData>
+): Record<keyof FormData, JSX.Element> {
+    const { encryptionKeyFileName, encryptionKeyText } = createDatabaseUtils.getEncryptionData(
+        formValues.basicInfo.databaseName,
+        formValues.encryption.key
+    );
+
+    return {
+        basicInfo: <StepBasicInfo />,
+        source: <StepSource />,
+        encryption: (
+            <StepEncryption
+                control={control}
+                encryptionKey={formValues.encryption.key}
+                fileName={encryptionKeyFileName}
+                keyText={encryptionKeyText}
+                setValue={setValue}
+                triggerDatabaseName={() => trigger("basicInfo.databaseName")}
+                triggerEncryptionKey={() => trigger("encryption.key")}
+                encryptionKeyFieldName="encryption.key"
+                isSavedFieldName="encryption.isKeySaved"
+            />
+        ),
+        pathsConfigurations: <StepPath isBackupFolder manualSelectedNodes={null} />,
+    };
 }

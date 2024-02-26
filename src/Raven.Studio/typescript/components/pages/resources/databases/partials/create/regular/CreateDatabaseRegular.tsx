@@ -15,7 +15,7 @@ import StepPath from "../shared/CreateDatabaseStepPath";
 import { DevTool } from "@hookform/devtools";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
-import { CreateDatabaseDto } from "commands/resources/createDatabaseCommand";
+
 import { useServices } from "components/hooks/useServices";
 import databasesManager from "common/shell/databasesManager";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -23,23 +23,27 @@ import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { tryHandleSubmit } from "components/utils/common";
 import QuickCreateButton from "components/pages/resources/databases/partials/create/regular/QuickCreateButton";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { FormProvider, FormState, SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { useCreateDatabase } from "components/pages/resources/databases/partials/create/shared/useCreateDatabase";
+import {
+    Control,
+    FormProvider,
+    FormState,
+    SubmitHandler,
+    UseFormSetValue,
+    UseFormTrigger,
+    useForm,
+    useWatch,
+} from "react-hook-form";
 import { useSteps } from "components/common/steps/useSteps";
 import { useCreateDatabaseAsyncValidation } from "components/pages/resources/databases/partials/create/shared/useCreateDatabaseAsyncValidation";
+import { createDatabaseRegularDataUtils } from "components/pages/resources/databases/partials/create/regular/createDatabaseRegularDataUtils";
+import {
+    CreateDatabaseStep,
+    createDatabaseUtils,
+} from "components/pages/resources/databases/partials/create/shared/createDatabaseUtils";
 
 interface CreateDatabaseRegularProps {
     closeModal: () => void;
     changeCreateModeToBackup: () => void;
-}
-
-type StepId = "createNew" | "encryption" | "replicationAndSharding" | "nodeSelection" | "path";
-
-interface Step {
-    id: StepId;
-    label: string;
-    active: boolean;
-    isInvalid?: boolean;
 }
 
 // TODO google events
@@ -51,7 +55,7 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
 
     const form = useForm<FormData>({
         mode: "onChange",
-        defaultValues: getDefaultValues(allNodeTags.length),
+        defaultValues: createDatabaseRegularDataUtils.getDefaultValues(allNodeTags.length),
         resolver: (data, _, options) =>
             yupResolver(createDatabaseRegularSchema)(
                 data,
@@ -69,40 +73,22 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
     const formValues = useWatch({
         control,
     });
+    console.log("kalczur Regular errors", formState.errors); // TODO remove
 
-    const { encryptionKeyFileName, encryptionKeyText } = useCreateDatabase(formValues);
     const activeSteps = getActiveStepsList(formValues, formState);
-    const { currentStep, isFirstStep, isLastStep, goToStep, nextStep, prevStep } = useSteps(activeSteps.length);
-
-    // TODO to function
-    const stepViews: Record<StepId, JSX.Element> = {
-        createNew: <StepBasicInfo />,
-        encryption: (
-            <StepEncryption
-                control={control}
-                encryptionKey={formValues.encryption.key}
-                fileName={encryptionKeyFileName}
-                keyText={encryptionKeyText}
-                setValue={setValue}
-                triggerDatabaseName={() => trigger("basicInfo.databaseName")}
-                triggerEncryptionKey={() => trigger("encryption.key")}
-                encryptionKeyFieldName="encryption.key"
-                isSavedFieldName="encryption.isKeySaved"
-            />
-        ),
-        replicationAndSharding: <StepReplicationAndSharding />,
-        nodeSelection: <StepNodeSelection />,
-        path: (
-            <StepPath
-                isBackupFolder={false}
-                manualSelectedNodes={
-                    formValues.replicationAndSharding.isManualReplication ? formValues.manualNodeSelection.nodes : null
-                }
-            />
-        ),
-    };
+    const { currentStep, isFirstStep, isLastStep, goToStepWithValidation, nextStepWithValidation, prevStep } = useSteps(
+        activeSteps.length
+    );
+    const stepViews = getStepViews(control, formValues, setValue, trigger);
 
     const asyncDatabaseNameValidation = useCreateDatabaseAsyncValidation(formValues.basicInfo.databaseName, setError);
+
+    const stepValidation = createDatabaseUtils.getStepValidation(
+        activeSteps[currentStep].id,
+        trigger,
+        asyncDatabaseNameValidation,
+        formValues.basicInfo.databaseName
+    );
 
     const onFinish: SubmitHandler<FormData> = async (formValues) => {
         return tryHandleSubmit(async () => {
@@ -113,12 +99,14 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
 
             databasesManager.default.activateAfterCreation(formValues.basicInfo.databaseName);
 
-            const dto = mapToDto(formValues, allNodeTags);
+            const dto = createDatabaseRegularDataUtils.mapToDto(formValues, allNodeTags);
             await databasesService.createDatabase(dto, formValues.replicationAndSharding.replicationFactor);
 
             closeModal();
         });
     };
+
+    // TODO add step validation spinner
 
     return (
         <FormProvider {...form}>
@@ -132,7 +120,7 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
                                 label: step.label,
                                 isInvalid: step.isInvalid,
                             }))}
-                            onClick={goToStep}
+                            onClick={(step) => goToStepWithValidation(step, stepValidation)}
                             className="flex-grow me-4"
                         ></Steps>
                         <CloseButton onClick={closeModal} />
@@ -173,7 +161,7 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
                             type="button"
                             color="primary"
                             className="rounded-pill"
-                            onClick={nextStep}
+                            onClick={() => nextStepWithValidation(stepValidation)}
                             disabled={isLastStep}
                         >
                             Next <Icon icon="arrow-thin-right" margin="ms-1" />
@@ -185,37 +173,11 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
     );
 }
 
-const getDefaultValues = (replicationFactor: number): FormData => {
-    return {
-        basicInfo: {
-            databaseName: "",
-            isEncrypted: false,
-        },
-        encryption: {
-            key: "",
-            isKeySaved: false,
-        },
-        replicationAndSharding: {
-            replicationFactor,
-            isSharded: false,
-            shardsCount: 1,
-            isDynamicDistribution: false,
-            isManualReplication: false,
-        },
-        manualNodeSelection: {
-            nodes: [],
-            shards: [],
-        },
-        pathsConfigurations: {
-            isDefault: true,
-            path: "",
-        },
-    };
-};
+type Step = CreateDatabaseStep<FormData>;
 
 function getActiveStepsList(formValues: FormData, formState: FormState<FormData>): Step[] {
     const steps: Step[] = [
-        { id: "createNew", label: "Name", active: true, isInvalid: !!formState.errors.basicInfo },
+        { id: "basicInfo", label: "Name", active: true, isInvalid: !!formState.errors.basicInfo },
         {
             id: "encryption",
             label: "Encryption",
@@ -229,69 +191,57 @@ function getActiveStepsList(formValues: FormData, formState: FormState<FormData>
             isInvalid: !!formState.errors.replicationAndSharding,
         },
         {
-            id: "nodeSelection",
+            id: "manualNodeSelection",
             label: "Manual Node Selection",
             active: formValues.replicationAndSharding.isManualReplication,
             isInvalid: !!formState.errors.manualNodeSelection,
         },
-        { id: "path", label: "Paths Configuration", active: true, isInvalid: !!formState.errors.pathsConfigurations },
+        {
+            id: "pathsConfigurations",
+            label: "Paths Configuration",
+            active: true,
+            isInvalid: !!formState.errors.pathsConfigurations,
+        },
     ];
 
     return steps.filter((step) => step.active);
 }
 
-function mapToDto(formValues: FormData, allNodeTags: string[]): CreateDatabaseDto {
-    const { basicInfo, replicationAndSharding, manualNodeSelection, pathsConfigurations } = formValues;
-
-    const Settings: CreateDatabaseDto["Settings"] = pathsConfigurations.isDefault
-        ? {}
-        : {
-              DataDir: _.trim(pathsConfigurations.path),
-          };
-
-    const Topology: CreateDatabaseDto["Topology"] = replicationAndSharding.isSharded
-        ? null
-        : {
-              Members: replicationAndSharding.isManualReplication ? manualNodeSelection.nodes : null,
-              DynamicNodesDistribution: replicationAndSharding.isDynamicDistribution,
-          };
-
-    const Shards: CreateDatabaseDto["Sharding"]["Shards"] = {};
-
-    if (replicationAndSharding.isSharded) {
-        for (let i = 0; i < replicationAndSharding.shardsCount; i++) {
-            Shards[i] = replicationAndSharding.isManualReplication
-                ? {
-                      Members: manualNodeSelection.shards[i],
-                  }
-                : {};
-        }
-    }
-
-    const selectedOrchestrators =
-        formValues.replicationAndSharding.isSharded && formValues.replicationAndSharding.isManualReplication
-            ? formValues.manualNodeSelection.nodes
-            : allNodeTags;
-
-    const Sharding: CreateDatabaseDto["Sharding"] = replicationAndSharding.isSharded
-        ? {
-              Shards,
-              Orchestrator: {
-                  Topology: {
-                      Members: selectedOrchestrators,
-                  },
-              },
-          }
-        : null;
-
-    // TODO encription key?
+function getStepViews(
+    control: Control<FormData>,
+    formValues: FormData,
+    setValue: UseFormSetValue<FormData>,
+    trigger: UseFormTrigger<FormData>
+): Record<keyof FormData, JSX.Element> {
+    const { encryptionKeyFileName, encryptionKeyText } = createDatabaseUtils.getEncryptionData(
+        formValues.basicInfo.databaseName,
+        formValues.encryption.key
+    );
 
     return {
-        DatabaseName: basicInfo.databaseName,
-        Settings,
-        Disabled: false,
-        Encrypted: basicInfo.isEncrypted,
-        Topology,
-        Sharding,
+        basicInfo: <StepBasicInfo />,
+        encryption: (
+            <StepEncryption
+                control={control}
+                encryptionKey={formValues.encryption.key}
+                fileName={encryptionKeyFileName}
+                keyText={encryptionKeyText}
+                setValue={setValue}
+                triggerDatabaseName={() => trigger("basicInfo.databaseName")}
+                triggerEncryptionKey={() => trigger("encryption.key")}
+                encryptionKeyFieldName="encryption.key"
+                isSavedFieldName="encryption.isKeySaved"
+            />
+        ),
+        replicationAndSharding: <StepReplicationAndSharding />,
+        manualNodeSelection: <StepNodeSelection />,
+        pathsConfigurations: (
+            <StepPath
+                isBackupFolder={false}
+                manualSelectedNodes={
+                    formValues.replicationAndSharding.isManualReplication ? formValues.manualNodeSelection.nodes : null
+                }
+            />
+        ),
     };
 }
