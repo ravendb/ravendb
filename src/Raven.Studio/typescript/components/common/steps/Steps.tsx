@@ -3,10 +3,12 @@ import classNames from "classnames";
 import "./Steps.scss";
 import { Icon } from "../Icon";
 import { todo } from "common/developmentHelper";
+import { Spinner } from "reactstrap";
 
 export interface StepItem {
     label: string;
     isInvalid?: boolean;
+    isLoading?: boolean;
 }
 
 interface StepsProps {
@@ -50,25 +52,42 @@ function Step({ step, onClick, isCurrent: isActive, isDone, isLast }: StepProps)
         active: isActive,
     });
 
-    todo("Styling", "Kwiato", "invalid state");
     return (
         <>
             <div className={classes} onClick={onClick}>
-                {step.isInvalid ? (
-                    <div>
-                        <Icon icon="cancel" color="danger" margin="m-0" />
-                    </div>
-                ) : (
-                    <div className="step-bullet">
-                        <Icon icon="arrow-thin-bottom" margin="m-0" className="bullet-icon-active" />
-                        <Icon icon="check" margin="m-0" className="bullet-icon-done" />
-                    </div>
-                )}
+                <StepState step={step} />
                 <span className={classNames("steps-label small-label", { "text-danger": step.isInvalid })}>
                     {step.label}
                 </span>
             </div>
             {!isLast && <div className="steps-spacer" />}
         </>
+    );
+}
+
+todo("Styling", "Kwiato", "invalid and loading state");
+
+function StepState({ step }: { step: StepItem }) {
+    if (step.isLoading) {
+        return (
+            <div className="step-bullet">
+                <Spinner size="sm" className="m-0" />
+            </div>
+        );
+    }
+
+    if (step.isInvalid) {
+        return (
+            <div>
+                <Icon icon="cancel" color="danger" margin="m-0" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="step-bullet">
+            <Icon icon="arrow-thin-bottom" margin="m-0" className="bullet-icon-active" />
+            <Icon icon="check" margin="m-0" className="bullet-icon-done" />
+        </div>
     );
 }
