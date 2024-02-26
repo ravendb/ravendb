@@ -91,6 +91,8 @@ namespace Raven.Client.Documents.Queries.Suggestions
         }
     }
 
+
+    /// <inheritdoc cref="SuggestionBase"/>
     internal abstract class SuggestionQueryBase
     {
         private readonly InMemoryDocumentSessionOperations _session;

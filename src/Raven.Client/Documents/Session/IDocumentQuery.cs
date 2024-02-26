@@ -178,6 +178,8 @@ namespace Raven.Client.Documents.Session
 
         IGroupByDocumentQuery<T> GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields);
 
+        /// <inheritdoc cref="IMoreLikeThisOperations{T}"/>
+        /// <param name="builder">Configure MoreLikeThis query by builder. See more at: <see cref="IMoreLikeThisBuilderForDocumentQuery{T}"/> or see <see cref="IMoreLikeThisBuilderForAsyncDocumentQuery{T}">here</see> for async operations.</param>
         IDocumentQuery<T> MoreLikeThis(Action<IMoreLikeThisBuilderForDocumentQuery<T>> builder);
         
         /// <summary>
@@ -196,8 +198,10 @@ namespace Raven.Client.Documents.Session
 
         IAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentId);
 
+        /// <inheritdoc cref="ISuggestionQuery{T}.AndSuggestUsing(SuggestionBase)"/>
         ISuggestionDocumentQuery<T> SuggestUsing(SuggestionBase suggestion);
 
+        /// <inheritdoc cref="ISuggestionQuery{T}.AndSuggestUsing(Action{ISuggestionBuilder{T}})"/>
         ISuggestionDocumentQuery<T> SuggestUsing(Action<ISuggestionBuilder<T>> builder);
 
         /// <summary>

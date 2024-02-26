@@ -1,5 +1,8 @@
 ﻿namespace Raven.Client.Documents.Queries.MoreLikeThis
 {
+    /// <summary>
+    /// Configuration of MoreLikeThis query.
+    /// </summary>
     public sealed class MoreLikeThisOptions
     {
         public const int DefaultMaximumNumberOfTokensParsed = 5000;
