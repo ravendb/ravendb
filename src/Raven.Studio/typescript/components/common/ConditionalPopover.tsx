@@ -26,7 +26,7 @@ export function ConditionalPopover(props: PropsWithChildren<ConditionalPopoverPr
             <div id={containerId}>{children}</div>
 
             {message && (
-                <UncontrolledPopover target={containerId} trigger="hover" placement={popoverPlacement}>
+                <UncontrolledPopover target={containerId} trigger="hover" placement={popoverPlacement} className="bs5">
                     <PopoverBody>{message}</PopoverBody>
                 </UncontrolledPopover>
             )}

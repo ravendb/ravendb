@@ -10,9 +10,16 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta;
 
+interface DefaultCreateDatabaseProps {
+    isSecureServer: boolean;
+    hasEncryption: boolean;
+    hasDynamicNodesDistribution: boolean;
+    maxReplicationFactorForSharding: number;
+}
+
 export const DefaultCreateDatabase: StoryObj = {
     name: "Create Database",
-    render: (props: { isSecureServer: boolean; hasEncryption: boolean; hasDynamicNodesDistribution: boolean }) => {
+    render: (props: DefaultCreateDatabaseProps) => {
         const { license, accessManager, cluster } = mockStore;
         const { resourcesService, databasesService } = mockServices;
 
@@ -26,6 +33,7 @@ export const DefaultCreateDatabase: StoryObj = {
         license.with_License({
             HasEncryption: props.hasEncryption,
             HasDynamicNodesDistribution: props.hasDynamicNodesDistribution,
+            MaxReplicationFactorForSharding: props.maxReplicationFactorForSharding,
         });
 
         accessManager.with_isServerSecure(props.isSecureServer);
@@ -37,5 +45,6 @@ export const DefaultCreateDatabase: StoryObj = {
         isSecureServer: true,
         hasEncryption: true,
         hasDynamicNodesDistribution: true,
+        maxReplicationFactorForSharding: 3,
     },
 };
