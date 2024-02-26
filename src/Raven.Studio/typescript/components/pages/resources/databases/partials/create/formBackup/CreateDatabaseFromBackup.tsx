@@ -73,13 +73,13 @@ export default function CreateDatabaseFromBackup({
     });
     console.log("kalczur FromBackup errors", formState.errors); // TODO remove
 
-    const activeSteps = getActiveStepsList(formValues, formState);
+    const asyncDatabaseNameValidation = useCreateDatabaseAsyncValidation(formValues.basicInfo.databaseName, setError);
+
+    const activeSteps = getActiveStepsList(formValues, formState, asyncDatabaseNameValidation.loading);
     const { currentStep, isFirstStep, isLastStep, goToStepWithValidation, nextStepWithValidation, prevStep } = useSteps(
         activeSteps.length
     );
     const stepViews = getStepViews(control, formValues, setValue, trigger);
-
-    const asyncDatabaseNameValidation = useCreateDatabaseAsyncValidation(formValues.basicInfo.databaseName, setError);
 
     const stepValidation = createDatabaseUtils.getStepValidation(
         activeSteps[currentStep].id,
@@ -110,8 +110,6 @@ export default function CreateDatabaseFromBackup({
         });
     };
 
-    // TODO add step validation spinner
-
     return (
         <FormProvider {...form}>
             <Form onSubmit={handleSubmit(onFinish)}>
@@ -120,7 +118,7 @@ export default function CreateDatabaseFromBackup({
                     <div className="d-flex  mb-5">
                         <Steps
                             current={currentStep}
-                            steps={activeSteps.map((step) => ({ label: step.label, isInvalid: step.isInvalid }))}
+                            steps={activeSteps.map(createDatabaseUtils.mapToStepItem)}
                             onClick={(step) => goToStepWithValidation(step, stepValidation)}
                             className="flex-grow me-4"
                         ></Steps>
@@ -162,6 +160,7 @@ export default function CreateDatabaseFromBackup({
                             color="primary"
                             className="rounded-pill"
                             onClick={() => nextStepWithValidation(stepValidation)}
+                            disabled={asyncDatabaseNameValidation.loading}
                         >
                             Next <Icon icon="arrow-thin-right" margin="ms-1" />
                         </Button>
@@ -174,13 +173,18 @@ export default function CreateDatabaseFromBackup({
 
 type Step = CreateDatabaseStep<FormData>;
 
-function getActiveStepsList(formValues: FormData, formState: FormState<FormData>): Step[] {
+function getActiveStepsList(
+    formValues: FormData,
+    formState: FormState<FormData>,
+    isValidatingDatabaseName: boolean
+): Step[] {
     const allSteps: Step[] = [
         {
             id: "basicInfo",
             label: "Select backup",
             active: true,
             isInvalid: !!formState.errors.basicInfo,
+            isLoading: isValidatingDatabaseName,
         },
         { id: "source", label: "Backup Source", active: true, isInvalid: !!formState.errors.source },
         {
