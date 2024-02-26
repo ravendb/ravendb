@@ -456,15 +456,14 @@ namespace Voron
 
             var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
-            using (var root = Tree.Create(tx, null, Constants.RootTreeNameSlice))
             {
-
+                var root = Tree.Create(tx, null, Constants.RootTreeNameSlice);
+                
                 // important to first create the root trees, then set them on the env
                 tx.UpdateRootsIfNeeded(root);
 
                 using (var treesTx = new Transaction(tx))
                 {
-
                     FillBase64Id(Guid.NewGuid());
 
                     var metadataTree = treesTx.CreateTree(Constants.MetadataTreeNameSlice);
@@ -476,7 +475,6 @@ namespace Voron
                     tx.Commit();
                 }
             }
-
         }
 
         public IFreeSpaceHandling FreeSpaceHandling => _freeSpaceHandling;
