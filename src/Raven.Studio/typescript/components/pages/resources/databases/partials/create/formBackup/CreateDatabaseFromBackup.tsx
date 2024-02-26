@@ -217,8 +217,7 @@ function getStepViews(
                 encryptionKey={formValues.encryption.key}
                 fileName={encryptionKeyFileName}
                 keyText={encryptionKeyText}
-                setValue={setValue}
-                triggerDatabaseName={() => trigger("basicInfo.databaseName")}
+                setEncryptionKey={(x) => setValue("encryption.key", x)}
                 triggerEncryptionKey={() => trigger("encryption.key")}
                 encryptionKeyFieldName="encryption.key"
                 isSavedFieldName="encryption.isKeySaved"
