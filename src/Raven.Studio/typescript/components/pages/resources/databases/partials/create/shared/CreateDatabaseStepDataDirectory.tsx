@@ -20,8 +20,8 @@ interface CreateDatabaseStepPathProps {
 export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFolder }: CreateDatabaseStepPathProps) {
     const { control, setValue } = useFormContext<CreateDatabaseRegularFormData | CreateDatabaseFromBackupFormData>();
     const {
-        basicInfo: { databaseName },
-        pathsConfigurations,
+        basicInfoStep: { databaseName },
+        dataDirectoryStep,
     } = useWatch({ control });
     const { resourcesService } = useServices();
 
@@ -33,18 +33,18 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
             const dto = await resourcesService.getFolderPathOptions_ServerLocal(path, isBackupFolder);
             return dto?.List.map((x) => ({ value: x, label: x }));
         },
-        [pathsConfigurations.path, isBackupFolder]
+        [dataDirectoryStep.directory, isBackupFolder]
     );
 
     const asyncGetDatabaseLocation = useAsyncDebounce(resourcesService.getDatabaseLocation, [
         databaseName,
-        pathsConfigurations.path,
+        dataDirectoryStep.directory,
     ]);
 
     // TODO kalczur make autocomplete component?
     const onPathChange = (value: string, action: InputActionMeta) => {
         if (action?.action !== "input-blur" && action?.action !== "menu-close") {
-            setValue("pathsConfigurations.path", value);
+            setValue("dataDirectoryStep.directory", value);
         }
     };
 
@@ -53,22 +53,22 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
             <h2 className="text-center">Path Configuration</h2>
             <InputGroup className="my-4">
                 <InputGroupText>
-                    <FormCheckbox control={control} name="pathsConfigurations.isDefault">
+                    <FormCheckbox control={control} name="dataDirectoryStep.isDefault">
                         Use server directory
                     </FormCheckbox>
                 </InputGroupText>
                 <FormSelectCreatable
                     control={control}
-                    name="pathsConfigurations.path"
-                    placeholder={pathsConfigurations.isDefault ? "" : "Enter database directory"}
+                    name="dataDirectoryStep.directory"
+                    placeholder={dataDirectoryStep.isDefault ? "" : "Enter database directory"}
                     options={asyncGetFolderOptions.result ?? []}
                     isLoading={asyncGetFolderOptions.loading}
-                    inputValue={pathsConfigurations.path ?? ""}
+                    inputValue={dataDirectoryStep.directory ?? ""}
                     onInputChange={onPathChange}
                     components={{ Input: InputNotHidden }}
                     tabSelectsValue
                     blurInputOnSelect={false}
-                    isDisabled={pathsConfigurations.isDefault}
+                    isDisabled={dataDirectoryStep.isDefault}
                 />
             </InputGroup>
             <PathInfo asyncGetDatabaseLocation={asyncGetDatabaseLocation} nodeTagsToDisplay={selectedNodeTags} />

@@ -26,7 +26,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
 
     const { control, setValue } = useFormContext<CreateDatabaseRegularFormData>();
     const {
-        replicationAndSharding: { isSharded, shardsCount, replicationFactor, isManualReplication },
+        replicationAndShardingStep: { isSharded, shardsCount, replicationFactor, isManualReplication },
     } = useWatch({
         control,
     });
@@ -41,7 +41,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
 
     useEffect(() => {
         if (isSharded && replicationFactor > maxReplicationFactorForSharding) {
-            setValue("replicationAndSharding.replicationFactor", maxReplicationFactorForSharding);
+            setValue("replicationAndShardingStep.replicationFactor", maxReplicationFactorForSharding);
         }
     }, [replicationFactor, isSharded, maxReplicationFactorForSharding, setValue]);
 
@@ -100,7 +100,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                 <FormInput
                                     type="number"
                                     control={control}
-                                    name="replicationAndSharding.replicationFactor"
+                                    name="replicationAndShardingStep.replicationFactor"
                                     className="replication-input"
                                     min="1"
                                     max={maxReplicationFactor}
@@ -112,7 +112,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                             <FormInput
                                 type="range"
                                 control={control}
-                                name="replicationAndSharding.replicationFactor"
+                                name="replicationAndShardingStep.replicationFactor"
                                 min="1"
                                 max={maxReplicationFactor}
                                 className="mt-1"
@@ -153,7 +153,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                         <Col>
                             <FormSwitch
                                 control={control}
-                                name="replicationAndSharding.isSharded"
+                                name="replicationAndShardingStep.isSharded"
                                 color="shard"
                                 className="mt-1"
                             >
@@ -170,7 +170,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                     <FormInput
                                         type="number"
                                         control={control}
-                                        name="replicationAndSharding.shardsCount"
+                                        name="replicationAndShardingStep.shardsCount"
                                         className="replication-input"
                                         min="1"
                                         max="100"
@@ -221,7 +221,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                     >
                         <FormSwitch
                             control={control}
-                            name="replicationAndSharding.isDynamicDistribution"
+                            name="replicationAndShardingStep.isDynamicDistribution"
                             color="primary"
                             disabled={!hasDynamicNodesDistribution}
                         >
@@ -232,7 +232,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                     </ConditionalPopover>
                 </Col>
                 <Col>
-                    <FormSwitch control={control} name="replicationAndSharding.isManualReplication" color="primary">
+                    <FormSwitch control={control} name="replicationAndShardingStep.isManualReplication" color="primary">
                         Set replication nodes manually
                         <br />
                         <small className="text-muted">Select nodes from the list in the next step</small>

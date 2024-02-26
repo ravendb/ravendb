@@ -1,14 +1,14 @@
 import * as yup from "yup";
 
-export const pathsConfigurationsSchema = yup.object({
+export const dataDirectoryStepSchema = yup.object({
     isDefault: yup.boolean(),
-    path: yup.string().when("isDefault", {
+    directory: yup.string().when("isDefault", {
         is: false,
         then: (schema) => schema.required(),
     }),
 });
 
-export const encryptionSchema = yup.object({
+export const encryptionStepSchema = yup.object({
     key: yup.string().when("$isEncrypted", {
         is: true,
         then: (schema) => schema.base64().required(),
@@ -19,4 +19,4 @@ export const encryptionSchema = yup.object({
     }),
 });
 
-export type Encryption = yup.InferType<typeof encryptionSchema>;
+export type Encryption = yup.InferType<typeof encryptionStepSchema>;

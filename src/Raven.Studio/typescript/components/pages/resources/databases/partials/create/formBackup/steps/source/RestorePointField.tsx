@@ -24,7 +24,7 @@ interface GroupedOption {
 
 interface CreateDatabaseFromBackupRestorePointProps {
     index: number;
-    fieldName: Extract<FieldPath<FormData>, `source.sourceData.${restoreSource}.restorePoints`>;
+    fieldName: Extract<FieldPath<FormData>, `sourceStep.sourceData.${restoreSource}.restorePoints`>;
     remove: (index: number) => void;
     restorePointsOptions: GroupedOption[];
     isLoading?: boolean;
@@ -39,7 +39,7 @@ export default function CreateDatabaseFromBackupRestorePoint({
 }: CreateDatabaseFromBackupRestorePointProps) {
     const { control, formState } = useFormContext<FormData>();
     const {
-        basicInfo: { isSharded },
+        basicInfoStep: { isSharded },
     } = useWatch({
         control,
     });

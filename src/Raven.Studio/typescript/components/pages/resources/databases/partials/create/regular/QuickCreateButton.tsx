@@ -29,7 +29,7 @@ export default function QuickCreateButton({ formValues, isSubmitting }: QuickCre
                         <PropSummaryName>
                             <Icon icon="encryption" /> Encryption
                         </PropSummaryName>
-                        {formValues.basicInfo.isEncrypted ? (
+                        {formValues.basicInfoStep.isEncrypted ? (
                             <PropSummaryValue color="success"> ON</PropSummaryValue>
                         ) : (
                             <PropSummaryValue color="danger"> OFF</PropSummaryValue>
@@ -40,7 +40,7 @@ export default function QuickCreateButton({ formValues, isSubmitting }: QuickCre
                         <PropSummaryName>
                             <Icon icon="replication" /> Replication
                         </PropSummaryName>
-                        {formValues.replicationAndSharding.replicationFactor > 1 ? (
+                        {formValues.replicationAndShardingStep.replicationFactor > 1 ? (
                             <PropSummaryValue color="success"> ON</PropSummaryValue>
                         ) : (
                             <PropSummaryValue color="danger"> OFF</PropSummaryValue>
@@ -51,14 +51,14 @@ export default function QuickCreateButton({ formValues, isSubmitting }: QuickCre
                         <PropSummaryName>
                             <Icon icon="sharding" /> Sharding
                         </PropSummaryName>
-                        {formValues.replicationAndSharding.isSharded ? (
+                        {formValues.replicationAndShardingStep.isSharded ? (
                             <PropSummaryValue color="success"> ON</PropSummaryValue>
                         ) : (
                             <PropSummaryValue color="danger"> OFF</PropSummaryValue>
                         )}
                     </PropSummaryItem>
 
-                    {formValues.replicationAndSharding.isManualReplication && (
+                    {formValues.replicationAndShardingStep.isManualReplication && (
                         <PropSummaryItem>
                             <PropSummaryName>
                                 <Icon icon="node" /> Manual node selection
@@ -69,7 +69,7 @@ export default function QuickCreateButton({ formValues, isSubmitting }: QuickCre
 
                     <PropSummaryItem>
                         <PropSummaryName>
-                            {formValues.pathsConfigurations.isDefault ? (
+                            {formValues.dataDirectoryStep.isDefault ? (
                                 <>
                                     <Icon icon="path" /> <strong>Default</strong> path
                                 </>

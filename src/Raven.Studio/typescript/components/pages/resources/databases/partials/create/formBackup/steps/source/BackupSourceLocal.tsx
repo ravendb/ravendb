@@ -17,8 +17,8 @@ export default function BackupSourceLocal() {
     const { control, setValue } = useFormContext<FormData>();
 
     const {
-        basicInfo: { isSharded },
-        source: {
+        basicInfoStep: { isSharded },
+        sourceStep: {
             sourceData: { local: localSourceData },
         },
     } = useWatch({
@@ -37,7 +37,7 @@ export default function BackupSourceLocal() {
     // TODO make autocomplete component?
     const onPathChange = (value: string, action: InputActionMeta) => {
         if (action?.action !== "input-blur" && action?.action !== "menu-close") {
-            setValue("source.sourceData.local.directory", value);
+            setValue("sourceStep.sourceData.local.directory", value);
         }
     };
 
@@ -50,7 +50,7 @@ export default function BackupSourceLocal() {
                 <Col>
                     <FormSelectCreatable
                         control={control}
-                        name="source.sourceData.local.directory"
+                        name="sourceStep.sourceData.local.directory"
                         options={asyncGetLocalFolderPathOptions.result || []}
                         isLoading={asyncGetLocalFolderPathOptions.loading}
                         inputValue={localSourceData.directory ?? ""}
@@ -64,7 +64,7 @@ export default function BackupSourceLocal() {
             </Row>
             <RestorePointsFields
                 isSharded={isSharded}
-                restorePointsFieldName="source.sourceData.googleCloud.restorePoints"
+                restorePointsFieldName="sourceStep.sourceData.googleCloud.restorePoints"
                 mapRestorePoint={(field, index) => (
                     <SourceRestorePoint
                         key={field.id}
@@ -75,7 +75,7 @@ export default function BackupSourceLocal() {
                 )}
             />
             <EncryptionField
-                encryptionKeyFieldName="source.sourceData.local.encryptionKey"
+                encryptionKeyFieldName="sourceStep.sourceData.local.encryptionKey"
                 selectedSourceData={localSourceData}
             />
         </>
@@ -93,7 +93,7 @@ function SourceRestorePoint({ index, directory, isSharded }: SourceRestorePointP
 
     const { remove } = useFieldArray({
         control,
-        name: "source.sourceData.local.restorePoints",
+        name: "sourceStep.sourceData.local.restorePoints",
     });
 
     const { resourcesService } = useServices();
@@ -113,7 +113,7 @@ function SourceRestorePoint({ index, directory, isSharded }: SourceRestorePointP
 
     return (
         <CreateDatabaseFromBackupRestorePoint
-            fieldName="source.sourceData.local.restorePoints"
+            fieldName="sourceStep.sourceData.local.restorePoints"
             index={index}
             remove={remove}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}

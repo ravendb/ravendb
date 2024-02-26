@@ -27,7 +27,7 @@ export default function CreateDatabaseRegularStepBasicInfo() {
                     <FormInput
                         type="text"
                         control={control}
-                        name="basicInfo.databaseName"
+                        name="basicInfoStep.databaseName"
                         placeholder="Database Name"
                         id="DbName"
                     />
@@ -64,7 +64,7 @@ function IsEncryptedField() {
                 <FormSwitch
                     color="primary"
                     control={control}
-                    name="basicInfo.isEncrypted"
+                    name="basicInfoStep.isEncrypted"
                     disabled={!hasEncryption || !isSecureServer || formState.isSubmitting}
                 >
                     <Icon icon="encryption" />

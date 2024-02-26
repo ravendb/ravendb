@@ -17,8 +17,8 @@ export default function BackupSourceCloud() {
     const { control } = useFormContext<FormData>();
 
     const {
-        basicInfo: { isSharded },
-        source: {
+        basicInfoStep: { isSharded },
+        sourceStep: {
             sourceData: { cloud: cloudData },
         },
     } = useWatch({
@@ -55,7 +55,7 @@ export default function BackupSourceCloud() {
                     <FormInput
                         type="text"
                         control={control}
-                        name="source.sourceData.cloud.link"
+                        name="sourceStep.sourceData.cloud.link"
                         placeholder="Enter backup link generated in RavenDB Cloud"
                     />
                 </Col>
@@ -74,13 +74,13 @@ export default function BackupSourceCloud() {
             )}
             <RestorePointsFields
                 isSharded={isSharded}
-                restorePointsFieldName="source.sourceData.cloud.restorePoints"
+                restorePointsFieldName="sourceStep.sourceData.cloud.restorePoints"
                 mapRestorePoint={(field, index) => (
                     <CloudSourceRestorePoint key={field.id} index={index} isSharded={isSharded} link={cloudData.link} />
                 )}
             />
             <EncryptionField
-                encryptionKeyFieldName="source.sourceData.cloud.encryptionKey"
+                encryptionKeyFieldName="sourceStep.sourceData.cloud.encryptionKey"
                 selectedSourceData={cloudData}
             />
         </>
@@ -99,14 +99,14 @@ function CloudSourceRestorePoint({ index, isSharded, link }: CloudSourceRestoreP
 
     const { remove } = useFieldArray({
         control,
-        name: "source.sourceData.local.restorePoints",
+        name: "sourceStep.sourceData.local.restorePoints",
     });
 
     const asyncGetRestorePointsOptions = useAsyncDebounce(
         async (link) => {
             const credentials = await resourcesService.getCloudBackupCredentialsFromLink(link);
 
-            setValue("source.sourceData.cloud.awsSettings", {
+            setValue("sourceStep.sourceData.cloud.awsSettings", {
                 sessionToken: credentials.AwsSessionToken,
                 accessKey: credentials.AwsAccessKey,
                 secretKey: credentials.AwsSecretKey,
@@ -143,7 +143,7 @@ function CloudSourceRestorePoint({ index, isSharded, link }: CloudSourceRestoreP
 
     return (
         <CreateDatabaseFromBackupRestorePoint
-            fieldName="source.sourceData.cloud.restorePoints"
+            fieldName="sourceStep.sourceData.cloud.restorePoints"
             index={index}
             remove={remove}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}

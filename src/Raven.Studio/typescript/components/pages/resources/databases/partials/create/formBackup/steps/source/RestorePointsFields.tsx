@@ -5,7 +5,7 @@ import { CreateDatabaseFromBackupFormData as FormData } from "../../createDataba
 import { Icon } from "components/common/Icon";
 
 interface RestorePointsFieldsProps {
-    restorePointsFieldName: Extract<FieldPath<FormData>, `source.sourceData.${restoreSource}.restorePoints`>;
+    restorePointsFieldName: Extract<FieldPath<FormData>, `sourceStep.sourceData.${restoreSource}.restorePoints`>;
     isSharded: boolean;
     mapRestorePoint: (field: FieldArrayWithId<FormData>, index: number) => ReactNode;
 }

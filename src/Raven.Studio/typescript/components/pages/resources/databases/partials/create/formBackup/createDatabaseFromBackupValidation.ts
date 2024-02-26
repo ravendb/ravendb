@@ -1,11 +1,11 @@
 import {
-    encryptionSchema,
-    pathsConfigurationsSchema,
+    encryptionStepSchema,
+    dataDirectoryStepSchema,
 } from "components/pages/resources/databases/partials/create/shared/createDatabaseSharedValidation";
 import { restorePointSchema } from "components/utils/common";
 import * as yup from "yup";
 
-const basicInfoSchema = yup.object({
+const basicInfoStepSchema = yup.object({
     databaseName: yup
         .string()
         .required()
@@ -139,7 +139,7 @@ const googleCloudSource = yup.object({
     encryptionKey: getEncryptionKeySchema("googleCloud"),
 });
 
-const sourceSchema = yup.object({
+const sourceStepSchema = yup.object({
     isDisableOngoingTasksAfterRestore: yup.boolean(),
     isSkipIndexes: yup.boolean(),
     isEncrypted: yup.boolean(),
@@ -154,10 +154,10 @@ const sourceSchema = yup.object({
 });
 
 export const createDatabaseFromBackupSchema = yup.object({
-    basicInfo: basicInfoSchema,
-    source: sourceSchema,
-    encryption: encryptionSchema,
-    pathsConfigurations: pathsConfigurationsSchema,
+    basicInfoStep: basicInfoStepSchema,
+    sourceStep: sourceStepSchema,
+    encryptionStep: encryptionStepSchema,
+    dataDirectoryStep: dataDirectoryStepSchema,
 });
 
 export type CreateDatabaseFromBackupFormData = yup.InferType<typeof createDatabaseFromBackupSchema>;
