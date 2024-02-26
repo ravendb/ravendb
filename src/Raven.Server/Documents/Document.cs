@@ -132,7 +132,7 @@ namespace Raven.Server.Documents
             return new Document
             {
                 Etag = Etag,
-                StorageId = StorageId,
+                StorageId = IgnoreDispose ? Voron.Global.Constants.Compression.NonReturnableStorageId : StorageId,
                 IndexScore = IndexScore,
                 Distance = Distance,
                 ChangeVector = ChangeVector,
