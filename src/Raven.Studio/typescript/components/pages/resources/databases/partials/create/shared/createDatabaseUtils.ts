@@ -1,3 +1,4 @@
+import { StepItem } from "components/common/steps/Steps";
 import { CreateDatabaseFromBackupFormData } from "components/pages/resources/databases/partials/create/formBackup/createDatabaseFromBackupValidation";
 import { CreateDatabaseRegularFormData } from "components/pages/resources/databases/partials/create/regular/createDatabaseRegularValidation";
 import moment from "moment";
@@ -35,14 +36,24 @@ function getStepValidation<T extends FormData>(
     }
 }
 
-export const createDatabaseUtils = {
-    getEncryptionData,
-    getStepValidation,
-};
-
 export interface CreateDatabaseStep<T extends FormData> {
     id: keyof T;
     label: string;
     active: boolean;
     isInvalid?: boolean;
+    isLoading?: boolean;
 }
+
+function mapToStepItem<T extends FormData>(step: CreateDatabaseStep<T>): StepItem {
+    return {
+        label: step.label,
+        isInvalid: step.isInvalid,
+        isLoading: step.isLoading,
+    };
+}
+
+export const createDatabaseUtils = {
+    getEncryptionData,
+    getStepValidation,
+    mapToStepItem,
+};
