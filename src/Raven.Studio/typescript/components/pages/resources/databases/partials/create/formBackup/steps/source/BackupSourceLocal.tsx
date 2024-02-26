@@ -16,11 +16,14 @@ export default function BackupSourceLocal() {
     const { resourcesService } = useServices();
     const { control, setValue } = useFormContext<FormData>();
 
-    const formValues = useWatch({
+    const {
+        basicInfo: { isSharded },
+        source: {
+            sourceData: { local: localSourceData },
+        },
+    } = useWatch({
         control,
     });
-
-    const directory = formValues.source.sourceData.local.directory;
 
     const asyncGetLocalFolderPathOptions = useAsyncDebounce(
         async (directory) => {
@@ -28,7 +31,7 @@ export default function BackupSourceLocal() {
 
             return dto.List.map((x) => ({ value: x, label: x }) satisfies SelectOption);
         },
-        [directory]
+        [localSourceData.directory]
     );
 
     // TODO make autocomplete component?
@@ -50,7 +53,7 @@ export default function BackupSourceLocal() {
                         name="source.sourceData.local.directory"
                         options={asyncGetLocalFolderPathOptions.result || []}
                         isLoading={asyncGetLocalFolderPathOptions.loading}
-                        inputValue={directory ?? ""}
+                        inputValue={localSourceData.directory ?? ""}
                         placeholder="Enter backup directory path"
                         onInputChange={onPathChange}
                         components={{ Input: InputNotHidden }}
@@ -60,32 +63,38 @@ export default function BackupSourceLocal() {
                 </Col>
             </Row>
             <RestorePointsFields
-                isSharded={formValues.basicInfo.isSharded}
+                isSharded={isSharded}
                 restorePointsFieldName="source.sourceData.googleCloud.restorePoints"
-                mapRestorePoint={(field, index) => <SourceRestorePoint key={field.id} index={index} />}
+                mapRestorePoint={(field, index) => (
+                    <SourceRestorePoint
+                        key={field.id}
+                        index={index}
+                        isSharded={isSharded}
+                        directory={localSourceData.directory}
+                    />
+                )}
             />
             <EncryptionField
                 encryptionKeyFieldName="source.sourceData.local.encryptionKey"
-                selectedSourceData={formValues.source.sourceData.local}
+                selectedSourceData={localSourceData}
             />
         </>
     );
 }
 
-function SourceRestorePoint({ index }: { index: number }) {
-    const { control } = useFormContext<FormData>();
+interface SourceRestorePointProps {
+    index: number;
+    isSharded: boolean;
+    directory: string;
+}
 
-    const formValues = useWatch({
-        control,
-    });
+function SourceRestorePoint({ index, directory, isSharded }: SourceRestorePointProps) {
+    const { control } = useFormContext<FormData>();
 
     const { remove } = useFieldArray({
         control,
         name: "source.sourceData.local.restorePoints",
     });
-
-    const directory = formValues.source.sourceData.local.directory;
-    const isSharded = formValues.basicInfo.isSharded;
 
     const { resourcesService } = useServices();
 

@@ -21,13 +21,15 @@ const backupSourceImg = require("Content/img/createDatabase/backup-source.svg");
 
 export default function CreateDatabaseFromBackupStepSource() {
     const { control } = useFormContext<FormData>();
-    const formValues = useWatch({
+    const {
+        source: { sourceType },
+    } = useWatch({
         control,
     });
 
     return (
         <>
-            <Collapse isOpen={formValues.source.sourceType == null}>
+            <Collapse isOpen={sourceType == null}>
                 <div className="d-flex justify-content-center">
                     <img src={backupSourceImg} alt="Backup source" className="step-img" />
                 </div>
@@ -50,12 +52,12 @@ export default function CreateDatabaseFromBackupStepSource() {
                     />
                 </Col>
             </Row>
-            <Collapse isOpen={formValues.source != null}>
-                {formValues.source.sourceType === "local" && <BackupSourceLocal />}
-                {formValues.source.sourceType === "cloud" && <BackupSourceCloud />}
-                {formValues.source.sourceType === "amazonS3" && <BackupSourceAmazonS3 />}
-                {formValues.source.sourceType === "azure" && <BackupSourceAzure />}
-                {formValues.source.sourceType === "googleCloud" && <BackupSourceGoogleCloud />}
+            <Collapse isOpen={sourceType != null}>
+                {sourceType === "local" && <BackupSourceLocal />}
+                {sourceType === "cloud" && <BackupSourceCloud />}
+                {sourceType === "amazonS3" && <BackupSourceAmazonS3 />}
+                {sourceType === "azure" && <BackupSourceAzure />}
+                {sourceType === "googleCloud" && <BackupSourceGoogleCloud />}
 
                 <FormSwitch
                     className="mt-4"
@@ -105,15 +107,17 @@ const sourceOptions: SelectOptionWithIcon<restoreSource>[] = [
 
 function IsEncryptedField() {
     const { control, formState } = useFormContext<FormData>();
-    const formValues = useWatch({
+    const {
+        source: { sourceType, sourceData },
+    } = useWatch({
         control,
     });
 
     const hasEncryption = useAppSelector(licenseSelectors.statusValue("HasEncryption"));
     const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
 
-    const isRestorePointEncrypted = formValues.source.sourceType
-        ? formValues.source.sourceData[formValues.source.sourceType].restorePoints[0].restorePoint?.isEncrypted
+    const isRestorePointEncrypted = sourceType
+        ? sourceData[sourceType].restorePoints[0].restorePoint?.isEncrypted
         : false;
 
     const isEncryptionDisabled = !hasEncryption || !isSecureServer || isRestorePointEncrypted || formState.isSubmitting;
