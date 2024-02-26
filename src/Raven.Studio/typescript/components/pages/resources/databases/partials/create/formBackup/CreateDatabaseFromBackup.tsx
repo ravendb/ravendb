@@ -22,7 +22,7 @@ import {
     useWatch,
 } from "react-hook-form";
 import StepBasicInfo from "./steps/CreateDatabaseFromBackupStepBasicInfo";
-import StepPath from "../shared/CreateDatabaseStepPath";
+import StepPath from "../shared/CreateDatabaseStepDataDirectory";
 import StepEncryption from "../../../../../../common/FormEncryption";
 import StepSource from "./steps/source/CreateDatabaseFromBackupStepSource";
 import { tryHandleSubmit } from "components/utils/common";
@@ -59,9 +59,9 @@ export default function CreateDatabaseFromBackup({
                 data,
                 {
                     usedDatabaseNames: usedDatabaseNames,
-                    sourceType: data.source.sourceType,
-                    isEncrypted: data.source.isEncrypted,
-                    isSharded: data.basicInfo.isSharded,
+                    sourceType: data.sourceStep.sourceType,
+                    isEncrypted: data.sourceStep.isEncrypted,
+                    isSharded: data.basicInfoStep.isSharded,
                 },
                 options
             ),
@@ -73,7 +73,10 @@ export default function CreateDatabaseFromBackup({
     });
     console.log("kalczur FromBackup errors", formState.errors); // TODO remove
 
-    const asyncDatabaseNameValidation = useCreateDatabaseAsyncValidation(formValues.basicInfo.databaseName, setError);
+    const asyncDatabaseNameValidation = useCreateDatabaseAsyncValidation(
+        formValues.basicInfoStep.databaseName,
+        setError
+    );
 
     const activeSteps = getActiveStepsList(formValues, formState, asyncDatabaseNameValidation.loading);
     const { currentStep, isFirstStep, isLastStep, goToStepWithValidation, nextStepWithValidation, prevStep } = useSteps(
@@ -85,7 +88,7 @@ export default function CreateDatabaseFromBackup({
         activeSteps[currentStep].id,
         trigger,
         asyncDatabaseNameValidation,
-        formValues.basicInfo.databaseName
+        formValues.basicInfoStep.databaseName
     );
 
     const { reportEvent } = useEventsCollector();
@@ -94,12 +97,12 @@ export default function CreateDatabaseFromBackup({
         return tryHandleSubmit(async () => {
             reportEvent("database", "restore");
 
-            asyncDatabaseNameValidation.execute(formValues.basicInfo.databaseName);
+            asyncDatabaseNameValidation.execute(formValues.basicInfoStep.databaseName);
             if (!asyncDatabaseNameValidation.result) {
                 return;
             }
 
-            databasesManager.default.activateAfterCreation(formValues.basicInfo.databaseName);
+            databasesManager.default.activateAfterCreation(formValues.basicInfoStep.databaseName);
 
             const resultDto = await databasesService.restoreDatabaseFromBackup(
                 createDatabaseFromBackupDataUtils.mapToDto(formValues)
@@ -180,24 +183,24 @@ function getActiveStepsList(
 ): Step[] {
     const allSteps: Step[] = [
         {
-            id: "basicInfo",
+            id: "basicInfoStep",
             label: "Select backup",
             active: true,
-            isInvalid: !!formState.errors.basicInfo,
+            isInvalid: !!formState.errors.basicInfoStep,
             isLoading: isValidatingDatabaseName,
         },
-        { id: "source", label: "Backup Source", active: true, isInvalid: !!formState.errors.source },
+        { id: "sourceStep", label: "Backup Source", active: true, isInvalid: !!formState.errors.sourceStep },
         {
-            id: "encryption",
+            id: "encryptionStep",
             label: "Encryption",
-            active: formValues.source.isEncrypted,
-            isInvalid: !!formState.errors.encryption,
+            active: formValues.sourceStep.isEncrypted,
+            isInvalid: !!formState.errors.encryptionStep,
         },
         {
-            id: "pathsConfigurations",
+            id: "dataDirectoryStep",
             label: "Paths Configuration",
             active: true,
-            isInvalid: !!formState.errors.pathsConfigurations,
+            isInvalid: !!formState.errors.dataDirectoryStep,
         },
     ];
 
@@ -211,25 +214,25 @@ function getStepViews(
     trigger: UseFormTrigger<FormData>
 ): Record<keyof FormData, JSX.Element> {
     const { encryptionKeyFileName, encryptionKeyText } = createDatabaseUtils.getEncryptionData(
-        formValues.basicInfo.databaseName,
-        formValues.encryption.key
+        formValues.basicInfoStep.databaseName,
+        formValues.encryptionStep.key
     );
 
     return {
-        basicInfo: <StepBasicInfo />,
-        source: <StepSource />,
-        encryption: (
+        basicInfoStep: <StepBasicInfo />,
+        sourceStep: <StepSource />,
+        encryptionStep: (
             <StepEncryption
                 control={control}
-                encryptionKey={formValues.encryption.key}
+                encryptionKey={formValues.encryptionStep.key}
                 fileName={encryptionKeyFileName}
                 keyText={encryptionKeyText}
-                setEncryptionKey={(x) => setValue("encryption.key", x)}
-                triggerEncryptionKey={() => trigger("encryption.key")}
-                encryptionKeyFieldName="encryption.key"
-                isSavedFieldName="encryption.isKeySaved"
+                setEncryptionKey={(x) => setValue("encryptionStep.key", x)}
+                triggerEncryptionKey={() => trigger("encryptionStep.key")}
+                encryptionKeyFieldName="encryptionStep.key"
+                isSavedFieldName="encryptionStep.isKeySaved"
             />
         ),
-        pathsConfigurations: <StepPath isBackupFolder manualSelectedNodes={null} />,
+        dataDirectoryStep: <StepPath isBackupFolder manualSelectedNodes={null} />,
     };
 }

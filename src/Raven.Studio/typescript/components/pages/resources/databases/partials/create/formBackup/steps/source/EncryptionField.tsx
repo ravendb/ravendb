@@ -5,8 +5,8 @@ import { CreateDatabaseFromBackupFormData as FormData } from "../../createDataba
 import { FieldPath, useFormContext } from "react-hook-form";
 
 interface EncryptionFieldProps {
-    selectedSourceData: FormData["source"]["sourceData"][restoreSource];
-    encryptionKeyFieldName: Extract<FieldPath<FormData>, `source.sourceData.${restoreSource}.encryptionKey`>;
+    selectedSourceData: FormData["sourceStep"]["sourceData"][restoreSource];
+    encryptionKeyFieldName: Extract<FieldPath<FormData>, `sourceStep.sourceData.${restoreSource}.encryptionKey`>;
 }
 
 export default function EncryptionField({ selectedSourceData, encryptionKeyFieldName }: EncryptionFieldProps) {

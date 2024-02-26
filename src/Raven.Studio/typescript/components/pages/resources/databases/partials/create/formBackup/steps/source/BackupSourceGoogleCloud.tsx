@@ -14,8 +14,8 @@ export default function BackupSourceGoogleCloud() {
     const { control } = useFormContext<FormData>();
 
     const {
-        basicInfo: { isSharded },
-        source: {
+        basicInfoStep: { isSharded },
+        sourceStep: {
             sourceData: { googleCloud: googleCloudData },
         },
     } = useWatch({
@@ -32,7 +32,7 @@ export default function BackupSourceGoogleCloud() {
                     <FormInput
                         type="text"
                         control={control}
-                        name="source.sourceData.googleCloud.bucketName"
+                        name="sourceStep.sourceData.googleCloud.bucketName"
                         placeholder="Enter Google Cloud Storage Bucket Name"
                     />
                 </Col>
@@ -46,7 +46,7 @@ export default function BackupSourceGoogleCloud() {
                         type="textarea"
                         rows="18"
                         control={control}
-                        name="source.sourceData.googleCloud.credentialsJson"
+                        name="sourceStep.sourceData.googleCloud.credentialsJson"
                         placeholder={credentialsPlaceholder}
                     />
                 </Col>
@@ -61,14 +61,14 @@ export default function BackupSourceGoogleCloud() {
                     <FormInput
                         type="text"
                         control={control}
-                        name="source.sourceData.googleCloud.remoteFolderName"
+                        name="sourceStep.sourceData.googleCloud.remoteFolderName"
                         placeholder="Enter Remote Folder Name"
                     />
                 </Col>
             </Row>
             <RestorePointsFields
                 isSharded={isSharded}
-                restorePointsFieldName="source.sourceData.googleCloud.restorePoints"
+                restorePointsFieldName="sourceStep.sourceData.googleCloud.restorePoints"
                 mapRestorePoint={(field, index) => (
                     <SourceRestorePoint
                         key={field.id}
@@ -79,7 +79,7 @@ export default function BackupSourceGoogleCloud() {
                 )}
             />
             <EncryptionField
-                encryptionKeyFieldName="source.sourceData.googleCloud.encryptionKey"
+                encryptionKeyFieldName="sourceStep.sourceData.googleCloud.encryptionKey"
                 selectedSourceData={googleCloudData}
             />
         </div>
@@ -88,7 +88,7 @@ export default function BackupSourceGoogleCloud() {
 
 interface SourceRestorePointProps {
     index: number;
-    googleCloudData: FormData["source"]["sourceData"]["googleCloud"];
+    googleCloudData: FormData["sourceStep"]["sourceData"]["googleCloud"];
     isSharded: boolean;
 }
 
@@ -99,7 +99,7 @@ function SourceRestorePoint({ index, googleCloudData, isSharded }: SourceRestore
 
     const { remove } = useFieldArray({
         control,
-        name: "source.sourceData.googleCloud.restorePoints",
+        name: "sourceStep.sourceData.googleCloud.restorePoints",
     });
 
     const asyncGetRestorePointsOptions = useAsyncDebounce(
@@ -122,7 +122,7 @@ function SourceRestorePoint({ index, googleCloudData, isSharded }: SourceRestore
 
     return (
         <CreateDatabaseFromBackupRestorePoint
-            fieldName="source.sourceData.googleCloud.restorePoints"
+            fieldName="sourceStep.sourceData.googleCloud.restorePoints"
             index={index}
             remove={remove}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}

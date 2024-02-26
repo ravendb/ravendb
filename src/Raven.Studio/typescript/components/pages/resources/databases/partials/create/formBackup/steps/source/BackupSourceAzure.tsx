@@ -14,8 +14,8 @@ export default function BackupSourceAzure() {
     const { control } = useFormContext<FormData>();
 
     const {
-        basicInfo: { isSharded },
-        source: {
+        basicInfoStep: { isSharded },
+        sourceStep: {
             sourceData: { azure: azureData },
         },
     } = useWatch({
@@ -32,7 +32,7 @@ export default function BackupSourceAzure() {
                     <FormInput
                         type="text"
                         control={control}
-                        name="source.sourceData.azure.accountName"
+                        name="sourceStep.sourceData.azure.accountName"
                         placeholder="Enter Azure Storage Account Name"
                     />
                 </Col>
@@ -45,7 +45,7 @@ export default function BackupSourceAzure() {
                     <FormInput
                         type="password"
                         control={control}
-                        name="source.sourceData.azure.accountKey"
+                        name="sourceStep.sourceData.azure.accountKey"
                         placeholder="Enter Azure Storage Account Key"
                         passwordPreview
                     />
@@ -59,7 +59,7 @@ export default function BackupSourceAzure() {
                     <FormInput
                         type="text"
                         control={control}
-                        name="source.sourceData.azure.container"
+                        name="sourceStep.sourceData.azure.container"
                         placeholder="Enter Azure Storage Container Name"
                     />
                 </Col>
@@ -74,20 +74,20 @@ export default function BackupSourceAzure() {
                     <FormInput
                         type="text"
                         control={control}
-                        name="source.sourceData.azure.remoteFolderName"
+                        name="sourceStep.sourceData.azure.remoteFolderName"
                         placeholder="Enter remote folder name"
                     />
                 </Col>
             </Row>
             <RestorePointsFields
                 isSharded={isSharded}
-                restorePointsFieldName="source.sourceData.azure.restorePoints"
+                restorePointsFieldName="sourceStep.sourceData.azure.restorePoints"
                 mapRestorePoint={(field, index) => (
                     <SourceRestorePoint key={field.id} index={index} azureData={azureData} isSharded={isSharded} />
                 )}
             />
             <EncryptionField
-                encryptionKeyFieldName="source.sourceData.azure.encryptionKey"
+                encryptionKeyFieldName="sourceStep.sourceData.azure.encryptionKey"
                 selectedSourceData={azureData}
             />
         </div>
@@ -96,7 +96,7 @@ export default function BackupSourceAzure() {
 
 interface SourceRestorePointProps {
     index: number;
-    azureData: FormData["source"]["sourceData"]["azure"];
+    azureData: FormData["sourceStep"]["sourceData"]["azure"];
     isSharded: boolean;
 }
 
@@ -106,7 +106,7 @@ function SourceRestorePoint({ index, azureData, isSharded }: SourceRestorePointP
     const { control } = useFormContext<FormData>();
     const { remove } = useFieldArray({
         control,
-        name: "source.sourceData.azure.restorePoints",
+        name: "sourceStep.sourceData.azure.restorePoints",
     });
 
     const asyncGetRestorePointsOptions = useAsyncDebounce(
@@ -131,7 +131,7 @@ function SourceRestorePoint({ index, azureData, isSharded }: SourceRestorePointP
 
     return (
         <CreateDatabaseFromBackupRestorePoint
-            fieldName="source.sourceData.azure.restorePoints"
+            fieldName="sourceStep.sourceData.azure.restorePoints"
             index={index}
             remove={remove}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}

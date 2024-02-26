@@ -1,7 +1,7 @@
-import { encryptionSchema, pathsConfigurationsSchema } from "../shared/createDatabaseSharedValidation";
+import { encryptionStepSchema, dataDirectoryStepSchema } from "../shared/createDatabaseSharedValidation";
 import * as yup from "yup";
 
-const basicInfoSchema = yup.object({
+const basicInfoStepSchema = yup.object({
     databaseName: yup
         .string()
         .required()
@@ -12,7 +12,7 @@ const basicInfoSchema = yup.object({
     isEncrypted: yup.boolean(),
 });
 
-const replicationAndShardingSchema = yup.object({
+const replicationAndShardingStepSchema = yup.object({
     replicationFactor: yup.number().integer().positive().required(),
     isSharded: yup.boolean(),
     shardsCount: yup
@@ -26,7 +26,7 @@ const replicationAndShardingSchema = yup.object({
     isManualReplication: yup.boolean(),
 });
 
-const manualNodeSelectionSchema = yup.object({
+const manualNodeSelectionStepSchema = yup.object({
     nodes: yup
         .array()
         .of(yup.string())
@@ -52,11 +52,11 @@ const manualNodeSelectionSchema = yup.object({
 });
 
 export const createDatabaseRegularSchema = yup.object({
-    basicInfo: basicInfoSchema,
-    encryption: encryptionSchema,
-    replicationAndSharding: replicationAndShardingSchema,
-    manualNodeSelection: manualNodeSelectionSchema,
-    pathsConfigurations: pathsConfigurationsSchema,
+    basicInfoStep: basicInfoStepSchema,
+    encryptionStep: encryptionStepSchema,
+    replicationAndShardingStep: replicationAndShardingStepSchema,
+    manualNodeSelectionStep: manualNodeSelectionStepSchema,
+    dataDirectoryStep: dataDirectoryStepSchema,
 });
 
 export type CreateDatabaseRegularFormData = yup.InferType<typeof createDatabaseRegularSchema>;

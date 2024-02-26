@@ -10,7 +10,7 @@ const fromBackupImg = require("Content/img/createDatabase/from-backup.svg");
 export default function CreateDatabaseFromBackupStepBasicInfo() {
     const { control, setValue } = useFormContext<CreateDatabaseFromBackupFormData>();
     const {
-        basicInfo: { isSharded },
+        basicInfoStep: { isSharded },
     } = useWatch({ control });
 
     return (
@@ -26,7 +26,7 @@ export default function CreateDatabaseFromBackupStepBasicInfo() {
                     <FormInput
                         type="text"
                         control={control}
-                        name="basicInfo.databaseName"
+                        name="basicInfoStep.databaseName"
                         id="DbName"
                         placeholder="Database Name"
                     />
@@ -37,7 +37,7 @@ export default function CreateDatabaseFromBackupStepBasicInfo() {
                 <Col sm="6" lg={{ offset: 2, size: 4 }}>
                     <Button
                         active={!isSharded}
-                        onClick={() => setValue("basicInfo.isSharded", false)}
+                        onClick={() => setValue("basicInfoStep.isSharded", false)}
                         outline
                         className=" me-2 px-4 pt-3 w-100"
                         color="node"
@@ -50,7 +50,7 @@ export default function CreateDatabaseFromBackupStepBasicInfo() {
                 <Col sm="6" lg="4">
                     <Button
                         active={isSharded}
-                        onClick={() => setValue("basicInfo.isSharded", true)}
+                        onClick={() => setValue("basicInfoStep.isSharded", true)}
                         color="shard"
                         outline
                         className="px-4 pt-3 w-100"

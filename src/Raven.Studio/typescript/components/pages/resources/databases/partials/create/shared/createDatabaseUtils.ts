@@ -18,22 +18,21 @@ function getEncryptionData(databaseName: string, encryptionKey: string) {
 
 type FormData = CreateDatabaseFromBackupFormData | CreateDatabaseRegularFormData;
 
-function getStepValidation<T extends FormData>(
-    stepId: Path<T>,
-    trigger: UseFormTrigger<T>,
+function getStepValidation(
+    stepId: Path<FormData>,
+    trigger: UseFormTrigger<FormData>,
     asyncDatabaseNameValidation: UseAsyncReturn<boolean, [string]>,
     databaseName: string
 ) {
-    switch (stepId) {
-        case "basicInfo":
-            return async () => {
-                const basicInfoResult = await trigger(stepId);
-                asyncDatabaseNameValidation.execute(databaseName);
-                return asyncDatabaseNameValidation.result && basicInfoResult;
-            };
-        default:
-            return async () => await trigger(stepId);
+    if (stepId === "basicInfoStep") {
+        return async () => {
+            const basicInfoResult = await trigger(stepId);
+            asyncDatabaseNameValidation.execute(databaseName);
+            return asyncDatabaseNameValidation.result && basicInfoResult;
+        };
     }
+
+    return async () => await trigger(stepId);
 }
 
 export interface CreateDatabaseStep<T extends FormData> {

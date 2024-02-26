@@ -18,7 +18,7 @@ export const useCreateDatabaseAsyncValidation = (
 
             const result = await resourcesService.validateName("Database", databaseName);
             if (!result.IsValid) {
-                setError("basicInfo.databaseName", {
+                setError("basicInfoStep.databaseName", {
                     type: "manual",
                     message: result.ErrorMessage,
                 });

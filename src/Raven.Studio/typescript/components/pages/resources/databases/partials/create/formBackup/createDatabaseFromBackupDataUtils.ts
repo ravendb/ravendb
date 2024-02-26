@@ -7,7 +7,7 @@ type GoogleCloudSettings = Raven.Client.Documents.Operations.Backups.GoogleCloud
 type BackupEncryptionSettings = Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings;
 type RestoreType = Raven.Client.Documents.Operations.Backups.RestoreType;
 
-const defaultRestorePoints: FormData["source"]["sourceData"][restoreSource]["restorePoints"] = [
+const defaultRestorePoints: FormData["sourceStep"]["sourceData"][restoreSource]["restorePoints"] = [
     {
         restorePoint: null,
         nodeTag: "",
@@ -15,11 +15,11 @@ const defaultRestorePoints: FormData["source"]["sourceData"][restoreSource]["res
 ];
 
 const defaultValues: FormData = {
-    basicInfo: {
+    basicInfoStep: {
         databaseName: "",
         isSharded: false,
     },
-    source: {
+    sourceStep: {
         isDisableOngoingTasksAfterRestore: false,
         isSkipIndexes: false,
         isEncrypted: false,
@@ -61,17 +61,16 @@ const defaultValues: FormData = {
             },
         },
     },
-    encryption: {
+    encryptionStep: {
         isKeySaved: false,
         key: "",
     },
-    pathsConfigurations: {
+    dataDirectoryStep: {
         isDefault: true,
-        path: "",
+        directory: "",
     },
 };
 
-// TODO rename path -> dataDirectory?
 function getRestoreDtoType(sourceType: restoreSource): RestoreType {
     switch (sourceType) {
         case "local":
@@ -88,9 +87,9 @@ function getRestoreDtoType(sourceType: restoreSource): RestoreType {
     }
 }
 
-// TODO refactor
+// TODO kalczur refactor
 function getEncryptionDto(
-    selectedSourceData: FormData["source"]["sourceData"][restoreSource],
+    selectedSourceData: FormData["sourceStep"]["sourceData"][restoreSource],
     encryptionDataIsEncrypted: boolean,
     encryptionDataKey: string
 ): Pick<RestoreBackupConfigurationBase, "EncryptionKey" | "BackupEncryptionSettings"> {
@@ -139,7 +138,7 @@ type SelectedSourceDto = Pick<
 
 function getSelectedSourceDto(
     isSharded: boolean,
-    selectedSourceData: FormData["source"]["sourceData"][restoreSource],
+    selectedSourceData: FormData["sourceStep"]["sourceData"][restoreSource],
     encryptionDataIsEncrypted: boolean,
     encryptionDataKey: string
 ): SelectedSourceDto {
@@ -173,14 +172,14 @@ function getSelectedSourceDto(
 }
 
 function getSourceDto(
-    source: FormData["source"],
+    sourceStep: FormData["sourceStep"],
     isSharded: boolean,
     encryptionDataIsEncrypted: boolean,
     encryptionDataKey: string
 ): SelectedSourceDto & Pick<CreateDatabaseFromBackupDto, "BackupLocation" | "Settings"> {
-    switch (source.sourceType) {
+    switch (sourceStep.sourceType) {
         case "local": {
-            const data = source.sourceData.local;
+            const data = sourceStep.sourceData.local;
 
             return {
                 ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),
@@ -188,7 +187,7 @@ function getSourceDto(
             };
         }
         case "cloud": {
-            const data = source.sourceData.cloud;
+            const data = sourceStep.sourceData.cloud;
 
             return {
                 ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),
@@ -207,7 +206,7 @@ function getSourceDto(
             };
         }
         case "amazonS3": {
-            const data = source.sourceData.amazonS3;
+            const data = sourceStep.sourceData.amazonS3;
 
             return {
                 ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),
@@ -226,7 +225,7 @@ function getSourceDto(
             };
         }
         case "azure": {
-            const data = source.sourceData.azure;
+            const data = sourceStep.sourceData.azure;
 
             return {
                 ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),
@@ -243,7 +242,7 @@ function getSourceDto(
         }
 
         case "googleCloud": {
-            const data = source.sourceData.googleCloud;
+            const data = sourceStep.sourceData.googleCloud;
 
             return {
                 ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),
@@ -257,7 +256,7 @@ function getSourceDto(
             };
         }
         default:
-            assertUnreachable(source.sourceType);
+            assertUnreachable(sourceStep.sourceType);
     }
 }
 
@@ -268,14 +267,19 @@ export type CreateDatabaseFromBackupDto = Partial<RestoreBackupConfigurationBase
     Settings?: S3Settings | AzureSettings | GoogleCloudSettings;
 };
 
-function mapToDto({ basicInfo, source, encryption, pathsConfigurations }: FormData): CreateDatabaseFromBackupDto {
+function mapToDto({
+    basicInfoStep,
+    sourceStep,
+    encryptionStep,
+    dataDirectoryStep,
+}: FormData): CreateDatabaseFromBackupDto {
     return {
-        ...getSourceDto(source, basicInfo.isSharded, source.isEncrypted, encryption.key),
-        Type: getRestoreDtoType(source.sourceType),
-        DatabaseName: basicInfo.databaseName,
-        DisableOngoingTasks: source.isDisableOngoingTasksAfterRestore,
-        SkipIndexes: source.isSkipIndexes,
-        DataDirectory: pathsConfigurations.isDefault ? null : _.trim(pathsConfigurations.path),
+        ...getSourceDto(sourceStep, basicInfoStep.isSharded, sourceStep.isEncrypted, encryptionStep.key),
+        Type: getRestoreDtoType(sourceStep.sourceType),
+        DatabaseName: basicInfoStep.databaseName,
+        DisableOngoingTasks: sourceStep.isDisableOngoingTasksAfterRestore,
+        SkipIndexes: sourceStep.isSkipIndexes,
+        DataDirectory: dataDirectoryStep.isDefault ? null : _.trim(dataDirectoryStep.directory),
     };
 }
 

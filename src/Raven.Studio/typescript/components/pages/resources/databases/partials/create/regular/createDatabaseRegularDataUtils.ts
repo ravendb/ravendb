@@ -3,66 +3,66 @@ import { CreateDatabaseDto } from "commands/resources/createDatabaseCommand";
 
 const getDefaultValues = (replicationFactor: number): FormData => {
     return {
-        basicInfo: {
+        basicInfoStep: {
             databaseName: "",
             isEncrypted: false,
         },
-        encryption: {
+        encryptionStep: {
             key: "",
             isKeySaved: false,
         },
-        replicationAndSharding: {
+        replicationAndShardingStep: {
             replicationFactor,
             isSharded: false,
             shardsCount: 1,
             isDynamicDistribution: false,
             isManualReplication: false,
         },
-        manualNodeSelection: {
+        manualNodeSelectionStep: {
             nodes: [],
             shards: [],
         },
-        pathsConfigurations: {
+        dataDirectoryStep: {
             isDefault: true,
-            path: "",
+            directory: "",
         },
     };
 };
 
 function mapToDto(formValues: FormData, allNodeTags: string[]): CreateDatabaseDto {
-    const { basicInfo, replicationAndSharding, manualNodeSelection, pathsConfigurations } = formValues;
+    const { basicInfoStep, replicationAndShardingStep, manualNodeSelectionStep, dataDirectoryStep } = formValues;
 
-    const Settings: CreateDatabaseDto["Settings"] = pathsConfigurations.isDefault
+    const Settings: CreateDatabaseDto["Settings"] = dataDirectoryStep.isDefault
         ? {}
         : {
-              DataDir: _.trim(pathsConfigurations.path),
+              DataDir: _.trim(dataDirectoryStep.directory),
           };
 
-    const Topology: CreateDatabaseDto["Topology"] = replicationAndSharding.isSharded
+    const Topology: CreateDatabaseDto["Topology"] = replicationAndShardingStep.isSharded
         ? null
         : {
-              Members: replicationAndSharding.isManualReplication ? manualNodeSelection.nodes : null,
-              DynamicNodesDistribution: replicationAndSharding.isDynamicDistribution,
+              Members: replicationAndShardingStep.isManualReplication ? manualNodeSelectionStep.nodes : null,
+              DynamicNodesDistribution: replicationAndShardingStep.isDynamicDistribution,
           };
 
     const Shards: CreateDatabaseDto["Sharding"]["Shards"] = {};
 
-    if (replicationAndSharding.isSharded) {
-        for (let i = 0; i < replicationAndSharding.shardsCount; i++) {
-            Shards[i] = replicationAndSharding.isManualReplication
+    if (replicationAndShardingStep.isSharded) {
+        for (let i = 0; i < replicationAndShardingStep.shardsCount; i++) {
+            Shards[i] = replicationAndShardingStep.isManualReplication
                 ? {
-                      Members: manualNodeSelection.shards[i].filter((x) => x),
+                      Members: manualNodeSelectionStep.shards[i].filter((x) => x),
                   }
                 : {};
         }
     }
 
     const selectedOrchestrators =
-        formValues.replicationAndSharding.isSharded && formValues.replicationAndSharding.isManualReplication
-            ? formValues.manualNodeSelection.nodes
+        formValues.replicationAndShardingStep.isSharded && formValues.replicationAndShardingStep.isManualReplication
+            ? formValues.manualNodeSelectionStep.nodes
             : allNodeTags;
 
-    const Sharding: CreateDatabaseDto["Sharding"] = replicationAndSharding.isSharded
+    const Sharding: CreateDatabaseDto["Sharding"] = replicationAndShardingStep.isSharded
         ? {
               Shards,
               Orchestrator: {
@@ -74,10 +74,10 @@ function mapToDto(formValues: FormData, allNodeTags: string[]): CreateDatabaseDt
         : null;
 
     return {
-        DatabaseName: basicInfo.databaseName,
+        DatabaseName: basicInfoStep.databaseName,
         Settings,
         Disabled: false,
-        Encrypted: basicInfo.isEncrypted,
+        Encrypted: basicInfoStep.isEncrypted,
         Topology,
         Sharding,
     };

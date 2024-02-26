@@ -16,8 +16,8 @@ export default function BackupSourceAmazonS3() {
     const { control } = useFormContext<FormData>();
 
     const {
-        basicInfo: { isSharded },
-        source: {
+        basicInfoStep: { isSharded },
+        sourceStep: {
             sourceData: { amazonS3: amazonS3Data },
         },
     } = useWatch({
@@ -28,7 +28,7 @@ export default function BackupSourceAmazonS3() {
         <div className="mt-2">
             <Row>
                 <Col lg={{ offset: 3 }}>
-                    <FormSwitch control={control} name="source.sourceData.amazonS3.isUseCustomHost" color="primary">
+                    <FormSwitch control={control} name="sourceStep.sourceData.amazonS3.isUseCustomHost" color="primary">
                         Use a custom S3 host
                     </FormSwitch>
                 </Col>
@@ -40,7 +40,7 @@ export default function BackupSourceAmazonS3() {
                         <FormSwitch
                             color="primary"
                             control={control}
-                            name="source.sourceData.amazonS3.isForcePathStyle"
+                            name="sourceStep.sourceData.amazonS3.isForcePathStyle"
                         >
                             Force path style <Icon icon="info" color="info" id="CloudBackupLinkInfo" margin="m-0" />
                         </FormSwitch>
@@ -61,7 +61,7 @@ export default function BackupSourceAmazonS3() {
                         <FormInput
                             type="text"
                             control={control}
-                            name="source.sourceData.amazonS3.customHost"
+                            name="sourceStep.sourceData.amazonS3.customHost"
                             placeholder="Enter custom server URL"
                         />
                     </Col>
@@ -78,7 +78,7 @@ export default function BackupSourceAmazonS3() {
                     <FormInput
                         type="text"
                         control={control}
-                        name="source.sourceData.amazonS3.accessKey"
+                        name="sourceStep.sourceData.amazonS3.accessKey"
                         placeholder="Enter access key"
                     />
                 </Col>
@@ -92,7 +92,7 @@ export default function BackupSourceAmazonS3() {
                 <Col>
                     <FormInput
                         control={control}
-                        name="source.sourceData.amazonS3.secretKey"
+                        name="sourceStep.sourceData.amazonS3.secretKey"
                         placeholder="Enter secret key"
                         type="password"
                         passwordPreview
@@ -112,13 +112,13 @@ export default function BackupSourceAmazonS3() {
                         <FormInput
                             type="text"
                             control={control}
-                            name="source.sourceData.amazonS3.awsRegion"
+                            name="sourceStep.sourceData.amazonS3.awsRegion"
                             placeholder="Enter an AWS region"
                             autoComplete="off"
                         />
                     ) : (
                         <FormSelectCreatable
-                            name="source.sourceData.amazonS3.awsRegion"
+                            name="sourceStep.sourceData.amazonS3.awsRegion"
                             control={control}
                             placeholder="Select an AWS region (or enter new one)"
                             options={availableS3Regions}
@@ -134,7 +134,7 @@ export default function BackupSourceAmazonS3() {
                     <FormInput
                         type="text"
                         control={control}
-                        name="source.sourceData.amazonS3.bucketName"
+                        name="sourceStep.sourceData.amazonS3.bucketName"
                         placeholder="Enter bucket name"
                     />
                 </Col>
@@ -151,14 +151,14 @@ export default function BackupSourceAmazonS3() {
                     <FormInput
                         type="text"
                         control={control}
-                        name="source.sourceData.amazonS3.remoteFolderName"
+                        name="sourceStep.sourceData.amazonS3.remoteFolderName"
                         placeholder="Enter remote folder name"
                     />
                 </Col>
             </Row>
             <RestorePointsFields
                 isSharded={isSharded}
-                restorePointsFieldName="source.sourceData.amazonS3.restorePoints"
+                restorePointsFieldName="sourceStep.sourceData.amazonS3.restorePoints"
                 mapRestorePoint={(field, index) => (
                     <SourceRestorePoint
                         key={field.id}
@@ -169,7 +169,7 @@ export default function BackupSourceAmazonS3() {
                 )}
             />
             <EncryptionField
-                encryptionKeyFieldName="source.sourceData.amazonS3.encryptionKey"
+                encryptionKeyFieldName="sourceStep.sourceData.amazonS3.encryptionKey"
                 selectedSourceData={amazonS3Data}
             />
         </div>
@@ -179,7 +179,7 @@ export default function BackupSourceAmazonS3() {
 interface SourceRestorePointProps {
     index: number;
     isSharded: boolean;
-    amazonS3Data: FormData["source"]["sourceData"]["amazonS3"];
+    amazonS3Data: FormData["sourceStep"]["sourceData"]["amazonS3"];
 }
 
 function SourceRestorePoint({ index, isSharded, amazonS3Data }: SourceRestorePointProps) {
@@ -188,7 +188,7 @@ function SourceRestorePoint({ index, isSharded, amazonS3Data }: SourceRestorePoi
     const { control } = useFormContext<FormData>();
     const { remove } = useFieldArray({
         control,
-        name: "source.sourceData.amazonS3.restorePoints",
+        name: "sourceStep.sourceData.amazonS3.restorePoints",
     });
 
     const asyncGetRestorePointsOptions = useAsyncDebounce(
@@ -236,7 +236,7 @@ function SourceRestorePoint({ index, isSharded, amazonS3Data }: SourceRestorePoi
 
     return (
         <CreateDatabaseFromBackupRestorePoint
-            fieldName="source.sourceData.amazonS3.restorePoints"
+            fieldName="sourceStep.sourceData.amazonS3.restorePoints"
             index={index}
             remove={remove}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}
