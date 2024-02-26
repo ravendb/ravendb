@@ -144,13 +144,19 @@ export default function CreateDatabaseRegularStepNodeSelection() {
 }
 
 function getNodeOptions(availableNodeTags: string[]): SelectOptionWithIcon[] {
-    return availableNodeTags.map(
-        (x) =>
-            ({
-                label: x,
-                value: x,
-                icon: "node",
-                iconColor: "node",
-            }) satisfies SelectOptionWithIcon
-    );
+    return [
+        {
+            label: "None",
+            value: null,
+        } satisfies SelectOptionWithIcon,
+        ...availableNodeTags.map(
+            (x) =>
+                ({
+                    label: x,
+                    value: x,
+                    icon: "node",
+                    iconColor: "node",
+                }) satisfies SelectOptionWithIcon
+        ),
+    ];
 }

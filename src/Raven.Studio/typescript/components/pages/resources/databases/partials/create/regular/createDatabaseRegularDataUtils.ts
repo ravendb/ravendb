@@ -51,7 +51,7 @@ function mapToDto(formValues: FormData, allNodeTags: string[]): CreateDatabaseDt
         for (let i = 0; i < replicationAndSharding.shardsCount; i++) {
             Shards[i] = replicationAndSharding.isManualReplication
                 ? {
-                      Members: manualNodeSelection.shards[i],
+                      Members: manualNodeSelection.shards[i].filter((x) => x),
                   }
                 : {};
         }
