@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -1347,22 +1347,6 @@ namespace Voron.Data.BTrees
             // https://issues.hibernatingrhinos.com/issue/RavenDB-22090
             _isDisposed = true;
             
-            if (_fixedSizeTrees != null)
-            {
-                foreach (var tree in _fixedSizeTrees)
-                {
-                    tree.Value.Dispose();
-                }
-            }
-            
-            if (_fixedSizeTreesForDouble != null)
-            {
-                foreach (var tree in _fixedSizeTreesForDouble)
-                {
-                    tree.Value.Dispose();
-                }
-            }
-
             DecompressionsCache?.Dispose();
             _prepareLocator?.Dispose();
 

@@ -35,7 +35,7 @@ namespace Voron.Impl
         private readonly long _id;
         private readonly ByteStringContext _allocator;
         internal readonly PageLocator _pageLocator;
-        private bool _disposeAllocator;
+        private readonly bool _disposeAllocator;
         internal long DecompressedBufferBytes;
         internal TestingStuff _forTestingPurposes;
         
@@ -308,11 +308,11 @@ namespace Voron.Impl
 
             foreach (var scratchOrDataPagerState in previous._pagerStates)
             {
-                // in order to avoid "dragging" pager state ref on non active scratch - we will not copy disposed scratches from previous async tx. RavenDB-6766
+                // in order to avoid "dragging" pager state ref on non-active scratch - we will not copy disposed scratches from previous async tx. RavenDB-6766
                 if (scratchOrDataPagerState.DiscardOnTxCopy)
                     continue;
 
-                // copy the "current pager" which is the last pager used, and by that do not "drag" old non used pager state refs to the next async commit (i.e. older views of data file). RavenDB-6949
+                // copy the "current pager" which is the last pager used, and by that do not "drag" old non-used pager state refs to the next async commit (i.e. older views of data file). RavenDB-6949
                 var currentPager = scratchOrDataPagerState.CurrentPager;
                 if (pagers.Add(currentPager) == false)
                     continue;
@@ -961,7 +961,6 @@ namespace Voron.Impl
                 }
 
                 _root?.Dispose();
-                _freeSpaceTree?.Dispose();
 
                 _allocator.AllocationFailed -= MarkTransactionAsFailed;
               
@@ -1065,16 +1064,10 @@ namespace Voron.Impl
             key = null;
         }
 
-        private sealed class PagerStateCacheItem
+        private sealed class PagerStateCacheItem(int file, PagerState state)
         {
-            public readonly int FileNumber;
-            public readonly PagerState State;
-
-            public PagerStateCacheItem(int file, PagerState state)
-            {
-                FileNumber = file;
-                State = state;
-            }
+            public readonly int FileNumber = file;
+            public readonly PagerState State = state;
         }
 
         internal void PrepareForCommit()
@@ -1113,7 +1106,7 @@ namespace Voron.Impl
         public LowLevelTransaction BeginAsyncCommitAndStartNewTransaction(TransactionPersistentContext persistentContext)
         {
             if (Flags != TransactionFlags.ReadWrite)
-                ThrowReadTranscationCannotDoAsyncCommit();
+                ThrowReadTransactionCannotDoAsyncCommit();
             if (_asyncCommitNextTransaction != null)
                 ThrowAsyncCommitAlreadyCalled();
 
@@ -1176,7 +1169,7 @@ namespace Voron.Impl
         }
 
         [DoesNotReturn]
-        private static void ThrowReadTranscationCannotDoAsyncCommit()
+        private static void ThrowReadTransactionCannotDoAsyncCommit()
         {
             throw new InvalidOperationException("Only write transactions can do async commit");
         }
@@ -1232,7 +1225,7 @@ namespace Voron.Impl
         private void CommitStage2_WriteToJournal()
         {
             // In the case of non-lazy transactions, we must flush the data from older lazy transactions
-            // to ensure the sequentiality of the data.
+            // to ensure the data is sequentially written.
 
             try
             {

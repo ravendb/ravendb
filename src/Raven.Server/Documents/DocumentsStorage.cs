@@ -570,19 +570,11 @@ namespace Raven.Server.Documents
 
         private static long ReadLastEtagFrom(Transaction tx, Slice name)
         {
-            using (var fst = new FixedSizeTree(tx.LowLevelTransaction,
-                tx.LowLevelTransaction.RootObjects,
-                name, sizeof(long),
-                clone: false))
-            {
-                using (var it = fst.Iterate())
-                {
-                    if (it.SeekToLast())
-                        return it.CurrentKey;
-                }
-            }
+            var fst = new FixedSizeTree(tx.LowLevelTransaction, tx.LowLevelTransaction.RootObjects, 
+                                        name, sizeof(long), clone: false);
 
-            return 0;
+            using var it = fst.Iterate();
+            return it.SeekToLast() ? it.CurrentKey : 0;
         }
 
         public long ReadLastEtag(Transaction tx)

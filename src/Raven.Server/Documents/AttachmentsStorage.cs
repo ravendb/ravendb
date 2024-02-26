@@ -68,18 +68,11 @@ namespace Raven.Server.Documents
 
         public static long ReadLastEtag(Transaction tx)
         {
-            var tableTree = tx.ReadTree(Attachments.AttachmentsMetadataSlice, RootObjectType.Table);
+            var tableTree = tx.ReadTree(AttachmentsMetadataSlice, RootObjectType.Table);
+            var fst = tableTree.FixedTreeFor(AttachmentsEtagSlice, valSize: sizeof(long));
 
-            using (var fst = tableTree.FixedTreeFor(Attachments.AttachmentsEtagSlice, valSize: sizeof(long)))
-            {
-                using (var it = fst.Iterate())
-                {
-                    if (it.SeekToLast())
-                        return it.CurrentKey;
-                }
-            }
-
-            return 0;
+            using var it = fst.Iterate();
+            return it.SeekToLast() ? it.CurrentKey : 0;
         }
 
         public IEnumerable<ReplicationBatchItem> GetAttachmentsFrom(DocumentsOperationContext context, long etag)
