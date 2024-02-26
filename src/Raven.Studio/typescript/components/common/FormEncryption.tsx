@@ -19,9 +19,8 @@ export interface FormEncryptionProps<TFieldValues extends FieldValues, TName ext
     isSavedFieldName: TName;
     keyText: string;
     fileName: string;
-    setValue: (name: TName, value: FieldValues[TName]) => void;
+    setEncryptionKey: (value: string) => void;
     triggerEncryptionKey: () => Promise<boolean>;
-    triggerDatabaseName?: () => Promise<boolean>;
 }
 
 export default function FormEncryption<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>({
@@ -31,8 +30,7 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
     isSavedFieldName,
     keyText,
     fileName,
-    setValue,
-    triggerDatabaseName,
+    setEncryptionKey,
     triggerEncryptionKey,
 }: FormEncryptionProps<TFieldValues, TName>) {
     const { databasesService } = useServices();
@@ -42,15 +40,8 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
             return;
         }
         const generatedKey = await databasesService.generateSecret();
-        setValue(encryptionKeyFieldName, generatedKey);
+        setEncryptionKey(generatedKey);
     });
-
-    const { result: isDatabaseNameValid } = useAsync(async () => {
-        if (triggerDatabaseName) {
-            return await triggerDatabaseName();
-        }
-        return true;
-    }, []);
 
     const { result: isEncryptionKeyValid } = useAsync(async () => {
         return await triggerEncryptionKey();
@@ -98,8 +89,6 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
         };
     }, [encryptionKey, isEncryptionKeyValid, qrCode]);
 
-    const isActionButtonDisabled = !isDatabaseNameValid || !isEncryptionKeyValid;
-
     return (
         <div>
             <div className="d-flex justify-content-center">
@@ -114,17 +103,14 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                         <Button type="button" title="Regenerate key" onClick={() => asyncGenerateSecret.execute(true)}>
                             <Icon icon="reset" margin="m-0" />
                         </Button>
-                        <ActionButton
-                            isDatabaseNameValid={isDatabaseNameValid}
-                            isEncryptionKeyValid={isEncryptionKeyValid}
-                        >
+                        <ActionButton isEncryptionKeyValid={isEncryptionKeyValid}>
                             <Button
                                 type="button"
                                 title="Copy to clipboard"
                                 onClick={() =>
                                     copyToClipboard.copy(keyText, "Encryption key data was copied to clipboard")
                                 }
-                                disabled={isActionButtonDisabled}
+                                disabled={!isEncryptionKeyValid}
                             >
                                 <Icon icon="copy-to-clipboard" margin="m-0" />
                             </Button>
@@ -132,27 +118,21 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                     </InputGroup>
                     <Row className="mt-2">
                         <Col>
-                            <ActionButton
-                                isDatabaseNameValid={isDatabaseNameValid}
-                                isEncryptionKeyValid={isEncryptionKeyValid}
-                            >
+                            <ActionButton isEncryptionKeyValid={isEncryptionKeyValid}>
                                 <Button
                                     type="button"
                                     block
                                     color="primary"
                                     size="sm"
                                     onClick={() => fileDownloader.downloadAsTxt(keyText, fileName)}
-                                    disabled={isActionButtonDisabled}
+                                    disabled={!isEncryptionKeyValid}
                                 >
                                     <Icon icon="download" /> Download encryption key
                                 </Button>
                             </ActionButton>
                         </Col>
                         <Col>
-                            <ActionButton
-                                isDatabaseNameValid={isDatabaseNameValid}
-                                isEncryptionKeyValid={isEncryptionKeyValid}
-                            >
+                            <ActionButton isEncryptionKeyValid={isEncryptionKeyValid}>
                                 <Button
                                     type="button"
                                     block
@@ -160,7 +140,7 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                                     onClick={() =>
                                         printEncryptionKey(keyText, fileName, qrContainerRef.current.innerHTML)
                                     }
-                                    disabled={isActionButtonDisabled}
+                                    disabled={!isEncryptionKeyValid}
                                 >
                                     <Icon icon="print" /> Print encryption key
                                 </Button>
@@ -251,24 +231,13 @@ const printEncryptionKey = (keyText: string, fileName: string, qrCodeHtml: strin
     }, 50);
 };
 
-interface ActionButtonProps {
-    isEncryptionKeyValid: boolean;
-    isDatabaseNameValid: boolean;
-}
-
-function ActionButton({ children, isEncryptionKeyValid, isDatabaseNameValid }: PropsWithChildren<ActionButtonProps>) {
+function ActionButton({ children, isEncryptionKeyValid }: PropsWithChildren<{ isEncryptionKeyValid: boolean }>) {
     return (
         <ConditionalPopover
-            conditions={[
-                {
-                    isActive: !isEncryptionKeyValid,
-                    message: "Encryption key is not valid",
-                },
-                {
-                    isActive: !isDatabaseNameValid,
-                    message: "Database name is not valid",
-                },
-            ]}
+            conditions={{
+                isActive: !isEncryptionKeyValid,
+                message: "Encryption key is not valid",
+            }}
             popoverPlacement="top"
         >
             {children}
