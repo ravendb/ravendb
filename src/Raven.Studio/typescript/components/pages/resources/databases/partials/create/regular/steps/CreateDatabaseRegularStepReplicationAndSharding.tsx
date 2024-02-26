@@ -9,6 +9,7 @@ import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMessage";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
+import { useAppUrls } from "components/hooks/useAppUrls";
 
 const shardingImg = require("Content/img/createDatabase/sharding.svg");
 
@@ -38,10 +39,12 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
         }
     }, [replicationFactor, isSharded, maxReplicationFactorForSharding, setValue]);
 
+    const { appUrl } = useAppUrls();
+
     return (
         <div>
             <div className="d-flex justify-content-center">
-                <img src={shardingImg} alt="" className="step-img" />
+                <img src={shardingImg} alt="Sharding" className="step-img" />
             </div>
 
             <h2 className="text-center">Replication & Sharding</h2>
@@ -79,7 +82,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                         <strong className="text-node">
                                             <Icon icon="node" margin="m-0" /> Instance nodes
                                         </strong>{" "}
-                                        in <a href="#">Manage cluster</a> view
+                                        in <a href={appUrl.forCluster()}>Manage cluster</a> view
                                     </PopoverBody>
                                 )}
                             </UncontrolledPopover>
@@ -116,7 +119,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                     <Row className="pt-2">
                         <span>
                             <Icon id="ShardingInfo" icon="info" color="info" margin="m-0" /> What is sharding?
-                            <UncontrolledPopover target="ShardingInfo" placement="left" trigger="hover">
+                            <UncontrolledPopover target="ShardingInfo" placement="left" trigger="hover" className="bs5">
                                 <PopoverBody>
                                     <p>
                                         <strong className="text-shard">
@@ -135,8 +138,8 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                         Each shard contains a subset of the data and can be stored on a separate server,
                                         allowing for <strong>horizontal scalability and improved performance</strong>.
                                     </p>
-                                    <a href="#">
-                                        Learn more TODO <Icon icon="newtab" margin="m-0" />
+                                    <a href="#TODO">
+                                        Learn more <Icon icon="newtab" margin="m-0" />
                                     </a>
                                 </PopoverBody>
                             </UncontrolledPopover>

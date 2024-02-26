@@ -6,7 +6,7 @@ import { CreateDatabaseRegularFormData as FormData } from "../createDatabaseRegu
 import { useAppSelector } from "components/store";
 import React from "react";
 import { useFormContext } from "react-hook-form";
-import { Col, FormGroup, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
+import { Col, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import AuthenticationOffMessage from "components/pages/resources/databases/partials/create/shared/AuthenticationOffMessage";
 import EncryptionUnavailableMessage from "components/pages/resources/databases/partials/create/shared/EncryptionUnavailableMessage";
@@ -24,16 +24,13 @@ export default function CreateDatabaseRegularStepBasicInfo() {
             <h2 className="text-center mb-4">Create new database</h2>
             <Row>
                 <Col lg={{ offset: 2, size: 8 }} className="text-center">
-                    <FormGroup floating>
-                        {/* <Label for="DbName">Database Name</Label> */}
-                        <FormInput
-                            type="text"
-                            control={control}
-                            name="basicInfo.databaseName"
-                            placeholder="Database Name"
-                            id="DbName"
-                        />
-                    </FormGroup>
+                    <FormInput
+                        type="text"
+                        control={control}
+                        name="basicInfo.databaseName"
+                        placeholder="Database Name"
+                        id="DbName"
+                    />
                 </Col>
             </Row>
             <Row className="mt-2">

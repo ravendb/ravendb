@@ -15,38 +15,21 @@ todo("Feature", "Damian", "Add Auto fill button");
 
 export default function CreateDatabaseRegularStepNodeSelection() {
     const { control, setValue, formState } = useFormContext<CreateDatabaseRegularFormData>();
-    const formValues = useWatch({
+    const {
+        replicationAndSharding: { isSharded, shardsCount, replicationFactor },
+        manualNodeSelection: { nodes: manualNodes },
+    } = useWatch({
         control,
     });
 
-    // TODO use just watch?
-    const manualNodes = formValues.manualNodeSelection.nodes;
-    const isSharded = formValues.replicationAndSharding.isSharded;
-    const shardsCount = formValues.replicationAndSharding.shardsCount;
-    const replicationFactor = formValues.replicationAndSharding.replicationFactor;
+    const shardNumbers = new Array(shardsCount).fill(0).map((_, i) => i);
+    const replicationNumbers = new Array(replicationFactor).fill(0).map((_, i) => i);
 
-    // const availableNodes = useAppSelector(clusterSelectors.allNodes);
-    // TODO show node url?
     const availableNodeTags = useAppSelector(clusterSelectors.allNodeTags);
+    const nodeOptions = getNodeOptions(availableNodeTags);
 
-    // const allActionContexts = ActionContextUtils.getContexts(nodeList);
-    // const [selectedActionContexts, setSelectedActionContexts] = useState<DatabaseActionContexts[]>(allActionContexts);
-
-    const nodeOptions: SelectOptionWithIcon[] = [
-        {
-            label: "None",
-            value: "null",
-        },
-        ...availableNodeTags.map(
-            (x) =>
-                ({
-                    label: x,
-                    value: x,
-                    icon: "node",
-                    iconColor: "node",
-                }) satisfies SelectOptionWithIcon
-        ),
-    ];
+    const isSelectAllNodesIndeterminate = manualNodes.length > 0 && manualNodes.length < availableNodeTags.length;
+    const isSelectedAllNodes = manualNodes.length === availableNodeTags.length;
 
     const toggleNodeTag = (nodeTag: string) => {
         if (manualNodes.includes(nodeTag)) {
@@ -58,10 +41,6 @@ export default function CreateDatabaseRegularStepNodeSelection() {
             setValue("manualNodeSelection.nodes", [...manualNodes, nodeTag]);
         }
     };
-
-    const isSelectAllNodesIndeterminate = manualNodes.length > 0 && manualNodes.length < availableNodeTags.length;
-
-    const isSelectedAllNodes = manualNodes.length === availableNodeTags.length;
 
     const toggleAllNodeTags = () => {
         if (manualNodes.length === 0) {
@@ -76,9 +55,6 @@ export default function CreateDatabaseRegularStepNodeSelection() {
             setValue("replicationAndSharding.replicationFactor", manualNodes.length);
         }
     }, [isSharded, manualNodes.length, setValue]);
-
-    const shardNumbers = new Array(shardsCount).fill(0).map((_, i) => i);
-    const replicationNumbers = new Array(replicationFactor).fill(0).map((_, i) => i);
 
     return (
         <div className="text-center">
@@ -167,38 +143,14 @@ export default function CreateDatabaseRegularStepNodeSelection() {
     );
 }
 
-// interface NodeSelectionDropdownProps {
-//     nodeList: string[];
-//     id: string;
-//     destinationNode: string;
-//     handleUpdate: () => void;
-// }
-
-// function NodeSelectionDropdown(props: NodeSelectionDropdownProps) {
-//     const { nodeList, destinationNode, handleUpdate } = props;
-//     return (
-//         <>
-//             <UncontrolledDropdown>
-//                 <DropdownToggle caret color="link" className="w-100" size="sm">
-//                     {destinationNode == null ? (
-//                         <>select</>
-//                     ) : (
-//                         <>
-//                             <Icon icon="node" color="node" margin="m-0" /> {destinationNode}
-//                         </>
-//                     )}
-//                 </DropdownToggle>
-//                 <DropdownMenu container="DropdownContainer">
-//                     {nodeList.map((nodeTag) => (
-//                         <DropdownItem key={nodeTag} onClick={() => handleUpdate()}>
-//                             <Icon icon="node" color="node" margin="m-0" /> {nodeTag}
-//                         </DropdownItem>
-//                     ))}
-//                     <DropdownItem>
-//                         <Icon icon="disabled" margin="m-0" /> None
-//                     </DropdownItem>
-//                 </DropdownMenu>
-//             </UncontrolledDropdown>
-//         </>
-//     );
-// }
+function getNodeOptions(availableNodeTags: string[]): SelectOptionWithIcon[] {
+    return availableNodeTags.map(
+        (x) =>
+            ({
+                label: x,
+                value: x,
+                icon: "node",
+                iconColor: "node",
+            }) satisfies SelectOptionWithIcon
+    );
+}

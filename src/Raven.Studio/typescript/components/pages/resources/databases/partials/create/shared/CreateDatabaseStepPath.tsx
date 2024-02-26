@@ -19,7 +19,10 @@ interface CreateDatabaseStepPathProps {
 
 export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFolder }: CreateDatabaseStepPathProps) {
     const { control, setValue } = useFormContext<CreateDatabaseRegularFormData | CreateDatabaseFromBackupFormData>();
-    const formValues = useWatch({ control });
+    const {
+        basicInfo: { databaseName },
+        pathsConfigurations,
+    } = useWatch({ control });
     const { resourcesService } = useServices();
 
     const allNodeTags = useAppSelector(clusterSelectors.allNodeTags);
@@ -30,15 +33,15 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
             const dto = await resourcesService.getFolderPathOptions_ServerLocal(path, isBackupFolder);
             return dto?.List.map((x) => ({ value: x, label: x }));
         },
-        [formValues.pathsConfigurations.path, isBackupFolder]
+        [pathsConfigurations.path, isBackupFolder]
     );
 
     const asyncGetDatabaseLocation = useAsyncDebounce(resourcesService.getDatabaseLocation, [
-        formValues.basicInfo.databaseName,
-        formValues.pathsConfigurations.path,
+        databaseName,
+        pathsConfigurations.path,
     ]);
 
-    // TODO make autocomplete component?
+    // TODO kalczur make autocomplete component?
     const onPathChange = (value: string, action: InputActionMeta) => {
         if (action?.action !== "input-blur" && action?.action !== "menu-close") {
             setValue("pathsConfigurations.path", value);
@@ -57,15 +60,15 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
                 <FormSelectCreatable
                     control={control}
                     name="pathsConfigurations.path"
-                    placeholder={formValues.pathsConfigurations.isDefault ? "" : "Enter database directory"}
+                    placeholder={pathsConfigurations.isDefault ? "" : "Enter database directory"}
                     options={asyncGetFolderOptions.result ?? []}
                     isLoading={asyncGetFolderOptions.loading}
-                    inputValue={formValues.pathsConfigurations.path ?? ""}
+                    inputValue={pathsConfigurations.path ?? ""}
                     onInputChange={onPathChange}
                     components={{ Input: InputNotHidden }}
                     tabSelectsValue
                     blurInputOnSelect={false}
-                    isDisabled={formValues.pathsConfigurations.isDefault}
+                    isDisabled={pathsConfigurations.isDefault}
                 />
             </InputGroup>
             <PathInfo asyncGetDatabaseLocation={asyncGetDatabaseLocation} nodeTagsToDisplay={selectedNodeTags} />
