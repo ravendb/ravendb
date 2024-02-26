@@ -10,6 +10,7 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMessage";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { useAppUrls } from "components/hooks/useAppUrls";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 const shardingImg = require("Content/img/createDatabase/sharding.svg");
 
@@ -17,6 +18,11 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
     const hasDynamicNodesDistribution = useAppSelector(licenseSelectors.statusValue("HasDynamicNodesDistribution"));
     const maxReplicationFactorForSharding =
         useAppSelector(licenseSelectors.statusValue("MaxReplicationFactorForSharding")) ?? Infinity;
+
+    const { appUrl } = useAppUrls();
+    const docsShardingLink = useRavenLink({
+        hash: "VKF52P",
+    });
 
     const { control, setValue } = useFormContext<CreateDatabaseRegularFormData>();
     const {
@@ -38,8 +44,6 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
             setValue("replicationAndSharding.replicationFactor", maxReplicationFactorForSharding);
         }
     }, [replicationFactor, isSharded, maxReplicationFactorForSharding, setValue]);
-
-    const { appUrl } = useAppUrls();
 
     return (
         <div>
@@ -138,7 +142,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                         Each shard contains a subset of the data and can be stored on a separate server,
                                         allowing for <strong>horizontal scalability and improved performance</strong>.
                                     </p>
-                                    <a href="#TODO">
+                                    <a href={docsShardingLink}>
                                         Learn more <Icon icon="newtab" margin="m-0" />
                                     </a>
                                 </PopoverBody>
@@ -211,6 +215,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                 </LicenseRestrictedMessage>
                             ),
                         }}
+                        popoverPlacement="left"
                     >
                         <FormSwitch
                             control={control}
