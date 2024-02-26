@@ -37,13 +37,12 @@ import {
     CreateDatabaseStep,
     createDatabaseUtils,
 } from "components/pages/resources/databases/partials/create/shared/createDatabaseUtils";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
 
 interface CreateDatabaseFromBackupProps {
     closeModal: () => void;
     changeCreateModeToRegular: () => void;
 }
-
-// TODO google events
 
 export default function CreateDatabaseFromBackup({
     closeModal,
@@ -89,8 +88,12 @@ export default function CreateDatabaseFromBackup({
         formValues.basicInfo.databaseName
     );
 
+    const { reportEvent } = useEventsCollector();
+
     const onFinish: SubmitHandler<FormData> = async (formValues) => {
         return tryHandleSubmit(async () => {
+            reportEvent("database", "restore");
+
             asyncDatabaseNameValidation.execute(formValues.basicInfo.databaseName);
             if (!asyncDatabaseNameValidation.result) {
                 return;

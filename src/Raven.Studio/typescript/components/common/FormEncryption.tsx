@@ -57,7 +57,6 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Generate QR code
     useEffect(() => {
         const generateQrCode = async () => {
             if (!isEncryptionKeyValid) {
