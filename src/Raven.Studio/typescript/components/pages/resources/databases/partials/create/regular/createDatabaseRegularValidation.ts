@@ -1,4 +1,3 @@
-// import { useServices } from "components/hooks/useServices";
 import { encryptionSchema, pathsConfigurationsSchema } from "../shared/createDatabaseSharedValidation";
 import * as yup from "yup";
 
@@ -39,12 +38,16 @@ const manualNodeSelectionSchema = yup.object({
         .array()
         .nullable()
         .of(
-            yup.array().of(
-                yup.string().when(["$isManualReplication", "$isSharded"], {
-                    is: (isManualReplication: boolean, isSharded: boolean) => isManualReplication && isSharded,
-                    then: (schema) => schema.required(),
+            yup
+                .array()
+                .nullable()
+                .of(yup.string().nullable())
+                .test("at-least-one-replica", "Each shard needs at least one replica", (value) => {
+                    if (!value) {
+                        return true;
+                    }
+                    return value.some((x) => x);
                 })
-            )
         ),
 });
 
