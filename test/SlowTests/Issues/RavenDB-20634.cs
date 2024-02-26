@@ -5,6 +5,7 @@ using FastTests;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

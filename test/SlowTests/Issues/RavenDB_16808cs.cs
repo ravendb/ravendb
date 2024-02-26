@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using SlowTests.Bugs.Caching;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

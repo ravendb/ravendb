@@ -1,5 +1,4 @@
 ﻿using System;
-using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;

@@ -1,5 +1,4 @@
 ﻿using System;
-using FastTests;
 using Tests.Infrastructure.ConnectionString;
 using xRetry;
 
@@ -18,6 +17,12 @@ namespace Tests.Infrastructure
             int delayBetweenRetriesMs = 1000,
             params Type[] skipOnExceptions) : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
         {
+            if (RavenTestHelper.SkipIntegrationTests)
+            {
+                Skip = RavenTestHelper.SkipIntegrationMessage;
+                return;
+            }
+
             if (RavenTestHelper.IsRunningOnCI)
                 return;
 

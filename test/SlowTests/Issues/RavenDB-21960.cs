@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
 using Sparrow.Json;
