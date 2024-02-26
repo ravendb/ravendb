@@ -35,8 +35,17 @@ const manualNodeSelectionSchema = yup.object({
             is: true,
             then: (schema) => schema.min(1),
         }),
-    // TODO when isSharded?
-    shards: yup.array().nullable().of(yup.array().of(yup.string())),
+    shards: yup
+        .array()
+        .nullable()
+        .of(
+            yup.array().of(
+                yup.string().when(["$isManualReplication", "$isSharded"], {
+                    is: (isManualReplication: boolean, isSharded: boolean) => isManualReplication && isSharded,
+                    then: (schema) => schema.required(),
+                })
+            )
+        ),
 });
 
 export const createDatabaseRegularSchema = yup.object({

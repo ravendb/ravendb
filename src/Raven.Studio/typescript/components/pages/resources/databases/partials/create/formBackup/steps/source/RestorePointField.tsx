@@ -38,7 +38,9 @@ export default function CreateDatabaseFromBackupRestorePoint({
     isLoading,
 }: CreateDatabaseFromBackupRestorePointProps) {
     const { control, formState } = useFormContext<FormData>();
-    const formValues = useWatch({
+    const {
+        basicInfo: { isSharded },
+    } = useWatch({
         control,
     });
 
@@ -57,7 +59,7 @@ export default function CreateDatabaseFromBackupRestorePoint({
 
     return (
         <Row>
-            {formValues.basicInfo.isSharded && (
+            {isSharded && (
                 <>
                     <div className="d-flex justify-content-between">
                         <div className="text-shard">
@@ -90,7 +92,7 @@ export default function CreateDatabaseFromBackupRestorePoint({
                     </Col>
                 </>
             )}
-            <Col lg={formValues.basicInfo.isSharded ? 9 : 12}>
+            <Col lg={isSharded ? 9 : 12}>
                 <FormSelect
                     control={control}
                     name={`${fieldName}.${index}.restorePoint`}
