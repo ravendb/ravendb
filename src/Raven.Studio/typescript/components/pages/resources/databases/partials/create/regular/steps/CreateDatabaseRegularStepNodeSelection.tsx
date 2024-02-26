@@ -16,8 +16,8 @@ todo("Feature", "Damian", "Add Auto fill button");
 export default function CreateDatabaseRegularStepNodeSelection() {
     const { control, setValue, formState } = useFormContext<CreateDatabaseRegularFormData>();
     const {
-        replicationAndSharding: { isSharded, shardsCount, replicationFactor },
-        manualNodeSelection: { nodes: manualNodes },
+        replicationAndShardingStep: { isSharded, shardsCount, replicationFactor },
+        manualNodeSelectionStep: { nodes: manualNodes },
     } = useWatch({
         control,
     });
@@ -34,25 +34,25 @@ export default function CreateDatabaseRegularStepNodeSelection() {
     const toggleNodeTag = (nodeTag: string) => {
         if (manualNodes.includes(nodeTag)) {
             setValue(
-                "manualNodeSelection.nodes",
+                "manualNodeSelectionStep.nodes",
                 manualNodes.filter((x) => x !== nodeTag)
             );
         } else {
-            setValue("manualNodeSelection.nodes", [...manualNodes, nodeTag]);
+            setValue("manualNodeSelectionStep.nodes", [...manualNodes, nodeTag]);
         }
     };
 
     const toggleAllNodeTags = () => {
         if (manualNodes.length === 0) {
-            setValue("manualNodeSelection.nodes", availableNodeTags);
+            setValue("manualNodeSelectionStep.nodes", availableNodeTags);
         } else {
-            setValue("manualNodeSelection.nodes", []);
+            setValue("manualNodeSelectionStep.nodes", []);
         }
     };
 
     useEffect(() => {
         if (!isSharded) {
-            setValue("replicationAndSharding.replicationFactor", manualNodes.length);
+            setValue("replicationAndShardingStep.replicationFactor", manualNodes.length);
         }
     }, [isSharded, manualNodes.length, setValue]);
 
@@ -86,7 +86,7 @@ export default function CreateDatabaseRegularStepNodeSelection() {
                                     <td key={`${shardNumber}-${replicationNumber}`} className="p-0">
                                         <FormSelect
                                             control={control}
-                                            name={`manualNodeSelection.shards.${shardNumber}.${replicationNumber}`}
+                                            name={`manualNodeSelectionStep.shards.${shardNumber}.${replicationNumber}`}
                                             options={nodeOptions}
                                             isSearchable={false}
                                             components={{
@@ -134,9 +134,9 @@ export default function CreateDatabaseRegularStepNodeSelection() {
                     </NodeSetList>
                 </NodeSet>
             </div>
-            {formState.errors.manualNodeSelection?.nodes && (
+            {formState.errors.manualNodeSelectionStep?.nodes && (
                 <div className="badge bg-danger rounded-pill margin-top-xxs">
-                    {formState.errors.manualNodeSelection.nodes.message}
+                    {formState.errors.manualNodeSelectionStep.nodes.message}
                 </div>
             )}
         </div>

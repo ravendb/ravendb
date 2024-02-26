@@ -11,11 +11,10 @@ import StepBasicInfo from "./steps/CreateDatabaseRegularStepBasicInfo";
 import StepEncryption from "../../../../../../common/FormEncryption";
 import StepReplicationAndSharding from "./steps/CreateDatabaseRegularStepReplicationAndSharding";
 import StepNodeSelection from "./steps/CreateDatabaseRegularStepNodeSelection";
-import StepPath from "../shared/CreateDatabaseStepPath";
+import StepPath from "../shared/CreateDatabaseStepDataDirectory";
 import { DevTool } from "@hookform/devtools";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
-
 import { useServices } from "components/hooks/useServices";
 import databasesManager from "common/shell/databasesManager";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -60,9 +59,9 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
                 data,
                 {
                     usedDatabaseNames,
-                    isSharded: data.replicationAndSharding.isSharded,
-                    isManualReplication: data.replicationAndSharding.isManualReplication,
-                    isEncrypted: data.basicInfo.isEncrypted,
+                    isSharded: data.replicationAndShardingStep.isSharded,
+                    isManualReplication: data.replicationAndShardingStep.isManualReplication,
+                    isEncrypted: data.basicInfoStep.isEncrypted,
                 },
                 options
             ),
@@ -74,7 +73,10 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
     });
     console.log("kalczur Regular errors", formState.errors); // TODO remove
 
-    const asyncDatabaseNameValidation = useCreateDatabaseAsyncValidation(formValues.basicInfo.databaseName, setError);
+    const asyncDatabaseNameValidation = useCreateDatabaseAsyncValidation(
+        formValues.basicInfoStep.databaseName,
+        setError
+    );
 
     const activeSteps = getActiveStepsList(formValues, formState, asyncDatabaseNameValidation.loading);
     const { currentStep, isFirstStep, isLastStep, goToStepWithValidation, nextStepWithValidation, prevStep } = useSteps(
@@ -86,7 +88,7 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
         activeSteps[currentStep].id,
         trigger,
         asyncDatabaseNameValidation,
-        formValues.basicInfo.databaseName
+        formValues.basicInfoStep.databaseName
     );
 
     const { reportEvent } = useEventsCollector();
@@ -95,15 +97,15 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
         return tryHandleSubmit(async () => {
             reportEvent("database", "newDatabase");
 
-            asyncDatabaseNameValidation.execute(formValues.basicInfo.databaseName);
+            asyncDatabaseNameValidation.execute(formValues.basicInfoStep.databaseName);
             if (!asyncDatabaseNameValidation.result) {
                 return;
             }
 
-            databasesManager.default.activateAfterCreation(formValues.basicInfo.databaseName);
+            databasesManager.default.activateAfterCreation(formValues.basicInfoStep.databaseName);
 
             const dto = createDatabaseRegularDataUtils.mapToDto(formValues, allNodeTags);
-            await databasesService.createDatabase(dto, formValues.replicationAndSharding.replicationFactor);
+            await databasesService.createDatabase(dto, formValues.replicationAndShardingStep.replicationFactor);
 
             closeModal();
         });
@@ -182,35 +184,35 @@ function getActiveStepsList(
 ): Step[] {
     const steps: Step[] = [
         {
-            id: "basicInfo",
+            id: "basicInfoStep",
             label: "Name",
             active: true,
-            isInvalid: !!formState.errors.basicInfo,
+            isInvalid: !!formState.errors.basicInfoStep,
             isLoading: isValidatingDatabaseName,
         },
         {
-            id: "encryption",
+            id: "encryptionStep",
             label: "Encryption",
-            active: formValues.basicInfo.isEncrypted,
-            isInvalid: !!formState.errors.encryption,
+            active: formValues.basicInfoStep.isEncrypted,
+            isInvalid: !!formState.errors.encryptionStep,
         },
         {
-            id: "replicationAndSharding",
+            id: "replicationAndShardingStep",
             label: "Replication & Sharding",
             active: true,
-            isInvalid: !!formState.errors.replicationAndSharding,
+            isInvalid: !!formState.errors.replicationAndShardingStep,
         },
         {
-            id: "manualNodeSelection",
+            id: "manualNodeSelectionStep",
             label: "Manual Node Selection",
-            active: formValues.replicationAndSharding.isManualReplication,
-            isInvalid: !!formState.errors.manualNodeSelection,
+            active: formValues.replicationAndShardingStep.isManualReplication,
+            isInvalid: !!formState.errors.manualNodeSelectionStep,
         },
         {
-            id: "pathsConfigurations",
+            id: "dataDirectoryStep",
             label: "Paths Configuration",
             active: true,
-            isInvalid: !!formState.errors.pathsConfigurations,
+            isInvalid: !!formState.errors.dataDirectoryStep,
         },
     ];
 
@@ -224,31 +226,33 @@ function getStepViews(
     trigger: UseFormTrigger<FormData>
 ): Record<keyof FormData, JSX.Element> {
     const { encryptionKeyFileName, encryptionKeyText } = createDatabaseUtils.getEncryptionData(
-        formValues.basicInfo.databaseName,
-        formValues.encryption.key
+        formValues.basicInfoStep.databaseName,
+        formValues.encryptionStep.key
     );
 
     return {
-        basicInfo: <StepBasicInfo />,
-        encryption: (
+        basicInfoStep: <StepBasicInfo />,
+        encryptionStep: (
             <StepEncryption
                 control={control}
-                encryptionKey={formValues.encryption.key}
+                encryptionKey={formValues.encryptionStep.key}
                 fileName={encryptionKeyFileName}
                 keyText={encryptionKeyText}
-                setEncryptionKey={(x) => setValue("encryption.key", x)}
-                triggerEncryptionKey={() => trigger("encryption.key")}
-                encryptionKeyFieldName="encryption.key"
-                isSavedFieldName="encryption.isKeySaved"
+                setEncryptionKey={(x) => setValue("encryptionStep.key", x)}
+                triggerEncryptionKey={() => trigger("encryptionStep.key")}
+                encryptionKeyFieldName="encryptionStep.key"
+                isSavedFieldName="encryptionStep.isKeySaved"
             />
         ),
-        replicationAndSharding: <StepReplicationAndSharding />,
-        manualNodeSelection: <StepNodeSelection />,
-        pathsConfigurations: (
+        replicationAndShardingStep: <StepReplicationAndSharding />,
+        manualNodeSelectionStep: <StepNodeSelection />,
+        dataDirectoryStep: (
             <StepPath
                 isBackupFolder={false}
                 manualSelectedNodes={
-                    formValues.replicationAndSharding.isManualReplication ? formValues.manualNodeSelection.nodes : null
+                    formValues.replicationAndShardingStep.isManualReplication
+                        ? formValues.manualNodeSelectionStep.nodes
+                        : null
                 }
             />
         ),

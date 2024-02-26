@@ -22,7 +22,7 @@ const backupSourceImg = require("Content/img/createDatabase/backup-source.svg");
 export default function CreateDatabaseFromBackupStepSource() {
     const { control } = useFormContext<FormData>();
     const {
-        source: { sourceType },
+        sourceStep: { sourceType },
     } = useWatch({
         control,
     });
@@ -42,7 +42,7 @@ export default function CreateDatabaseFromBackupStepSource() {
                 <Col>
                     <FormSelect
                         control={control}
-                        name="source.sourceType"
+                        name="sourceStep.sourceType"
                         options={sourceOptions}
                         isSearchable={false}
                         components={{
@@ -62,13 +62,13 @@ export default function CreateDatabaseFromBackupStepSource() {
                 <FormSwitch
                     className="mt-4"
                     control={control}
-                    name="source.isDisableOngoingTasksAfterRestore"
+                    name="sourceStep.isDisableOngoingTasksAfterRestore"
                     color="primary"
                 >
                     <Icon icon="ongoing-tasks" addon="cancel" />
                     Disable ongoing tasks after restore
                 </FormSwitch>
-                <FormSwitch control={control} name="source.isSkipIndexes" color="primary">
+                <FormSwitch control={control} name="sourceStep.isSkipIndexes" color="primary">
                     <Icon icon="index" /> Skip indexes
                 </FormSwitch>
                 <IsEncryptedField />
@@ -108,7 +108,7 @@ const sourceOptions: SelectOptionWithIcon<restoreSource>[] = [
 function IsEncryptedField() {
     const { control, formState } = useFormContext<FormData>();
     const {
-        source: { sourceType, sourceData },
+        sourceStep: { sourceType, sourceData },
     } = useWatch({
         control,
     });
@@ -140,7 +140,7 @@ function IsEncryptedField() {
             ]}
             popoverPlacement="left"
         >
-            <FormSwitch color="primary" control={control} name="source.isEncrypted" disabled={isEncryptionDisabled}>
+            <FormSwitch color="primary" control={control} name="sourceStep.isEncrypted" disabled={isEncryptionDisabled}>
                 <Icon icon="encryption" />
                 Encrypt at Rest
             </FormSwitch>
