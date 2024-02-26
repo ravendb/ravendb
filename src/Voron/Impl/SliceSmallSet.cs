@@ -154,7 +154,7 @@ namespace Voron.Impl
                     continue;
 
                 // We now know that we have an almost sure hit. We will do a final verification at this time.
-                if (AdvMemory.CompareInline(keyPtr, candidateKey.Content.Ptr, keyLength) != 0)
+                if (Memory.CompareInline(keyPtr, candidateKey.Content.Ptr, keyLength) != 0)
                     continue;
 
                 return currentIdx;

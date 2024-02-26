@@ -30,7 +30,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core70,
+                        Runtime = CoreRuntime.Core80,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit
                     }
@@ -153,19 +153,19 @@ namespace Micro.Benchmark.Benchmarks.Hardware
         [Benchmark]
         public int SmallNet7Ref()
         {
-            return AdvMemory.CompareSmallInlineNet7(ref Unsafe.AsRef<byte>(source.Ptr), ref Unsafe.AsRef<byte>(destination.Ptr), Length);
+            return Memory.CompareSmallInlineNet7(ref Unsafe.AsRef<byte>(source.Ptr), ref Unsafe.AsRef<byte>(destination.Ptr), Length);
         }
 
         [Benchmark]
         public int Avx2Ref()
         {
-            return AdvMemory.CompareAvx2(ref Unsafe.AsRef<byte>(source.Ptr), ref Unsafe.AsRef<byte>(destination.Ptr), Length);
+            return Memory.CompareAvx2(ref Unsafe.AsRef<byte>(source.Ptr), ref Unsafe.AsRef<byte>(destination.Ptr), Length);
         }
 
         [Benchmark]
         public int Avx2()
         {
-            return AdvMemory.CompareAvx2(source.Ptr, destination.Ptr, Length);
+            return Memory.CompareAvx2(source.Ptr, destination.Ptr, Length);
         }
 
         [Benchmark]
@@ -197,7 +197,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
         public int Avx2_WithCacheMisses()
         {
             int index = randomLocation[(_randomIdx++) % Operations];
-            return AdvMemory.CompareAvx2(source.Ptr + index, destination.Ptr + index, Length);
+            return Memory.CompareAvx2(source.Ptr + index, destination.Ptr + index, Length);
         }
 
         [Benchmark]

@@ -8,34 +8,21 @@ using Sparrow.Utils;
 
 namespace Voron
 {
-    public unsafe struct ValueReader
+    public unsafe struct ValueReader(byte* val, int len)
     {
         [ThreadStatic]
-        private static byte[] tmpBuf;
+        private static byte[] _tmpBuf;
         static ValueReader()
         {
-            ThreadLocalCleanup.ReleaseThreadLocalState += () => tmpBuf = null;
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => _tmpBuf = null;
         }
 
-        private int _pos;
+        private int _pos = 0;
 
-        private readonly int _len;
-        private readonly byte* _val;
+        public byte* Base { get; } = val;
 
-        public byte* Base => _val;
 
-        public ValueReader(byte* val, int len)
-        {
-            _val = val;
-            _len = len;
-            _pos = 0;
-        }
-
-       
-        public int Length
-        {
-            get { return _len; }
-        }
+        public int Length { get; } = len;
 
         public void Reset()
         {
@@ -44,7 +31,7 @@ namespace Voron
 
         public Stream AsStream()
         {
-            return new UnmanagedMemoryStream(_val, _len, _len, FileAccess.Read);
+            return new UnmanagedMemoryStream(Base, len, len, FileAccess.Read);
         }
 
         public int Read(byte[] buffer, int offset, int count)
@@ -60,10 +47,10 @@ namespace Voron
 
         public int Read(byte* buffer, int count)
         {
-            count = Math.Min(count, _len - _pos);
+            count = Math.Min(count, len - _pos);
             if (count <= 0)
                 return 0;
-            Memory.Copy(buffer, _val + _pos, count);
+            Memory.Copy(buffer, Base + _pos, count);
             _pos += count;
 
             return count;
@@ -71,9 +58,9 @@ namespace Voron
 
         public int ReadLittleEndianInt32()
         {
-            if (_len - _pos < sizeof (int))
+            if (len - _pos < sizeof (int))
                 throw new EndOfStreamException();
-            var val = *(int*) (_val + _pos);
+            var val = *(int*) (Base + _pos);
 
             _pos += sizeof (int);
 
@@ -83,9 +70,9 @@ namespace Voron
         public T ReadStructure<T>()
             where T : unmanaged
         {
-            if (_len - _pos < sizeof (int))
+            if (len - _pos < sizeof (int))
                 throw new EndOfStreamException();
-            var val = *(T*) (_val + _pos);
+            var val = *(T*) (Base + _pos);
 
             _pos += sizeof (T);
 
@@ -96,9 +83,9 @@ namespace Voron
 
         public long ReadLittleEndianInt64()
         {
-            if (_len - _pos < sizeof (long))
+            if (len - _pos < sizeof (long))
                 throw new EndOfStreamException();
-            var val = *(long*) (_val + _pos);
+            var val = *(long*) (Base + _pos);
 
             _pos += sizeof (long);
 
@@ -107,10 +94,10 @@ namespace Voron
 
         public int ReadBigEndianInt32()
         {
-            if (_len - _pos < sizeof (int))
+            if (len - _pos < sizeof (int))
                 throw new EndOfStreamException();
 
-            int val = *(int*) (_val + _pos);
+            int val = *(int*) (Base + _pos);
 
             _pos += sizeof (int);
 
@@ -119,10 +106,10 @@ namespace Voron
 
         public byte ReadByte()
         {
-            if (_len - _pos < sizeof(byte))
+            if (len - _pos < sizeof(byte))
                 throw new EndOfStreamException();
 
-            byte val = *(_val + _pos);
+            byte val = *(Base + _pos);
 
             _pos += sizeof(byte);
 
@@ -131,10 +118,10 @@ namespace Voron
 
         public long ReadBigEndianInt64()
         {
-            if (_len - _pos < sizeof (long))
+            if (len - _pos < sizeof (long))
                 throw new EndOfStreamException();
             
-            var val = *(long*) (_val + _pos);
+            var val = *(long*) (Base + _pos);
 
             return Bits.SwapBytes(val);
         }
@@ -143,10 +130,10 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte[] EnsureTempBuffer(int size)
         {
-            if (tmpBuf != null && tmpBuf.Length >= size)
-                return tmpBuf;
+            if (_tmpBuf != null && _tmpBuf.Length >= size)
+                return _tmpBuf;
 
-            return tmpBuf = new byte[Bits.PowerOf2(size)];
+            return _tmpBuf = new byte[Bits.PowerOf2(size)];
         }
 
         public string ReadString(int length)
@@ -157,7 +144,7 @@ namespace Voron
 
         public string ToStringValue()
         {
-            int length = _len - _pos;
+            int length = len - _pos;
             var arraySegment = ReadBytes(length);
             return Encodings.Utf8.GetString(arraySegment.Array, arraySegment.Offset, arraySegment.Count);
         }
@@ -172,7 +159,7 @@ namespace Voron
 
         public ArraySegment<byte> ReadBytes(int length)
         {
-            int size = Math.Min(length, _len - _pos);
+            int size = Math.Min(length, len - _pos);
             var buffer = EnsureTempBuffer(length);
             var used = Read(buffer, 0, size);
             return new ArraySegment<byte>(buffer, 0, used);
@@ -195,7 +182,7 @@ namespace Voron
         {
             int size = Math.Min(Length, other.Length);
 
-            int r = Memory.CompareInline(_val, other._val, size);
+            int r = Memory.CompareInline(Base, other.Base, size);
 
             if (r != 0)
                 return r;
@@ -205,15 +192,15 @@ namespace Voron
 
         public ByteStringContext.InternalScope AsSlice(ByteStringContext context, out Slice str)
         {
-            if (_len >= ushort.MaxValue)
-                throw new InvalidOperationException("Cannot convert to slice, len is too big: " + _len);
+            if (len >= ushort.MaxValue)
+                throw new InvalidOperationException("Cannot convert to slice, len is too big: " + len);
 
-            return Slice.From(context, _val, _len, out str);
+            return Slice.From(context, Base, len, out str);
         }
 
         public Span<byte> AsSpan()
         {
-            return new Span<byte>(_val, _len);
+            return new Span<byte>(Base, len);
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -347,7 +348,7 @@ public sealed unsafe class CompactKey : IDisposable
         var length = Bits.ToBytes(lengthInBits);
         var nextEntryLength = Bits.ToBytes(nextEntryLengthInBits);
 
-        var result = AdvMemory.CompareInline(ref _storage[encodedStartIdx + sizeof(int)], ref Unsafe.AsRef<byte>(nextEntryPtr), Math.Min(length, nextEntryLength));
+        var result = Memory.CompareInline(ref _storage[encodedStartIdx + sizeof(int)], ref Unsafe.AsRef<byte>(nextEntryPtr), Math.Min(length, nextEntryLength));
         return result == 0 ? lengthInBits - nextEntryLengthInBits : result;
     }
 
@@ -381,7 +382,7 @@ public sealed unsafe class CompactKey : IDisposable
         int nextEntryLength = Bits.ToBytes(nextEntryLengthInBits);
         int encodedLength = Bits.ToBytes(encodedLengthInBits);
 
-        var result = AdvMemory.CompareInline(ref MemoryMarshal.GetReference(encodedKey), ref nextEntryRef, Math.Min(encodedLength, nextEntryLength));
+        var result = Memory.CompareInline(ref MemoryMarshal.GetReference(encodedKey), ref nextEntryRef, Math.Min(encodedLength, nextEntryLength));
         return result == 0 ? encodedLength - nextEntryLength : result;
     }
 

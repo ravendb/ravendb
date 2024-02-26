@@ -127,7 +127,7 @@ public unsafe struct TermsReader : IDisposable
         if (xItem.Address == null)
             return -1;
 
-        var match = AdvMemory.Compare(xItem.Address + 1, yItem.Address + 1, Math.Min(xItem.Length - 1, yItem.Length - 1));
+        var match = Memory.CompareInline(xItem.Address + 1, yItem.Address + 1, Math.Min(xItem.Length - 1, yItem.Length - 1));
         if (match != 0)
             return match;
         var xItemLengthInBits = (xItem.Length - 1) * 8 - (xItem.Address[0] >> 4);

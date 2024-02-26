@@ -1,19 +1,16 @@
-﻿using System;
+using System;
 using System.Runtime.Intrinsics.X86;
-using Sparrow.Server.Strings;
 using Xunit;
 using Xunit.Abstractions;
+using Sparrow;
+using Tests.Infrastructure;
 
 namespace FastTests.Sparrow
 {
-    public unsafe class StringTests : NoDisposalNeeded
+    public unsafe class AdvMemoryTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public StringTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
-        public void ExhaustiveCompareForEveryCombination()
+        [RavenFact(RavenTestCategory.Core)]
+        public void ExhaustiveIsEqualForEveryCombination()
         {
             for (int size = 1; size < 64; size++)
             {
@@ -30,12 +27,12 @@ namespace FastTests.Sparrow
                         s1Ptr[i] = 0x10;
                         s2[i] = 0x01;
 
-                        Assert.False(StringsExtensions.CompareConstant(s2Span, s1Ptr, size));
-                        Assert.False(StringsExtensions.CompareConstantVector128(ref s2Span[0], s1Ptr, size));
+                        Assert.False(Memory.IsEqualConstant(s2Span, s1Ptr, size));
+                        Assert.False(Memory.IsEqualConstantVector128(ref s2Span[0], s1Ptr, size));
 
                         if (Avx2.IsSupported)
                         {
-                            Assert.False(StringsExtensions.CompareConstantAvx2(ref s2Span[0], s1Ptr, size));
+                            Assert.False(Memory.IsEqualConstantAvx2(ref s2Span[0], s1Ptr, size));
                         }
 
                         // We reset the state to zero
@@ -43,12 +40,12 @@ namespace FastTests.Sparrow
                         s2[i] = 0x00;
 
 
-                        Assert.True(StringsExtensions.CompareConstant(s2Span, s1Ptr, size));
-                        Assert.True(StringsExtensions.CompareConstantVector128(ref s2Span[0], s1Ptr, size));
+                        Assert.True(Memory.IsEqualConstant(s2Span, s1Ptr, size));
+                        Assert.True(Memory.IsEqualConstantVector128(ref s2Span[0], s1Ptr, size));
 
                         if (Avx2.IsSupported)
                         {
-                            Assert.True(StringsExtensions.CompareConstantAvx2(ref s2Span[0], s1Ptr, size));
+                            Assert.True(Memory.IsEqualConstantAvx2(ref s2Span[0], s1Ptr, size));
                         }
                     };
                 }
