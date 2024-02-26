@@ -741,7 +741,7 @@ namespace Voron.Recovery
         private bool MacNotZero(PageHeader* pageHeader)
         {
             byte* zeroes = stackalloc byte[SizeOfMacInBytes];
-            return Memory.IsEqualConstant(zeroes, pageHeader->Mac, SizeOfMacInBytes) == false;
+            return Memory.IsEqualConstant(zeroes, SizeOfMacInBytes, pageHeader->Mac) == false;
         }
 
         private Size _maxTransactionSize = new Size(64, SizeUnit.Megabytes);
