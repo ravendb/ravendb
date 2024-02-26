@@ -2400,20 +2400,8 @@ namespace Voron.Data.Tables
                     item.Value.Dispose();
             }
 
-            if (_fixedSizeTreeCache != null)
-            {
-                foreach (var item in _fixedSizeTreeCache)
-                {
-                    foreach (var item2 in item.Value)
-                    {
-                        item2.Value.Dispose();
-                    }
-                }
-            }
-
-            _activeCandidateSection?.Dispose();
             _activeDataSmallSection?.Dispose();
-            _inactiveSections?.Dispose();
+
             _tableTree?.Dispose();
         }
 

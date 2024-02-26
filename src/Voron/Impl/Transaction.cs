@@ -541,14 +541,6 @@ namespace Voron.Impl
                 }
             }
 
-            if (_globalFixedSizeTree != null)
-            {
-                foreach (var tree in _globalFixedSizeTree)
-                {
-                    tree.Value?.Dispose();
-                }
-            }
-
             _lowLevelTransaction?.Dispose();
 
             _lowLevelTransaction = null;

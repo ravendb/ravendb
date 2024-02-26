@@ -179,14 +179,11 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 var mapEntries = new List<FixedSizeTree>(docIds.Length);
                 foreach (var docId in docIds)
                 {
-                    FixedSizeTree mapEntriesTree;
-                    scope.EnsureDispose(mapEntriesTree = mapPhaseTree.FixedTreeFor(docId.ToLower(), sizeof(long)));
+                    FixedSizeTree mapEntriesTree = mapPhaseTree.FixedTreeFor(docId.ToLower(), sizeof(long));
                     mapEntries.Add(mapEntriesTree);
                 }
 
-                FixedSizeTree typePerHash;
-                scope.EnsureDispose(typePerHash = reducePhaseTree.FixedTreeFor(MapReduceIndexBase<MapReduceIndexDefinition, IndexField>.ResultsStoreTypesTreeName, sizeof(byte)));
-
+                FixedSizeTree typePerHash = reducePhaseTree.FixedTreeFor(MapReduceIndexBase<MapReduceIndexDefinition, IndexField>.ResultsStoreTypesTreeName, sizeof(byte));
                 trees = IterateTrees(self, mapEntries, reducePhaseTree, typePerHash, indexContext, scope);
 
                 return scope.Delay();

@@ -22,14 +22,14 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Fixed
 {
-    public sealed class FixedSizeTree : FixedSizeTree<long>
-    {
-        public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize, bool clone = true, bool isIndexTree = false, NewPageAllocator newPageAllocator = null) : base(tx, parent, treeName, valSize, clone, isIndexTree, newPageAllocator)
-        {
-        }
-    } 
+    public sealed class FixedSizeTree(
+            LowLevelTransaction tx,
+            Tree parent, Slice treeName,
+            ushort valSize, bool clone = true, bool isIndexTree = false,
+            NewPageAllocator newPageAllocator = null)
+        : FixedSizeTree<long>(tx, parent, treeName, valSize, clone, isIndexTree, newPageAllocator); 
     
-    public unsafe partial class FixedSizeTree<TVal> : IDisposable
+    public unsafe partial class FixedSizeTree<TVal> 
         where TVal: unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
     {
 #if VALIDATE_DIRECT_ADD_STACKTRACE
@@ -83,7 +83,7 @@ namespace Voron.Data.Fixed
             return header->ValueSize;
         }
 
-        public struct DirectAddScope : IDisposable
+        public readonly struct DirectAddScope : IDisposable
         {
             private readonly FixedSizeTree<TVal> _parent;
 
@@ -1659,10 +1659,6 @@ namespace Voron.Data.Fixed
         public void DebugRenderAndShow()
         {
             DebugStuff.RenderAndShow_FixedSizeTree(_tx, this);
-        }
-
-        public void Dispose()
-        {
         }
 
         private Tree.DirectAddScope ModifyLargeHeader(out FixedSizeTreeHeader.Large* largeHeader)
