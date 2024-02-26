@@ -172,6 +172,8 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                         control={control}
                                         name="replicationAndSharding.shardsCount"
                                         className="replication-input"
+                                        min="1"
+                                        max="100"
                                     />
                                 </InputGroup>
                             </Collapse>
