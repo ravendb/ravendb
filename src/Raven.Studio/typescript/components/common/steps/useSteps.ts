@@ -22,6 +22,22 @@ export function useSteps(stepsCount: number) {
         }
     };
 
+    const goToStepWithValidation = async (step: number, validateStep: () => Promise<boolean>) => {
+        if (step <= currentStep) {
+            goToStep(step);
+        }
+
+        if (await validateStep()) {
+            goToStep(step);
+        }
+    };
+
+    const nextStepWithValidation = async (validateStep: () => Promise<boolean>) => {
+        if (await validateStep()) {
+            nextStep();
+        }
+    };
+
     return {
         currentStep,
         isFirstStep,
@@ -29,5 +45,7 @@ export function useSteps(stepsCount: number) {
         goToStep,
         nextStep,
         prevStep,
+        goToStepWithValidation,
+        nextStepWithValidation,
     };
 }
