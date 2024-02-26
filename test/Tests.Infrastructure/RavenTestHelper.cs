@@ -22,11 +22,14 @@ using Xunit.Sdk;
 using ExceptionAggregator = Raven.Server.Utils.ExceptionAggregator;
 using System.Runtime.CompilerServices;
 
-namespace FastTests
+namespace Tests.Infrastructure
 {
     public static class RavenTestHelper
     {
         public static readonly bool IsRunningOnCI;
+        public static readonly bool SkipIntegrationTests;
+
+        public const string SkipIntegrationMessage = "Skipping integration tests.";
 
         public static readonly ParallelOptions DefaultParallelOptions = new ParallelOptions
         {
@@ -36,6 +39,7 @@ namespace FastTests
         static RavenTestHelper()
         {
             bool.TryParse(Environment.GetEnvironmentVariable("RAVEN_IS_RUNNING_ON_CI"), out IsRunningOnCI);
+            bool.TryParse(Environment.GetEnvironmentVariable("RAVEN_SKIP_INTEGRATION_TESTS"), out SkipIntegrationTests);
         }
 
         private static int _pathCount;
@@ -70,7 +74,7 @@ namespace FastTests
                 }
             }
 
-            Xunit.Assert.True(condition, failureMessage);
+            Assert.True(condition, failureMessage);
         }
 
         public static void DeletePaths(ConcurrentSet<string> pathsToDelete, ExceptionAggregator exceptionAggregator)

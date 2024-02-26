@@ -1,7 +1,6 @@
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;

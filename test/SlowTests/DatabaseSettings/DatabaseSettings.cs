@@ -2,7 +2,6 @@
 using System.Linq;
 using FastTests;
 using Raven.Server.Config;
-using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 

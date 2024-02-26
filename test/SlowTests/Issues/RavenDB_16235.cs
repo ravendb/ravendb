@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -14,6 +14,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace BenchmarkTests

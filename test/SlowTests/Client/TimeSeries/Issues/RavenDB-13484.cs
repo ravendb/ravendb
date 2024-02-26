@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Session;

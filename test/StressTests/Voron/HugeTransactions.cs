@@ -8,7 +8,6 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
 using FastTests.Voron;
 using Sparrow.Compression;
 using Tests.Infrastructure;
