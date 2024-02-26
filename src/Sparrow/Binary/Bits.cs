@@ -259,6 +259,7 @@ namespace Sparrow.Binary
 #endif
         }
 
+#if !NET6_0_OR_GREATER
         private static readonly int[] powerOf2Table =
         {
               0,   1,   2,   4,   4,   8,   8,   8,   8,  16,  16,  16,  16,  16,  16,  16, 
@@ -278,6 +279,7 @@ namespace Sparrow.Binary
             256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 
             256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256
         };
+#endif
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int PowerOf2(int v)
@@ -287,7 +289,16 @@ namespace Sparrow.Binary
 #else
             if (v < powerOf2Table.Length)
                 return powerOf2Table[v];
-            return PowerOf2Internal(v);
+
+            v--;
+            v |= v >> 1;
+            v |= v >> 2;
+            v |= v >> 4;
+            v |= v >> 8;
+            v |= v >> 16;
+            v++;
+
+            return v;
 #endif
         }
 
@@ -299,35 +310,7 @@ namespace Sparrow.Binary
 #else
             if (v < powerOf2Table.Length)
                 return powerOf2Table[v];
-            return PowerOf2Internal(v);
-#endif
-        }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int PowerOf2Internal(int v)
-        {
-            if (v > GB)
-                ThrowPowerOf2OverflowException(v);
-
-            v--;
-            v |= v >> 1;
-            v |= v >> 2;
-            v |= v >> 4;
-            v |= v >> 8;
-            v |= v >> 16;
-            v++;
-
-            return v;
-        }
-
-        private static void ThrowPowerOf2OverflowException(int v)
-        {
-            throw new ArgumentException($"Could not return next power of 2 of {v} because the resulting number exceeds return type int");
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static long PowerOf2Internal(long v)
-        {
             v--;
             v |= v >> 1;
             v |= v >> 2;
@@ -338,6 +321,7 @@ namespace Sparrow.Binary
             v++;
 
             return v;
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -419,31 +403,51 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int TrailingZeroesInBytes(ulong value)
         {
+#if NET6_0_OR_GREATER
+            return BitOperations.TrailingZeroCount(value) / 8;
+#else
             return DeBruijnBytePos64[((value & (ulong)(-(long)value)) * 0x0218A392CDABBD3FUL) >> 58];
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int TrailingZeroesInBytes(long value)
         {
+#if NET6_0_OR_GREATER
+            return BitOperations.TrailingZeroCount(value) / 8;
+#else
             return DeBruijnBytePos64[((ulong)(value & -value) * 0x0218A392CDABBD3FUL) >> 58];
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int TrailingZeroesInBytes(uint value)
         {
+#if NET6_0_OR_GREATER
+            return BitOperations.TrailingZeroCount(value) / 8;
+#else
             return DeBruijnBytePos32[((value & (uint)(-(int)value)) * 0x077CB531U) >> 27];
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int TrailingZeroesInBytes(int value)
         {
+#if NET6_0_OR_GREATER
+            return BitOperations.TrailingZeroCount(value) / 8;
+#else
             return DeBruijnBytePos32[((uint)(value & -value) * 0x077CB531U) >> 27];
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsPowerOfTwo(int value)
         {
+#if NET6_0_OR_GREATER
+            return BitOperations.IsPow2(value);
+#else
             return value != 0 && (value & (value - 1)) == 0;
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

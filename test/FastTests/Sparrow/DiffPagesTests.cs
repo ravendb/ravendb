@@ -125,7 +125,7 @@ namespace FastTests.Sparrow
                     DiffSize = diffPages.OutputSize
                 }.Apply(false);
 
-                var result = Memory.Compare(tri, two, 4096, out int position);
+                var result = Memory.Compare(tri, two, 4096);
                 Assert.Equal(0, result);
             }
         }
@@ -186,7 +186,7 @@ namespace FastTests.Sparrow
                     DiffSize = diffPages.OutputSize
                 }.Apply(false);
 
-                var result = Memory.Compare(tri, two, 4096, out int position);
+                var result = Memory.Compare(tri, two, 4096);
                 Assert.Equal(0, result);
             }
         }
@@ -236,9 +236,7 @@ namespace FastTests.Sparrow
                         DiffSize = diffPages.OutputSize
                     }.Apply(false);
 
-                    var result = Memory.Compare(tri, two, Size, out int position);
-                    if ( result != 0 )
-                        Console.WriteLine($"The position at fault is '{position}'");
+                    var result = Memory.Compare(tri, two, Size);
                     Assert.Equal(0, result);
                 }
             }

@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Handlers.Batches
         private static unsafe bool ReadClusterTransactionProperty(JsonParserState state)
         {
             return state.CurrentTokenType == JsonParserToken.String &&
-                   "TransactionMode"u8.CompareConstant(state.StringBuffer, state.StringSize);
+                   "TransactionMode"u8.IsEqualConstant(state.StringBuffer, state.StringSize);
         }
 
         public async Task<CommandData> ReadSingleCommand(
@@ -735,118 +735,118 @@ namespace Raven.Server.Documents.Handlers.Batches
             switch (state.StringSize)
             {
                 case 2:
-                    if ("Id"u8.CompareConstant(state.StringBuffer))
+                    if ("Id"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Id;
-                    if ("To"u8.CompareConstant(state.StringBuffer))
+                    if ("To"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.To;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 3:
 
-                    if ("Ids"u8.CompareConstant(state.StringBuffer))
+                    if ("Ids"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Ids;
 
                     return CommandPropertyName.NoSuchProperty;
                 case 8:
-                    if ("Document"u8.CompareConstant(state.StringBuffer))
+                    if ("Document"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Document;
 
-                    if ("Counters"u8.CompareConstant(state.StringBuffer))
+                    if ("Counters"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Counters;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 4:
-                    if ("Type"u8.CompareConstant(state.StringBuffer))
+                    if ("Type"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Type;
-                    if ("Name"u8.CompareConstant(state.StringBuffer))
+                    if ("Name"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Name;
-                    if ("From"u8.CompareConstant(state.StringBuffer))
+                    if ("From"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.From;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 5:
-                    if ("Index"u8.CompareConstant(state.StringBuffer))
+                    if ("Index"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Index;
-                    if ("Patch"u8.CompareConstant(state.StringBuffer))
+                    if ("Patch"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Patch;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 10:
-                    if ("IdPrefixed"u8.CompareConstant(state.StringBuffer))
+                    if ("IdPrefixed"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.IdPrefixed;
 
-                    if ("TimeSeries"u8.CompareConstant(state.StringBuffer))
+                    if ("TimeSeries"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.TimeSeries;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 11:
-                    if ("ContentType"u8.CompareConstant(state.StringBuffer))
+                    if ("ContentType"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.ContentType;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 12:
-                    if ("ChangeVector"u8.CompareConstant(state.StringBuffer))
+                    if ("ChangeVector"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.ChangeVector;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 7:
-                    if ("FromEtl"u8.CompareConstant(state.StringBuffer))
+                    if ("FromEtl"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.FromEtl;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 13:
-                    if ("DestinationId"u8.CompareConstant(state.StringBuffer))
+                    if ("DestinationId"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.DestinationId;
 
-                    if ("ContentLength"u8.CompareConstant(state.StringBuffer))
+                    if ("ContentLength"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.ContentLength;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 14:
-                    if ("ReturnDocument"u8.CompareConstant(state.StringBuffer))
+                    if ("ReturnDocument"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.ReturnDocument;
 
-                    if ("PatchIfMissing"u8.CompareConstant(state.StringBuffer))
+                    if ("PatchIfMissing"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.PatchIfMissing;
 
-                    if ("AttachmentType"u8.CompareConstant(state.StringBuffer))
+                    if ("AttachmentType"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.AttachmentType;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 15:
-                    if ("DestinationName"u8.CompareConstant(state.StringBuffer))
+                    if ("DestinationName"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.DestinationName;
 
-                    if ("CreateIfMissing"u8.CompareConstant(state.StringBuffer))
+                    if ("CreateIfMissing"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.CreateIfMissing;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 20:
-                    if ("OriginalChangeVector"u8.CompareConstant(state.StringBuffer))
+                    if ("OriginalChangeVector"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.OriginalChangeVector;
 
                     return CommandPropertyName.NoSuchProperty;
 
 
                 case 29:
-                    if ("ForceRevisionCreationStrategy"u8.CompareConstant(state.StringBuffer))
+                    if ("ForceRevisionCreationStrategy"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.ForceRevisionCreationStrategy;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 9:
-                    if ("JsonPatch"u8.CompareConstant(state.StringBuffer))
+                    if ("JsonPatch"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.JsonPatch;
 
                     return CommandPropertyName.NoSuchProperty;
@@ -860,7 +860,7 @@ namespace Raven.Server.Documents.Handlers.Batches
             switch (state.StringSize)
             {
                 case 6:
-                    if ("Before"u8.CompareConstant(state.StringBuffer))
+                    if ("Before"u8.IsEqualConstant(state.StringBuffer))
                         return ForceRevisionStrategy.Before;
 
                     ThrowInvalidProperty(state, ctx);
@@ -881,10 +881,10 @@ namespace Raven.Server.Documents.Handlers.Batches
             switch (state.StringSize)
             {
                 case 8:
-                    if ("Document"u8.CompareConstant(state.StringBuffer))
+                    if ("Document"u8.IsEqualConstant(state.StringBuffer))
                         return AttachmentType.Document;
 
-                    if ("Revision"u8.CompareConstant(state.StringBuffer))
+                    if ("Revision"u8.IsEqualConstant(state.StringBuffer))
                         return AttachmentType.Revision;
 
                     ThrowInvalidProperty(state, ctx);
@@ -905,84 +905,84 @@ namespace Raven.Server.Documents.Handlers.Batches
             switch (state.StringSize)
             {
                 case 3:
-                    if ("PUT"u8.CompareConstant(state.StringBuffer))
+                    if ("PUT"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.PUT;
 
                     break;
 
                 case 5:
-                    if ("PATCH"u8.CompareConstant(state.StringBuffer))
+                    if ("PATCH"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.PATCH;
 
                     break;
                 case 6:
-                    if ("DELETE"u8.CompareConstant(state.StringBuffer))
+                    if ("DELETE"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.DELETE;
                     break;
 
                 case 8:
-                    if ("Counters"u8.CompareConstant(state.StringBuffer))
+                    if ("Counters"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.Counters;
                     break;
                 case 9:
-                    if ("JsonPatch"u8.CompareConstant(state.StringBuffer))
+                    if ("JsonPatch"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.JsonPatch;
 
-                    if ("HeartBeat"u8.CompareConstant(state.StringBuffer))
+                    if ("HeartBeat"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.HeartBeat;
                     break;
                 case 10:
-                    if ("TimeSeries"u8.CompareConstant(state.StringBuffer))
+                    if ("TimeSeries"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.TimeSeries;
 
-                    if ("BatchPATCH"u8.CompareConstant(state.StringBuffer))
+                    if ("BatchPATCH"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.BatchPATCH;
                     break;
 
                 case 13:
-                    if ("AttachmentPUT"u8.CompareConstant(state.StringBuffer))
+                    if ("AttachmentPUT"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.AttachmentPUT;
                     break;
 
                 case 14:
-                    if ("TimeSeriesCopy"u8.CompareConstant(state.StringBuffer))
+                    if ("TimeSeriesCopy"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.TimeSeriesCopy;
 
-                    if ("AttachmentCOPY"u8.CompareConstant(state.StringBuffer))
+                    if ("AttachmentCOPY"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.AttachmentCOPY;
 
-                    if ("AttachmentMOVE"u8.CompareConstant(state.StringBuffer))
+                    if ("AttachmentMOVE"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.AttachmentMOVE;
 
                     break;
 
                 case 16:
-                    if ("AttachmentDELETE"u8.CompareConstant(state.StringBuffer))
+                    if ("AttachmentDELETE"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.AttachmentDELETE;
                     break;
 
                 case 18:
-                    if ("CompareExchangePUT"u8.CompareConstant(state.StringBuffer))
+                    if ("CompareExchangePUT"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.CompareExchangePUT;
                     break;
 
                 case 20:
-                    if ("TimeSeriesBulkInsert"u8.CompareConstant(state.StringBuffer))
+                    if ("TimeSeriesBulkInsert"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.TimeSeriesBulkInsert;
 
                     ThrowInvalidProperty(state, ctx);
                     return CommandType.None;
 
                 case 21:
-                    if ("CompareExchangeDELETE"u8.CompareConstant(state.StringBuffer))
+                    if ("CompareExchangeDELETE"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.CompareExchangeDELETE;
 
-                    if ("ForceRevisionCreation"u8.CompareConstant(state.StringBuffer))
+                    if ("ForceRevisionCreation"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.ForceRevisionCreation;
                     break;
 
                 case 24:
-                    if ("TimeSeriesWithIncrements"u8.CompareConstant(state.StringBuffer))
+                    if ("TimeSeriesWithIncrements"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.TimeSeriesWithIncrements;
                     break;
             }
