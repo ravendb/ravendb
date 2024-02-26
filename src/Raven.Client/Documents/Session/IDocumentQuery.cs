@@ -103,9 +103,7 @@ namespace Raven.Client.Documents.Session
         Dictionary<string, FacetResult> ExecuteAggregation();
     }
 
-    /// <summary>
-    ///     A query against a Raven index
-    /// </summary>
+    /// <inheritdoc cref="IDocumentQueryBase{T, TSelf} "/>
     public interface IDocumentQuery<T> :
         IDocumentQueryBase<T, IDocumentQuery<T>>,
         IDocumentQueryBase<T>

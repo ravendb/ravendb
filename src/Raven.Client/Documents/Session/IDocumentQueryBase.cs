@@ -434,39 +434,35 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
     }
 
     /// <summary>
-    ///     A query against a Raven index
+    ///     Interface for lower level API access.
     /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Session.Querying.QueryVsDocumentQuery"/>
     public interface IDocumentQueryBase<T, TSelf> : IPagingDocumentQueryBase<T, TSelf>, IFilterDocumentQueryBase<T, TSelf>, IGroupByDocumentQueryBase<T, TSelf>, IQueryBase<T, TSelf>
         where TSelf : IDocumentQueryBase<T, TSelf>
     {
         /// <summary>
-        ///     Adds an ordering for a specific field to the query
+        ///     Orders query results by specified field.
         /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="descending">if set to <c>true</c> [descending].</param>
-        /// <param name="ordering">ordering type.</param>
+        /// <param name="fieldName">Name of the field to order the query results by.</param>
+        /// <param name="descending">Specifies if order is descending. Default: false.</param>
+        /// <param name="ordering">Ordering type. Default: OrderingType.String.</param>
         TSelf AddOrder(string fieldName, bool descending = false, OrderingType ordering = OrderingType.String);
 
         /// <summary>
-        ///     Adds an ordering for a specific field to the query
+        ///     Orders query results by specified field.
         /// </summary>
-        /// <param name="propertySelector">Property selector for the field.</param>
-        /// <param name="descending">if set to <c>true</c> [descending].</param>
-        /// <param name="ordering">Ordering type.</param>
+        /// <param name="propertySelector">Path to the field to order the query results by.</param>
+        /// <param name="descending">Specifies if order is descending. Default: false.</param>
+        /// <param name="ordering">Ordering type. Default: OrderingType.String.</param>
         TSelf AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending = false, OrderingType ordering = OrderingType.String);
 
         /// <summary>
-        ///     Specifies a boost weight to the previous where clause.
-        ///     The higher the boost factor, the more relevant the term will be.
+        ///     Specifies boost weight for the preceding Where clause.
+        ///     The higher the boost weight, the more relevant the term will be.
+        ///     By default all terms have weight of 1.0.
         /// </summary>
-        /// <param name="boost">
-        ///     boosting factor where 1.0 is default, less than 1.0 is lower weight, greater than 1.0 is higher
-        ///     weight
-        /// </param>
-        /// <returns></returns>
-        /// <remarks>
-        ///     http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Boosting%20a%20Term
-        /// </remarks>
+        /// <param name="boost">Boost weight.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.BoostSearchResults"/>
         TSelf Boost(decimal boost);
 
         /// <summary>
@@ -482,265 +478,331 @@ If you really want to do in memory filtering on the data returned from the query
         int Count(Func<T, bool> predicate);
 
         /// <summary>
-        ///     Apply distinct operation to this query
+        ///     Removes duplicates from query results.
         /// </summary>
         TSelf Distinct();
 
-        /// <inheritdoc cref="AbstractDocumentQuery{T,TSelf}.IncludeExplanations"/>
+        /// <inheritdoc cref="AbstractDocumentQuery{T, TSelf}.IncludeExplanations"/>
         TSelf IncludeExplanations(out Explanations explanations);
 
-        /// <inheritdoc cref="AbstractDocumentQuery{T,TSelf}.IncludeExplanations"/>
+        /// <inheritdoc cref="AbstractDocumentQuery{T, TSelf}.IncludeExplanations"/>
         TSelf IncludeExplanations(ExplanationOptions options, out Explanations explanations);
 
         /// <summary>
-        ///     Specifies a fuzziness factor to the single word term in the last where clause
+        ///     Specifies a fuzziness factor for the preceding WhereEquals clause,
+        ///     making it match documents containing terms similar to searched one.
+        ///     The higher the factor, the more similar terms will be matched.
         /// </summary>
-        /// <param name="fuzzy">0.0 to 1.0 where 1.0 means closer match</param>
+        /// <param name="fuzzy">Decimal value between 0.0 and 1.0.</param>
         /// <returns></returns>
-        /// <remarks>
-        ///     http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Fuzzy%20Searches
-        /// </remarks>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.FuzzySearch"/>
         TSelf Fuzzy(decimal fuzzy);
 
+        /// <inheritdoc cref="Highlight(string, int, int, HighlightingOptions, out Highlightings)"/>
         TSelf Highlight(string fieldName, int fragmentLength, int fragmentCount, out Highlightings highlightings);
 
+        /// <inheritdoc cref="Linq.IRavenQueryable{T}.Highlight(string, int, int, HighlightingOptions, out Highlightings)"/>
         TSelf Highlight(string fieldName, int fragmentLength, int fragmentCount, HighlightingOptions options, out Highlightings highlightings);
 
+        /// <inheritdoc cref="Highlight(Expression{Func{T, object}}, int, int, HighlightingOptions, out Highlightings)"/>
         TSelf Highlight(Expression<Func<T, object>> path, int fragmentLength, int fragmentCount, out Highlightings highlightings);
 
+        /// <inheritdoc cref="Linq.IRavenQueryable{T}.Highlight(Expression{Func{T, object}}, int, int, HighlightingOptions, out Highlightings)"/>
         TSelf Highlight(Expression<Func<T, object>> path, int fragmentLength, int fragmentCount, HighlightingOptions options, out Highlightings highlightings);
 
-        /// <summary>
-        ///     Includes the specified path in the query, loading the document specified in that path
-        /// </summary>
+        /// <inheritdoc cref="AbstractDocumentQuery{T, TSelf}.Include(string)"/>
         TSelf Include(string path);
 
-        /// <summary>
-        ///     Includes the specified path in the query, loading the document specified in that path
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc cref="AbstractDocumentQuery{T, TSelf}.Include(Expression{Func{T, object}})"/>
         TSelf Include(Expression<Func<T, object>> path);
 
         /// <summary>
-        ///     Partition the query so we can intersect different parts of the query
-        ///     across different index entries.
+        ///     Gets the intersection of sub-queries - documents that match all provided sub-queries.
         /// </summary>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToUseIntersect"/>
         TSelf Intersect();
 
+        /// <summary>
+        ///     Orders the query results using server-side custom sorter by the specified field in ascending order.
+        /// </summary>
+        /// <param name="field">Name of the field to order the query results by.</param>
+        /// <param name="sorterName">Name of the custom sorter to be used.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults"/>
         TSelf OrderBy(string field, string sorterName);
 
         /// <summary>
-        ///     Order the results by the specified fields
-        ///     The field is the name of the field to sort, defaulting to sorting by ascending.
+        ///     Orders the query results by the specified field in ascending order.
         /// </summary>
+        /// <param name="field">Name of the field to order the query results by.</param>
+        /// <param name="ordering">Ordering type. Default: OrderingType.String.</param>
         TSelf OrderBy(string field, OrderingType ordering = OrderingType.String);
 
-        /// <summary>
-        ///     Order the results by the specified fields
-        ///     The field is the name of the field to sort, defaulting to sorting by ascending.
-        /// </summary>
+        /// <inheritdoc cref="OrderBy{TValue}(Expression{Func{T, TValue}}, OrderingType)"/>
         TSelf OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector);
 
+        /// <summary>
+        ///     Orders the query results using custom server-side sorter by the specified field in ascending order.
+        /// </summary>
+        /// <param name="propertySelector">Path to the field to order the query results by.</param>
+        /// <param name="sorterName">Name of the custom sorter to be used.</param>
         TSelf OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, string sorterName);
 
         /// <summary>
-        ///     Order the results by the specified fields
-        ///     The field is the name of the field to sort, defaulting to sorting by ascending.
+        ///     Orders the query results by the specified field in ascending order.
         /// </summary>
+        /// <param name="propertySelector">Path to the field to order the query results by.</param>
+        /// <param name="ordering">Ordering type. Default: OrderingType.String.</param>
         TSelf OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, OrderingType ordering);
 
         /// <summary>
-        ///     Order the results by the specified fields
-        ///     The field is the name of the field to sort, defaulting to sorting by ascending.
+        ///     Orders the query results by specified fields in ascending order.
         /// </summary>
-        /// <param name="propertySelectors">Property selectors for the fields.</param>
+        /// <param name="propertySelectors">List of field paths to order the query results by.</param>
         TSelf OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
 
+        /// <summary>
+        ///     Orders the query results using server-side custom sorter by the specified field in descending order.
+        /// </summary>
+        /// <param name="field">Name of field to order the results by.</param>
+        /// <param name="sorterName">Name of the custom sorter to be used.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults"/>
         TSelf OrderByDescending(string field, string sorterName);
 
         /// <summary>
-        ///     Order the results by the specified fields
-        ///     The field is the name of the field to sort, defaulting to sorting by descending.
+        ///     Orders the query results by the specified field in descending order.
         /// </summary>
+        /// <param name="field">Name of the field to order the query results by.</param>
+        /// <param name="ordering">Ordering type. Default: OrderingType.String.</param>
         TSelf OrderByDescending(string field, OrderingType ordering = OrderingType.String);
 
-        /// <summary>
-        ///     Order the results by the specified fields
-        ///     The field is the name of the field to sort, defaulting to sorting by ascending.
-        /// </summary>
+        /// <inheritdoc cref="OrderByDescending{TValue}(Expression{Func{T, TValue}}, OrderingType)"/>
         TSelf OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector);
 
+        /// <summary>
+        ///     Orders the query results using server-side custom sorter by the specified field in descending order.
+        /// </summary>
+        /// <param name="propertySelector">Path to the field to order the query results by.</param>
+        /// <param name="sorterName">Name of the custom sorter to be used.</param>
         TSelf OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, string sorterName);
 
         /// <summary>
-        ///     Order the results by the specified fields
-        ///     The field is the name of the field to sort, defaulting to sorting by ascending.
+        ///     Orders the query results by the specified field in descending order.
         /// </summary>
+        /// <param name="propertySelector">Path to the field to order the query results by.</param>
+        /// <param name="ordering">Ordering type. Default: OrderingType.String.</param>
         TSelf OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, OrderingType ordering);
 
         /// <summary>
-        ///     Order the results by the specified fields
-        ///     The field is the name of the field to sort, defaulting to sorting by descending.
+        ///     Orders the query results by specified fields in descending order.
         /// </summary>
-        /// <param name="propertySelectors">Property selectors for the fields.</param>
+        /// <param name="propertySelectors">List of field paths to order the query results by.</param>
         TSelf OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
 
         /// <summary>
-        ///     Adds an ordering by score for a specific field to the query
+        ///     Sorts query results by score. Results with higher score will be returned first.
         /// </summary>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults"/>
         TSelf OrderByScore();
 
         /// <summary>
-        ///     Adds an ordering by score for a specific field to the query
+        ///     Sorts query results by score. Results with lower score will be returned first.
         /// </summary>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults"/>
         TSelf OrderByScoreDescending();
 
         /// <summary>
-        ///     Specifies a proximity distance for the phrase in the last search clause
+        ///     Specifies a proximity distance between terms in the preceding Search clause,
+        ///     making it return documents that contain searched terms separated by at
+        ///     most that many other terms.
         /// </summary>
-        /// <param name="proximity">Number of terms between the search terms</param>
-        /// <returns></returns>
-        /// <remarks>
-        ///     https://lucene.apache.org/core/2_9_4/queryparsersyntax.html#Proximity%20Searches
-        /// </remarks>
+        /// <param name="proximity">Maximum number of different terms separating searched terms.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.ProximitySearch"/>
         TSelf Proximity(int proximity);
 
         /// <summary>
-        ///     Order the search results randomly
+        ///     Orders the query results randomly.
         /// </summary>
         TSelf RandomOrdering();
 
         /// <summary>
-        ///     Order the search results randomly using the specified seed
-        ///     this is useful if you want to have repeatable random queries
+        ///     Orders the query results randomly using the specified seed.
+        ///     Allows to have repeatable random query results.
         /// </summary>
+        /// <param name="seed">Seed to be used for pseudorandom number generator.</param>
         TSelf RandomOrdering(string seed);
 
 #if FEATURE_CUSTOM_SORTING
         /// <summary>
-        /// Order the search results randomly
+        ///     Sorts query results using server-side custom sorter.
+        ///     Requires custom sorting feature to be enabled.
         /// </summary>
+        /// <param name="typeName">Name of the custom sorter to be used.</param>
+        /// <param name="descending">Sets the order to descending.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults.CustomSorters"/>
         TSelf CustomSortUsing(string typeName, bool descending);
 #endif
 
         /// <summary>
-        /// Sorts the query results by distance.
+        ///     Sorts the spatial query results by distance from a given geographical coordinates in ascending order.
         /// </summary>
+        /// <param name="field">Spatial field used for distance calculation.</param>
+        /// <param name="latitude">Latitude of coordinates to calculate the distance from.</param>
+        /// <param name="longitude">Longitude of coordinates to calculate the distance from.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistance(DynamicSpatialField field, double latitude, double longitude);
 
         /// <summary>
-        /// Sorts the query results by distance.
+        ///     Sorts the spatial query results by distance from a given geographical coordinates in ascending order.
         /// </summary>
+        /// <param name="field">Spatial field used for distance calculation.</param>
+        /// <param name="latitude">Latitude of coordinates to calculate the distance from.</param>
+        /// <param name="longitude">Longitude of coordinates to calculate the distance from.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistance(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude);
 
         /// <summary>
-        /// Sorts the query results by distance.
+        ///     Sorts the spatial query results by distance from the center of given WKT shape in ascending order.
         /// </summary>
+        /// <param name="field">Spatial field used for distance calculation.</param>
+        /// <param name="shapeWkt">String representing the WKT shape to calculate the distance from.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistance(DynamicSpatialField field, string shapeWkt);
 
         /// <summary>
-        /// Sorts the query results by distance.
+        ///     Sorts the spatial query results by distance from the center of given WKT shape in ascending order.
         /// </summary>
+        /// <param name="field">Spatial field used for distance calculation.</param>
+        /// <param name="shapeWkt">String representing the WKT shape to calculate the distance from.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistance(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt);
 
-        /// <summary>
-        /// Sorts the query results by distance.
-        /// </summary>
+        /// <inheritdoc cref="OrderByDistance(Expression{Func{T, object}}, double, double, double)"/>
         TSelf OrderByDistance(Expression<Func<T, object>> propertySelector, double latitude, double longitude);
 
         /// <summary>
-        /// Sorts the query results by distance.
+        ///     Sorts the spatial query results by distance from given geographical coordinates in ascending order.
         /// </summary>
+        /// <param name="propertySelector">Path to the spatial field used for distance calculation.</param>
+        /// <param name="latitude">Latitude of coordinates to calculate the distance from.</param>
+        /// <param name="longitude">Longitude of coordinates to calculate the distance from.</param>
+        /// <param name="roundFactor">Distance interval in kilometers. The distance from coordinates is rounded up to the nearest interval.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistance(Expression<Func<T, object>> propertySelector, double latitude, double longitude, double roundFactor);
 
-        /// <summary>
-        /// Sorts the query results by distance.
-        /// </summary>
+        /// <inheritdoc cref="OrderByDistance(string, double, double, double)"/>
         TSelf OrderByDistance(string fieldName, double latitude, double longitude);
 
         /// <summary>
-        /// Sorts the query results by distance.
+        ///     Sorts the spatial query results by distance from given geographical coordinates in ascending order.
         /// </summary>
+        /// <param name="fieldName">Name of the spatial field used for distance calculation.</param>
+        /// <param name="latitude">Latitude of coordinates to calculate the distance from.</param>
+        /// <param name="longitude">Longitude of coordinates to calculate the distance from.</param>
+        /// <param name="roundFactor">Distance interval in kilometers. The distance from coordinates is rounded up to the nearest interval.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor);
 
-        /// <summary>
-        /// Sorts the query results by distance.
-        /// </summary>
+        /// <inheritdoc cref="OrderByDistance(Expression{Func{T, object}}, string, double)"/>
         TSelf OrderByDistance(Expression<Func<T, object>> propertySelector, string shapeWkt);
 
         /// <summary>
-        /// Sorts the query results by distance.
+        ///     Sorts the spatial query results by distance from the center of given WKT shape in ascending order.
         /// </summary>
+        /// <param name="propertySelector">Path to the spatial field used for distance calculation.</param>
+        /// <param name="shapeWkt">String representing the WKT shape to calculate the distance from.</param>
+        /// <param name="roundFactor">Distance interval in kilometers. The distance from WKT shape is rounded up to the nearest interval.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistance(Expression<Func<T, object>> propertySelector, string shapeWkt, double roundFactor);
 
-        /// <summary>
-        /// Sorts the query results by distance.
-        /// </summary>
+        /// <inheritdoc cref="OrderByDistance(string, string, double)"/>
         TSelf OrderByDistance(string fieldName, string shapeWkt);
 
         /// <summary>
-        /// Sorts the query results by distance.
+        ///     Sorts the spatial query results by distance from the center of given WKT shape in ascending order.
         /// </summary>
+        /// <param name="fieldName">Name of the spatial field used for distance calculation.</param>
+        /// <param name="shapeWkt">String representing the WKT shape to calculate the distance from.</param>
+        /// <param name="roundFactor">Distance interval in kilometers. The distance from WKT shape is rounded up to the nearest interval.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistance(string fieldName, string shapeWkt, double roundFactor);
 
         /// <summary>
-        /// Sorts the query results by distance.
+        ///     Sorts the spatial query results by distance from given geographical coordinates in descending order.
         /// </summary>
+        /// <param name="field">Spatial field used for distance calculation.</param>
+        /// <param name="latitude">Latitude of coordinates to calculate the distance from.</param>
+        /// <param name="longitude">Longitude of coordinates to calculate the distance from.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude);
 
         /// <summary>
-        /// Sorts the query results by distance.
+        ///     Sorts the spatial query results by distance from given geographical coordinates in descending order.
         /// </summary>
+        /// <param name="field">Spatial field used for distance calculation.</param>
+        /// <param name="latitude">Latitude of coordinates to calculate the distance from.</param>
+        /// <param name="longitude">Longitude of coordinates to calculate the distance from.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistanceDescending(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude);
 
-        /// <summary>
-        /// Sorts the query results by distance.
-        /// </summary>
+        /// <inheritdoc cref="OrderByDistanceDescending(Func{DynamicSpatialFieldFactory{T}, DynamicSpatialField}, string)"/>
         TSelf OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt);
 
         /// <summary>
-        /// Sorts the query results by distance.
+        ///     Sorts the spatial query results by distance from the center of given WKT shape in descending order.
         /// </summary>
+        /// <param name="field">Spatial field used for distance calculation.</param>
+        /// <param name="shapeWkt">String representing the WKT shape to calculate the distance from.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistanceDescending(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt);
 
-        /// <summary>
-        /// Sorts the query results by distance.
-        /// </summary>
+        /// <inheritdoc cref="OrderByDistanceDescending(Expression{Func{T, object}}, double, double, double)"/>
         TSelf OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, double latitude, double longitude);
 
         /// <summary>
-        /// Sorts the query results by distance.
+        ///     Sorts the spatial query results by distance from a given geographical coordinates in descending order.
         /// </summary>
+        /// <param name="propertySelector">Path to the spatial field used for distance calculation.</param>
+        /// <param name="latitude">Latitude of coordinates to calculate the distance from.</param>
+        /// <param name="longitude">Longitude of coordinates to calculate the distance from.</param>
+        /// <param name="roundFactor">Distance interval in kilometers. The distance from coordinates is rounded up to the nearest interval.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, double latitude, double longitude, double roundFactor);
 
-        /// <summary>
-        /// Sorts the query results by distance.
-        /// </summary>
+        /// <inheritdoc cref="OrderByDistanceDescending(string, double, double, double)"></inheritdoc>
         TSelf OrderByDistanceDescending(string fieldName, double latitude, double longitude);
 
         /// <summary>
-        /// Sorts the query results by distance.
+        ///     Sorts the spatial query results by distance from given geographical coordinates in descending order.
         /// </summary>
+        /// <param name="fieldName">Name of spatial field used for distance calculation.</param>
+        /// <param name="latitude">Latitude of coordinates to calculate the distance from.</param>
+        /// <param name="longitude">Longitude of coordinates to calculate the distance from.</param>
+        /// <param name="roundFactor">Distance interval in kilometers. The distance from coordinates is rounded up to the nearest interval.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor);
 
-        /// <summary>
-        /// Sorts the query results by distance.
-        /// </summary>
+        /// <inheritdoc cref="OrderByDistanceDescending(Expression{Func{T, object}}, string, double)"/>
         TSelf OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, string shapeWkt);
 
         /// <summary>
-        /// Sorts the query results by distance.
+        ///     Sorts the spatial query results by distance from the center of given WKT shape in descending order.
         /// </summary>
+        /// <param name="propertySelector">Property selector for the spatial field used for distance calculation.</param>
+        /// <param name="shapeWkt">String representing the WKT shape to calculate the distance from.</param>
+        /// <param name="roundFactor">Distance interval in kilometers. The distance from WKT shape is rounded up to the nearest interval.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, string shapeWkt, double roundFactor);
 
-        /// <summary>
-        /// Sorts the query results by distance.
-        /// </summary>
+        /// <inheritdoc cref="OrderByDistanceDescending(string, string, double)"/>
         TSelf OrderByDistanceDescending(string fieldName, string shapeWkt);
 
         /// <summary>
-        /// Sorts the query results by distance.
+        ///     Sorts the spatial query results by distance from the center of given WKT shape in descending order.
         /// </summary>
+        /// <param name="fieldName">Name of spatial field used for distance calculation.</param>
+        /// <param name="shapeWkt">String representing the WKT shape to calculate the distance from.</param>
+        /// <param name="roundFactor">Distance interval in kilometers. The distance from WKT shape is rounded up to the nearest interval.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor);
     }
 }

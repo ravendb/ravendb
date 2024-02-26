@@ -53,6 +53,27 @@ internal static class DocumentationUrls
             
             ///<remarks><seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-work-with-suggestions"/></remarks>
             public const string SuggestionsQuery = nameof(SuggestionsQuery);
+
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-use-intersect"/></remarks>
+            public const string HowToUseIntersect = nameof(HowToUseIntersect);
+
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/text-search/fuzzy-search"/></remarks>
+            public const string FuzzySearch = nameof(FuzzySearch);
+
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/text-search/boost-search-results"/></remarks>
+            public const string BoostSearchResults = nameof(BoostSearchResults);
+
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/text-search/proximity-search"/></remarks>
+            public const string ProximitySearch = nameof(ProximitySearch);
+
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-make-a-spatial-query"/></remarks>
+            public const string HowToMakeASpatialQuery = nameof(HowToMakeASpatialQuery);
+
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/sort-query-results"/></remarks>
+            public const string SortQueryResults = nameof(SortQueryResults);
+
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/document-query/query-vs-document-query"/></remarks>
+            public const string QueryVsDocumentQuery = nameof(QueryVsDocumentQuery);
         }
 
         internal static class Transactions

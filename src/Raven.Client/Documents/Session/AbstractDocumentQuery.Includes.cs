@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///   Includes the specified path in the query, loading the document specified in that path
         /// </summary>
-        /// <param name = "path">The path.</param>
+        /// <param name = "path">Path to included document.</param>
         public void Include(string path)
         {
             TheSession?.AssertNoIncludesInNonTrackingSession();
@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///   Includes the specified path in the query, loading the document specified in that path
         /// </summary>
-        /// <param name = "path">The path.</param>
+        /// <param name = "path">Path to included document.</param>
         public void Include(Expression<Func<T, object>> path)
         {
             Include(path.ToPropertyPath(_conventions));

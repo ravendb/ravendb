@@ -17,61 +17,66 @@ namespace Raven.Client.Documents.Session
     ///</summary>
     public interface IAbstractDocumentQuery<T>
     {
+        /// <summary>
+        ///     Get the queried index name.
+        /// </summary>
         string IndexName { get; }
         
+        /// <summary>
+        ///     Get the queried collection name.
+        /// </summary>
         string CollectionName { get; }
 
         /// <summary>
-        /// Gets the document convention from the query session
+        ///     Get the document conventions used for this query.
         /// </summary>
         DocumentConventions Conventions { get; }
 
         /// <summary>
-        /// Determines if it is a dynamic map-reduce query
+        ///     Determines if query is a dynamic map-reduce query.
         /// </summary>
         bool IsDynamicMapReduce { get; }
 
         /// <summary>
-        ///   Instruct the query to wait for non stale results.
-        ///   This shouldn't be used outside of unit tests unless you are well aware of the implications
+        ///     Instruct the query to wait for non-stale results.
+        ///     This shouldn't be used outside of unit tests unless you are well aware of the implications.
         /// </summary>
-        /// <param name = "waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown. Default: 15 seconds.</param>
+        /// <param name="waitTimeout">Maximum time in seconds to wait for index query results to become non-stale before exception is thrown. Default: 15 seconds.</param>
         void WaitForNonStaleResults(TimeSpan? waitTimeout = null);
 
         /// <summary>
-        ///   Gets the fields for projection
+        ///     Gets field names of query result projection.
         /// </summary>
         /// <returns></returns>
         IEnumerable<string> GetProjectionFields();
 
         /// <summary>
-        /// Order the search results randomly
+        ///     Order the query results randomly.
         /// </summary>
         void RandomOrdering();
 
         /// <summary>
-        /// Order the search results randomly using the specified seed
-        /// this is useful if you want to have repeatable random queries
+        ///     Orders the query results randomly using the specified seed.
+        ///     Allows to repeat random query results.
         /// </summary>
         void RandomOrdering(string seed);
 
 #if FEATURE_CUSTOM_SORTING
         /// <summary>
-        /// Sort using custom sorter on the server
+        ///     Sort query results using server-side custom sorter.
+        ///     Requires custom sorting feature to be enabled.
         /// </summary>
+        /// <param name="descending">Changes order to descending.</param>
         void CustomSortUsing(string typeName, bool descending = false);
 #endif
 
         /// <summary>
-        ///   Includes the specified path in the query, loading the document specified in that path
+        ///     Includes document using the specified path, loading it into session.
         /// </summary>
-        /// <param name = "path">The path.</param>
+        /// <param name = "path">Path to loaded document.</param>
         void Include(string path);
 
-        /// <summary>
-        ///   Includes the specified path in the query, loading the document specified in that path
-        /// </summary>
-        /// <param name = "path">The path.</param>
+        /// <inheritdoc cref="Include(string)"/>>
         void Include(Expression<Func<T, object>> path);
 
         /// <summary>
@@ -81,22 +86,25 @@ namespace Raven.Client.Documents.Session
         void Include(IncludeBuilder includes);
 
         /// <summary>
-        ///   Takes the specified count.
+        ///   Takes the specified number of query results.
         /// </summary>
-        /// <param name = "count">The count.</param>
-        /// <returns></returns>
+        /// <param name = "count">Number of query results to take.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.Paging.PagingExamples"/>
         void Take(long count);
 
         /// <summary>
-        ///   Skips the specified count.
+        ///   Skips the specified number of query results.
         /// </summary>
-        /// <param name = "count">The count.</param>
-        /// <returns></returns>
+        /// <param name = "count">Number of query results to skip.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.Paging.PagingExamples"/>
         void Skip(long count);
 
         /// <summary>
-        ///   Matches value
+        ///   Matches documents with value in specified field equal to value provided in parameter.
         /// </summary>
+        /// <param name="fieldName">Field to take value from.</param>
+        /// <param name="value">Value to compare with field.</param>
+        /// <param name="exact">Default: false.</param>
         void WhereEquals(string fieldName, object value, bool exact = false);
 
         /// <summary>
