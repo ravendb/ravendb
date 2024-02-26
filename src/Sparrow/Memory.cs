@@ -901,7 +901,7 @@ namespace Sparrow
             // leaving very efficient code to be used by the caller. If there would be any way to know if the
             // span comes from a JIT known constant, we would throw or fallback to memory compare instead. 
 
-            if (constant.Length > 64)
+            if (constant.Length >= 64)
                 throw new NotSupportedException("The size must not be bigger than 64. The intended usage of this method is against constant short utf8 strings.");
 
             ref var constantRef = ref MemoryMarshal.GetReference(constant);
@@ -915,7 +915,7 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsEqualConstant(byte* constant, byte* ptr, int size)
+        public static bool IsEqualConstant(byte* constant, int size, byte* ptr)
         {
 #if NET7_0_OR_GREATER
             // PERF: The intended use of this method is when the byte* size is a constant, for anything
@@ -925,7 +925,7 @@ namespace Sparrow
             // caller. If there would be any way to know if the span comes from a JIT known constant,
             // we would throw or fallback to memory compare instead. 
 
-            if (size > 64)
+            if (size >= 64)
                 throw new NotSupportedException("The size must not be bigger than 64. The intended usage of this method is against constant sized structures.");
 
             ref var constantRef = ref *constant;
@@ -950,8 +950,8 @@ namespace Sparrow
             // leaving very efficient code to be used by the caller. If there would be any way to know if the
             // span comes from a JIT known constant, we would throw or fallback to memory compare instead. 
 
-            if (constant.Length > 64)
-                throw new NotSupportedException("The size must not be bigger than 64. The intended usage of this method is against constant short utf8 strings.");
+            if (constant.Length >= 64)
+                throw new NotSupportedException("The size must not be bigger or equal to 64. The intended usage of this method is against constant short utf8 strings.");
 
             if (size != constant.Length)
                 return false;

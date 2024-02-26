@@ -233,7 +233,7 @@ namespace Voron.Impl.FileHeaders
                    header->Root.RootPageNumber == -1 &&
                    header->Journal.CurrentJournal == -1 &&
                    header->Journal.Flags == Journal.JournalInfoFlags.None &&
-                   Memory.IsEqualConstant(header->Journal.Reserved, zeroed, 3) &&
+                   Memory.IsEqualConstant(header->Journal.Reserved, 3, zeroed) &&
                    header->Journal.LastSyncedJournal == -1 &&
                    header->Journal.LastSyncedTransactionId == -1 &&
                    header->IncrementalBackup.LastBackedUpJournal == -1 &&
