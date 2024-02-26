@@ -172,81 +172,77 @@ namespace Voron.Data.Tables
             tableTree.Add(CurrentCompressionDictionaryIdSlice, 0);
 
             // Create raw data. This is where we will actually store the documents
-            using (var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx, name, 
-                TableType, sizeInPages))
+            var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx, name, TableType, sizeInPages);
+            long val = rawDataActiveSection.PageNumber;
+
+            using (Slice.External(tx.Allocator, (byte*)&val, sizeof(long), ByteStringType.Immutable, out Slice pageNumber))
             {
-                long val = rawDataActiveSection.PageNumber;
-                using (
-                    Slice.External(tx.Allocator, (byte*)&val, sizeof(long), ByteStringType.Immutable, out Slice pageNumber))
-                {
-                    tableTree.Add(ActiveSectionSlice, pageNumber);
-                }
-
-                byte* ptr;
-                using (tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats), out ptr))
-                {
-                    var stats = (TableSchemaStats*)ptr;
-                    stats->NumberOfEntries = 0;
-                }
-
-                var tablePageAllocator = new NewPageAllocator(tx.LowLevelTransaction, tableTree);
-                tablePageAllocator.Create();
-
-                var globalPageAllocator = new NewPageAllocator(tx.LowLevelTransaction,
-                    tx.LowLevelTransaction.RootObjects);
-                globalPageAllocator.Create();
-                
-                if (_primaryKey != null)
-                {
-                    if (_primaryKey.IsGlobal == false)
-                    {
-                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, _primaryKey.Name, isIndexTree: true, newPageAllocator: tablePageAllocator))
-                        using (tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader), out ptr))
-                        {
-                            indexTree.State.CopyTo((TreeRootHeader*)ptr);
-                        }
-                    }
-                    else
-                    {
-                        tx.CreateTree(_primaryKey.Name.ToString(), isIndexTree: true, newPageAllocator: globalPageAllocator);
-                    }
-                }
-
-                foreach (var indexDef in _commonIndexes.Values)
-                {
-                    if (indexDef.IsGlobal == false)
-                    {
-                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, indexDef.Name, isIndexTree: true, newPageAllocator: tablePageAllocator))
-                        using (tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader), out ptr))
-                        {
-                            indexTree.State.CopyTo((TreeRootHeader*)ptr);
-                        }
-                    }
-                    else
-                    {
-                        tx.CreateTree(indexDef.Name.ToString(), isIndexTree: true, newPageAllocator: globalPageAllocator);
-                    }
-                }
-
-                foreach (var dynamicKeyIndexDef in _dynamicKeyIndexes.Values)
-                {
-                    if (dynamicKeyIndexDef.IsGlobal == false)
-                    {
-                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, dynamicKeyIndexDef.Name, isIndexTree: true, newPageAllocator: tablePageAllocator))
-                        using (tableTree.DirectAdd(dynamicKeyIndexDef.Name, sizeof(TreeRootHeader), out ptr))
-                        {
-                            indexTree.State.CopyTo((TreeRootHeader*)ptr);
-                        }
-                    }
-                    else
-                    {
-                        tx.CreateTree(dynamicKeyIndexDef.Name.ToString(), isIndexTree: true, newPageAllocator: globalPageAllocator);
-                    }
-                }
-
-                // Serialize the schema into the table's tree
-                SerializeSchemaIntoTableTree(tableTree);
+                tableTree.Add(ActiveSectionSlice, pageNumber);
             }
+
+            using (tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats), out var ptr))
+            {
+                var stats = (TableSchemaStats*)ptr;
+                stats->NumberOfEntries = 0;
+            }
+
+            var tablePageAllocator = new NewPageAllocator(tx.LowLevelTransaction, tableTree);
+            tablePageAllocator.Create();
+
+            var globalPageAllocator = new NewPageAllocator(tx.LowLevelTransaction,
+                tx.LowLevelTransaction.RootObjects);
+            globalPageAllocator.Create();
+                
+            if (_primaryKey != null)
+            {
+                if (_primaryKey.IsGlobal == false)
+                {
+                    using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, _primaryKey.Name, isIndexTree: true, newPageAllocator: tablePageAllocator))
+                    using (tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader), out var ptr))
+                    {
+                        indexTree.State.CopyTo((TreeRootHeader*)ptr);
+                    }
+                }
+                else
+                {
+                    tx.CreateTree(_primaryKey.Name.ToString(), isIndexTree: true, newPageAllocator: globalPageAllocator);
+                }
+            }
+
+            foreach (var indexDef in _commonIndexes.Values)
+            {
+                if (indexDef.IsGlobal == false)
+                {
+                    using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, indexDef.Name, isIndexTree: true, newPageAllocator: tablePageAllocator))
+                    using (tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader), out var ptr))
+                    {
+                        indexTree.State.CopyTo((TreeRootHeader*)ptr);
+                    }
+                }
+                else
+                {
+                    tx.CreateTree(indexDef.Name.ToString(), isIndexTree: true, newPageAllocator: globalPageAllocator);
+                }
+            }
+
+            foreach (var dynamicKeyIndexDef in _dynamicKeyIndexes.Values)
+            {
+                if (dynamicKeyIndexDef.IsGlobal == false)
+                {
+                    using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, dynamicKeyIndexDef.Name, isIndexTree: true, newPageAllocator: tablePageAllocator))
+                    using (tableTree.DirectAdd(dynamicKeyIndexDef.Name, sizeof(TreeRootHeader), out var ptr))
+                    {
+                        indexTree.State.CopyTo((TreeRootHeader*)ptr);
+                    }
+                }
+                else
+                {
+                    tx.CreateTree(dynamicKeyIndexDef.Name.ToString(), isIndexTree: true, newPageAllocator: globalPageAllocator);
+                }
+            }
+
+            // Serialize the schema into the table's tree
+            SerializeSchemaIntoTableTree(tableTree);
         }
 
         internal void SerializeSchemaIntoTableTree(Tree tableTree)

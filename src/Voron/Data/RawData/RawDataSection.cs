@@ -11,7 +11,7 @@ using Voron.Impl;
 
 namespace Voron.Data.RawData
 {
-    public unsafe class RawDataSection : IDisposable
+    public unsafe class RawDataSection
     {
         protected const ushort ReservedHeaderSpace = 96;
 
@@ -359,9 +359,6 @@ namespace Voron.Data.RawData
                    $"Density: {Density:P}";
         }
 
-        public void Dispose()
-        {
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void EnsureHeaderModified()
