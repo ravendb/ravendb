@@ -440,9 +440,6 @@ namespace Voron.Impl
 
             if (isInRoot)
                 _lowLevelTransaction.RootObjects.Delete(tree.Name);
-
-            // Since we are deleting a tree we need to register the tree for disposal. 
-            _lowLevelTransaction.RegisterDisposable(tree);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -514,25 +511,7 @@ namespace Voron.Impl
         
         public void Dispose()
         {
-            if (_trees != null)
-            {
-                foreach (var tree in _trees)
-                {
-                    tree.Value?.Dispose();
-                }
-            }
-
-            if (_multiValueTrees != null)
-            {
-                foreach (var item in _multiValueTrees)
-                {
-                    item.Value?.Dispose();
-                    item.Key.Item1?.Dispose();
-                }
-            }
-
             _lowLevelTransaction?.Dispose();
-
             _lowLevelTransaction = null;
         }
 

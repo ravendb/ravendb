@@ -20,7 +20,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Voron.Data.BTrees
 {
-    public unsafe partial class Tree : IDisposable
+    public unsafe partial class Tree
     {
         private int _directAddUsage;
 
@@ -47,7 +47,6 @@ namespace Voron.Data.BTrees
         private readonly Transaction _tx;
         public readonly bool IsIndexTree;
         private NewPageAllocator _newPageAllocator;
-        private bool _isDisposed;
 
         public LowLevelTransaction Llt => _llt;
 
@@ -121,7 +120,7 @@ namespace Voron.Data.BTrees
                 ThrowInvalidTreeCreateType();
 
             if (llt.Flags != TransactionFlags.ReadWrite)
-                ThrowCannotCreatTreeInReadTx();
+                ThrowCannotCreateTreeInReadTx();
 
             var newPage = newPageAllocator?.AllocateSinglePage(0) ?? llt.AllocatePage(1);
 
@@ -145,7 +144,7 @@ namespace Voron.Data.BTrees
         }
 
         [DoesNotReturn]
-        private static void ThrowCannotCreatTreeInReadTx()
+        private static void ThrowCannotCreateTreeInReadTx()
         {
             throw new ArgumentException("Cannot create a tree in a read only transaction");
         }
@@ -435,7 +434,7 @@ namespace Voron.Data.BTrees
             throw new VoronConcurrencyErrorException("Value already exists, but requested NewOnly");
         }
 
-        public struct DirectAddScope : IDisposable
+        public readonly struct DirectAddScope : IDisposable
         {
             private readonly Tree _parent;
 
@@ -721,8 +720,7 @@ namespace Voron.Data.BTrees
 
                 var pageNode = p.GetNode(nodePos);
                 p = GetReadOnlyTreePage(pageNode->PageNumber);
-                Debug.Assert(pageNode->PageNumber == p.PageNumber,
-                    string.Format("Requested Page: #{0}. Got Page: #{1}", pageNode->PageNumber, p.PageNumber));
+                Debug.Assert(pageNode->PageNumber == p.PageNumber, $"Requested Page: #{pageNode->PageNumber}. Got Page: #{p.PageNumber}");
 
                 CursorPathBuffer.Add(p.PageNumber);
             }
@@ -796,8 +794,7 @@ namespace Voron.Data.BTrees
 
                 var pageNode = p.GetNode(nodePos);
                 p = GetReadOnlyTreePage(pageNode->PageNumber);
-                Debug.Assert(pageNode->PageNumber == p.PageNumber,
-                    string.Format("Requested Page: #{0}. Got Page: #{1}", pageNode->PageNumber, p.PageNumber));
+                Debug.Assert(pageNode->PageNumber == p.PageNumber, $"Requested Page: #{pageNode->PageNumber}. Got Page: #{p.PageNumber}");
 
                 cursor.Push(p);
             }
@@ -932,7 +929,7 @@ namespace Voron.Data.BTrees
             {
                 page = null;
                 node = null;
-                cursor = default(TreeCursorConstructor);
+                cursor = default;
                 return false;
             }
 
@@ -1042,10 +1039,8 @@ namespace Voron.Data.BTrees
             if (_llt.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot delete a value in a read only transaction");
 
-            State.IsModified = true;            
-            TreeNodeHeader* node;
-            TreeCursorConstructor cursorConstructor;
-            var page = FindPageFor(key, node: out node, cursor: out cursorConstructor, allowCompressed: true);
+            State.IsModified = true;
+            var page = FindPageFor(key, node: out _, cursor: out TreeCursorConstructor cursorConstructor, allowCompressed: true);
 
             if (page.IsCompressed)
             {
@@ -1086,8 +1081,7 @@ namespace Voron.Data.BTrees
         {
             AssertNotDisposed();
 
-            TreeNodeHeader* node;
-            var p = FindPageFor(key, out node);
+            var p = FindPageFor(key, out TreeNodeHeader* node);
 
             if (p.LastMatch != 0)
                 return null;
@@ -1107,8 +1101,7 @@ namespace Voron.Data.BTrees
         {
             AssertNotDisposed();
 
-            TreeNodeHeader* node;
-            var p = FindPageFor(key, out node);
+            var p = FindPageFor(key, out TreeNodeHeader* node);
 
             if (p.LastMatch != 0)
                 return -1;
@@ -1116,8 +1109,7 @@ namespace Voron.Data.BTrees
             if (node == null)
                 return -1;
 
-            Slice nodeKey;
-            using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out nodeKey))
+            using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out Slice nodeKey))
             {
                 if (!SliceComparer.EqualsInline(nodeKey, key))
                     return -1;
@@ -1166,12 +1158,9 @@ namespace Voron.Data.BTrees
 
             Debug.Assert(page.IsCompressed == false);
 
-            TreePage p;
-            Slice key;
-
-            using (page.IsLeaf ? page.GetNodeKey(_llt, 0, out key) : page.GetNodeKey(_llt, 1, out key))
+            using (page.IsLeaf ? page.GetNodeKey(_llt, 0, out Slice key) : page.GetNodeKey(_llt, 1, out key))
             {
-                p = FindPageFor(key, node: out TreeNodeHeader* _, cursor: out TreeCursorConstructor cursorConstructor, allowCompressed: true);
+                TreePage p = FindPageFor(key, node: out TreeNodeHeader* _, cursor: out TreeCursorConstructor cursorConstructor, allowCompressed: true);
 
                 if (page.IsLeaf)
                 {
@@ -1222,8 +1211,7 @@ namespace Voron.Data.BTrees
 
         internal byte* DirectRead(Slice key)
         {
-            TreeNodeHeader* node;
-            var p = FindPageFor(key, out node);
+            var p = FindPageFor(key, out TreeNodeHeader* node);
 
             if (p == null || p.LastMatch != 0)
                 return null;
@@ -1337,21 +1325,8 @@ namespace Voron.Data.BTrees
         [Conditional("DEBUG")]
         internal void AssertNotDisposed()
         {
-            if (_isDisposed)
+            if (_llt.IsDisposed)
                 throw new InvalidOperationException("Cannot call this operation on a disposed instance.");
-        }
-
-        public void Dispose()
-        {
-            // During DEBUG runs we will actively check that Trees are not used after disposing. 
-            // https://issues.hibernatingrhinos.com/issue/RavenDB-22090
-            _isDisposed = true;
-            
-            DecompressionsCache?.Dispose();
-            _prepareLocator?.Dispose();
-
-            DecompressionsCache = null;
-            _prepareLocator = null;
         }
 
         private bool TryOverwriteOverflowPages(TreeNodeHeader* updatedNode, int len, out byte* pos)
@@ -1410,7 +1385,11 @@ namespace Voron.Data.BTrees
         {
             // RavenDB-21678: Indexes with dynamic fields can generate a lot of fields, which can lead to overflow in the locator.
             // We've observed indexes with more than ~150 fields, and since performance is crucial, we increased it by one order of magnitude.
-            _prepareLocator ??= new SliceSmallSet<IPrepareForCommit>(4096);
+            if (_prepareLocator == null)
+            {
+                _prepareLocator = new SliceSmallSet<IPrepareForCommit>(4096);
+                _llt.RegisterDisposable(_prepareLocator);
+            }
 
             if (_prepareLocator.TryGetValue(key, out var prep) == false)
             {
@@ -1432,7 +1411,11 @@ namespace Voron.Data.BTrees
         public Lookup<TKey> LookupFor<TKey>(Slice key)
             where TKey : struct, ILookupKey
         {
-            _prepareLocator ??= new SliceSmallSet<IPrepareForCommit>(128);
+            if (_prepareLocator == null)
+            {
+                _prepareLocator = new SliceSmallSet<IPrepareForCommit>(128);
+                _llt.RegisterDisposable(_prepareLocator);
+            }
 
             if (_prepareLocator.TryGetValue(key, out var prep) == false)
             {

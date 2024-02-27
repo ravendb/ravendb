@@ -1,4 +1,4 @@
-﻿using Voron;
+using Voron;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
@@ -62,15 +62,12 @@ namespace Raven.Server.Storage.Schema.Updates.LuceneIndex
             newTableSchema.Create(step.WriteTx, "Errors", 16);
             
             var newErrorsTable = step.WriteTx.OpenTable(newTableSchema, "Errors");
-
+            var indexTree = Tree.Create(step.WriteTx.LowLevelTransaction, step.WriteTx, indexDef.Name, isIndexTree: true);
+            
             var newErrorsTableTableTree = step.WriteTx.ReadTree("Errors", RootObjectType.Table);
-
-            using (var indexTree = Tree.Create(step.WriteTx.LowLevelTransaction, step.WriteTx, indexDef.Name, isIndexTree:true))
+            using (newErrorsTableTableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader), out byte* ptr))
             {
-                using (newErrorsTableTableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader),out byte* ptr))
-                {
-                    indexTree.State.CopyTo((TreeRootHeader*)ptr);
-                }
+                indexTree.State.CopyTo((TreeRootHeader*)ptr);
             }
 
             var newErrorTimestampsIndexTree = newErrorsTable.GetTree(newTableSchema.Indexes[errorTimestampsSlice]);

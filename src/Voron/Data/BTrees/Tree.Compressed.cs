@@ -14,12 +14,12 @@ namespace Voron.Data.BTrees
         public void InitializeCompression()
         {
             DecompressionsCache = new DecompressedPagesCache();
+            _llt.RegisterDisposable(DecompressionsCache);
         }
 
         private bool TryCompressPageNodes(Slice key, int len, TreePage page)
         {
             var alreadyCompressed = page.IsCompressed;
-
             if (alreadyCompressed && page.NumberOfEntries == 0) // there isn't any entry what we could compress
                 return false;
 
@@ -156,8 +156,7 @@ namespace Voron.Data.BTrees
             {
                 var uncompressedNode = p.GetNode(i);
 
-                Slice nodeKey;
-                using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, uncompressedNode, out nodeKey))
+                using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, uncompressedNode, out Slice nodeKey))
                 {
                     if (uncompressedNode->Flags == TreeNodeFlags.CompressionTombstone)
                     {
@@ -172,30 +171,28 @@ namespace Voron.Data.BTrees
 
                     if (decompressedPage.NumberOfEntries > 0)
                     {
-                        Slice lastKey;
-                        using (decompressedPage.GetNodeKey(_llt, decompressedPage.NumberOfEntries - 1, out lastKey))
+                        using (decompressedPage.GetNodeKey(_llt, decompressedPage.NumberOfEntries - 1, out Slice lastKey))
                         {
                             // optimization: it's very likely that uncompressed nodes have greater keys than compressed ones 
                             // when we insert sequential keys
 
                             var cmp = SliceComparer.CompareInline(nodeKey, lastKey);
 
-                            if (cmp > 0)
-                                index = decompressedPage.NumberOfEntries;
-                            else
+                            switch (cmp)
                             {
-                                if (cmp == 0)
-                                {
+                                case > 0:
+                                    index = decompressedPage.NumberOfEntries;
+                                    break;
+                                case 0:
+
                                     // update of the last entry, just decrement NumberOfEntries in the page and
                                     // put it at the last position
-
                                     index = decompressedPage.NumberOfEntries - 1;
                                     decompressedPage.Lower -= Constants.Tree.NodeOffsetSize;
-                                }
-                                else
+                                    break;
+                                default:
                                 {
                                     index = decompressedPage.NodePositionFor(_llt, nodeKey);
-
                                     if (decompressedPage.LastMatch == 0) // update
                                     {
                                         decompressedPage.RemoveNode(index);
@@ -203,13 +200,15 @@ namespace Voron.Data.BTrees
                                         if (usage == DecompressionUsage.Write)
                                             State.NumberOfEntries--;
                                     }
+
+                                    break;
                                 }
                             }
                         }
                     }
                     else
                     {
-                        // all uncompressed nodes were compresion tombstones which deleted all entries from the decompressed page
+                        // all uncompressed nodes were compression tombstones which deleted all entries from the decompressed page
                         index = 0;
                     }
 
@@ -227,7 +226,7 @@ namespace Voron.Data.BTrees
                             throw new NotSupportedException("Multi trees do not support compression");
 
                         default:
-                            throw new NotSupportedException("Invalid node type to copye: " + uncompressedNode->Flags);
+                            throw new NotSupportedException("Invalid node type to copy: " + uncompressedNode->Flags);
                     }
                 }
             }
@@ -304,10 +303,9 @@ namespace Voron.Data.BTrees
 
         public DecompressedReadResult ReadDecompressed(Slice key)
         {
-            DecompressedLeafPage decompressed;
             TreeNodeHeader* node;
 
-            if (DecompressionsCache.TryFindPageForReading(key, _llt, out decompressed))
+            if (DecompressionsCache.TryFindPageForReading(key, _llt, out DecompressedLeafPage decompressed))
             {
                 node = decompressed.Search(_llt, key);
 
@@ -316,7 +314,6 @@ namespace Voron.Data.BTrees
             }
             else
             {
-                TreeCursorConstructor _;
                 var page = SearchForPage(key, true, out _, out node, addToRecentlyFoundPages: false);
 
                 if (page.IsCompressed)
@@ -350,10 +347,8 @@ namespace Voron.Data.BTrees
 
                 var necessarySize = p.SizeUsed - compressionSectionSize - Constants.Compression.HeaderSize + DecompressedSize + KeysOffsetsSize;
 
-                if (necessarySize > Constants.Compression.MaxPageSize)
-                    DecompressedPageSize = Constants.Compression.MaxPageSize; // we are guranteed that after decompression a page won't exceed max size
-                else
-                    DecompressedPageSize = Bits.PowerOf2(necessarySize);
+                // we are guaranteed that after decompression a page won't exceed max size
+                DecompressedPageSize = necessarySize > Constants.Compression.MaxPageSize ? Constants.Compression.MaxPageSize : Bits.PowerOf2(necessarySize);
             }
 
             public readonly TreePage Page;
