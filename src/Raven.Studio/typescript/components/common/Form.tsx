@@ -9,8 +9,8 @@ import AceEditor, { AceEditorProps } from "./AceEditor";
 import classNames from "classnames";
 import DurationPicker, { DurationPickerProps } from "./DurationPicker";
 import SelectCreatable from "./select/SelectCreatable";
-import { GetOptionValue, GroupBase, OnChangeValue, OptionsOrGroups } from "react-select";
-import Select, { SelectValue } from "./select/Select";
+import { GetOptionValue, GroupBase, InputActionMeta, OnChangeValue, OptionsOrGroups } from "react-select";
+import Select, { InputNotHidden, SelectValue } from "./select/Select";
 import DatePicker from "./DatePicker";
 import { Icon } from "components/common/Icon";
 
@@ -254,6 +254,43 @@ export function FormSelectCreatable<
                 <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
             )}
         </div>
+    );
+}
+
+export function FormSelectAutocomplete<
+    Option,
+    IsMulti extends boolean = false,
+    Group extends GroupBase<Option> = GroupBase<Option>,
+    TFieldValues extends FieldValues = FieldValues,
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+>(
+    props: FormElementProps<TFieldValues, TName> &
+        ComponentProps<typeof SelectCreatable<Option, IsMulti, Group>> & {
+            customOptions?: OptionsOrGroups<Option, Group>;
+            optionCreator?: (value: string) => any;
+        }
+) {
+    const {
+        field: { onChange, value },
+    } = useController({
+        name: props.name,
+    });
+
+    const onInputChange = (value: string, action: InputActionMeta) => {
+        if (action?.action !== "input-blur" && action?.action !== "menu-close") {
+            onChange(value);
+        }
+    };
+
+    return (
+        <FormSelectCreatable<Option, IsMulti, Group, TFieldValues, TName>
+            inputValue={value}
+            onInputChange={onInputChange}
+            components={{ Input: InputNotHidden }}
+            tabSelectsValue
+            controlShouldRenderValue={false}
+            {...props}
+        />
     );
 }
 
