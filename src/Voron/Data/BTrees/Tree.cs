@@ -47,6 +47,7 @@ namespace Voron.Data.BTrees
         private readonly Transaction _tx;
         public readonly bool IsIndexTree;
         private NewPageAllocator _newPageAllocator;
+        private bool _isDisposed;
 
         public LowLevelTransaction Llt => _llt;
 
@@ -309,6 +310,8 @@ namespace Voron.Data.BTrees
 
         public DirectAddScope DirectAdd(Slice key, int len, TreeNodeFlags nodeType, out byte* ptr)
         {
+            AssertNotDisposed();
+
             if (_llt.Flags == TransactionFlags.ReadWrite)
             {
                 State.IsModified = true;
@@ -490,6 +493,8 @@ namespace Voron.Data.BTrees
 
         public TreePage ModifyPage(TreePage page)
         {
+            AssertNotDisposed();
+
             if (page.Dirty)
                 return page;
 
@@ -502,6 +507,8 @@ namespace Voron.Data.BTrees
 
         public TreePage ModifyPage(long pageNumber)
         {
+            AssertNotDisposed();
+
             var newPage = GetWriteableTreePage(pageNumber);
             newPage.Dirty = true;
             _recentlyFoundPages.Reset(pageNumber);
@@ -1030,6 +1037,8 @@ namespace Voron.Data.BTrees
 
         public void Delete(Slice key)
         {
+            AssertNotDisposed();
+
             if (_llt.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot delete a value in a read only transaction");
 
@@ -1068,11 +1077,15 @@ namespace Voron.Data.BTrees
 
         public TreeIterator Iterate(bool prefetch)
         {
+            AssertNotDisposed();
+
             return new TreeIterator(this, _llt, prefetch);
         }
 
         public ReadResult Read(Slice key)
         {
+            AssertNotDisposed();
+
             TreeNodeHeader* node;
             var p = FindPageFor(key, out node);
 
@@ -1084,12 +1097,16 @@ namespace Voron.Data.BTrees
 
         public bool Exists(Slice key)
         {
+            AssertNotDisposed();
+
             var p = FindPageFor(key, out _);
             return p.LastMatch == 0;
         }
 
         public int GetDataSize(Slice key)
         {
+            AssertNotDisposed();
+
             TreeNodeHeader* node;
             var p = FindPageFor(key, out node);
 
@@ -1111,6 +1128,8 @@ namespace Voron.Data.BTrees
 
         public int GetDataSize(TreeNodeHeader* node)
         {
+            AssertNotDisposed();
+
             if (node->Flags == (TreeNodeFlags.PageRef))
             {
                 var overFlowPage = GetReadOnlyPage(node->PageNumber);
@@ -1121,6 +1140,8 @@ namespace Voron.Data.BTrees
 
         public void RemoveEmptyDecompressedPage(DecompressedLeafPage emptyPage)
         {
+            AssertNotDisposed();
+
             using (emptyPage.Original.GetNodeKey(_llt, 0, out var key))
             {
                 var p = FindPageFor(key, node: out _, cursor: out var cursorConstructor, allowCompressed: true);
@@ -1141,6 +1162,8 @@ namespace Voron.Data.BTrees
 
         public long GetParentPageOf(TreePage page)
         {
+            AssertNotDisposed();
+
             Debug.Assert(page.IsCompressed == false);
 
             TreePage p;
@@ -1218,6 +1241,8 @@ namespace Voron.Data.BTrees
 
         public List<long> AllPages()
         {
+            AssertNotDisposed();
+
             var results = new List<long>();
             var stack = new Stack<TreePage>();
             var root = GetReadOnlyTreePage(State.RootPageNumber);
@@ -1309,8 +1334,19 @@ namespace Voron.Data.BTrees
                 ct.PrepareForCommit();
         }
 
+        [Conditional("DEBUG")]
+        internal void AssertNotDisposed()
+        {
+            if (_isDisposed)
+                throw new InvalidOperationException("Cannot call this operation on a disposed instance.");
+        }
+
         public void Dispose()
         {
+            // During DEBUG runs we will actively check that Trees are not used after disposing. 
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-22090
+            _isDisposed = true;
+            
             if (_fixedSizeTrees != null)
             {
                 foreach (var tree in _fixedSizeTrees)
@@ -1412,8 +1448,7 @@ namespace Voron.Data.BTrees
         public Lookup<TKey> LookupFor<TKey>(Slice key)
             where TKey : struct, ILookupKey
         {
-            if (_prepareLocator == null)
-                _prepareLocator = new SliceSmallSet<IPrepareForCommit>(128);
+            _prepareLocator ??= new SliceSmallSet<IPrepareForCommit>(128);
 
             if (_prepareLocator.TryGetValue(key, out var prep) == false)
             {
