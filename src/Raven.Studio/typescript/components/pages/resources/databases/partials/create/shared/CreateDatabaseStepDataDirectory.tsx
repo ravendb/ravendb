@@ -41,7 +41,7 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
 
     return (
         <div>
-            <h2 className="text-center">Path Configuration</h2>
+            <h2 className="text-center">Data Directory</h2>
             <InputGroup className="my-4">
                 <InputGroupText>
                     <FormCheckbox control={control} name="dataDirectoryStep.isDefault">

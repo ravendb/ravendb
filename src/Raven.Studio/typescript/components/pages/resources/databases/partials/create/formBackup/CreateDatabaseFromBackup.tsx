@@ -26,7 +26,6 @@ import StepPath from "../shared/CreateDatabaseStepDataDirectory";
 import StepEncryption from "../../../../../../common/FormEncryption";
 import StepSource from "./steps/source/CreateDatabaseFromBackupStepSource";
 import { tryHandleSubmit } from "components/utils/common";
-import { DevTool } from "@hookform/devtools";
 import { useServices } from "components/hooks/useServices";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import databasesManager from "common/shell/databasesManager";
@@ -200,7 +199,7 @@ function getActiveStepsList(
         },
         {
             id: "dataDirectoryStep",
-            label: "Paths Configuration",
+            label: "Data Directory",
             active: true,
             isInvalid: !!errors.dataDirectoryStep,
         },

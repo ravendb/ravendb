@@ -16,6 +16,7 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import AuthenticationOffMessage from "components/pages/resources/databases/partials/create/shared/AuthenticationOffMessage";
 import EncryptionUnavailableMessage from "components/pages/resources/databases/partials/create/shared/EncryptionUnavailableMessage";
 import { useAppSelector } from "components/store";
+import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 
 const backupSourceImg = require("Content/img/createDatabase/backup-source.svg");
 
@@ -143,6 +144,7 @@ function IsEncryptedField() {
             <FormSwitch color="primary" control={control} name="sourceStep.isEncrypted" disabled={isEncryptionDisabled}>
                 <Icon icon="encryption" />
                 Encrypt at Rest
+                {!hasEncryption && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
             </FormSwitch>
         </ConditionalPopover>
     );

@@ -58,23 +58,19 @@ const localSource = yup.object({
 const ravenCloudSource = yup.object({
     link: yup.string().when("$sourceType", {
         is: "cloud",
-        then: (schema) => schema.required(),
+        then: (schema) => schema.url().required(),
     }),
     restorePoints: getRestorePointsSchema("cloud"),
     encryptionKey: getEncryptionKeySchema("cloud"),
     awsSettings: yup
         .object({
-            sessionToken: yup.string(),
-            accessKey: yup.string(),
-            secretKey: yup.string(),
-            regionName: yup.string(),
-            remoteFolderName: yup.string(),
-            bucketName: yup.string(),
-            disabled: yup.boolean(),
-            getBackupConfigurationScript: yup.string(),
-            customServerUrl: yup.string(),
-            forcePathStyle: yup.boolean(),
-            expireDate: yup.string(),
+            sessionToken: yup.string().nullable(),
+            accessKey: yup.string().nullable(),
+            secretKey: yup.string().nullable(),
+            regionName: yup.string().nullable(),
+            remoteFolderName: yup.string().nullable(),
+            bucketName: yup.string().nullable(),
+            expireDate: yup.string().nullable(),
         })
         .nullable(),
 });

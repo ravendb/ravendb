@@ -1,3 +1,5 @@
+import moment from "moment";
+
 export class ResourcesStubs {
     static validValidateName(): Raven.Client.Util.NameValidation {
         return {
@@ -84,6 +86,23 @@ export class ResourcesStubs {
                     NodeTag: "A",
                 },
             ],
+        };
+    }
+
+    static cloudBackupCredentials(): federatedCredentials {
+        return {
+            AwsSessionToken: "some-token",
+            AwsAccessKey: "some-access-key",
+            AwsSecretKey: "some-secret-key",
+            AwsRegionName: "us-east-1",
+            BucketName: "ravendb-some-us-east-1",
+            RemoteFolderName: "some/free/db_N",
+            BackupStorageType: "S3",
+            Expires: moment().add(2, "hours").toString(),
+            CustomServerUrl: null,
+            ForcePathStyle: false,
+            Disabled: false,
+            GetBackupConfigurationScript: null,
         };
     }
 }
