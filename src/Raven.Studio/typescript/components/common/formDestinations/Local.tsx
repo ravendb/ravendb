@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import { Alert, Card, CardBody, Collapse, Label, Spinner } from "reactstrap";
-import { FormSelectCreatable, FormSwitch } from "components/common/Form";
+import { FormSelectAutocomplete, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { FormDestinations } from "./utils/formDestinationsTypes";
@@ -10,9 +10,11 @@ import { InputNotHidden, SelectOption } from "../select/Select";
 import { InputActionMeta } from "react-select";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
+import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
+import { SelectOption } from "../select/Select";
 
 export default function Local() {
-    const { control, setValue } = useFormContext<FormDestinations>();
+    const { control } = useFormContext<FormDestinations>();
     const {
         destinations: { local: formValues },
     } = useWatch({ control });
@@ -30,12 +32,6 @@ export default function Local() {
         }
         return tasksService.getBackupLocation(formValues.folderPath, databaseName);
     }, [formValues.folderPath]);
-
-    const onPathChange = (value: string, action: InputActionMeta) => {
-        if (action?.action !== "input-blur" && action?.action !== "menu-close") {
-            setValue(getName("folderPath"), value);
-        }
-    };
 
     const pathOptions = getAvailableFolderOptions(asyncGetLocalFolderPathOptions.result?.List);
 
@@ -60,16 +56,11 @@ export default function Local() {
                     ) : (
                         <div className="mt-2">
                             <Label>Folder path</Label>
-                            <FormSelectCreatable
+                            <FormSelectAutocomplete
                                 control={control}
                                 name={getName("folderPath")}
                                 placeholder="Full directory path"
                                 options={pathOptions}
-                                inputValue={formValues.folderPath ?? ""}
-                                onInputChange={onPathChange}
-                                components={{ Input: InputNotHidden }}
-                                tabSelectsValue
-                                blurInputOnSelect={false}
                             />
                             <PathInfo
                                 asyncGetBackupLocation={asyncGetBackupLocation}

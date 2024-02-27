@@ -1,9 +1,8 @@
-import { FormSelectCreatable } from "components/common/Form";
-import { InputNotHidden, SelectOption } from "components/common/select/Select";
+import { FormSelectAutocomplete } from "components/common/Form";
+import { SelectOption } from "components/common/select/Select";
 import { useServices } from "components/hooks/useServices";
 import React from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
-import { InputActionMeta } from "react-select";
 import { Col, Row } from "reactstrap";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
@@ -14,7 +13,7 @@ import RestorePointsFields from "components/pages/resources/databases/partials/c
 
 export default function BackupSourceLocal() {
     const { resourcesService } = useServices();
-    const { control, setValue } = useFormContext<FormData>();
+    const { control } = useFormContext<FormData>();
 
     const {
         basicInfoStep: { isSharded },
@@ -34,13 +33,6 @@ export default function BackupSourceLocal() {
         [localSourceData.directory]
     );
 
-    // TODO make autocomplete component?
-    const onPathChange = (value: string, action: InputActionMeta) => {
-        if (action?.action !== "input-blur" && action?.action !== "menu-close") {
-            setValue("sourceStep.sourceData.local.directory", value);
-        }
-    };
-
     return (
         <>
             <Row className="mt-2">
@@ -48,17 +40,12 @@ export default function BackupSourceLocal() {
                     <label className="col-form-label">Directory Path</label>
                 </Col>
                 <Col>
-                    <FormSelectCreatable
+                    <FormSelectAutocomplete
                         control={control}
                         name="sourceStep.sourceData.local.directory"
                         options={asyncGetLocalFolderPathOptions.result || []}
                         isLoading={asyncGetLocalFolderPathOptions.loading}
-                        inputValue={localSourceData.directory ?? ""}
                         placeholder="Enter backup directory path"
-                        onInputChange={onPathChange}
-                        components={{ Input: InputNotHidden }}
-                        tabSelectsValue
-                        blurInputOnSelect={false}
                     />
                 </Col>
             </Row>
