@@ -17,7 +17,7 @@ interface DefaultCreateDatabaseProps {
     maxReplicationFactorForSharding: number;
 }
 
-export const DefaultCreateDatabase: StoryObj = {
+export const DefaultCreateDatabase: StoryObj<DefaultCreateDatabaseProps> = {
     name: "Create Database",
     render: (props: DefaultCreateDatabaseProps) => {
         const { license, accessManager, cluster } = mockStore;
