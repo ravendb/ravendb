@@ -24,8 +24,8 @@ import QuickCreateButton from "components/pages/resources/databases/partials/cre
 import { yupResolver } from "@hookform/resolvers/yup";
 import {
     Control,
+    FieldErrors,
     FormProvider,
-    FormState,
     SubmitHandler,
     UseFormSetValue,
     UseFormTrigger,
@@ -71,14 +71,13 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
     const formValues = useWatch({
         control,
     });
-    console.log("kalczur Regular errors", formState.errors); // TODO remove
 
     const asyncDatabaseNameValidation = useCreateDatabaseAsyncValidation(
         formValues.basicInfoStep.databaseName,
         setError
     );
 
-    const activeSteps = getActiveStepsList(formValues, formState, asyncDatabaseNameValidation.loading);
+    const activeSteps = getActiveStepsList(formValues, formState.errors, asyncDatabaseNameValidation.loading);
     const { currentStep, isFirstStep, isLastStep, goToStepWithValidation, nextStepWithValidation, prevStep } = useSteps(
         activeSteps.length
     );
@@ -111,13 +110,10 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
         });
     };
 
-    // TODO add step validation spinner
-
     return (
         <FormProvider {...form}>
             <Form onSubmit={handleSubmit(onFinish)}>
                 <ModalBody>
-                    <DevTool control={control} />
                     <div className="d-flex  mb-5">
                         <Steps
                             current={currentStep}
@@ -179,7 +175,7 @@ type Step = CreateDatabaseStep<FormData>;
 
 function getActiveStepsList(
     formValues: FormData,
-    formState: FormState<FormData>,
+    errors: FieldErrors<FormData>,
     isValidatingDatabaseName: boolean
 ): Step[] {
     const steps: Step[] = [
@@ -187,32 +183,32 @@ function getActiveStepsList(
             id: "basicInfoStep",
             label: "Name",
             active: true,
-            isInvalid: !!formState.errors.basicInfoStep,
+            isInvalid: !!errors.basicInfoStep,
             isLoading: isValidatingDatabaseName,
         },
         {
             id: "encryptionStep",
             label: "Encryption",
             active: formValues.basicInfoStep.isEncrypted,
-            isInvalid: !!formState.errors.encryptionStep,
+            isInvalid: !!errors.encryptionStep,
         },
         {
             id: "replicationAndShardingStep",
             label: "Replication & Sharding",
             active: true,
-            isInvalid: !!formState.errors.replicationAndShardingStep,
+            isInvalid: !!errors.replicationAndShardingStep,
         },
         {
             id: "manualNodeSelectionStep",
             label: "Manual Node Selection",
             active: formValues.replicationAndShardingStep.isManualReplication,
-            isInvalid: !!formState.errors.manualNodeSelectionStep,
+            isInvalid: !!errors.manualNodeSelectionStep,
         },
         {
             id: "dataDirectoryStep",
             label: "Paths Configuration",
             active: true,
-            isInvalid: !!formState.errors.dataDirectoryStep,
+            isInvalid: !!errors.dataDirectoryStep,
         },
     ];
 

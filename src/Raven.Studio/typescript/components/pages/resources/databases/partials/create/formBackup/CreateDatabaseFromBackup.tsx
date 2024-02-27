@@ -13,8 +13,8 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useCreateDatabaseAsyncValidation } from "../shared/useCreateDatabaseAsyncValidation";
 import {
     Control,
+    FieldErrors,
     FormProvider,
-    FormState,
     SubmitHandler,
     UseFormSetValue,
     UseFormTrigger,
@@ -71,14 +71,13 @@ export default function CreateDatabaseFromBackup({
     const formValues = useWatch({
         control,
     });
-    console.log("kalczur FromBackup errors", formState.errors); // TODO remove
 
     const asyncDatabaseNameValidation = useCreateDatabaseAsyncValidation(
         formValues.basicInfoStep.databaseName,
         setError
     );
 
-    const activeSteps = getActiveStepsList(formValues, formState, asyncDatabaseNameValidation.loading);
+    const activeSteps = getActiveStepsList(formValues, formState.errors, asyncDatabaseNameValidation.loading);
     const { currentStep, isFirstStep, isLastStep, goToStepWithValidation, nextStepWithValidation, prevStep } = useSteps(
         activeSteps.length
     );
@@ -116,7 +115,6 @@ export default function CreateDatabaseFromBackup({
     return (
         <FormProvider {...form}>
             <Form onSubmit={handleSubmit(onFinish)}>
-                <DevTool control={control} placement="top-right" />
                 <ModalBody>
                     <div className="d-flex  mb-5">
                         <Steps
@@ -178,29 +176,33 @@ type Step = CreateDatabaseStep<FormData>;
 
 function getActiveStepsList(
     formValues: FormData,
-    formState: FormState<FormData>,
+    errors: FieldErrors<FormData>,
     isValidatingDatabaseName: boolean
 ): Step[] {
+    const {
+        sourceStep: { sourceType, sourceData, isEncrypted },
+    } = formValues;
+
     const allSteps: Step[] = [
         {
             id: "basicInfoStep",
             label: "Select backup",
             active: true,
-            isInvalid: !!formState.errors.basicInfoStep,
+            isInvalid: !!errors.basicInfoStep,
             isLoading: isValidatingDatabaseName,
         },
-        { id: "sourceStep", label: "Backup Source", active: true, isInvalid: !!formState.errors.sourceStep },
+        { id: "sourceStep", label: "Backup Source", active: true, isInvalid: !!errors.sourceStep },
         {
             id: "encryptionStep",
             label: "Encryption",
-            active: formValues.sourceStep.isEncrypted,
-            isInvalid: !!formState.errors.encryptionStep,
+            active: sourceType && isEncrypted && !sourceData[sourceType].restorePoints[0].restorePoint?.isEncrypted,
+            isInvalid: !!errors.encryptionStep,
         },
         {
             id: "dataDirectoryStep",
             label: "Paths Configuration",
             active: true,
-            isInvalid: !!formState.errors.dataDirectoryStep,
+            isInvalid: !!errors.dataDirectoryStep,
         },
     ];
 

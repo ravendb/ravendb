@@ -23,7 +23,7 @@ export default function QuickCreateButton({ formValues, isSubmitting }: QuickCre
                 Quick Create
             </ButtonWithSpinner>
 
-            <UncontrolledPopover placement="top" target="quickCreateButton" trigger="hover">
+            <UncontrolledPopover placement="top" target="quickCreateButton" trigger="hover" className="bs5">
                 <PropSummary>
                     <PropSummaryItem>
                         <PropSummaryName>
