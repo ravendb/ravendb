@@ -31,25 +31,7 @@ export default function BackupSourceCloud() {
         <>
             <Row className="mt-2">
                 <Col lg="3">
-                    <Label className="col-form-label" id="CloudBackupLinkInfo">
-                        Backup Link <Icon icon="info" color="info" margin="m-0" />
-                    </Label>
-                    <UncontrolledPopover target="CloudBackupLinkInfo" trigger="hover">
-                        <PopoverBody>
-                            <ol className="m-0">
-                                <li>
-                                    Login to your <code>RavenDB Cloud Account</code>
-                                </li>
-                                <li>
-                                    Go to <code>Backups</code> view
-                                </li>
-                                <li>Select desired Instance and a Backup File</li>
-                                <li>
-                                    Click <code>Generate Backup Link</code>
-                                </li>
-                            </ol>
-                        </PopoverBody>
-                    </UncontrolledPopover>
+                    <LinkLabel />
                 </Col>
                 <Col>
                     <FormInput
@@ -61,11 +43,12 @@ export default function BackupSourceCloud() {
                 </Col>
             </Row>
             {expireDateMoment && (
-                <Row className="mt-2">
+                <Row className="mt-2 align-items-center">
                     <Col lg="3">
                         <Label className="col-form-label">Link will expire in</Label>
                     </Col>
                     <Col>
+                        <Icon icon="clock" />
                         {expireDateMoment.isBefore()
                             ? "Link has expired"
                             : generalUtils.formatDurationByDate(expireDateMoment)}
@@ -87,6 +70,32 @@ export default function BackupSourceCloud() {
     );
 }
 
+function LinkLabel() {
+    return (
+        <>
+            <Label className="col-form-label" id="CloudBackupLinkInfo">
+                Backup Link <Icon icon="info" color="info" margin="m-0" />
+            </Label>
+            <UncontrolledPopover target="CloudBackupLinkInfo" trigger="hover" className="bs5">
+                <PopoverBody>
+                    <ol className="m-0">
+                        <li>
+                            Login to your <code>RavenDB Cloud Account</code>
+                        </li>
+                        <li>
+                            Go to <code>Backups</code> view
+                        </li>
+                        <li>Select desired Instance and a Backup File</li>
+                        <li>
+                            Click <code>Generate Backup Link</code>
+                        </li>
+                    </ol>
+                </PopoverBody>
+            </UncontrolledPopover>
+        </>
+    );
+}
+
 interface CloudSourceRestorePointProps {
     index: number;
     isSharded: boolean;
@@ -104,6 +113,10 @@ function CloudSourceRestorePoint({ index, isSharded, link }: CloudSourceRestoreP
 
     const asyncGetRestorePointsOptions = useAsyncDebounce(
         async (link) => {
+            if (!link) {
+                return [];
+            }
+
             const credentials = await resourcesService.getCloudBackupCredentialsFromLink(link);
 
             setValue("sourceStep.sourceData.cloud.awsSettings", {
@@ -114,10 +127,6 @@ function CloudSourceRestorePoint({ index, isSharded, link }: CloudSourceRestoreP
                 remoteFolderName: credentials.RemoteFolderName,
                 bucketName: credentials.BucketName,
                 expireDate: credentials.Expires,
-                disabled: false,
-                getBackupConfigurationScript: null,
-                customServerUrl: null, // TODO RavenDB-14716
-                forcePathStyle: false,
             });
 
             const dto = await resourcesService.getRestorePoints_S3Backup(

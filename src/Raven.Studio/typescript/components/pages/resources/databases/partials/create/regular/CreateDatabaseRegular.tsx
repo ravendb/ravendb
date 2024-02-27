@@ -12,7 +12,6 @@ import StepEncryption from "../../../../../../common/FormEncryption";
 import StepReplicationAndSharding from "./steps/CreateDatabaseRegularStepReplicationAndSharding";
 import StepNodeSelection from "./steps/CreateDatabaseRegularStepNodeSelection";
 import StepPath from "../shared/CreateDatabaseStepDataDirectory";
-import { DevTool } from "@hookform/devtools";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { useServices } from "components/hooks/useServices";
@@ -206,7 +205,7 @@ function getActiveStepsList(
         },
         {
             id: "dataDirectoryStep",
-            label: "Paths Configuration",
+            label: "Data Directory",
             active: true,
             isInvalid: !!errors.dataDirectoryStep,
         },

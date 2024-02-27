@@ -87,7 +87,7 @@ function getRestoreDtoType(sourceType: restoreSource): RestoreType {
     }
 }
 
-// TODO kalczur refactor
+// TODO maybe refactor? this is copy-paste from 5.4
 function getEncryptionDto(
     selectedSourceData: FormData["sourceStep"]["sourceData"][restoreSource],
     encryptionDataIsEncrypted: boolean,
@@ -192,16 +192,16 @@ function getSourceDto(
             return {
                 ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),
                 Settings: {
-                    AwsAccessKey: _.trim(data.awsSettings.accessKey),
-                    AwsSecretKey: _.trim(data.awsSettings.secretKey),
-                    AwsRegionName: _.trim(data.awsSettings.regionName),
-                    BucketName: _.trim(data.awsSettings.bucketName),
-                    AwsSessionToken: "",
-                    RemoteFolderName: _.trim(data.awsSettings.remoteFolderName),
+                    AwsAccessKey: data.awsSettings.accessKey,
+                    AwsSecretKey: data.awsSettings.secretKey,
+                    AwsRegionName: data.awsSettings.regionName,
+                    BucketName: data.awsSettings.bucketName,
+                    AwsSessionToken: data.awsSettings.sessionToken,
+                    RemoteFolderName: data.awsSettings.remoteFolderName,
                     Disabled: false,
+                    CustomServerUrl: null,
+                    ForcePathStyle: false,
                     GetBackupConfigurationScript: null,
-                    CustomServerUrl: _.trim(data.awsSettings.customServerUrl),
-                    ForcePathStyle: data.awsSettings.forcePathStyle,
                 } satisfies S3Settings,
             };
         }

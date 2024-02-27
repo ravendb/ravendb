@@ -26,6 +26,7 @@ export const DefaultCreateDatabase: StoryObj<DefaultCreateDatabaseProps> = {
         resourcesService.withValidateNameCommand();
         resourcesService.withDatabaseLocation();
         resourcesService.withFolderPathOptions_ServerLocal();
+        resourcesService.withCloudBackupCredentialsFromLink();
         resourcesService.withRestorePoints();
 
         databasesService.withGenerateSecret();
@@ -45,6 +46,6 @@ export const DefaultCreateDatabase: StoryObj<DefaultCreateDatabaseProps> = {
         isSecureServer: true,
         hasEncryption: true,
         hasDynamicNodesDistribution: true,
-        maxReplicationFactorForSharding: 3,
+        maxReplicationFactorForSharding: 2,
     },
 };

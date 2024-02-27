@@ -3,7 +3,7 @@ import React from "react";
 import { Row, Col, Collapse, UncontrolledPopover, PopoverBody, Label } from "reactstrap";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
-import { FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
+import { FormInput, FormSelectAutocomplete, FormSwitch } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
 import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
 import { mapRestorePointDtoToSelectOptions } from "components/pages/resources/databases/partials/create/formBackup/steps/source/backupSourceUtils";
@@ -117,7 +117,7 @@ export default function BackupSourceAmazonS3() {
                             autoComplete="off"
                         />
                     ) : (
-                        <FormSelectCreatable
+                        <FormSelectAutocomplete
                             name="sourceStep.sourceData.amazonS3.awsRegion"
                             control={control}
                             placeholder="Select an AWS region (or enter new one)"
