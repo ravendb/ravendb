@@ -71,14 +71,17 @@ function IsEncryptedField() {
                     Encrypt at Rest
                 </FormSwitch>
             </ConditionalPopover>
-
-            <Icon icon="info" color="info" id="encryption-info" margin="ms-1" />
-            <UncontrolledPopover target="encryption-info" placement="right" trigger="hover">
-                <PopoverBody>
-                    Data will be encrypted at the storage engine layer, using <code>XChaCha20-Poly1305</code>{" "}
-                    authenticated encryption algorithm.
-                </PopoverBody>
-            </UncontrolledPopover>
+            {hasEncryption && isSecureServer && (
+                <>
+                    <Icon icon="info" color="info" id="encryption-info" margin="ms-1" />
+                    <UncontrolledPopover target="encryption-info" placement="right" trigger="hover">
+                        <PopoverBody>
+                            Data will be encrypted at the storage engine layer, using <code>XChaCha20-Poly1305</code>{" "}
+                            authenticated encryption algorithm.
+                        </PopoverBody>
+                    </UncontrolledPopover>
+                </>
+            )}
         </div>
     );
 }

@@ -96,6 +96,12 @@ export default function CreateDatabaseRegularStepNodeSelection() {
                                         ></FormSelect>
                                     </td>
                                 ))}
+
+                                {formState.errors.manualNodeSelectionStep?.shards?.[shardNumber] && (
+                                    <div className="position-absolute badge bg-danger rounded-pill">
+                                        {formState.errors.manualNodeSelectionStep.shards[shardNumber].message}
+                                    </div>
+                                )}
                             </tr>
                         ))}
                     </tbody>
