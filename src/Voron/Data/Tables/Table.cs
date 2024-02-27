@@ -1207,7 +1207,6 @@ namespace Voron.Data.Tables
                 throw new VoronErrorException($"Cannot find tree {name} in table {Name}");
 
             tree = Tree.Open(_tx.LowLevelTransaction, _tx, name, (TreeRootHeader*)treeHeader, isIndexTree: isIndexTree, newPageAllocator: TablePageAllocator);
-            _tx.LowLevelTransaction.RegisterDisposable(tree);
             
             _treesBySliceCache ??= new Dictionary<Slice, Tree>(SliceStructComparer.Instance);
             _treesBySliceCache[name] = tree;

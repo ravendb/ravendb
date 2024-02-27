@@ -314,9 +314,9 @@ namespace Voron
             Interlocked.Exchange(ref _transactionsCounter, header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
             var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
-            using (var root = Tree.Open(tx, null, Constants.RootTreeNameSlice, header->TransactionId == 0 ? &entry.Root : &header->Root))
             using (var writeTx = new Transaction(tx))
             {
+                var root = Tree.Open(tx, null, Constants.RootTreeNameSlice, header->TransactionId == 0 ? &entry.Root : &header->Root);
                 tx.UpdateRootsIfNeeded(root);
 
                 var metadataTree = writeTx.ReadTree(Constants.MetadataTreeNameSlice);

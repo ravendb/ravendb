@@ -972,7 +972,6 @@ namespace Voron.Impl
                 }
 
                 _disposableScope.Dispose();
-                _root?.Dispose();
 
                 _allocator.AllocationFailed -= MarkTransactionAsFailed;
               

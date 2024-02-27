@@ -197,7 +197,7 @@ namespace Voron.Data.Tables
             {
                 if (_primaryKey.IsGlobal == false)
                 {
-                    using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, _primaryKey.Name, isIndexTree: true, newPageAllocator: tablePageAllocator))
+                    var indexTree = Tree.Create(tx.LowLevelTransaction, tx, _primaryKey.Name, isIndexTree: true, newPageAllocator: tablePageAllocator);
                     using (tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader), out var ptr))
                     {
                         indexTree.State.CopyTo((TreeRootHeader*)ptr);
@@ -213,7 +213,7 @@ namespace Voron.Data.Tables
             {
                 if (indexDef.IsGlobal == false)
                 {
-                    using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, indexDef.Name, isIndexTree: true, newPageAllocator: tablePageAllocator))
+                    var indexTree = Tree.Create(tx.LowLevelTransaction, tx, indexDef.Name, isIndexTree: true, newPageAllocator: tablePageAllocator);
                     using (tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader), out var ptr))
                     {
                         indexTree.State.CopyTo((TreeRootHeader*)ptr);
@@ -229,7 +229,7 @@ namespace Voron.Data.Tables
             {
                 if (dynamicKeyIndexDef.IsGlobal == false)
                 {
-                    using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, dynamicKeyIndexDef.Name, isIndexTree: true, newPageAllocator: tablePageAllocator))
+                    var indexTree = Tree.Create(tx.LowLevelTransaction, tx, dynamicKeyIndexDef.Name, isIndexTree: true, newPageAllocator: tablePageAllocator);
                     using (tableTree.DirectAdd(dynamicKeyIndexDef.Name, sizeof(TreeRootHeader), out var ptr))
                     {
                         indexTree.State.CopyTo((TreeRootHeader*)ptr);

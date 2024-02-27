@@ -202,7 +202,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public void Dispose()
         {
             _nestedValueKeyScope.Dispose();
-            Tree?.Dispose();
         }
     }
 }

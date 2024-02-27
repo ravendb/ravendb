@@ -150,11 +150,8 @@ namespace Voron.Data.Compression
                     continue;
                 }
 
-                Slice first;
-                Slice last;
-
-                using (page.GetNodeKey(tx, 0, out first))
-                using (page.GetNodeKey(tx, page.NumberOfEntries - 1, out last))
+                using (page.GetNodeKey(tx, 0, out Slice first))
+                using (page.GetNodeKey(tx, page.NumberOfEntries - 1, out Slice last))
                 {
                     if (SliceComparer.Compare(key, first) >= 0 && SliceComparer.Compare(key, last) <= 0)
                     {
