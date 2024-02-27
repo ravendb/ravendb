@@ -77,7 +77,8 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                     <PopoverBody>
                                         <LicenseRestrictedMessage>
                                             Your license doesn&apos;t allow replication factor higher than{" "}
-                                            {maxReplicationFactorForSharding} for sharded database.
+                                            <strong>{maxReplicationFactorForSharding}</strong>
+                                            for sharded database.
                                         </LicenseRestrictedMessage>
                                     </PopoverBody>
                                 ) : (

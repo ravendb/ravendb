@@ -142,28 +142,26 @@ function RestorePointOption(props: OptionProps<SelectOption<RestorePoint>>) {
 
     todo("Styling", "Kwiato", "backup type color");
     return (
-        <div>
-            <components.Option {...props}>
-                <Row>
-                    <Col lg="4" className="text-center">
-                        <small>{data.value.dateTime}</small>
-                    </Col>
-                    <Col lg="2" className="text-center">
-                        <small>{data.value.backupType}</small>
-                    </Col>
-                    <Col lg="2" className="text-center">
-                        <small>
-                            {data.value.isEncrypted ? <Icon icon="lock" color="success" /> : <Icon icon="unsecure" />}
-                        </small>
-                    </Col>
-                    <Col lg="2" className="text-center">
-                        <small>{data.value.nodeTag}</small>
-                    </Col>
-                    <Col lg="2" className="text-center">
-                        <small>{data.value.filesToRestore}</small>
-                    </Col>
-                </Row>
-            </components.Option>
-        </div>
+        <components.Option {...props}>
+            <Row>
+                <Col lg="4" className="text-center">
+                    <small>{data.value.dateTime}</small>
+                </Col>
+                <Col lg="2" className="text-center">
+                    <small>{data.value.backupType}</small>
+                </Col>
+                <Col lg="2" className="text-center">
+                    <small>
+                        {data.value.isEncrypted ? <Icon icon="lock" color="success" /> : <Icon icon="unsecure" />}
+                    </small>
+                </Col>
+                <Col lg="2" className="text-center">
+                    <small>{data.value.nodeTag}</small>
+                </Col>
+                <Col lg="2" className="text-center">
+                    <small>{data.value.filesToRestore}</small>
+                </Col>
+            </Row>
+        </components.Option>
     );
 }

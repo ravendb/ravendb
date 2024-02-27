@@ -10,6 +10,7 @@ import { Col, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import AuthenticationOffMessage from "components/pages/resources/databases/partials/create/shared/AuthenticationOffMessage";
 import EncryptionUnavailableMessage from "components/pages/resources/databases/partials/create/shared/EncryptionUnavailableMessage";
+import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 
 const newDatabaseImg = require("Content/img/createDatabase/new-database.svg");
 
@@ -69,6 +70,7 @@ function IsEncryptedField() {
                 >
                     <Icon icon="encryption" />
                     Encrypt at Rest
+                    {!hasEncryption && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                 </FormSwitch>
             </ConditionalPopover>
             {hasEncryption && isSecureServer && (

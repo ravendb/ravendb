@@ -103,6 +103,7 @@ function initYup() {
             },
         },
         string: {
+            url: "Please enter valid URL",
             email: "Please enter valid e-mail",
             length: ({ length }) => `Please enter exactly ${length} character${length > 1 ? "s" : ""}`,
             min: ({ min }) => `Please provide at least ${min} characters`,
@@ -129,7 +130,7 @@ function initYup() {
         return this.matches(genUtils.urlRegex, msg);
     });
 
-    yup.addMethod<yup.StringSchema>(yup.string, "base64", function (msg = "Invalid base64 string") {
+    yup.addMethod<yup.StringSchema>(yup.string, "base64", function (msg = "Please enter valid base64 string") {
         return this.matches(/^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/, msg);
     });
 }
