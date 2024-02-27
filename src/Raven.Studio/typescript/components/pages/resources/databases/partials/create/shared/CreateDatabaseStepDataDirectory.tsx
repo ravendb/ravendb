@@ -1,12 +1,10 @@
 import React from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Alert, InputGroup, InputGroupText, Spinner } from "reactstrap";
-import { FormCheckbox, FormSelectCreatable } from "components/common/Form";
+import { FormCheckbox, FormSelectAutocomplete } from "components/common/Form";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useServices } from "components/hooks/useServices";
-import { InputActionMeta } from "react-select";
-import { InputNotHidden } from "components/common/select/Select";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
 import { UseAsyncReturn } from "react-async-hook";
 import { CreateDatabaseFromBackupFormData } from "components/pages/resources/databases/partials/create/formBackup/createDatabaseFromBackupValidation";
@@ -18,7 +16,7 @@ interface CreateDatabaseStepPathProps {
 }
 
 export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFolder }: CreateDatabaseStepPathProps) {
-    const { control, setValue } = useFormContext<CreateDatabaseRegularFormData | CreateDatabaseFromBackupFormData>();
+    const { control } = useFormContext<CreateDatabaseRegularFormData | CreateDatabaseFromBackupFormData>();
     const {
         basicInfoStep: { databaseName },
         dataDirectoryStep,
@@ -41,13 +39,6 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
         dataDirectoryStep.directory,
     ]);
 
-    // TODO kalczur make autocomplete component?
-    const onPathChange = (value: string, action: InputActionMeta) => {
-        if (action?.action !== "input-blur" && action?.action !== "menu-close") {
-            setValue("dataDirectoryStep.directory", value);
-        }
-    };
-
     return (
         <div>
             <h2 className="text-center">Path Configuration</h2>
@@ -57,17 +48,12 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
                         Use server directory
                     </FormCheckbox>
                 </InputGroupText>
-                <FormSelectCreatable
+                <FormSelectAutocomplete
                     control={control}
                     name="dataDirectoryStep.directory"
                     placeholder={dataDirectoryStep.isDefault ? "" : "Enter database directory"}
                     options={asyncGetFolderOptions.result ?? []}
                     isLoading={asyncGetFolderOptions.loading}
-                    inputValue={dataDirectoryStep.directory ?? ""}
-                    onInputChange={onPathChange}
-                    components={{ Input: InputNotHidden }}
-                    tabSelectsValue
-                    blurInputOnSelect={false}
                     isDisabled={dataDirectoryStep.isDefault}
                 />
             </InputGroup>
