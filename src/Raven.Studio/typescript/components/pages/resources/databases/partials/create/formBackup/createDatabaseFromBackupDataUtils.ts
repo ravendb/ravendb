@@ -211,15 +211,15 @@ function getSourceDto(
             return {
                 ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),
                 Settings: {
-                    AwsAccessKey: _.trim(data.accessKey),
-                    AwsSecretKey: _.trim(data.secretKey),
-                    AwsRegionName: _.trim(data.awsRegion),
-                    BucketName: _.trim(data.bucketName),
+                    AwsAccessKey: data.accessKey,
+                    AwsSecretKey: data.secretKey,
+                    AwsRegionName: data.awsRegion,
+                    BucketName: data.bucketName,
                     AwsSessionToken: "",
-                    RemoteFolderName: _.trim(data.remoteFolderName),
+                    RemoteFolderName: data.remoteFolderName,
                     Disabled: false,
                     GetBackupConfigurationScript: null,
-                    CustomServerUrl: data.isUseCustomHost ? _.trim(data.customHost) : null,
+                    CustomServerUrl: data.isUseCustomHost ? data.customHost : null,
                     ForcePathStyle: data.isUseCustomHost && data.isForcePathStyle,
                 } satisfies S3Settings,
             };
@@ -230,11 +230,11 @@ function getSourceDto(
             return {
                 ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),
                 Settings: {
-                    AccountKey: _.trim(data.accountKey),
+                    AccountKey: data.accountKey,
                     SasToken: "",
-                    AccountName: _.trim(data.accountName),
-                    StorageContainer: _.trim(data.container),
-                    RemoteFolderName: _.trim(data.remoteFolderName),
+                    AccountName: data.accountName,
+                    StorageContainer: data.container,
+                    RemoteFolderName: data.remoteFolderName,
                     Disabled: false,
                     GetBackupConfigurationScript: null,
                 } satisfies AzureSettings,
@@ -247,9 +247,9 @@ function getSourceDto(
             return {
                 ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),
                 Settings: {
-                    BucketName: _.trim(data.bucketName),
-                    GoogleCredentialsJson: _.trim(data.credentialsJson),
-                    RemoteFolderName: _.trim(data.remoteFolderName),
+                    BucketName: data.bucketName,
+                    GoogleCredentialsJson: data.credentialsJson,
+                    RemoteFolderName: data.remoteFolderName,
                     Disabled: false,
                     GetBackupConfigurationScript: null,
                 } satisfies GoogleCloudSettings,
@@ -272,7 +272,7 @@ function mapToDto({
         DatabaseName: basicInfoStep.databaseName,
         DisableOngoingTasks: sourceStep.isDisableOngoingTasksAfterRestore,
         SkipIndexes: sourceStep.isSkipIndexes,
-        DataDirectory: dataDirectoryStep.isDefault ? null : _.trim(dataDirectoryStep.directory),
+        DataDirectory: dataDirectoryStep.isDefault ? null : dataDirectoryStep.directory,
     };
 }
 

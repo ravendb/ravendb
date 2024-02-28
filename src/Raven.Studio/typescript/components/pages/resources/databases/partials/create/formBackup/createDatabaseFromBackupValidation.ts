@@ -7,6 +7,8 @@ import * as yup from "yup";
 const basicInfoStepSchema = yup.object({
     databaseName: yup
         .string()
+        .trim()
+        .strict()
         .required()
         .when("$usedDatabaseNames", ([usedDatabaseNames], schema) =>
             schema.notOneOf(usedDatabaseNames, "Database already exists")
@@ -96,25 +98,25 @@ const amazonS3Source = yup.object({
     isForcePathStyle: yup.boolean(),
     customHost: yup.string().when(["isUseCustomHost", "$sourceType"], {
         is: (isUseCustomHost: boolean, sourceType: RestoreSource) => isUseCustomHost && sourceType === "amazonS3",
-        then: (schema) => schema.required(),
+        then: (schema) => schema.trim().strict().required(),
     }),
     accessKey: yup.string().when("$sourceType", {
         is: "amazonS3",
-        then: (schema) => schema.required(),
+        then: (schema) => schema.trim().strict().required(),
     }),
     secretKey: yup.string().when("$sourceType", {
         is: "amazonS3",
-        then: (schema) => schema.required(),
+        then: (schema) => schema.trim().strict().required(),
     }),
     awsRegion: yup.string().when(["isUseCustomHost", "$sourceType"], {
         is: (isUseCustomHost: boolean, sourceType: RestoreSource) => !isUseCustomHost && sourceType === "amazonS3",
-        then: (schema) => schema.required(),
+        then: (schema) => schema.trim().strict().required(),
     }),
     bucketName: yup.string().when("$sourceType", {
         is: "amazonS3",
-        then: (schema) => schema.required(),
+        then: (schema) => schema.trim().strict().required(),
     }),
-    remoteFolderName: yup.string(),
+    remoteFolderName: yup.string().trim().strict(),
     pointsWithTags: getPointsWithTagsSchema("amazonS3"),
     encryptionKey: getEncryptionKeySchema("amazonS3"),
 });
@@ -122,17 +124,17 @@ const amazonS3Source = yup.object({
 const azureSource = yup.object({
     accountName: yup.string().when("$sourceType", {
         is: "azure",
-        then: (schema) => schema.required(),
+        then: (schema) => schema.trim().strict().required(),
     }),
     accountKey: yup.string().when("$sourceType", {
         is: "azure",
-        then: (schema) => schema.required(),
+        then: (schema) => schema.trim().strict().required(),
     }),
     container: yup.string().when("$sourceType", {
         is: "azure",
-        then: (schema) => schema.required(),
+        then: (schema) => schema.trim().strict().required(),
     }),
-    remoteFolderName: yup.string(),
+    remoteFolderName: yup.string().trim().strict(),
     pointsWithTags: getPointsWithTagsSchema("azure"),
     encryptionKey: getEncryptionKeySchema("azure"),
 });
@@ -140,13 +142,13 @@ const azureSource = yup.object({
 const googleCloudSource = yup.object({
     bucketName: yup.string().when("$sourceType", {
         is: "googleCloud",
-        then: (schema) => schema.required(),
+        then: (schema) => schema.trim().strict().required(),
     }),
     credentialsJson: yup.string().when("$sourceType", {
         is: "googleCloud",
         then: (schema) => schema.required(),
     }),
-    remoteFolderName: yup.string(),
+    remoteFolderName: yup.string().trim().strict(),
     pointsWithTags: getPointsWithTagsSchema("googleCloud"),
     encryptionKey: getEncryptionKeySchema("googleCloud"),
 });
