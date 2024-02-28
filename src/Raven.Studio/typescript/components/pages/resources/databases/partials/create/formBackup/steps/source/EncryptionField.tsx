@@ -1,12 +1,12 @@
 import { FormInput } from "components/common/Form";
 import React from "react";
 import { Row, Col, Label } from "reactstrap";
-import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
+import { CreateDatabaseFromBackupFormData as FormData, RestoreSource } from "../../createDatabaseFromBackupValidation";
 import { FieldPath, useFormContext } from "react-hook-form";
 
 interface EncryptionFieldProps {
-    selectedSourceData: FormData["sourceStep"]["sourceData"][restoreSource];
-    encryptionKeyFieldName: Extract<FieldPath<FormData>, `sourceStep.sourceData.${restoreSource}.encryptionKey`>;
+    selectedSourceData: FormData["sourceStep"]["sourceData"][RestoreSource];
+    encryptionKeyFieldName: Extract<FieldPath<FormData>, `sourceStep.sourceData.${RestoreSource}.encryptionKey`>;
 }
 
 export default function EncryptionField({ selectedSourceData, encryptionKeyFieldName }: EncryptionFieldProps) {

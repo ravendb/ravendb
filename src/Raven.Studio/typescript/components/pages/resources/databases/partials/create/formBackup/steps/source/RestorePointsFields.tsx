@@ -1,11 +1,11 @@
 import React, { ReactNode } from "react";
 import { FieldArrayWithId, useFormContext, useFieldArray, FieldPath } from "react-hook-form";
 import { Row, Col, Label, Button } from "reactstrap";
-import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
+import { CreateDatabaseFromBackupFormData as FormData, RestoreSource } from "../../createDatabaseFromBackupValidation";
 import { Icon } from "components/common/Icon";
 
 interface RestorePointsFieldsProps {
-    pointsWithTagsFieldName: Extract<FieldPath<FormData>, `sourceStep.sourceData.${restoreSource}.pointsWithTags`>;
+    pointsWithTagsFieldName: Extract<FieldPath<FormData>, `sourceStep.sourceData.${RestoreSource}.pointsWithTags`>;
     isSharded: boolean;
     mapRestorePoint: (field: FieldArrayWithId<FormData>, index: number) => ReactNode;
 }
