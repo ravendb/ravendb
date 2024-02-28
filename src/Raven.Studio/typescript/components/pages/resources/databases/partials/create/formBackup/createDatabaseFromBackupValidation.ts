@@ -14,18 +14,20 @@ const basicInfoStepSchema = yup.object({
     isSharded: yup.boolean(),
 });
 
-function getPointsWithTagsSchema(sourceType: restoreSource) {
+export type RestoreSource = "local" | "ravenCloud" | "amazonS3" | "azure" | "googleCloud";
+
+function getPointsWithTagsSchema(sourceType: RestoreSource) {
     return yup
         .array()
         .of(
             yup.object({
                 nodeTag: yup.string().when(["$sourceType", "$isSharded"], {
-                    is: (currentSourceType: restoreSource, isSharded: boolean) =>
+                    is: (currentSourceType: RestoreSource, isSharded: boolean) =>
                         currentSourceType === sourceType && isSharded,
                     then: (schema) => schema.required(),
                 }),
                 restorePoint: restorePointSchema.nullable().when("$sourceType", {
-                    is: (currentSourceType: restoreSource) => currentSourceType === sourceType,
+                    is: (currentSourceType: RestoreSource) => currentSourceType === sourceType,
                     then: (schema) => schema.required(),
                 }),
             })
@@ -50,9 +52,9 @@ export type RestorePoint = yup.InferType<typeof restorePointSchema>;
 
 type PointsWithTags = yup.InferType<ReturnType<typeof getPointsWithTagsSchema>>;
 
-function getEncryptionKeySchema(sourceType: restoreSource) {
+function getEncryptionKeySchema(sourceType: RestoreSource) {
     return yup.string().when(["$sourceType", "pointsWithTags"], {
-        is: (currentSourceType: restoreSource, pointsWithTags: PointsWithTags) =>
+        is: (currentSourceType: RestoreSource, pointsWithTags: PointsWithTags) =>
             currentSourceType === sourceType &&
             pointsWithTags[0]?.restorePoint?.isEncrypted &&
             !pointsWithTags[0]?.restorePoint?.isSnapshotRestore,
@@ -71,11 +73,11 @@ const localSource = yup.object({
 
 const ravenCloudSource = yup.object({
     link: yup.string().when("$sourceType", {
-        is: "cloud",
+        is: "ravenCloud",
         then: (schema) => schema.url().required(),
     }),
-    pointsWithTags: getPointsWithTagsSchema("cloud"),
-    encryptionKey: getEncryptionKeySchema("cloud"),
+    pointsWithTags: getPointsWithTagsSchema("ravenCloud"),
+    encryptionKey: getEncryptionKeySchema("ravenCloud"),
     awsSettings: yup
         .object({
             sessionToken: yup.string().nullable(),
@@ -93,7 +95,7 @@ const amazonS3Source = yup.object({
     isUseCustomHost: yup.boolean(),
     isForcePathStyle: yup.boolean(),
     customHost: yup.string().when(["isUseCustomHost", "$sourceType"], {
-        is: (isUseCustomHost: boolean, sourceType: restoreSource) => isUseCustomHost && sourceType === "amazonS3",
+        is: (isUseCustomHost: boolean, sourceType: RestoreSource) => isUseCustomHost && sourceType === "amazonS3",
         then: (schema) => schema.required(),
     }),
     accessKey: yup.string().when("$sourceType", {
@@ -105,7 +107,7 @@ const amazonS3Source = yup.object({
         then: (schema) => schema.required(),
     }),
     awsRegion: yup.string().when(["isUseCustomHost", "$sourceType"], {
-        is: (isUseCustomHost: boolean, sourceType: restoreSource) => !isUseCustomHost && sourceType === "amazonS3",
+        is: (isUseCustomHost: boolean, sourceType: RestoreSource) => !isUseCustomHost && sourceType === "amazonS3",
         then: (schema) => schema.required(),
     }),
     bucketName: yup.string().when("$sourceType", {
@@ -153,10 +155,10 @@ const sourceStepSchema = yup.object({
     isDisableOngoingTasksAfterRestore: yup.boolean(),
     isSkipIndexes: yup.boolean(),
     isEncrypted: yup.boolean(),
-    sourceType: yup.string<restoreSource>().nullable().required(),
+    sourceType: yup.string<RestoreSource>().nullable().required(),
     sourceData: yup.object({
         local: localSource,
-        cloud: ravenCloudSource,
+        ravenCloud: ravenCloudSource,
         amazonS3: amazonS3Source,
         azure: azureSource,
         googleCloud: googleCloudSource,
