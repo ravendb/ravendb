@@ -958,6 +958,8 @@ namespace Voron.Impl
                 // transaction. First the pagers and internal resources, then registered ones by external parties.
                 _env.TransactionCompleted(this);
 
+                _disposableScope.Dispose();
+
                 foreach (var pagerState in _pagerStates)
                 {
                     pagerState.Release();
@@ -970,8 +972,6 @@ namespace Voron.Impl
                         journalFile.Release();
                     }
                 }
-
-                _disposableScope.Dispose();
 
                 _allocator.AllocationFailed -= MarkTransactionAsFailed;
               
