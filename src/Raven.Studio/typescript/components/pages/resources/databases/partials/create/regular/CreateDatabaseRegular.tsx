@@ -49,10 +49,11 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
     const { databasesService } = useServices();
     const usedDatabaseNames = useAppSelector(databaseSelectors.allDatabases).map((db) => db.name);
     const allNodeTags = useAppSelector(clusterSelectors.allNodeTags);
+    const initialReplicationFactor = allNodeTags.length || 1;
 
     const form = useForm<FormData>({
         mode: "onChange",
-        defaultValues: createDatabaseRegularDataUtils.getDefaultValues(allNodeTags.length),
+        defaultValues: createDatabaseRegularDataUtils.getDefaultValues(initialReplicationFactor),
         resolver: (data, _, options) =>
             yupResolver(createDatabaseRegularSchema)(
                 data,
