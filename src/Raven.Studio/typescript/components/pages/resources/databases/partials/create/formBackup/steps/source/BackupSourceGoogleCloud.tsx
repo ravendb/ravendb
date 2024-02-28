@@ -5,7 +5,7 @@ import { CreateDatabaseFromBackupFormData as FormData } from "../../createDataba
 import { FormInput } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
 import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
-import { mapRestorePointDtoToSelectOptions } from "components/pages/resources/databases/partials/create/formBackup/steps/source/backupSourceUtils";
+import { restorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/restorePointUtils";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
 import RestorePointsFields from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointsFields";
@@ -68,7 +68,7 @@ export default function BackupSourceGoogleCloud() {
             </Row>
             <RestorePointsFields
                 isSharded={isSharded}
-                restorePointsFieldName="sourceStep.sourceData.googleCloud.restorePoints"
+                pointsWithTagsFieldName="sourceStep.sourceData.googleCloud.pointsWithTags"
                 mapRestorePoint={(field, index) => (
                     <SourceRestorePoint
                         key={field.id}
@@ -99,7 +99,7 @@ function SourceRestorePoint({ index, googleCloudData, isSharded }: SourceRestore
 
     const { remove } = useFieldArray({
         control,
-        name: "sourceStep.sourceData.googleCloud.restorePoints",
+        name: "sourceStep.sourceData.googleCloud.pointsWithTags",
     });
 
     const asyncGetRestorePointsOptions = useAsyncDebounce(
@@ -115,14 +115,14 @@ function SourceRestorePoint({ index, googleCloudData, isSharded }: SourceRestore
                 true,
                 isSharded ? index : undefined
             );
-            return mapRestorePointDtoToSelectOptions(dto);
+            return restorePointUtils.mapToSelectOptions(dto);
         },
         [googleCloudData.bucketName, googleCloudData.credentialsJson, googleCloudData.remoteFolderName]
     );
 
     return (
         <CreateDatabaseFromBackupRestorePoint
-            fieldName="sourceStep.sourceData.googleCloud.restorePoints"
+            fieldName="sourceStep.sourceData.googleCloud.pointsWithTags"
             index={index}
             remove={remove}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}

@@ -186,6 +186,9 @@ function getActiveStepsList(
         sourceStep: { sourceType, sourceData, isEncrypted },
     } = formValues;
 
+    const isEncryptionActive =
+        sourceType && isEncrypted && !sourceData[sourceType].pointsWithTags[0].restorePoint?.isEncrypted;
+
     const allSteps: Step[] = [
         {
             id: "basicInfoStep",
@@ -198,7 +201,7 @@ function getActiveStepsList(
         {
             id: "encryptionStep",
             label: "Encryption",
-            active: sourceType && isEncrypted && !sourceData[sourceType].restorePoints[0].restorePoint?.isEncrypted,
+            active: isEncryptionActive,
             isInvalid: !!errors.encryptionStep,
         },
         {

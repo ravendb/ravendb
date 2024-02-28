@@ -6,7 +6,7 @@ import { CreateDatabaseFromBackupFormData as FormData } from "../../createDataba
 import { FormInput, FormSelectAutocomplete, FormSwitch } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
 import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
-import { mapRestorePointDtoToSelectOptions } from "components/pages/resources/databases/partials/create/formBackup/steps/source/backupSourceUtils";
+import { restorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/restorePointUtils";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
 import { availableS3Regions } from "components/utils/common";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
@@ -158,7 +158,7 @@ export default function BackupSourceAmazonS3() {
             </Row>
             <RestorePointsFields
                 isSharded={isSharded}
-                restorePointsFieldName="sourceStep.sourceData.amazonS3.restorePoints"
+                pointsWithTagsFieldName="sourceStep.sourceData.amazonS3.pointsWithTags"
                 mapRestorePoint={(field, index) => (
                     <SourceRestorePoint
                         key={field.id}
@@ -188,7 +188,7 @@ function SourceRestorePoint({ index, isSharded, amazonS3Data }: SourceRestorePoi
     const { control } = useFormContext<FormData>();
     const { remove } = useFieldArray({
         control,
-        name: "sourceStep.sourceData.amazonS3.restorePoints",
+        name: "sourceStep.sourceData.amazonS3.pointsWithTags",
     });
 
     const asyncGetRestorePointsOptions = useAsyncDebounce(
@@ -219,7 +219,7 @@ function SourceRestorePoint({ index, isSharded, amazonS3Data }: SourceRestorePoi
                 true,
                 isSharded ? index : undefined
             );
-            return mapRestorePointDtoToSelectOptions(dto);
+            return restorePointUtils.mapToSelectOptions(dto);
         },
         [
             amazonS3Data.accessKey,
@@ -236,7 +236,7 @@ function SourceRestorePoint({ index, isSharded, amazonS3Data }: SourceRestorePoi
 
     return (
         <CreateDatabaseFromBackupRestorePoint
-            fieldName="sourceStep.sourceData.amazonS3.restorePoints"
+            fieldName="sourceStep.sourceData.amazonS3.pointsWithTags"
             index={index}
             remove={remove}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}

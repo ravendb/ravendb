@@ -6,7 +6,7 @@ import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { Col, Row } from "reactstrap";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
-import { mapRestorePointDtoToSelectOptions } from "components/pages/resources/databases/partials/create/formBackup/steps/source/backupSourceUtils";
+import { restorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/restorePointUtils";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
 import RestorePointsFields from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointsFields";
@@ -51,7 +51,7 @@ export default function BackupSourceLocal() {
             </Row>
             <RestorePointsFields
                 isSharded={isSharded}
-                restorePointsFieldName="sourceStep.sourceData.googleCloud.restorePoints"
+                pointsWithTagsFieldName="sourceStep.sourceData.googleCloud.pointsWithTags"
                 mapRestorePoint={(field, index) => (
                     <SourceRestorePoint
                         key={field.id}
@@ -80,7 +80,7 @@ function SourceRestorePoint({ index, directory, isSharded }: SourceRestorePointP
 
     const { remove } = useFieldArray({
         control,
-        name: "sourceStep.sourceData.local.restorePoints",
+        name: "sourceStep.sourceData.local.pointsWithTags",
     });
 
     const { resourcesService } = useServices();
@@ -93,14 +93,14 @@ function SourceRestorePoint({ index, directory, isSharded }: SourceRestorePointP
                 true,
                 isSharded ? index : undefined
             );
-            return mapRestorePointDtoToSelectOptions(dto);
+            return restorePointUtils.mapToSelectOptions(dto);
         },
         [directory, isSharded]
     );
 
     return (
         <CreateDatabaseFromBackupRestorePoint
-            fieldName="sourceStep.sourceData.local.restorePoints"
+            fieldName="sourceStep.sourceData.local.pointsWithTags"
             index={index}
             remove={remove}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}

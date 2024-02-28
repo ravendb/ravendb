@@ -5,13 +5,13 @@ import { CreateDatabaseFromBackupFormData as FormData } from "../../createDataba
 import { Icon } from "components/common/Icon";
 
 interface RestorePointsFieldsProps {
-    restorePointsFieldName: Extract<FieldPath<FormData>, `sourceStep.sourceData.${restoreSource}.restorePoints`>;
+    pointsWithTagsFieldName: Extract<FieldPath<FormData>, `sourceStep.sourceData.${restoreSource}.pointsWithTags`>;
     isSharded: boolean;
     mapRestorePoint: (field: FieldArrayWithId<FormData>, index: number) => ReactNode;
 }
 
 export default function RestorePointsFields({
-    restorePointsFieldName,
+    pointsWithTagsFieldName,
     isSharded,
     mapRestorePoint,
 }: RestorePointsFieldsProps) {
@@ -19,7 +19,7 @@ export default function RestorePointsFields({
 
     const { fields, append } = useFieldArray({
         control,
-        name: restorePointsFieldName,
+        name: pointsWithTagsFieldName,
     });
 
     return (

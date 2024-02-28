@@ -7,7 +7,7 @@ type GoogleCloudSettings = Raven.Client.Documents.Operations.Backups.GoogleCloud
 type BackupEncryptionSettings = Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings;
 type RestoreType = Raven.Client.Documents.Operations.Backups.RestoreType;
 
-const defaultRestorePoints: FormData["sourceStep"]["sourceData"][restoreSource]["restorePoints"] = [
+const defaultPointsWithTags: FormData["sourceStep"]["sourceData"][restoreSource]["pointsWithTags"] = [
     {
         restorePoint: null,
         nodeTag: "",
@@ -27,11 +27,11 @@ const defaultValues: FormData = {
         sourceData: {
             local: {
                 directory: "",
-                restorePoints: defaultRestorePoints,
+                pointsWithTags: defaultPointsWithTags,
             },
             cloud: {
                 link: "",
-                restorePoints: defaultRestorePoints,
+                pointsWithTags: defaultPointsWithTags,
                 encryptionKey: "",
                 awsSettings: null,
             },
@@ -44,20 +44,20 @@ const defaultValues: FormData = {
                 awsRegion: "",
                 bucketName: "",
                 remoteFolderName: "",
-                restorePoints: defaultRestorePoints,
+                pointsWithTags: defaultPointsWithTags,
             },
             azure: {
                 accountKey: "",
                 accountName: "",
                 container: "",
                 remoteFolderName: "",
-                restorePoints: defaultRestorePoints,
+                pointsWithTags: defaultPointsWithTags,
             },
             googleCloud: {
                 bucketName: "",
                 credentialsJson: "",
                 remoteFolderName: "",
-                restorePoints: defaultRestorePoints,
+                pointsWithTags: defaultPointsWithTags,
             },
         },
     },
@@ -96,7 +96,7 @@ function getEncryptionDto(
     let encryptionSettings: BackupEncryptionSettings = null;
     let databaseEncryptionKey = null;
 
-    const restorePoint = selectedSourceData.restorePoints[0].restorePoint;
+    const restorePoint = selectedSourceData.pointsWithTags[0].restorePoint;
 
     if (restorePoint.isEncrypted) {
         if (restorePoint.isSnapshotRestore) {
@@ -152,19 +152,19 @@ function getSelectedSourceDto(
         dto["LastFileNameToRestore"] = null;
         dto["ShardRestoreSettings"] = {
             Shards: Object.fromEntries(
-                selectedSourceData.restorePoints.map((restorePoint, index) => [
+                selectedSourceData.pointsWithTags.map((pointWithTag, index) => [
                     index,
                     {
-                        FolderName: restorePoint.restorePoint.location,
-                        LastFileNameToRestore: restorePoint.restorePoint.fileName,
-                        NodeTag: restorePoint.nodeTag,
+                        FolderName: pointWithTag.restorePoint.location,
+                        LastFileNameToRestore: pointWithTag.restorePoint.fileName,
+                        NodeTag: pointWithTag.nodeTag,
                         ShardNumber: index,
                     },
                 ])
             ),
         };
     } else {
-        dto["LastFileNameToRestore"] = selectedSourceData.restorePoints[0].restorePoint.fileName;
+        dto["LastFileNameToRestore"] = selectedSourceData.pointsWithTags[0].restorePoint.fileName;
         dto["ShardRestoreSettings"] = null;
     }
 
@@ -183,7 +183,7 @@ function getSourceDto(
 
             return {
                 ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),
-                BackupLocation: isSharded ? null : data.restorePoints[0].restorePoint.location,
+                BackupLocation: isSharded ? null : data.pointsWithTags[0].restorePoint.location,
             };
         }
         case "cloud": {

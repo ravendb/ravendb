@@ -118,7 +118,7 @@ function IsEncryptedField() {
     const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
 
     const isRestorePointEncrypted = sourceType
-        ? sourceData[sourceType].restorePoints[0].restorePoint?.isEncrypted
+        ? sourceData[sourceType].pointsWithTags[0].restorePoint?.isEncrypted
         : false;
 
     const isEncryptionDisabled = !hasEncryption || !isSecureServer || isRestorePointEncrypted || formState.isSubmitting;
