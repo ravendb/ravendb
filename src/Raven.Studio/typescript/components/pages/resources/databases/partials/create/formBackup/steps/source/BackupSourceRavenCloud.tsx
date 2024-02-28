@@ -138,12 +138,12 @@ function RavenCloudSourceRestorePoint({ index, isSharded, link }: RavenCloudSour
 
             const dto = await resourcesService.getRestorePoints_S3Backup(
                 {
-                    AwsSessionToken: _.trim(credentials.AwsSessionToken),
-                    AwsAccessKey: _.trim(credentials.AwsAccessKey),
-                    AwsSecretKey: _.trim(credentials.AwsSecretKey),
-                    AwsRegionName: _.trim(credentials.AwsRegionName),
-                    RemoteFolderName: _.trim(credentials.RemoteFolderName),
-                    BucketName: _.trim(credentials.BucketName),
+                    AwsSessionToken: credentials.AwsSessionToken,
+                    AwsAccessKey: credentials.AwsAccessKey,
+                    AwsSecretKey: credentials.AwsSecretKey,
+                    AwsRegionName: credentials.AwsRegionName,
+                    RemoteFolderName: credentials.RemoteFolderName,
+                    BucketName: credentials.BucketName,
                     Disabled: false,
                     GetBackupConfigurationScript: null,
                     CustomServerUrl: null, // TODO RavenDB-14716

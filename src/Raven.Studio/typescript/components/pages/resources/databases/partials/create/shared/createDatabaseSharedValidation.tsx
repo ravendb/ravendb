@@ -7,6 +7,8 @@ export const dataDirectoryStepSchema = yup.object({
         then: (schema) =>
             schema
                 .required()
+                .trim()
+                .strict()
                 .max(248)
                 .test(
                     "forbidden-characters",
