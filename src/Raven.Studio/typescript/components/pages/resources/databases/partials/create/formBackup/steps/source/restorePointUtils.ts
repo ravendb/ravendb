@@ -1,9 +1,9 @@
 import generalUtils from "common/generalUtils";
 import { SelectOption } from "components/common/select/Select";
-import { RestorePoint } from "components/models/common";
+import { RestorePoint } from "components/pages/resources/databases/partials/create/formBackup/createDatabaseFromBackupValidation";
 import moment from "moment";
 
-export function mapRestorePointFromDto(dto: Raven.Server.Documents.PeriodicBackup.Restore.RestorePoint): RestorePoint {
+function mapFromDto(dto: Raven.Server.Documents.PeriodicBackup.Restore.RestorePoint): RestorePoint {
     let backupType = "";
     if (dto.IsSnapshotRestore) {
         if (dto.IsIncremental) {
@@ -37,7 +37,7 @@ interface RestorePointGroupedOption {
     options: SelectOption<RestorePoint>[];
 }
 
-export function mapRestorePointDtoToSelectOptions(
+function mapToSelectOptions(
     dto: Raven.Server.Documents.PeriodicBackup.Restore.RestorePoints
 ): RestorePointGroupedOption[] {
     const groups: RestorePointGroupedOption[] = [];
@@ -51,7 +51,7 @@ export function mapRestorePointDtoToSelectOptions(
 
         const group = groups.find((x) => x.label === databaseName);
 
-        const restorePointValue = mapRestorePointFromDto(dtoRestorePoint);
+        const restorePointValue = mapFromDto(dtoRestorePoint);
         group.options.push({
             value: restorePointValue,
             label: `${restorePointValue.dateTime}, ${restorePointValue.backupType} Backup`,
@@ -60,3 +60,7 @@ export function mapRestorePointDtoToSelectOptions(
 
     return groups;
 }
+
+export const restorePointUtils = {
+    mapToSelectOptions,
+};

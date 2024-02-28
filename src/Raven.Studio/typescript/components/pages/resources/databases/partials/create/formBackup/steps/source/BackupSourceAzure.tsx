@@ -4,7 +4,7 @@ import { CreateDatabaseFromBackupFormData as FormData } from "../../createDataba
 import { useFormContext, useWatch, useFieldArray } from "react-hook-form";
 import { useServices } from "components/hooks/useServices";
 import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
-import { mapRestorePointDtoToSelectOptions } from "components/pages/resources/databases/partials/create/formBackup/steps/source/backupSourceUtils";
+import { restorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/restorePointUtils";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
 import { FormInput } from "components/common/Form";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
@@ -81,7 +81,7 @@ export default function BackupSourceAzure() {
             </Row>
             <RestorePointsFields
                 isSharded={isSharded}
-                restorePointsFieldName="sourceStep.sourceData.azure.restorePoints"
+                pointsWithTagsFieldName="sourceStep.sourceData.azure.pointsWithTags"
                 mapRestorePoint={(field, index) => (
                     <SourceRestorePoint key={field.id} index={index} azureData={azureData} isSharded={isSharded} />
                 )}
@@ -106,7 +106,7 @@ function SourceRestorePoint({ index, azureData, isSharded }: SourceRestorePointP
     const { control } = useFormContext<FormData>();
     const { remove } = useFieldArray({
         control,
-        name: "sourceStep.sourceData.azure.restorePoints",
+        name: "sourceStep.sourceData.azure.pointsWithTags",
     });
 
     const asyncGetRestorePointsOptions = useAsyncDebounce(
@@ -124,14 +124,14 @@ function SourceRestorePoint({ index, azureData, isSharded }: SourceRestorePointP
                 true,
                 isSharded ? index : undefined
             );
-            return mapRestorePointDtoToSelectOptions(dto);
+            return restorePointUtils.mapToSelectOptions(dto);
         },
         [azureData.accountName, azureData.accountKey, azureData.container, azureData.remoteFolderName, isSharded]
     );
 
     return (
         <CreateDatabaseFromBackupRestorePoint
-            fieldName="sourceStep.sourceData.azure.restorePoints"
+            fieldName="sourceStep.sourceData.azure.pointsWithTags"
             index={index}
             remove={remove}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}

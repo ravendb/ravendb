@@ -12,7 +12,7 @@ interface EncryptionFieldProps {
 export default function EncryptionField({ selectedSourceData, encryptionKeyFieldName }: EncryptionFieldProps) {
     const { control } = useFormContext<FormData>();
 
-    const isEncrypted = selectedSourceData.restorePoints[0].restorePoint?.isEncrypted;
+    const isEncrypted = selectedSourceData.pointsWithTags[0].restorePoint?.isEncrypted;
 
     if (!isEncrypted) {
         return null;
