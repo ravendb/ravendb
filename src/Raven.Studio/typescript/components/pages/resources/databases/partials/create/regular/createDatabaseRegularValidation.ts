@@ -8,7 +8,6 @@ const basicInfoStepSchema = yup.object({
         .when("$usedDatabaseNames", ([usedDatabaseNames], schema) =>
             schema.notOneOf(usedDatabaseNames, "Database already exists")
         ),
-
     isEncrypted: yup.boolean(),
 });
 
@@ -48,6 +47,18 @@ const manualNodeSelectionStepSchema = yup.object({
                     }
                     return value.some((x) => x);
                 })
+                .test(
+                    "invalid-shard-topology",
+                    "Invalid shard topology - replicas must reside on different nodes",
+                    (value) => {
+                        if (!value) {
+                            return true;
+                        }
+
+                        const duplicates = value.filter((item, index) => value.indexOf(item) != index);
+                        return duplicates.length === 0;
+                    }
+                )
         ),
 });
 

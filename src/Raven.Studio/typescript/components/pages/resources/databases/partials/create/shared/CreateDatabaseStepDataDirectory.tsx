@@ -16,7 +16,7 @@ interface CreateDatabaseStepPathProps {
 }
 
 export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFolder }: CreateDatabaseStepPathProps) {
-    const { control } = useFormContext<CreateDatabaseRegularFormData | CreateDatabaseFromBackupFormData>();
+    const { control, trigger } = useFormContext<CreateDatabaseRegularFormData | CreateDatabaseFromBackupFormData>();
     const {
         basicInfoStep: { databaseName },
         dataDirectoryStep,
@@ -28,16 +28,28 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
 
     const asyncGetFolderOptions = useAsyncDebounce(
         async (path, isBackupFolder) => {
+            if (!path || !(await trigger("dataDirectoryStep.directory"))) {
+                return [];
+            }
+
             const dto = await resourcesService.getFolderPathOptions_ServerLocal(path, isBackupFolder);
             return dto?.List.map((x) => ({ value: x, label: x }));
         },
         [dataDirectoryStep.directory, isBackupFolder]
     );
 
-    const asyncGetDatabaseLocation = useAsyncDebounce(resourcesService.getDatabaseLocation, [
-        databaseName,
-        dataDirectoryStep.directory,
-    ]);
+    const asyncGetDatabaseLocation = useAsyncDebounce(
+        async (databaseName, directory) => {
+            if (!directory || !(await trigger("dataDirectoryStep.directory"))) {
+                return {
+                    List: [],
+                };
+            }
+
+            return await resourcesService.getDatabaseLocation(databaseName, directory);
+        },
+        [databaseName, dataDirectoryStep.directory]
+    );
 
     return (
         <div>
