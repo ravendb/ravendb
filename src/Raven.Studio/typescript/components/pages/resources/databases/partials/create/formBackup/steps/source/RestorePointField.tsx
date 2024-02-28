@@ -11,7 +11,11 @@ import { components } from "react-select";
 import { Icon } from "components/common/Icon";
 import { GroupHeadingProps, OptionProps } from "react-select";
 import { Row, Button, Col } from "reactstrap";
-import { CreateDatabaseFromBackupFormData as FormData, RestorePoint } from "../../createDatabaseFromBackupValidation";
+import {
+    CreateDatabaseFromBackupFormData as FormData,
+    RestorePoint,
+    RestoreSource,
+} from "../../createDatabaseFromBackupValidation";
 import { FieldPath, useFormContext, useWatch } from "react-hook-form";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useAppSelector } from "components/store";
@@ -23,7 +27,7 @@ interface GroupedOption {
 
 interface CreateDatabaseFromBackupRestorePointProps {
     index: number;
-    fieldName: Extract<FieldPath<FormData>, `sourceStep.sourceData.${restoreSource}.pointsWithTags`>;
+    fieldName: Extract<FieldPath<FormData>, `sourceStep.sourceData.${RestoreSource}.pointsWithTags`>;
     remove: (index: number) => void;
     restorePointsOptions: GroupedOption[];
     isLoading?: boolean;

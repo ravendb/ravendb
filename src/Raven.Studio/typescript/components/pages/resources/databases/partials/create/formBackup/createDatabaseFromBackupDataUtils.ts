@@ -1,5 +1,5 @@
 import { CreateDatabaseFromBackupDto } from "commands/resources/restoreDatabaseFromBackupCommand";
-import { CreateDatabaseFromBackupFormData as FormData } from "./createDatabaseFromBackupValidation";
+import { CreateDatabaseFromBackupFormData as FormData, RestoreSource } from "./createDatabaseFromBackupValidation";
 import assertUnreachable from "components/utils/assertUnreachable";
 type S3Settings = Raven.Client.Documents.Operations.Backups.S3Settings;
 type AzureSettings = Raven.Client.Documents.Operations.Backups.AzureSettings;
@@ -7,7 +7,7 @@ type GoogleCloudSettings = Raven.Client.Documents.Operations.Backups.GoogleCloud
 type BackupEncryptionSettings = Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings;
 type RestoreType = Raven.Client.Documents.Operations.Backups.RestoreType;
 
-const defaultPointsWithTags: FormData["sourceStep"]["sourceData"][restoreSource]["pointsWithTags"] = [
+const defaultPointsWithTags: FormData["sourceStep"]["sourceData"][RestoreSource]["pointsWithTags"] = [
     {
         restorePoint: null,
         nodeTag: "",
@@ -29,7 +29,7 @@ const defaultValues: FormData = {
                 directory: "",
                 pointsWithTags: defaultPointsWithTags,
             },
-            cloud: {
+            ravenCloud: {
                 link: "",
                 pointsWithTags: defaultPointsWithTags,
                 encryptionKey: "",
@@ -71,11 +71,11 @@ const defaultValues: FormData = {
     },
 };
 
-function getRestoreDtoType(sourceType: restoreSource): RestoreType {
+function getRestoreDtoType(sourceType: RestoreSource): RestoreType {
     switch (sourceType) {
         case "local":
             return "Local";
-        case "cloud": // raven cloud stores backups only on S3
+        case "ravenCloud": // raven cloud stores backups only on S3
         case "amazonS3":
             return "S3";
         case "azure":
@@ -89,7 +89,7 @@ function getRestoreDtoType(sourceType: restoreSource): RestoreType {
 
 // TODO maybe refactor to get rid of nesting? this is copy-paste from 5.4
 function getEncryptionDto(
-    selectedSourceData: FormData["sourceStep"]["sourceData"][restoreSource],
+    selectedSourceData: FormData["sourceStep"]["sourceData"][RestoreSource],
     encryptionDataIsEncrypted: boolean,
     encryptionDataKey: string
 ): Pick<CreateDatabaseFromBackupDto, "EncryptionKey" | "BackupEncryptionSettings"> {
@@ -138,7 +138,7 @@ type SelectedSourceDto = Pick<
 
 function getSelectedSourceDto(
     isSharded: boolean,
-    selectedSourceData: FormData["sourceStep"]["sourceData"][restoreSource],
+    selectedSourceData: FormData["sourceStep"]["sourceData"][RestoreSource],
     encryptionDataIsEncrypted: boolean,
     encryptionDataKey: string
 ): SelectedSourceDto {
@@ -186,8 +186,8 @@ function getSourceDto(
                 BackupLocation: isSharded ? null : data.pointsWithTags[0].restorePoint.location,
             };
         }
-        case "cloud": {
-            const data = sourceStep.sourceData.cloud;
+        case "ravenCloud": {
+            const data = sourceStep.sourceData.ravenCloud;
 
             return {
                 ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),

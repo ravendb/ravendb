@@ -13,19 +13,21 @@ import RestorePointsFields from "components/pages/resources/databases/partials/c
 import moment from "moment";
 import generalUtils from "common/generalUtils";
 
-export default function BackupSourceCloud() {
+export default function BackupSourceRavenCloud() {
     const { control } = useFormContext<FormData>();
 
     const {
         basicInfoStep: { isSharded },
         sourceStep: {
-            sourceData: { cloud: cloudData },
+            sourceData: { ravenCloud: ravenCloudData },
         },
     } = useWatch({
         control,
     });
 
-    const expireDateMoment = cloudData.awsSettings?.expireDate ? moment.utc(cloudData.awsSettings.expireDate) : null;
+    const expireDateMoment = ravenCloudData.awsSettings?.expireDate
+        ? moment.utc(ravenCloudData.awsSettings.expireDate)
+        : null;
 
     return (
         <>
@@ -37,7 +39,7 @@ export default function BackupSourceCloud() {
                     <FormInput
                         type="text"
                         control={control}
-                        name="sourceStep.sourceData.cloud.link"
+                        name="sourceStep.sourceData.ravenCloud.link"
                         placeholder="Enter backup link generated in RavenDB Cloud"
                     />
                 </Col>
@@ -57,14 +59,19 @@ export default function BackupSourceCloud() {
             )}
             <RestorePointsFields
                 isSharded={isSharded}
-                pointsWithTagsFieldName="sourceStep.sourceData.cloud.pointsWithTags"
+                pointsWithTagsFieldName="sourceStep.sourceData.ravenCloud.pointsWithTags"
                 mapRestorePoint={(field, index) => (
-                    <CloudSourceRestorePoint key={field.id} index={index} isSharded={isSharded} link={cloudData.link} />
+                    <RavenCloudSourceRestorePoint
+                        key={field.id}
+                        index={index}
+                        isSharded={isSharded}
+                        link={ravenCloudData.link}
+                    />
                 )}
             />
             <EncryptionField
-                encryptionKeyFieldName="sourceStep.sourceData.cloud.encryptionKey"
-                selectedSourceData={cloudData}
+                encryptionKeyFieldName="sourceStep.sourceData.ravenCloud.encryptionKey"
+                selectedSourceData={ravenCloudData}
             />
         </>
     );
@@ -96,13 +103,13 @@ function LinkLabel() {
     );
 }
 
-interface CloudSourceRestorePointProps {
+interface RavenCloudSourceRestorePointProps {
     index: number;
     isSharded: boolean;
     link: string;
 }
 
-function CloudSourceRestorePoint({ index, isSharded, link }: CloudSourceRestorePointProps) {
+function RavenCloudSourceRestorePoint({ index, isSharded, link }: RavenCloudSourceRestorePointProps) {
     const { resourcesService } = useServices();
     const { control, setValue } = useFormContext<FormData>();
 
@@ -119,7 +126,7 @@ function CloudSourceRestorePoint({ index, isSharded, link }: CloudSourceRestoreP
 
             const credentials = await resourcesService.getCloudBackupCredentialsFromLink(link);
 
-            setValue("sourceStep.sourceData.cloud.awsSettings", {
+            setValue("sourceStep.sourceData.ravenCloud.awsSettings", {
                 sessionToken: credentials.AwsSessionToken,
                 accessKey: credentials.AwsAccessKey,
                 secretKey: credentials.AwsSecretKey,
@@ -152,7 +159,7 @@ function CloudSourceRestorePoint({ index, isSharded, link }: CloudSourceRestoreP
 
     return (
         <CreateDatabaseFromBackupRestorePoint
-            fieldName="sourceStep.sourceData.cloud.pointsWithTags"
+            fieldName="sourceStep.sourceData.ravenCloud.pointsWithTags"
             index={index}
             remove={remove}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}

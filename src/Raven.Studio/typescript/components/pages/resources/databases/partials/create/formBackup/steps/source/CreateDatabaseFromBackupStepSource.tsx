@@ -4,10 +4,10 @@ import { OptionWithIcon, SingleValueWithIcon, SelectOptionWithIcon } from "compo
 import React from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Collapse, Row, Col, Label } from "reactstrap";
-import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
+import { CreateDatabaseFromBackupFormData as FormData, RestoreSource } from "../../createDatabaseFromBackupValidation";
 import BackupSourceLocal from "./BackupSourceLocal";
 import BackupSourceAmazonS3 from "./BackupSourceAmazonS3";
-import BackupSourceCloud from "./BackupSourceCloud";
+import BackupSourceRavenCloud from "./BackupSourceRavenCloud";
 import BackupSourceAzure from "./BackupSourceAzure";
 import BackupSourceGoogleCloud from "components/pages/resources/databases/partials/create/formBackup/steps/source/BackupSourceGoogleCloud";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
@@ -55,7 +55,7 @@ export default function CreateDatabaseFromBackupStepSource() {
             </Row>
             <Collapse isOpen={sourceType != null}>
                 {sourceType === "local" && <BackupSourceLocal />}
-                {sourceType === "cloud" && <BackupSourceCloud />}
+                {sourceType === "ravenCloud" && <BackupSourceRavenCloud />}
                 {sourceType === "amazonS3" && <BackupSourceAmazonS3 />}
                 {sourceType === "azure" && <BackupSourceAzure />}
                 {sourceType === "googleCloud" && <BackupSourceGoogleCloud />}
@@ -78,14 +78,14 @@ export default function CreateDatabaseFromBackupStepSource() {
     );
 }
 
-const sourceOptions: SelectOptionWithIcon<restoreSource>[] = [
+const sourceOptions: SelectOptionWithIcon<RestoreSource>[] = [
     {
         value: "local",
         label: "Local Server Directory",
         icon: "storage",
     },
     {
-        value: "cloud",
+        value: "ravenCloud",
         label: "RavenDB Cloud",
         icon: "cloud",
     },
