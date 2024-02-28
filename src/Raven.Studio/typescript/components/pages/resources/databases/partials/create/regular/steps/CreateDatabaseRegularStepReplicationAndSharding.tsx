@@ -31,7 +31,8 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
         control,
     });
 
-    const availableNodesCount = useAppSelector(clusterSelectors.allNodes).length;
+    const nodeTagsCount = useAppSelector(clusterSelectors.allNodes).length;
+    const availableNodesCount = nodeTagsCount || 1;
 
     const maxReplicationFactor = isSharded
         ? Math.min(maxReplicationFactorForSharding, availableNodesCount)
@@ -233,11 +234,28 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                     </ConditionalPopover>
                 </Col>
                 <Col>
-                    <FormSwitch control={control} name="replicationAndShardingStep.isManualReplication" color="primary">
-                        Set replication nodes manually
-                        <br />
-                        <small className="text-muted">Select nodes from the list in the next step</small>
-                    </FormSwitch>
+                    <ConditionalPopover
+                        conditions={{
+                            isActive: nodeTagsCount === 0,
+                            message: (
+                                <span>
+                                    Please, first <a href={appUrl.forCluster()}>Bootstrap a Cluster</a>.
+                                </span>
+                            ),
+                        }}
+                        popoverPlacement="left"
+                    >
+                        <FormSwitch
+                            control={control}
+                            name="replicationAndShardingStep.isManualReplication"
+                            color="primary"
+                            disabled={nodeTagsCount === 0}
+                        >
+                            Set replication nodes manually
+                            <br />
+                            <small className="text-muted">Select nodes from the list in the next step</small>
+                        </FormSwitch>
+                    </ConditionalPopover>
                 </Col>
             </Row>
         </div>

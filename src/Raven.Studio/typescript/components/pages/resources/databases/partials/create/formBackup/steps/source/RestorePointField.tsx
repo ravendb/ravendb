@@ -44,12 +44,8 @@ export default function CreateDatabaseFromBackupRestorePoint({
         control,
     });
 
-    const nodeTagOptions: SelectOptionWithIcon[] = useAppSelector(clusterSelectors.allNodeTags).map((tag) => ({
-        value: tag,
-        label: tag,
-        icon: "node",
-        iconColor: "node",
-    }));
+    const allNodeTags = useAppSelector(clusterSelectors.allNodeTags);
+    const nodeTagOptions = getNodeTagOptions(allNodeTags);
 
     const flatOptionsCount = restorePointsOptions.reduce((acc, curr) => acc + curr.options.length, 0);
 
@@ -108,6 +104,26 @@ export default function CreateDatabaseFromBackupRestorePoint({
             </Col>
         </Row>
     );
+}
+
+function getNodeTagOptions(allNodeTags: string[]): SelectOptionWithIcon[] {
+    if (allNodeTags?.length > 0) {
+        return allNodeTags.map((tag) => ({
+            value: tag,
+            label: tag,
+            icon: "node",
+            iconColor: "node",
+        }));
+    }
+
+    return [
+        {
+            value: "?",
+            label: "?",
+            icon: "node",
+            iconColor: "node",
+        },
+    ];
 }
 
 const RestorePointGroupHeading = (props: GroupHeadingProps<SelectOption<RestorePoint>>) => {
