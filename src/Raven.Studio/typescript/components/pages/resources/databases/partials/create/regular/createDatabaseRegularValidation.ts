@@ -20,7 +20,7 @@ const replicationAndShardingStepSchema = yup.object({
         .nullable()
         .when("$isSharded", {
             is: true,
-            then: (schema) => schema.integer().positive().required(),
+            then: (schema) => schema.integer().positive().max(100).required(),
         }),
     isDynamicDistribution: yup.boolean(),
     isManualReplication: yup.boolean(),
