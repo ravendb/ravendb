@@ -62,7 +62,7 @@ import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCom
 import saveUnusedDatabaseIDsCommand = require("commands/database/settings/saveUnusedDatabaseIDsCommand");
 import { CreateDatabaseDto, createDatabaseCommand } from "commands/resources/createDatabaseCommand";
 import { createDatabaseCommand } from "commands/resources/createDatabaseCommand";
-import restoreDatabaseFromBackupCommand = require("commands/resources/restoreDatabaseFromBackupCommand");
+import { restoreDatabaseFromBackupCommand } from "commands/resources/restoreDatabaseFromBackupCommand";
 import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
 
 export default class DatabasesService {
