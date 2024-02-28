@@ -63,7 +63,7 @@ import getConnectionStringsCommand = require("commands/database/settings/getConn
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import { createDatabaseCommand } from "commands/resources/createDatabaseCommand";
-import restoreDatabaseFromBackupCommand = require("commands/resources/restoreDatabaseFromBackupCommand");
+import { restoreDatabaseFromBackupCommand } from "commands/resources/restoreDatabaseFromBackupCommand";
 import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
 
 export default class DatabasesService {
