@@ -23,7 +23,9 @@ export function ConditionalPopover(props: PropsWithChildren<ConditionalPopoverPr
 
     return (
         <>
-            <div id={containerId}>{children}</div>
+            <div id={containerId} className="w-fit-content">
+                {children}
+            </div>
 
             {message && (
                 <UncontrolledPopover target={containerId} trigger="hover" placement={popoverPlacement} className="bs5">

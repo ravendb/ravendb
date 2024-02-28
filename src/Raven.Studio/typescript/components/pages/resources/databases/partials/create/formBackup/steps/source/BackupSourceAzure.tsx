@@ -113,10 +113,10 @@ function SourceRestorePoint({ index, azureData, isSharded }: SourceRestorePointP
         async (accountName, accountKey, container, remoteFolderName, isSharded) => {
             const dto = await resourcesService.getRestorePoints_AzureBackup(
                 {
-                    AccountKey: _.trim(accountKey),
-                    AccountName: _.trim(accountName),
-                    StorageContainer: _.trim(container),
-                    RemoteFolderName: _.trim(remoteFolderName),
+                    AccountKey: accountKey,
+                    AccountName: accountName,
+                    StorageContainer: container,
+                    RemoteFolderName: remoteFolderName,
                     Disabled: false,
                     GetBackupConfigurationScript: null,
                     SasToken: null,

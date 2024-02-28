@@ -35,7 +35,7 @@ function mapToDto(formValues: FormData, allNodeTags: string[]): CreateDatabaseDt
     const Settings: CreateDatabaseDto["Settings"] = dataDirectoryStep.isDefault
         ? {}
         : {
-              DataDir: _.trim(dataDirectoryStep.directory),
+              DataDir: dataDirectoryStep.directory,
           };
 
     const Topology: CreateDatabaseDto["Topology"] = replicationAndShardingStep.isSharded

@@ -205,13 +205,13 @@ function SourceRestorePoint({ index, isSharded, amazonS3Data }: SourceRestorePoi
         ) => {
             const dto = await resourcesService.getRestorePoints_S3Backup(
                 {
-                    AwsAccessKey: _.trim(accessKey),
-                    AwsSecretKey: _.trim(secretKey),
-                    AwsRegionName: _.trim(awsRegion),
-                    BucketName: _.trim(bucketName),
-                    RemoteFolderName: _.trim(remoteFolderName),
+                    AwsAccessKey: accessKey,
+                    AwsSecretKey: secretKey,
+                    AwsRegionName: awsRegion,
+                    BucketName: bucketName,
+                    RemoteFolderName: remoteFolderName,
                     AwsSessionToken: "",
-                    CustomServerUrl: isUseCustomHost ? _.trim(customHost) : null,
+                    CustomServerUrl: isUseCustomHost ? customHost : null,
                     ForcePathStyle: isUseCustomHost && isForcePathStyle,
                     Disabled: false,
                     GetBackupConfigurationScript: null,

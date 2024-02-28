@@ -28,7 +28,6 @@ import StepSource from "./steps/source/CreateDatabaseFromBackupStepSource";
 import { tryHandleSubmit } from "components/utils/common";
 import { useServices } from "components/hooks/useServices";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import databasesManager from "common/shell/databasesManager";
 import { useSteps } from "components/common/steps/useSteps";
 import { createDatabaseFromBackupDataUtils } from "components/pages/resources/databases/partials/create/formBackup/createDatabaseFromBackupDataUtils";
 import notificationCenter from "common/notifications/notificationCenter";
@@ -104,7 +103,8 @@ export default function CreateDatabaseFromBackup({
                 return;
             }
 
-            databasesManager.default.activateAfterCreation(formValues.basicInfoStep.databaseName);
+            // It causes errors when fetching stats. Commented for now
+            // databasesManager.default.activateAfterCreation(formValues.basicInfoStep.databaseName);
 
             const resultDto = await databasesService.restoreDatabaseFromBackup(
                 createDatabaseFromBackupDataUtils.mapToDto(formValues)
