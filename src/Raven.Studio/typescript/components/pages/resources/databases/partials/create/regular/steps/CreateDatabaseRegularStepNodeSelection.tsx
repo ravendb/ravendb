@@ -93,6 +93,7 @@ export default function CreateDatabaseRegularStepNodeSelection() {
                                                 Option: OptionWithIcon,
                                                 SingleValue: SingleValueWithIcon,
                                             }}
+                                            defaultValue={null}
                                         ></FormSelect>
                                     </td>
                                 ))}

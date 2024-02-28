@@ -55,7 +55,9 @@ const manualNodeSelectionStepSchema = yup.object({
                             return true;
                         }
 
-                        const duplicates = value.filter((item, index) => value.indexOf(item) != index);
+                        const duplicates = value.filter(
+                            (item, index) => item != null && item !== "None" && value.indexOf(item) != index
+                        );
                         return duplicates.length === 0;
                     }
                 )
