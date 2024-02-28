@@ -1,5 +1,13 @@
 import { useState } from "react";
 
+interface ValidationResult {
+    isValid: boolean;
+}
+
+export interface StepInRangeValidationResult extends ValidationResult {
+    invalidStep?: number;
+}
+
 export function useSteps(stepsCount: number) {
     const [currentStep, setCurrentStep] = useState(0);
 
@@ -22,18 +30,27 @@ export function useSteps(stepsCount: number) {
         }
     };
 
-    const goToStepWithValidation = async (step: number, validateStep: () => Promise<boolean>) => {
+    const goToStepWithValidation = async (
+        step: number,
+        validateStepsInRange: () => Promise<StepInRangeValidationResult>
+    ) => {
         if (step <= currentStep) {
             goToStep(step);
         }
 
-        if (await validateStep()) {
+        const result = await validateStepsInRange();
+
+        if (result.isValid) {
             goToStep(step);
+        } else {
+            goToStep(result.invalidStep);
         }
     };
 
-    const nextStepWithValidation = async (validateStep: () => Promise<boolean>) => {
-        if (await validateStep()) {
+    const nextStepWithValidation = async (validateStep: () => Promise<ValidationResult>) => {
+        const result = await validateStep();
+
+        if (result.isValid) {
             nextStep();
         }
     };
