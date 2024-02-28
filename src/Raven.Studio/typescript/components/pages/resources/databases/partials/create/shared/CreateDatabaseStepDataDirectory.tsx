@@ -92,7 +92,7 @@ function PathInfo({
     return (
         <Alert color="info" className="mt-2">
             {filteredLocations.map((location) => (
-                <div key={location.FullPath}>
+                <div key={`${location.NodeTag}-${location.FullPath}`}>
                     <small>
                         <span>
                             Node tag: <strong>{location.NodeTag}</strong>

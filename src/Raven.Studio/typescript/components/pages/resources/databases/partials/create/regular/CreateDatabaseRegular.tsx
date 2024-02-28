@@ -77,18 +77,21 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
     );
 
     const activeSteps = getActiveStepsList(formValues, formState.errors, asyncDatabaseNameValidation.loading);
+    const stepViews = getStepViews(control, formValues, setValue, trigger);
     const { currentStep, isFirstStep, isLastStep, goToStepWithValidation, nextStepWithValidation, prevStep } = useSteps(
         activeSteps.length
     );
-    const stepViews = getStepViews(control, formValues, setValue, trigger);
 
-    const stepValidation = createDatabaseUtils.getStepValidation(
-        activeSteps[currentStep].id,
-        trigger,
-        asyncDatabaseNameValidation,
-        formValues.basicInfoStep.databaseName
-    );
-
+    const validateToTargetStep = (targetStep: number) => {
+        return createDatabaseUtils.getStepInRangeValidation({
+            currentStep,
+            targetStep,
+            activeStepIds: activeSteps.map((x) => x.id),
+            trigger,
+            asyncDatabaseNameValidation,
+            databaseName: formValues.basicInfoStep.databaseName,
+        });
+    };
     const { reportEvent } = useEventsCollector();
 
     const onFinish: SubmitHandler<FormData> = async (formValues) => {
@@ -117,7 +120,7 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
                         <Steps
                             current={currentStep}
                             steps={activeSteps.map(createDatabaseUtils.mapToStepItem)}
-                            onClick={(step) => goToStepWithValidation(step, stepValidation)}
+                            onClick={(step) => goToStepWithValidation(step, validateToTargetStep(step - 1))}
                             className="flex-grow me-4"
                         ></Steps>
                         <CloseButton onClick={closeModal} />
@@ -158,7 +161,7 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
                             type="button"
                             color="primary"
                             className="rounded-pill"
-                            onClick={() => nextStepWithValidation(stepValidation)}
+                            onClick={() => nextStepWithValidation(validateToTargetStep(currentStep))}
                             disabled={asyncDatabaseNameValidation.loading}
                         >
                             Next <Icon icon="arrow-thin-right" margin="ms-1" />

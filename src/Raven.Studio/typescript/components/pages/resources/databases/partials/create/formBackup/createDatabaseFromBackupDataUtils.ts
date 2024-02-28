@@ -87,7 +87,7 @@ function getRestoreDtoType(sourceType: restoreSource): RestoreType {
     }
 }
 
-// TODO maybe refactor? this is copy-paste from 5.4
+// TODO maybe refactor to get rid of nesting? this is copy-paste from 5.4
 function getEncryptionDto(
     selectedSourceData: FormData["sourceStep"]["sourceData"][restoreSource],
     encryptionDataIsEncrypted: boolean,

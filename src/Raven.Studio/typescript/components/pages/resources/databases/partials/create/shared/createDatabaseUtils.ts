@@ -1,4 +1,5 @@
 import { StepItem } from "components/common/steps/Steps";
+import { StepInRangeValidationResult } from "components/common/steps/useSteps";
 import { CreateDatabaseFromBackupFormData } from "components/pages/resources/databases/partials/create/formBackup/createDatabaseFromBackupValidation";
 import { CreateDatabaseRegularFormData } from "components/pages/resources/databases/partials/create/regular/createDatabaseRegularValidation";
 import moment from "moment";
@@ -18,12 +19,27 @@ function getEncryptionData(databaseName: string, encryptionKey: string) {
 
 type FormData = CreateDatabaseFromBackupFormData | CreateDatabaseRegularFormData;
 
-function getStepValidation(
-    stepId: Path<FormData>,
-    trigger: UseFormTrigger<FormData>,
-    asyncDatabaseNameValidation: UseAsyncReturn<boolean, [string]>,
-    databaseName: string
-) {
+export interface CreateDatabaseStep<T extends FormData> {
+    id: keyof T;
+    label: string;
+    active: boolean;
+    isInvalid?: boolean;
+    isLoading?: boolean;
+}
+
+interface GetStepValidationProps<T extends FormData> {
+    stepId: Path<T>;
+    trigger: UseFormTrigger<T>;
+    asyncDatabaseNameValidation: UseAsyncReturn<boolean, [string]>;
+    databaseName: string;
+}
+
+function getStepValidation<T extends FormData>({
+    stepId,
+    trigger,
+    asyncDatabaseNameValidation,
+    databaseName,
+}: GetStepValidationProps<T>) {
     if (stepId === "basicInfoStep") {
         return async () => {
             const basicInfoResult = await trigger(stepId);
@@ -35,12 +51,45 @@ function getStepValidation(
     return async () => await trigger(stepId);
 }
 
-export interface CreateDatabaseStep<T extends FormData> {
-    id: keyof T;
-    label: string;
-    active: boolean;
-    isInvalid?: boolean;
-    isLoading?: boolean;
+interface GetStepInRangeValidationProps<T extends FormData> {
+    currentStep: number;
+    targetStep: number;
+    activeStepIds: Extract<Path<T>, CreateDatabaseStep<T>["id"]>[];
+    trigger: UseFormTrigger<T>;
+    asyncDatabaseNameValidation: UseAsyncReturn<boolean, [string]>;
+    databaseName: string;
+}
+
+function getStepInRangeValidation<T extends FormData>({
+    currentStep,
+    targetStep,
+    activeStepIds,
+    trigger,
+    asyncDatabaseNameValidation,
+    databaseName,
+}: GetStepInRangeValidationProps<T>) {
+    return async function (): Promise<StepInRangeValidationResult> {
+        for (let i = currentStep; i <= targetStep; i++) {
+            const stepValidation = createDatabaseUtils.getStepValidation<T>({
+                stepId: activeStepIds[i],
+                trigger,
+                asyncDatabaseNameValidation,
+                databaseName,
+            });
+
+            const isValid = await stepValidation();
+            if (!isValid) {
+                return {
+                    isValid: false,
+                    invalidStep: i,
+                };
+            }
+        }
+
+        return {
+            isValid: true,
+        };
+    };
 }
 
 function mapToStepItem<T extends FormData>(step: CreateDatabaseStep<T>): StepItem {
@@ -54,5 +103,6 @@ function mapToStepItem<T extends FormData>(step: CreateDatabaseStep<T>): StepIte
 export const createDatabaseUtils = {
     getEncryptionData,
     getStepValidation,
+    getStepInRangeValidation,
     mapToStepItem,
 };
