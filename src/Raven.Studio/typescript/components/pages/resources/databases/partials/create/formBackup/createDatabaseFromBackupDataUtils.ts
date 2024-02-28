@@ -1,6 +1,6 @@
+import { CreateDatabaseFromBackupDto } from "commands/resources/restoreDatabaseFromBackupCommand";
 import { CreateDatabaseFromBackupFormData as FormData } from "./createDatabaseFromBackupValidation";
 import assertUnreachable from "components/utils/assertUnreachable";
-type RestoreBackupConfigurationBase = Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase;
 type S3Settings = Raven.Client.Documents.Operations.Backups.S3Settings;
 type AzureSettings = Raven.Client.Documents.Operations.Backups.AzureSettings;
 type GoogleCloudSettings = Raven.Client.Documents.Operations.Backups.GoogleCloudSettings;
@@ -92,7 +92,7 @@ function getEncryptionDto(
     selectedSourceData: FormData["sourceStep"]["sourceData"][restoreSource],
     encryptionDataIsEncrypted: boolean,
     encryptionDataKey: string
-): Pick<RestoreBackupConfigurationBase, "EncryptionKey" | "BackupEncryptionSettings"> {
+): Pick<CreateDatabaseFromBackupDto, "EncryptionKey" | "BackupEncryptionSettings"> {
     let encryptionSettings: BackupEncryptionSettings = null;
     let databaseEncryptionKey = null;
 
@@ -259,13 +259,6 @@ function getSourceDto(
             assertUnreachable(sourceStep.sourceType);
     }
 }
-
-export type CreateDatabaseFromBackupDto = Partial<RestoreBackupConfigurationBase> & {
-    Type: RestoreType;
-} & {
-    BackupLocation?: string;
-    Settings?: S3Settings | AzureSettings | GoogleCloudSettings;
-};
 
 function mapToDto({
     basicInfoStep,
