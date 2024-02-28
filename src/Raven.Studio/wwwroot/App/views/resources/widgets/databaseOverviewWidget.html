@@ -20,7 +20,10 @@
         <div class="list-container">
             <div class="no-data-area" data-bind="visible: $root.noDatabases() && !$root.spinners.loading()">
                 <div><i class="icon-empty-set"></i><span>No data</span></div>
-                <button data-bind="click: $root.newDatabase" class="btn btn-primary btn-xs text-uppercase">Create Database</button>
+                <button data-bind="click: () => isCreateDatabaseViewOpen(true)" class="btn btn-primary btn-xs text-uppercase">Create Database</button>
+                <div data-bind="if: isCreateDatabaseViewOpen()">
+                    <div data-bind="react: $root.createDatabaseView"></div>
+                </div>
             </div>
             <div class="list absolute-fill">
                 <virtual-grid class="resizable no-margin" params="controller: gridController, condensed: true, disableStripes: true"></virtual-grid>

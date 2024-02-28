@@ -4,14 +4,15 @@ import CreateDatabaseRegular from "./regular/CreateDatabaseRegular";
 import CreateDatabaseFromBackup from "./formBackup/CreateDatabaseFromBackup";
 import "./CreateDatabase.scss";
 
-type CreateMode = "regular" | "fromBackup";
+export type CreateDatabaseMode = "regular" | "fromBackup";
 
 interface CreateDatabaseProps {
     closeModal: () => void;
+    initialMode?: CreateDatabaseMode;
 }
 
-export default function CreateDatabase({ closeModal }: CreateDatabaseProps) {
-    const [createMode, setCreateMode] = useState<CreateMode>("regular");
+export default function CreateDatabase({ closeModal, initialMode }: CreateDatabaseProps) {
+    const [createMode, setCreateMode] = useState<CreateDatabaseMode>(initialMode ?? "regular");
 
     return (
         <Modal isOpen wrapClassName="bs5" size="lg" centered autoFocus fade className="create-database">

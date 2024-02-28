@@ -3,7 +3,7 @@ import { DatabasePanel } from "./partials/DatabasePanel";
 import { DatabasesSelectActions } from "./partials/DatabasesSelectActions";
 import { DatabasesFilter } from "./partials/DatabasesFilter";
 import { NoDatabases } from "./partials/NoDatabases";
-import { Button, ButtonGroup, DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
+import { Button } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
@@ -13,8 +13,6 @@ import { DatabaseFilterCriteria } from "components/models/databases";
 import {
     compactDatabase,
     loadDatabasesDetails,
-    openCreateDatabaseDialog,
-    openCreateDatabaseFromRestoreDialog,
     syncDatabaseDetails,
 } from "components/pages/resources/databases/store/databasesViewActions";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -24,6 +22,7 @@ import { Icon } from "components/common/Icon";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import useBoolean from "components/hooks/useBoolean";
 import CreateDatabase from "./partials/create/CreateDatabase";
+import CreateDatabase, { CreateDatabaseMode } from "./partials/create/CreateDatabase";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
@@ -99,7 +98,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
             }
         }
         if (props.restore) {
-            dispatch(openCreateDatabaseFromRestoreDialog());
+            setCreateDatabaseMode("fromBackup");
         }
 
         // normalize url (strip extra params)
@@ -111,7 +110,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
     const selectedDatabases = databases.filter((x) => selectedDatabaseNames.includes(x.name));
 
-    const { value: isCreateDatabaseOpen, toggle: toggleIsCreateDatabaseOpen } = useBoolean(false);
+    const [createDatabaseMode, setCreateDatabaseMode] = useState<CreateDatabaseMode>(null);
 
     return (
         <>
@@ -119,11 +118,20 @@ export function DatabasesPage(props: DatabasesPageProps) {
                 <div className="d-flex flex-wrap gap-3 align-items-end">
                     {isOperatorOrAbove && (
                         <>
-                            <Button color="primary" onClick={toggleIsCreateDatabaseOpen} className="rounded-pill">
+                            <Button
+                                color="primary"
+                                onClick={() => setCreateDatabaseMode("regular")}
+                                className="rounded-pill"
+                            >
                                 <Icon icon="database" addon="plus" />
                                 New database
                             </Button>
-                            {isCreateDatabaseOpen && <CreateDatabase closeModal={toggleIsCreateDatabaseOpen} />}
+                            {createDatabaseMode && (
+                                <CreateDatabase
+                                    closeModal={() => setCreateDatabaseMode(null)}
+                                    initialMode={createDatabaseMode}
+                                />
+                            )}
                         </>
                     )}
                     {showToggleButton && (
