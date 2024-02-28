@@ -1,11 +1,7 @@
 ﻿import { MouseEvent, MouseEventHandler } from "react";
-import { Story, StoryFn } from "@storybook/react";
-import { RestorePoint, loadableData } from "components/models/common";
-import generalUtils from "common/generalUtils";
-import moment from "moment";
-import { yupObjectSchema } from "components/utils/yupUtils";
-import * as yup from "yup";
 import { SelectOption } from "components/common/select/Select";
+import { loadableData } from "components/models/common";
+import { Story, StoryFn } from "@storybook/react";
 
 export function withPreventDefault(action: (...args: any[]) => void): MouseEventHandler<HTMLElement> {
     return (e: MouseEvent<HTMLElement>) => {
@@ -81,46 +77,6 @@ export const exhaustiveStringTuple =
 // ---
 
 export const milliSecondsInWeek = 1000 * 3600 * 24 * 7;
-
-export function mapRestorePointFromDto(dto: Raven.Server.Documents.PeriodicBackup.Restore.RestorePoint): RestorePoint {
-    let backupType = "";
-    if (dto.IsSnapshotRestore) {
-        if (dto.IsIncremental) {
-            backupType = "Incremental ";
-        }
-        backupType += "Snapshot";
-    } else if (dto.IsIncremental) {
-        backupType = "Incremental";
-    } else {
-        backupType = "Full";
-    }
-
-    return {
-        dateTime: moment(dto.DateTime).format(generalUtils.dateFormat),
-        location: dto.Location,
-        fileName: dto.FileName,
-        isSnapshotRestore: dto.IsSnapshotRestore,
-        isIncremental: dto.IsIncremental,
-        isEncrypted: dto.IsEncrypted,
-        filesToRestore: dto.FilesToRestore,
-        databaseName: dto.DatabaseName,
-        nodeTag: dto.NodeTag || "-",
-        backupType,
-    };
-}
-
-export const restorePointSchema = yupObjectSchema<RestorePoint | null>({
-    dateTime: yup.string().required(),
-    location: yup.string().required(),
-    fileName: yup.string().required(),
-    isSnapshotRestore: yup.boolean().required(),
-    isIncremental: yup.boolean().required(),
-    isEncrypted: yup.boolean().required(),
-    filesToRestore: yup.number().required(),
-    databaseName: yup.string().required(),
-    nodeTag: yup.string().required(),
-    backupType: yup.string().required(),
-});
 
 export const availableGlacierRegions: SelectOption<string>[] = [
     { label: "Africa (Cape Town) - af-south-1", value: "af-south-1" },

@@ -7,7 +7,7 @@ import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/dat
 import { useServices } from "components/hooks/useServices";
 import { FormInput } from "components/common/Form";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
-import { mapRestorePointDtoToSelectOptions } from "components/pages/resources/databases/partials/create/formBackup/steps/source/backupSourceUtils";
+import { restorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/restorePointUtils";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
 import RestorePointsFields from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointsFields";
 import moment from "moment";
@@ -57,7 +57,7 @@ export default function BackupSourceCloud() {
             )}
             <RestorePointsFields
                 isSharded={isSharded}
-                restorePointsFieldName="sourceStep.sourceData.cloud.restorePoints"
+                pointsWithTagsFieldName="sourceStep.sourceData.cloud.pointsWithTags"
                 mapRestorePoint={(field, index) => (
                     <CloudSourceRestorePoint key={field.id} index={index} isSharded={isSharded} link={cloudData.link} />
                 )}
@@ -108,7 +108,7 @@ function CloudSourceRestorePoint({ index, isSharded, link }: CloudSourceRestoreP
 
     const { remove } = useFieldArray({
         control,
-        name: "sourceStep.sourceData.local.restorePoints",
+        name: "sourceStep.sourceData.local.pointsWithTags",
     });
 
     const asyncGetRestorePointsOptions = useAsyncDebounce(
@@ -145,14 +145,14 @@ function CloudSourceRestorePoint({ index, isSharded, link }: CloudSourceRestoreP
                 true,
                 isSharded ? index : undefined
             );
-            return mapRestorePointDtoToSelectOptions(dto);
+            return restorePointUtils.mapToSelectOptions(dto);
         },
         [link]
     );
 
     return (
         <CreateDatabaseFromBackupRestorePoint
-            fieldName="sourceStep.sourceData.cloud.restorePoints"
+            fieldName="sourceStep.sourceData.cloud.pointsWithTags"
             index={index}
             remove={remove}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}

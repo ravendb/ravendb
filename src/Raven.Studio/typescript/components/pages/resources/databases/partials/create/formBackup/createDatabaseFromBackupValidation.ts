@@ -2,7 +2,6 @@ import {
     encryptionStepSchema,
     dataDirectoryStepSchema,
 } from "components/pages/resources/databases/partials/create/shared/createDatabaseSharedValidation";
-import { restorePointSchema } from "components/utils/common";
 import * as yup from "yup";
 
 const basicInfoStepSchema = yup.object({
@@ -15,7 +14,7 @@ const basicInfoStepSchema = yup.object({
     isSharded: yup.boolean(),
 });
 
-function getRestorePointsSchema(sourceType: restoreSource) {
+function getPointsWithTagsSchema(sourceType: restoreSource) {
     return yup
         .array()
         .of(
@@ -34,14 +33,29 @@ function getRestorePointsSchema(sourceType: restoreSource) {
         .min(1);
 }
 
-type RestorePoints = yup.InferType<ReturnType<typeof getRestorePointsSchema>>;
+export const restorePointSchema = yup.object({
+    dateTime: yup.string().required(),
+    location: yup.string().required(),
+    fileName: yup.string().required(),
+    isSnapshotRestore: yup.boolean().required(),
+    isIncremental: yup.boolean().required(),
+    isEncrypted: yup.boolean().required(),
+    filesToRestore: yup.number().required(),
+    databaseName: yup.string().required(),
+    nodeTag: yup.string().required(),
+    backupType: yup.string().required(),
+});
+
+export type RestorePoint = yup.InferType<typeof restorePointSchema>;
+
+type PointsWithTags = yup.InferType<ReturnType<typeof getPointsWithTagsSchema>>;
 
 function getEncryptionKeySchema(sourceType: restoreSource) {
-    return yup.string().when(["$sourceType", "restorePoints"], {
-        is: (currentSourceType: restoreSource, restorePoints: RestorePoints) =>
+    return yup.string().when(["$sourceType", "pointsWithTags"], {
+        is: (currentSourceType: restoreSource, pointsWithTags: PointsWithTags) =>
             currentSourceType === sourceType &&
-            restorePoints[0]?.restorePoint?.isEncrypted &&
-            !restorePoints[0]?.restorePoint?.isSnapshotRestore,
+            pointsWithTags[0]?.restorePoint?.isEncrypted &&
+            !pointsWithTags[0]?.restorePoint?.isSnapshotRestore,
         then: (schema) => schema.base64().required(),
     });
 }
@@ -51,7 +65,7 @@ const localSource = yup.object({
         is: "local",
         then: (schema) => schema.required(),
     }),
-    restorePoints: getRestorePointsSchema("local"),
+    pointsWithTags: getPointsWithTagsSchema("local"),
     encryptionKey: getEncryptionKeySchema("local"),
 });
 
@@ -60,7 +74,7 @@ const ravenCloudSource = yup.object({
         is: "cloud",
         then: (schema) => schema.url().required(),
     }),
-    restorePoints: getRestorePointsSchema("cloud"),
+    pointsWithTags: getPointsWithTagsSchema("cloud"),
     encryptionKey: getEncryptionKeySchema("cloud"),
     awsSettings: yup
         .object({
@@ -99,7 +113,7 @@ const amazonS3Source = yup.object({
         then: (schema) => schema.required(),
     }),
     remoteFolderName: yup.string(),
-    restorePoints: getRestorePointsSchema("amazonS3"),
+    pointsWithTags: getPointsWithTagsSchema("amazonS3"),
     encryptionKey: getEncryptionKeySchema("amazonS3"),
 });
 
@@ -117,7 +131,7 @@ const azureSource = yup.object({
         then: (schema) => schema.required(),
     }),
     remoteFolderName: yup.string(),
-    restorePoints: getRestorePointsSchema("azure"),
+    pointsWithTags: getPointsWithTagsSchema("azure"),
     encryptionKey: getEncryptionKeySchema("azure"),
 });
 
@@ -131,7 +145,7 @@ const googleCloudSource = yup.object({
         then: (schema) => schema.required(),
     }),
     remoteFolderName: yup.string(),
-    restorePoints: getRestorePointsSchema("googleCloud"),
+    pointsWithTags: getPointsWithTagsSchema("googleCloud"),
     encryptionKey: getEncryptionKeySchema("googleCloud"),
 });
 
