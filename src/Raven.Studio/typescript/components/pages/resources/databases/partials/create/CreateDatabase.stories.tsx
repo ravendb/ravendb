@@ -46,6 +46,6 @@ export const DefaultCreateDatabase: StoryObj<DefaultCreateDatabaseProps> = {
         isSecureServer: true,
         hasEncryption: true,
         hasDynamicNodesDistribution: true,
-        maxReplicationFactorForSharding: 2,
+        maxReplicationFactorForSharding: 1,
     },
 };
