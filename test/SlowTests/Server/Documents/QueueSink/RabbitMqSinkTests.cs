@@ -13,7 +13,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.QueueSink;
 
-public class RabbitMqSinkTests : QueueSinkTestBase
+public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
 {
     public RabbitMqSinkTests(ITestOutputHelper output) : base(output)
     {
@@ -28,9 +28,7 @@ public class RabbitMqSinkTests : QueueSinkTestBase
         byte[] userBytes1 = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user1));
         byte[] userBytes2 = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user2));
 
-        var producer = CreateRabbitMqProducer();
-
-        producer.QueueDeclare(queue: UsersQueueName, exclusive: false);
+        var producer = CreateRabbitMqProducer(UsersQueueName);
 
         producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
             body: new ReadOnlyMemory<byte>(userBytes1));
@@ -75,11 +73,9 @@ public class RabbitMqSinkTests : QueueSinkTestBase
         byte[] userBytes3 = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user3));
         byte[] userBytes4 = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user4));
 
-        var producer = CreateRabbitMqProducer();
-
-        producer.QueueDeclare(queue: UsersQueueName, exclusive: false);
         string developersQueueName = $"developers{QueueSuffix}";
-        producer.QueueDeclare(queue: developersQueueName, exclusive: false);
+
+        var producer = CreateRabbitMqProducer(UsersQueueName, developersQueueName);
 
         producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
             body: new ReadOnlyMemory<byte>(userBytes1));
@@ -141,9 +137,7 @@ public class RabbitMqSinkTests : QueueSinkTestBase
         byte[] userBytes1 = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user1));
         byte[] userBytes2 = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user2));
 
-        var producer = CreateRabbitMqProducer();
-
-        producer.QueueDeclare(queue: UsersQueueName, exclusive: false);
+        var producer = CreateRabbitMqProducer(UsersQueueName);
 
         producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
             body: new ReadOnlyMemory<byte>(userBytes1));
@@ -178,9 +172,7 @@ public class RabbitMqSinkTests : QueueSinkTestBase
     {
         var numberOfUsers = 10;
 
-        var producer = CreateRabbitMqProducer();
-
-        producer.QueueDeclare(queue: UsersQueueName, exclusive: false);
+        var producer = CreateRabbitMqProducer(UsersQueueName);
 
         for (int i = 0; i < numberOfUsers; i++)
         {

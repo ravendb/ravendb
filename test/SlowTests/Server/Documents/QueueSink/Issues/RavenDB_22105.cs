@@ -11,7 +11,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.QueueSink.Issues;
 
-public class RavenDB_22105 : QueueSinkTestBase
+public class RavenDB_22105 : RabbitMqQueueSinkTestBase
 {
     public RavenDB_22105(ITestOutputHelper output) : base(output)
     {
@@ -33,9 +33,7 @@ public class RavenDB_22105 : QueueSinkTestBase
 
         byte[] userBytes1 = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user1));
 
-        var producer = CreateRabbitMqProducer();
-
-        producer.QueueDeclare(queue: UsersQueueName, exclusive: false);
+        var producer = CreateRabbitMqProducer(UsersQueueName);
 
         producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
             body: new ReadOnlyMemory<byte>(userBytes1));
