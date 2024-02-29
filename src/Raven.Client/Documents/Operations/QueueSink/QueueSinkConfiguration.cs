@@ -87,6 +87,7 @@ public class QueueSinkConfiguration : IDynamicJsonValueConvertible, IDatabaseTas
         {
             [nameof(Name)] = Name,
             [nameof(TaskId)] = TaskId,
+            [nameof(Disabled)] = Disabled,
             [nameof(ConnectionStringName)] = ConnectionStringName,
             [nameof(MentorNode)] = MentorNode,
             [nameof(PinToMentorNode)] = PinToMentorNode,

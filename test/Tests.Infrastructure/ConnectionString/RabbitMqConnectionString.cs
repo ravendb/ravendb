@@ -59,7 +59,7 @@ public class RabbitMqConnectionString
         if (TryConnect(ConnectionString.Value, out var ex))
             return ConnectionString.Value;
 
-        throw new InvalidOperationException($"Can't access Kafka instance. Provided url: {ConnectionString.Value}", ex);
+        throw new InvalidOperationException($"Can't access RabbitMQ instance. Provided url: {ConnectionString.Value}", ex);
 
 
         bool TryConnect(string connectionString, out Exception exception)
