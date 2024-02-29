@@ -27,7 +27,7 @@ namespace SlowTests.Issues
             {
                 Cluster.SuspendObserver(server);
 
-                var testingStuff = Server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly();
+                var testingStuff = server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly();
                 testingStuff.BeforeHandleClusterTransactionOnDatabaseChanged = (server) => server.DatabasesLandlord.RestartDatabaseAsync(store.Database).WithCancellation(cts.Token);
                 testingStuff.DelayNotifyFeaturesAboutStateChange = () => Thread.Sleep(1000);
 

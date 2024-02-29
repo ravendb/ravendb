@@ -533,10 +533,12 @@ select {
                         }
                     };
 
-                    await Server.ServerStore.ModifyDatabaseRevisions(context,
+                    (long Index, object _) res = await Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
                         DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration,
                             context), Guid.NewGuid().ToString());
+
+                    await Databases.WaitForRaftIndex(store.Database, res.Index);
                 }
 
                 var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
@@ -546,7 +548,7 @@ select {
                 var revisions = new HashSet<MyRevision>();
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<MyRevision>(new SubscriptionWorkerOptions(subscriptionId)
                 {
-                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3)
                 }))
                 {
                     _ = sub.Run(x =>
