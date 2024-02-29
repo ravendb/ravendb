@@ -261,6 +261,8 @@ namespace Raven.Server.Documents.Handlers
                 array = await GetClusterTransactionDatabaseCommandsResults(result, clusterTransactionCommand.DatabaseCommandsCount, index, options, onDatabaseCompletionTask: tcs.Task, token);
             }
 
+            token.ThrowIfCancellationRequested();
+
             foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
             {
                 array.Add(new DynamicJsonValue
