@@ -165,8 +165,10 @@ namespace Voron.Data.Compression
                         throw;
                     }
 
+                    ObjectDisposedException.ThrowIf(_compressionPager.TryUse() == false, _compressionPager);
+
                     buffer = new DecompressionBuffer(_compressionPager, _lastUsedPage, pageSize, this, index, tx);
-                    _compressionPager.TryUse();
+
                     _lastUsedPage += allocationInPages;
 
                     void CreateNewBuffersPager(long size)
@@ -281,6 +283,8 @@ namespace Voron.Data.Compression
 
         private sealed class DecompressionBuffer : IDisposable
         {
+            private bool _isDisposed;
+
             internal readonly PagerInfo PagerInfo;
             private readonly long _position;
             private readonly int _size;
@@ -295,8 +299,8 @@ namespace Voron.Data.Compression
                 _size = size;
                 _pool = pool;
                 _index = index;
-                PagerInfo.Pager.EnsureMapped(tx, _position, _size / Constants.Storage.PageSize);
-                Pointer = PagerInfo.Pager.AcquirePagePointer(tx, position);
+
+                EnsureValidPointer(tx);
             }
 
 
@@ -304,10 +308,17 @@ namespace Voron.Data.Compression
             {
                 PagerInfo.Pager.EnsureMapped(tx, _position, _size / Constants.Storage.PageSize);
                 Pointer = PagerInfo.Pager.AcquirePagePointer(tx, _position);
+                _isDisposed = false;
             }
 
             public void Dispose()
             {
+                if (_isDisposed)
+                    throw new InvalidOperationException("Double disposing is disallowed.");
+
+                if (PagerInfo.Pager.Disposed)
+                    throw new InvalidOperationException("Pager has been disposed already.");
+
                 if (PagerInfo.Pager.Options.Encryption.IsEnabled)
                     Sodium.sodium_memzero(Pointer, Constants.Storage.PageSize);
 
@@ -316,6 +327,8 @@ namespace Voron.Data.Compression
 
                 Interlocked.Add(ref _pool._currentlyUsedBytes, -_size);
                 PagerInfo.Release();
+
+                _isDisposed = true;
             }
         }
 
@@ -332,7 +345,7 @@ namespace Voron.Data.Compression
             public bool TryUse()
             {
                 return Interlocked.Increment(ref _numberOfUsages) > 0;
-}
+            }
 
             public void Release()
             {
