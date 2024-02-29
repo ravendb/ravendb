@@ -155,6 +155,7 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
     {
         while (true)
         {
+            using var _ = Database.PreventFromUnloadingByIdleOperations();
             try
             {
                 if (CancellationToken.IsCancellationRequested)
