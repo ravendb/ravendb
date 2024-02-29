@@ -4,10 +4,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using RabbitMQ.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.QueueSink;
+using Raven.Server;
 using Raven.Server.Documents.QueueSink;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
@@ -160,6 +162,14 @@ namespace SlowTests.Server.Documents.QueueSink
                 });
 
             return config;
+        }
+
+        protected IModel CreateRabbitMqProducer()
+        {
+            var connectionFactory = new ConnectionFactory { Uri = new Uri(RabbitMqConnectionString.Instance.VerifiedConnectionString.Value) };
+            var connection = connectionFactory.CreateConnection();
+            var producer = connection.CreateModel();
+            return producer;
         }
     }
 }

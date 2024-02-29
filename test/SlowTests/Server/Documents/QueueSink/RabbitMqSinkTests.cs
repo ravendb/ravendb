@@ -240,12 +240,4 @@ public class RabbitMqSinkTests : QueueSinkTestBase
 
         Assert.Equal("Script 'test' must not be empty", errors[0]);
     }
-
-    private IModel CreateRabbitMqProducer()
-    {
-        var connectionFactory = new ConnectionFactory { Uri = new Uri(RabbitMqConnectionString.Instance.VerifiedConnectionString.Value) };
-        var connection = connectionFactory.CreateConnection();
-        var producer = connection.CreateModel();
-        return producer;
-    }
 }
