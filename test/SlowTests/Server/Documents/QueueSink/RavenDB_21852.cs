@@ -7,18 +7,18 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.QueueSink;
 
-public class RavenDB_21852 : QueueSinkTestBase
+public class RavenDB_21852 : RabbitMqQueueSinkTestBase
 {
     public RavenDB_21852(ITestOutputHelper output) : base(output)
     {
     }
 
-    [RavenFact(RavenTestCategory.ClientApi)]
+    [RequiresRabbitMqRetryFact]
     public void CanGetQueueSinkTaskInfo()
     {
         using var store = GetDocumentStore();
         var config = SetupRabbitMqQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)",
-            new List<string>() {UsersQueueName});
+            new List<string>() {UsersQueueName}, disabled: true);
 
         var op = new GetOngoingTaskInfoOperation(config.Name, OngoingTaskType.QueueSink);
 
@@ -27,6 +27,8 @@ public class RavenDB_21852 : QueueSinkTestBase
         Assert.NotNull(taskInfo);
         Assert.Null(taskInfo.Error);
         Assert.Equal(QueueBrokerType.RabbitMq, taskInfo.BrokerType);
+        Assert.Equal(OngoingTaskState.Disabled, taskInfo.TaskState);
+        Assert.True(taskInfo.Configuration.Disabled);
 
         var nonExisting = new GetOngoingTaskInfoOperation("non-existing", OngoingTaskType.QueueSink);
 
