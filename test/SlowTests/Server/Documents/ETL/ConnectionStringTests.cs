@@ -241,7 +241,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
+        [RequiresMsSqlFact]
         public void CanGetConnectionStringByName()
         {
             using (var store = GetDocumentStore())
