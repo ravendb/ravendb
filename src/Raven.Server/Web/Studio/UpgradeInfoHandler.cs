@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -24,9 +25,19 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
             return;
         }
 
+        var pageNumber = GetStart(defaultStart: 1);
+        var pageSize = GetPageSize();
+
         var licenseId = ServerStore.LicenseManager.LicenseStatus.Id.ToString();
         
-        var request = new UpgradeInfoRequest() { CurrentFullVersion = ServerVersion.FullVersion, LicenseId = licenseId };
+        var request = new UpgradeInfoRequest()
+        {
+            UserFullVersion = ServerVersion.FullVersion, 
+            UserVersion =  ServerVersion.Version,
+            LicenseId = licenseId, 
+            ChangelogPageNumber = pageNumber, 
+            ChangelogPageSize = pageSize
+        };
 
         var requestPayload = JsonConvert.SerializeObject(request);
 
@@ -67,14 +78,38 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
 
     private class UpgradeInfoRequest
     {
-        public string CurrentFullVersion { get; set; }
+        public string UserFullVersion { get; set; }
+        public string UserVersion { get; set; }
         public string LicenseId { get; set; }
+        public int ChangelogPageSize { get; set; }
+        public int ChangelogPageNumber { get; set; }
+    }
+    
+    public class BuildCompatibilityInfo : IDynamicJsonValueConvertible
+    {
+        public string FullVersion { get; set; }
+        public bool CanDowngradeFollowingUpgrade { get; set; }
+        public string ChangelogHtml { get; set; }
+        public DateTime? ReleasedAt { get; set; }
+        
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(FullVersion)] = FullVersion,
+                [nameof(CanDowngradeFollowingUpgrade)] = CanDowngradeFollowingUpgrade,
+                [nameof(ChangelogHtml)] = ChangelogHtml,
+                [nameof(ReleasedAt)] = ReleasedAt
+            };
+        }
     }
 
     public class UpgradeInfoResponse
     {
-        public string ChangelogHtml { get; set; }
-        public bool CanDowngradeFollowingUpgrade { get; set; }
+        public List<BuildCompatibilityInfo> BuildCompatibilitiesForUserMajorMinor { get; set; }
+        public List<BuildCompatibilityInfo> BuildCompatibilitiesForLatestMajorMinor { get; set; }
+        public long TotalBuildsForUserMajorMinor { get; set; }
+        public long TotalBuildsForLatestMajorMinor { get; set; }
         public bool IsLicenseEligibleForUpgrade { get; set; }
         public string ErrorMessage { get; set; }
 
@@ -82,8 +117,10 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
         {
             return new DynamicJsonValue
             {
-                [nameof(ChangelogHtml)] = ChangelogHtml,
-                [nameof(CanDowngradeFollowingUpgrade)] = CanDowngradeFollowingUpgrade,
+                [nameof(BuildCompatibilitiesForUserMajorMinor)] = BuildCompatibilitiesForUserMajorMinor,
+                [nameof(BuildCompatibilitiesForLatestMajorMinor)] = BuildCompatibilitiesForLatestMajorMinor,
+                [nameof(TotalBuildsForUserMajorMinor)] = TotalBuildsForUserMajorMinor,
+                [nameof(TotalBuildsForLatestMajorMinor)] = TotalBuildsForLatestMajorMinor,
                 [nameof(IsLicenseEligibleForUpgrade)] = IsLicenseEligibleForUpgrade,
                 [nameof(ErrorMessage)] = ErrorMessage
             };
