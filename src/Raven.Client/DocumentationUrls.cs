@@ -35,8 +35,14 @@ internal static class DocumentationUrls
 
             internal static class SortQueryResults
             {
+                /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/sort-query-results#order-by-field-value"/></remarks>
+                public const string OrderByFieldValue = nameof(OrderByFieldValue);
+                
                 /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/sort-query-results#order-by-random"/></remarks>
                 public const string OrderByRandom = nameof(OrderByRandom);
+
+                /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/sort-query-results#order-by-score"/></remarks>
+                public const string OrderByScore = nameof(OrderByScore);
                 
                 /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/sort-query-results#custom-sorters"/></remarks>
                 public const string CustomSorters = nameof(CustomSorters);
@@ -69,11 +75,11 @@ internal static class DocumentationUrls
             /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-make-a-spatial-query"/></remarks>
             public const string HowToMakeASpatialQuery = nameof(HowToMakeASpatialQuery);
 
-            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/sort-query-results"/></remarks>
-            public const string SortQueryResults = nameof(SortQueryResults);
-
             /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/document-query/query-vs-document-query"/></remarks>
             public const string QueryVsDocumentQuery = nameof(QueryVsDocumentQuery);
+            
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/indexes/querying/distinct"/></remarks>
+            public const string Distinct = nameof(Distinct);
         }
 
         internal static class Transactions
@@ -98,6 +104,15 @@ internal static class DocumentationUrls
 
             /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/sharding/querying#querying-a-selected-shard"/></remarks>
             public const string QueryingASelectedShard = nameof(QueryingASelectedShard);
+        }
+
+        internal static class HowTo
+        {
+            internal static class HandleDocumentRelationships
+            {
+                /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/how-to/handle-document-relationships#includes"/></remarks>
+                public const string Includes = nameof(Includes);
+            }
         }
     }
 }

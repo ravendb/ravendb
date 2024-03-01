@@ -434,7 +434,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
     }
 
     /// <summary>
-    ///     Interface for lower level API access.
+    ///     Interface providing low-level querying capabilities.
     /// </summary>
     /// <inheritdoc cref="DocumentationUrls.Session.Querying.QueryVsDocumentQuery"/>
     public interface IDocumentQueryBase<T, TSelf> : IPagingDocumentQueryBase<T, TSelf>, IFilterDocumentQueryBase<T, TSelf>, IGroupByDocumentQueryBase<T, TSelf>, IQueryBase<T, TSelf>
@@ -480,6 +480,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///     Removes duplicates from query results.
         /// </summary>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.Distinct"/>
         TSelf Distinct();
 
         /// <inheritdoc cref="AbstractDocumentQuery{T, TSelf}.IncludeExplanations"/>
@@ -527,7 +528,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name="field">Name of the field to order the query results by.</param>
         /// <param name="sorterName">Name of the custom sorter to be used.</param>
-        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults"/>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults.OrderByFieldValue"/>
         TSelf OrderBy(string field, string sorterName);
 
         /// <summary>
@@ -565,7 +566,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name="field">Name of field to order the results by.</param>
         /// <param name="sorterName">Name of the custom sorter to be used.</param>
-        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults"/>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults.OrderByFieldValue"/>
         TSelf OrderByDescending(string field, string sorterName);
 
         /// <summary>
@@ -601,13 +602,13 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///     Sorts query results by score. Results with higher score will be returned first.
         /// </summary>
-        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults"/>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults.OrderByScore"/>
         TSelf OrderByScore();
 
         /// <summary>
         ///     Sorts query results by score. Results with lower score will be returned first.
         /// </summary>
-        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults"/>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults.OrderByScore"/>
         TSelf OrderByScoreDescending();
 
         /// <summary>

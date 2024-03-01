@@ -19,14 +19,15 @@ namespace Raven.Client.Documents.Session
         internal List<RevisionIncludesToken> RevisionsIncludesTokens;
 
         /// <summary>
-        /// The paths to include when loading the query
+        ///     Set of included document IDs for this query.
         /// </summary>
         protected HashSet<string> DocumentIncludes = new HashSet<string>();
 
         /// <summary>
-        ///   Includes the specified path in the query, loading the document specified in that path
+        ///     Allows to fetch related documents without having to make multiple remote calls.
         /// </summary>
-        /// <param name = "path">Path to included document.</param>
+        /// <param name="path">Path to the property referencing related document.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.HowTo.HandleDocumentRelationships.Includes"/>
         public void Include(string path)
         {
             TheSession?.AssertNoIncludesInNonTrackingSession();
@@ -34,10 +35,7 @@ namespace Raven.Client.Documents.Session
             DocumentIncludes.Add(path);
         }
 
-        /// <summary>
-        ///   Includes the specified path in the query, loading the document specified in that path
-        /// </summary>
-        /// <param name = "path">Path to included document.</param>
+        /// <inheritdoc cref="Include(string)"/>
         public void Include(Expression<Func<T, object>> path)
         {
             Include(path.ToPropertyPath(_conventions));
