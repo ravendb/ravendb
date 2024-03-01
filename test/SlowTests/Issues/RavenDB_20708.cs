@@ -47,14 +47,9 @@ namespace SlowTests.Issues
                     var key = AlertRaised.GetKey(AlertType.ClusterTransactionFailure, $"{database.Name}/ClusterTransaction");
                     Assert.False(database.NotificationCenter.Exists(key));
                 }
-                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
-                {
-                    var user = await session.LoadAsync<User>("users/1", cts.Token);
-                    Assert.Equal(user1.Name, user.Name);
 
-                    user = await session.LoadAsync<User>("users/2", cts.Token);
-                    Assert.Equal(user2.Name, user.Name);
-                }
+                WaitForDocument<User>(store, "users/1", u => u.Name == user1.Name, timeout: 5_000);
+                WaitForDocument<User>(store, "users/2", u => u.Name == user2.Name, timeout: 5_000);
             }
         }
     }

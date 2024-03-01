@@ -114,7 +114,11 @@ namespace StressTests.Issues
                     lastBackup = status.LastFullBackup.Value;
                 }
                 var nextBackup = backupParser.GetNextOccurrence(lastBackup);
-                await Task.Delay(nextBackup - DateTime.UtcNow);
+                var timeToWait = nextBackup - DateTime.UtcNow;
+                if (timeToWait > TimeSpan.Zero)
+                {
+                    await Task.Delay(timeToWait);
+                }
 
                 status = await AssertWaitForNextBackup(store.Database, status);
                 controlGroupStatus = await AssertWaitForNextBackup(controlgroupDbName, controlGroupStatus);
