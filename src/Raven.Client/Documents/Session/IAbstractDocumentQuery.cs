@@ -67,6 +67,7 @@ namespace Raven.Client.Documents.Session
         ///     Requires custom sorting feature to be enabled.
         /// </summary>
         /// <param name="descending">Changes order to descending.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults.CustomSorters"/>
         void CustomSortUsing(string typeName, bool descending = false);
 #endif
 
