@@ -993,16 +993,17 @@ namespace Raven.Server.ServerWide
         {
             ClusterTransactionCommand clusterTransaction = null;
             Exception exception = null;
+            RawDatabaseRecord rawRecord = null;
             try
             {
                 clusterTransaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
-                using var rawRecord = ReadRawDatabaseRecord(context, clusterTransaction.DatabaseName);
+                rawRecord = ReadRawDatabaseRecord(context, clusterTransaction.DatabaseName);
                 if (rawRecord == null)
                     throw DatabaseDoesNotExistException.CreateWithMessage(clusterTransaction.DatabaseName, $"Could not execute update command of type '{nameof(ClusterTransactionCommand)}'.");
 
                 if (rawRecord.IsSharded == false)
                     //This function is used to set cluster & database id for backward compatibility so no need if for shardNumber
-                    UpdateDatabaseRecordId(context, rawRecord, index, clusterTransaction);
+                    UpdateDatabaseRecordId(context, ref rawRecord, index, clusterTransaction);
 
                 if (clusterTransaction.SerializedDatabaseCommands != null &&
                     clusterTransaction.SerializedDatabaseCommands.TryGet(nameof(ClusterTransactionCommand.Options), out BlittableJsonReaderObject blittableOptions))
@@ -1042,11 +1043,12 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
+                rawRecord?.Dispose();
                 LogCommand(nameof(ClusterTransactionCommand), index, exception, clusterTransaction);
             }
         }
 
-        private void UpdateDatabaseRecordId(ClusterOperationContext context, RawDatabaseRecord rawRecord, long index,
+        private void UpdateDatabaseRecordId(ClusterOperationContext context, ref RawDatabaseRecord rawRecord, long index,
             ClusterTransactionCommand clusterTransaction)
         {
             if (rawRecord == null)
@@ -1068,12 +1070,13 @@ namespace Raven.Server.ServerWide
                         [nameof(DatabaseRecord.Topology)] = topology.ToJson()
                     };
 
-                    using (var old = databaseRecordJson)
+                    using (rawRecord)
                     {
                         databaseRecordJson = context.ReadObject(databaseRecordJson, dbKey);
                     }
 
                     UpdateValue(index, items, valueNameLowered, valueName, databaseRecordJson);
+                    rawRecord = new RawDatabaseRecord(context, databaseRecordJson);
                 }
             }
         }

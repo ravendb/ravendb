@@ -277,7 +277,8 @@ namespace Raven.Server
                 return;
 
             var databaseShutdown = context.Database?.DatabaseShutdown ?? context.DatabaseContext?.DatabaseShutdown;
-            if (databaseShutdown is { IsCancellationRequested: true })
+            var databaseShutdownCompleted = context.Database?.DatabaseShutdownCompleted;
+            if (databaseShutdown is { IsCancellationRequested: true } || databaseShutdownCompleted is { IsSet: true})
                 e = new DatabaseDisabledException("The database " + context.DatabaseName + " is shutting down", e);
         }
 
