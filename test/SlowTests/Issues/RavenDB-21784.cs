@@ -16,6 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
+        [RequiresMsSqlFact]
         [RavenFact(RavenTestCategory.Etl)]
         public void DeprecatedFactoryNameOfMySqlConnectionStringIsBeingReplacedDuringPut()
         {

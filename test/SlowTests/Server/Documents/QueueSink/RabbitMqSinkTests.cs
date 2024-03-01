@@ -213,6 +213,7 @@ public class RabbitMqSinkTests : QueueSinkTestBase
     }
 
     [RavenFact(RavenTestCategory.Sinks)]
+    [RequiresRabbitMqRetryFact]
     public void Error_if_script_is_empty()
     {
         var config = new QueueSinkConfiguration
