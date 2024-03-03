@@ -170,46 +170,49 @@ namespace SlowTests.Client.Subscriptions
                     var con1Docs = new List<string>();
                     var con2Docs = new List<string>();
 
-                    var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    var mre = new ManualResetEvent(false);
-
-                    var _ = Subscription2.Run(x =>
+                    var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
                     {
-                        foreach (var item in x.Items)
+                        var mre = new ManualResetEvent(false);
+
+                        var _ = Subscription2.Run(async x =>
                         {
-                            con2Docs.Add(item.Id);
-                        }
-
-                        mre.Set();
-                        tcs.Task.Wait();
-                    });
-
-                    mre.WaitOne();
-
-                    var exception = string.Empty;
-                    var t = subscription.Run(x =>
-                    {
-                        foreach (var item in x.Items)
-                        {
-                            if (string.IsNullOrEmpty(exception) && string.IsNullOrEmpty(item.ExceptionMessage) == false)
+                            foreach (var item in x.Items)
                             {
-                                exception = item.ExceptionMessage;
+                                con2Docs.Add(item.Id);
                             }
 
-                            con1Docs.Add(item.Id);
-                        }
-                    });
+                            mre.Set();
+                            await tcs.Task;
+                        });
 
-                    Assert.True(await WaitForValueAsync(() => Task.FromResult(con2Docs.Count == 2), true, 6000, 100), $"connection 2 has {con2Docs.Count} docs");
-                    Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Count == 4), true, 6000, 100), $"connection 1 has {con1Docs.Count} docs");
+                        mre.WaitOne();
 
-                    tcs.SetException(new InvalidOperationException());
-                    await Subscription2.DisposeAsync(waitForSubscriptionTask: true);
+                        var exception = string.Empty;
+                        var t = subscription.Run(x =>
+                        {
+                            foreach (var item in x.Items)
+                            {
+                                if (string.IsNullOrEmpty(exception) && string.IsNullOrEmpty(item.ExceptionMessage) == false)
+                                {
+                                    exception = item.ExceptionMessage;
+                                }
 
-                    Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Count == 6), true, 6000, 100), $"connection 1 has {con1Docs.Count} docs");
-                    Assert.True(string.IsNullOrEmpty(exception), $"string.IsNullOrEmpty(exception): " + exception);
+                                con1Docs.Add(item.Id);
+                            }
+                        });
 
-                    await AssertNoLeftovers(store, id);
+                        Assert.True(await WaitForValueAsync(() => Task.FromResult(con2Docs.Count == 2), true, 6000, 100), $"connection 2 has {con2Docs.Count} docs");
+                        Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Count == 4), true, 6000, 100), $"connection 1 has {con1Docs.Count} docs");
+
+                        tcs.SetException(new InvalidOperationException());
+                        await Subscription2.DisposeAsync(waitForSubscriptionTask: true);
+
+                        Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Count == 6), true, 6000, 100), $"connection 1 has {con1Docs.Count} docs");
+                        Assert.True(string.IsNullOrEmpty(exception), $"string.IsNullOrEmpty(exception): " + exception);
+
+                        await AssertNoLeftovers(store, id);
+                    }, tcs);
                 }
             }
         }
@@ -339,44 +342,47 @@ namespace SlowTests.Client.Subscriptions
                     var con1Docs = new List<string>();
                     var con2Docs = new List<string>();
 
-                    var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    var mre = new ManualResetEvent(false);
-
-                    var _ = subscription2.Run(x =>
+                    var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
                     {
-                        foreach (var item in x.Items)
+                        var mre = new ManualResetEvent(false);
+
+                        var _ = subscription2.Run(async x =>
                         {
-                            con2Docs.Add(item.Id);
+                            foreach (var item in x.Items)
+                            {
+                                con2Docs.Add(item.Id);
+                            }
+
+                            mre.Set();
+                            await tcs.Task;
+                        });
+
+                        mre.WaitOne();
+
+                        using (var session = store.OpenAsyncSession())
+                        {
+                            session.Delete("users/1");
+                            await session.StoreAsync(new User(), "users/7");
+                            await session.SaveChangesAsync();
                         }
 
-                        mre.Set();
-                        tcs.Task.Wait();
-                    });
-
-                    mre.WaitOne();
-
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        session.Delete("users/1");
-                        await session.StoreAsync(new User(), "users/7");
-                        await session.SaveChangesAsync();
-                    }
-
-                    var t = subscription.Run(x =>
-                    {
-                        foreach (var item in x.Items)
+                        var t = subscription.Run(x =>
                         {
-                            con1Docs.Add(item.Id);
-                        }
-                    });
+                            foreach (var item in x.Items)
+                            {
+                                con1Docs.Add(item.Id);
+                            }
+                        });
 
-                    Assert.True(await WaitForValueAsync(() => Task.FromResult(con2Docs.Count == 2), true, 6000, 100), $"connection 2 has {con2Docs.Count} docs");
-                    Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Count == 5), true, 6000, 100), $"connection 1 has {con1Docs.Count} docs");
+                        Assert.True(await WaitForValueAsync(() => Task.FromResult(con2Docs.Count == 2), true, 6000, 100), $"connection 2 has {con2Docs.Count} docs");
+                        Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Count == 5), true, 6000, 100), $"connection 1 has {con1Docs.Count} docs");
 
-                    Assert.Contains("users/7", con1Docs);
-                    tcs.SetException(new InvalidOperationException());
+                        Assert.Contains("users/7", con1Docs);
+                        tcs.SetException(new InvalidOperationException());
 
-                    await WaitForNoExceptionAsync(() => AssertNoLeftovers(store, id));
+                        await WaitForNoExceptionAsync(() => AssertNoLeftovers(store, id));
+                    }, tcs);
                 }
             }
         }
@@ -435,51 +441,54 @@ namespace SlowTests.Client.Subscriptions
                     var con1Docs = new List<string>();
                     var con2Docs = new List<string>();
 
-                    var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    var mre = new ManualResetEvent(false);
-
-                    var _ = Subscription2.Run(x =>
+                    var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
                     {
-                        foreach (var item in x.Items)
+                        var mre = new ManualResetEvent(false);
+
+                        var _ = Subscription2.Run(async x =>
                         {
-                            con2Docs.Add(item.Id);
-                        }
-
-                        mre.Set();
-                        tcs.Task.Wait();
-                    });
-
-                    mre.WaitOne();
-
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        await session.StoreAsync(new User { Name = "Changed" }, "users/1");
-                        await session.StoreAsync(new User(), "users/7");
-                        await session.SaveChangesAsync();
-                    }
-
-                    var gotIt = false;
-                    var t = subscription.Run(x =>
-                    {
-                        foreach (var item in x.Items)
-                        {
-                            con1Docs.Add(item.Id);
-                            if (item.Result.Name == "Changed")
+                            foreach (var item in x.Items)
                             {
-                                gotIt = true;
+                                con2Docs.Add(item.Id);
                             }
+
+                            mre.Set();
+                            await tcs.Task;
+                        });
+
+                        mre.WaitOne();
+
+                        using (var session = store.OpenAsyncSession())
+                        {
+                            await session.StoreAsync(new User { Name = "Changed" }, "users/1");
+                            await session.StoreAsync(new User(), "users/7");
+                            await session.SaveChangesAsync();
                         }
-                    });
 
-                    Assert.True(await WaitForValueAsync(() => Task.FromResult(con2Docs.Count == 2), true, 6000, 100), $"connection 2 has {con2Docs.Count} docs");
-                    Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Count == 5), true, 6000, 100), $"connection 1 has {con1Docs.Count} docs");
+                        var gotIt = false;
+                        var t = subscription.Run(x =>
+                        {
+                            foreach (var item in x.Items)
+                            {
+                                con1Docs.Add(item.Id);
+                                if (item.Result.Name == "Changed")
+                                {
+                                    gotIt = true;
+                                }
+                            }
+                        });
 
-                    Assert.Contains("users/7", con1Docs);
-                    tcs.SetException(new InvalidOperationException());
+                        Assert.True(await WaitForValueAsync(() => Task.FromResult(con2Docs.Count == 2), true, 6000, 100), $"connection 2 has {con2Docs.Count} docs");
+                        Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Count == 5), true, 6000, 100), $"connection 1 has {con1Docs.Count} docs");
 
-                    Assert.True(await WaitForValueAsync(() => Task.FromResult(gotIt), true), $"updated document didn't arrived");
+                        Assert.Contains("users/7", con1Docs);
+                        tcs.SetException(new InvalidOperationException());
 
-                    await AssertNoLeftovers(store, id);
+                        Assert.True(await WaitForValueAsync(() => Task.FromResult(gotIt), true), $"updated document didn't arrived");
+
+                        await AssertNoLeftovers(store, id);
+                    }, tcs);
                 }
             }
         }
@@ -531,51 +540,54 @@ namespace SlowTests.Client.Subscriptions
                     var con1Docs = new List<string>();
                     var con2Docs = new List<string>();
 
-                    var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    var mre = new ManualResetEvent(false);
-
-                    var _ = Subscription2.Run(x =>
+                    var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
                     {
-                        foreach (var item in x.Items)
+                        var mre = new ManualResetEvent(false);
+
+                        var _ = Subscription2.Run(async x =>
                         {
-                            con2Docs.Add(item.Id);
-                        }
-
-                        mre.Set();
-                        tcs.Task.Wait();
-                    });
-
-                    mre.WaitOne();
-
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        await session.StoreAsync(new User { Name = "Changed" }, "users/1");
-                        await session.StoreAsync(new User { Name = "Changed" }, "users/2");
-                        await session.StoreAsync(new User(), "users/7");
-                        await session.SaveChangesAsync();
-                    }
-
-                    var gotIt = false;
-                    var t = subscription.Run(x =>
-                    {
-                        foreach (var item in x.Items)
-                        {
-                            con1Docs.Add(item.Id);
-                            if (item.Result.Name == "Changed")
+                            foreach (var item in x.Items)
                             {
-                                gotIt = true;
+                                con2Docs.Add(item.Id);
                             }
+
+                            mre.Set();
+                            await tcs.Task;
+                        });
+
+                        mre.WaitOne();
+
+                        using (var session = store.OpenAsyncSession())
+                        {
+                            await session.StoreAsync(new User { Name = "Changed" }, "users/1");
+                            await session.StoreAsync(new User { Name = "Changed" }, "users/2");
+                            await session.StoreAsync(new User(), "users/7");
+                            await session.SaveChangesAsync();
                         }
-                    });
 
-                    Assert.True(await WaitForValueAsync(() => Task.FromResult(con2Docs.Count == 2), true, 6000, 100), $"connection 2 has {con2Docs.Count} docs");
-                    Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Count == 5), true, 6000, 100), $"connection 1 has {con1Docs.Count} docs");
+                        var gotIt = false;
+                        var t = subscription.Run(x =>
+                        {
+                            foreach (var item in x.Items)
+                            {
+                                con1Docs.Add(item.Id);
+                                if (item.Result.Name == "Changed")
+                                {
+                                    gotIt = true;
+                                }
+                            }
+                        });
 
-                    Assert.Contains("users/7", con1Docs);
-                    tcs.SetException(new InvalidOperationException());
+                        Assert.True(await WaitForValueAsync(() => Task.FromResult(con2Docs.Count == 2), true, 6000, 100), $"connection 2 has {con2Docs.Count} docs");
+                        Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Count == 5), true, 6000, 100), $"connection 1 has {con1Docs.Count} docs");
 
-                    Assert.True(await WaitForValueAsync(() => Task.FromResult(gotIt), true), $"updated document didn't arrived");
-                    await AssertNoLeftovers(store, id);
+                        Assert.Contains("users/7", con1Docs);
+                        tcs.SetException(new InvalidOperationException());
+
+                        Assert.True(await WaitForValueAsync(() => Task.FromResult(gotIt), true), $"updated document didn't arrived");
+                        await AssertNoLeftovers(store, id);
+                    }, tcs);
                 }
             }
         }
@@ -968,54 +980,58 @@ namespace SlowTests.Client.Subscriptions
             const int expectedNumberOfDocsToResend = 7;
 
             string databaseName = GetDatabaseName();
-            using (var store = GetDocumentStore(new Options { ModifyDatabaseName = _ => databaseName }))
+
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
             {
-                var subscriptionId = await store.Subscriptions.CreateAsync<User>();
-                await using var subscriptionWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionId)
+                using (var store = GetDocumentStore(new Options { ModifyDatabaseName = _ => databaseName }))
                 {
-                    Strategy = SubscriptionOpeningStrategy.Concurrent,
-                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(2),
-                    MaxDocsPerBatch = expectedNumberOfDocsToResend
-                });
+                    var subscriptionId = await store.Subscriptions.CreateAsync<User>();
+                    await using var subscriptionWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionId)
+                    {
+                        Strategy = SubscriptionOpeningStrategy.Concurrent,
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(2),
+                        MaxDocsPerBatch = expectedNumberOfDocsToResend
+                    });
 
-                using (var session = store.OpenSession())
-                {
-                    for (int i = 0; i < 10; i++)
-                        session.Store(new User { Name = $"UserNo{i}" });
+                    using (var session = store.OpenSession())
+                    {
+                        for (int i = 0; i < 10; i++)
+                            session.Store(new User { Name = $"UserNo{i}" });
 
-                    session.SaveChanges();
+                        session.SaveChanges();
+                    }
+
+                    _ = subscriptionWorker.Run(async x =>
+                    {
+                        await tcs.Task;
+                    });
+
+                    await AssertWaitForValueAsync(() =>
+                    {
+                        List<SubscriptionStorage.ResendItem> items;
+
+                        using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                        using (context.OpenReadTransaction())
+                            items = SubscriptionStorage.GetResendItemsForDatabase(context, store.Database).ToList();
+
+                        return Task.FromResult(items.Count);
+                    }, expectedNumberOfDocsToResend);
                 }
 
-                _ = subscriptionWorker.Run(x =>
-                {
-                    var tcs = new TaskCompletionSource<bool>();
-                    tcs.Task.Wait();
-                });
-
-                await AssertWaitForValueAsync(() =>
+                // Upon disposing of the store, the database gets deleted.
+                // Then we recreate the database to ensure no leftover subscription data from the previous instance.
+                using (var _ = GetDocumentStore(new Options { ModifyDatabaseName = _ => databaseName }))
                 {
                     List<SubscriptionStorage.ResendItem> items;
 
                     using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
-                        items = SubscriptionStorage.GetResendItemsForDatabase(context, store.Database).ToList();
+                        items = SubscriptionStorage.GetResendItemsForDatabase(context, databaseName).ToList();
 
-                    return Task.FromResult(items.Count);
-                }, expectedNumberOfDocsToResend);
-            }
-
-            // Upon disposing of the store, the database gets deleted.
-            // Then we recreate the database to ensure no leftover subscription data from the previous instance.
-            using (var _ = GetDocumentStore(new Options { ModifyDatabaseName = _ => databaseName }))
-            {
-                List<SubscriptionStorage.ResendItem> items;
-
-                using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                using (context.OpenReadTransaction())
-                    items = SubscriptionStorage.GetResendItemsForDatabase(context, databaseName).ToList();
-
-                Assert.Equal(0, items.Count);
-            }
+                    Assert.Equal(0, items.Count);
+                }
+            }, tcs);
         }
 
         [RavenTheory(RavenTestCategory.Subscriptions)]
