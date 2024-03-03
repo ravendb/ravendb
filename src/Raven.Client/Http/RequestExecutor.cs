@@ -318,6 +318,7 @@ namespace Raven.Client.Http
                 Cache.Dispose();
                 ContextPool.Dispose();
                 _updateTopologyTimer?.Dispose();
+                _nodeSelector?.Dispose();
                 DisposeAllFailedNodesTimers();
                 // shared instance, cannot dispose!
                 //_httpClient.Dispose();
