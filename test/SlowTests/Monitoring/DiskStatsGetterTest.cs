@@ -26,8 +26,8 @@ namespace SlowTests.Monitoring
 #pragma warning restore CA1416
             await DiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet(diskStatsGetter);
         }
-        
-        [NightlyBuildMultiplatformFact(RavenPlatform.Windows, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-21945")]
+
+        [NightlyBuildMultiplatformFact(RavenPlatform.Windows)]
         public async Task WindowsDiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet()
         {
 #pragma warning disable CA1416
@@ -36,10 +36,80 @@ namespace SlowTests.Monitoring
             await DiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet(diskStatsGetter);
         }
 
+        [RavenFact(RavenTestCategory.Monitoring)]
+        public async Task DiskStats_WhenTakesLongTime_ShouldReturnPrevResult()
+        {
+            const string drive = "C:";
+
+            using var mre = new ManualResetEvent(false);
+            var statsGetter = new DummyDiskStatsGetter(TimeSpan.FromMicroseconds(1), mre);
+            Assert.Null(await statsGetter.GetAsync(drive));
+            Assert.Null(await statsGetter.GetAsync(drive));
+
+            mre.Set();
+            await WaitFor(async () => (await statsGetter.GetAsync(drive))?.QueueLength >= 1);
+            mre.Reset();
+
+            await statsGetter.GetAsync(drive);
+            var result = await statsGetter.GetAsync(drive);
+            await Task.Delay(100);
+            var result2 = await statsGetter.GetAsync(drive);
+
+            Assert.Equal(result.QueueLength, result2.QueueLength);
+
+            mre.Set();
+            await WaitFor(async () => (await statsGetter.GetAsync(drive))?.QueueLength >= result.QueueLength);
+        }
+
+        private static async Task WaitFor(Func<Task<bool>> func)
+        {
+            var stop = Stopwatch.StartNew();
+            while (true)
+            {
+                if (await func())
+                    break;
+                if (stop.Elapsed > TimeSpan.FromSeconds(5))
+                    throw new TimeoutException();
+                await Task.Delay(TimeSpan.FromMilliseconds(100));
+            }
+        }
+
+        private class DummyDiskStatsGetter : DiskStatsGetter<DummyDiskStatsRawResult>
+        {
+            private readonly ManualResetEvent _mre;
+            private int _nextValue;
+
+
+            public DummyDiskStatsGetter(TimeSpan minInterval, ManualResetEvent mre) : base(minInterval)
+            {
+                _mre = mre;
+            }
+
+            protected override DiskStatsResult CalculateStats(DummyDiskStatsRawResult currentInfo, State state)
+            {
+                _mre.WaitOne();
+                return new DiskStatsResult { QueueLength = _nextValue++ };
+            }
+
+            protected override DummyDiskStatsRawResult GetDiskInfo(string path)
+            {
+                _mre.WaitOne();
+                return new DummyDiskStatsRawResult { Time = DateTime.UtcNow };
+            }
+
+            public override void Dispose() { }
+        }
+
+        private class DummyDiskStatsRawResult : IDiskStatsRawResult
+        {
+            public DateTime Time { get; init; }
+            public int Value { get; init; }
+        }
+
         private static async Task DiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet(IDiskStatsGetter diskStatsGetter)
         {
             var currentDirectory = Directory.GetCurrentDirectory();
-            
+
             var baseTime = TimeSpan.Zero;
             const int controlGroupCount = 10;
             for (int i = 0; i < controlGroupCount; i++)
@@ -49,6 +119,7 @@ namespace SlowTests.Monitoring
                 var stopElapsed = stop.Elapsed;
                 baseTime += stopElapsed;
             }
+
             baseTime /= controlGroupCount;
 
             var errorCount = 0;

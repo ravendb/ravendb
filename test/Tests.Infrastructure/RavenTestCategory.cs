@@ -56,4 +56,5 @@ public enum RavenTestCategory : long
     Smuggler = 1L << 41,
     Lucene = 1L << 42,
     Security = 1L << 43,
+    Monitoring = 1L << 44,
 }
