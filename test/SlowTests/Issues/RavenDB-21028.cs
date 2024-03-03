@@ -1,15 +1,14 @@
-﻿using System.Threading.Tasks;
-using Xunit.Abstractions;
-using System;
+﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.PeriodicBackup;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -63,21 +62,12 @@ namespace SlowTests.Issues
 
             var db = await GetDatabase(store.Database);
 
-            // hold backup execution 
-            var tcs = new TaskCompletionSource<object>();
-
-            try
+            await Backup.HoldBackupExecutionIfNeededAndInvoke(db.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
             {
-                db.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
-
                 // wait for completion should not hang
                 var operation = await store.Maintenance.SendAsync(new BackupOperation(config));
                 await Assert.ThrowsAsync<TimeoutException>(async () => await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)));
-            }
-            finally
-            {
-                tcs.TrySetResult(null);
-            }
+            }, tcs: new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
         }
     }
 }

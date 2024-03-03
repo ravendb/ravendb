@@ -46,7 +46,7 @@ namespace SlowTests.Client.Subscriptions
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(100)
                 });
-                var tcs = new TaskCompletionSource<bool>();
+                var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var signalWhenForcefullyUpdatedCV = new AsyncManualResetEvent();
                 var signalWhenStartedProcessingDoc = new AsyncManualResetEvent();
 

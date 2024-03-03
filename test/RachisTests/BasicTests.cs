@@ -61,7 +61,7 @@ namespace RachisTests
         {
             var leader = await CreateNetworkAndGetLeader(1);
             var mre = new ManualResetEvent(false);
-            var tcs = new TaskCompletionSource<object>();
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             leader.Timeout.Start(() =>
             {
@@ -73,11 +73,11 @@ namespace RachisTests
                     {
 
                     }
-                    tcs.SetResult(null);
+                    tcs.TrySetResult(null);
                 }
                 catch (Exception e)
                 {
-                    tcs.SetException(e);
+                    tcs.TrySetException(e);
                 }
             });
 

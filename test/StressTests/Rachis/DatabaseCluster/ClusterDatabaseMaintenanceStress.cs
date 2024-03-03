@@ -45,7 +45,7 @@ namespace StressTests.Rachis.DatabaseCluster
                 ReplicationFactor = clusterSize
             }))
             {
-                var tcs = new TaskCompletionSource<DocumentDatabase>();
+                var tcs = new TaskCompletionSource<DocumentDatabase>(TaskCreationOptions.RunContinuationsAsynchronously);
 
                 var databaseName = store.Database;
                 using (var session = store.OpenSession())
@@ -63,7 +63,7 @@ namespace StressTests.Rachis.DatabaseCluster
                 using (new DisposableAction(() =>
                 {
                     if (preferred.ServerStore.DatabasesLandlord.DatabasesCache.TryRemove(databaseName, tcs.Task))
-                        tcs.SetCanceled();
+                        tcs.TrySetCanceled();
                 }))
                 {
                     var t = preferred.ServerStore.DatabasesLandlord.DatabasesCache.ForTestingPurposesOnly().Replace(databaseName, tcs.Task);
@@ -108,7 +108,7 @@ namespace StressTests.Rachis.DatabaseCluster
                 ReplicationFactor = clusterSize
             }))
             {
-                var tcs = new TaskCompletionSource<DocumentDatabase>();
+                var tcs = new TaskCompletionSource<DocumentDatabase>(TaskCreationOptions.RunContinuationsAsynchronously);
 
                 var databaseName = store.Database;
                 using (var session = store.OpenSession())
@@ -129,7 +129,7 @@ namespace StressTests.Rachis.DatabaseCluster
                 using (new DisposableAction(() =>
                 {
                     if (preferred.ServerStore.DatabasesLandlord.DatabasesCache.TryRemove(databaseName, tcs.Task))
-                        tcs.SetCanceled();
+                        tcs.TrySetCanceled();
                 }))
                 {
                     var t = preferred.ServerStore.DatabasesLandlord.DatabasesCache.ForTestingPurposesOnly().Replace(databaseName, tcs.Task);

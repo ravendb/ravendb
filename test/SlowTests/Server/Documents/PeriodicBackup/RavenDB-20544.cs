@@ -20,47 +20,39 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task CanRunTwoBackupsConcurrently()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var tcs = new TaskCompletionSource<object>();
-            DocumentDatabase documentDatabase = null;
+            DoNotReuseServer();
+            await Server.ServerStore.EnsureNotPassiveAsync();
 
-            try
+            using var store = GetDocumentStore();
+            var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+            Assert.NotNull(documentDatabase);
+
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
             {
-                DoNotReuseServer();
-                await Server.ServerStore.EnsureNotPassiveAsync();
-
-                using var store = GetDocumentStore();
-                documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                Assert.NotNull(documentDatabase);
-                documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
-
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name= "Lev" });
+                    await session.StoreAsync(new User { Name = "Lev" });
                     await session.SaveChangesAsync();
                 }
 
                 var config1 = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
                 var config2 = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-            
+
                 var taskId1 = await Backup.UpdateConfigAndRunBackupAsync(Server, config1, store, opStatus: OperationStatus.InProgress);
                 var taskId2 = await Backup.UpdateConfigAndRunBackupAsync(Server, config2, store, opStatus: OperationStatus.InProgress);
 
                 var op1 = new GetOngoingTaskInfoOperation(taskId1, OngoingTaskType.Backup);
                 var op2 = new GetOngoingTaskInfoOperation(taskId2, OngoingTaskType.Backup);
-            
+
                 var backupResult1 = store.Maintenance.Send(op1) as OngoingTaskBackup;
                 var backupResult2 = store.Maintenance.Send(op2) as OngoingTaskBackup;
 
                 Assert.NotNull(backupResult1?.OnGoingBackup);
                 Assert.NotNull(backupResult2?.OnGoingBackup);
 
-                tcs.SetResult(null);
-            }
-            finally
-            {
-                if (documentDatabase != null) 
-                    documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = null;
-            }
+                tcs.TrySetResult(null);
+            }, tcs);
         }
     }
 }
