@@ -21,13 +21,14 @@ namespace Raven.Client.Documents.Session
         IAsyncTimeSeriesStreamingBase<TimeSeriesEntry>
     {
         /// <summary>
-        /// Get Time-Series entries asynchronously.
+        /// Retrieves a range of entries from a single time series.<br/>
+        /// <seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/session/get/get-entries#timeseriesfor.get"/>
         /// </summary>
-        /// <param name="from">Date time to start collecting from (included). By default: DateTime.MinValue.</param>
-        /// <param name="to">Date time to stop collecting from (included). By default: DateTime.MaxValue.</param>
-        /// <param name="start">Number of time series entries that should be skipped. By default: 0.</param>
-        /// <param name="pageSize">Maximum number of time series entries that will be retrieved. By default: int.MaxValue.</param>
-        /// <param name="token"></param>
+        /// <param name="from">The date and time from which to start collecting time series entries (inclusive). If not specified, the collection will start from the earliest possible date and time (DateTime.MinValue).</param>
+        /// <param name="to">The date and time at which to stop collecting time series entries (inclusive). If not specified, the collection will continue until the latest possible date and time (DateTime.MaxValue).</param>
+        /// <param name="start">The number of time series entries that should be skipped. By default: 0.</param>
+        /// <param name="pageSize">The maximum number of time series entries that will be retrieved. By default: int.MaxValue.</param>
+        /// <param name="token">A cancellation token that can be used to cancel the asynchronous operation if needed. By default: CancellationToken.None.</param>
         Task<TimeSeriesEntry[]> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
             CancellationToken token = default);
 

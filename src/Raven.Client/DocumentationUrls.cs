@@ -114,5 +114,17 @@ internal static class DocumentationUrls
                 public const string Includes = nameof(Includes);
             }
         }
+
+        internal static class TimeSeries
+        {
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/session/get/get-entries#include-parent-and-tagged-documents"/></remarks>
+            public const string Include = nameof(Include);
+
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/overview"/></remarks>
+            public const string ClientApi = nameof(ClientApi);
+
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/incremental-time-series/overview"/></remarks>
+            public const string IncrementalOverview = nameof(IncrementalOverview);
+        }
     }
 }
