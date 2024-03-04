@@ -36,7 +36,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents
 {
-    public unsafe class DocumentsStorage : IDisposable
+    public unsafe partial class DocumentsStorage : IDisposable
     {
         private static readonly Slice DocsSlice;
         public static readonly Slice CollectionEtagsSlice;

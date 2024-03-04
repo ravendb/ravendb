@@ -1830,7 +1830,6 @@ namespace Voron.Data.Tables
 
         public bool FindByIndex(TableSchema.FixedSizeSchemaIndexDef index, long value, out TableValueReader reader)
         {
-            AssertWritableTable();
             reader = default;
             var fst = GetFixedSizeTree(index);
 
