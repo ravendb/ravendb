@@ -1048,7 +1048,7 @@ namespace RachisTests.DatabaseCluster
                 try
                 {
                     var db = await srcLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(srcDB);
-                    var ex = await Assert.ThrowsAsync<AggregateException>(async () =>
+                    var ex = await Assert.ThrowsAsync<TimeoutException>(async () =>
                     {
                         var wait = Task.Delay(TimeSpan.FromSeconds(30));
                         var exec = Task.Run(() =>
