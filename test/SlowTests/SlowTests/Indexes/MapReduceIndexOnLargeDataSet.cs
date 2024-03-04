@@ -16,11 +16,12 @@ namespace SlowTests.SlowTests.Indexes
         {
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-        public void WillNotProduceAnyErrors(Options options)
+        [MultiplatformTheory(RavenArchitecture.X64)]
+        [InlineData(RavenSearchEngineMode.Corax)]
+        [InlineData(RavenSearchEngineMode.Lucene)]
+        public void WillNotProduceAnyErrors(RavenSearchEngineMode mode)
         {
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(mode)))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
