@@ -36,6 +36,7 @@ import {
     createDatabaseUtils,
 } from "components/pages/resources/databases/partials/create/shared/createDatabaseUtils";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
+import { clusterSelectors } from "components/common/shell/clusterSlice";
 
 interface CreateDatabaseFromBackupProps {
     closeModal: () => void;
@@ -47,6 +48,7 @@ export default function CreateDatabaseFromBackup({
     changeCreateModeToRegular,
 }: CreateDatabaseFromBackupProps) {
     const { databasesService } = useServices();
+    const localNodeTag = useAppSelector(clusterSelectors.localNodeTag);
     const usedDatabaseNames = useAppSelector(databaseSelectors.allDatabases).map((db) => db.name);
 
     const form = useForm<FormData>({
@@ -60,6 +62,7 @@ export default function CreateDatabaseFromBackup({
                     sourceType: data.sourceStep.sourceType,
                     isEncrypted: data.sourceStep.isEncrypted,
                     isSharded: data.basicInfoStep.isSharded,
+                    localNodeTag,
                 },
                 options
             ),
