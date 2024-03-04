@@ -60,7 +60,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     var tombstoneEtags = etlProcess.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
 
-                    Assert.Equal(tombstones.First(x => x.Collection.CompareTo("Users") == 0).Etag, tombstoneEtags["Users"]);
+                    Assert.Equal("Users", tombstoneEtags.First().Value.Collection);
+                    Assert.Equal(tombstones.First(x => x.Collection.CompareTo("Users") == 0).Etag, tombstoneEtags.First().Value.Etag);
                 }
             }
         }
@@ -71,7 +72,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, collections: new string[0], script: null, applyToAllDocuments: true);
+                var etl = AddEtl(src, dest, collections: new string[0], script: null, applyToAllDocuments: true);
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses >= 4); // 2 docs and 2 HiLos
 
@@ -109,7 +110,9 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     var tombstoneEtags = etlProcess.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
 
-                    Assert.Equal(tombstones.Max(x => x.Etag), tombstoneEtags[Constants.Documents.Collections.AllDocumentsCollection]);
+                    Assert.Equal(Constants.Documents.Collections.AllDocumentsCollection, tombstoneEtags.First().Value.Collection);
+                    Assert.Equal(tombstones.Max(x => x.Etag), tombstoneEtags.First().Value.Etag);
+
                 }
             }
         }

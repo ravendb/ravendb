@@ -320,7 +320,6 @@ namespace Raven.Server.Documents
         public static CounterTombstoneDetail TableValueToCounterTombstoneDetail(JsonOperationContext context, ref TableValueReader tvr)
         {
             ExtractDocIdAndCounterNameFromCounterTombstoneKey(context, ref tvr, out var docId, out var name);
-
             return new CounterTombstoneDetail
             {
                 DocumentId = docId,
@@ -1974,6 +1973,27 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<CounterTombstoneDetailWithCollection> GetCounterWithCollectionTombstonesFrom(DocumentsOperationContext context, string collectionName, long etag)
+        {
+            var table = new Table(CounterTombstonesSchema, context.Transaction.InnerTransaction);
+
+            foreach (var result in table.SeekForwardFrom(CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice], etag, 0))
+            {
+                CounterTombstoneDetail item = TableValueToCounterTombstoneDetail(context, ref result.Reader);
+                DocumentOrTombstone documentOrTombstone = _documentsStorage.GetDocumentOrTombstone(context, item.DocumentId);
+
+                if (documentOrTombstone.Missing)
+                    continue;
+
+                string collection = documentOrTombstone.Document != null ?
+                    _documentDatabase.DocumentsStorage.ExtractCollectionName(context, documentOrTombstone.Document.Data).Name :
+                    documentOrTombstone.Tombstone.Collection;
+
+                if (collection.Equals(collectionName))
+                    yield return new CounterTombstoneDetailWithCollection(item, collection);
+            }
+        }
+
         public long PurgeCountersAndCounterTombstones(DocumentsOperationContext context, string collection, long upto, long numberOfEntriesToDelete)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
@@ -2812,5 +2832,19 @@ namespace Raven.Server.Documents
             ChangeVector?.Dispose();
             Name?.Dispose();
         }
+    }
+
+    public class CounterTombstoneDetailWithCollection : CounterTombstoneDetail
+    {
+        public CounterTombstoneDetailWithCollection(CounterTombstoneDetail counterTombstoneDetail, string collection)
+        {
+            DocumentId = counterTombstoneDetail.DocumentId;
+            ChangeVector = counterTombstoneDetail.ChangeVector;
+            Name = counterTombstoneDetail.Name;
+            Etag = counterTombstoneDetail.Etag;
+            Collection = collection;
+        }
+
+        public string Collection { get; set; }
     }
 }

@@ -17,8 +17,8 @@ class tombstonesState extends viewModelBase {
     isForbidden = ko.observable<boolean>(false);
     
     state = ko.observable<TombstonesStateOnWire>();
-    
-    spinners = {
+
+        spinners = {
         force: ko.observable<boolean>(false),
         refresh: ko.observable<boolean>(false)
     };
@@ -84,17 +84,26 @@ class tombstonesState extends viewModelBase {
 
         subscriptionsGrid.init(() => this.subscriptionsFetcher(), () => {
             return [
-                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.Identifier, "Process", "30%", {
+                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.Process, "Process", "15%", {
                     sortable: "string"
                 }),
-                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.Type, "Type", "20%", {
+                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.Identifier, "Name", "15%", {
                     sortable: "string"
                 }),
-                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.Collection, "Collection", "25%", {
+                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.NumberOfTombstoneLeft, "Number of tombstone left", "10%", {
                     sortable: "string"
                 }),
-                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => this.formatEtag(x.Etag), "Etag", "25%", {
+                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.TombStoneTypes, "TombStoneTypes", "25%", {
+                    sortable: "string"
+                }),
+                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.Collection, "Collection", "10%", {
+                    sortable: "string"
+                }),
+                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => this.formatEtag(x.Etag), "Etag", "10%", {
                     sortable: "string", title: (x) => this.getEtagTitle(x.Etag)
+                }),
+                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.BlockCleanup, "Blocking cleanup", "15%", {
+                    sortable: "string"
                 }),
             ]
         });
@@ -125,6 +134,7 @@ class tombstonesState extends viewModelBase {
                 this.state(state);
             });
     }
+
     
     refresh() {
         this.spinners.refresh(true);

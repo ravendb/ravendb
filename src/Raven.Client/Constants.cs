@@ -254,6 +254,7 @@ namespace Raven.Client
                 public const string AllDocumentsCollection = "@all_docs";
 
                 public const string EmptyCollection = "@empty";
+
             }
 
             public class Indexing
@@ -493,6 +494,10 @@ namespace Raven.Client
             }
 
             public const string GraphApi = "Graph API will be removed in next major version of the product.";
+        }
+        public static class Collections
+        {
+            public const string AllCollection = "@all";
         }
     }
 }
