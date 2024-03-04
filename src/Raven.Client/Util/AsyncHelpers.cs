@@ -37,7 +37,15 @@ namespace Raven.Client.Util
             if (UseTaskAwaiterWhenNoSynchronizationContextIsAvailable && oldContext == null)
             {
                 // We can run synchronously without any issue.
-                task().GetAwaiter().GetResult();
+                try
+                {
+                    task().GetAwaiter().GetResult();
+                }
+                catch (AggregateException ex)
+                {
+                    var exception = ex.ExtractSingleInnerException();
+                    ExceptionDispatchInfo.Capture(exception).Throw();
+                }
                 return;
             }
 
