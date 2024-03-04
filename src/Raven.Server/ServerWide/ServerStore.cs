@@ -3645,6 +3645,7 @@ namespace Raven.Server.ServerWide
             internal Action<CompareExchangeCommandBase> ModifyCompareExchangeTimeout;
             internal Action RestoreDatabaseAfterSavingDatabaseRecord;
             internal Action AfterCommitInClusterTransaction;
+            internal Action<string, List<ClusterTransactionCommand.SingleClusterDatabaseCommand>> BeforeExecuteClusterTransactionBatch;
         }
         
         public readonly MemoryCache QueryClauseCache;
