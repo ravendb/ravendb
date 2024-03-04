@@ -525,7 +525,10 @@ namespace Raven.Server.Documents
         public List<ClusterTransactionCommand.SingleClusterDatabaseCommand> ExecuteClusterTransaction(TransactionOperationContext context, int batchSize)
         {
             var batch = new List<ClusterTransactionCommand.SingleClusterDatabaseCommand>(
-                ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take: batchSize));
+                ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, 
+                    lastCompletedClusterTransactionIndex: LastCompletedClusterTransactionIndex, take: batchSize));
+            
+            ServerStore.ForTestingPurposes?.BeforeExecuteClusterTransactionBatch?.Invoke(Name, batch);
 
             Stopwatch stopwatch = null;
             if (_logger.IsInfoEnabled)
