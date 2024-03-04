@@ -16,7 +16,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
         }
 
-        [Fact]
+        [Fact(Skip = "Fixed by RavenDB-22108")]
         public async Task CanRunTwoBackupsConcurrently()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

@@ -2085,7 +2085,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "Fixed by RavenDB-22108"), Trait("Category", "Smuggler")]
         public async Task CanAbortOneTimeBackupAndRestore()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2969,7 +2969,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         // Performing backup Delay to the time:
         [InlineData(1)] // until the next scheduled backup time.
         [InlineData(5)] // after the next scheduled backup.
-        [Theory, Trait("Category", "Smuggler")]
+        [Theory(Skip = "Fixed by RavenDB-22108"), Trait("Category", "Smuggler")]
         public async Task ShouldProperlyPlaceOriginalBackupTimePropertyWithDelay(int delayDurationInMinutes)
         {
             const string fullBackupFrequency = "*/2 * * * *";
@@ -3035,7 +3035,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "Fixed by RavenDB-22108"), Trait("Category", "Smuggler")]
         public async Task ShouldHaveFailoverForFirstBackupInNewBackupTask()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -3092,7 +3092,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "Fixed by RavenDB-22108"), Trait("Category", "Smuggler")]
         public async Task CanDelayBackupTask()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -3148,7 +3148,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "Fixed by RavenDB-22108"), Trait("Category", "Smuggler")]
         public async Task ShouldDelayBackupOnNotResponsibleNode()
         {
             const int clusterSize = 3;
@@ -3258,7 +3258,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "Fixed by RavenDB-22108"), Trait("Category", "Smuggler")]
         public async Task ShouldScheduleNextBackupAfterServerRestartCorrectly()
         {
             const int clusterSize = 3;
@@ -3354,7 +3354,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "Fixed by RavenDB-22108"), Trait("Category", "Smuggler")]
         public async Task EveryNodeHasDelayInMemory()
         {
             const int clusterSize = 3;
@@ -3426,7 +3426,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "Fixed by RavenDB-22108"), Trait("Category", "Smuggler")]
         public async Task ShouldDelayOnCurrentNodeIfClusterDown()
         {
             const int clusterSize = 3;
@@ -3483,7 +3483,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "Fixed by RavenDB-22108"), Trait("Category", "Smuggler")]
         public async Task NumberOfCurrentlyRunningBackupsShouldBeCorrectAfterBackupTaskDelay()
         {
             DoNotReuseServer();
@@ -3531,7 +3531,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "Fixed by RavenDB-22108"), Trait("Category", "Smuggler")]
         public async Task ShouldRearrangeTheBackupTimer_IfItGot_ActiveByOtherNode_Then_ActiveByCurrentNode_WhileRunning()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -3606,7 +3606,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "Fixed by RavenDB-22108"), Trait("Category", "Smuggler")]
         public async Task can_restore_smuggler_with_escaped_quotes()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

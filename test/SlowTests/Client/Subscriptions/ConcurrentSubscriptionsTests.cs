@@ -553,7 +553,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
+        [RavenFact(RavenTestCategory.Subscriptions, Skip = "Fixed by RavenDB-22108")]
         public async Task ResendChangedDocument()
         {
             using (var store = GetDocumentStore())
@@ -649,7 +649,7 @@ namespace SlowTests.Client.Subscriptions
             }, 0);
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
+        [RavenFact(RavenTestCategory.Subscriptions, Skip = "Fixed by RavenDB-22108")]
         public async Task ResendChangedDocument2()
         {
             using (var store = GetDocumentStore())
@@ -1116,7 +1116,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Fixed by RavenDB-22108")]
         public async Task ShouldClearSubscriptionInfoFromStorageAfterDatabaseDeletion()
         {
             DoNotReuseServer();

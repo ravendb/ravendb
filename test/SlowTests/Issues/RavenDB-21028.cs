@@ -19,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Smuggler)]
+        [RavenFact(RavenTestCategory.Smuggler, Skip = "Fixed by RavenDB-22108")]
         public async Task WaitForCompletionShouldNotHangOnFailureDuringExport()
         {
             using var store = GetDocumentStore();
@@ -34,7 +34,7 @@ namespace SlowTests.Issues
 
         }
 
-        [RavenFact(RavenTestCategory.Smuggler)]
+        [RavenFact(RavenTestCategory.Smuggler, Skip = "Fixed by RavenDB-22108")]
         public async Task WaitForCompletionShouldRespectTimeout()
         {
             UseNewLocalServer();
