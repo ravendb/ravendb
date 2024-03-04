@@ -34,6 +34,13 @@ function getPointsWithTagsSchema(sourceType: RestoreSource) {
                 }),
             })
         )
+        .when(["$sourceType", "$isSharded"], {
+            is: (currentSourceType: RestoreSource, isSharded: boolean) => currentSourceType === sourceType && isSharded,
+            then: (schema) =>
+                schema.test("one-must-be-local", "At least one selected node must be local", (value, ctx) => {
+                    return value.some((x) => x.nodeTag === ctx.options.context.localNodeTag);
+                }),
+        })
         .min(1);
 }
 
