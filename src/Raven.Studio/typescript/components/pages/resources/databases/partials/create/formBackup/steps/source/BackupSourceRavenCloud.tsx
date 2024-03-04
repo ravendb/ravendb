@@ -1,7 +1,7 @@
 import React from "react";
 import { Row, Col, Label, UncontrolledPopover, PopoverBody } from "reactstrap";
 import { Icon } from "components/common/Icon";
-import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
 import { useServices } from "components/hooks/useServices";
@@ -17,7 +17,6 @@ export default function BackupSourceRavenCloud() {
     const { control } = useFormContext<FormData>();
 
     const {
-        basicInfoStep: { isSharded },
         sourceStep: {
             sourceData: { ravenCloud: ravenCloudData },
         },
@@ -58,21 +57,9 @@ export default function BackupSourceRavenCloud() {
                 </Row>
             )}
             <RestorePointsFields
-                isSharded={isSharded}
-                pointsWithTagsFieldName="sourceStep.sourceData.ravenCloud.pointsWithTags"
-                mapRestorePoint={(field, index) => (
-                    <RavenCloudSourceRestorePoint
-                        key={field.id}
-                        index={index}
-                        isSharded={isSharded}
-                        link={ravenCloudData.link}
-                    />
-                )}
+                mapRestorePoint={(field, index) => <RavenCloudSourceRestorePoint key={field.id} index={index} />}
             />
-            <EncryptionField
-                encryptionKeyFieldName="sourceStep.sourceData.ravenCloud.encryptionKey"
-                selectedSourceData={ravenCloudData}
-            />
+            <EncryptionField sourceType="ravenCloud" />
         </>
     );
 }
@@ -103,24 +90,22 @@ function LinkLabel() {
     );
 }
 
-interface RavenCloudSourceRestorePointProps {
-    index: number;
-    isSharded: boolean;
-    link: string;
-}
-
-function RavenCloudSourceRestorePoint({ index, isSharded, link }: RavenCloudSourceRestorePointProps) {
+function RavenCloudSourceRestorePoint({ index }: { index: number }) {
     const { resourcesService } = useServices();
-    const { control, setValue } = useFormContext<FormData>();
+    const { trigger, setValue, control } = useFormContext<FormData>();
 
-    const { remove } = useFieldArray({
+    const {
+        basicInfoStep: { isSharded },
+        sourceStep: {
+            sourceData: { ravenCloud },
+        },
+    } = useWatch({
         control,
-        name: "sourceStep.sourceData.local.pointsWithTags",
     });
 
     const asyncGetRestorePointsOptions = useAsyncDebounce(
         async (link) => {
-            if (!link) {
+            if (!link || !(await trigger("sourceStep.sourceData.ravenCloud.link"))) {
                 return [];
             }
 
@@ -154,14 +139,12 @@ function RavenCloudSourceRestorePoint({ index, isSharded, link }: RavenCloudSour
             );
             return restorePointUtils.mapToSelectOptions(dto);
         },
-        [link]
+        [ravenCloud.link]
     );
 
     return (
         <CreateDatabaseFromBackupRestorePoint
-            fieldName="sourceStep.sourceData.ravenCloud.pointsWithTags"
             index={index}
-            remove={remove}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}
             isLoading={asyncGetRestorePointsOptions.loading}
         />
