@@ -376,9 +376,18 @@ namespace RachisTests.DatabaseCluster
                 return await session.LoadAsync<TestObj>(notDelete);
             });
 
-            var r = await AssertWaitForSingleAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")));
+            var r = await WaitForSingleAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")));
+            Assert.True(r.Count == 1, GetSingleCompareExchangeMsg(r));
             Assert.EndsWith(notDelete, r.Single().Key, StringComparison.OrdinalIgnoreCase);
         }
+
+        private string GetSingleCompareExchangeMsg(Dictionary<string, CompareExchangeValue<TestObj>> r)
+        {
+            return $"The collection was expected to contain a single element, but it contained {r.Count} elements. \n" +
+                   "The collection:\n" + 
+                    string.Join(',', r.Select(kvp => $"[ Key: {kvp.Key}, Index: {kvp.Value.Index}, Value: {{ Id: {kvp.Value.Value?.Id}, Prop: {kvp.Value.Value?.Prop} }} ]"));
+        }
+
 
         [Theory]
         [InlineData(1)]
