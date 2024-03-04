@@ -35,7 +35,7 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
         const { accessManager, license } = mockStore;
         const { tasksService } = mockServices;
 
-        accessManager.with_secureServer(props.isSecuredServer);
+        accessManager.with_isServerSecure(props.isSecuredServer);
 
         tasksService.withLocalFolderPathOptions();
         tasksService.withBackupLocation();

@@ -11,7 +11,7 @@ import { useAsyncCallback } from "react-async-hook";
 import { mapGlacierToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
-import { availableGlacierRegions } from "./utils/amazonRegions";
+import { availableGlacierRegions } from "components/utils/common";
 
 export default function AmazonGlacier() {
     const { control, trigger } = useFormContext<FormDestinations>();

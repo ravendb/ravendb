@@ -9,8 +9,8 @@ import AceEditor, { AceEditorProps } from "./AceEditor";
 import classNames from "classnames";
 import DurationPicker, { DurationPickerProps } from "./DurationPicker";
 import SelectCreatable from "./select/SelectCreatable";
-import { GetOptionValue, GroupBase, OnChangeValue, OptionsOrGroups } from "react-select";
-import Select, { SelectValue } from "./select/Select";
+import { GetOptionValue, GroupBase, InputActionMeta, OnChangeValue, OptionsOrGroups } from "react-select";
+import Select, { InputNotHidden, SelectValue } from "./select/Select";
 import DatePicker from "./DatePicker";
 import { Icon } from "components/common/Icon";
 
@@ -70,6 +70,7 @@ export function FormCheckboxes<TFieldValues extends FieldValues, TName extends F
     const {
         field: { onChange, value: selectedValues },
         fieldState: { invalid, error },
+        formState,
     } = useController({
         name,
         control,
@@ -95,6 +96,7 @@ export function FormCheckboxes<TFieldValues extends FieldValues, TName extends F
                         className={checkboxClassName}
                         selected={selectedValues.includes(option.value)}
                         toggleSelection={(x) => toggleSelection(x.currentTarget.checked, option.value)}
+                        disabled={formState.isSubmitting}
                     >
                         {option.label}
                     </Checkbox>
@@ -140,8 +142,8 @@ export function getFormSelectedOptions<Option>(
     const allOptions: Option[] = [...optionsFromGroups, ...basicOptions];
 
     return Array.isArray(formValues)
-        ? formValues.map((value) => allOptions.find((option) => valueAccessor(option) === value))
-        : allOptions.find((option) => valueAccessor(option) === formValues);
+        ? formValues.map((value) => allOptions.find((option) => _.isEqual(valueAccessor(option), value)))
+        : allOptions.find((option) => _.isEqual(valueAccessor(option), formValues));
 }
 
 export function FormSelect<
@@ -156,6 +158,7 @@ export function FormSelect<
     const {
         field: { onChange, value: formValues },
         fieldState: { invalid, error },
+        formState,
     } = useController({
         name,
         control,
@@ -178,6 +181,7 @@ export function FormSelect<
                             Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options)
                         );
                     }}
+                    isDisabled={formState.isSubmitting}
                     {...rest}
                 />
             </div>
@@ -206,6 +210,7 @@ export function FormSelectCreatable<
     const {
         field: { onChange, value: formValues },
         fieldState: { invalid, error },
+        formState,
     } = useController({
         name,
         control,
@@ -241,6 +246,7 @@ export function FormSelectCreatable<
                         );
                     }}
                     onCreateOption={onCreateOption}
+                    disabled={formState.isSubmitting}
                     {...rest}
                 />
             </div>
@@ -248,6 +254,44 @@ export function FormSelectCreatable<
                 <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
             )}
         </div>
+    );
+}
+
+export function FormSelectAutocomplete<
+    Option,
+    IsMulti extends boolean = false,
+    Group extends GroupBase<Option> = GroupBase<Option>,
+    TFieldValues extends FieldValues = FieldValues,
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+>(
+    props: FormElementProps<TFieldValues, TName> &
+        ComponentProps<typeof SelectCreatable<Option, IsMulti, Group>> & {
+            customOptions?: OptionsOrGroups<Option, Group>;
+            optionCreator?: (value: string) => any;
+        }
+) {
+    const {
+        field: { onChange, value },
+    } = useController({
+        name: props.name,
+    });
+
+    const onInputChange = (value: string, action: InputActionMeta) => {
+        if (action?.action !== "input-blur" && action?.action !== "menu-close") {
+            onChange(value);
+        }
+    };
+
+    return (
+        <FormSelectCreatable<Option, IsMulti, Group, TFieldValues, TName>
+            inputValue={value}
+            onInputChange={onInputChange}
+            components={{ Input: InputNotHidden }}
+            tabSelectsValue
+            controlShouldRenderValue={false}
+            closeMenuOnSelect={false}
+            {...props}
+        />
     );
 }
 
@@ -259,6 +303,7 @@ export function FormRadioToggleWithIcon<TFieldValues extends FieldValues, TName 
     const {
         field: { onChange, value },
         fieldState: { error, invalid },
+        formState,
     } = useController({
         name,
         control,
@@ -270,7 +315,13 @@ export function FormRadioToggleWithIcon<TFieldValues extends FieldValues, TName 
     return (
         <div className="position-relative flex-grow-1">
             <div className="d-flex flex-grow-1">
-                <RadioToggleWithIcon name={name} selectedValue={value} setSelectedValue={onChange} {...rest} />
+                <RadioToggleWithIcon
+                    name={name}
+                    selectedValue={value}
+                    setSelectedValue={onChange}
+                    disabled={formState.isSubmitting}
+                    {...rest}
+                />
             </div>
             {invalid && (
                 <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
@@ -308,6 +359,7 @@ export function FormDurationPicker<
     const {
         field: { onChange, value },
         fieldState: { error },
+        formState,
     } = useController({
         name,
         control,
@@ -319,7 +371,7 @@ export function FormDurationPicker<
     return (
         <div className="position-relative flex-grow-1">
             <div className="d-flex flex-grow-1">
-                <DurationPicker totalSeconds={value} onChange={onChange} {...rest} />
+                <DurationPicker totalSeconds={value} onChange={onChange} disabled={formState.isSubmitting} {...rest} />
             </div>
             {error && <div className="position-absolute badge bg-danger rounded-pill">{error.message}</div>}
         </div>
@@ -335,6 +387,7 @@ export function FormDatePicker<
     const {
         field: { onChange, value },
         fieldState: { error, invalid },
+        formState,
     } = useController({
         name,
         control,
@@ -347,7 +400,13 @@ export function FormDatePicker<
         <div className="position-relative flex-grow-1">
             <div className="d-flex flex-grow-1">
                 <InputGroup>
-                    <DatePicker {...rest} selected={value} onChange={onChange} invalid={invalid} />
+                    <DatePicker
+                        selected={value}
+                        onChange={onChange}
+                        invalid={invalid}
+                        disabled={formState.isSubmitting}
+                        {...rest}
+                    />
                     {addon && <InputGroupText>{addon}</InputGroupText>}
                 </InputGroup>
             </div>
@@ -368,6 +427,7 @@ function FormInputGeneral<
     const {
         field: { onChange, onBlur, value },
         fieldState: { error, invalid },
+        formState,
     } = useController({
         name,
         control,
@@ -403,6 +463,7 @@ function FormInputGeneral<
                             "position-relative d-flex flex-grow-1",
                             passwordPreview ? "preview-password" : null
                         )}
+                        disabled={formState.isSubmitting}
                         {...rest}
                     >
                         {children}
@@ -439,6 +500,7 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
     const {
         field: { onChange, onBlur, value },
         fieldState: { error, invalid },
+        formState,
     } = useController({
         name,
         control,
@@ -471,6 +533,7 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
                     invalid={invalid}
                     onBlur={onBlur}
                     color="primary"
+                    disabled={formState.isSubmitting}
                     {...rest}
                 />
             </div>

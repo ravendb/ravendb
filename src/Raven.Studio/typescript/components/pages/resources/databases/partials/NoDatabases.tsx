@@ -1,23 +1,15 @@
-﻿import React from "react";
-import createDatabase from "viewmodels/resources/createDatabase";
-import app from "durandal/app";
-import { withPreventDefault } from "components/utils/common";
+﻿import React, { useState } from "react";
 import { Button } from "reactstrap";
 import { EmptySet } from "components/common/EmptySet";
 import { useAccessManager } from "hooks/useAccessManager";
 import { FlexGrow } from "components/common/FlexGrow";
+import CreateDatabase, {
+    CreateDatabaseMode,
+} from "components/pages/resources/databases/partials/create/CreateDatabase";
 
 export function NoDatabases() {
     const { isOperatorOrAbove } = useAccessManager();
-    const newDatabase = () => {
-        const createDbView = new createDatabase("newDatabase");
-        app.showBootstrapDialog(createDbView);
-    };
-
-    const newDatabaseFromBackup = () => {
-        const createDbView = new createDatabase("restore");
-        app.showBootstrapDialog(createDbView);
-    };
+    const [createDatabaseMode, setCreateDatabaseMode] = useState<CreateDatabaseMode>(null);
 
     return (
         <div className="content-margin">
@@ -27,14 +19,21 @@ export function NoDatabases() {
                 {isOperatorOrAbove() && (
                     <div className="d-flex gap-1">
                         <FlexGrow />
-                        <Button outline color="primary" onClick={withPreventDefault(newDatabase)}>
+                        <Button outline color="primary" onClick={() => setCreateDatabaseMode("regular")}>
                             Create new database
                         </Button>
                         <div>or</div>
-                        <Button outline color="primary" onClick={withPreventDefault(newDatabaseFromBackup)}>
+                        <Button outline color="primary" onClick={() => setCreateDatabaseMode("fromBackup")}>
                             Create one from backup
                         </Button>
                         <FlexGrow />
+
+                        {createDatabaseMode && (
+                            <CreateDatabase
+                                closeModal={() => setCreateDatabaseMode(null)}
+                                initialMode={createDatabaseMode}
+                            />
+                        )}
                     </div>
                 )}
             </div>

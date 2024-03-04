@@ -1,9 +1,8 @@
 import widget = require("viewmodels/resources/widgets/widget");
-import app = require("durandal/app");
 import appUrl = require("common/appUrl");
-import createDatabase = require("viewmodels/resources/createDatabase");
 import viewModelBase = require("viewmodels/viewModelBase");
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
+import CreateDatabase from "components/pages/resources/databases/partials/create/CreateDatabase";
 
 class welcomeWidget extends widget {
 
@@ -17,7 +16,10 @@ class welcomeWidget extends widget {
     queryingUrl = welcomeWidget.createLink("L1QXE3");
 
     bootstrapped: KnockoutComputed<boolean>;
-    
+
+    isCreateDatabaseViewOpen = ko.observable(false);
+    createDatabaseView: ReactInKnockout<typeof CreateDatabase>;
+
     private static createLink(hash: string) {
         return ko.pureComputed(() => {
             const version = welcomeWidget.clientVersion();
@@ -29,15 +31,17 @@ class welcomeWidget extends widget {
         super(controller);
 
         this.bootstrapped = ko.pureComputed(() => this.controller.currentServerNodeTag !== "?");
+
+        this.createDatabaseView = ko.pureComputed(() => ({
+            component: CreateDatabase,
+            props: {
+                closeModal: () => this.isCreateDatabaseViewOpen(false),
+            }
+        }))
     }
     
     getType(): widgetType {
         return "Welcome";
-    }
-
-    newDatabase() {
-        const createDbView = new createDatabase("newDatabase");
-        app.showBootstrapDialog(createDbView);
     }
 }
 

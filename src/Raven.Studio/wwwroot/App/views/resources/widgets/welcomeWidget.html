@@ -18,7 +18,10 @@
             <div class="col-sm-6 margin-top">
                 <div class="text-center">
                     <img src="../../../../Content/img/new-database.svg" width="150px" alt="Create new database" /><br/>
-                    <div>Create <a href="#" data-bind="click: newDatabase">new database</a></div>
+                    <div>Create <a href="#" data-bind="click: () => isCreateDatabaseViewOpen(true)">new database</a></div>
+                    <div data-bind="if: isCreateDatabaseViewOpen()">
+                        <div data-bind="react: $root.createDatabaseView"></div>
+                    </div>
                 </div>
             </div>
             <div class="col-sm-6 margin-top">

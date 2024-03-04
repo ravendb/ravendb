@@ -9,7 +9,6 @@ import notificationCenter from "common/notifications/notificationCenter";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { UnsubscribeListener } from "@reduxjs/toolkit";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
-import createDatabase from "viewmodels/resources/createDatabase";
 import app from "durandal/app";
 import disableIndexingToggleConfirm from "viewmodels/resources/disableIndexingToggleConfirm";
 import disableDatabaseToggleConfirm from "viewmodels/resources/disableDatabaseToggleConfirm";
@@ -109,16 +108,6 @@ export const reloadDatabasesDetails: AppAsyncThunk = async (dispatch, getState) 
     const tasks = nodeTags.map((nodeTag) => dispatch(databasesViewSliceInternal.fetchDatabases(nodeTag)));
 
     await Promise.all(tasks);
-};
-
-export const openCreateDatabaseDialog = () => () => {
-    const createDbView = new createDatabase("newDatabase");
-    app.showBootstrapDialog(createDbView);
-};
-
-export const openCreateDatabaseFromRestoreDialog = () => () => {
-    const createDbView = new createDatabase("restore");
-    app.showBootstrapDialog(createDbView);
 };
 
 export const confirmToggleIndexing =

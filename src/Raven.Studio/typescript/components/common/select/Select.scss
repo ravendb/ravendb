@@ -73,6 +73,11 @@
                 }
             }
 
+            .react-select__option--is-focused {
+                background-color: bs5variables.$panel-bg-3-var;
+                color: bs5variables.$link-color;
+            }
+
             hr {
                 margin: 0 bs5variables.$gutter-xxs;
             }

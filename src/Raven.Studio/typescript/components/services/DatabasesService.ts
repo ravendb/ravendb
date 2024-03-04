@@ -62,6 +62,9 @@ import deleteConnectionStringCommand = require("commands/database/settings/delet
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
+import { createDatabaseCommand } from "commands/resources/createDatabaseCommand";
+import { restoreDatabaseFromBackupCommand } from "commands/resources/restoreDatabaseFromBackupCommand";
+import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -283,5 +286,17 @@ export default class DatabasesService {
 
     async saveDatabaseRecord(db: database, databaseRecord: documentDto, etag: number) {
         return new saveDatabaseRecordCommand(db, databaseRecord, etag).execute();
+    }
+
+    async createDatabase(...args: ConstructorParameters<typeof createDatabaseCommand>) {
+        return new createDatabaseCommand(...args).execute();
+    }
+
+    async restoreDatabaseFromBackup(...args: ConstructorParameters<typeof restoreDatabaseFromBackupCommand>) {
+        return new restoreDatabaseFromBackupCommand(...args).execute();
+    }
+
+    async generateSecret(...args: ConstructorParameters<typeof generateSecretCommand>) {
+        return new generateSecretCommand(...args).execute();
     }
 }

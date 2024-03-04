@@ -16,6 +16,7 @@ export interface RadioToggleWithIconProps<T extends string | number | boolean = 
     selectedValue: T;
     setSelectedValue: (x: T) => void;
     className?: string;
+    disabled?: boolean;
 }
 
 export function RadioToggleWithIcon<T extends string | number | boolean = string>({
@@ -25,6 +26,7 @@ export function RadioToggleWithIcon<T extends string | number | boolean = string
     selectedValue,
     setSelectedValue,
     className,
+    disabled,
 }: RadioToggleWithIconProps<T>) {
     useEffect(() => {
         if (selectedValue == null) {
@@ -40,6 +42,7 @@ export function RadioToggleWithIcon<T extends string | number | boolean = string
                 name={name}
                 checked={selectedValue === leftItem.value}
                 onChange={() => setSelectedValue(leftItem.value)}
+                disabled={disabled}
             />
             <label htmlFor="radio-toggle-left">{leftItem.label}</label>
 
@@ -49,6 +52,7 @@ export function RadioToggleWithIcon<T extends string | number | boolean = string
                 name={name}
                 checked={selectedValue === rightItem.value}
                 onChange={() => setSelectedValue(rightItem.value)}
+                disabled={disabled}
             />
             <label htmlFor="radio-toggle-right">{rightItem.label}</label>
 
