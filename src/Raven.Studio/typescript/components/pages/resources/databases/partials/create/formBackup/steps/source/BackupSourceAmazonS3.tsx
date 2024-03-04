@@ -1,7 +1,7 @@
 import { Icon } from "components/common/Icon";
 import React from "react";
 import { Row, Col, Collapse, UncontrolledPopover, PopoverBody, Label } from "reactstrap";
-import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import { FormInput, FormSelectAutocomplete, FormSwitch } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
@@ -16,9 +16,10 @@ export default function BackupSourceAmazonS3() {
     const { control } = useFormContext<FormData>();
 
     const {
-        basicInfoStep: { isSharded },
         sourceStep: {
-            sourceData: { amazonS3: amazonS3Data },
+            sourceData: {
+                amazonS3: { isUseCustomHost },
+            },
         },
     } = useWatch({
         control,
@@ -34,7 +35,7 @@ export default function BackupSourceAmazonS3() {
                 </Col>
             </Row>
 
-            <Collapse isOpen={amazonS3Data.isUseCustomHost}>
+            <Collapse isOpen={isUseCustomHost}>
                 <Row>
                     <Col lg={{ offset: 3 }}>
                         <FormSwitch
@@ -104,11 +105,11 @@ export default function BackupSourceAmazonS3() {
                     <Label className="col-form-label">
                         Aws Region
                         <br />
-                        {amazonS3Data.isUseCustomHost && <small>(optional)</small>}
+                        {isUseCustomHost && <small>(optional)</small>}
                     </Label>
                 </Col>
                 <Col>
-                    {amazonS3Data.isUseCustomHost ? (
+                    {isUseCustomHost ? (
                         <FormInput
                             type="text"
                             control={control}
@@ -157,38 +158,25 @@ export default function BackupSourceAmazonS3() {
                 </Col>
             </Row>
             <RestorePointsFields
-                isSharded={isSharded}
-                pointsWithTagsFieldName="sourceStep.sourceData.amazonS3.pointsWithTags"
-                mapRestorePoint={(field, index) => (
-                    <SourceRestorePoint
-                        key={field.id}
-                        index={index}
-                        isSharded={isSharded}
-                        amazonS3Data={amazonS3Data}
-                    />
-                )}
+                mapRestorePoint={(field, index) => <SourceRestorePoint key={field.id} index={index} />}
             />
-            <EncryptionField
-                encryptionKeyFieldName="sourceStep.sourceData.amazonS3.encryptionKey"
-                selectedSourceData={amazonS3Data}
-            />
+            <EncryptionField sourceType="amazonS3" />
         </div>
     );
 }
 
-interface SourceRestorePointProps {
-    index: number;
-    isSharded: boolean;
-    amazonS3Data: FormData["sourceStep"]["sourceData"]["amazonS3"];
-}
-
-function SourceRestorePoint({ index, isSharded, amazonS3Data }: SourceRestorePointProps) {
+function SourceRestorePoint({ index }: { index: number }) {
     const { resourcesService } = useServices();
 
     const { control } = useFormContext<FormData>();
-    const { remove } = useFieldArray({
+
+    const {
+        basicInfoStep: { isSharded },
+        sourceStep: {
+            sourceData: { amazonS3: amazonS3Data },
+        },
+    } = useWatch({
         control,
-        name: "sourceStep.sourceData.amazonS3.pointsWithTags",
     });
 
     const asyncGetRestorePointsOptions = useAsyncDebounce(
@@ -203,6 +191,10 @@ function SourceRestorePoint({ index, isSharded, amazonS3Data }: SourceRestorePoi
             isForcePathStyle,
             isSharded
         ) => {
+            if (!accessKey || !secretKey || !awsRegion || !bucketName) {
+                return [];
+            }
+
             const dto = await resourcesService.getRestorePoints_S3Backup(
                 {
                     AwsAccessKey: accessKey,
@@ -236,9 +228,7 @@ function SourceRestorePoint({ index, isSharded, amazonS3Data }: SourceRestorePoi
 
     return (
         <CreateDatabaseFromBackupRestorePoint
-            fieldName="sourceStep.sourceData.amazonS3.pointsWithTags"
             index={index}
-            remove={remove}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}
             isLoading={asyncGetRestorePointsOptions.loading}
         />

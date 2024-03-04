@@ -1,7 +1,7 @@
 import React from "react";
 import { Row, Col, Label } from "reactstrap";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
-import { useFormContext, useWatch, useFieldArray } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { useServices } from "components/hooks/useServices";
 import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
 import { restorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/restorePointUtils";
@@ -12,15 +12,6 @@ import RestorePointsFields from "components/pages/resources/databases/partials/c
 
 export default function BackupSourceAzure() {
     const { control } = useFormContext<FormData>();
-
-    const {
-        basicInfoStep: { isSharded },
-        sourceStep: {
-            sourceData: { azure: azureData },
-        },
-    } = useWatch({
-        control,
-    });
 
     return (
         <div className="mt-2">
@@ -80,37 +71,33 @@ export default function BackupSourceAzure() {
                 </Col>
             </Row>
             <RestorePointsFields
-                isSharded={isSharded}
-                pointsWithTagsFieldName="sourceStep.sourceData.azure.pointsWithTags"
-                mapRestorePoint={(field, index) => (
-                    <SourceRestorePoint key={field.id} index={index} azureData={azureData} isSharded={isSharded} />
-                )}
+                mapRestorePoint={(field, index) => <SourceRestorePoint key={field.id} index={index} />}
             />
-            <EncryptionField
-                encryptionKeyFieldName="sourceStep.sourceData.azure.encryptionKey"
-                selectedSourceData={azureData}
-            />
+            <EncryptionField sourceType="azure" />
         </div>
     );
 }
 
-interface SourceRestorePointProps {
-    index: number;
-    azureData: FormData["sourceStep"]["sourceData"]["azure"];
-    isSharded: boolean;
-}
-
-function SourceRestorePoint({ index, azureData, isSharded }: SourceRestorePointProps) {
+function SourceRestorePoint({ index }: { index: number }) {
     const { resourcesService } = useServices();
 
     const { control } = useFormContext<FormData>();
-    const { remove } = useFieldArray({
+
+    const {
+        basicInfoStep: { isSharded },
+        sourceStep: {
+            sourceData: { azure: azureData },
+        },
+    } = useWatch({
         control,
-        name: "sourceStep.sourceData.azure.pointsWithTags",
     });
 
     const asyncGetRestorePointsOptions = useAsyncDebounce(
         async (accountName, accountKey, container, remoteFolderName, isSharded) => {
+            if (!accountName || !accountKey || !container) {
+                return [];
+            }
+
             const dto = await resourcesService.getRestorePoints_AzureBackup(
                 {
                     AccountKey: accountKey,
@@ -131,9 +118,7 @@ function SourceRestorePoint({ index, azureData, isSharded }: SourceRestorePointP
 
     return (
         <CreateDatabaseFromBackupRestorePoint
-            fieldName="sourceStep.sourceData.azure.pointsWithTags"
             index={index}
-            remove={remove}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}
             isLoading={asyncGetRestorePointsOptions.loading}
         />

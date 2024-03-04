@@ -1,31 +1,26 @@
 import React, { ReactNode } from "react";
-import { FieldArrayWithId, useFormContext, useFieldArray, FieldPath, useWatch } from "react-hook-form";
+import { FieldArrayWithId, useFormContext, useFieldArray, useWatch } from "react-hook-form";
 import { Row, Col, Label, Button } from "reactstrap";
-import { CreateDatabaseFromBackupFormData as FormData, RestoreSource } from "../../createDatabaseFromBackupValidation";
+import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import { Icon } from "components/common/Icon";
 
 interface RestorePointsFieldsProps {
-    pointsWithTagsFieldName: Extract<FieldPath<FormData>, `sourceStep.sourceData.${RestoreSource}.pointsWithTags`>;
-    isSharded: boolean;
     mapRestorePoint: (field: FieldArrayWithId<FormData>, index: number) => ReactNode;
 }
 
-export default function RestorePointsFields({
-    pointsWithTagsFieldName,
-    isSharded,
-    mapRestorePoint,
-}: RestorePointsFieldsProps) {
+export default function RestorePointsFields({ mapRestorePoint }: RestorePointsFieldsProps) {
     const { control, formState } = useFormContext<FormData>();
 
     const {
         sourceStep: { sourceType },
+        basicInfoStep: { isSharded },
     } = useWatch({
         control,
     });
 
     const { fields, append } = useFieldArray({
         control,
-        name: pointsWithTagsFieldName,
+        name: `sourceStep.sourceData.${sourceType}.pointsWithTags`,
     });
 
     const pointsWithTagsErrorMessage = formState.errors.sourceStep?.sourceData?.[sourceType]?.pointsWithTags?.message;

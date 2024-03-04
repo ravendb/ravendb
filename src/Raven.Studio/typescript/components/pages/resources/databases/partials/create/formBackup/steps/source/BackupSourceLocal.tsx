@@ -2,7 +2,7 @@ import { FormSelectAutocomplete } from "components/common/Form";
 import { SelectOption } from "components/common/select/Select";
 import { useServices } from "components/hooks/useServices";
 import React from "react";
-import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { Col, Row } from "reactstrap";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
@@ -16,9 +16,10 @@ export default function BackupSourceLocal() {
     const { control } = useFormContext<FormData>();
 
     const {
-        basicInfoStep: { isSharded },
         sourceStep: {
-            sourceData: { local: localSourceData },
+            sourceData: {
+                local: { directory },
+            },
         },
     } = useWatch({
         control,
@@ -30,7 +31,7 @@ export default function BackupSourceLocal() {
 
             return dto.List.map((x) => ({ value: x, label: x }) satisfies SelectOption);
         },
-        [localSourceData.directory]
+        [directory]
     );
 
     return (
@@ -50,43 +51,34 @@ export default function BackupSourceLocal() {
                 </Col>
             </Row>
             <RestorePointsFields
-                isSharded={isSharded}
-                pointsWithTagsFieldName="sourceStep.sourceData.googleCloud.pointsWithTags"
-                mapRestorePoint={(field, index) => (
-                    <SourceRestorePoint
-                        key={field.id}
-                        index={index}
-                        isSharded={isSharded}
-                        directory={localSourceData.directory}
-                    />
-                )}
+                mapRestorePoint={(field, index) => <SourceRestorePoint key={field.id} index={index} />}
             />
-            <EncryptionField
-                encryptionKeyFieldName="sourceStep.sourceData.local.encryptionKey"
-                selectedSourceData={localSourceData}
-            />
+            <EncryptionField sourceType="local" />
         </>
     );
 }
 
-interface SourceRestorePointProps {
-    index: number;
-    isSharded: boolean;
-    directory: string;
-}
-
-function SourceRestorePoint({ index, directory, isSharded }: SourceRestorePointProps) {
+function SourceRestorePoint({ index }: { index: number }) {
+    const { resourcesService } = useServices();
     const { control } = useFormContext<FormData>();
 
-    const { remove } = useFieldArray({
+    const {
+        basicInfoStep: { isSharded },
+        sourceStep: {
+            sourceData: {
+                local: { directory },
+            },
+        },
+    } = useWatch({
         control,
-        name: "sourceStep.sourceData.local.pointsWithTags",
     });
-
-    const { resourcesService } = useServices();
 
     const asyncGetRestorePointsOptions = useAsyncDebounce(
         async (directory, isSharded) => {
+            if (!directory) {
+                return [];
+            }
+
             const dto = await resourcesService.getRestorePoints_Local(
                 _.trim(directory),
                 null,
@@ -100,9 +92,7 @@ function SourceRestorePoint({ index, directory, isSharded }: SourceRestorePointP
 
     return (
         <CreateDatabaseFromBackupRestorePoint
-            fieldName="sourceStep.sourceData.local.pointsWithTags"
             index={index}
-            remove={remove}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}
             isLoading={asyncGetRestorePointsOptions.loading}
         />

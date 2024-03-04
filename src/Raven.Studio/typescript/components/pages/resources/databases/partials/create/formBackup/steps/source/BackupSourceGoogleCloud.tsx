@@ -1,5 +1,5 @@
 import React from "react";
-import { useFormContext, useWatch, useFieldArray } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { Row, Col, Label } from "reactstrap";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import { FormInput } from "components/common/Form";
@@ -12,15 +12,6 @@ import RestorePointsFields from "components/pages/resources/databases/partials/c
 
 export default function BackupSourceGoogleCloud() {
     const { control } = useFormContext<FormData>();
-
-    const {
-        basicInfoStep: { isSharded },
-        sourceStep: {
-            sourceData: { googleCloud: googleCloudData },
-        },
-    } = useWatch({
-        control,
-    });
 
     return (
         <div className="mt-2">
@@ -67,43 +58,33 @@ export default function BackupSourceGoogleCloud() {
                 </Col>
             </Row>
             <RestorePointsFields
-                isSharded={isSharded}
-                pointsWithTagsFieldName="sourceStep.sourceData.googleCloud.pointsWithTags"
-                mapRestorePoint={(field, index) => (
-                    <SourceRestorePoint
-                        key={field.id}
-                        index={index}
-                        googleCloudData={googleCloudData}
-                        isSharded={isSharded}
-                    />
-                )}
+                mapRestorePoint={(field, index) => <SourceRestorePoint key={field.id} index={index} />}
             />
-            <EncryptionField
-                encryptionKeyFieldName="sourceStep.sourceData.googleCloud.encryptionKey"
-                selectedSourceData={googleCloudData}
-            />
+            <EncryptionField sourceType="googleCloud" />
         </div>
     );
 }
 
-interface SourceRestorePointProps {
-    index: number;
-    googleCloudData: FormData["sourceStep"]["sourceData"]["googleCloud"];
-    isSharded: boolean;
-}
-
-function SourceRestorePoint({ index, googleCloudData, isSharded }: SourceRestorePointProps) {
+function SourceRestorePoint({ index }: { index: number }) {
     const { resourcesService } = useServices();
 
     const { control } = useFormContext<FormData>();
 
-    const { remove } = useFieldArray({
+    const {
+        basicInfoStep: { isSharded },
+        sourceStep: {
+            sourceData: { googleCloud: googleCloudData },
+        },
+    } = useWatch({
         control,
-        name: "sourceStep.sourceData.googleCloud.pointsWithTags",
     });
 
     const asyncGetRestorePointsOptions = useAsyncDebounce(
         async (bucketName, credentialsJson, remoteFolderName) => {
+            if (!bucketName || !credentialsJson) {
+                return [];
+            }
+
             const dto = await resourcesService.getRestorePoints_GoogleCloudBackup(
                 {
                     BucketName: bucketName,
@@ -122,9 +103,7 @@ function SourceRestorePoint({ index, googleCloudData, isSharded }: SourceRestore
 
     return (
         <CreateDatabaseFromBackupRestorePoint
-            fieldName="sourceStep.sourceData.googleCloud.pointsWithTags"
             index={index}
-            remove={remove}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}
             isLoading={asyncGetRestorePointsOptions.loading}
         />
