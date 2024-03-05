@@ -9,14 +9,24 @@ using System.Collections.Generic;
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
-    /// Provides synchronous client API for counter operations on a specific entity
+    /// Provides client API for counter operations on a specific entity.<br/>
+    /// Counters are numeric data variables that can be added to documents,
+    /// and are used to perform high frequency counting in a distributed manner.<br/> 
+    /// Read more about Counters <see href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/counters/overview">here</see> 
     /// </summary>
     public interface ISessionDocumentCounters : ISessionDocumentCountersBase
     {
-        /// <inheritdoc cref="IAsyncSessionDocumentCounters.GetAllAsync"/> 
+        /// <summary>
+        /// Get all counters for a specific document.
+        /// </summary>
+        ///<returns>A Dictionary of counter values by counter name, containing all counters for this document</returns>
         Dictionary<string, long?> GetAll();
 
-        /// <inheritdoc cref="IAsyncSessionDocumentCounters.GetAsync"/> 
+        /// <summary>
+        /// Get counter value by counter name.
+        /// </summary>
+        ///<param name="counter">Name of the counter to get</param>
+        /// <returns>The counter value if exists, or Null if the counter does not exist</returns>
         long? Get(string counter);
 
         /// <summary>
