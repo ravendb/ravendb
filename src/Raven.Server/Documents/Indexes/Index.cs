@@ -4221,7 +4221,7 @@ namespace Raven.Server.Documents.Indexes
             return _lastStats;
         }
 
-        public abstract IQueryResultRetriever GetQueryResultRetriever(
+        public abstract IQueryResultRetriever<QueriedDocument> GetQueryResultRetriever(
             IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch,
             IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand);
 

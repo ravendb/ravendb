@@ -1147,8 +1147,15 @@ namespace Raven.Server.Documents
                 Tombstone = null
             };
         }
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Document Get(DocumentsOperationContext context, string id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
+        {
+            return Get<Document>(context, id, fields, throwOnConflict);
+        }        
+        
+        public TDocument Get<TDocument>(DocumentsOperationContext context, string id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
+            where TDocument : Document, new()
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("Argument is null or whitespace", nameof(id));
@@ -1157,22 +1164,29 @@ namespace Raven.Server.Documents
 
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             {
-                return Get(context, lowerId, fields, throwOnConflict);
+                return Get<TDocument>(context, lowerId, fields, throwOnConflict);
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Document Get(DocumentsOperationContext context, Slice lowerId, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true, bool skipValidationInDebug = false)
+        {
+            return Get<Document>(context, lowerId, fields, throwOnConflict, skipValidationInDebug);
+        }
+        
+        private TDocument Get<TDocument>(DocumentsOperationContext context, Slice lowerId, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true, bool skipValidationInDebug = false)
+            where TDocument : Document, new()
         {
             if (GetTableValueReaderForDocument(context, lowerId, throwOnConflict, out TableValueReader tvr) == false)
                 return null;
 
-            var doc = TableValueToDocument(context, ref tvr, fields, skipValidationInDebug);
+            var doc = TableValueToDocument<TDocument>(context, ref tvr, fields, skipValidationInDebug);
 
             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(doc);
 
             return doc;
         }
-
+        
         public Document GetByEtag(DocumentsOperationContext context, long etag)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
@@ -1525,7 +1539,14 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields = DocumentFields.All, bool skipValidationInDebug = false)
         {
-            var document = ParseDocument(context, ref tvr, fields);
+            return TableValueToDocument<Document>(context, ref tvr, fields, skipValidationInDebug);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal TDocument TableValueToDocument<TDocument>(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields = DocumentFields.All, bool skipValidationInDebug = false)
+        where TDocument : Document, new()
+        {
+            var document = ParseDocument<TDocument>(context, ref tvr, fields);
 #if DEBUG
             if (skipValidationInDebug == false)
             {
@@ -1564,11 +1585,12 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
+        private static TDocument ParseDocument<TDocument>(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
+            where TDocument : Document, new()
         {
             if (fields == DocumentFields.All)
             {
-                return new Document
+                return new TDocument
                 {
                     StorageId = tvr.Id,
                     LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr),
@@ -1582,12 +1604,13 @@ namespace Raven.Server.Documents
                 };
             }
 
-            return ParseDocumentPartial(context, ref tvr, fields);
+            return ParseDocumentPartial<TDocument>(context, ref tvr, fields);
         }
 
-        private static Document ParseDocumentPartial(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
+        private static TDocument ParseDocumentPartial<TDocument>(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
+        where TDocument : Document, new()
         {
-            var result = new Document();
+            var result = new TDocument();
 
             if (fields.Contain(DocumentFields.LowerId))
                 result.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr);
@@ -1616,7 +1639,7 @@ namespace Raven.Server.Documents
             if (size > expectedSize || size <= 0)
                 throw new ArgumentException("Data size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
 
-            return ParseDocument(context, ref tvr, DocumentFields.All);
+            return ParseDocument<Document>(context, ref tvr, DocumentFields.All);
         }
 
         public static Tombstone TableValueToTombstone(JsonOperationContext context, ref TableValueReader tvr)
