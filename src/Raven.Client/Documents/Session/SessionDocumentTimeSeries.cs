@@ -28,21 +28,25 @@ namespace Raven.Client.Documents.Session
             _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries<TimeSeriesEntry>(session, entity, name);
         }
 
+        /// <inheritdoc cref="ISessionDocumentAppendTimeSeriesBase.Append"/>
         void ISessionDocumentAppendTimeSeriesBase.Append(DateTime timestamp, IEnumerable<double> values, string tag)
         {
             _asyncSessionTimeSeries.Append(timestamp, values, tag);
         }
 
+        /// <inheritdoc cref="ISessionDocumentAppendTimeSeriesBase.Append(DateTime, double, string)"/>
         void ISessionDocumentAppendTimeSeriesBase.Append(DateTime timestamp, double value, string tag)
         {
             _asyncSessionTimeSeries.Append(timestamp, value, tag);
         }
 
-        void ISessionDocumentTypedAppendTimeSeriesBase<TValues>.Append(DateTime timestamp, TValues value, string tag)
+        /// <inheritdoc cref="ISessionDocumentTypedAppendTimeSeriesBase{TValue}.Append"/>
+        void ISessionDocumentTypedAppendTimeSeriesBase<TValues>.Append(DateTime timestamp, TValues entry, string tag)
         {
-            _asyncSessionTimeSeries.Append(timestamp, value, tag);
+            _asyncSessionTimeSeries.Append(timestamp, entry, tag);
         }
 
+        /// <inheritdoc cref="ISessionDocumentTypedAppendTimeSeriesBase{TValue}.Append(TimeSeriesEntry{TValue})"/>
         void ISessionDocumentTypedAppendTimeSeriesBase<TValues>.Append(TimeSeriesEntry<TValues> entry)
         {
             _asyncSessionTimeSeries.Append(entry.Timestamp, entry.Value, entry.Tag);
@@ -91,6 +95,7 @@ namespace Raven.Client.Documents.Session
             return result.Result?.Select(r => r.AsRollupEntry()).ToArray();
         }
 
+        /// <inheritdoc cref="ISessionDocumentRollupTypedAppendTimeSeriesBase{TValue}.Append"/>
         public void Append(TimeSeriesRollupEntry<TValues> entry)
         {
             entry.SetValuesFromMembers();

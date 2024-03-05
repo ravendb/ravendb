@@ -18,24 +18,59 @@ namespace Raven.Client.Documents.Session
     public interface ISessionDocumentAppendTimeSeriesBase
     {
         /// <summary>
-        /// Append the the values (and optional tag) to the times series at the provided time stamp
+        /// Appends values (and an optional tag) to the time series at the provided timestamp.
         /// </summary>
+        /// <remarks>
+        /// For more information on the Time Series Append operation, see: <inheritdoc cref="DocumentationUrls.Session.TimeSeries.AppendOperation"/>.
+        /// </remarks>
+        /// <param name="timestamp">The timestamp at which the values should be appended to the time series.</param>
+        /// <param name="values">An enumerable collection of values to append to the time series.</param>
+        /// <param name="tag">An optional tag to associate with the appended values. Tags can be used to categorize or label the data.</param>
         void Append(DateTime timestamp, IEnumerable<double> values, string tag = null);
 
-        /// <summary>
-        /// Append a single value (and optional tag) to the times series at the provided time stamp
-        /// </summary>
+        /// <inheritdoc cref="Append"/>
+        /// <param name="value">The value to append to the time series.</param>
         void Append(DateTime timestamp, double value, string tag = null);
     }
 
     public interface ISessionDocumentTypedAppendTimeSeriesBase<T> where T : new()
     {
+        /// <summary>
+        /// Appends values (and an optional tag) to the time series at the provided timestamp.
+        /// </summary>
+        /// <remarks>
+        /// For more information on the Time Series Append operation, see: <inheritdoc cref="DocumentationUrls.Session.TimeSeries.AppendOperation"/>. <br/>
+        /// For details about named time series values, refer to: <inheritdoc cref="DocumentationUrls.Session.TimeSeries.NamedValues"/>.
+        /// </remarks>
+        /// <param name="timestamp">The timestamp at which the values should be appended to the time series.</param>
+        /// <param name="entry">An entry representing the typed values to append to the time series (<typeparamref name="T"/> indicates the value type).</param>
+        /// <param name="tag">An optional tag to associate with the appended values. Tags can be used to categorize or label the data.</param>
         void Append(DateTime timestamp, T entry, string tag = null);
+
+        /// <summary>
+        /// Appends values (and an optional tag) to the time series at the provided timestamp.
+        /// </summary>
+        /// <remarks>
+        /// For more information on the Time Series Append operation, see: <inheritdoc cref="DocumentationUrls.Session.TimeSeries.AppendOperation"/>. <br/>
+        /// For details about named time series values, refer to: <inheritdoc cref="DocumentationUrls.Session.TimeSeries.NamedValues"/>.
+        /// </remarks>
+        /// <param name="entry">The time series arguments to append (timestamp, values, optional tag). <br/>
+        /// <typeparamref name="TimeSeriesEntry"/> is an object that aggregates the time series inputs, and <typeparamref name="T"/> indicates the value type.</param>
         void Append(TimeSeriesEntry<T> entry);
     }
 
     public interface ISessionDocumentRollupTypedAppendTimeSeriesBase<T> where T : new()
     {
+        /// <summary>
+        /// Appends rollup values to the time series at the provided timestamp.
+        /// </summary>
+        /// <remarks>
+        /// For more information on the Time Series Append operation, see: <inheritdoc cref="DocumentationUrls.Session.TimeSeries.AppendOperation"/>. <br/>
+        /// For details about named time series values, refer to: <inheritdoc cref="DocumentationUrls.Session.TimeSeries.NamedValues"/>.
+        /// </remarks>
+        /// <param name="entry">The time series arguments to append (timestamp and rollup values). <br/>
+        /// <typeparamref name="TimeSeriesRollupEntry"/> is an extension of <typeparamref name="TimeSeriesEntry"/>
+        /// which contains the aggregated values of rollup time series [Min, Max, First, Last, Sum, Count, Average].</param>
         void Append(TimeSeriesRollupEntry<T> entry);
     }
 
