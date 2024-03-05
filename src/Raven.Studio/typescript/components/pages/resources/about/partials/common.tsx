@@ -12,7 +12,7 @@ interface OverallInfoItemProps {
 export function OverallInfoItem(props: OverallInfoItemProps) {
     const { icon, label, children } = props;
     return (
-        <Col sm={6} className="mb-3">
+        <Col sm={7} className="mb-3">
             <div className="d-flex">
                 <Icon icon={icon} className="fs-1" margin="me-3 mt-2" />
                 <div className="vstack">

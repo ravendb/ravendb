@@ -116,7 +116,9 @@ export function AboutPage() {
                 </div>
             </div>
             <AboutFooter />
-            <ChangeLogModal mode={changeLogMode} onClose={() => setChangeLogMode("hidden")} />
+            {changeLogMode !== "hidden" && (
+                <ChangeLogModal mode={changeLogMode} onClose={() => setChangeLogMode("hidden")} />
+            )}
 
             {/* TODO we hide this for now
             <RequestSupportModal

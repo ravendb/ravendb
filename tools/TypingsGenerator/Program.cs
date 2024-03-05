@@ -665,6 +665,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(StudioConfiguration));
 
             scripter.AddType(typeof(StudioTasksHandler.StudioBootstrapConfiguration));
+            scripter.AddType(typeof(UpgradeInfoHandler.UpgradeInfoResponse));
 
             // custom sorters & analyzers
             scripter.AddType(typeof(SorterDefinition));

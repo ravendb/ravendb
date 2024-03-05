@@ -189,7 +189,10 @@ function LicenseTable(props: LicenseTableProps) {
                                                     "bg-current": column === currentColumn,
                                                 })}
                                             >
-                                                <FeatureValue value={getEffectiveValue(feature, column)} />
+                                                <FeatureValue
+                                                    value={getEffectiveValue(feature, column)}
+                                                    suffix={feature.suffix}
+                                                />
                                             </td>
                                         ))}
                                     </tr>
@@ -262,11 +265,12 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
         items: [
             {
                 name: "Max cluster size",
-                community: { value: "3 nodes" },
-                professional: { value: "5 nodes" },
+                community: { value: "3" },
+                professional: { value: "5" },
                 enterprise: { value: Infinity },
-                developer: { value: "3 nodes" },
+                developer: { value: "3" },
                 fieldInLicense: "MaxClusterSize",
+                suffix: "nodes",
             },
             {
                 name: "Max cores in cluster",
@@ -279,11 +283,12 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             {
                 name: "Max cluster memory usage",
 
-                community: { value: "6 GB RAM" },
-                professional: { value: "240 GB RAM" },
+                community: { value: "6" },
+                professional: { value: "240" },
                 enterprise: { value: Infinity },
-                developer: { value: "36 GB RAM" },
+                developer: { value: "36" },
                 fieldInLicense: "MaxMemory",
+                suffix: "GB RAM",
             },
             {
                 name: "Cluster Dashboard",
@@ -1031,8 +1036,8 @@ export const forTesting = {
     featureAvailabilityData,
 };
 
-function FeatureValue(props: { value: AvailabilityValue }) {
-    const { value } = props;
+function FeatureValue(props: { value: AvailabilityValue; suffix: string }) {
+    const { value, suffix } = props;
     switch (value) {
         case true:
             return <Icon icon="check" color="success" margin="m-0" />;
@@ -1041,7 +1046,7 @@ function FeatureValue(props: { value: AvailabilityValue }) {
         case Infinity:
             return <Icon icon="infinity" margin="m-0" />;
         default:
-            return value;
+            return value + " " + (suffix ?? "");
     }
 }
 
@@ -1060,6 +1065,7 @@ interface FeatureAvailabilityItem {
     professional: ValueData;
     enterprise: ValueData;
     developer: ValueData;
+    suffix?: string;
 }
 
 type AvailabilityValue = boolean | number | string;

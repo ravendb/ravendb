@@ -4,6 +4,7 @@ import getConnectivityToLicenseServerCommand from "commands/licensing/getConnect
 import getLicenseConfigurationSettingsCommand from "commands/licensing/getLicenseConfigurationSettingsCommand";
 import forceLicenseUpdateCommand from "commands/licensing/forceLicenseUpdateCommand";
 import getLicenseStatusCommand from "commands/licensing/getLicenseStatusCommand";
+import getChangeLogCommand from "commands/licensing/getChangeLogCommand";
 
 export default class LicenseService {
     async getLicenseStatus() {
@@ -11,6 +12,10 @@ export default class LicenseService {
     }
     async getClusterLimitsUsage() {
         return new getClusterLicenseLimitsUsage().execute();
+    }
+
+    async getChangeLog() {
+        return new getChangeLogCommand().execute();
     }
 
     async getLatestVersion(refresh: boolean = false) {
