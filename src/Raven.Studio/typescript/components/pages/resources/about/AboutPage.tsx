@@ -4,7 +4,6 @@ import { Icon } from "components/common/Icon";
 import "./AboutPage.scss";
 
 import classNames from "classnames";
-import useBoolean from "components/hooks/useBoolean";
 import { LicenseSummary } from "components/pages/resources/about/partials/LicenseSummary";
 import { VersionsSummary } from "components/pages/resources/about/partials/VersionsSummary";
 import { SupportSummary } from "components/pages/resources/about/partials/SupportSummary";
@@ -29,7 +28,7 @@ export function AboutPage() {
         useAboutPage();
 
     const [activeTab, setActiveTab] = useState<"license" | "support">("license");
-    const { value: showChangelogModal, toggle: toggleShowChangelogModal } = useBoolean(false);
+    const [changeLogMode, setChangeLogMode] = useState<"whatsNew" | "changeLog" | "hidden">("hidden");
 
     const refreshLatestVersion = useCallback(async () => {
         await asyncFetchLatestVersion.execute();
@@ -57,7 +56,8 @@ export function AboutPage() {
                             <VersionsSummary
                                 refreshLatestVersion={refreshLatestVersion}
                                 asyncLatestVersion={asyncFetchLatestVersion}
-                                toggleShowChangelogModal={toggleShowChangelogModal}
+                                showWhatsNewModal={() => setChangeLogMode("whatsNew")}
+                                showChangeLogModal={() => setChangeLogMode("changeLog")}
                             />
                             <SupportSummary asyncCheckLicenseServerConnectivity={asyncCheckLicenseServerConnectivity} />
                         </div>
@@ -116,7 +116,7 @@ export function AboutPage() {
                 </div>
             </div>
             <AboutFooter />
-            <ChangeLogModal visible={showChangelogModal} toggle={toggleShowChangelogModal} />
+            <ChangeLogModal mode={changeLogMode} onClose={() => setChangeLogMode("hidden")} />
 
             {/* TODO we hide this for now
             <RequestSupportModal

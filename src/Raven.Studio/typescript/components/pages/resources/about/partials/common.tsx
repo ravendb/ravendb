@@ -31,8 +31,7 @@ export interface ConnectivityStatus {
 
 export const aboutPageUrls = {
     ravenDbHome: "https://ravendb.net",
-    updateInstructions: "#", //TODO:
-    changeLog: "#", //TODO:
+    updateInstructions: "https://ravendb.net/l/LC9K4B",
     getLicense: "https://ravendb.net/buy",
     supportTerms: "https://ravendb.net/terms",
     gitHubDiscussions: "https://github.com/ravendb/ravendb/discussions",
