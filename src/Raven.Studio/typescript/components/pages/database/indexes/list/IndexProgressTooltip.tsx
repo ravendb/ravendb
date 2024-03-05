@@ -86,10 +86,21 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                     </LocationSpecificDetailsItem>
                     {nodeInfo.details.stale ? (
                         <LocationSpecificDetailsItem className="status updating">
-                            <Icon icon="waiting" margin="me-xl-1" />{" "}
-                            <a href="#" onClick={withPreventDefault(() => showStaleReason(nodeInfo.location))}>
-                                {formatTimeLeftToProcess(nodeInfo.progress?.global, nodeInfo.details)}
-                            </a>
+                            <div>
+                                <div>
+                                    <Icon icon="waiting" margin="me-xl-1" />{" "}
+                                    {formatTimeLeftToProcess(nodeInfo.progress?.global, nodeInfo.details)}
+                                </div>
+                                <div className="mt-2">
+                                    <a
+                                        href="#"
+                                        className="mt-2"
+                                        onClick={withPreventDefault(() => showStaleReason(nodeInfo.location))}
+                                    >
+                                        show staleness reason
+                                    </a>
+                                </div>
+                            </div>
                         </LocationSpecificDetailsItem>
                     ) : (
                         <LocationSpecificDetailsItem className="status">
