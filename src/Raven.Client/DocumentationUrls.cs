@@ -157,6 +157,9 @@ internal static class DocumentationUrls
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/session/get/get-entries#timeseriesfor.get"/></remarks>
             public const string GetOperation = nameof(GetOperation);
 
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/session/append"/></remarks>
+            public const string AppendOperation = nameof(AppendOperation);
+
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/incremental-time-series/overview"/></remarks>
             public const string IncrementalOverview = nameof(IncrementalOverview);
 
