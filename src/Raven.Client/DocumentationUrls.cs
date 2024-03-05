@@ -123,8 +123,17 @@ internal static class DocumentationUrls
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/overview"/></remarks>
             public const string ClientApi = nameof(ClientApi);
 
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/session/get/get-entries#timeseriesfor.get"/></remarks>
+            public const string GetOperation = nameof(GetOperation);
+
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/incremental-time-series/overview"/></remarks>
             public const string IncrementalOverview = nameof(IncrementalOverview);
+
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/named-time-series-values"/></remarks>
+            public const string NamedValues = nameof(NamedValues);
+
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/rollup-and-retention"/></remarks>
+            public const string RollupAndRetention = nameof(RollupAndRetention);
         }
     }
 }

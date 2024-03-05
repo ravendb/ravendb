@@ -22,8 +22,10 @@ namespace Raven.Client.Documents.Session
     {
         /// <summary>
         /// Retrieves a range of entries from a single time series.<br/>
-        /// <seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/session/get/get-entries#timeseriesfor.get"/>
         /// </summary>
+        /// <remarks>
+        /// For more information on the Time Series Get operation, see: <inheritdoc cref="DocumentationUrls.Session.TimeSeries.GetOperation"/>.
+        /// </remarks>
         /// <param name="from">The date and time from which to start collecting time series entries (inclusive). If not specified, the collection will start from the earliest possible date and time (DateTime.MinValue).</param>
         /// <param name="to">The date and time at which to stop collecting time series entries (inclusive). If not specified, the collection will continue until the latest possible date and time (DateTime.MaxValue).</param>
         /// <param name="start">The number of time series entries that should be skipped. By default: 0.</param>
