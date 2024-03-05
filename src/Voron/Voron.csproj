@@ -29,6 +29,12 @@
     <EmbeddedResource Include="Data\CompactTrees\dictionary.bin" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Sparrow.Server\Sparrow.Server.csproj" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Validate' ">
