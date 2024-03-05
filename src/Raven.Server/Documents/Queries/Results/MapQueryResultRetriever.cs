@@ -15,7 +15,8 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Results
 {
-    public class MapQueryResultRetriever : QueryResultRetrieverBase
+    public class MapQueryResultRetriever<TDocument> : QueryResultRetrieverBase<TDocument>
+    where TDocument : Document, new()
     {
         private QueryTimingsScope _storageScope;
 
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.Queries.Results
         {
         }
 
-        public override (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token)
+        public override (TDocument Document, List<TDocument> List) Get(ref RetrieverInput retrieverInput, CancellationToken token)
         {
 
             using (RetrieverScope?.Start())
@@ -67,17 +68,7 @@ namespace Raven.Server.Documents.Queries.Results
             key = searcher.GetRawIdentityFor(id);
             return key.Length > 0;
         }
-
-        public override Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
-        {
-            return DocumentsStorage.Get(DocumentContext, id, fields);
-        }
-
-        protected override Document LoadDocument(string id)
-        {
-            return DocumentsStorage.Get(DocumentContext, id);
-        }
-
+        
         protected override long? GetCounter(string docId, string name)
         {
             var value = DocumentsStorage.CountersStorage.GetCounterValue(DocumentContext, docId, name);

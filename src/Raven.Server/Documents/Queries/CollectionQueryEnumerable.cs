@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Queries
             private bool _hasProjections;
             private List<Document>.Enumerator _projections;
             private readonly List<Slice> _ids;
-            private readonly MapQueryResultRetriever _resultsRetriever;
+            private readonly MapQueryResultRetriever<Document> _resultsRetriever;
             private readonly string _startsWith;
             private readonly Reference<long> _skippedResults;
             private readonly CancellationToken _token;
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Queries
                 if (_fieldsToFetch.IsDistinct)
                     _alreadySeenProjections = new HashSet<ulong>();
 
-                _resultsRetriever = new MapQueryResultRetriever(database, query, queryTimings, documents, context, SearchEngineType.None, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
+                _resultsRetriever = new MapQueryResultRetriever<Document>(database, query, queryTimings, documents, context, SearchEngineType.None, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
 
                 (_ids, _startsWith) = ExtractIdsFromQuery(query, context);
                 
@@ -353,6 +353,8 @@ namespace Raven.Server.Documents.Queries
                             return (true, null);
                     }
                 }
+                
+                RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase<Document>.ZeroScore, null);
 
                 if (_totalResultsCalculated == false)
                     _totalResults.Value++;
@@ -472,8 +474,56 @@ namespace Raven.Server.Documents.Queries
                 
                 if (start == 0)
                 {
-                    _inner = GetDocuments(out _totalResultsCalculated, start).GetEnumerator();
-                    return;
+                    var count = 0;
+                    foreach (var document in _documents.GetDocumentsFrom(_context, _collection, 0, start, _query.PageSize))
+                    {
+                        count++;
+                        RetrieverInput retrieverInput = new(null, QueryResultRetrieverCommon.ZeroScore, null);
+                        if (_fieldsToFetch.IsProjection)
+                        {
+                            var result = _resultsRetriever.GetProjectionFromDocument(document, ref retrieverInput, _fieldsToFetch, _context, _token);
+                            if (result.Document != null)
+                            {
+                                if (IsStartingPoint(result.Document))
+                                    break;
+                            }
+                            else if (result.List != null)
+                            {
+                                bool match = false;
+                                foreach (Document item in result.List)
+                                {
+                                    if (IsStartingPoint(item))
+                                    {
+                                        match = true;
+                                        break;
+                                    }
+                                }
+
+                                if (match)
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            if (IsStartingPoint(_inner.Current))
+                            {
+                                break;
+                            }
+                        }
+
+                        bool IsStartingPoint(Document d)
+                        {
+                            return d.Data.Count > 0 && _alreadySeenProjections.Add(d.DataHash) && _alreadySeenProjections.Count == _query.Start;
+                        }
+                    }
+
+                    if (_alreadySeenProjections.Count == _query.Start)
+                        break;
+
+                    if (count < _query.PageSize)
+                        break;
+
+                    start += count;
                 }
 
                 if (_query.SkipDuplicateChecking)

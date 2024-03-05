@@ -33,13 +33,64 @@ using RangeType = Raven.Client.Documents.Indexes.RangeType;
 
 namespace Raven.Server.Documents.Queries.Results
 {
-    public abstract class QueryResultRetrieverBase : IQueryResultRetriever
+    public abstract class QueryResultRetrieverCommon
     {
         public static readonly int LoadedDocumentsCacheSize = 16 * 1024;
 
         public static readonly Lucene.Net.Search.ScoreDoc ZeroScore = new Lucene.Net.Search.ScoreDoc(-1, 0f);
 
         public static readonly Lucene.Net.Search.ScoreDoc OneScore = new Lucene.Net.Search.ScoreDoc(-1, 1f);
+
+        
+        internal static FieldType GetFieldType(string field, Lucene.Net.Documents.Document indexDocument)
+        {
+            var isArray = false;
+            var isJson = false;
+            var isNumeric = false;
+
+            var arrayFieldName = field + LuceneDocumentConverterBase.IsArrayFieldSuffix;
+            var jsonConvertFieldName = field + LuceneDocumentConverterBase.ConvertToJsonSuffix;
+            var numericFieldName = field + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
+
+            foreach (var f in indexDocument.GetFields())
+            {
+                if (f.Name == arrayFieldName)
+                {
+                    isArray = true;
+                    continue;
+                }
+
+                if (f.Name == jsonConvertFieldName)
+                {
+                    isJson = true;
+                    break;
+                }
+
+                if (f.Name == numericFieldName)
+                {
+                    isNumeric = true;
+                }
+            }
+
+            return new FieldType
+            {
+                IsArray = isArray,
+                IsJson = isJson,
+                IsNumeric = isNumeric
+            };
+        }
+
+        internal class FieldType
+        {
+            public bool IsArray;
+            public bool IsJson;
+            public bool IsNumeric;
+        }
+    }
+    
+    public abstract class QueryResultRetrieverBase<TDocument> : QueryResultRetrieverCommon, IQueryResultRetriever<TDocument>
+    where TDocument : Document, new()
+    {
 
         private readonly DocumentDatabase _database;
         protected readonly IndexQueryServerSide _query;
@@ -49,8 +100,8 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly IncludeCompareExchangeValuesCommand _includeCompareExchangeValuesCommand;
         private readonly BlittableJsonTraverser _blittableTraverser;
 
-        private LruDictionary<string, Document> _loadedDocuments;
-        private Dictionary<string, Document> _loadedDocumentsByAliasName;
+        private LruDictionary<string, TDocument> _loadedDocumentMarshall;
+        private Dictionary<string, TDocument> _loadedDocumentsByAliasName;
         private HashSet<string> _loadedDocumentIds;
 
         protected readonly DocumentFields DocumentFields;
@@ -69,7 +120,7 @@ namespace Raven.Server.Documents.Queries.Results
         private QueryTimingsScope _functionScope;
         private QueryTimingsScope _loadScope;
 
-        private TimeSeriesRetriever _timeSeriesRetriever;
+        private TimeSeriesRetriever<TDocument> _timeSeriesRetriever;
 
         protected readonly DocumentsOperationContext DocumentContext;
 
@@ -98,6 +149,10 @@ namespace Raven.Server.Documents.Queries.Results
             DocumentFields = query?.DocumentFields ?? DocumentFields.All;
 
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
+
+            _loadedDocumentMarshall = typeof(TDocument) == typeof(QueriedDocument) && DocumentContext != null
+                ? (LruDictionary<string, TDocument>)(object)(new LruDictionary<string, QueriedDocument>(LoadedDocumentsCacheSize, new LruCacheHelpers.DocumentReleaser(DocumentContext)))
+                : new LruDictionary<string, TDocument>(LoadedDocumentsCacheSize);
         }
 
 
@@ -108,7 +163,7 @@ namespace Raven.Server.Documents.Queries.Results
                 throw new ArgumentNullException(nameof(fieldsToFetch));
         }
 
-        protected void FinishDocumentSetup(Document doc, Lucene.Net.Search.ScoreDoc scoreDoc)
+        protected void FinishDocumentSetup(TDocument doc, Lucene.Net.Search.ScoreDoc scoreDoc)
         {
             if (doc == null || scoreDoc == null)
                 return;
@@ -120,25 +175,65 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        public abstract (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token);
+        public abstract (TDocument Document, List<TDocument> List) Get(ref RetrieverInput retrieverInput, CancellationToken token);
 
         public abstract bool TryGetKeyLucene(ref RetrieverInput retrieverInput, out string key);
 
         public abstract bool TryGetKeyCorax(IndexSearcher searcher, long id, out UnmanagedSpan key);
 
-        public abstract Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
+        public virtual TDocument DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
+        {
+            if (_loadedDocumentMarshall.TryGetValue(id, out var doc))
+            {
+                if (typeof(TDocument) == typeof(QueriedDocument))
+                    ((QueriedDocument)(object)doc).IncreaseReference();
+                return doc;
+            }
 
-        protected abstract Document LoadDocument(string id);
+            doc = _loadedDocumentMarshall[id] = DocumentsStorage.Get<TDocument>(DocumentContext, id, fields);
+            return doc;
+        }
+
+        protected virtual TDocument LoadDocument(TDocument parentDocument, string id)
+        {
+            _loadedDocumentMarshall.MaybeClean();
+            
+            if (_loadedDocumentMarshall.TryGetValue(id, out var doc))
+            {
+                if (typeof(TDocument) == typeof(QueriedDocument))
+                {
+                    ((QueriedDocument)(object)doc).IncreaseReference();
+                    if (ReferenceEquals(parentDocument, doc) == false)
+                    {
+                        ((QueriedDocument)(object)parentDocument).AddChild((QueriedDocument)(object)doc);
+                    }
+                }
+                
+                return doc;
+            }
+
+            doc = DocumentsStorage.Get<TDocument>(DocumentContext, id);
+            if (doc != null)
+                _loadedDocumentMarshall[id] = doc;
+
+            if (typeof(TDocument) == typeof(QueriedDocument) && doc != null)
+            {
+                ((QueriedDocument)(object)parentDocument).AddChild((QueriedDocument)(object)doc);
+                ((QueriedDocument)(object)doc).IncreaseReference();
+            }
+
+            return doc;
+        }
 
         protected abstract long? GetCounter(string docId, string name);
 
         protected abstract DynamicJsonValue GetCounterRaw(string docId, string name);
 
-        protected (Document Document, List<Document> List) GetProjection(ref RetrieverInput retrieverInput, string lowerId, CancellationToken token)
+        protected (TDocument Document, List<TDocument> List) GetProjection(ref RetrieverInput retrieverInput, string lowerId, CancellationToken token)
         {
             using (_projectionScope = _projectionScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Projection)))
             {
-                Document doc = null;
+                TDocument doc = null;
 
                 if (FieldsToFetch.AnyExtractableFromIndex == false)
                 {
@@ -260,9 +355,24 @@ namespace Raven.Server.Documents.Queries.Results
                             if (FieldsToFetch.SingleBodyOrMethodWithNoAlias)
                             {
                                 if (fieldVal is BlittableJsonReaderObject nested)
-                                    doc.Data = nested;
+                                {
+                                    if (ReferenceEquals(nested, doc.Data) == false)
+                                    {
+                                        using (doc)
+                                            doc.CloneWith<TDocument>(_context, nested);
+                                    }
+                                }
+                                else if (fieldVal is TDocument dt)
+                                {
+                                    if (ReferenceEquals(doc, dt) == false)
+                                        doc.Dispose();
+                                    doc = dt;
+                                }
                                 else if (fieldVal is Document d)
-                                    doc = d;
+                                {
+                                    using (d)
+                                        doc = d.Clone<TDocument>(_context);
+                                }
                                 else
                                     ThrowInvalidQueryBodyResponse(fieldVal);
                                 FinishDocumentSetup(doc, retrieverInput.Score);
@@ -272,8 +382,12 @@ namespace Raven.Server.Documents.Queries.Results
                             if (fieldVal is List<object> list)
                                 fieldVal = new DynamicJsonArray(list);
 
-                            if (fieldVal is Document d2)
+                            if (fieldVal is TDocument d2)
+                            {
+                                if (typeof(TDocument) == typeof(QueriedDocument))
+                                    ((QueriedDocument)(object)doc).AddChild((QueriedDocument)(object)d2);
                                 fieldVal = d2.Data;
+                            }
 
                             result[key] = fieldVal;
                         }
@@ -292,7 +406,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (doc == null)
                 {
                     // the fields were projected from the index
-                    doc = new Document
+                    doc = new TDocument
                     {
                         Id = _context.GetLazyString(lowerId)
                     };
@@ -321,7 +435,7 @@ namespace Raven.Server.Documents.Queries.Results
             return false;
         }
 
-        public (Document Document, List<Document> List) GetProjectionFromDocument(Document doc, ref RetrieverInput retrieverInput, FieldsToFetch fieldsToFetch, JsonOperationContext context, CancellationToken token)
+        public (TDocument Document, List<TDocument> List) GetProjectionFromDocument(TDocument doc, ref RetrieverInput retrieverInput, FieldsToFetch fieldsToFetch, JsonOperationContext context, CancellationToken token)
         {
             using (RetrieverScope?.Start())
             using (_projectionScope = _projectionScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Projection)))
@@ -330,7 +444,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private (Document Document, List<Document> List) GetProjectionFromDocumentInternal(Document doc, ref RetrieverInput retrieverInput, FieldsToFetch fieldsToFetch, JsonOperationContext context, CancellationToken token)
+        private (TDocument Document, List<TDocument> List) GetProjectionFromDocumentInternal(TDocument doc, ref RetrieverInput retrieverInput, FieldsToFetch fieldsToFetch, JsonOperationContext context, CancellationToken token) 
         {
             var result = new DynamicJsonValue();
 
@@ -357,13 +471,13 @@ namespace Raven.Server.Documents.Queries.Results
             return (ReturnProjection(result, doc, context, retrieverInput.Score), null);
         }
 
-        protected (Document Document, List<Document> List) AddProjectionToResult(Document doc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, DynamicJsonValue result, string key, object fieldVal)
+        protected (TDocument Document, List<TDocument> List) AddProjectionToResult(TDocument doc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, DynamicJsonValue result, string key, object fieldVal)
         {
             if (_query.IsStream &&
                 key.StartsWith(Constants.TimeSeries.QueryFunction))
             {
                 doc.TimeSeriesStream ??= new TimeSeriesStream();
-                var value = (TimeSeriesRetriever.TimeSeriesStreamingRetrieverResult)fieldVal;
+                var value = (TimeSeriesRetriever<TDocument>.TimeSeriesStreamingRetrieverResult)fieldVal;
                 doc.TimeSeriesStream.TimeSeries = value.Stream;
                 doc.TimeSeriesStream.Key = key;
                 Json.BlittableJsonTextWriterExtensions.MergeMetadata(result, value.Metadata);
@@ -376,7 +490,7 @@ namespace Raven.Server.Documents.Queries.Results
                 FinishDocumentSetup(r.Document, scoreDoc);
                 if (r.List == null)
                     return r;
-                foreach (Document item in r.List)
+                foreach (var item in r.List)
                 {
                     FinishDocumentSetup(item, scoreDoc);
                 }
@@ -388,13 +502,13 @@ namespace Raven.Server.Documents.Queries.Results
             return default;
         }
 
-        private (Document Document, List<Document> List) CreateNewDocument(Document doc, string key, object fieldVal)
+        private (TDocument Document, List<TDocument> List) CreateNewDocument(TDocument doc, string key, object fieldVal)
         {
             switch (fieldVal)
             {
                 case List<object> list:
                     RuntimeHelpers.EnsureSufficientExecutionStack();
-                    var results = new List<Document>(list.Count);
+                    var results = new List<TDocument>(list.Count);
                     for (int i = 0; i < list.Count; i++)
                     {
                         var result = CreateNewDocument(doc, key, list[i]);
@@ -413,52 +527,34 @@ namespace Raven.Server.Documents.Queries.Results
 
                     return (null, results);
                 case BlittableJsonReaderObject nested:
-                    return (new Document
-                    {
-                        // https://issues.hibernatingrhinos.com/issue/RavenDB-19350
-                        // https://issues.hibernatingrhinos.com/issue/RavenDB-19127
-                        // We need to have a different instance of Id / LowerId, otherwise 
-                        // they will be disposed (but then try to be used)
-                        Id = doc.IgnoreDispose ? doc.Id?.CloneOnSameContext() : doc.Id,
-                        ChangeVector = doc.ChangeVector,
-                        Data = nested,
-                        Etag = doc.Etag,
-                        Flags = doc.Flags,
-                        LastModified = doc.LastModified,
-                        LowerId = doc.IgnoreDispose ? doc.LowerId?.CloneOnSameContext() : doc.LowerId,
-                        NonPersistentFlags = doc.NonPersistentFlags,
-                        
-                        // https://issues.hibernatingrhinos.com/issue/RavenDB-21900
-                        // In case when document reference itself we cannot release the storage
-                        // and we do not want to made this object non-disposable (via IgnoreDispose) either since we want to release
-                        // some clones of it.
-                        StorageId = doc.IgnoreDispose ?  Voron.Global.Constants.Compression.NonReturnableStorageId : doc.StorageId,
-                        TransactionMarker = doc.TransactionMarker
-                    }, null);
-
+                {
+                    using var _ = doc;
+                    
+                    if (typeof(TDocument) == typeof(QueriedDocument))
+                        return (((QueriedDocument)(object)doc).CloneWith<TDocument>(_context, nested), null);
+                    
+                    return (doc.CloneWith<TDocument>(_context, nested), null);
+                }
+                case TDocument td:
+                    if (ReferenceEquals(td, doc) == false)
+                        doc.Dispose();
+                    return (td, null);
                 case Document d:
-                    return (d, null);
-
-                case TimeSeriesRetriever.TimeSeriesStreamingRetrieverResult ts:
-                    return (new Document
+                    using (d)
                     {
-                        Id = doc.IgnoreDispose ? doc.Id?.CloneOnSameContext() : doc.Id,
-                        ChangeVector = doc.ChangeVector,
-                        Data = _context.ReadObject(ts.Metadata, "time-series-metadata"),
-                        Etag = doc.Etag,
-                        Flags = doc.Flags,
-                        LastModified = doc.LastModified,
-                        LowerId = doc.IgnoreDispose ? doc.LowerId?.CloneOnSameContext() : doc.LowerId,
-                        NonPersistentFlags = doc.NonPersistentFlags,
-                        StorageId = doc.IgnoreDispose ?  Voron.Global.Constants.Compression.NonReturnableStorageId : doc.StorageId,
-                        TransactionMarker = doc.TransactionMarker,
-                        TimeSeriesStream = new TimeSeriesStream
-                        {
-                            TimeSeries = ts.Stream,
-                            Key = key
-                        }
-                    }, null);
-
+                        if (typeof(TDocument) == typeof(QueriedDocument))
+                            return (((QueriedDocument)(object)doc).Clone<TDocument>(_context), null);
+                        return (d.Clone<TDocument>(_context), null);
+                    }
+                case TimeSeriesRetrieverBase.TimeSeriesStreamingRetrieverResult ts:
+                {
+                    var newData = _context.ReadObject(ts.Metadata, "time-series-metadata");
+                    var clonedDocument = typeof(TDocument) != typeof(QueriedDocument)
+                        ? doc.CloneWith<TDocument>(_context, newData)
+                        : (TDocument)(((QueriedDocument)(object)doc).CloneWith<TDocument>(_context, newData));
+                    clonedDocument.TimeSeriesStream = new TimeSeriesStream { TimeSeries = ts.Stream, Key = key };
+                    return (clonedDocument, null);
+                }
                 default:
                     ThrowInvalidQueryBodyResponse(fieldVal);
                     break;
@@ -500,38 +596,26 @@ namespace Raven.Server.Documents.Queries.Results
             throw new InvalidOperationException("Query returning a single function call result must return an object, but got: " + (fieldVal ?? "null"));
         }
 
-        protected Document ReturnProjection(DynamicJsonValue result, Document doc, JsonOperationContext context, Lucene.Net.Search.ScoreDoc scoreDoc = null)
+        protected TDocument ReturnProjection(DynamicJsonValue result, TDocument doc, JsonOperationContext context, Lucene.Net.Search.ScoreDoc scoreDoc = null)
         {
             var metadata = Json.BlittableJsonTextWriterExtensions.GetOrCreateMetadata(result);
             metadata[Constants.Documents.Metadata.Projection] = true;
 
             var newData = context.ReadObject(result, "projection result");
-
-            try
+            var sameBlittable = ReferenceEquals(newData, doc.Data);
+            var returnDoc = doc;
+            if (sameBlittable == false)
             {
-                if (ReferenceEquals(newData, doc.Data) == false
-                    && doc.IgnoreDispose == false) // this is being referenced by the _loadedDocuments still...
-                    doc.Data?.Dispose();
+                returnDoc = typeof(TDocument) == typeof(QueriedDocument) 
+                    ? ((QueriedDocument)(object)doc).CloneWith<TDocument>(context, newData) 
+                    : doc.CloneWith<TDocument>(context, newData);
+                doc.Dispose();
             }
-            catch (Exception)
-            {
-                newData.Dispose();
-                throw;
-            }
-
-            if (doc.IgnoreDispose)// this is being retained by the _loadedDocuments
-            {
-                doc = doc.CloneWith(context, newData);
-            }
-            else
-            {
-                doc.Data = newData;
-            }
-
+            
             if (scoreDoc != null)
-                FinishDocumentSetup(doc, scoreDoc);
+                FinishDocumentSetup(returnDoc, scoreDoc);
 
-            return doc;
+            return returnDoc;
         }
 
         private bool LuceneTryExtractValueFromIndex(FieldsToFetch.FieldToFetch fieldToFetch, Lucene.Net.Documents.Document indexDocument, DynamicJsonValue toFill, IState state)
@@ -801,7 +885,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new NotSupportedException("Cannot convert binary values");
         }
 
-        protected bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, ref RetrieverInput retrieverInput, Dictionary<string, IndexField> indexFields, bool? anyDynamicIndexFields, out string key, out object value, CancellationToken token)
+        protected bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, TDocument document, ref RetrieverInput retrieverInput, Dictionary<string, IndexField> indexFields, bool? anyDynamicIndexFields, out string key, out object value, CancellationToken token)
         {
             key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
 
@@ -817,9 +901,12 @@ namespace Raven.Server.Documents.Queries.Results
                 {
 
                     TryGetValue(fieldToFetch.FunctionArgs[i], document, ref retrieverInput, indexFields, anyDynamicIndexFields, out _, out args[i], token);
+                    // if (args[i] is QueriedDocument d)
+                    //     args[i] = d.Clone<Document>(_context);
+                    
                     if (ReferenceEquals(args[i], document))
                     {
-                        args[i] = Tuple.Create(document, retrieverInput, indexFields, anyDynamicIndexFields, FieldsToFetch.Projection);
+                        args[i] = Tuple.Create((Document)document, retrieverInput, indexFields, anyDynamicIndexFields, FieldsToFetch.Projection);
                     }
                 }
                 value = GetFunctionValue(fieldToFetch, document.Id, args, token);
@@ -888,21 +975,22 @@ namespace Raven.Server.Documents.Queries.Results
             if (_loadedDocumentIds == null)
             {
                 _loadedDocumentIds = new HashSet<string>();
-                
-                //Cleaner can be injected only in case when we perform streaming operation since we write to buffer just after projection of each document.
-                //In case of non-streaming query we store references to docs inside a list, so we've to be careful not to dispose it before writing.
-                _loadedDocuments =  _query.IsStream && DocumentContext != null 
-                    ? new (LoadedDocumentsCacheSize, new LruCacheHelpers.DocumentReleaser(DocumentContext)) 
-                    : new LruDictionary<string, Document>(LoadedDocumentsCacheSize);
-                _loadedDocumentsByAliasName = new Dictionary<string, Document>();
+                _loadedDocumentsByAliasName = new Dictionary<string, TDocument>();
             }
+
+            if (typeof(TDocument) == typeof(QueriedDocument) && _loadedDocumentIds != null)
+            {
+                foreach (var loadedDocId in _loadedDocumentIds)
+                {
+                    if (_loadedDocumentMarshall.TryGetValue(loadedDocId.ToLowerInvariant(), out var doc))
+                        doc.Dispose();
+                }
+            }
+            
             _loadedDocumentIds.Clear();
 
             //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cache this for the duration of the query
-
-            _loadedDocuments[document.Id ?? string.Empty] = document;
-
-            document.IgnoreDispose = true; // so we can do multiple projections of the same value
+            
 
             if (fieldToFetch.QueryField.SourceAlias != null)
             {
@@ -996,15 +1084,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (docId == null)
                     continue;
 
-                if (_loadedDocuments.TryGetValue(docId, out var doc) == false)
-                {
-                    using (_loadScope = _loadScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Load)))
-                    {
-                        _loadedDocuments[docId] = doc = LoadDocument(docId);
-                        if (doc != null)
-                            doc.IgnoreDispose = true; // so we can do multiple projections of the same value
-                    }
-                }
+                var doc = LoadDocument(document, docId.ToLowerInvariant());
                 if (doc == null)
                     continue;
 
@@ -1144,7 +1224,7 @@ namespace Raven.Server.Documents.Queries.Results
         {
             if (TryGetTimeSeriesFunction(methodName, query, out var func))
             {
-                _timeSeriesRetriever ??= new TimeSeriesRetriever(_includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocuments, token);
+                _timeSeriesRetriever ??= new TimeSeriesRetriever<TDocument>(_includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocumentMarshall, token);
                 var result = _timeSeriesRetriever.InvokeTimeSeriesFunction(func, documentId, args, out var type);
                 if (_query.IsStream)
                     return _timeSeriesRetriever.PrepareForStreaming(result, FieldsToFetch.SingleBodyOrMethodWithNoAlias, _query.AddTimeSeriesNames);
@@ -1177,7 +1257,8 @@ namespace Raven.Server.Documents.Queries.Results
                    func.Type == DeclaredFunction.FunctionType.TimeSeries;
         }
 
-        private bool TryGetFieldValueFromDocument(Document document, FieldsToFetch.FieldToFetch field, out object value)
+        private bool TryGetFieldValueFromDocument<TDocument>(TDocument document, FieldsToFetch.FieldToFetch field, out object value)
+        where TDocument : Document
         {
             if (field.IsDocumentId)
             {
@@ -1208,7 +1289,8 @@ namespace Raven.Server.Documents.Queries.Results
             return true;
         }
 
-        private static string GetIdFromDocument(Document document)
+        private static string GetIdFromDocument<TDocument>(TDocument document)
+            where TDocument : Document
         {
             if (document.Id != null)
             {

@@ -1,11 +1,13 @@
 ﻿using System;
-using System.Runtime.InteropServices;
-using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
+using System.Collections.Generic;
+using System.Diagnostics;
+using QueriedDocument = Raven.Server.Documents.QueriedDocument;
 
 namespace Raven.Server.Utils;
 
-using System.Collections.Generic;
+
+
 
 public sealed class LruDictionary<TKey, TValue> 
     where TKey : notnull, IComparable
@@ -14,32 +16,13 @@ public sealed class LruDictionary<TKey, TValue>
     private readonly Dictionary<TKey, (LinkedListNode<TKey> Node, TValue Value)> _cache;
     private readonly LinkedList<TKey> _list;
 
-    private readonly Dictionary<TKey, TValue> _toRelease;
-    private readonly LruCacheHelpers.ICacheReleaser<TValue> _releaseValue;
-    private readonly int _toReleaseMaxCapacity;
-    
-    public LruDictionary(int maxCapacity, LruCacheHelpers.ICacheReleaser<TValue> releaseValue = null)
+    private readonly LruCacheHelpers.ICacheReleaser<TValue> _releaser;
+    public LruDictionary(int maxCapacity, LruCacheHelpers.ICacheReleaser<TValue> releaser = null)
     {
         _maxCapacity = maxCapacity;  
         _cache = new Dictionary<TKey, (LinkedListNode<TKey> Node, TValue Value)>(maxCapacity);
         _list = new LinkedList<TKey>();
-
-        if (releaseValue is not null)
-        {
-            _toReleaseMaxCapacity = Math.Max(_maxCapacity / 32, 4);
-            _toRelease = new(_toReleaseMaxCapacity);
-            _releaseValue = releaseValue;
-        }
-    }
-    
-    private void ReleaseRemovedItems()
-    {
-        //Let's release documents in batches.
-        foreach (var doc in _toRelease)
-        {
-            _releaseValue!.ReleaseItem(doc.Value);
-        }
-        _toRelease.Clear();
+        _releaser = releaser;
     }
     
     public bool TryGetValue(TKey key, out TValue value)
@@ -57,6 +40,10 @@ public sealed class LruDictionary<TKey, TValue>
         return true;
     }
 
+    public void MaybeClean()
+    {
+    }
+    
     public TValue this[TKey key]
     {
         get
@@ -67,6 +54,9 @@ public sealed class LruDictionary<TKey, TValue>
 
         set
         {
+            if (typeof(TValue) == typeof(QueriedDocument))
+                Debug.Assert(((QueriedDocument)(object)value).StorageId != -1);
+            
             if (_cache.TryGetValue(key, out var node))
             {
                 _list.Remove(node.Node);
@@ -79,23 +69,45 @@ public sealed class LruDictionary<TKey, TValue>
                 if (_cache.Count >= _maxCapacity)
                 {
                     var removeKey = _list.Last!.Value;
-                    
-                    //We've to add last document to release list and ensure that currently added document is not persisted 
-                    // in release list (since this can be promotion from release list to cache list again).
-                    // In such case we've remove it from toRelease list. 
-                    if (_toRelease != null)
+                    if (_cache.TryGetValue(removeKey, out var toRemove) && typeof(TValue) == typeof(QueriedDocument) && _releaser != null)
                     {
-                        _toRelease.Add(removeKey, _cache[removeKey].Value);
-                        _toRelease.Remove(key);
-                    }
+                        var element = (QueriedDocument)(object)(toRemove.Value);
+                        if (element.CanDispose == false)
+                        {
+                            var nodeToCheck = toRemove.Node.Previous;
+                            while (nodeToCheck != null)
+                            {
+                                if (_cache.TryGetValue(nodeToCheck.Value, out var valueAtNode) == false)
+                                    break;
 
+                                var previousValue = (QueriedDocument)(object)valueAtNode.Value;
+                                if (previousValue.CanDispose)
+                                {
+                                    _releaser?.ReleaseItem(valueAtNode.Value);
+                                    previousValue.Dispose();
+                                }
+                                else
+                                    break;
+                            
+                                var newNode = valueAtNode.Node.Previous;
+                                _cache.Remove(nodeToCheck.Value);
+                                _list.Remove(nodeToCheck);
+                                nodeToCheck = newNode;
+                            }
+                        }
+                        
+                        if (element.CanDispose == false)
+                            goto AddOnly;
+                        
+                        _releaser?.ReleaseItem(toRemove.Value);
+                        element.Dispose();
+                    }
+                    
                     _cache.Remove(removeKey);
                     _list.RemoveLast();
-
-                    if (_toRelease != null && _toRelease.Count < _toReleaseMaxCapacity)
-                        ReleaseRemovedItems();
                 }
 
+                AddOnly:
                 // add cache
                 _cache.Add(key, (_list.AddFirst(key), value));
             }
@@ -110,7 +122,7 @@ public static class LruCacheHelpers
         void ReleaseItem(TValue value);
     }
     
-    public class DocumentReleaser : ICacheReleaser<Document>
+    public class DocumentReleaser : ICacheReleaser<QueriedDocument>
     {
         private readonly DocumentsOperationContext _context;
 
@@ -119,10 +131,9 @@ public static class LruCacheHelpers
             _context = context;
         }
         
-        public void ReleaseItem(Document value)
+        public void ReleaseItem(QueriedDocument value)
         {
             _context.Transaction.ForgetAbout(value);
-            value.IgnoreDispose = false;
             value.Dispose();
         }
     }
