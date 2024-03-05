@@ -174,7 +174,7 @@ namespace FastTests
             {
                 var database = await _parent.GetDatabase(store.Database);
 
-                var taskCompletionSource = new TaskCompletionSource<(string, string, EtlProcessStatistics)>();
+                var taskCompletionSource = new TaskCompletionSource<(string, string, EtlProcessStatistics)>(TaskCreationOptions.RunContinuationsAsynchronously);
 
                 void EtlLoaderOnBatchCompleted((string ConfigurationName, string TransformationName, EtlProcessStatistics Statistics) x)
                 {
@@ -182,11 +182,11 @@ namespace FastTests
                     {
                         if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics) == false)
                             return;
-                        taskCompletionSource.SetResult(x);
+                        taskCompletionSource.TrySetResult(x);
                     }
                     catch (Exception e)
                     {
-                        taskCompletionSource.SetException(e);
+                        taskCompletionSource.TrySetException(e);
                     }
                 }
 

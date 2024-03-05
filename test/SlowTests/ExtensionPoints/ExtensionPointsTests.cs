@@ -416,12 +416,12 @@ exit 0";
                 throw new CryptographicException($"Failed to load the test certificate from {certificates}.", e);
             }
 
-            var ts = new TaskCompletionSource();
+            var ts = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             Server.ServerStore.Engine.StateMachine.Changes.ValueChanged += (index, type) =>
             {
                 if (type == nameof(InstallUpdatedServerCertificateCommand))
                 {
-                    ts.SetResult();
+                    ts.TrySetResult();
                 }
 
                 return Task.CompletedTask;
