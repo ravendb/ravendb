@@ -10,10 +10,11 @@ namespace Raven.Client.Documents.Session
 {
     /// <summary>
     /// Provides client API for counter operations on a specific entity.<br/>
-    /// Counters are numeric data variables that can be added to documents,
-    /// and are used to perform high frequency counting in a distributed manner.<br/> 
-    /// Read more about Counters <see href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/counters/overview">here</see> 
+    /// Counters are numeric data variables that can be added to documents. <br/>
+    /// They are designed to perform high frequency counting in a distributed manner, <br/>
+    /// while ensuring conflict-free behavior.
     /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Session.Counters.Overview"/>
     public interface ISessionDocumentCounters : ISessionDocumentCountersBase
     {
         /// <summary>

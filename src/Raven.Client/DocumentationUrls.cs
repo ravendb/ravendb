@@ -82,6 +82,12 @@ internal static class DocumentationUrls
             public const string Distinct = nameof(Distinct);
         }
 
+        internal static class Counters
+        {
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/counters/overview"/></remarks>
+            public const string Overview = nameof(Overview);
+        }
+
         internal static class Transactions
         {
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/faq/transaction-support"/></remarks>
