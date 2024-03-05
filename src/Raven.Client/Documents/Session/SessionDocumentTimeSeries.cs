@@ -48,11 +48,13 @@ namespace Raven.Client.Documents.Session
             _asyncSessionTimeSeries.Append(entry.Timestamp, entry.Value, entry.Tag);
         }
 
+        /// <inheritdoc cref="ISessionDocumentTimeSeries.Get"/>
         public TimeSeriesEntry[] Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue)
         {
             return Get(from, to, includes: null, start, pageSize);
         }
 
+        /// <inheritdoc cref="ISessionDocumentTimeSeries.Get(DateTime?, DateTime?, Action{ITimeSeriesIncludeBuilder}, int, int)"/>
         public TimeSeriesEntry[] Get(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue)
         {
             return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsync(from, to, includes, start, pageSize));
@@ -71,11 +73,13 @@ namespace Raven.Client.Documents.Session
             });
         }
 
+        /// <inheritdoc cref="ISessionDocumentTypedTimeSeries{TValue}.Get"/>
         TimeSeriesEntry<TValues>[] ISessionDocumentTypedTimeSeries<TValues>.Get(DateTime? from, DateTime? to, int start, int pageSize)
         {
             return GetInternal(from, to, start, pageSize);
         }
 
+        /// <inheritdoc cref="ISessionDocumentRollupTypedTimeSeries{TValue}.Get"/>
         TimeSeriesRollupEntry<TValues>[] ISessionDocumentRollupTypedTimeSeries<TValues>.Get(DateTime? from, DateTime? to, int start, int pageSize)
         {
             if (_asyncSessionTimeSeries.NotInCache(from, to))
@@ -93,6 +97,7 @@ namespace Raven.Client.Documents.Session
             _asyncSessionTimeSeries.Append(entry.Timestamp, entry.Values, entry.Tag);
         }
 
+        /// <inheritdoc cref="ISessionDocumentTypedIncrementalTimeSeries{TValue}.Get"/>
         TimeSeriesEntry<TValues>[] ISessionDocumentTypedIncrementalTimeSeries<TValues>.Get(DateTime? from, DateTime? to, int start, int pageSize)
         {
             return GetInternal(from, to, start, pageSize);
