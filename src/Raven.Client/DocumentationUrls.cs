@@ -160,6 +160,12 @@ internal static class DocumentationUrls
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/session/append"/></remarks>
             public const string AppendOperation = nameof(AppendOperation);
 
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/session/delete"/></remarks>
+            public const string DeleteOperation = nameof(DeleteOperation);
+
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/incremental-time-series/client-api/session/increment"/></remarks>
+            public const string IncrementOperation = nameof(IncrementOperation);
+
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/incremental-time-series/overview"/></remarks>
             public const string IncrementalOverview = nameof(IncrementalOverview);
 

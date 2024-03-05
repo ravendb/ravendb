@@ -108,11 +108,13 @@ namespace Raven.Client.Documents.Session
             return GetInternal(from, to, start, pageSize);
         }
 
+        /// <inheritdoc cref="ISessionDocumentDeleteTimeSeriesBase.Delete"/>
         void ISessionDocumentDeleteTimeSeriesBase.Delete(DateTime? from, DateTime? to)
         {
             _asyncSessionTimeSeries.Delete(from, to);
         }
 
+        /// <inheritdoc cref="ISessionDocumentDeleteTimeSeriesBase.Delete(DateTime)"/>
         void ISessionDocumentDeleteTimeSeriesBase.Delete(DateTime at)
         {
             _asyncSessionTimeSeries.Delete(at);
@@ -138,31 +140,37 @@ namespace Raven.Client.Documents.Session
             _asyncSessionTimeSeries.Increment(timestamp, values);
         }
 
+        /// <inheritdoc cref="ISessionDocumentIncrementTimeSeriesBase.Increment"/>
         void ISessionDocumentIncrementTimeSeriesBase.Increment(DateTime timestamp, IEnumerable<double> values)
         {
             Increment(timestamp, values);
         }
 
+        /// <inheritdoc cref="ISessionDocumentIncrementTimeSeriesBase.Increment"/>
         void ISessionDocumentIncrementTimeSeriesBase.Increment(IEnumerable<double> values)
         {
             Increment(DateTime.UtcNow, values);
         }
 
+        /// <inheritdoc cref="ISessionDocumentIncrementTimeSeriesBase.Increment(DateTime, double)"/>
         void ISessionDocumentIncrementTimeSeriesBase.Increment(DateTime timestamp, double value)
         {
             Increment(timestamp, new[] { value });
         }
 
+        /// <inheritdoc cref="ISessionDocumentIncrementTimeSeriesBase.Increment(double)"/>
         void ISessionDocumentIncrementTimeSeriesBase.Increment(double value)
         {
             Increment(DateTime.UtcNow, new[] { value });
         }
 
+        /// <inheritdoc cref="ISessionDocumentTypedIncrementTimeSeriesBase{TValues}.Increment"/>
         void ISessionDocumentTypedIncrementTimeSeriesBase<TValues>.Increment(DateTime timestamp, TValues entry)
         {
             _asyncSessionTimeSeries.Increment(timestamp, entry);
         }
 
+        /// <inheritdoc cref="ISessionDocumentTypedIncrementTimeSeriesBase{TValues}.Increment"/>
         void ISessionDocumentTypedIncrementTimeSeriesBase<TValues>.Increment(TValues entry)
         {
             _asyncSessionTimeSeries.Increment(DateTime.UtcNow, entry);

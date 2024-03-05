@@ -55,6 +55,7 @@ namespace Raven.Client.Documents.Session
             Session = session;
         }
 
+        /// <inheritdoc cref="ISessionDocumentAppendTimeSeriesBase.Append(DateTime, double, string)"/>
         public void Append(DateTime timestamp, double value, string tag = null)
         {
             Append(timestamp, new []{ value }, tag);
@@ -72,6 +73,7 @@ namespace Raven.Client.Documents.Session
             Append(timestamp, values, tag);
         }
 
+        /// <inheritdoc cref="ISessionDocumentAppendTimeSeriesBase.Append"/>
         public void Append(DateTime timestamp, IEnumerable<double> values, string tag = null)
         {
             if (Session.DocumentsById.TryGetValue(DocId, out DocumentInfo documentInfo) &&
@@ -96,11 +98,13 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        /// <inheritdoc cref="ISessionDocumentDeleteTimeSeriesBase.Delete(DateTime)"/>
         public void Delete(DateTime at)
         {
             Delete(at, at);
         }
 
+        /// <inheritdoc cref="ISessionDocumentDeleteTimeSeriesBase.Delete"/>
         public void Delete(DateTime? from = null, DateTime? to = null)
         {
             if (Session.DocumentsById.TryGetValue(DocId, out DocumentInfo documentInfo) &&
@@ -158,6 +162,7 @@ namespace Raven.Client.Documents.Session
             Increment(timestamp, values);
         }
 
+        /// <inheritdoc cref="ISessionDocumentIncrementTimeSeriesBase.Increment"/>
         public void Increment(DateTime timestamp, IEnumerable<double> values)
         {
             if (Session.DocumentsById.TryGetValue(DocId, out DocumentInfo documentInfo) &&
@@ -181,16 +186,19 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        /// <inheritdoc cref="ISessionDocumentIncrementTimeSeriesBase.Increment"/>
         public void Increment(IEnumerable<double> values)
         {
             Increment(DateTime.UtcNow, values);
         }
 
+        /// <inheritdoc cref="ISessionDocumentIncrementTimeSeriesBase.Increment(DateTime, double)"/>
         public void Increment(DateTime timestamp, double value)
         {
             Increment(timestamp, new [] {value});
         }
 
+        /// <inheritdoc cref="ISessionDocumentIncrementTimeSeriesBase.Increment(double)"/>
         public void Increment( double value)
         {
             Increment(DateTime.UtcNow, new [] { value });
