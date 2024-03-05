@@ -457,11 +457,13 @@ namespace Raven.Client.Documents.Session
             return GetAsyncInternal(from, to, start, pageSize, token);
         }
 
+        /// <inheritdoc cref="ISessionDocumentTypedAppendTimeSeriesBase{TValue}.Append"/>
         void ISessionDocumentTypedAppendTimeSeriesBase<TValues>.Append(DateTime timestamp, TValues entry, string tag)
         {
             Append(timestamp, entry, tag);
         }
 
+        /// <inheritdoc cref="ISessionDocumentTypedAppendTimeSeriesBase{TValue}.Append(TimeSeriesEntry{TValue})"/>
         public void Append(TimeSeriesEntry<TValues> entry)
         {
             Append(entry.Timestamp, entry.Value, entry.Tag);
