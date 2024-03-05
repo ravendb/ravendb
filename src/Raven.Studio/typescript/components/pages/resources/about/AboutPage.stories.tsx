@@ -10,6 +10,8 @@ import { AboutPage as AboutPageComponent } from "./AboutPage";
 import React from "react";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
+import { LicenseStubs } from "test/stubs/LicenseStubs";
+import { ClusterStubs } from "test/stubs/ClusterStubs";
 
 export default {
     title: "Pages/About Page",
@@ -26,6 +28,7 @@ interface AboutPageStoryProps {
     securityClearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
     licenseServerConnection: boolean;
     passiveServer: boolean;
+    latestServerBuildNumber: number;
     isIsv: boolean;
     cloud: boolean;
     supportStatus: Raven.Server.Commercial.Status;
@@ -57,7 +60,11 @@ function commonInit(props: AboutPageStoryProps) {
         });
     }
 
-    licenseService.withLatestVersion();
+    licenseService.withLatestVersion((x) => {
+        if (props.latestServerBuildNumber) {
+            x.BuildNumber = props.latestServerBuildNumber;
+        }
+    });
     licenseService.withGetConfigurationSettings();
 }
 
@@ -67,6 +74,7 @@ const defaultArgs: AboutPageStoryProps = {
     cloud: false,
     passiveServer: false,
     supportStatus: "NoSupport",
+    latestServerBuildNumber: undefined,
     licenseServerConnection: true,
     securityClearance: "ClusterAdmin",
 };
@@ -198,5 +206,15 @@ export const PartialSupportOnPremise: StoryObj<AboutPageStoryProps> = {
         ...defaultArgs,
         cloud: false,
         supportStatus: "PartialSupport",
+    },
+};
+
+export const UsingLatestVersion: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        latestServerBuildNumber: ClusterStubs.serverVersion().BuildVersion,
+        cloud: false,
+        supportStatus: "NoSupport",
     },
 };

@@ -204,6 +204,7 @@ module.exports = (env, args) => {
                                     "corax-backward": 0xf14F,
                                     "corax-sort-az": 0xf150,
                                     "corax-sort-za": 0xf151,
+                                    "close": 0xf162,
                                 },
                                 cssTemplate: path.resolve(__dirname, "wwwroot/Content/css/fonts/icomoon.template.css.hbs")
                             }

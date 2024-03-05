@@ -1,10 +1,10 @@
 ﻿import { Button, Card, CardBody, Col, Row } from "reactstrap";
-import { aboutPageUrls, OverallInfoItem } from "components/pages/resources/about/partials/common";
+import { OverallInfoItem } from "components/pages/resources/about/partials/common";
 import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
-import { AsyncState, UseAsyncReturn } from "react-async-hook";
+import { AsyncState } from "react-async-hook";
 import { LazyLoad } from "components/common/LazyLoad";
 import { LoadError } from "components/common/LoadError";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -12,11 +12,11 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 interface VersionsSummaryProps {
     asyncLatestVersion: AsyncState<Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo>;
     refreshLatestVersion: () => Promise<void>;
-    toggleShowChangelogModal: () => void;
+    showChangeLogModal: () => void;
+    showWhatsNewModal: () => void;
 }
 
 export function VersionsSummary(props: VersionsSummaryProps) {
-    const clientVersion = useAppSelector(clusterSelectors.clientVersion);
     const serverVersion = useAppSelector(clusterSelectors.serverVersion);
     const serverFullVersion = serverVersion?.FullVersion ?? "n/a";
 
@@ -24,7 +24,7 @@ export function VersionsSummary(props: VersionsSummaryProps) {
 
     const [refreshing, setRefreshing] = useState<boolean>(false);
 
-    const { toggleShowChangelogModal, refreshLatestVersion } = props;
+    const { showChangeLogModal, showWhatsNewModal, refreshLatestVersion } = props;
 
     const checkForUpdates = async () => {
         setRefreshing(true);
@@ -43,16 +43,21 @@ export function VersionsSummary(props: VersionsSummaryProps) {
                     <OverallInfoItem icon="server" label="Server version">
                         {serverFullVersion}
                     </OverallInfoItem>
-                    <OverallInfoItem icon="client" label="Studio version">
-                        {clientVersion}
-                    </OverallInfoItem>
-                    <OverallInfoItem icon="global" label="Updates">
-                        <LatestVersion asyncLatestVersion={asyncLatestVersion} serverVersion={serverVersion} />
-                    </OverallInfoItem>
                     <Col className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
-                        <Button outline className="rounded-pill" onClick={toggleShowChangelogModal}>
+                        <Button outline className="rounded-pill" onClick={showChangeLogModal}>
                             <Icon icon="logs" /> Changelog
                         </Button>
+                    </Col>
+                </Row>
+                <Row>
+                    <OverallInfoItem icon="global" label="Updates">
+                        <LatestVersion
+                            asyncLatestVersion={asyncLatestVersion}
+                            serverVersion={serverVersion}
+                            showWhatsNewModal={showWhatsNewModal}
+                        />
+                    </OverallInfoItem>
+                    <Col className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
                         <ButtonWithSpinner
                             isSpinning={refreshing}
                             outline
@@ -87,8 +92,9 @@ function isNewVersionAvailable(
 function LatestVersion(props: {
     asyncLatestVersion: AsyncState<Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo>;
     serverVersion: serverBuildVersionDto;
+    showWhatsNewModal: () => void;
 }) {
-    const { asyncLatestVersion, serverVersion } = props;
+    const { asyncLatestVersion, serverVersion, showWhatsNewModal } = props;
 
     if (asyncLatestVersion.loading) {
         return (
@@ -114,9 +120,9 @@ function LatestVersion(props: {
                     Update Available
                 </span>
                 <div className="small text-muted fw-light">{latestVersion}</div>
-                <a href={aboutPageUrls.updateInstructions} className="small" target="_blank">
-                    Update instructions <Icon icon="newtab" margin="m-0" />
-                </a>
+                <Button className="rounded-pill" color="primary" onClick={showWhatsNewModal}>
+                    What's New?
+                </Button>
             </>
         );
     }

@@ -5,21 +5,21 @@ import React from "react";
 import { aboutPageUrls } from "components/pages/resources/about/partials/common";
 
 interface ChangelogModalProps {
-    visible: boolean;
-    toggle: () => void;
+    mode: "whatsNew" | "changeLog" | "hidden";
+    onClose: () => void;
 }
 
 // TODO: review entire file
 
 export function ChangeLogModal(props: ChangelogModalProps) {
-    const { visible, toggle } = props;
+    const { mode, onClose } = props;
 
     const canUpgrade = true; //TODO:
 
     return (
         <Modal
-            isOpen={visible}
-            toggle={toggle}
+            isOpen={mode !== "hidden"}
+            toggle={onClose}
             wrapClassName="bs5"
             centered
             size="lg"
@@ -31,15 +31,13 @@ export function ChangeLogModal(props: ChangelogModalProps) {
                 </div>
 
                 <div className="position-absolute m-2 end-0 top-0">
-                    <Button close onClick={toggle} />
+                    <Button close onClick={onClose} />
                 </div>
                 <div className="text-center lead">Changelog</div>
+                <h1>{mode} TODO</h1>
                 <div>
                     <h3>
                         <strong className="text-warning">NEW</strong> - 6.0.0 (60002) - 2023/10/02{" "}
-                        <a href={aboutPageUrls.changeLog}>
-                            <Icon icon="newtab" margin="m-0" />
-                        </a>
                     </h3>
                     <div className="d-flex gap-3">
                         {/* TODO add messages if no downgrade or needs license upgrade*/}
@@ -82,13 +80,10 @@ export function ChangeLogModal(props: ChangelogModalProps) {
                 </div>
             </ModalBody>
             <ModalFooter>
-                <Button color="secondary" outline onClick={toggle} className="rounded-pill px-3">
+                <Button color="secondary" outline onClick={onClose} className="rounded-pill px-3">
                     Close
                 </Button>
                 <FlexGrow />
-                <Button color="secondary" outline className="rounded-pill px-3" href={aboutPageUrls.changeLog}>
-                    Version history <Icon icon="newtab" margin="ms-1" />
-                </Button>
                 <Button color="primary" className="rounded-pill px-3" href={aboutPageUrls.updateInstructions}>
                     Update instructions <Icon icon="newtab" margin="m-0" />
                 </Button>

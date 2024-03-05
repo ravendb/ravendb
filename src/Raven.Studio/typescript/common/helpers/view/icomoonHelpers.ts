@@ -68,6 +68,7 @@ class icomoonHelpers {
         "corax-backward": 0xf14F,
         "corax-sort-az": 0xf150,
         "corax-sort-za": 0xf151,
+        "close": 0xf162,
     } as const;
     
     static getCodePointForCanvas(iconName: keyof typeof icomoonHelpers.fixedCodepoints): string {

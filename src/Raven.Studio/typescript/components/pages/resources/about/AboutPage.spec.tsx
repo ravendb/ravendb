@@ -4,6 +4,7 @@ import * as stories from "./AboutPage.stories";
 import React from "react";
 
 const {
+    AboutPage,
     ConnectionFailure,
     NoSupportOnPremise,
     NoSupportCloud,
@@ -17,6 +18,7 @@ const {
     EnterpriseLicense,
     EssentialLicense,
     CommunityLicense,
+    UsingLatestVersion,
 } = composeStories(stories);
 
 describe("AboutPage", function () {
@@ -97,6 +99,24 @@ describe("AboutPage", function () {
             expect(screen.queryByText(selectors.registerLicense)).not.toBeInTheDocument();
             expect(screen.queryByText(selectors.forceUpdate)).toBeInTheDocument();
             expect(screen.queryByText(selectors.replaceLicense)).toBeInTheDocument();
+        });
+    });
+
+    describe("latest version", function () {
+        it("upgrade available", async function () {
+            const { screen } = rtlRender(<AboutPage />);
+
+            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.versions.usingLatest)).not.toBeInTheDocument();
+            expect(screen.queryByText(selectors.versions.whatsNew)).toBeInTheDocument();
+        });
+
+        it("using latest version", async function () {
+            const { screen } = rtlRender(<UsingLatestVersion />);
+
+            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.versions.usingLatest)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.versions.whatsNew)).not.toBeInTheDocument();
         });
     });
 
@@ -199,6 +219,10 @@ const selectors = {
         failure: /Unable to reach the RavenDB License Server/,
         retestButton: /Test again/,
         connected: /Connected/,
+    },
+    versions: {
+        usingLatest: /You are using the latest version/,
+        whatsNew: /What's New\?/,
     },
     agplLicense: /No license - AGPLv3 Restrictions/,
     licenseId: /License ID/,
