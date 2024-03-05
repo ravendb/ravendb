@@ -18,17 +18,12 @@ namespace Raven.Client.Documents.Session
         ISessionDocumentAppendTimeSeriesBase,
         ISessionDocumentDeleteTimeSeriesBase
     {
-        /// <summary>
-        /// Return the time series values for the provided range
-        /// </summary>
+        /// <inheritdoc cref="IAsyncSessionDocumentTimeSeries.GetAsync"/>
         TimeSeriesEntry[] Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue);
 
-        /// <summary>
-        /// Return the time series values for the provided range and includes related documents 
-        /// </summary>
-
+        /// <inheritdoc cref="Get"/>
+        /// <param name="includes">Action to include Tags or Documents.</param>
         TimeSeriesEntry[] Get(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue);
-
     }
 
     /// <summary>
@@ -39,15 +34,11 @@ namespace Raven.Client.Documents.Session
         ISessionDocumentDeleteTimeSeriesBase,
         ISessionDocumentIncrementTimeSeriesBase
     {
-        /// <summary>
-        /// Return the time series values for the provided range
-        /// </summary>
+        /// <inheritdoc cref="IAsyncSessionDocumentTimeSeries.GetAsync"/>
         TimeSeriesEntry[] Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue);
 
-        /// <summary>
-        /// Return the time series values for the provided range and includes related documents 
-        /// </summary>
-
+        /// <inheritdoc cref="Get"/>
+        /// <param name="includes">Action to include Tags or Documents.</param>
         TimeSeriesEntry[] Get(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue);
 
     }
@@ -61,9 +52,7 @@ namespace Raven.Client.Documents.Session
         ISessionDocumentDeleteTimeSeriesBase
         where TValues : new()
     {
-        /// <summary>
-        /// Return the time series values for the provided range
-        /// </summary>
+        /// <inheritdoc cref="IAsyncSessionDocumentTypedTimeSeries{TValue}.GetAsync"/>
         TimeSeriesEntry<TValues>[] Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue);
     }
 
@@ -76,9 +65,7 @@ namespace Raven.Client.Documents.Session
         ISessionDocumentDeleteTimeSeriesBase
         where TValues : new()
     {
-        /// <summary>
-        /// Return the time series values for the provided range
-        /// </summary>
+        /// <inheritdoc cref="IAsyncSessionDocumentRollupTypedTimeSeries{TValue}.GetAsync"/>
         TimeSeriesRollupEntry<TValues>[] Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue);
     }
 
@@ -91,9 +78,7 @@ namespace Raven.Client.Documents.Session
         ISessionDocumentTypedIncrementTimeSeriesBase<TValues>
         where TValues : new()
     {
-        /// <summary>
-        /// Return the time series values for the provided range
-        /// </summary>
+        /// <inheritdoc cref="IAsyncSessionDocumentTypedIncrementalTimeSeries{TValue}.GetAsync"/>
         TimeSeriesEntry<TValues>[] Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue);
     }
 }
