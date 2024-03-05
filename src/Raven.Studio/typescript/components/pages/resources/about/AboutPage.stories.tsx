@@ -10,7 +10,6 @@ import { AboutPage as AboutPageComponent } from "./AboutPage";
 import React from "react";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
-import { LicenseStubs } from "test/stubs/LicenseStubs";
 import { ClusterStubs } from "test/stubs/ClusterStubs";
 
 export default {
@@ -50,6 +49,8 @@ function commonInit(props: AboutPageStoryProps) {
     license.with_Support({
         Status: props.supportStatus,
     });
+
+    licenseService.withGetChangeLog();
 
     if (props.licenseServerConnection) {
         licenseService.withConnectivityCheck();

@@ -1,5 +1,6 @@
 ﻿import moment from "moment";
 import LicenseLimitsUsage = Raven.Server.Commercial.LicenseLimitsUsage;
+import BuildCompatibilityInfo = Raven.Server.Web.Studio.UpgradeInfoHandler.BuildCompatibilityInfo;
 
 export class LicenseStubs {
     static licenseServerConnectivityValid() {
@@ -142,6 +143,41 @@ export class LicenseStubs {
             NumberOfCustomSortersInCluster: 4,
             NumberOfAnalyzersInCluster: 4,
             NumberOfSubscriptionsInCluster: 14,
+        };
+    }
+
+    static changeLog(): Raven.Server.Web.Studio.UpgradeInfoHandler.UpgradeInfoResponse {
+        return {
+            ErrorMessage: null,
+            IsLicenseEligibleForUpgrade: true,
+            BuildCompatibilitiesForLatestMajorMinor: [
+                LicenseStubs.buildCompatibilityInfo("6.0.100"),
+                LicenseStubs.buildCompatibilityInfo("6.0.8"),
+                LicenseStubs.buildCompatibilityInfo("6.0.7"),
+            ],
+            BuildCompatibilitiesForUserMajorMinor: [
+                LicenseStubs.buildCompatibilityInfo("6.0.5"),
+                LicenseStubs.buildCompatibilityInfo("6.0.0"),
+            ],
+            TotalBuildsForLatestMajorMinor: 3,
+            TotalBuildsForUserMajorMinor: 2,
+        };
+    }
+
+    private static buildCompatibilityInfo(fullVersion = "6.0.100"): BuildCompatibilityInfo {
+        return {
+            CanDowngradeFollowingUpgrade: true,
+            ChangelogHtml: `<h3>Breaking changes</h3>
+<ul>
+    <li><code>[Backups]</code> compression algorithm was changes from gzip/deflate to zstd, which might introduce some backward compatibility concerns. </li>
+</ul>
+<hr />
+<h3>Server</h3>
+<ul>
+    <li><code>[Backups]</code> switched to zstd compression algorithm for all backup types and exports. More info <a href=\\"https://github.com/ravendb/ravendb/discussions/17678\\">here</a></li>
+</ul>`,
+            ReleasedAt: "2023-10-02T07:36:24.3850897",
+            FullVersion: fullVersion,
         };
     }
 

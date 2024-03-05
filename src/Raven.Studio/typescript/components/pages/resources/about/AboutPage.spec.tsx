@@ -104,19 +104,29 @@ describe("AboutPage", function () {
 
     describe("latest version", function () {
         it("upgrade available", async function () {
-            const { screen } = rtlRender(<AboutPage />);
+            const { screen, fireClick } = rtlRender(<AboutPage />);
 
             expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
             expect(screen.queryByText(selectors.versions.usingLatest)).not.toBeInTheDocument();
             expect(screen.queryByText(selectors.versions.whatsNew)).toBeInTheDocument();
+
+            await fireClick(screen.queryByText(selectors.versions.whatsNew));
+
+            expect(await screen.findByText(selectors.versions.close)).toBeInTheDocument();
+            expect(await screen.findByText(selectors.versions.updateInstructions)).toBeInTheDocument();
         });
 
         it("using latest version", async function () {
-            const { screen } = rtlRender(<UsingLatestVersion />);
+            const { screen, fireClick } = rtlRender(<UsingLatestVersion />);
 
             expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
             expect(screen.queryByText(selectors.versions.usingLatest)).toBeInTheDocument();
             expect(screen.queryByText(selectors.versions.whatsNew)).not.toBeInTheDocument();
+
+            await fireClick(screen.queryByText(selectors.versions.changelog));
+
+            expect(await screen.findByText(selectors.versions.close)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.versions.updateInstructions)).not.toBeInTheDocument();
         });
     });
 
@@ -223,6 +233,9 @@ const selectors = {
     versions: {
         usingLatest: /You are using the latest version/,
         whatsNew: /What's New\?/,
+        updateInstructions: /Update instructions/,
+        close: "Close",
+        changelog: /Changelog/,
     },
     agplLicense: /No license - AGPLv3 Restrictions/,
     licenseId: /License ID/,
