@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Raven.Client;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -13,6 +14,108 @@ namespace Raven.Server.Documents
         public IEnumerable<DynamicJsonValue> TimeSeries;
         public string Key;
     }
+
+    public sealed class QueriedDocument : Document, IResetSupport<List<QueriedDocument>>
+    {
+        private static readonly QueriedDocument Empty = new();
+        
+        private int _refCount = 1;
+        
+        
+        private QueriedDocument _parent;
+        private QueriedDocument _child;
+        private List<QueriedDocument> _childs;
+        public bool CanDispose => _refCount <= 1;
+
+        public void AddChild(QueriedDocument child)
+        {
+            if (_child == null)
+            {
+                _child = child;
+            }
+            else
+            {
+                if (ReferenceEquals(Empty, _child) == false)
+                {
+                    _childs ??= new(2);
+                    _childs.Add(_child);
+                    _child = Empty;
+                }
+                
+                _childs.Add(child);
+            }
+            
+            child._refCount++;
+        }
+        
+        public new TDocument Clone<TDocument>(JsonOperationContext context)
+            where TDocument : Document, new()
+        {
+            var data = Data.Clone(context);
+            return CloneWith<TDocument>(context, data);
+        }
+
+        public new TDocument CloneWith<TDocument>(JsonOperationContext context, BlittableJsonReaderObject newData)
+            where TDocument : Document, new()
+
+        {
+            if (typeof(TDocument) != typeof(QueriedDocument))
+                return base.Clone<TDocument>(context);
+            _refCount++;
+            var cloned = base.CloneWith<TDocument>(context, newData);
+            ((QueriedDocument)(object)cloned)._parent = this;
+            AddChild((QueriedDocument)(object)cloned);
+            return cloned;
+        }
+
+        public void RemoveChild(QueriedDocument child)
+        {
+            Debug.Assert(child != null, "child != null");
+            _refCount--;
+            if (ReferenceEquals(child, Empty) == false)
+            {
+                _childs.Remove(child);
+                return;
+            }
+            
+            _child = null;
+        }
+
+        public override void Dispose()
+        {
+            _refCount--;
+            if (_refCount == 0)
+            {
+                base.Dispose();
+                _parent?.RemoveChild(this);
+            }
+            else
+            {
+                return;
+            }
+
+            if (ReferenceEquals(_child, Empty))
+            {
+                for (var id = 0; id < _childs.Count; ++id)
+                    _childs[id].Dispose();
+                
+                _childs = null;
+            }
+            else
+            {
+                _child?.Dispose();
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void IncreaseReference() => _refCount++;
+
+        public void Reset(List<QueriedDocument> value)
+        {
+            value.Clear();
+        }
+    }
+    
     public class Document : IDisposable
     {
         public static readonly Document ExplicitNull = new Document();
@@ -32,8 +135,6 @@ namespace Raven.Server.Documents
         public DocumentFlags Flags;
         public NonPersistentDocumentFlags NonPersistentFlags;
         public short TransactionMarker;
-        public bool IgnoreDispose;
-
         private bool _metadataEnsured;
         private bool _disposed;
 
@@ -124,15 +225,25 @@ namespace Raven.Server.Documents
             var newData = Data.Clone(context);
             return CloneWith(context, newData);
         }
+        
+        public TDocument Clone<TDocument>(JsonOperationContext context)
+            where TDocument : Document, new()
+        {
+            var newData = Data.Clone(context);
+            return CloneWith<TDocument>(context, newData);
+        }
 
-        public Document CloneWith(JsonOperationContext context, BlittableJsonReaderObject newData)
+        public Document CloneWith(JsonOperationContext context, BlittableJsonReaderObject newData) => CloneWith<Document>(context, newData);
+        
+        public TDocument CloneWith<TDocument>(JsonOperationContext context, BlittableJsonReaderObject newData)
+            where TDocument : Document, new()
         {
             var newId = context.GetLazyString(Id);
             var newLowerId = context.GetLazyString(LowerId);
-            return new Document
+            return new TDocument()
             {
                 Etag = Etag,
-                StorageId = IgnoreDispose ? Voron.Global.Constants.Compression.NonReturnableStorageId : StorageId,
+                StorageId = Voron.Global.Constants.Compression.NonReturnableStorageId, // this is basically in-memory copy, so we should care about storage...
                 IndexScore = IndexScore,
                 Distance = Distance,
                 ChangeVector = ChangeVector,
@@ -146,9 +257,9 @@ namespace Raven.Server.Documents
             };
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
-            if (_disposed || IgnoreDispose)
+            if (_disposed)
                 return;
 
             Id?.Dispose();

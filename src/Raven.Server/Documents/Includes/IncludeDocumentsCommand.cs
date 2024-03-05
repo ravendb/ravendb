@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Includes
             _idsToIgnore.Add(documentId);
         }
 
-        public class ConflictDocument : Document
+        public sealed class ConflictDocument : Document
         {
             public new readonly string Id;
 

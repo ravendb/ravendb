@@ -13,11 +13,12 @@ namespace Raven.Server.Json
     {
         private const string LastModifiedPath = Constants.Documents.Metadata.Key + "." + Constants.Documents.Metadata.LastModified;
 
-        public static bool TryRead(
+        public static bool TryRead<TDocument>(
             BlittableJsonTraverser blittableJsonTraverser,
-            Document document,
+            TDocument document,
             StringSegment path,
             out object value)
+        where TDocument : Document
         {
             if (TryRead(blittableJsonTraverser, document.Data, path, out value))
                 return true;

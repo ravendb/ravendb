@@ -19,7 +19,7 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Results
 {
-    public class GraphQueryResultRetriever : QueryResultRetrieverBase
+    public class GraphQueryResultRetriever : QueryResultRetrieverBase<Document>
     {
         private readonly GraphQuery _graphQuery;
 
@@ -61,10 +61,8 @@ namespace Raven.Server.Documents.Queries.Results
         {
             throw new NotSupportedException("Graph Queries do not deal with Corax indexes.");
         }
-
-        public override Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields) => DocumentsStorage.Get(DocumentContext, id);
-
-        protected override Document LoadDocument(string id) => DocumentsStorage.Get(DocumentContext, id);
+        
+        protected override Document LoadDocument(Document parent, string id) => DocumentsStorage.Get(DocumentContext, id);
 
         protected override long? GetCounter(string docId, string name)
         {

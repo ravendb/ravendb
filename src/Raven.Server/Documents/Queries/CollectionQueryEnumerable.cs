@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Queries
             private List<Document>.Enumerator _projections;
             private int _innerCount;
             private readonly List<Slice> _ids;
-            private readonly MapQueryResultRetriever _resultsRetriever;
+            private readonly MapQueryResultRetriever<Document> _resultsRetriever;
             private readonly string _startsWith;
             private readonly Reference<long> _skippedResults;
             private readonly CancellationToken _token;
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Queries
                 if (_fieldsToFetch.IsDistinct)
                     _alreadySeenProjections = new HashSet<ulong>();
 
-                _resultsRetriever = new MapQueryResultRetriever(database, query, queryTimings, documents, context, searchEngineType, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
+                _resultsRetriever = new MapQueryResultRetriever<Document>(database, query, queryTimings, documents, context, searchEngineType, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
 
                 (_ids, _startsWith) = ExtractIdsFromQuery(query, context);
                 
@@ -303,7 +303,7 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
                 
-                RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase.ZeroScore, null);
+                RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase<Document>.ZeroScore, null);
 
                 if (_fieldsToFetch.IsProjection)
                 {
@@ -426,7 +426,7 @@ namespace Raven.Server.Documents.Queries
                     foreach (var document in _documents.GetDocumentsFrom(_context, _collection, 0, start, _query.PageSize))
                     {
                         count++;
-                        RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase.ZeroScore, null);
+                        RetrieverInput retrieverInput = new(null, QueryResultRetrieverCommon.ZeroScore, null);
                         if (_fieldsToFetch.IsProjection)
                         {
                             var result = _resultsRetriever.GetProjectionFromDocument(document, ref retrieverInput, _fieldsToFetch, _context, _token);

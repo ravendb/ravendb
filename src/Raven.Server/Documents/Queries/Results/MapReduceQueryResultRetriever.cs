@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Queries.Results
         }
     }
 
-    public abstract class StoredValueQueryResultRetriever : QueryResultRetrieverBase
+    public abstract class StoredValueQueryResultRetriever : QueryResultRetrieverBase<QueriedDocument>
     {
         private readonly string _storedValueFieldName;
         private readonly JsonOperationContext _context;
@@ -54,11 +54,10 @@ namespace Raven.Server.Documents.Queries.Results
                 throw new InvalidQueryException($"Invalid projection behavior '{_query.ProjectionBehavior}'. You can only extract values from index.", _query.Query, _query.QueryParameters);
         }
 
-        protected override Document LoadDocument(string id)
+        protected override QueriedDocument LoadDocument(QueriedDocument parentDocument, string id)
         {
-            if (DocumentsStorage != null &&
-                _context is DocumentsOperationContext ctx)
-                return DocumentsStorage.Get(ctx, id);
+            if (DocumentsStorage != null && _context is DocumentsOperationContext ctx)
+                return base.LoadDocument(parentDocument, id);
             // can happen during some debug endpoints that should never load a document
             return null;
         }
@@ -86,7 +85,7 @@ namespace Raven.Server.Documents.Queries.Results
             return djv;
         }
         
-        public override unsafe Document DirectGet(ref RetrieverInput retrieverInput,string id, DocumentFields fields)
+        public override unsafe QueriedDocument DirectGet(ref RetrieverInput retrieverInput,string id, DocumentFields fields)
         {
             BlittableJsonReaderObject result;
             if (retrieverInput.IsLuceneDocument() == false)
@@ -109,13 +108,13 @@ namespace Raven.Server.Documents.Queries.Results
                 result = new BlittableJsonReaderObject(allocation.Address, storedValue.Length, _context, buffer);
             }
 
-            return new Document
+            return new QueriedDocument()
             {
                 Data = result
             };
         }
 
-        public override (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token)
+        public override (QueriedDocument Document, List<QueriedDocument> List) Get(ref RetrieverInput retrieverInput, CancellationToken token)
         {
             if (FieldsToFetch.IsProjection)
                 return GetProjection(ref retrieverInput, null, token);
