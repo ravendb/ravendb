@@ -23,6 +23,10 @@ export default class MockLicenseService extends AutoMockService<LicenseService> 
         );
     }
 
+    withGetChangeLog(dto?: MockedValue<Raven.Server.Web.Studio.UpgradeInfoHandler.UpgradeInfoResponse>) {
+        return this.mockResolvedValue(this.mocks.getChangeLog, dto, LicenseStubs.changeLog());
+    }
+
     withLatestVersion(dto?: MockedValue<Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo>) {
         return this.mockResolvedValue(this.mocks.getLatestVersion, dto, LicenseStubs.latestVersion());
     }
