@@ -45,7 +45,7 @@ namespace Tests.Infrastructure.Utils
         private void Close()
         {
             if (Interlocked.CompareExchange(ref _isClosed, 1, 0) == 0)
-                _completionSource.SetResult(Result);
+                _completionSource.TrySetResult(Result);
         }
 
         public override void Abort() { }

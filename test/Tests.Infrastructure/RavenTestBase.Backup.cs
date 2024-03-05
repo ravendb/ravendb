@@ -633,6 +633,22 @@ namespace FastTests
                     await FillDatabaseWithRandomDataAsync(databaseSizeInMb, session, (int?)timeoutTimeSpan.TotalMilliseconds);
                 }   
             }
+
+            internal async Task HoldBackupExecutionIfNeededAndInvoke(PeriodicBackupRunner.TestingStuff ts, Func<Task> func, TaskCompletionSource<object> tcs)
+            {
+                // hold backup execution 
+                try
+                {
+                    if (ts != null)
+                        ts.OnBackupTaskRunHoldBackupExecution = tcs;
+
+                    await func.Invoke();
+                }
+                finally
+                {
+                    tcs.TrySetResult(null);
+                }
+            }
         }
     }
 }

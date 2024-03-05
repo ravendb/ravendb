@@ -201,7 +201,7 @@ namespace SlowTests.Issues
                 await AssertCount(store, _companyName1, _employeesCount);
 
                 var batchCount = 0;
-                var tcs = new TaskCompletionSource<object>();
+                var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 store.Changes().ForIndex(index.IndexName).Subscribe(x =>
                 {
                     if (x.Type == IndexChangeTypes.BatchCompleted)
