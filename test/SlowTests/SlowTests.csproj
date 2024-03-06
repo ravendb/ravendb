@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.1</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.2</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>SlowTests</AssemblyName>
     <PackageId>SlowTests</PackageId>
@@ -98,6 +98,8 @@
     <EmbeddedResource Include="Data\RavenDB_19205\RavenDB_19205.ravendb-snapshot" />
     <None Remove="Data\RavenDB_21957\js_index_with_dates_54112.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_21957\js_index_with_dates_54112.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_21889\RavenDB_21889_BackwardCompatibility.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_21889\RavenDB_21889_BackwardCompatibility.ravendb-snapshot" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />
@@ -164,13 +166,13 @@
     <PackageReference Include="FubarDev.FtpServer" Version="3.1.2" />
     <PackageReference Include="FubarDev.FtpServer.FileSystem.DotNet" Version="3.1.2" />
     <PackageReference Include="FubarDev.FtpServer.FileSystem.InMemory" Version="3.1.2" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
     <PackageReference Include="System.DirectoryServices.Protocols" Version="8.0.0" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.6">
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.7">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="xunit" Version="2.6.5" />
+    <PackageReference Include="xunit" Version="2.7.0" />
     <DotNetCliToolReference Include="dotnet-xunit" Version="2.4.0-beta.1.build10001" />
   </ItemGroup>
   <ItemGroup>

@@ -8,8 +8,9 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const CopyPlugin = require("copy-webpack-plugin");
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const ZipPlugin = require("zip-webpack-plugin");
+const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+// const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 module.exports = (env, args) => {
     const isProductionMode = args && args.mode === 'production';
@@ -74,6 +75,11 @@ module.exports = (env, args) => {
             'window.ko': "knockout"
         }),
         new webpack.ContextReplacementPlugin(/moment[\/\\]locale$/, /(en)$/),
+        new ForkTsCheckerWebpackPlugin({
+            typescript: {
+                configFile: path.resolve(__dirname, "tsconfig.json")
+            }
+        }),
         //new BundleAnalyzerPlugin()
     ];
     
@@ -180,6 +186,24 @@ module.exports = (env, args) => {
                                     "kafka-sink": 0xf131,
                                     "rabbitmq-sink": 0xf132,
                                     "preview": 0xf133,
+                                    "corax-include-null-match": 0xf140,
+                                    "corax-fallback": 0xf141,
+                                    "corax-all-entries-match": 0xf142,
+                                    "corax-boosting-match": 0xf143,
+                                    "corax-forward": 0xf144,
+                                    "corax-memoization-match": 0xf145,
+                                    "corax-multi-term-match": 0xf146,
+                                    "corax-operator-and": 0xf147,
+                                    "corax-operator-andnot": 0xf148,
+                                    "corax-operator-or": 0xf149,
+                                    "corax-phrase-query": 0xf14A,
+                                    "corax-sorting-match": 0xf14B,
+                                    "corax-spatial-match": 0xf14C,
+                                    "corax-term-match": 0xf14D,
+                                    "corax-unary-match": 0xf14E,
+                                    "corax-backward": 0xf14F,
+                                    "corax-sort-az": 0xf150,
+                                    "corax-sort-za": 0xf151,
                                 },
                                 cssTemplate: path.resolve(__dirname, "wwwroot/Content/css/fonts/icomoon.template.css.hbs")
                             }
@@ -230,7 +254,9 @@ module.exports = (env, args) => {
                         },
                         {
                             loader: "sass-loader",
-                            options: {}
+                            options: {
+                                sourceMap: true, 
+                            }
                         }
                     ]
                 },
@@ -252,7 +278,12 @@ module.exports = (env, args) => {
                 },
                 {
                     test: /\.tsx?$/,
-                    use: 'ts-loader'
+                    use: {
+                        loader: 'ts-loader',
+                        options: {
+                            transpileOnly: true,
+                        },
+                    },
                 },
                 {
                     test: /\.html$/,

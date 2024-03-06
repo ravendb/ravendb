@@ -1,13 +1,12 @@
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Sparrow.Server;
-using Voron.Impl;
 
 namespace Voron
 {
 
-    public sealed unsafe class PageLocator
+    public sealed class PageLocator
     {
         [StructLayout(LayoutKind.Explicit, Size = 20)]
         private struct PageData
@@ -17,45 +16,18 @@ namespace Voron
             [FieldOffset(8)]
             public Page Page;
             [FieldOffset(16)]
+            public ushort Generation;
+            [FieldOffset(18)]
             public bool IsWritable;
         }
 
         private const long Invalid = -1;
-        private LowLevelTransaction _tx;
+        private ushort _generation = 1;
 
-        private PageData* _cache;
-        private ByteString _cacheMemory;
+        private readonly PageData[] _cache = new PageData[CacheSize];
 
         private const uint CacheSize = 1024;
         private const uint CacheMask = CacheSize - 1;
-
-        public void Release()
-        {
-            if (_tx == null)
-                return;
-
-            _tx.Allocator.Release(ref _cacheMemory);
-            _tx = null;
-            _cache = null;
-        }
-
-        public void Renew(LowLevelTransaction tx)
-        {
-            Debug.Assert(tx != null);
-
-            _tx = tx;
-
-            tx.Allocator.Allocate((int)CacheSize * sizeof(PageData), out _cacheMemory);
-            _cache = (PageData*)_cacheMemory.Ptr;
-
-            for (var i = 0; i < CacheSize; i++)
-                _cache[i].PageNumber = Invalid;
-        }
-
-        public PageLocator(LowLevelTransaction tx)
-        {
-            Renew(tx);
-        }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -64,9 +36,9 @@ namespace Voron
             ulong bucket = (ulong)pageNumber & CacheMask;
             Debug.Assert(bucket is >= 0 and < CacheSize);
 
-            ref var node = ref _cache[bucket];
+            ref var node = ref Unsafe.Add(ref _cache[0], (int)bucket);
             page = node.Page;
-            return node.PageNumber == pageNumber && node.PageNumber != Invalid;
+            return node.Generation == _generation && node.PageNumber == pageNumber && node.PageNumber != Invalid;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -77,9 +49,21 @@ namespace Voron
 
             ref var node = ref Unsafe.Add(ref _cache[0], (int)bucket);
             page = node.Page;
-            return node.IsWritable && node.PageNumber == pageNumber && node.PageNumber != Invalid;
+            return node.Generation == _generation && node.IsWritable && node.PageNumber == pageNumber && node.PageNumber != Invalid;
         }
 
+        public void Renew()
+        {
+            _generation++;
+
+            // We are using 16 bits to store the generation, therefore if we are reusing the values after an overflow,
+            // we should reset the whole array. 
+            if (_generation == 0)
+            {
+                _generation = 1;
+                MemoryMarshal.Cast<PageData, byte>(_cache).Fill(0);
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset(long pageNumber)
@@ -109,6 +93,7 @@ namespace Voron
             {
                 node.PageNumber = pageNumber;
                 node.Page = page;
+                node.Generation = _generation;
                 node.IsWritable = false;
             }
         }
@@ -127,6 +112,7 @@ namespace Voron
             {
                 node.PageNumber = pageNumber;
                 node.Page = page;
+                node.Generation = _generation;
                 node.IsWritable = true;
             }
         }

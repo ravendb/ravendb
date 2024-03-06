@@ -9,19 +9,48 @@ namespace Raven.Client.Documents.Queries.Facets
     public interface IFacetOperationsBase<T, out TSelf>
         where TSelf : class
     {
+        /// <summary>
+        /// Set a display name for this field in the results (optional).
+        /// </summary>
+        /// <param name="displayName">Display name</param>
         TSelf WithDisplayName(string displayName);
 
+        /// <summary>
+        /// Get sum of values for each group of documents per range specified.
+        /// </summary>
+        /// <param name="path">Path of field to sum from document.</param>
+        /// <param name="displayName">Set a display name for this field in the results (optional).</param>
         TSelf SumOn(Expression<Func<T, object>> path, string displayName = null);
 
+        /// <summary>
+        /// Get minimum value for each group of documents per range specified.
+        /// </summary>
+        /// <param name="path">Path of field from document.</param>
+        /// <param name="displayName">Set a display name for this field in the results (optional).</param>
         TSelf MinOn(Expression<Func<T, object>> path, string displayName = null);
 
+        /// <summary>
+        /// Get maximum value for each group of documents per range specified.
+        /// </summary>
+        /// <param name="path">Path of field from document.</param>
+        /// <param name="displayName">Set a display name for this field in the results (optional).</param>
         TSelf MaxOn(Expression<Func<T, object>> path, string displayName = null);
 
+        /// <summary>
+        /// Get average from values for each group of documents per range specified.
+        /// </summary>
+        /// <param name="path">Path of field from document.</param>
+        /// <param name="displayName">Set a display name for this field in the results (optional).</param>
         TSelf AverageOn(Expression<Func<T, object>> path, string displayName = null);
     }
 
     public interface IFacetOperations<T> : IFacetOperationsBase<T, IFacetOperations<T>>
     {
+        /// <summary>
+        /// Optional configuration for facet query.
+        /// </summary>
+        /// <param name="options">Configuration object. See more at <see cref="FacetOptions"/></param>
+        /// <returns></returns>
         IFacetOperations<T> WithOptions(FacetOptions options);
     }
 
@@ -31,12 +60,30 @@ namespace Raven.Client.Documents.Queries.Facets
     
     public interface IFacetBuilder<T>
     {
+        /// <summary>
+        ///  Returns a count per range within the specified index-field
+        /// </summary>
+        /// <param name="path">Definition of range in the specified index-field.</param>
+        /// <param name="paths">Definitions of ranges in the specified index-field.</param>
         IRangeFacetOperations<T> ByRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths);
 
+        /// <summary>
+        ///  Returns a count for each unique term found in the specified index-field.
+        /// </summary>
+        /// <param name="path">Field from index.</param>
+        /// <returns></returns>
         IFacetOperations<T> ByField(Expression<Func<T, object>> path);
 
+        /// <summary>
+        /// Returns a count for each unique term found in the specified index-field.
+        /// </summary>
+        /// <param name="fieldName">Name of field from index.</param>
         IFacetOperations<T> ByField(string fieldName);
 
+        /// <summary>
+        /// Scopes all index results. Useful to gather index-wide statistics data.
+        /// </summary>
+        /// <returns></returns>
         IFacetOperations<T> AllResults();
     }
 
@@ -62,6 +109,7 @@ namespace Raven.Client.Documents.Queries.Facets
             _conventions = conventions;
         }
 
+        /// <inheritdoc/>
         public IRangeFacetOperations<T> ByRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths)
         {
             if (path == null)
@@ -83,11 +131,13 @@ namespace Raven.Client.Documents.Queries.Facets
             return this;
         }
 
+        /// <inheritdoc/>
         public IFacetOperations<T> ByField(Expression<Func<T, object>> path)
         {
             return ByField(path.ToPropertyPath(_conventions,'_'));
         }
 
+        /// <inheritdoc/>
         public IFacetOperations<T> ByField(string fieldName)
         {
             if (_default == null)
@@ -113,6 +163,7 @@ namespace Raven.Client.Documents.Queries.Facets
             return this;
         }
 
+        /// <inheritdoc/>
         public IFacetOperations<T> WithOptions(FacetOptions options)
         {
             if (Facet is Facet facet)
@@ -122,36 +173,42 @@ namespace Raven.Client.Documents.Queries.Facets
             return this;
         }
 
+        /// <inheritdoc/>
         public IFacetOperations<T> WithDisplayName(string displayName)
         {
             Facet.DisplayFieldName = displayName;
             return this;
         }
 
+        /// <inheritdoc/>
         IRangeFacetOperations<T> IFacetOperationsBase<T, IRangeFacetOperations<T>>.SumOn(Expression<Func<T, object>> path, string displayName)
         {
             SumOn(path, displayName);
             return this;
         }
 
+        /// <inheritdoc/>
         IRangeFacetOperations<T> IFacetOperationsBase<T, IRangeFacetOperations<T>>.MinOn(Expression<Func<T, object>> path, string displayName)
         {
             MinOn(path, displayName);
             return this;
         }
 
+        /// <inheritdoc/>
         IRangeFacetOperations<T> IFacetOperationsBase<T, IRangeFacetOperations<T>>.MaxOn(Expression<Func<T, object>> path, string displayName)
         {
             MaxOn(path, displayName);
             return this;
         }
 
+        /// <inheritdoc/>
         IRangeFacetOperations<T> IFacetOperationsBase<T, IRangeFacetOperations<T>>.AverageOn(Expression<Func<T, object>> path, string displayName)
         {
             AverageOn(path, displayName);
             return this;
         }
 
+        /// <inheritdoc/>
         IRangeFacetOperations<T> IFacetOperationsBase<T, IRangeFacetOperations<T>>.WithDisplayName(string displayName)
         {
             WithDisplayName(displayName);
@@ -159,6 +216,7 @@ namespace Raven.Client.Documents.Queries.Facets
             
         }
 
+        /// <inheritdoc/>
         public IFacetOperations<T> SumOn(Expression<Func<T, object>> path, string displayName = null)
         {
             if (Facet.Aggregations.TryGetValue(FacetAggregation.Sum, out var aggregations) == false)
@@ -173,6 +231,7 @@ namespace Raven.Client.Documents.Queries.Facets
             return this;
         }
 
+        /// <inheritdoc/>
         public IFacetOperations<T> MinOn(Expression<Func<T, object>> path, string displayName = null)
         {
             if (Facet.Aggregations.TryGetValue(FacetAggregation.Min, out var aggregations) == false)
@@ -186,6 +245,7 @@ namespace Raven.Client.Documents.Queries.Facets
             return this;
         }
 
+        /// <inheritdoc/>
         public IFacetOperations<T> MaxOn(Expression<Func<T, object>> path, string displayName = null)
         {
             if (Facet.Aggregations.TryGetValue(FacetAggregation.Max, out var aggregations) == false)
@@ -199,6 +259,7 @@ namespace Raven.Client.Documents.Queries.Facets
             return this;
         }
 
+        /// <inheritdoc/>
         public IFacetOperations<T> AverageOn(Expression<Func<T, object>> path, string displayName = null)
         {
             if (Facet.Aggregations.TryGetValue(FacetAggregation.Average, out var aggregations) == false)

@@ -206,7 +206,7 @@
 }
 
 .query-results-container {
-    min-height: 500px;
+    min-height: 480px;
 
     .js-time-series-graph-container > div {
         overflow-x: hidden;
@@ -252,6 +252,22 @@
                 text-decoration: underline;
             }
         }
+    }
+}
+
+.queryPlan {
+    pre {
+        @color-list: @color-1, @color-1-2, @color-2, @color-2-2, @color-3, @color-3-2, @color-4, @color-4-2, @color-5, @color-5-2;
+        .loop(@index) when (@index > 0) {
+            @color: extract(@color-list, @index);
+
+            .indent-@{index} {
+                color: @color;
+            }
+
+            .loop(@index - 1);
+        }
+        .loop(length(@color-list));
     }
 }
 

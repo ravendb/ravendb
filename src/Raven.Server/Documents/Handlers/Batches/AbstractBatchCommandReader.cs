@@ -123,7 +123,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
             
             unsafe
             {
-                if ("Commands"u8.CompareConstant(state.StringBuffer, state.StringSize) == false)
+                if ("Commands"u8.IsEqualConstant(state.StringBuffer, state.StringSize) == false)
                     BatchRequestParser.ThrowUnexpectedToken(JsonParserToken.String, state);
             }
 

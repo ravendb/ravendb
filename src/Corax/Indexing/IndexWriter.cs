@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
 using System.Text;
 using Corax.Analyzers;
 using Corax.Mappings;
@@ -17,6 +18,7 @@ using Sparrow.Compression;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Server.Binary;
 using Sparrow.Server.Utils;
 using Sparrow.Server.Utils.VxSort;
 using Sparrow.Threading;
@@ -42,6 +44,7 @@ namespace Corax.Indexing
         private readonly HashSet<Slice> _indexedEntries = new(SliceComparer.Instance);
         private List<(long EntryId, float Boost)> _boostedDocs;
         private readonly IndexFieldsMapping _fieldsMapping;
+        private readonly bool _phraseQuerySupport;
         private FixedSizeTree _documentBoost;
         private Tree _indexMetadata;
         private Tree _persistedDynamicFieldsAnalyzers;
@@ -81,11 +84,12 @@ namespace Corax.Indexing
         // to explicitly provide the index writer with opening semantics and also every new
         // writer becomes essentially a unit of work which makes reusing assets tracking more explicit.
 
-        private IndexWriter(IndexFieldsMapping fieldsMapping)
+        private IndexWriter(IndexFieldsMapping fieldsMapping, bool phraseQuerySupport)
         {
             _indexDebugDumper = new IndexOperationsDumper(fieldsMapping);
             _builder = new IndexEntryBuilder(this);
             _fieldsMapping = fieldsMapping;
+            _phraseQuerySupport = phraseQuerySupport;
             _encodingBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize);
             _tokensBufferHandler = Analyzer.TokensPool.Rent(fieldsMapping.MaximumTokenSize);
             _utf8ConverterBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize * 10);
@@ -94,7 +98,7 @@ namespace Corax.Indexing
             _knownFieldsTerms = new IndexedField[bufferSize];
             for (int i = 0; i < bufferSize; ++i)
             {
-                _knownFieldsTerms[i] = new IndexedField(fieldsMapping.GetByFieldId(i)) { FieldRootPage = -1 };
+                _knownFieldsTerms[i] = new IndexedField(fieldsMapping.GetByFieldId(i));
             }
 
             _entriesAlreadyAdded = new HashSet<long>();
@@ -102,12 +106,20 @@ namespace Corax.Indexing
             _removalsForTerm = new List<long>();
         }
 
-        public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
+        public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping, bool phraseQuerySupport = true) : this(fieldsMapping, phraseQuerySupport)
         {
             TransactionPersistentContext transactionPersistentContext = new(true);
             _transaction = environment.WriteTransaction(transactionPersistentContext);
 
             _ownsTransaction = true;
+            Init();
+        }
+        
+        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping, bool phraseQuerySupport = true) : this(fieldsMapping, phraseQuerySupport)
+        {
+            _transaction = tx;
+
+            _ownsTransaction = false;
             Init();
         }
 
@@ -139,20 +151,29 @@ namespace Corax.Indexing
             _pforDecoder = new FastPForDecoder(_entriesAllocator);
         }
         
-        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
-        {
-            _transaction = tx;
-
-            _ownsTransaction = false;
-            Init();
-        }
-        
         private void InitializeFieldRootPage(IndexedField field)
         {
             if (field.FieldRootPage == -1)
             {
                 _fieldsTree ??= _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
                 field.FieldRootPage = _fieldsCache.GetFieldRootPage(field.Name, _fieldsTree);
+            }
+        }
+
+        private void InitializeFieldRootPageForTermsVector(IndexedField field)
+        {
+            Debug.Assert(field.FieldIndexingMode is FieldIndexingMode.Search, "field.FieldIndexingMode is FieldIndexingMode.Search");
+            Debug.Assert(_phraseQuerySupport, "_phraseQuerySupport");
+            
+            if (field.TermsVectorFieldRootPage == -1)
+            {
+                _fieldsTree ??= _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
+                _transaction.Allocator.Allocate(field.Name.Size + Constants.PhraseQuerySuffix.Length, out var memory);
+                var memAsSpan = memory.ToSpan();
+                field.Name.CopyTo(memAsSpan);
+                Constants.PhraseQuerySuffix.CopyTo(memAsSpan.Slice(field.Name.Size));
+                var storedName = new Slice(memory);
+                field.TermsVectorFieldRootPage = _fieldsCache.GetFieldRootPage(storedName, _fieldsTree);
             }
         }
         
@@ -319,7 +340,8 @@ namespace Corax.Indexing
 
                 indexedField = CreateDynamicField(analyzer, mode);
             }
-            indexedField.FieldRootPage = _fieldsCache.GetFieldRootPage(indexedField.Name, _fieldsTree);
+            
+            InitializeFieldRootPage(indexedField);
             return indexedField;
 
             IndexedField CreateDynamicField(Analyzer analyzer, FieldIndexingMode mode)
@@ -495,7 +517,7 @@ namespace Corax.Indexing
                     if (nullExists == false)
                     {
                         nullTermLocation = field.Storage.Count;
-                        field.Storage.AddByRef(new EntriesModifications(_entriesAllocator, 1));
+                        field.Storage.AddByRef(new EntriesModifications(1));
                           // We dont want to reclaim the term name
                     }
                     ref var nullTerm = ref field.Storage.GetAsRef(nullTermLocation);
@@ -512,7 +534,7 @@ namespace Corax.Indexing
                 if (exists == false)
                 {
                     termLocation = field.Storage.Count;
-                    field.Storage.AddByRef(new EntriesModifications(_entriesAllocator, decodedKey.Length));
+                    field.Storage.AddByRef(new EntriesModifications(decodedKey.Length));
                     scope = default; // We dont want to reclaim the term name
                 }
 
@@ -527,7 +549,7 @@ namespace Corax.Indexing
                 if (exists == false)
                 {
                     termLocation = field.Storage.Count;
-                    field.Storage.AddByRef(new EntriesModifications(_entriesAllocator, sizeof(long)));
+                    field.Storage.AddByRef(new EntriesModifications(sizeof(long)));
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
@@ -537,7 +559,7 @@ namespace Corax.Indexing
                 if (exists == false)
                 {
                     termLocation = field.Storage.Count;
-                    field.Storage.AddByRef(new EntriesModifications(_entriesAllocator, sizeof(long)));
+                    field.Storage.AddByRef(new EntriesModifications(sizeof(long)));
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
@@ -1099,6 +1121,12 @@ namespace Corax.Indexing
             private NativeList<TermInEntryModification> _entriesForTerm;
             private ContextBoundNativeList<long> _pagesToPrefetch;
 
+            /// <summary>
+            /// Terms are lazily initialized on disk, and we obtain the real address after processing EntriesModification.
+            /// Creates a mapping (Index: StorageIndex, Value: physical term container). If the term doesn't exist: Constants.IndexedField.Invalid.
+            /// </summary>
+            private NativeList<long> _virtualTermIdToTermContainerId;
+            
             private int _offsetAdjustment;
             private long _curPage;
 
@@ -1116,6 +1144,14 @@ namespace Corax.Indexing
                 _entriesForTerm.Initialize(_writer._entriesAllocator);
                 _pagesToPrefetch = new ContextBoundNativeList<long>(_writer._entriesAllocator);
                 _buffers = _writer._textualFieldBuffers ??= new TextualFieldBuffers(_writer);
+
+                if (_writer.FieldSupportsPhraseQuery(indexedField))
+                {
+                    // For most cases, _indexField.Storage.Count is equal to _indexedField.Textual.Count().
+                    // However, in cases where the field has mixed values (string/numerics), it differs. Therefore, we need to ensure that we have enough space to create the mapping.
+                    _virtualTermIdToTermContainerId = new NativeList<long>();
+                    _virtualTermIdToTermContainerId.InitializeWithValue(_writer._entriesAllocator, Constants.IndexedField.Invalid,  _indexedField.Storage.Count);
+                }
             }
 
             public void Dispose()
@@ -1138,7 +1174,7 @@ namespace Corax.Indexing
                     ref var entries = ref _indexedField.Storage.GetAsRef(termsOffsets[0]);
                     var nullLookup = new CompactTree.CompactKeyLookup(CompactKey.NullInstance);
                     totalLengthOfTerm += ProcessSingleEntry(ref entries, ref nullLookup, isNullTerm: true,
-                        sortedTerms[0], postingListId, termContainerId, -1);
+                        sortedTerms[0], postingListId, termContainerId, -1, termsOffsets[0]);
                     
                     // now skip it the null so we don't have the special case it
                     sortedTerms = sortedTerms[1..]; 
@@ -1175,7 +1211,7 @@ namespace Corax.Indexing
                             ref var entries = ref _indexedField.Storage.GetAsRef(entriesOffsets[idx]);
                             totalLengthOfTerm += ProcessSingleEntry(ref entries, ref keys[idx], isNullTerm: false,
                                 sortedTerms[idx], postListIds[idx],
-                                keys[idx].ContainerId, pageOffsets[idx]);
+                                keys[idx].ContainerId, pageOffsets[idx], entriesOffsets[idx]);
 
                             // if the tree structure changed, the bulk insert details are wrong
                             // and will need to restart the operation with a new BulkUpdateStart
@@ -1208,10 +1244,12 @@ namespace Corax.Indexing
                 _writer.InsertEntriesForTermBulk(_entriesToTermsTree, _indexedField.Name);
 
                 _writer._indexMetadata.Increment(_indexedField.NameTotalLengthOfTerms, totalLengthOfTerm);
+
+                ProcessTermsVector();
             }
 
             private long ProcessSingleEntry(ref EntriesModifications entries, ref CompactTree.CompactKeyLookup key,
-                bool isNullTerm, Slice term, long postListId, long termContainerId, int pageOffset)
+                bool isNullTerm, Slice term, long postListId, long termContainerId, int pageOffset, int storageLocation)
             {
                 UpdateEntriesForTerm(ref _entriesForTerm, in entries);
                 if (_indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
@@ -1275,7 +1313,15 @@ namespace Corax.Indexing
                 }
                 
                 RecordTermsForEntries(_entriesForTerm, entries, termContainerId);
-
+    
+                //Update mapping virtual<=> storage location location. Final writing will be done after inserting ALL terms for specific field.
+                if (_writer.FieldSupportsPhraseQuery(_indexedField))
+                {
+                    Debug.Assert(_virtualTermIdToTermContainerId[storageLocation] == Constants.IndexedField.Invalid, "virtualMapping[entries.StorageLocation] == Constants.IndexedField.Invalid, Term was already set! Persisted: {_virtualTermIdToTermContainerId[storageLocation]}, new: {termContainerId}");
+                    _virtualTermIdToTermContainerId[storageLocation] = termContainerId;
+                }
+                
+                
                 if (_indexedField.Spatial == null)
                 {
                     Debug.Assert(termContainerId > 0);
@@ -1283,6 +1329,136 @@ namespace Corax.Indexing
                 }
 
                 return totalLengthOfTerm;
+            }
+            
+            void ProcessTermsVector()
+            {
+                if (_writer.FieldSupportsPhraseQuery(_indexedField) == false)
+                    return;
+
+                const StoredFieldType storedFieldType = (StoredFieldType.List | StoredFieldType.Term);
+                _writer.InitializeFieldRootPageForTermsVector(_indexedField); 
+                var termsPerEntrySpan = _writer._termsPerEntryId.ToSpan();
+                
+                IDisposable memoryHandler = null;
+                var processingBufferPosition = 0;
+                var virtualMapping = _virtualTermIdToTermContainerId.ToSpan();
+                
+                Span<long> termsBuffer = stackalloc long[32];
+                Span<int> indexesBuffer = stackalloc int[32];
+                Span<byte> processingBuffer = stackalloc byte[32 * ZigZagEncoding.MaxEncodedSize];
+                
+                for (var documentIndex = 0; documentIndex < _indexedField.EntryToTerms.Count; ++documentIndex)
+                {
+                    ref var fieldTerms = ref _indexedField.EntryToTerms[documentIndex];
+                    ref var entryTerms = ref termsPerEntrySpan[documentIndex];
+                    
+                    //When document has no terms we proceed
+                    if (fieldTerms.Count == 0)
+                        continue;
+
+                    if (fieldTerms.Count > termsBuffer.Length)
+                        UnlikelyGrowBuffer(_writer._entriesAllocator, fieldTerms.Count, ref termsBuffer, ref indexesBuffer, ref processingBuffer);
+
+                    var terms = termsBuffer.Slice(0, fieldTerms.Count);
+                    var indexes = indexesBuffer.Slice(0, fieldTerms.Count);
+                    
+                    for (var termIndex = 0; termIndex < fieldTerms.Count; ++termIndex)
+                    {
+                        ref var virtualTermId = ref fieldTerms[termIndex];
+                        Debug.Assert(virtualMapping.Length > virtualTermId, "_indexedField.NativeVirtualTermIdToTermContainerId.Count > term");
+
+                        terms[termIndex] = virtualMapping[virtualTermId];
+                        indexes[termIndex] = termIndex << 1; // Gives bit for duplicate marker.
+                    }
+
+// In the EntryTermsWriter, we are storing terms sorted. Since we also store frequency inside TermID, it has an impact on the order because we're moving
+// each container ID by `Constants.IndexWriter.TermFrequencyShift` to store encoded frequency. We want to reconstruct exactly the same process that happens inside indexing
+// to have terms in the exact same order as they will be on the disk. To do so, we have to sort terms by IDs first.
+// Secondly, we have to shift all repetitions by `Constants.IndexWriter.TermFrequencyShift` and sort them again. This will give us the order from the disk.
+                    terms.Sort(indexes);
+                    var lastTermIndex = 0;
+                    var lastTerm = terms[lastTermIndex];
+                    var count = 1;
+                    for (int currentTermIdx = 1; currentTermIdx < fieldTerms.Count; ++currentTermIdx)
+                    {
+                        if (lastTerm != terms[currentTermIdx])
+                        {
+                            for (; lastTermIndex < currentTermIdx && count > 1; ++lastTermIndex)
+                                terms[lastTermIndex] <<= Constants.IndexWriter.TermFrequencyShift;
+
+                            lastTerm = terms[currentTermIdx];
+                            lastTermIndex = currentTermIdx;
+                            count = 1;
+                        }
+                        else
+                        {
+                            count++;
+                        }
+                    }
+
+                    //last duplicate batch e.g. [...., N, N, N, N]
+                    for (; count > 1 && lastTermIndex < fieldTerms.Count; ++lastTermIndex)
+                        terms[lastTermIndex] <<= Constants.IndexWriter.TermFrequencyShift;
+                    
+                    
+// Terms stored in the EntryTerms struct are sorted and unique. This means that in the case of duplicates, our offsets list may have a different size than the term array.
+// Since we know that adjacent offsets may be duplicates (although not adjacent elements cannot be duplicates of each other),
+// let's use the lowest bit to mark the duplication of a term from the previous elements.
+// Example:
+// indexes [0, 2 | 1, 4 | 1, 6 | 1, 10]
+// terms   [23, 50]
+// the lowest bit indicates whether to move to the next term on the list or to reuse the current one.
+                    terms.Sort(indexes);
+                    for (int currentTermIdx = terms.Length - 1; currentTermIdx >= 1; --currentTermIdx)
+                    {
+                        // We've sorted terms, so when we're moving from right to left and find the first one without |TermFrequencyShift| bits set, that means all repetitions have been processed, and we can finish.
+                         if ((terms[currentTermIdx] & Constants.IndexWriter.FrequencyTermFreeSpace) != 0)
+                             break;
+
+                        if (terms[currentTermIdx - 1] == terms[currentTermIdx])
+                            indexes[currentTermIdx] |= 0b1;
+                    }
+                    
+                    
+                    for (var termIndex = 0; termIndex < fieldTerms.Count; ++termIndex)
+                    {
+                        processingBufferPosition += ZigZagEncoding.Encode(processingBuffer,indexes[termIndex], processingBufferPosition);
+                    }
+                    
+                    var listContainerId = Container.Allocate(
+                        _writer._transaction.LowLevelTransaction,
+                        _writer._storedFieldsContainerId,
+                        size: processingBufferPosition, //compression
+                        pageLevelMetadata: _indexedField.TermsVectorFieldRootPage, // identifies list
+                        out var listSpace);
+                    
+                    processingBuffer.Slice(0, processingBufferPosition).CopyTo(listSpace);
+                    var recordedTerm = RecordedTerm.CreateForStored(fieldTerms, storedFieldType, listContainerId);
+                    
+                    fieldTerms.Dispose(_writer._entriesAllocator);
+                    if (entryTerms.TryAdd(recordedTerm) == false)
+                    {
+                        entryTerms.Grow(_writer._entriesAllocator, 1);
+                        entryTerms.AddUnsafe(recordedTerm);
+                    }
+
+                    processingBufferPosition = 0;
+                }
+                
+                _virtualTermIdToTermContainerId.Dispose(_writer._entriesAllocator);
+                _virtualTermIdToTermContainerId = default;
+                memoryHandler?.Dispose();
+
+                void UnlikelyGrowBuffer(ByteStringContext allocator, int count, ref Span<long> termsBuffer, ref Span<int> indexesBuffer, ref Span<byte> processingBuffer)
+                {
+                    var length = Bits.PowerOf2(count + 1);
+                    memoryHandler?.Dispose();
+                    memoryHandler = allocator.Allocate(length * (sizeof(int) + sizeof(long) + ZigZagEncoding.MaxEncodedSize), out var memory);
+                    termsBuffer = MemoryMarshal.Cast<byte, long>(memory.ToSpan().Slice(0, length * sizeof(long)));
+                    indexesBuffer = MemoryMarshal.Cast<byte, int>(memory.ToSpan().Slice(length * sizeof(long), length * sizeof(int)));
+                    processingBuffer = memory.ToSpan().Slice(length * (sizeof(int) + sizeof(long)));
+                }
             }
             
             private void RecordTermsForEntries(in NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries, long termContainerId)
@@ -1300,7 +1476,7 @@ namespace Corax.Indexing
                 
                     long recordedTermContainerId = entry.Frequency switch
                     {
-                        > 1 => termContainerId << 8 | // note, bottom 3 are cleared, so we have 11 bits to play with
+                        > 1 => termContainerId << Constants.IndexWriter.TermFrequencyShift | // note, bottom 3 are cleared, so we have 11 bits to play with
                                EntryIdEncodings.FrequencyQuantization(entry.Frequency) << 3 |
                                0b100, // marker indicating that we have a term frequency here
                         _ => termContainerId
@@ -1466,9 +1642,7 @@ namespace Corax.Indexing
                 }
             }
         }
-
         
-
         private void SetRange(List<long> list, in NativeList<TermInEntryModification> span)
         {
             list.Clear();
@@ -1482,7 +1656,6 @@ namespace Corax.Indexing
             UpdateTermId,
             RemoveTermId,
         }
-
 
         /// <param name="idInTree">encoded</param>
         /// <param name="termId">encoded</param>
@@ -1580,6 +1753,7 @@ namespace Corax.Indexing
             
             return EntryIdEncodings.Encode(termIdInTree, 0, TermIdMask.SmallPostingList);
         }
+
 
         private AddEntriesToTermResult AddEntriesToTermResultSingleValue(Span<byte> tmpBuf, long idInTree, ref EntriesModifications entries, out long termId)
         {
@@ -1885,6 +2059,8 @@ namespace Corax.Indexing
                 _tokensBufferHandler = Analyzer.TokensPool.Rent(newTokenSize);
             }
         }
+
+        private bool FieldSupportsPhraseQuery(in IndexedField field) => _phraseQuerySupport && field.FieldIndexingMode is FieldIndexingMode.Search;
         
         public void Dispose()
         {

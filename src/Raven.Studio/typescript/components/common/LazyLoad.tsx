@@ -1,15 +1,17 @@
-﻿import React, { ReactNode } from "react";
+﻿import classNames from "classnames";
+import React, { ReactNode } from "react";
 
 interface LazyLoadProps {
     children?: ReactNode | ReactNode[];
     active?: boolean;
+    className?: string;
 }
 
 export function LazyLoad(props: LazyLoadProps): JSX.Element {
-    const { children, active } = props;
+    const { children, active, className } = props;
 
     if (active) {
-        return <div className="lazy-load">{children}</div>;
+        return <div className={classNames("lazy-load", className)}>{children}</div>;
     }
 
     return <React.Fragment>{children}</React.Fragment>;

@@ -9,6 +9,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using Sparrow.Server;
 using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Global;
@@ -221,7 +222,7 @@ namespace Voron.Impl.FileHeaders
             header->PageSize = _env.Options.PageSize;
         }
 
-        private  bool IsEmptyHeader(FileHeader* header)
+        private bool IsEmptyHeader(FileHeader* header)
         {
             var zeroed = stackalloc byte[JournalInfo.NumberOfReservedBytes];
             return header->MagicMarker == Constants.MagicMarker &&
@@ -232,7 +233,7 @@ namespace Voron.Impl.FileHeaders
                    header->Root.RootPageNumber == -1 &&
                    header->Journal.CurrentJournal == -1 &&
                    header->Journal.Flags == Journal.JournalInfoFlags.None &&
-                   Memory.Compare(header->Journal.Reserved, zeroed, 3) == 0 &&
+                   Memory.IsEqualConstant(header->Journal.Reserved, 3, zeroed) &&
                    header->Journal.LastSyncedJournal == -1 &&
                    header->Journal.LastSyncedTransactionId == -1 &&
                    header->IncrementalBackup.LastBackedUpJournal == -1 &&

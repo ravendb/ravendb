@@ -175,7 +175,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
             if (xItem.Address == null)
                 return -1;
-            var match = AdvMemory.Compare(xItem.Address + 1, yItem.Address + 1, Math.Min(xItem.Length - 1, yItem.Length - 1));
+            var match = Memory.Compare(xItem.Address + 1, yItem.Address + 1, Math.Min(xItem.Length - 1, yItem.Length - 1));
             if (match != 0)
                 return match;
 

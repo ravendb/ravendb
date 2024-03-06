@@ -30,7 +30,7 @@ export function EditKafkaSinkTaskInfoHub() {
                     Define a <strong>Kafka Sink</strong> ongoing-task in order to consume and process incoming messages from Kafka topics.
                 </p>
                 <p>
-                    Add one or more <strong>scripts</strong> that Load, Put, or Delete documents in RavenDB based on the incoming messages.
+                    Add one or more <strong>scripts</strong> that Load, Put, or Delete documents in RavenDB based on the incoming messages:
                 </p>
                 <ul>
                     <li className="margin-top-sm">
@@ -46,6 +46,10 @@ export function EditKafkaSinkTaskInfoHub() {
                         Incoming messages are expected only as JSON.
                     </li>
                 </ul>
+                <p>
+                    A database with a defined Kafka Sink task will Not become idle,<br />
+                    ensuring continuous processing of incoming messages.
+                </p>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
                 isUnlimited={hasQueueSink}

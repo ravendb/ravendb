@@ -65,6 +65,16 @@ public unsafe struct NativeList<T>
         AddUnsafe(value);
     }
 
+    public void InitializeWithValue(ByteStringContext allocator, T value, int count)
+    {
+        EnsureCapacityFor(allocator, count);
+        if (Capacity == 0) 
+            return;
+        
+        Count = count;
+        ToSpan().Fill(value);
+    }
+
     public void AddRangeUnsafe(ReadOnlySpan<T> range)
     {
         Debug.Assert(Count + range.Length <= Capacity);

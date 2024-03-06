@@ -1,25 +1,25 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Rachis
 {
-    public sealed class ClusterTransactionWaiter : AsyncWaiter<ClusterTransactionCompletionResult>
+    public sealed class ClusterTransactionWaiter : AsyncWaiter<HashSet<string>>
     {
-
-    }
-
-    public sealed class ClusterTransactionCompletionResult
-    {
-        public Task IndexTask;
-        public DynamicJsonArray Array;
+        public RemoveTask CreateTask(string id, out TaskCompletionSource<HashSet<string>> tcs)
+        {
+            tcs = _results.GetOrAdd(id, static (key) => new TaskCompletionSource<HashSet<string>>(TaskCreationOptions.RunContinuationsAsynchronously));
+            return new RemoveTask(this, id);
+        }
     }
 
     public class AsyncWaiter<T>
     {
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<T>> _results = new ConcurrentDictionary<string, TaskCompletionSource<T>>();
+        protected readonly ConcurrentDictionary<string, TaskCompletionSource<T>> _results = new ConcurrentDictionary<string, TaskCompletionSource<T>>();
 
         public RemoveTask CreateTask(out string id)
         {
@@ -65,7 +65,7 @@ namespace Raven.Server.Rachis
             {
                 _parent._results.TryRemove(_id, out var task);
                 // cancel it, if someone still awaits
-                task.TrySetCanceled();
+                task?.TrySetCanceled();
             }
         }
 

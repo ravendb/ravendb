@@ -207,6 +207,7 @@ namespace Raven.Server.Commercial
             try
             {
                 SetLicense(GetLicenseStatus(license));
+                _serverStore.Configuration.UpdateLicenseType(LicenseStatus.Type);
             }
             catch (Exception e)
             {

@@ -190,7 +190,7 @@ namespace Corax.Querying.Matches
                     // There must be a shared prefix.
                     ref var gramKeyStart = ref MemoryMarshal.GetReference(gramKey);
 
-                    var cmp = AdvMemory.CompareInline(ref ngramStart, ref gramKeyStart, Math.Min(ngram.Length, gramKey.Length));
+                    var cmp = Memory.CompareInline(ref ngramStart, ref gramKeyStart, Math.Min(ngram.Length, gramKey.Length));
                     if (cmp > 0)
                         break;
                     if (cmp < 0)

@@ -926,6 +926,8 @@ namespace Voron.Impl
         public bool IsDisposed => _txState.HasFlag(TxState.Disposed);
 
         public NativeMemory.ThreadStats CurrentTransactionHolder { get; set; }
+        
+        public PageLocator PageLocator => _pageLocator;
 
         public void Dispose()
         {

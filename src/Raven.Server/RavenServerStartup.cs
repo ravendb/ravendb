@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using CsvHelper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -26,6 +27,7 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -39,6 +41,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Exceptions;
 using Voron.Exceptions;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server
 {
@@ -96,7 +99,7 @@ namespace Raven.Server
         {
             if (RoutesAllowedInUnsafeMode.Contains(context.Request.Path.Value))
             {
-                await RequestHandler(context);
+                await RequestHandler(context).ConfigureAwait(false);
                 return;
             }
 
@@ -105,7 +108,9 @@ namespace Raven.Server
             if (IsHtmlAcceptable(context))
             {
                 context.Response.Headers[Constants.Headers.ContentType] = "text/html; charset=utf-8";
-                await context.Response.WriteAsync(HtmlUtil.RenderUnsafePage());
+
+                await context.Response.WriteAsync(HtmlUtil.RenderUnsafePage())
+                                      .ConfigureAwait(false);
                 return;
             }
 
@@ -129,6 +134,9 @@ namespace Raven.Server
                 }
                 writer.WriteEndArray();
                 writer.WriteEndObject();
+
+                await writer.FlushAsync()
+                            .ConfigureAwait(false);
             }
         }
 
@@ -155,7 +163,7 @@ namespace Raven.Server
             $"Please find the RavenDB settings file *settings.json* in the server directory and fill in your certificate information in either { RavenConfiguration.GetKey(x => x.Security.CertificatePath) } or { RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec) }",
             $"If you would rather like to keep your server unsecured, please relax the { RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed) } setting to match the { RavenConfiguration.GetKey(x => x.Core.ServerUrls) } setting value."
         };
-        
+
         private static readonly StringValues CacheControlHeaderValues = new[] { "must-revalidate", "no-cache" };
 
         private static readonly StringValues ContentTypeHeaderValue = "application/json; charset=utf-8";
@@ -177,10 +185,12 @@ namespace Raven.Server
                 context.Response.Headers[Constants.Headers.ContentType] = ContentTypeHeaderValue;
 
                 if (_server.ServerStore.Initialized == false)
-                    await _server.ServerStore.InitializationCompleted.WaitAsync();
+                    await _server.ServerStore.InitializationCompleted.WaitAsync()
+                                                                     .ConfigureAwait(false);
 
                 sp = Stopwatch.StartNew();
-                await _router.HandlePath(requestHandlerContext);
+                await _router.HandlePath(requestHandlerContext)
+                             .ConfigureAwait(false);
                 sp.Stop();
             }
             catch (Exception e)
@@ -189,6 +199,8 @@ namespace Raven.Server
                 {
                     sp?.Stop();
                     exception = e;
+
+                    CheckDatabaseShutdownAndThrowIfNeeded(requestHandlerContext, ref e);
 
                     CheckVersionAndWrapException(context, ref e);
 
@@ -257,6 +269,17 @@ namespace Raven.Server
                     _logger.Info($"{context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString.Value} - {context.Response.StatusCode} - {(sp?.ElapsedMilliseconds ?? 0):#,#;;0} ms", exception);
                 }
             }
+        }
+
+        private static void CheckDatabaseShutdownAndThrowIfNeeded(RequestHandlerContext context, ref Exception e)
+        {
+            if (e is not OperationCanceledException) 
+                return;
+
+            var databaseShutdown = context.Database?.DatabaseShutdown ?? context.DatabaseContext?.DatabaseShutdown;
+            var databaseShutdownCompleted = context.Database?.DatabaseShutdownCompleted;
+            if (databaseShutdown is { IsCancellationRequested: true } || databaseShutdownCompleted is { IsSet: true})
+                e = new DatabaseDisabledException("The database " + context.DatabaseName + " is shutting down", e);
         }
 
         private static void CheckVersionAndWrapException(HttpContext context, ref Exception e)

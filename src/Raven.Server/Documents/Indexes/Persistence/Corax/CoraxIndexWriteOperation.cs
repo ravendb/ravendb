@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _allocator = writeTransaction.Allocator;
             try
             {
-                _indexWriter =  new IndexWriter(writeTransaction, knownFields);
+                _indexWriter =  new IndexWriter(writeTransaction, knownFields, phraseQuerySupport: index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.PhraseQuerySupportInCoraxIndexes);
             }
             catch (Exception e) when (e.IsOutOfMemory())
             {

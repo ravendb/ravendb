@@ -128,12 +128,12 @@ namespace Raven.Server.Documents.Handlers.Batches
         public async Task<bool> IsClusterTransaction(Stream stream, UnmanagedJsonParser parser, JsonOperationContext.MemoryBuffer buffer, JsonParserState state)
         {
             while (parser.Read() == false)
-                await RefillParserBuffer(stream, buffer, parser);
+                await RefillParserBuffer(stream, buffer, parser).ConfigureAwait(false);
 
             if (ReadClusterTransactionProperty(state))
             {
                 while (parser.Read() == false)
-                    await RefillParserBuffer(stream, buffer, parser);
+                    await RefillParserBuffer(stream, buffer, parser).ConfigureAwait(false);
 
                 return GetStringPropertyValue(state) == nameof(TransactionMode.ClusterWide);
             }
@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Handlers.Batches
         private static unsafe bool ReadClusterTransactionProperty(JsonParserState state)
         {
             return state.CurrentTokenType == JsonParserToken.String &&
-                   "TransactionMode"u8.CompareConstant(state.StringBuffer, state.StringSize);
+                   "TransactionMode"u8.IsEqualConstant(state.StringBuffer, state.StringSize);
         }
 
         public async Task<CommandData> ReadSingleCommand(
@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Handlers.Batches
             while (true)
             {
                 while (parser.Read() == false)
-                    await RefillParserBuffer(stream, buffer, parser, token);
+                    await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
 
                 if (state.CurrentTokenType == JsonParserToken.EndObject)
                 {
@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                 {
                     case CommandPropertyName.Type:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                         if (state.CurrentTokenType != JsonParserToken.String)
                         {
                             ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -193,7 +193,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.Id:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
 
                         switch (state.CurrentTokenType)
                         {
@@ -219,14 +219,14 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                         CommandParsingObserver?.OnIdsStart(parser);
 
-                        commandData.Ids = await ReadJsonArray(ctx, stream, parser, state, buffer, token);
+                        commandData.Ids = await ReadJsonArray(ctx, stream, parser, state, buffer, token).ConfigureAwait(false);
 
                         CommandParsingObserver?.OnIdsEnd(parser);
                         break;
 
                     case CommandPropertyName.Name:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
@@ -245,7 +245,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.DestinationId:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         break;
                     case CommandPropertyName.From:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
@@ -279,7 +279,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         break;
                     case CommandPropertyName.To:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
@@ -295,7 +295,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         break;
                     case CommandPropertyName.DestinationName:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
@@ -314,7 +314,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.ContentType:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
@@ -333,8 +333,8 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.Document:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
-                        commandData.Document = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                        commandData.Document = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false);
                         commandData.SeenAttachments = modifier.SeenAttachments;
                         commandData.SeenCounters = modifier.SeenCounters;
                         commandData.SeenTimeSeries = modifier.SeenTimeSeries;
@@ -343,23 +343,23 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.Patch:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
-                        var patch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                        var patch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false);
                         commandData.Patch = PatchRequest.Parse(patch, out commandData.PatchArgs);
                         break;
 
                     case CommandPropertyName.JsonPatch:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
-                        var jsonPatch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                        var jsonPatch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false);
                         commandData.JsonPatchCommands = JsonPatchCommand.Parse(jsonPatch);
                         break;
 
                     case CommandPropertyName.TimeSeries:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
 
-                        using (var timeSeriesOperations = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token))
+                        using (var timeSeriesOperations = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false))
                         {
                             commandData.TimeSeries = commandData.Type == CommandType.TimeSeriesBulkInsert ?
                                 TimeSeriesOperation.ParseForBulkInsert(timeSeriesOperations) :
@@ -370,20 +370,20 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.CreateIfMissing:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
-                        var createIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                        var createIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false);
                         commandData.CreateIfMissing = createIfMissing;
                         break;
                     case CommandPropertyName.PatchIfMissing:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
-                        var patchIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                        var patchIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false);
                         commandData.PatchIfMissing = PatchRequest.Parse(patchIfMissing, out commandData.PatchIfMissingArgs);
                         break;
 
                     case CommandPropertyName.ChangeVector:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                         if (state.CurrentTokenType == JsonParserToken.Null)
                         {
                             commandData.ChangeVector = null;
@@ -402,7 +402,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         break;
                     case CommandPropertyName.OriginalChangeVector:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                         if (state.CurrentTokenType == JsonParserToken.Null)
                         {
                             commandData.OriginalChangeVector = null;
@@ -421,7 +421,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.Index:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                         if (state.CurrentTokenType != JsonParserToken.Integer)
                         {
                             ThrowUnexpectedToken(JsonParserToken.Integer, state);
@@ -432,7 +432,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.IdPrefixed:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
 
                         if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
                         {
@@ -444,7 +444,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.ReturnDocument:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
 
                         if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
                         {
@@ -456,15 +456,15 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.Counters:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
 
-                        var counterOps = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                        var counterOps = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false);
                         commandData.Counters = DocumentCountersOperation.Parse(counterOps);
                         break;
 
                     case CommandPropertyName.FromEtl:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
 
                         if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
                         {
@@ -476,7 +476,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.AttachmentType:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                         if (state.CurrentTokenType == JsonParserToken.Null)
                         {
                             commandData.AttachmentType = AttachmentType.Document;
@@ -494,7 +494,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.ContentLength:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                         if (state.CurrentTokenType != JsonParserToken.Integer)
                         {
                             ThrowUnexpectedToken(JsonParserToken.Integer, state);
@@ -505,17 +505,17 @@ namespace Raven.Server.Documents.Handlers.Batches
                     case CommandPropertyName.NoSuchProperty:
                         // unknown command - ignore it
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                         if (state.CurrentTokenType == JsonParserToken.StartObject ||
                             state.CurrentTokenType == JsonParserToken.StartArray)
                         {
-                            await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                            await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false);
                         }
                         break;
 
                     case CommandPropertyName.ForceRevisionCreationStrategy:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                         if (state.CurrentTokenType != JsonParserToken.String)
                         {
                             ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -627,7 +627,8 @@ namespace Raven.Server.Documents.Handlers.Batches
                 {
                     if (builder.Read())
                         break;
-                    await RefillParserBuffer(stream, buffer, parser, token);
+
+                    await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                 }
 
                 builder.FinalizeDocument();
@@ -654,7 +655,8 @@ namespace Raven.Server.Documents.Handlers.Batches
                 {
                     if (builder.Read())
                         break;
-                    await RefillParserBuffer(stream, buffer, parser, token);
+
+                    await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                 }
                 builder.FinalizeDocument();
                 reader = builder.CreateReader();
@@ -735,118 +737,118 @@ namespace Raven.Server.Documents.Handlers.Batches
             switch (state.StringSize)
             {
                 case 2:
-                    if ("Id"u8.CompareConstant(state.StringBuffer))
+                    if ("Id"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Id;
-                    if ("To"u8.CompareConstant(state.StringBuffer))
+                    if ("To"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.To;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 3:
 
-                    if ("Ids"u8.CompareConstant(state.StringBuffer))
+                    if ("Ids"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Ids;
 
                     return CommandPropertyName.NoSuchProperty;
                 case 8:
-                    if ("Document"u8.CompareConstant(state.StringBuffer))
+                    if ("Document"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Document;
 
-                    if ("Counters"u8.CompareConstant(state.StringBuffer))
+                    if ("Counters"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Counters;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 4:
-                    if ("Type"u8.CompareConstant(state.StringBuffer))
+                    if ("Type"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Type;
-                    if ("Name"u8.CompareConstant(state.StringBuffer))
+                    if ("Name"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Name;
-                    if ("From"u8.CompareConstant(state.StringBuffer))
+                    if ("From"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.From;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 5:
-                    if ("Index"u8.CompareConstant(state.StringBuffer))
+                    if ("Index"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Index;
-                    if ("Patch"u8.CompareConstant(state.StringBuffer))
+                    if ("Patch"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Patch;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 10:
-                    if ("IdPrefixed"u8.CompareConstant(state.StringBuffer))
+                    if ("IdPrefixed"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.IdPrefixed;
 
-                    if ("TimeSeries"u8.CompareConstant(state.StringBuffer))
+                    if ("TimeSeries"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.TimeSeries;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 11:
-                    if ("ContentType"u8.CompareConstant(state.StringBuffer))
+                    if ("ContentType"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.ContentType;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 12:
-                    if ("ChangeVector"u8.CompareConstant(state.StringBuffer))
+                    if ("ChangeVector"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.ChangeVector;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 7:
-                    if ("FromEtl"u8.CompareConstant(state.StringBuffer))
+                    if ("FromEtl"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.FromEtl;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 13:
-                    if ("DestinationId"u8.CompareConstant(state.StringBuffer))
+                    if ("DestinationId"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.DestinationId;
 
-                    if ("ContentLength"u8.CompareConstant(state.StringBuffer))
+                    if ("ContentLength"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.ContentLength;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 14:
-                    if ("ReturnDocument"u8.CompareConstant(state.StringBuffer))
+                    if ("ReturnDocument"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.ReturnDocument;
 
-                    if ("PatchIfMissing"u8.CompareConstant(state.StringBuffer))
+                    if ("PatchIfMissing"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.PatchIfMissing;
 
-                    if ("AttachmentType"u8.CompareConstant(state.StringBuffer))
+                    if ("AttachmentType"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.AttachmentType;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 15:
-                    if ("DestinationName"u8.CompareConstant(state.StringBuffer))
+                    if ("DestinationName"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.DestinationName;
 
-                    if ("CreateIfMissing"u8.CompareConstant(state.StringBuffer))
+                    if ("CreateIfMissing"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.CreateIfMissing;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 20:
-                    if ("OriginalChangeVector"u8.CompareConstant(state.StringBuffer))
+                    if ("OriginalChangeVector"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.OriginalChangeVector;
 
                     return CommandPropertyName.NoSuchProperty;
 
 
                 case 29:
-                    if ("ForceRevisionCreationStrategy"u8.CompareConstant(state.StringBuffer))
+                    if ("ForceRevisionCreationStrategy"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.ForceRevisionCreationStrategy;
 
                     return CommandPropertyName.NoSuchProperty;
 
                 case 9:
-                    if ("JsonPatch"u8.CompareConstant(state.StringBuffer))
+                    if ("JsonPatch"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.JsonPatch;
 
                     return CommandPropertyName.NoSuchProperty;
@@ -860,7 +862,7 @@ namespace Raven.Server.Documents.Handlers.Batches
             switch (state.StringSize)
             {
                 case 6:
-                    if ("Before"u8.CompareConstant(state.StringBuffer))
+                    if ("Before"u8.IsEqualConstant(state.StringBuffer))
                         return ForceRevisionStrategy.Before;
 
                     ThrowInvalidProperty(state, ctx);
@@ -881,10 +883,10 @@ namespace Raven.Server.Documents.Handlers.Batches
             switch (state.StringSize)
             {
                 case 8:
-                    if ("Document"u8.CompareConstant(state.StringBuffer))
+                    if ("Document"u8.IsEqualConstant(state.StringBuffer))
                         return AttachmentType.Document;
 
-                    if ("Revision"u8.CompareConstant(state.StringBuffer))
+                    if ("Revision"u8.IsEqualConstant(state.StringBuffer))
                         return AttachmentType.Revision;
 
                     ThrowInvalidProperty(state, ctx);
@@ -905,84 +907,84 @@ namespace Raven.Server.Documents.Handlers.Batches
             switch (state.StringSize)
             {
                 case 3:
-                    if ("PUT"u8.CompareConstant(state.StringBuffer))
+                    if ("PUT"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.PUT;
 
                     break;
 
                 case 5:
-                    if ("PATCH"u8.CompareConstant(state.StringBuffer))
+                    if ("PATCH"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.PATCH;
 
                     break;
                 case 6:
-                    if ("DELETE"u8.CompareConstant(state.StringBuffer))
+                    if ("DELETE"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.DELETE;
                     break;
 
                 case 8:
-                    if ("Counters"u8.CompareConstant(state.StringBuffer))
+                    if ("Counters"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.Counters;
                     break;
                 case 9:
-                    if ("JsonPatch"u8.CompareConstant(state.StringBuffer))
+                    if ("JsonPatch"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.JsonPatch;
 
-                    if ("HeartBeat"u8.CompareConstant(state.StringBuffer))
+                    if ("HeartBeat"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.HeartBeat;
                     break;
                 case 10:
-                    if ("TimeSeries"u8.CompareConstant(state.StringBuffer))
+                    if ("TimeSeries"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.TimeSeries;
 
-                    if ("BatchPATCH"u8.CompareConstant(state.StringBuffer))
+                    if ("BatchPATCH"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.BatchPATCH;
                     break;
 
                 case 13:
-                    if ("AttachmentPUT"u8.CompareConstant(state.StringBuffer))
+                    if ("AttachmentPUT"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.AttachmentPUT;
                     break;
 
                 case 14:
-                    if ("TimeSeriesCopy"u8.CompareConstant(state.StringBuffer))
+                    if ("TimeSeriesCopy"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.TimeSeriesCopy;
 
-                    if ("AttachmentCOPY"u8.CompareConstant(state.StringBuffer))
+                    if ("AttachmentCOPY"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.AttachmentCOPY;
 
-                    if ("AttachmentMOVE"u8.CompareConstant(state.StringBuffer))
+                    if ("AttachmentMOVE"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.AttachmentMOVE;
 
                     break;
 
                 case 16:
-                    if ("AttachmentDELETE"u8.CompareConstant(state.StringBuffer))
+                    if ("AttachmentDELETE"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.AttachmentDELETE;
                     break;
 
                 case 18:
-                    if ("CompareExchangePUT"u8.CompareConstant(state.StringBuffer))
+                    if ("CompareExchangePUT"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.CompareExchangePUT;
                     break;
 
                 case 20:
-                    if ("TimeSeriesBulkInsert"u8.CompareConstant(state.StringBuffer))
+                    if ("TimeSeriesBulkInsert"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.TimeSeriesBulkInsert;
 
                     ThrowInvalidProperty(state, ctx);
                     return CommandType.None;
 
                 case 21:
-                    if ("CompareExchangeDELETE"u8.CompareConstant(state.StringBuffer))
+                    if ("CompareExchangeDELETE"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.CompareExchangeDELETE;
 
-                    if ("ForceRevisionCreation"u8.CompareConstant(state.StringBuffer))
+                    if ("ForceRevisionCreation"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.ForceRevisionCreation;
                     break;
 
                 case 24:
-                    if ("TimeSeriesWithIncrements"u8.CompareConstant(state.StringBuffer))
+                    if ("TimeSeriesWithIncrements"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.TimeSeriesWithIncrements;
                     break;
             }
@@ -1020,7 +1022,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
             // Although we using here WithCancellation and passing the token,
             // the stream will stay open even after the cancellation until the entire server will be disposed.
-            var read = await stream.ReadAsync(buffer.Memory.Memory, token);
+            var read = await stream.ReadAsync(buffer.Memory.Memory, token).ConfigureAwait(false);
             if (read == 0)
                 ThrowUnexpectedEndOfStream();
             parser.SetBuffer(buffer, 0, read);

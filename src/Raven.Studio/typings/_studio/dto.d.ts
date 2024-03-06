@@ -105,6 +105,10 @@ interface updateDatabaseConfigurationsResult {
     RaftCommandIndex: number;
 }
 
+interface updateConflictSolverConfigurationResponse extends updateDatabaseConfigurationsResult {
+    ConflictSolverConfig: Raven.Client.ServerWide.ConflictSolver;
+}
+
 interface nodeCounterValue {
     nodeTag: string;
     databaseId: string;
@@ -447,6 +451,7 @@ interface pagedResultExtended<T> extends pagedResult<T> {
     highlightings?: dictionary<dictionary<Array<string>>>;
     explanations?: dictionary<Array<string>>;
     timings?: Raven.Client.Documents.Queries.Timings.QueryTimings;
+    queryPlan?: Raven.Client.Documents.Queries.Timings.QueryInspectionNode;
 }
 
 interface pagedResultWithToken<T> extends pagedResult<T> {
@@ -1014,3 +1019,16 @@ type TombstonesStateOnWire = Omit<Raven.Server.Documents.TombstoneCleaner.Tombst
 
 // Server ToJson() method converts the version object to a string
 type LicenseStatus = Omit<Raven.Server.Commercial.LicenseStatus, "Version"> & { Version: string };
+
+
+type SqlConnectionStringFactoryName =
+    | "System.Data.SqlClient"
+    | "MySql.Data.MySqlClient"
+    | "MySqlConnector.MySqlConnectorFactory"
+    | "Npgsql"
+    | "Oracle.ManagedDataAccess.Client";
+
+type SqlConnectionString = Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString & { FactoryName: SqlConnectionStringFactoryName }
+type GetConnectionStringsResult = Omit<Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult, "SqlConnectionStrings"> & {
+    SqlConnectionStrings: {[key: string]: SqlConnectionString;};
+}

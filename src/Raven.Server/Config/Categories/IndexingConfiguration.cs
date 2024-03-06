@@ -7,7 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Raven.Client;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.DataArchival;
+using Raven.Server.Commercial;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Analysis;
@@ -36,6 +36,23 @@ namespace Raven.Server.Config.Categories
         public IndexingConfiguration(RavenConfiguration root)
         {
             _root = root;
+
+            SearchEngineType engineType;
+            switch (root.LicenseType)
+            {
+                case LicenseType.None:
+                case LicenseType.Community:
+                case LicenseType.Developer:
+                    engineType = SearchEngineType.Corax;
+                    break;
+
+                default:
+                    engineType = SearchEngineType.Lucene;
+                    break;
+            }
+
+            AutoIndexingEngineType = engineType;
+            StaticIndexingEngineType = engineType;
 
             QueryClauseCacheDisabled = root.Core.FeaturesAvailability != FeaturesAvailability.Experimental;
             QueryClauseCacheSize = PlatformDetails.Is32Bits ? new Size(32, SizeUnit.Megabytes) : (MemoryInformation.TotalPhysicalMemory / 10);
@@ -78,7 +95,7 @@ namespace Raven.Server.Config.Categories
         
         private static HashSet<string> GetValidIndexingConfigurationKeys()
         {
-            return RavenConfiguration.AllConfigurationEntries.Value.Where(configurationEntry => configurationEntry.Category == ConfigurationCategoryType.Indexing.GetDescription()).SelectMany(configurationEntry => configurationEntry.Keys).ToHashSet();
+            return RavenConfiguration.AllConfigurationEntriesForConfigurationNamesAndDebug.Value.Where(configurationEntry => configurationEntry.Category == ConfigurationCategoryType.Indexing.GetDescription()).SelectMany(configurationEntry => configurationEntry.Keys).ToHashSet();
         }
 
         [DefaultValue(false)]
@@ -262,15 +279,15 @@ namespace Raven.Server.Config.Categories
         [Description("Smallest n-gram to generate when NGram analyzer is used")]
         [DefaultValue(2)]
         [IndexUpdateType(IndexUpdateType.Reset)]
-        [ConfigurationEntry("Indexing.Analyzers.NGram.MinGram", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         [ConfigurationEntry("Indexing.Lucene.Analyzers.NGram.MinGram", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry("Indexing.Analyzers.NGram.MinGram", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int MinGram { get; set; }
 
         [Description("Largest n-gram to generate when NGram analyzer is used")]
         [DefaultValue(6)]
         [IndexUpdateType(IndexUpdateType.Reset)]
-        [ConfigurationEntry("Indexing.Analyzers.NGram.MaxGram", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         [ConfigurationEntry("Indexing.Lucene.Analyzers.NGram.MaxGram", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry("Indexing.Analyzers.NGram.MaxGram", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int MaxGram { get; set; }
 
         [Description("Managed allocations limit in an indexing batch after which the batch will complete and an index will continue by starting a new one")]
@@ -284,24 +301,24 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.MaximumSizePerSegmentInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         [ConfigurationEntry("Indexing.Lucene.MaximumSizePerSegmentInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry("Indexing.MaximumSizePerSegmentInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public Size MaximumSizePerSegment { get; protected set; }
 
         [Description("EXPERT: Set how often index segments are merged into larger ones. The merge process will start when the number of segments in an index reaches this number. " +
                      "With smaller values, less RAM is used while indexing, and searches on unoptimized indexes are faster, but indexing speed is slower.")]
         [DefaultValue(10)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.MergeFactor", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         [ConfigurationEntry("Indexing.Lucene.MergeFactor", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry("Indexing.MergeFactor", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int MergeFactor { get; protected set; }
 
         [Description("EXPERT: The definition of a large segment in MB. We wont merge more than " + nameof(NumberOfLargeSegmentsToMergeInSingleBatch) + " in a single batch")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.LargeSegmentSizeToMergeInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         [ConfigurationEntry("Indexing.Lucene.LargeSegmentSizeToMergeInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry("Indexing.LargeSegmentSizeToMergeInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public Size LargeSegmentSizeToMerge { get; protected set; }
 
         [Description("EXPERT: Number of large segments (defined by " + nameof(LargeSegmentSizeToMerge) + ") to merge in a single batch")]
@@ -315,8 +332,8 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.MaxTimeForMergesToKeepRunningInSec", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         [ConfigurationEntry("Indexing.Lucene.MaxTimeForMergesToKeepRunningInSec", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry("Indexing.MaxTimeForMergesToKeepRunningInSec", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public TimeSetting MaxTimeForMergesToKeepRunning { get; protected set; }
 
         [Description("Transaction size limit after which an index will stop and complete the current batch")]
@@ -437,13 +454,13 @@ namespace Raven.Server.Config.Categories
         public TimeSetting? ThrottlingTimeInterval { get; protected set; }
 
         [Description("Search engine for auto indexes")]
-        [DefaultValue(SearchEngineType.Lucene)]
+        [DefaultValue(DefaultValueSetInConstructor)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Auto.SearchEngineType", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public SearchEngineType AutoIndexingEngineType { get; protected set; }
 
         [Description("Search engine for static indexes")]
-        [DefaultValue(SearchEngineType.Lucene)]
+        [DefaultValue(DefaultValueSetInConstructor)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry(Constants.Configuration.Indexes.IndexingStaticSearchEngineType, ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public SearchEngineType StaticIndexingEngineType { get; protected set; }

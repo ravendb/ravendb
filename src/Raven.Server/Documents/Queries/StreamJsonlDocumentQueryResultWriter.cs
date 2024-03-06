@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Queries
             _writer.WriteEndObject();
 
             _writer.WriteNewLine();
-            await _writer.MaybeFlushAsync(token);
+            await _writer.MaybeFlushAsync(token).ConfigureAwait(false);
         }
 
         public void EndResponse()
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Queries
 
             _writer.WriteNewLine();
 
-            await _writer.FlushAsync();
+            await _writer.FlushAsync().ConfigureAwait(false);
         }
 
         public async ValueTask WriteErrorAsync(string error)
@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Queries
 
             _writer.WriteNewLine();
 
-            await _writer.FlushAsync();
+            await _writer.FlushAsync().ConfigureAwait(false);
         }
 
         public void WriteQueryStatistics(long resultEtag, bool isStale, string indexName, long totalResults, DateTime timestamp)

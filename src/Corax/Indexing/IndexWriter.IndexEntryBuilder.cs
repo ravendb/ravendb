@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax.Analyzers;
@@ -10,6 +11,7 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Containers;
+using Voron.Util;
 
 namespace Corax.Indexing;
 
@@ -22,7 +24,7 @@ public partial class IndexWriter
         private int _termPerEntryIndex;
         public bool Active;
         private int _buildingList;
-
+        
         public long EntryId => _entryId;
 
         public IndexEntryBuilder(Indexing.IndexWriter parent)
@@ -138,7 +140,7 @@ public partial class IndexWriter
             if (exists == false)
             {
                 termLocation = field.Storage.Count;
-                field.Storage.AddByRef(new EntriesModifications(_parent._entriesAllocator, value.Length));
+                field.Storage.AddByRef(new EntriesModifications(value.Length));
                 scope = null; // We don't want the fieldname (slice) to be returned.
             }
 
@@ -150,6 +152,42 @@ public partial class IndexWriter
             ref var term = ref field.Storage.GetAsRef(termLocation);
             term.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex, freq: 1);
 
+            // Creates a mapping for PhraseQuery
+            if (_parent.FieldSupportsPhraseQuery(field))
+            {
+                // We're aligning our EntryToTerms list to have exactly _termPerEntryIndex items.
+                // For most use cases, we will append only one element for each document, but we may be in a situation when the difference between sizes is bigger than 1.
+                // This happens when previously indexed documents have not inserted any term for our field (mostly occurs in AutoIndexes when a document has no 'Field'
+                // and we do not set explicit null configuration). In such a situation, we have to fill our 'gap' with the default NativeList (where Count is 0)
+                // since we rely on it during the creation of the mapping in the Commit phase.
+                if (field.EntryToTerms.Count <= _termPerEntryIndex)
+                {
+                    var additionalItems = Math.Max(1, _termPerEntryIndex - field.EntryToTerms.Count + 1);
+                    field.EntryToTerms.EnsureCapacityFor(_parent._entriesAllocator, additionalItems);
+                    
+                    for (var i = field.EntryToTerms.Count; i <= _termPerEntryIndex; i++)
+                    {
+                        var nativeList = new NativeList<int>();
+	
+                        if (i == _termPerEntryIndex)
+                            nativeList.Initialize(_parent._entriesAllocator, 1);
+	   
+                        field.EntryToTerms.AddByRefUnsafe() = nativeList;
+                    }
+                }
+                
+                
+                ref var nativeEntryTerms = ref field.EntryToTerms[_termPerEntryIndex];
+                if (nativeEntryTerms.TryAdd(termLocation) == false)
+                {
+                    nativeEntryTerms.Grow(_parent._entriesAllocator, 1);
+                    nativeEntryTerms.AddUnsafe(termLocation);
+                }
+                
+                if (nativeEntryTerms.Count >= Constants.IndexWriter.MaxSizeOfTermVectorList)
+                    ThrowDocumentExceedsPossibleTermAmount(field);
+            }
+            
             if (field.HasSuggestions)
                 _parent.AddSuggestions(field, slice);
 
@@ -165,7 +203,7 @@ public partial class IndexWriter
             if (fieldDoublesExist == false)
             {
                 doublesTermsLocation = field.Storage.Count;
-                field.Storage.AddByRef(new EntriesModifications(_parent._entriesAllocator, sizeof(double)));
+                field.Storage.AddByRef(new EntriesModifications(sizeof(double)));
             }
 
             // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
@@ -173,7 +211,7 @@ public partial class IndexWriter
             if (fieldLongExist == false)
             {
                 longsTermsLocation = field.Storage.Count;
-                field.Storage.AddByRef(new EntriesModifications(_parent._entriesAllocator, sizeof(long)));
+                field.Storage.AddByRef(new EntriesModifications(sizeof(long)));
             }
 
             ref var doublesTerm = ref field.Storage.GetAsRef(doublesTermsLocation);
@@ -309,16 +347,8 @@ public partial class IndexWriter
                 out Span<byte> space);
             term.CopyTo(space);
 
-            var recordedTerm = new RecordedTerm
-            (
-                // why: entryTerms.Count << 8 
-                // we put entries count here because we are sorting the entries afterward
-                // this ensure that stored values are then read using the same order we have for writing them
-                // which is important for storing arrays
-                termContainerId: entryTerms.Count << 8 | (int)type | 0b110, // marker for stored field
-                @long: termId
-            );
-
+            var recordedTerm = RecordedTerm.CreateForStored(entryTerms, type, termId);
+            
             if (entryTerms.TryAdd(recordedTerm) == false)
             {
                 entryTerms.Grow(_parent._entriesAllocator, 1);
@@ -337,17 +367,8 @@ public partial class IndexWriter
             ref var entryTerms = ref _parent.GetEntryTerms(_termPerEntryIndex);
 
             _parent.InitializeFieldRootPage(field);
-
-            var recordedTerm = new RecordedTerm
-            (
-                // why: entryTerms.Count << 8 
-                // we put entries count here because we are sorting the entries afterward
-                // this ensure that stored values are then read using the same order we have for writing them
-                // which is important for storing arrays
-                termContainerId: entryTerms.Count << 8 | (int)type | 0b110, // marker for stored field
-                @long: field.FieldRootPage
-            );
-
+            var recordedTerm = RecordedTerm.CreateForStored(entryTerms, type, field.FieldRootPage);
+            
             if (entryTerms.TryAdd(recordedTerm) == false)
             {
                 entryTerms.Grow(_parent._entriesAllocator, 1);
@@ -375,6 +396,11 @@ public partial class IndexWriter
         public void RestoreList(int old)
         {
             _buildingList = old;
+        }
+
+        private static void ThrowDocumentExceedsPossibleTermAmount(IndexedField field)
+        {
+            throw new NotSupportedException($"Field '{field.Name} exceeds the limit of terms. Search field can have up to {Constants.IndexWriter.MaxSizeOfTermVectorList} elements.");
         }
     }
 }

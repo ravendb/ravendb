@@ -48,7 +48,7 @@ namespace SlowTests.Cluster
                 }
             }))
             {
-                var tcs = new TaskCompletionSource<DocumentDatabase>();
+                var tcs = new TaskCompletionSource<DocumentDatabase>(TaskCreationOptions.RunContinuationsAsynchronously);
 
                 var databaseName = store.Database;
                 using (var session = store.OpenSession())
@@ -66,7 +66,7 @@ namespace SlowTests.Cluster
                 using (new DisposableAction(() =>
                 {
                     if (preferred.ServerStore.DatabasesLandlord.DatabasesCache.TryRemove(databaseName, tcs.Task))
-                        tcs.SetCanceled();
+                        tcs.TrySetCanceled();
                 }))
                 {
                     var t = preferred.ServerStore.DatabasesLandlord.DatabasesCache.ForTestingPurposesOnly().Replace(databaseName, tcs.Task);

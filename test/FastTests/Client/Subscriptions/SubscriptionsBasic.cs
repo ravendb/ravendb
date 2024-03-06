@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -1200,6 +1201,44 @@ namespace FastTests.Client.Subscriptions
 
                     throw new TimeoutException($"No batch received for {timeout}");
                 }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Subscriptions)]
+        public async Task Subscription_GetOngoingTaskInfoOperation_ShouldReturnCorrentTaskStatus()
+        {
+            using var store = GetDocumentStore();
+
+            var entity = new User();
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(entity);
+                await session.SaveChangesAsync();
+            }
+
+            var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
+
+            var state = await store.Subscriptions.GetSubscriptionStateAsync(name);
+            await using (var sub = store.Subscriptions.GetSubscriptionWorker<ProjectionObject>(name))
+            {
+                var mre = new AsyncManualResetEvent();
+                var subscriptionTask = sub.Run(batch =>
+                {
+                    mre.Set();
+                });
+                var timeout = TimeSpan.FromSeconds(30);
+                Assert.True(await mre.WaitAsync(timeout));
+                var taskInfoById = store.Maintenance.Send(new GetOngoingTaskInfoOperation(state.SubscriptionId, OngoingTaskType.Subscription));
+                Assert.NotNull(taskInfoById);
+                Assert.Equal(OngoingTaskState.Enabled, taskInfoById.TaskState);
+                Assert.Equal(OngoingTaskType.Subscription, taskInfoById.TaskType);
+                Assert.Equal(OngoingTaskConnectionStatus.Active, taskInfoById.TaskConnectionStatus);
+
+                var taskInfoByName = store.Maintenance.Send(new GetOngoingTaskInfoOperation(state.SubscriptionName, OngoingTaskType.Subscription));
+                Assert.NotNull(taskInfoByName);
+                Assert.Equal(taskInfoById.TaskState, taskInfoByName.TaskState);
+                Assert.Equal(taskInfoById.TaskType, taskInfoByName.TaskType);
+                Assert.Equal(taskInfoById.TaskConnectionStatus, taskInfoByName.TaskConnectionStatus);
             }
         }
 

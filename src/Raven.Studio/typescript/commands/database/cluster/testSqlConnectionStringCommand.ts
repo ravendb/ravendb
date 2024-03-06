@@ -4,8 +4,15 @@ import database = require("models/resources/database");
 
 class testSqlConnectionStringCommand extends commandBase {
 
-    constructor(private db: database, private connectionString: string, private factoryName: string) {
+    private readonly db: database;
+    private readonly connectionString: string;
+    private readonly factoryName: string;
+
+    constructor(db: database, connectionString: string, factoryName: string) {
         super();
+        this.db = db;
+        this.connectionString = connectionString;
+        this.factoryName = factoryName;
     }
 
     execute(): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {

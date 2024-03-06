@@ -311,6 +311,25 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     }
 
     public bool TryGetValue(TLookupKey key, out long value) => TryGetValue(ref key, out value);
+
+    public bool TryGetTermContainerId(TLookupKey key, out long value)
+    {
+        if (typeof(TLookupKey) != typeof(CompactTree.CompactKeyLookup))
+            throw new NotSupportedException(typeof(TLookupKey).FullName);
+        
+        FindPageFor(ref key, ref _internalCursor);
+        ref var state = ref _internalCursor._stk[_internalCursor._pos];
+        if (state.LastMatch != 0)
+        {
+            value = -1;
+            return false;
+        }
+
+        //For CompactTree this is external term container.
+        value = GetKeyData(ref state, state.LastSearchPosition);
+        return true;
+    }
+    
     public bool TryGetValue(ref TLookupKey key, out long value)
     {
         FindPageFor(ref key, ref _internalCursor);

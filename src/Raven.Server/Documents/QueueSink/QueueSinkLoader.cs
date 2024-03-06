@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -313,44 +314,39 @@ public class QueueSinkLoader : IDisposable
             }
         }
 
-        Parallel.ForEach(toRemove, x =>
-        {
-            foreach (var process in x.Value)
-            {
-                _database.DatabaseShutdown.ThrowIfCancellationRequested();
-
-                try
-                {
-                    string reason = GetStopReason(process, myQueueSink, responsibleNodes);
-                    process.Stop(reason);
-                }
-                catch (Exception e)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Failed to stop Queue Sink process {process.Name} on the database record change", e);
-                }
-            }
-        });
-
         LoadProcesses(record, myQueueSink, toRemove.SelectMany(x => x.Value).ToList());
 
-        Parallel.ForEach(toRemove, x =>
-        {
-            foreach (var process in x.Value)
-            {
-                _database.DatabaseShutdown.ThrowIfCancellationRequested();
+        if (toRemove.Count == 0)
+            return;
 
-                try
+        ThreadPool.QueueUserWorkItem(_ =>
+        {
+            Parallel.ForEach(toRemove, x =>
+            {
+                foreach (var process in x.Value)
                 {
-                    process.Dispose();
+                    try
+                    {
+                        if (_database.DatabaseShutdown.IsCancellationRequested)
+                            return;
+
+                        using (process)
+                        {
+                            string reason = GetStopReason(process, myQueueSink, responsibleNodes);
+                            process.Stop(reason);
+                        }
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations(
+                                $"Failed to dispose queue sink process {process.Name} on the database record change", e);
+                    }
                 }
-                catch (Exception e)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info(
-                            $"Failed to dispose queue sink process {process.Name} on the database record change", e);
-                }
-            }
+            });
         });
     }
 

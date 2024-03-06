@@ -7,19 +7,41 @@ namespace Raven.Client.Documents.Queries.Suggestions
 {
     public interface ISuggestionBuilder<T>
     {
+        /// <inheritdoc cref="ISuggestionQuery{T}"/>
+        /// <param name="fieldName">Field on which perform term-search.</param>
+        /// <param name="term">The term for which to get suggested similar terms.</param>
         ISuggestionOperations<T> ByField(string fieldName, string term);
 
+        /// <inheritdoc cref="ISuggestionQuery{T}"/>
+        /// <param name="fieldName">Field on which perform term-search.</param>
+        /// <param name="terms">List of terms for which to get suggested similar terms.</param>
         ISuggestionOperations<T> ByField(string fieldName, string[] terms);
 
+
+        /// <inheritdoc cref="ISuggestionQuery{T}"/>
+        /// <param name="path">Field on which perform term-search.</param>
+        /// <param name="term">The term for which to get suggested similar terms.</param>
         ISuggestionOperations<T> ByField(Expression<Func<T, object>> path, string term);
 
+        /// <inheritdoc cref="ISuggestionQuery{T}"/>
+        /// <param name="path">Field on which perform term-search.</param>
+        /// <param name="terms">List of terms for which to get suggested similar terms.</param>
         ISuggestionOperations<T> ByField(Expression<Func<T, object>> path, string[] terms);
     }
 
     public interface ISuggestionOperations<T>
     {
+        /// <summary>
+        /// A custom name for the suggestions result.
+        /// </summary>
+        /// <param name="displayName">Custom name.</param>
         ISuggestionOperations<T> WithDisplayName(string displayName);
 
+
+        /// <summary>
+        /// Non-default options to use in the operation.
+        /// </summary>
+        /// <param name="options"></param>
         ISuggestionOperations<T> WithOptions(SuggestionOptions options);
     }
 
@@ -34,6 +56,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
             _conventions = conventions;
         }
 
+        /// <inheritdoc/>
         public ISuggestionOperations<T> WithDisplayName(string displayName)
         {
             Suggestion.DisplayField = displayName;
@@ -41,6 +64,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
             return this;
         }
 
+        /// <inheritdoc/>
         public ISuggestionOperations<T> ByField(string fieldName, string term)
         {
             if (fieldName == null)
@@ -56,6 +80,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
             return this;
         }
 
+        /// <inheritdoc/>
         public ISuggestionOperations<T> ByField(string fieldName, string[] terms)
         {
             if (fieldName == null)
@@ -73,16 +98,19 @@ namespace Raven.Client.Documents.Queries.Suggestions
             return this;
         }
 
+        /// <inheritdoc/>
         public ISuggestionOperations<T> ByField(Expression<Func<T, object>> path, string term)
         {
             return ByField(path.ToPropertyPath(_conventions), term);
         }
 
+        /// <inheritdoc/>
         public ISuggestionOperations<T> ByField(Expression<Func<T, object>> path, string[] terms)
         {
             return ByField(path.ToPropertyPath(_conventions), terms);
         }
 
+        /// <inheritdoc/>
         public ISuggestionOperations<T> WithOptions(SuggestionOptions options)
         {
             Suggestion.Options = options;

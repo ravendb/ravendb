@@ -206,18 +206,18 @@ namespace Raven.Server.Routing
             DatabasesLandlord databasesLandlord, StringSegment databaseName)
         {
             var time = databasesLandlord.DatabaseLoadTimeout;
-            if (await database.DatabaseShutdownCompleted.WaitAsync(time) == false)
+            if (await database.DatabaseShutdownCompleted.WaitAsync(time).ConfigureAwait(false) == false)
             {
                 ThrowDatabaseUnloadTimeout(databaseName, databasesLandlord.DatabaseLoadTimeout);
             }
-            await CreateDatabase(context);
+            await CreateDatabase(context).ConfigureAwait(false);
         }
 
         private async Task UnlikelyWaitForDatabaseToLoad(RequestHandlerContext context, Task<DocumentDatabase> database,
             DatabasesLandlord databasesLandlord, StringSegment databaseName)
         {
             var time = databasesLandlord.DatabaseLoadTimeout;
-            await Task.WhenAny(database, Task.Delay(time));
+            await Task.WhenAny(database, Task.Delay(time)).ConfigureAwait(false);
             if (database.IsCompleted == false)
             {
                 if (databasesLandlord.InitLog.TryGetValue(databaseName.Value, out var initLogQueue))
@@ -230,7 +230,7 @@ namespace Raven.Server.Routing
                 }
                 ThrowDatabaseLoadTimeout(databaseName, databasesLandlord.DatabaseLoadTimeout);
             }
-            context.Database = await database;
+            context.Database = await database.ConfigureAwait(false);
             if (context.Database == null)
                 DatabaseDoesNotExistException.Throw(databaseName.Value);
         }
@@ -280,7 +280,7 @@ namespace Raven.Server.Routing
 
         private async Task<HandleRequest> WaitForDb(Task databaseLoading)
         {
-            await databaseLoading;
+            await databaseLoading.ConfigureAwait(false);
 
             return _request;
         }

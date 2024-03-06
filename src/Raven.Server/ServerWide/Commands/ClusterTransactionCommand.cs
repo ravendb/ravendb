@@ -578,37 +578,13 @@ namespace Raven.Server.ServerWide.Commands
                 string id,
                 int shardNumber)
             {
-                if (command.TryGet(nameof(ClusterTransactionDataCommand.Type), out string type) == false)
-                    throw new InvalidOperationException($"Got command with no type defined: {command}");
-
-                var result = new DynamicJsonValue { [nameof(ICommandData.Type)] = type, [Constants.Documents.Metadata.LastModified] = DateTime.UtcNow, };
-
-                switch (type)
-                {
-                    case nameof(CommandType.PUT):
-                        if (command.TryGet(nameof(ClusterTransactionDataCommand.Document), out BlittableJsonReaderObject document)
-                            && document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata)
-                            && metadata.TryGet(Constants.Documents.Metadata.Flags, out DocumentFlags flags))
-                        {
-                            result[Constants.Documents.Metadata.Flags] = flags | DocumentFlags.FromClusterTransaction;
-                        }
-
-                        result[Constants.Documents.Metadata.Id] = id;
-                        break;
-                    case nameof(CommandType.DELETE):
-                        result[Constants.Documents.Metadata.IdProperty] = id;
-                        break;
-                    default:
-                        throw new InvalidOperationException(
-                            $"Database cluster transaction command type can be {CommandType.PUT} or {CommandType.PUT} but got {type}");
-                }
-
-                var databaseId = _record.Sharding.Shards[shardNumber].DatabaseTopologyIdBase64;
-                var changeVector = ChangeVectorUtils.GetClusterWideChangeVector(databaseId, ++_initialCount, _options.DisableAtomicDocumentWrites == false, _index,
+                return ClusterTransactionCommand.GetCommandResult(command,
+                    id,
+                    ref _initialCount,
+                    _options.DisableAtomicDocumentWrites,
+                    _index,
+                    _record.Sharding.Shards[shardNumber].DatabaseTopologyIdBase64,
                     _record.GetClusterTransactionId());
-
-                result[Constants.Documents.Metadata.ChangeVector] = changeVector;
-                return result;
             }
 
             private struct SingleCommandForShard
@@ -619,27 +595,73 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public void SaveCommandsBatch(ClusterOperationContext context, RawDatabaseRecord rawRecord, long index,
-            ClusterTransactionWaiter clusterTransactionWaiter)
+        private static DynamicJsonValue GetCommandResult(
+            BlittableJsonReaderObject command,
+            string id,
+            ref long initialCount,
+            bool? disableAtomicDocumentWrites,
+            long index,
+            string databaseTopologyIdBase64,
+            string clusterTransactionId)
         {
+            if (command.TryGet(nameof(ClusterTransactionDataCommand.Type), out string type) == false)
+                throw new InvalidOperationException($"Got command with no type defined: {command}");
+
+            var result = new DynamicJsonValue
+            {
+                [nameof(ICommandData.Type)] = type, 
+                [Constants.Documents.Metadata.LastModified] = DateTime.UtcNow,
+            };
+
+            switch (type)
+            {
+                case nameof(CommandType.PUT):
+                    if (command.TryGet(nameof(ClusterTransactionDataCommand.Document), out BlittableJsonReaderObject document)
+                        && document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata)
+                        && metadata.TryGet(Constants.Documents.Metadata.Flags, out DocumentFlags flags))
+                    {
+                        result[Constants.Documents.Metadata.Flags] = flags | DocumentFlags.FromClusterTransaction;
+                    }
+
+                    result[Constants.Documents.Metadata.Id] = id;
+                    break;
+                case nameof(CommandType.DELETE):
+                    result[Constants.Documents.Metadata.IdProperty] = id;
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"Database cluster transaction command type can be {CommandType.PUT} or {CommandType.DELETE} but got {type}");
+            }
+
+
+            var changeVector = ChangeVectorUtils.GetClusterWideChangeVector(databaseTopologyIdBase64, ++initialCount, disableAtomicDocumentWrites == false, index,
+                clusterTransactionId);
+
+            result[Constants.Documents.Metadata.ChangeVector] = changeVector;
+            return result;
+        }
+
+        public DynamicJsonArray SaveCommandsBatch(ClusterOperationContext context, RawDatabaseRecord rawRecord, long index)
+        {
+            var result = new DynamicJsonArray();
+
             if (HasDocumentsInTransaction == false)
-                return;
+                return result;
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsCountPerDatabase);
 
             if (SerializedDatabaseCommands == null)
-                return;
+                return result;
+
+            if (SerializedDatabaseCommands.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray commands) == false)
+                throw new InvalidOperationException($"Cluster {nameof(SerializedDatabaseCommands)} don't include the actual commands : {SerializedDatabaseCommands}");
+            
+            var prevCount = GetPrevCount(context, commandsCountPerDatabase, rawRecord.DatabaseName);
 
             if (rawRecord.IsSharded)
             {
-                if (SerializedDatabaseCommands.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray commands) == false)
-                    throw new InvalidOperationException($"Cluster {nameof(SerializedDatabaseCommands)} don't include the actual commands : {SerializedDatabaseCommands}");
-
-                var prevCount = GetPrevCount(context, commandsCountPerDatabase, rawRecord.DatabaseName);
-
                 var perShard = new CommandsPerShard(rawRecord, index, Options, prevCount);
 
-                var result = new DynamicJsonArray();
                 foreach (BlittableJsonReaderObject command in commands)
                 {
                     if (command.TryGet(nameof(ClusterTransactionDataCommand.Id), out string id) == false)
@@ -655,20 +677,26 @@ namespace Raven.Server.ServerWide.Commands
                     size = result.Count - size;
                     SaveCommandBatch(context, index, rawRecord.DatabaseName, commandsCountPerDatabase, items, command, size);
                 }
-
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
-                {
-                    if (context.Transaction.InnerTransaction.LowLevelTransaction.Committed == false)
-                        return;
-
-                    clusterTransactionWaiter.TrySetResult(Options.TaskId, new ClusterTransactionCompletionResult { Array = result });
-                };
             }
             else
             {
-                var commands = context.ReadObject(SerializedDatabaseCommands, "serialized-tx-commands");
-                SaveCommandBatch(context, index, DatabaseName, commandsCountPerDatabase, items, commands, DatabaseCommandsCount);
+                var clusterTransactionCommand = context.ReadObject(SerializedDatabaseCommands, "serialized-tx-commands");
+                foreach (BlittableJsonReaderObject command in commands)
+                {
+                    if (command.TryGet(nameof(ClusterTransactionDataCommand.Id), out string id) == false)
+                        throw new InvalidOperationException($"Got cluster transaction database command without an id: {command}");
+
+                    var dataCmdRes = GetCommandResult(command, id, ref prevCount, Options.DisableAtomicDocumentWrites, index, rawRecord.Topology.DatabaseTopologyIdBase64,
+                        rawRecord.GetClusterTransactionId());
+                    result.Add(dataCmdRes);
+                }
+
+                SaveCommandBatch(context, index, DatabaseName, commandsCountPerDatabase, items, clusterTransactionCommand, DatabaseCommandsCount);
             }
+
+
+
+            return result;
         }
 
         private static long GetPrevCount(ClusterOperationContext context, Tree commandsCountPerDatabase, string databaseName)
@@ -891,20 +919,93 @@ namespace Raven.Server.ServerWide.Commands
 
         public override object FromRemote(object remoteResult)
         {
-            var errors = new List<ClusterTransactionErrorInfo>();
-            if (remoteResult is BlittableJsonReaderArray array)
+            if (remoteResult is BlittableJsonReaderObject bjro)
             {
-                foreach (var o in array)
-                {
-                    if (o is not BlittableJsonReaderObject blittable)
-                        continue;
-
-                    errors.Add(ToClusterTransactionErrorInfo(blittable));
-                }
-
-                return errors;
+                return GetResults(bjro);
             }
+
+            if (remoteResult is BlittableJsonReaderArray bjra)
+            {
+                return GetErrors(bjra);
+            }
+
             return base.FromRemote(remoteResult);
+        }
+
+        internal static ClusterTransactionResult GetResults(BlittableJsonReaderObject bjro)
+        {
+            var results = new ClusterTransactionResult();
+            if (bjro.TryGet(nameof(ClusterTransactionResult.GeneratedResult), out BlittableJsonReaderArray bjra))
+                results.GeneratedResult = GetGeneratedResults(bjra);
+
+            return results;
+        }
+
+        private static DynamicJsonArray GetGeneratedResults(BlittableJsonReaderArray bjra)
+        {
+            var array = new DynamicJsonArray();
+
+            if (bjra != null)
+            {
+                foreach (BlittableJsonReaderObject item in bjra)
+                {
+                    array.Add(ToDynamicJsonValue(item));
+                }
+            }
+
+            return array;
+        }
+
+        private static DynamicJsonValue ToDynamicJsonValue(BlittableJsonReaderObject bjro)
+        {
+            var djv = new DynamicJsonValue();
+
+            if (bjro.TryGet(nameof(ICommandData.Type), out string type) == false)
+                throw new InvalidOperationException("Database cluster transaction command must have a type");
+            djv[nameof(ICommandData.Type)] = type;
+
+            if (bjro.TryGet(Constants.Documents.Metadata.LastModified, out string lastModified) == false)
+                throw new InvalidOperationException($"Database cluster transaction {type} command must have a LastModified property");
+            djv[Constants.Documents.Metadata.LastModified] = lastModified;
+
+            switch (type)
+            {
+                case nameof(CommandType.PUT):
+                    if (bjro.TryGet(Constants.Documents.Metadata.Flags, out string flags))
+                        djv[Constants.Documents.Metadata.Flags] = flags;
+
+                    if (bjro.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
+                        throw new InvalidOperationException("Database cluster transaction Put command must have an id");
+                    djv[Constants.Documents.Metadata.Id] = id;
+                    break;
+                case nameof(CommandType.DELETE):
+                    if (bjro.TryGet(Constants.Documents.Metadata.IdProperty, out string idProp) == false)
+                        throw new InvalidOperationException("Database cluster transaction Delete command must have an id");
+                    djv[Constants.Documents.Metadata.IdProperty] = idProp;
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"Database cluster transaction command type can be {CommandType.PUT} or {CommandType.DELETE} but got {type}");
+            }
+
+            if (bjro.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false)
+                throw new InvalidOperationException($"Database cluster transaction {type} command must have a changeVector");
+            djv[Constants.Documents.Metadata.ChangeVector] = changeVector;
+
+            return djv;
+        }
+
+        private static List<ClusterTransactionErrorInfo> GetErrors(BlittableJsonReaderArray array)
+        {
+            var errors = new List<ClusterTransactionErrorInfo>();
+            foreach (var o in array)
+            {
+                if (o is not BlittableJsonReaderObject blittable)
+                    continue;
+
+                errors.Add(ToClusterTransactionErrorInfo(blittable));
+            }
+            return errors;
         }
 
         private static ClusterTransactionErrorInfo ToClusterTransactionErrorInfo(BlittableJsonReaderObject bjro)

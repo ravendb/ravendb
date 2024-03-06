@@ -44,7 +44,7 @@ export default function ConflictResolutionConfigPanel({
         .filter((x) => !usedCollectionNames.includes(x))
         .map((x) => ({ label: x, value: x }));
 
-    const { control, handleSubmit } = useForm<FormData>({
+    const { control, handleSubmit, reset } = useForm<FormData>({
         defaultValues: {
             collectionName: initialConfig.name,
             script: initialConfig.script,
@@ -94,8 +94,10 @@ export default function ConflictResolutionConfigPanel({
                     <Form onSubmit={handleSubmit(save)}>
                         <RichPanelActions>
                             <PanelActions
+                                reset={reset}
                                 isDatabaseAdmin={isDatabaseAdmin}
                                 isInEditMode={initialConfig.isInEditMode}
+                                isNewUnsaved={initialConfig.isNewUnsaved}
                                 configId={configId}
                             />
                         </RichPanelActions>
@@ -111,7 +113,9 @@ export default function ConflictResolutionConfigPanel({
                                 </>
                             }
                         >
-                            {genUtils.formatUtcDateAsLocal(initialConfig.lastModifiedTime)}
+                            {initialConfig.lastModifiedTime
+                                ? genUtils.formatUtcDateAsLocal(initialConfig.lastModifiedTime)
+                                : "(new)"}
                         </RichPanelDetailItem>
                     </RichPanelDetails>
                 </Collapse>
@@ -165,27 +169,31 @@ export default function ConflictResolutionConfigPanel({
 function PanelActions({
     isDatabaseAdmin,
     isInEditMode,
+    isNewUnsaved,
     configId,
+    reset,
 }: {
     isDatabaseAdmin: boolean;
     isInEditMode: boolean;
+    isNewUnsaved: boolean;
     configId: string;
+    reset: () => void;
 }) {
     const dispatch = useAppDispatch();
+
+    const discard = () => {
+        dispatch(conflictResolutionActions.discardEdit(configId));
+        reset();
+    };
 
     if (isDatabaseAdmin) {
         if (isInEditMode) {
             return (
                 <React.Fragment key="actions-in-edit">
-                    <Button type="submit" color="success" title="Save changes">
-                        <Icon icon="save" margin="m-0" /> Save
+                    <Button type="submit" color="success" title={isNewUnsaved ? "Add Script" : "Update Script"}>
+                        <Icon icon="tick" margin="m-0" /> {isNewUnsaved ? "Add" : "Update"}
                     </Button>
-                    <Button
-                        type="button"
-                        color="secondary"
-                        title="Discard changes"
-                        onClick={() => dispatch(conflictResolutionActions.discardEdit(configId))}
-                    >
+                    <Button type="button" color="secondary" title="Discard changes" onClick={discard}>
                         <Icon icon="cancel" margin="m-0" /> Discard
                     </Button>
                 </React.Fragment>

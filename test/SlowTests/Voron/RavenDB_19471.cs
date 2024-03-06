@@ -99,7 +99,7 @@ namespace SlowTests.Voron
                         }
                     }
                 });
-                Assert.Equal(9214364837600034815, env._validPages[0]);
+                Assert.Equal(9214364837600034815, env._validPagesAfterLoad[0]);
             }
         }
     }

@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
 
-            await GetCsvWriter().NextRecordAsync();
+            await GetCsvWriter().NextRecordAsync().ConfigureAwait(false);
         }
 
         public StreamCsvDocumentQueryResultWriter(HttpResponse response, Stream stream, string[] properties = null,

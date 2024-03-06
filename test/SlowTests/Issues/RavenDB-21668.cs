@@ -84,18 +84,10 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var rql = "from 'Messages' " +
-                              "group by Name, Tries[].ResultMessage " +
-                              "select Name, Tries[].ResultMessage as ResultMessage, sum(Data.Items[].TotalPrice) as Total";
-
-                    var results = HandleQuery<ResultDifferentPath>(store, session, rql);
-                    
-                    Assert.Equal(0, results.Count); // expected - wrong rql will produce 0 results
-
-                    rql = "from 'Messages' " +
                           "group by Name, Tries[].ResultMessage " +
                           "select Name, Tries[].ResultMessage as ResultMessage, sum(Data[].Items[].TotalPrice) as Total";
 
-                    results = HandleQuery<ResultDifferentPath>(store, session, rql);
+                    var results = HandleQuery<ResultDifferentPath>(store, session, rql);
                     
                     Assert.Equal(1, results.Count);
                     Assert.Equal("Initial", results[0].Name);

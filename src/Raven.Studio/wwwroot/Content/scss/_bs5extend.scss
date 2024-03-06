@@ -129,7 +129,7 @@
 
 .form-control,
 .form-select {
-    min-height: 37px;
+    min-height: 40px;
 
     &::placeholder {
         color: $text-muted-var;
@@ -448,6 +448,7 @@ select {
     }
 }
 
+//Styling for eye button that allows to preview password
 .preview-password {
     border-top-right-radius: $border-radius-sm !important;
     border-bottom-right-radius: $border-radius-sm !important;
@@ -457,6 +458,7 @@ select {
     z-index: 5 !important;
 }
 
+//Checkbox that activates input, e.g. Client Configuration form
 .toggle-field-checkbox {
     @extend .input-group-text;
     border-top-right-radius: 0;
@@ -466,6 +468,70 @@ select {
         .react-select-container {
             border-top-left-radius: 0;
             border-bottom-left-radius: 0;
+        }
+    }
+}
+
+//Better positioning for position absolute
+.top-gutter-xs {
+    top: $gutter-xs;
+}
+
+.end-gutter-xs {
+    right: $gutter-xs;
+}
+
+//Remove shadow from all btn-close on focus
+.btn-close:focus {
+    box-shadow: none;
+}
+
+//Styling for accordions inside modal, e.g. ConnectionTestError.tsx
+.accordion-inside-modal {
+    .description {
+        font-size: 0.75rem;
+        color: $text-muted-var;
+    }
+    .tab-icon {
+        top: 3px;
+        font-size: 1.5rem;
+    }
+    .accordion-button {
+        border-radius: $border-radius-md !important;
+        align-items: baseline;
+        transition: background-color 0.4s ease;
+        background-color: $panel-bg-2-var;
+        &:focus {
+            outline: none;
+            box-shadow: none;
+        }
+        &:not(.collapsed) {
+            background: transparent;
+            box-shadow: none;
+        }
+        h4 {
+            color: $text-emphasis-var;
+        }
+    }
+    .accordion-item {
+        background-color: $panel-bg-2-var;
+        border-radius: $border-radius-md;
+        .accordion-body {
+            padding: $gutter-xs $gutter-sm $gutter $gutter-sm;
+            pre {
+                margin-bottom: 0;
+            }
+        }
+    }
+}
+
+.well {
+    .accordion-inside-modal {
+        .accordion-button {
+            background-color: $panel-header-bg-var;
+        }
+        .accordion-item {
+            background-color: $panel-header-bg-var;
         }
     }
 }

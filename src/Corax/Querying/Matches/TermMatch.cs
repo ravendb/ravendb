@@ -88,7 +88,9 @@ namespace Corax.Querying.Matches
                 return new QueryInspectionNode($"{nameof(TermMatch)} [Empty]",
                     parameters: new Dictionary<string, string>()
                     {
-                        {nameof(term.IsBoosting), term.IsBoosting.ToString()}, {nameof(term.Count), $"{term.Count} [{term.Confidence}]"}
+                        { Constants.QueryInspectionNode.IsBoosting, term.IsBoosting.ToString() },
+                        { Constants.QueryInspectionNode.Count, term.Count.ToString()},
+                        { Constants.QueryInspectionNode.CountConfidence, term.Confidence.ToString() },
                     });
             }
 
@@ -150,7 +152,9 @@ namespace Corax.Querying.Matches
                 return new QueryInspectionNode($"{nameof(TermMatch)} [Once]",
                     parameters: new Dictionary<string, string>()
                     {
-                        {nameof(term.IsBoosting), term.IsBoosting.ToString()}, {nameof(term.Count), $"{term.Count} [{term.Confidence}]"}
+                        { Constants.QueryInspectionNode.IsBoosting, term.IsBoosting.ToString() },
+                        { Constants.QueryInspectionNode.Count, term.Count.ToString()},
+                        { Constants.QueryInspectionNode.CountConfidence, term.Confidence.ToString() },
                     });
             }
 
@@ -272,7 +276,9 @@ namespace Corax.Querying.Matches
                 return new QueryInspectionNode($"{nameof(TermMatch)} [SmallSet]",
                     parameters: new Dictionary<string, string>()
                     {
-                        {nameof(term.IsBoosting), term.IsBoosting.ToString()}, {nameof(term.Count), $"{term.Count} [{term.Confidence}]"}
+                        { Constants.QueryInspectionNode.IsBoosting, term.IsBoosting.ToString() },
+                        { Constants.QueryInspectionNode.Count, term.Count.ToString()},
+                        { Constants.QueryInspectionNode.CountConfidence, term.Confidence.ToString() },
                     });
             }
 
@@ -549,7 +555,9 @@ namespace Corax.Querying.Matches
                 return new QueryInspectionNode($"{nameof(TermMatch)} [Set]",
                     parameters: new Dictionary<string, string>()
                     {
-                        {nameof(term.IsBoosting), term.IsBoosting.ToString()}, {nameof(term.Count), $"{term.Count} [{term.Confidence}]"}
+                        { Constants.QueryInspectionNode.IsBoosting, term.IsBoosting.ToString() },
+                        { Constants.QueryInspectionNode.Count, term.Count.ToString()},
+                        { Constants.QueryInspectionNode.CountConfidence, term.Confidence.ToString() },
                     });
             }
 

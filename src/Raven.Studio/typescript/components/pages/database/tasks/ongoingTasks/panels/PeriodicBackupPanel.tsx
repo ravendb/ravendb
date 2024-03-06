@@ -76,8 +76,8 @@ function Details(props: PeriodicBackupPanelProps) {
         ? data.shared.backupDestinations.join(", ")
         : "No destinations defined";
 
-    const lastFullBackupHumanized = data.shared.lastIncrementalBackup
-        ? genUtils.formatDurationByDate(moment.utc(data.shared.lastIncrementalBackup), true)
+    const lastFullBackupHumanized = data.shared.lastFullBackup
+        ? genUtils.formatDurationByDate(moment.utc(data.shared.lastFullBackup), true)
         : neverBackedUpText;
 
     const lastIncrementalBackupHumanized = data.shared.lastIncrementalBackup

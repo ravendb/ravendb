@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using FastTests;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;

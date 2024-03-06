@@ -158,7 +158,7 @@ export default function EditRevision(props: EditRevisionProps) {
                         Limit # of revisions to keep by age
                     </FormSwitch>
                     {formValues.isMinimumRevisionAgeToKeepEnabled && (
-                        <InputGroup className="mb-2">
+                        <div className="mb-2">
                             <FormDurationPicker
                                 control={control}
                                 name="minimumRevisionAgeToKeep"
@@ -178,7 +178,7 @@ export default function EditRevision(props: EditRevisionProps) {
                                     limit={generalUtils.formatTimeSpan(revisionsByAgeDelta * 1000, true)}
                                 />
                             )}
-                        </InputGroup>
+                        </div>
                     )}
                     {(formValues.isMinimumRevisionsToKeepEnabled || formValues.isMinimumRevisionAgeToKeepEnabled) && (
                         <>

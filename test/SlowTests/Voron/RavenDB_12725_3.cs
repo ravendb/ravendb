@@ -1,7 +1,7 @@
 ﻿using System.IO;
-using FastTests;
 using FastTests.Voron;
 using Raven.Server.Config.Settings;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Xunit;

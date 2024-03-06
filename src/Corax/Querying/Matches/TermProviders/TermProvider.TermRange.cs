@@ -186,12 +186,23 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
 
     public QueryInspectionNode Inspect()
     {
-        return new QueryInspectionNode($"TermRangeProvider<{typeof(TLookupIterator).Name}, {typeof(TLow).Name}, {typeof(THigh).Name}>",
+        var lowValue = _low.Options is SliceOptions.BeforeAllKeys 
+            ? null
+            : _low.ToString();
+
+        var highValue = _high.Options is SliceOptions.AfterAllKeys 
+            ? null
+            : _high.ToString();
+        
+        return new QueryInspectionNode(nameof(TermRangeProvider<TLookupIterator, TLow, THigh>),
             parameters: new Dictionary<string, string>()
             {
-                { "Field", _field.ToString() },
-                { "Low", _low.ToString()},
-                { "High", _high.ToString()}
+                { Constants.QueryInspectionNode.FieldName, _field.ToString() },
+                { Constants.QueryInspectionNode.LowValue, lowValue},
+                { Constants.QueryInspectionNode.HighValue, highValue},
+                { Constants.QueryInspectionNode.LowOption, typeof(TLow).Name},
+                { Constants.QueryInspectionNode.HighOption, typeof(THigh).Name},
+                { Constants.QueryInspectionNode.IteratorDirection, Constants.QueryInspectionNode.IterationDirectionName<TLookupIterator>()}
             });
     }
 

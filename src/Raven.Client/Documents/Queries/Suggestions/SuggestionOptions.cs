@@ -20,6 +20,10 @@
             PageSize = DefaultPageSize;
         }
 
+        /// <summary>
+        /// Maximum number of suggested terms that will be returned
+        /// Default is 15
+        /// </summary>
         public int PageSize { get; set; }
 
         /// <summary>

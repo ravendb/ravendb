@@ -4,9 +4,15 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands.Cluster;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Utils;
 using Tests.Infrastructure;
@@ -195,6 +201,113 @@ namespace LicenseTests
                         Assert.True(detailsPerNode.UtilizedCores == 1, $"detailsPerNode.UtilizedCores:{detailsPerNode.UtilizedCores} == 1");
                     }
                 }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Licensing)]
+        [InlineData(LicenseType.None, SearchEngineType.Lucene, SearchEngineType.Lucene)]
+        [InlineData(LicenseType.None, SearchEngineType.Corax, SearchEngineType.Corax)]
+        [InlineData(LicenseType.None, SearchEngineType.None, SearchEngineType.Corax)]
+        [InlineData(LicenseType.Community, SearchEngineType.Lucene, SearchEngineType.Lucene)]
+        [InlineData(LicenseType.Community, SearchEngineType.Corax, SearchEngineType.Corax)]
+        [InlineData(LicenseType.Community, SearchEngineType.None, SearchEngineType.Corax)]
+        [InlineData(LicenseType.Developer, SearchEngineType.Lucene, SearchEngineType.Lucene)]
+        [InlineData(LicenseType.Developer, SearchEngineType.Corax, SearchEngineType.Corax)]
+        [InlineData(LicenseType.Developer, SearchEngineType.None, SearchEngineType.Corax)]
+        [InlineData(LicenseType.Professional, SearchEngineType.Lucene, SearchEngineType.Lucene)]
+        [InlineData(LicenseType.Professional, SearchEngineType.Corax, SearchEngineType.Corax)]
+        [InlineData(LicenseType.Professional, SearchEngineType.None, SearchEngineType.Lucene)]
+        [InlineData(LicenseType.Enterprise, SearchEngineType.Lucene, SearchEngineType.Lucene)]
+        [InlineData(LicenseType.Enterprise, SearchEngineType.Corax, SearchEngineType.Corax)]
+        [InlineData(LicenseType.Enterprise, SearchEngineType.None, SearchEngineType.Lucene)]
+        [InlineData(LicenseType.Essential, SearchEngineType.Lucene, SearchEngineType.Lucene)]
+        [InlineData(LicenseType.Essential, SearchEngineType.Corax, SearchEngineType.Corax)]
+        [InlineData(LicenseType.Essential, SearchEngineType.None, SearchEngineType.Lucene)]
+        public async Task UsingCorrectIndexingEngine(LicenseType licenseType, SearchEngineType serverIndexingEngineType, SearchEngineType expectedSearchEngine)
+        {
+            DoNotReuseServer();
+
+            var customSettings = new Dictionary<string, string>();
+            
+            if (serverIndexingEngineType == SearchEngineType.None)
+            {
+                customSettings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = null;
+                customSettings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = null;
+            }
+            else
+            {
+                customSettings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = serverIndexingEngineType.ToString();
+                customSettings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = serverIndexingEngineType.ToString();
+            }
+
+            var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = customSettings
+            });
+
+            using (var store = GetDocumentStore(new Options
+            {
+                CreateDatabase = false,
+                Server = server
+            }))
+            {
+                server.Configuration.UpdateLicenseType(licenseType);
+
+                var dbRecord = new DatabaseRecord(store.Database);
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(dbRecord));
+
+                var database = await GetDatabase(server, store.Database);
+                Assert.Equal(expectedSearchEngine, database.Configuration.Indexing.AutoIndexingEngineType);
+                Assert.Equal(expectedSearchEngine, database.Configuration.Indexing.StaticIndexingEngineType);
+
+                var indexToDeploy = new Index(name: "test", engineType: null);
+                await indexToDeploy.ExecuteAsync(store);
+
+                var index = database.IndexStore.GetIndex(indexToDeploy.IndexName);
+                Assert.Equal(expectedSearchEngine, index.Configuration.AutoIndexingEngineType);
+                Assert.Equal(expectedSearchEngine, index.Configuration.StaticIndexingEngineType);
+                Assert.Equal(expectedSearchEngine, index.GetStats().SearchEngineType);
+
+                indexToDeploy = new Index(name: "corax", engineType: SearchEngineType.Corax);
+                await indexToDeploy.ExecuteAsync(store);
+                index = database.IndexStore.GetIndex(indexToDeploy.IndexName);
+                Assert.Equal(SearchEngineType.Corax, index.GetStats().SearchEngineType);
+
+                indexToDeploy = new Index(name: "lucene", engineType: SearchEngineType.Lucene);
+                await indexToDeploy.ExecuteAsync(store);
+                index = database.IndexStore.GetIndex(indexToDeploy.IndexName);
+                Assert.Equal(SearchEngineType.Lucene, index.GetStats().SearchEngineType);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.Query<User>().Where(x => x.Name == "Grisha").ToListAsync();
+                }
+
+                index = database.IndexStore.GetIndex("Auto/Users/ByName");
+                Assert.Equal(expectedSearchEngine, index.Configuration.AutoIndexingEngineType);
+                Assert.Equal(expectedSearchEngine, index.Configuration.StaticIndexingEngineType);
+                Assert.Equal(expectedSearchEngine, index.GetStats().SearchEngineType);
+            }
+        }
+
+        private class Index : AbstractIndexCreationTask<User>
+        {
+            private string _name;
+
+            public override string IndexName => _name;
+
+            public Index(string name, SearchEngineType? engineType)
+            {
+                _name = name;
+
+                Map = docs =>
+                    from doc in docs
+                    select new
+                    {
+                        Name = doc.Name
+                    };
+
+                SearchEngineType = engineType;
             }
         }
     }

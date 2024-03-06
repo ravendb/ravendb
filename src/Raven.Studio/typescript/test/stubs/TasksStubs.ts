@@ -506,4 +506,26 @@ namespace Orders
             collections: [new collection("some-collection-name", 2)],
         };
     }
+
+    static backupLocation(): Raven.Server.Web.Studio.DataDirectoryResult {
+        return {
+            List: [
+                {
+                    NodeTag: "A",
+                    FullPath: "/",
+                    FreeSpaceInBytes: 6126075904,
+                    FreeSpaceHumane: "5.705 GBytes",
+                    TotalSpaceInBytes: 20738408448,
+                    TotalSpaceHumane: "19.314 GBytes",
+                    Error: "Cannot write to directory path: /",
+                },
+            ],
+        };
+    }
+
+    static localFolderPathOptions(): Raven.Server.Web.Studio.FolderPathOptions {
+        return {
+            List: ["/bin", "/boot", "/data", "/dev", "/etc"],
+        };
+    }
 }

@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Json;
@@ -35,7 +34,7 @@ namespace Raven.Server.Web.System
 
             var settingsResult = new SettingsResult();
 
-            foreach (var configurationEntryMetadata in RavenConfiguration.AllConfigurationEntries.Value)
+            foreach (var configurationEntryMetadata in ServerStore.Configuration._allConfigurationEntries.Value)
             {
                 if (scope.HasValue && scope != configurationEntryMetadata.Scope)
                     continue;

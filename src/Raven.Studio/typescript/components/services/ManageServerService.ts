@@ -9,6 +9,7 @@ import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyz
 import deleteServerWideCustomAnalyzerCommand = require("commands/serverWide/analyzers/deleteServerWideCustomAnalyzerCommand");
 import getServerWideCustomSortersCommand = require("commands/serverWide/sorters/getServerWideCustomSortersCommand");
 import deleteServerWideCustomSorterCommand = require("commands/serverWide/sorters/deleteServerWideCustomSorterCommand");
+import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testPeriodicBackupCredentialsCommand");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -45,5 +46,12 @@ export default class ManageServerService {
 
     async deleteServerWideCustomSorter(name: string) {
         return new deleteServerWideCustomSorterCommand(name).execute();
+    }
+
+    async testPeriodicBackupCredentials(
+        type: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType,
+        config: Raven.Client.Documents.Operations.Backups.BackupSettings
+    ) {
+        return new testPeriodicBackupCredentialsCommand(type, config).execute();
     }
 }

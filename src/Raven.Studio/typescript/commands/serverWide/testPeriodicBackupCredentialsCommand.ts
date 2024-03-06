@@ -2,9 +2,13 @@ import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
 class testPeriodicBackupCredentialsCommand extends commandBase {
-    constructor(private type: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType,
-                private connectionConfiguration: Raven.Client.Documents.Operations.Backups.BackupSettings) {
+    private readonly type: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType;
+    private readonly connectionConfiguration: Raven.Client.Documents.Operations.Backups.BackupSettings;
+
+    constructor(type: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType, connectionConfiguration: Raven.Client.Documents.Operations.Backups.BackupSettings) {
         super();
+        this.type = type;
+        this.connectionConfiguration = connectionConfiguration;
     }
  
     execute(): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {

@@ -157,7 +157,7 @@ namespace Raven.Server.Documents
                                 // we need to update this upon any shard topology change
                                 // and upon migration completion
                                 var databaseContext = GetOrAddShardedDatabaseContext(databaseName, rawRecord);
-                                databaseContext.UpdateDatabaseRecord(rawRecord, index);
+                                await databaseContext.UpdateDatabaseRecordAsync(rawRecord, index);
                             }
                             else
                             {
@@ -190,7 +190,11 @@ namespace Raven.Server.Documents
                 }
                 catch (ObjectDisposedException)
                 {
-                    // the server is disposed when we are trying to access to database
+                    // the server is disposed when we are trying to access the database
+                }
+                catch (OperationCanceledException)
+                {
+                    // the server is disposed when we are trying to access the database
                 }
                 catch (DatabaseConcurrentLoadTimeoutException e)
                 {
@@ -269,7 +273,7 @@ namespace Raven.Server.Documents
             switch (changeType)
             {
                 case ClusterDatabaseChangeType.RecordChanged:
-                    database.StateChanged(index);
+                    await database.StateChangedAsync(index);
                     if (type == ClusterStateMachine.SnapshotInstalled)
                     {
                         database.NotifyOnPendingClusterTransaction(index, changeType);
@@ -277,7 +281,7 @@ namespace Raven.Server.Documents
                     break;
 
                 case ClusterDatabaseChangeType.ValueChanged:
-                    database.ValueChanged(index, type, changeState);
+                    await database.ValueChangedAsync(index, type, changeState);
                     break;
 
                 case ClusterDatabaseChangeType.PendingClusterTransactions:
@@ -658,18 +662,11 @@ namespace Raven.Server.Documents
             return task.Result.DatabaseShutdown.IsCancellationRequested == false;
         }
 
-        public sealed class DatabaseSearchResult
+        public readonly struct DatabaseSearchResult(DatabaseSearchResult.Status databaseStatus, Task<DocumentDatabase> databaseTask, ShardedDatabaseContext databaseContext)
         {
-            public readonly Task<DocumentDatabase> DatabaseTask;
-            public readonly ShardedDatabaseContext DatabaseContext;
-            public readonly Status DatabaseStatus;
-
-            public DatabaseSearchResult(Status databaseStatus, Task<DocumentDatabase> databaseTask, ShardedDatabaseContext databaseContext)
-            {
-                DatabaseStatus = databaseStatus;
-                DatabaseTask = databaseTask;
-                DatabaseContext = databaseContext;
-            }
+            public readonly Task<DocumentDatabase> DatabaseTask = databaseTask;
+            public readonly ShardedDatabaseContext DatabaseContext = databaseContext;
+            public readonly Status DatabaseStatus = databaseStatus;
 
             public enum Status
             {
@@ -1515,7 +1512,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index, StateChange state)
+        public static async ValueTask NotifyFeaturesAboutStateChangeAsync(DatabaseRecord record, long index, StateChange state)
         {
             if (CanSkipDatabaseRecordChange())
                 return;
@@ -1525,7 +1522,7 @@ namespace Raven.Server.Documents
 
             while (taken == false)
             {
-                Monitor.TryEnter(state.Locker, TimeSpan.FromSeconds(5), ref taken);
+                taken = await state.Locker.WaitAsync(TimeSpan.FromSeconds(5));
 
                 try
                 {
@@ -1565,7 +1562,7 @@ namespace Raven.Server.Documents
                 {
                     if (taken)
                     {
-                        Monitor.Exit(state.Locker);
+                        state.Locker.Release();
 
                         sp?.Stop();
 
@@ -1614,7 +1611,7 @@ namespace Raven.Server.Documents
 
         public sealed class StateChange
         {
-            public readonly object Locker = new object();
+            public readonly SemaphoreSlim Locker;
             public readonly ServerStore ServerStore;
             public readonly string Name;
             public readonly CancellationToken Token;
@@ -1623,7 +1620,7 @@ namespace Raven.Server.Documents
 
             public long LastIndexChange;
 
-            public StateChange(ServerStore serverStore, string name, Logger logger, Action<DatabaseRecord, long> onChange, long lastIndexChange, CancellationToken token)
+            public StateChange(ServerStore serverStore, string name, Logger logger, Action<DatabaseRecord, long> onChange, long lastIndexChange, CancellationToken token, SemaphoreSlim locker = null)
             {
                 ServerStore = serverStore;
                 Name = name;
@@ -1631,6 +1628,7 @@ namespace Raven.Server.Documents
                 OnChange = onChange;
                 LastIndexChange = lastIndexChange;
                 Token = token;
+                Locker = locker ?? new SemaphoreSlim(1, 1);
             }
         }
     }

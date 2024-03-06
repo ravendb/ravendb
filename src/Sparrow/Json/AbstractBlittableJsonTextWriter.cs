@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -19,60 +20,72 @@ namespace Sparrow.Json
         private const byte Comma = (byte)',';
         private const byte Quote = (byte)'"';
         private const byte Colon = (byte)':';
-        public static readonly byte[] NaNBuffer = { (byte)'"', (byte)'N', (byte)'a', (byte)'N', (byte)'"' };
 
-        public static readonly byte[] PositiveInfinityBuffer =
+        public static ReadOnlySpan<byte> NewLineBuffer => "\r\n"u8;
+        public static ReadOnlySpan<byte> NaNBuffer => "\"NaN\""u8;
+        public static ReadOnlySpan<byte> PositiveInfinityBuffer => "\"Infinity\""u8;
+        public static ReadOnlySpan<byte> NegativeInfinityBuffer => "\"-Infinity\""u8;
+
+        public static readonly byte[] NullBuffer = "null"u8.ToArray();
+        public static readonly byte[] TrueBuffer = "true"u8.ToArray();
+        public static readonly byte[] FalseBuffer = "false"u8.ToArray();
+
+        /// <summary>
+        /// The original code that generates this flatten sequence.
+        /// ControlCodeEscapes = new byte[32][];
+        /// for (int i = 0; i< 32; i++)
+        /// {
+        ///    ControlCodeEscapes[i] = Encodings.Utf8.GetBytes(i.ToString("X4"));
+        /// }
+        /// 
+        /// </summary>
+        private static ReadOnlySpan<byte> _controlCodeEscapes => "0000000100020003000400050006000700080009000A000B000C000D000E000F0010001100120013001400150016001700180019001A001B001C001D001E001F"u8;
+
+        internal static ReadOnlySpan<int> ControlCodeEscapes => MemoryMarshal.Cast<byte, int>(_controlCodeEscapes);
+
+        /// <summary>
+        /// The original code that generates this flatten sequence.
+        /// EscapeCharacters = new byte[256];
+        /// for (int i = 0; i< 32; i++)
+        ///     EscapeCharacters[i] = 0;
+        ///
+        /// for (int i = 32; i<EscapeCharacters.Length; i++)
+        ///     EscapeCharacters[i] = 255;
+        ///
+        /// EscapeCharacters[(byte)'\b'] = (byte)'b';
+        /// EscapeCharacters[(byte)'\t'] = (byte)'t';
+        /// EscapeCharacters[(byte)'\n'] = (byte)'n';
+        /// EscapeCharacters[(byte)'\f'] = (byte)'f';
+        /// EscapeCharacters[(byte)'\r'] = (byte)'r';
+        /// EscapeCharacters[(byte)'\\'] = (byte)'\\';
+        /// EscapeCharacters[(byte)'/'] = (byte)'/';
+        /// EscapeCharacters[(byte)'"'] = (byte)'"';
+        /// </summary>
+        private static ReadOnlySpan<byte> EscapeCharacters => new byte[]
         {
-           (byte)'"', (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y', (byte)'"'
+              0,   0,   0,   0,   0,   0,   0,   0,  98, 116, 110,   0, 102, 114,   0,   0,
+              0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 
+            255, 255,  34, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,  47,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,  92, 255, 255, 255, 
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
         };
-
-        public static readonly byte[] NegativeInfinityBuffer =
-        {
-           (byte)'"', (byte)'-', (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y', (byte)'"'
-        };
-
-        public static readonly byte[] NullBuffer = { (byte)'n', (byte)'u', (byte)'l', (byte)'l', };
-        public static readonly byte[] TrueBuffer = { (byte)'t', (byte)'r', (byte)'u', (byte)'e', };
-        public static readonly byte[] FalseBuffer = { (byte)'f', (byte)'a', (byte)'l', (byte)'s', (byte)'e', };
-
-        internal static readonly byte[] EscapeCharacters;
-        public static readonly byte[][] ControlCodeEscapes;
-
-        static AbstractBlittableJsonTextWriter()
-        {
-            ControlCodeEscapes = new byte[32][];
-
-            for (int i = 0; i < 32; i++)
-            {
-                ControlCodeEscapes[i] = Encodings.Utf8.GetBytes(i.ToString("X4"));
-            }
-
-            EscapeCharacters = new byte[256];
-            for (int i = 0; i < 32; i++)
-                EscapeCharacters[i] = 0;
-
-            for (int i = 32; i < EscapeCharacters.Length; i++)
-                EscapeCharacters[i] = 255;
-
-            EscapeCharacters[(byte)'\b'] = (byte)'b';
-            EscapeCharacters[(byte)'\t'] = (byte)'t';
-            EscapeCharacters[(byte)'\n'] = (byte)'n';
-            EscapeCharacters[(byte)'\f'] = (byte)'f';
-            EscapeCharacters[(byte)'\r'] = (byte)'r';
-            EscapeCharacters[(byte)'\\'] = (byte)'\\';
-            EscapeCharacters[(byte)'/'] = (byte)'/';
-            EscapeCharacters[(byte)'"'] = (byte)'"';
-        }
 
         private protected readonly JsonOperationContext.MemoryBuffer _pinnedBuffer;
         private readonly byte* _buffer;
 
-        private readonly byte* _auxiliarBuffer;
-        private readonly int _auxiliarBufferLength;
-
         private protected int _pos;
         private readonly JsonOperationContext.MemoryBuffer.ReturnBuffer _returnBuffer;
-        private readonly JsonOperationContext.MemoryBuffer.ReturnBuffer _returnAuxiliarBuffer;
 
         protected AbstractBlittableJsonTextWriter(JsonOperationContext context, Stream stream)
         {
@@ -81,10 +94,6 @@ namespace Sparrow.Json
 
             _returnBuffer = context.GetMemoryBuffer(out _pinnedBuffer);
             _buffer = _pinnedBuffer.Address;
-
-            _returnAuxiliarBuffer = context.GetMemoryBuffer(32, out var buffer);
-            _auxiliarBuffer = buffer.Address;
-            _auxiliarBufferLength = buffer.Size;
         }
 
         public int Position => _pos;
@@ -205,12 +214,17 @@ namespace Sparrow.Json
             return WriteDateTime(value.Value, isUtc);
         }
 
+#if NET6_0_OR_GREATER
+        [SkipLocalsInit]
+#endif
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int WriteDateTime(DateTime value, bool isUtc)
         {
-            int size = value.GetDefaultRavenFormat(_auxiliarBuffer, _auxiliarBufferLength, isUtc);
+            var auxBuffer = stackalloc byte[32];
 
-            WriteRawStringWhichMustBeWithoutEscapeChars(_auxiliarBuffer, size);
+            int size = value.GetDefaultRavenFormat(auxBuffer, 32, isUtc);
+
+            WriteRawStringWhichMustBeWithoutEscapeChars(auxBuffer, size);
 
             return size;
         }
@@ -258,10 +272,11 @@ namespace Sparrow.Json
             EnsureBuffer(size + NumberOfQuotesChars);
             _buffer[_pos++] = Quote;
 
-            if (numberOfEscapeSequences == 0)
+            if (numberOfEscapeSequences == 0 && size < JsonOperationContext.MemoryBuffer.DefaultSize)
             {
                 // PERF: Fast Path.
-                WriteRawString(strBuffer, size);
+                Memory.Copy(_buffer + _pos, strBuffer, size);
+                _pos += size;
             }
             else
             {
@@ -293,7 +308,6 @@ namespace Sparrow.Json
                 }
 
                 var escapeCharacter = *strBuffer++;
-
                 WriteEscapeCharacter(buffer, escapeCharacter);
 
                 size--;
@@ -336,29 +350,29 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void WriteEscapeCharacter(byte* buffer, byte b)
         {
+            // We don't need to call it multiple times, we can just ensure we have enough and be done with it.
+            EnsureBuffer(6);
+
             byte r = EscapeCharacters[b];
+            buffer[_pos++] = (byte)'\\';
+            buffer[_pos++] = r == 0 ? (byte)'u' : r;  // PERF: In .Net 8.0 this is a conditional move.
+
             if (r == 0)
             {
-                EnsureBuffer(6);
-                buffer[_pos++] = (byte)'\\';
-                buffer[_pos++] = (byte)'u';
-                fixed (byte* esc = ControlCodeEscapes[b])
-                    Memory.Copy(buffer + _pos, esc, 4);
+                *(int*)(buffer + _pos) = ControlCodeEscapes[b];
                 _pos += 4;
                 return;
             }
 
             if (r != 255)
-            {
-                EnsureBuffer(2);
-                buffer[_pos++] = (byte)'\\';
-                buffer[_pos++] = r;
                 return;
-            }
 
             ThrowInvalidEscapeCharacter(b);
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private void ThrowInvalidEscapeCharacter(byte b)
         {
             throw new InvalidOperationException("Invalid escape char '" + (char)b + "' numeric value is: " + b);
@@ -389,7 +403,9 @@ namespace Sparrow.Json
                 {
                     numberOfEscapeSequences--;
                     var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(strSrcBuffer, ref escapeSequencePos);
+
                     WriteRawString(strBuffer, bytesToSkip);
+
                     strBuffer += bytesToSkip;
                     size -= bytesToSkip + 1 /*for the escaped char we skip*/;
                     var b = *(strBuffer++);
@@ -442,8 +458,18 @@ namespace Sparrow.Json
         {
             EnsureBuffer(size + 2);
             _buffer[_pos++] = Quote;
-            WriteRawString(buffer, size);
-            _buffer[_pos++] = Quote;
+
+            if (size + 2 < JsonOperationContext.MemoryBuffer.DefaultSize)
+            {
+                Memory.Copy(_buffer + _pos, buffer, size);
+                _pos += size;
+                _buffer[_pos++] = Quote;
+            }
+            else
+            {
+                UnlikelyWriteLargeRawString(buffer, size);
+                _buffer[_pos++] = Quote;
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -476,20 +502,33 @@ namespace Sparrow.Json
 
         private void UnlikelyWriteLargeRawString(ReadOnlySpan<byte> buffer)
         {
+            ref byte bufferStart = ref MemoryMarshal.GetReference(buffer);
+            ref byte destination = ref Unsafe.AsRef<byte>(_buffer);
+
             // need to do this in pieces
             var posInStr = 0;
             while (posInStr < buffer.Length)
             {
-                var amountToCopy = Math.Min(buffer.Length - posInStr, JsonOperationContext.MemoryBuffer.DefaultSize);
-                FlushInternal();
+                var amountToCopy = Math.Min(buffer.Length - posInStr, JsonOperationContext.MemoryBuffer.DefaultSize - _pos);
+                if (amountToCopy == 0)
+                    goto End; // There is no space available to copy anything, let's just skip and move to flush. 
 
                 Unsafe.CopyBlockUnaligned(
-                    ref Unsafe.AsRef<byte>(_buffer), 
-                    ref Unsafe.AddByteOffset( ref MemoryMarshal.GetReference(buffer), (uint)posInStr ),
-                    (uint)buffer.Length);
+                    ref Unsafe.AddByteOffset(ref destination, (uint)_pos),
+                    ref Unsafe.AddByteOffset(ref bufferStart, (uint)posInStr),
+                    (uint)amountToCopy);
 
                 posInStr += amountToCopy;
-                _pos = amountToCopy;
+                _pos += amountToCopy;
+
+                // We are not gonna waste a buffer flush if we still have space for other things.
+                // Therefore, we will check if we are done (which is fast) and just break out if
+                // that's the case.
+                if (posInStr == buffer.Length)
+                    break;
+
+                End:
+                FlushInternal();
             }
         }
 
@@ -499,11 +538,22 @@ namespace Sparrow.Json
             var posInStr = 0;
             while (posInStr < size)
             {
-                var amountToCopy = Math.Min(size - posInStr, JsonOperationContext.MemoryBuffer.DefaultSize);
-                FlushInternal();
-                Memory.Copy(_buffer, buffer + posInStr, amountToCopy);
+                var amountToCopy = Math.Min(size - posInStr, JsonOperationContext.MemoryBuffer.DefaultSize - _pos);
+                if (amountToCopy == 0)
+                    goto End; // There is no space available to copy anything, let's just skip and move to flush. 
+
+                Memory.Copy(_buffer + _pos, buffer + posInStr, amountToCopy);
                 posInStr += amountToCopy;
-                _pos = amountToCopy;
+                _pos += amountToCopy;
+
+                // We are not gonna waste a buffer flush if we still have space for other things.
+                // Therefore, we will check if we are done (which is fast) and just break out if
+                // that's the case.
+                if (posInStr == size)
+                    break;
+
+                End:
+                FlushInternal();
             }
         }
 
@@ -537,22 +587,29 @@ namespace Sparrow.Json
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void EnsureBuffer(int len)
-        { 
-            if (len >= JsonOperationContext.MemoryBuffer.DefaultSize)
-                ThrowValueTooBigForBuffer(len);
+        {
+            // If len is bigger than the default size, then we will fail this check either way.
+            // therefore, we can remove a check from the fast-path even if highly predictable.
             if (_pos + len < JsonOperationContext.MemoryBuffer.DefaultSize)
                 return;
 
-            FlushInternal();
+            if (len < JsonOperationContext.MemoryBuffer.DefaultSize)
+            {
+                FlushInternal();
+                return;
+            }
+
+            ThrowValueTooBigForBuffer(len);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected virtual bool FlushInternal()
         {
             if (_stream == null)
                 ThrowStreamClosed();
+
             if (_pos == 0)
                 return false;
+
             _stream.Write(_pinnedBuffer.Memory.Memory.Span.Slice(0, _pos));
             _stream.Flush();
 
@@ -560,12 +617,18 @@ namespace Sparrow.Json
             return true;
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowValueTooBigForBuffer(int len)
         {
             // ReSharper disable once NotResolvedInText
             throw new ArgumentOutOfRangeException("len", len, "Length value too big: " + len);
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private void ThrowStreamClosed()
         {
             throw new ObjectDisposedException("The stream was closed already.");
@@ -575,20 +638,26 @@ namespace Sparrow.Json
         public void WriteNull()
         {
             EnsureBuffer(4);
-            for (int i = 0; i < 4; i++)
-            {
-                _buffer[_pos++] = NullBuffer[i];
-            }
+
+            Unsafe.WriteUnaligned(_buffer + _pos, Unsafe.ReadUnaligned<int>(ref NullBuffer[0]));
+            _pos += sizeof(int);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteBool(bool val)
         {
             EnsureBuffer(5);
-            var buffer = val ? TrueBuffer : FalseBuffer;
-            for (int i = 0; i < buffer.Length; i++)
+
+            if (val)
             {
-                _buffer[_pos++] = buffer[i];
+                Unsafe.WriteUnaligned(_buffer + _pos, Unsafe.ReadUnaligned<int>(ref TrueBuffer[0]));
+                _pos += sizeof(int);
+            }
+            else
+            {
+                Unsafe.WriteUnaligned(_buffer + _pos, Unsafe.ReadUnaligned<int>(ref FalseBuffer[0]));
+                _pos += sizeof(int);
+                _buffer[_pos++] = FalseBuffer[sizeof(int)];
             }
         }
 
@@ -596,13 +665,13 @@ namespace Sparrow.Json
         public void WriteComma()
         {
             EnsureBuffer(1);
-            _buffer[_pos++] = Comma;
+            Unsafe.WriteUnaligned(_buffer + _pos, Comma);
+            _pos++;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WritePropertyName(ReadOnlySpan<byte> prop)
         {
-            EnsureBuffer(prop.Length);
             WriteRawString(prop);
         }
 
@@ -611,8 +680,10 @@ namespace Sparrow.Json
         public void WritePropertyName(LazyStringValue prop)
         {
             WriteString(prop);
+
             EnsureBuffer(1);
-            _buffer[_pos++] = Colon;
+            Unsafe.WriteUnaligned(_buffer + _pos, Colon);
+            _pos++;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -620,8 +691,10 @@ namespace Sparrow.Json
         {
             var lazyProp = _context.GetLazyStringForFieldWithCaching(prop);
             WriteString(lazyProp);
+
             EnsureBuffer(1);
-            _buffer[_pos++] = Colon;
+            Unsafe.WriteUnaligned(_buffer + _pos, Colon);
+            _pos++;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -629,20 +702,27 @@ namespace Sparrow.Json
         {
             var lazyProp = _context.GetLazyStringForFieldWithCaching(prop);
             WriteString(lazyProp);
+
             EnsureBuffer(1);
-            _buffer[_pos++] = Colon;
+            Unsafe.WriteUnaligned(_buffer + _pos, Colon);
+            _pos++;
         }
 
+#if NET6_0_OR_GREATER
+        [SkipLocalsInit]
+#endif
         public void WriteInteger(long val)
         {
             if (val == 0)
             {
                 EnsureBuffer(1);
-                _buffer[_pos++] = (byte)'0';
+                Unsafe.WriteUnaligned(_buffer + _pos, (byte)'0');
+                _pos++;
+
                 return;
             }
 
-            var localBuffer = _auxiliarBuffer;
+            var localBuffer = stackalloc byte[32];
 
             int idx = 0;
             var negative = false;
@@ -712,18 +792,11 @@ namespace Sparrow.Json
             WriteRawString(lazyStringValue.Buffer, lazyStringValue.Size);
         }
 
-        public void WriteBufferFor(byte[] buffer)
-        {
-            WriteBufferFor(buffer.AsSpan());
-        }
-
         public void WriteBufferFor(ReadOnlySpan<byte> buffer)
         {
             EnsureBuffer(buffer.Length);
-            for (int i = 0; i < buffer.Length; i++)
-            {
-                _buffer[_pos++] = buffer[i];
-            }
+            buffer.CopyTo(new Span<byte>(_buffer + _pos, buffer.Length));
+            _pos += buffer.Length;
         }
 
         public void WriteDouble(double val)
@@ -773,15 +846,14 @@ namespace Sparrow.Json
             finally
             {
                 _returnBuffer.Dispose();
-                _returnAuxiliarBuffer.Dispose();
             }
         }
 
         public void WriteNewLine()
         {
             EnsureBuffer(2);
-            _buffer[_pos++] = (byte)'\r';
-            _buffer[_pos++] = (byte)'\n';
+            Unsafe.WriteUnaligned(_buffer + _pos, Unsafe.ReadUnaligned<short>(ref MemoryMarshal.GetReference(NewLineBuffer)));
+            _pos += sizeof(short);
         }
 
         public void WriteMemoryChunk(IntPtr ptr, int size)
@@ -791,13 +863,15 @@ namespace Sparrow.Json
 
         public void WriteMemoryChunk(byte* ptr, int size)
         {
-            FlushInternal();
             var leftToWrite = size;
+            if (leftToWrite >= JsonOperationContext.MemoryBuffer.DefaultSize - _pos)
+                FlushInternal();
+
             var totalWritten = 0;
             while (leftToWrite > 0)
             {
-                var toWrite = Math.Min(JsonOperationContext.MemoryBuffer.DefaultSize, leftToWrite);
-                Memory.Copy(_buffer, ptr + totalWritten, toWrite);
+                var toWrite = Math.Min(JsonOperationContext.MemoryBuffer.DefaultSize - _pos, leftToWrite);
+                Memory.Copy(_buffer + _pos, ptr + totalWritten, toWrite);
                 _pos += toWrite;
                 totalWritten += toWrite;
                 leftToWrite -= toWrite;

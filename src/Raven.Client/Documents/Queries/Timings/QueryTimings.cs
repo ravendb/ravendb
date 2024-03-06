@@ -1,16 +1,29 @@
 ﻿using System.Collections.Generic;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Queries.Timings
 {
+    /// <summary>
+    ///     Representation of query timings.
+    ///     Consists of total time spent on server-side execution of query, and time spent on each query part.
+    /// </summary>
+    /// <see ref="https://ravendb.net/docs/article-page/6.0/Csharp/client-api/session/querying/debugging/query-timings"/>
     public sealed class QueryTimings : IFillFromBlittableJson, IDynamicJson
     {
+        /// <summary>
+        ///     Total time spent on server-side query execution in milliseconds.
+        /// </summary>
         public long DurationInMs { get; set; }
 
+        /// <summary>
+        ///     Query timings for each part of query.
+        /// </summary>
         public IDictionary<string, QueryTimings> Timings { get; set; }
         
+        [JsonIgnore]
         public IDynamicJson QueryPlan { get; set; }
 
         internal bool ShouldBeIncluded { get; set; }
@@ -18,6 +31,12 @@ namespace Raven.Client.Documents.Queries.Timings
         public void FillFromBlittableJson(BlittableJsonReaderObject json)
         {
             var timings = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<QueryTimings>(json, "query/timings");
+
+            if (json.TryGetMember(nameof(QueryPlan), out var queryPlanObject) && queryPlanObject is BlittableJsonReaderObject queryPlanReader)
+            {
+                QueryPlan = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<QueryInspectionNode>(queryPlanReader, "query/timings/query_plan");
+            }
+            
             DurationInMs = timings.DurationInMs;
             Timings = timings.Timings;
         }
@@ -34,10 +53,15 @@ namespace Raven.Client.Documents.Queries.Timings
                 }
             }
 
+            var queryPlanCloned = default(IDynamicJson);
+            if (QueryPlan is QueryInspectionNode qin)
+                queryPlanCloned = qin.Clone();
+            
             return new QueryTimings
             {
                 DurationInMs = DurationInMs,
-                Timings = timings
+                Timings = timings,
+                QueryPlan = queryPlanCloned
             };
         }
 
@@ -51,6 +75,7 @@ namespace Raven.Client.Documents.Queries.Timings
 
             DurationInMs = queryResult.Timings.DurationInMs;
             Timings = queryResult.Timings.Timings;
+            QueryPlan = queryResult.Timings.QueryPlan;
         }
 
         public DynamicJsonValue ToJson()

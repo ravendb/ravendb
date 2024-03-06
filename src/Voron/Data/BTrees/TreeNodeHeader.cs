@@ -52,8 +52,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.ExternalScope ToSlicePtr(ByteStringContext context, TreeNodeHeader* node, out Slice slice)
         {
-            ByteString str;
-            var scope = context.FromPtr((byte*)node + Constants.Tree.NodeHeaderSize, node->KeySize, ByteStringType.Mutable | (ByteStringType)SliceOptions.Key, out str);
+            var scope = context.FromPtr((byte*)node + Constants.Tree.NodeHeaderSize, node->KeySize, ByteStringType.Mutable | (ByteStringType)SliceOptions.Key, out ByteString str);
             slice = new Slice(str);
             return scope;
         }
@@ -91,6 +90,17 @@ namespace Voron.Data.BTrees
                 return Slice.External(tx.Allocator, overFlowPage.Pointer + Constants.Tree.PageHeaderSize, (ushort)overFlowPage.OverflowSize, out slice);
             }
             return Slice.External(tx.Allocator, (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize, (ushort) node->DataSize, out slice);
+        }
+
+        public static ReadOnlySpan<byte> GetKeyAsSpan(TreeNodeHeader* node)
+        {
+            return new ReadOnlySpan<byte>((byte*)node + Constants.Tree.NodeHeaderSize, node->KeySize);
+        }
+
+        public static byte* GetKeyPtr(TreeNodeHeader* node, out int size)
+        {
+            size = node->KeySize;
+            return (byte*)node + Constants.Tree.NodeHeaderSize;
         }
     }
 }

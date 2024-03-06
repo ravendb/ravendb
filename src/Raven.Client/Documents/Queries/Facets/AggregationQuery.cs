@@ -36,6 +36,7 @@ namespace Raven.Client.Documents.Queries.Facets
             _aggregateByMethod = aggregateByMethod;
         }
 
+        /// <inheritdoc/>
         public IAggregationQuery<T> AndAggregateBy(Action<IFacetBuilder<T>> builder = null)
         {
             var f = new FacetBuilder<T>(((IRavenQueryProvider)_source.Provider).QueryGenerator.Conventions);
@@ -44,6 +45,7 @@ namespace Raven.Client.Documents.Queries.Facets
             return AndAggregateBy(f.Facet);
         }
 
+        /// <inheritdoc/>
         public IAggregationQuery<T> AndAggregateBy(FacetBase facet)
         {
             var expression = _convertExpressionIfNecessary(_source);

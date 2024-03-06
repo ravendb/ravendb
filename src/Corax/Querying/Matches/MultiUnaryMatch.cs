@@ -501,24 +501,31 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
 
     public QueryInspectionNode Inspect()
     {
-        var dict = new Dictionary<string, string>()
+        var parameters = new Dictionary<string, string>()
         {
-            {nameof(Count), $"Unknown"}
+            {Constants.QueryInspectionNode.IsBoosting, IsBoosting.ToString()},
+            {Constants.QueryInspectionNode.Count, _inner.Count.ToString()},
+            {Constants.QueryInspectionNode.CountConfidence, QueryCountConfidence.Low.ToString()},
         };
 
         for (int index = 0; index < _comparers.Length; index++)
         {
             MultiUnaryItem comparer = _comparers[index];
-            var text = $"{comparer.Mode} ({comparer.Type}) {comparer.LeftSideOperation} ({comparer.LeftAsString()})";
-
+            var prefix = Constants.QueryInspectionNode.Comparer + index + "_";
+            parameters.Add(prefix + Constants.QueryInspectionNode.FieldType, comparer.Type.ToString());
+            parameters.Add(prefix + Constants.QueryInspectionNode.Operation, comparer.Mode.ToString());
+            parameters.Add(prefix + (comparer.IsBetween ? Constants.QueryInspectionNode.Term : Constants.QueryInspectionNode.LowValue), comparer.LeftAsString());
+            parameters.Add(prefix + Constants.QueryInspectionNode.LowOption, comparer.LeftSideOperation.ToString());
+            
             if (comparer.IsBetween)
-                text += $" BETWEEN {comparer.RightSideOperation} ({comparer.RightAsString()})";
-
-            dict[index.ToString()] = text;
+            {
+                parameters.Add(prefix + Constants.QueryInspectionNode.HighValue, comparer.RightAsString());
+                parameters.Add(prefix + Constants.QueryInspectionNode.LowOption, comparer.LeftSideOperation.ToString());
+            }
         }
 
         return new QueryInspectionNode($"{nameof(MultiUnaryMatch<TInner>)}",
             children: new List<QueryInspectionNode> { _inner.Inspect() },
-            parameters: dict);
+            parameters: parameters);
     }
 }

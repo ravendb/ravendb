@@ -1,0 +1,96 @@
+﻿.queryPlan {
+    
+    .boost-true {
+        fill: var(--bs-success);
+    }
+    .boost-false {
+        fill: var(--bs-danger);
+    }
+    .order-icon {
+        fill: var(--bs-success);
+    }
+    .overlay {
+        fill: none;
+        pointer-events: all;
+    }
+    .execution-type-icon {
+        fill: var(--text-emphasis);
+        font-size: 32px;
+        alignment-baseline: central;
+    }
+    
+    .direction-type-icon {
+        fill: @color-3;
+        font-size: 24px;
+        alignment-baseline: central;
+    }
+    
+    .order-type-icon {
+        fill: @color-3;
+        font-size: 24px;
+        alignment-baseline: central;
+    }
+
+    .nodeContainer {
+        fill: var(--panel-bg-1);
+    }
+
+    .header {
+        fill: var(--panel-bg-3);
+    }
+
+    .link {
+        fill: none;
+        stroke-width: 2;
+        stroke-miterlimit: 10;
+        vector-effect: non-scaling-stroke;
+
+        &.level-0 {
+            stroke: @color-2;
+        }
+        
+        &.level-1 {
+            stroke: @color-3;
+        }
+
+        &.level-2 {
+            stroke: @color-3-2;
+        }
+
+        &.level-3 {
+            stroke: @color-4;
+        }
+
+        &.level-4 {
+            stroke: @color-4-2;
+        }
+
+        &.level-5 {
+            stroke: @color-5;
+        }
+
+        &.level-6 {
+            stroke: @color-5-2;
+        }
+
+        &.level-7 {
+            stroke: @color-1;
+        }
+    }
+    
+    .parameter {
+        cursor: default; 
+        fill-opacity: 1;
+        transition: fill-opacity .2s ease;
+        
+        fill: var(--text-color);
+        font-size: 16px;
+        alignment-baseline: middle;
+    }
+    
+    .title {
+        cursor: default;
+        font-size: 21px;
+        fill: var(--text-emphasis);
+    }
+}

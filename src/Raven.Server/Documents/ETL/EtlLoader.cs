@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -480,7 +481,6 @@ namespace Raven.Server.Documents.ETL
             var myElasticSearchEtl = new List<ElasticSearchEtlConfiguration>();
             var myQueueEtl = new List<QueueEtlConfiguration>();
 
-
             var responsibleNodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var config in record.RavenEtls)
@@ -672,45 +672,70 @@ namespace Raven.Server.Documents.ETL
                 }
             }
 
-            Parallel.ForEach(toRemove, x =>
-            {
-                foreach (var process in x.Value)
-                {
-                    _database.DatabaseShutdown.ThrowIfCancellationRequested();
-
-                    try
-                    {
-                        string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, responsibleNodes);
-
-                        process.Stop(reason);
-                    }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Failed to stop ETL process {process.Name} on the database record change", e);
-                    }
-                }
-            });
-
             LoadProcesses(record, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, toRemove.SelectMany(x => x.Value).ToList());
 
-            Parallel.ForEach(toRemove, x =>
-            {
-                foreach (var process in x.Value)
-                {
-                    _database.DatabaseShutdown.ThrowIfCancellationRequested();
+            if (toRemove.Count == 0)
+                return;
 
-                    try
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                Parallel.ForEach(toRemove, x =>
+                {
+                    foreach (var process in x.Value)
                     {
-                        process.Dispose();
+                        var sp = Stopwatch.StartNew();
+
+                        try
+                        {
+                            if (_database.DatabaseShutdown.IsCancellationRequested)
+                                return;
+
+                            using (process)
+                            {
+                                string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, responsibleNodes);
+                                process.Stop(reason);
+                            }
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                        }
+                        catch (Exception e)
+                        {
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"Failed to dispose ETL process {process.Name} on the database record change", e);
+                        }
+                        finally
+                        {
+                            LogLongRunningDisposeIfNeeded(sp, process.Name);
+                        }
                     }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Failed to dispose ETL process {process.Name} on the database record change", e);
-                    }
-                }
+                });
             });
+        }
+
+        private void LogLongRunningDisposeIfNeeded(Stopwatch sp, string processName)
+        {
+            try
+            {
+                if (sp == null || Logger.IsOperationsEnabled == false)
+                    return;
+
+                sp.Stop();
+
+                if (sp.Elapsed <= TimeSpan.FromSeconds(15))
+                    return;
+
+                var msg = $"Dispose of ETL process {processName} on the database record change was running for a very long time {sp.Elapsed}";
+                Logger.Operations(msg);
+
+#if !RELEASE
+                Console.WriteLine(msg);
+#endif
+            }
+            catch
+            {
+                // nothing that we can do
+            }
         }
 
         private static string GetStopReason(

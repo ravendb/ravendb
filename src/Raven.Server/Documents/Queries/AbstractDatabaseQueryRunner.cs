@@ -95,7 +95,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
                 return SuggestionQueryResult.NotModifiedResult;
         }
 
-        return await index.SuggestionQuery(query, queryContext, token);
+        return await index.SuggestionQuery(query, queryContext, token).ConfigureAwait(false);
     }
 
     protected Task<IOperationResult> ExecuteDelete(IndexQueryServerSide query, Index index, QueryOperationOptions options, QueryOperationContext queryContext, Action<DeterminateProgress> onProgress, OperationCancelToken token)
@@ -203,7 +203,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
                     maxTransactionSize: 16 * Constants.Size.Megabyte,
                     batchSize: batchSize);
 
-                await Database.TxMerger.Enqueue(command);
+                await Database.TxMerger.Enqueue(command).ConfigureAwait(false);
 
                 progress.Processed += command.Processed;
 

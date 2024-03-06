@@ -107,7 +107,7 @@ public static class CoraxQueryBuilder
                     break;
             }
             
-            if (orderMetadata is null
+            if (orderMetadata is null or {Length: 0}
                 || hasSpecialSorter
                 || searcher.HasMultipleTermsInField(orderMetadata[0].Field) 
                 || hasBoosting)
@@ -354,7 +354,7 @@ public static class CoraxQueryBuilder
                                 right = ToCoraxQuery(builderParameters, ne1.Expression, ref builderParameters.StreamingDisabled, exact);
                                 TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged,
                                     ref builderParameters.StreamingDisabled,  requiredMaterialization: true);
-                                return indexSearcher.AndNot(right, left, token: builderParameters.Token);
+                                return indexSearcher.AndNot(left, right, token: builderParameters.Token);
                             }
 
                             if (@where.Right is TrueExpression)
@@ -1063,7 +1063,7 @@ public static class CoraxQueryBuilder
                 QueryBuilderHelper.ThrowInvalidOperatorInSearch(metadata, queryParameters, fieldExpression);
         }
         
-        return indexSearcher.SearchQuery(fieldMetadata, GetValues(), @operator, builderParameters.Token);
+        return indexSearcher.SearchQuery(fieldMetadata, GetValues(), @operator, builderParameters.Index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.PhraseQuerySupportInCoraxIndexes, builderParameters.Token);
         
         /*
          * Here we need to deal with value that comes from the user, which means that we
@@ -1299,18 +1299,22 @@ public static class CoraxQueryBuilder
             if (field.OrderingType == OrderByFieldType.Score)
             {
                 if (field.Ascending)
-                    sortArray[sortIndex++] = new OrderMetadata(true, MatchCompareFieldType.Score, true);
-                else
                     sortArray[sortIndex++] = new OrderMetadata(true, MatchCompareFieldType.Score);
+                else
+                    sortArray[sortIndex++] = new OrderMetadata(true, MatchCompareFieldType.Score, ascending: false);
 
                 continue;
             }
-
+            
+            var fieldMetadata = QueryBuilderHelper.GetFieldIdForOrderBy(allocator, field.Name, index, builderParameters.HasDynamics,
+                builderParameters.DynamicFields, indexMapping, queryMapping, false);
+            
+            if (builderParameters.IndexSearcher.GetTermAmountInField(fieldMetadata) == 0)
+                continue;
+            
             if (field.OrderingType == OrderByFieldType.Distance)
             {
                 var spatialField = getSpatialField(field.Name);
-                var fieldMetadata = QueryBuilderHelper.GetFieldIdForOrderBy(allocator, field.Name, index, builderParameters.HasDynamics,
-                    builderParameters.DynamicFields, indexMapping, queryMapping, false);
 
                 int lastArgument;
                 IPoint point;
@@ -1356,7 +1360,7 @@ public static class CoraxQueryBuilder
             }
 
             var orderingType = field.OrderingType;
-            if (index.Configuration.OrderByTicksAutomaticallyWhenDatesAreInvolved && index.IndexFieldsPersistence.HasTimeValues(field.Name.Value))
+            if (orderingType is OrderByFieldType.Implicit && index.Configuration.OrderByTicksAutomaticallyWhenDatesAreInvolved && index.IndexFieldsPersistence.HasTimeValues(field.Name.Value))
                 orderingType = OrderByFieldType.Long;
 
             var metadataField = QueryBuilderHelper.GetFieldIdForOrderBy(allocator, field.Name.Value, index, builderParameters.HasDynamics,

@@ -15,73 +15,87 @@ namespace Raven.Client.Documents.Session
     public interface IAsyncDocumentQueryBase<T>
     {
         /// <summary>
-        /// Register the query as a lazy-count query and return a lazy instance that will evaluate the query when needed.
+        ///     Registers the lazy-count query and returns its lazy instance that will be evaluated on request.
         /// </summary>
+        /// <param name="token">Cancellation token for this operation.</param>
         Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default);
 
         /// <summary>
-        ///     Executed the query and returns the results.
+        ///     Executes the query and returns the results as a list.
         /// </summary>
+        /// <param name="token">Cancellation token for this operation.</param>
         Task<List<T>> ToListAsync(CancellationToken token = default);
 
         /// <summary>
-        ///     Executed the query and returns the results.
+        ///     Executes the query and returns the results as an array.
         /// </summary>
+        /// <param name="token">Cancellation token for this operation.</param>
         Task<T[]> ToArrayAsync(CancellationToken token = default);
 
         /// <summary>
-        ///     Returns first element or throws if sequence is empty.
+        ///     Returns first result of the query.
         /// </summary>
+        /// <param name="token">Cancellation token for this operation.</param>
+        /// <exception cref="InvalidOperationException">Results are empty.</exception>
         Task<T> FirstAsync(CancellationToken token = default);
 
         /// <summary>
-        ///     Returns first element or default value for type if sequence is empty.
+        ///     Returns first result of the query, or default value for queried type if there are none.
         /// </summary>
+        /// <param name="token">Cancellation token for this operation.</param>
         Task<T> FirstOrDefaultAsync(CancellationToken token = default);
 
         /// <summary>
-        ///     Returns first element or throws if sequence is empty or contains more than one element.
+        ///     Returns single result of the query.
         /// </summary>
+        /// <param name="token">Cancellation token for this operation.</param>
+        /// <exception cref="InvalidOperationException">There is not exactly one result.</exception>
         Task<T> SingleAsync(CancellationToken token = default);
 
         /// <summary>
-        ///     Returns first element or default value for given type if sequence is empty. Throws if sequence contains more than
-        ///     one element.
+        ///     Returns single result of the query, or default value for given type if sequence is empty.
+        ///     Throws if there is more than one result.
         /// </summary>
+        /// <param name="token">Cancellation token for this operation.</param>
+        /// <exception cref="InvalidOperationException">There is more than a single result.</exception>
         Task<T> SingleOrDefaultAsync(CancellationToken token = default);
 
         /// <summary>
-        ///     Checks if the given query matches any records
+        ///     Checks if query returns any results.
         /// </summary>
+        /// <param name="token">Cancellation token for this operation.</param>
         Task<bool> AnyAsync(CancellationToken token = default);
 
         /// <summary>
-        /// Gets the total count of records for this query
+        ///     Gets the total count of query results.
         /// </summary>
+        /// <param name="token">Cancellation token for this operation.</param>
         Task<int> CountAsync(CancellationToken token = default);
 
         /// <summary>
-        /// Gets the total count of records for this query as int64 
+        ///     Gets the total count of query results as int64.
         /// </summary>
+        /// <param name="token">Cancellation token for this operation.</param>
         Task<long> LongCountAsync(CancellationToken token = default);
 
         /// <summary>
-        ///     Register the query as a lazy query and return a lazy
-        ///     instance that will evaluate the query only when needed.
-        /// Also provide a function to execute when the value is evaluated
+        ///     Registers the lazy query and returns its lazy instance that will be evaluated on request.
+        ///     Allows to add a method that will be executed on query evaluation.
         /// </summary>
+        /// <param name="onEval">Action wrapping a method that will be executed on query evaluation. Default: null.</param>
         Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval = null);
     }
 
+    /// <inheritdoc cref="IRawDocumentQuery{T}" />
     public interface IAsyncRawDocumentQuery<T> :
         IPagingDocumentQueryBase<T, IAsyncRawDocumentQuery<T>>,
         IQueryBase<T, IAsyncRawDocumentQuery<T>>,
         IAsyncDocumentQueryBase<T>
     {
+        /// <inheritdoc cref="IRawDocumentQuery{T}.Projection" />
         IAsyncRawDocumentQuery<T> Projection(ProjectionBehavior projectionBehavior);
-        /// <summary>
-        ///    Execute raw query aggregated by facet
-        /// </summary>
+        
+        /// <inheritdoc cref="IRawDocumentQuery{T}.ExecuteAggregation" />
         Task<Dictionary<string, FacetResult>> ExecuteAggregationAsync(CancellationToken token = default);
     }
 
@@ -158,6 +172,7 @@ namespace Raven.Client.Documents.Session
 
         IAsyncGroupByDocumentQuery<T> GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields);
 
+        /// <inheritdoc cref="IDocumentQuery{T}.MoreLikeThis(System.Action{Raven.Client.Documents.Queries.MoreLikeThis.IMoreLikeThisBuilderForDocumentQuery{T}})"/>
         IAsyncDocumentQuery<T> MoreLikeThis(Action<IMoreLikeThisBuilderForAsyncDocumentQuery<T>> builder);
 
         /// <summary>
@@ -176,8 +191,10 @@ namespace Raven.Client.Documents.Session
 
         IAsyncAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentId);
 
+        /// <inheritdoc cref="ISuggestionQuery{T}.AndSuggestUsing(SuggestionBase)"/>
         IAsyncSuggestionDocumentQuery<T> SuggestUsing(SuggestionBase suggestion);
 
+        /// <inheritdoc cref="ISuggestionQuery{T}.AndSuggestUsing(Action{ISuggestionBuilder{T}})"/>
         IAsyncSuggestionDocumentQuery<T> SuggestUsing(Action<ISuggestionBuilder<T>> builder);
 
         IRavenQueryable<T> ToQueryable();

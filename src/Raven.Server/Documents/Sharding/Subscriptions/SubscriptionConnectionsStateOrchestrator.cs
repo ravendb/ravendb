@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
+using Raven.Client.Util;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
@@ -143,7 +144,29 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
 
     public override async Task HandleConnectionExceptionAsync(OrchestratedSubscriptionConnection connection, Exception e)
     {
-        await base.HandleConnectionExceptionAsync(connection, e);
+        var t = DisposeWorkersAsync(waitForSubscriptionTask: true);
+
+        try
+        {
+            await base.HandleConnectionExceptionAsync(connection, e);
+        }
+        finally
+        {
+            try
+            {
+                // we await here to make sure that we disposed the workers before we drop the subscription
+                await t;
+            }
+            catch (Exception ex)
+            {
+                // connection is disposed
+                if (connection._logger.IsInfoEnabled)
+                {
+                    connection._logger.Info("Got exception while disposing sharded subscription workers", ex);
+                }
+            }
+        }
+
         if (e is SubscriptionException se and not SubscriptionChangeVectorUpdateConcurrencyException and not SubscriptionInUseException)
         {
             DropSubscription(se);
@@ -156,11 +179,13 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
 
     public override void Dispose()
     {
-        DisposeWorkers();
+        var dispose = DisposeWorkersAsync(waitForSubscriptionTask: false).AsTask();
+        AsyncHelpers.RunSync(() => dispose);
+    
         base.Dispose();
     }
 
-    public void DisposeWorkers()
+    public async ValueTask DisposeWorkersAsync(bool waitForSubscriptionTask)
     {
         var workers = _shardWorkers;
         var connection = _initialConnection;
@@ -176,19 +201,14 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
         if (workers == null || workers.Count == 0)
             return;
 
-        Parallel.ForEach(workers, (w) =>
+        var list = new List<Task>();
+        foreach (var w in workers)
         {
-            try
-            {
-                w.Value.Dispose();
-            }
-            catch
-            {
-                // ignore
-            }
-        });
+            var t = w.Value.DisposeAsync(waitForSubscriptionTask).AsTask();
+            list.Add(t);
+        }
 
-
+        await Task.WhenAll(list);
         if (Interlocked.CompareExchange(ref _initialConnection, null, connection) == connection)
         {
             _shardWorkers = null;

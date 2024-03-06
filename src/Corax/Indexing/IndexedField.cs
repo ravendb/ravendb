@@ -3,6 +3,7 @@ using Corax.Analyzers;
 using Corax.Mappings;
 using Sparrow.Collections;
 using Voron;
+using Voron.Util;
 
 namespace Corax.Indexing;
 
@@ -17,6 +18,11 @@ internal sealed class IndexedField
     public Dictionary<long, SpatialEntry> Spatial;
     public readonly FastList<EntriesModifications> Storage;
     public readonly Dictionary<Slice, int> Textual;
+    
+    /// <summary>
+    /// Position matches position from _entryToTerms from IndexWriter which creates relation between entry and field
+    /// </summary>
+    public NativeList<NativeList<int>> EntryToTerms;
     public readonly Dictionary<long, int> Longs;
     public readonly Dictionary<double, int> Doubles;
     public Dictionary<Slice, int> Suggestions;
@@ -32,6 +38,7 @@ internal sealed class IndexedField
     public readonly bool ShouldStore;
     public bool HasMultipleTermsPerField;
     public long FieldRootPage;
+    public long TermsVectorFieldRootPage;
 
     public override string ToString()
     {
@@ -44,7 +51,7 @@ internal sealed class IndexedField
     }
 
     public IndexedField(int id, Slice name, Slice nameLong, Slice nameDouble, Slice nameTotalLengthOfTerms, Analyzer analyzer,
-        FieldIndexingMode fieldIndexingMode, bool hasSuggestions, bool shouldStore, string nameForStatistics = null)
+        FieldIndexingMode fieldIndexingMode, bool hasSuggestions, bool shouldStore,  string nameForStatistics = null, long fieldRootPage = -1, long termsVectorFieldRootPage = -1)
     {
         Name = name;
         NameLong = nameLong;
@@ -54,12 +61,17 @@ internal sealed class IndexedField
         Analyzer = analyzer;
         HasSuggestions = hasSuggestions;
         ShouldStore = shouldStore;
+        FieldRootPage = fieldRootPage;
+        TermsVectorFieldRootPage = termsVectorFieldRootPage;
         Storage = new FastList<EntriesModifications>();
         Textual = new Dictionary<Slice, int>(SliceComparer.Instance);
         Longs = new Dictionary<long, int>();
         Doubles = new Dictionary<double, int>();
         FieldIndexingMode = fieldIndexingMode;
         NameForStatistics = nameForStatistics ?? $"Field_{Name}";
+
+        if (fieldIndexingMode is FieldIndexingMode.Search)
+            EntryToTerms = new();
     }
 
     public void Clear()
@@ -69,5 +81,6 @@ internal sealed class IndexedField
         Spatial?.Clear();
         Longs?.Clear();
         Textual?.Clear();
+        EntryToTerms = default;
     }
 }

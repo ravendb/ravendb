@@ -2,7 +2,6 @@
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
 using Raven.Server.Json;

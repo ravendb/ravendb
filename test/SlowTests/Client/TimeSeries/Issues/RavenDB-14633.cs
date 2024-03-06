@@ -5,6 +5,7 @@ using System.Net;
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

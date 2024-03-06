@@ -109,7 +109,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url1,
                 [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
                 [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
-                [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = LetsEncryptSetupUtils.StagingAcmeClientUrl
+                [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = StagingAcmeClientUrl
             }
         });
 
@@ -124,7 +124,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url2,
                 [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
                 [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
-                [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = LetsEncryptSetupUtils.StagingAcmeClientUrl
+                [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = StagingAcmeClientUrl
             }
         });
 
@@ -139,7 +139,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url3,
                 [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
                 [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
-                [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = LetsEncryptSetupUtils.StagingAcmeClientUrl
+                [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = StagingAcmeClientUrl
             }
         });
 
@@ -229,7 +229,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
     {
         DoNotReuseServer();
 
-        Server.Configuration.Core.AcmeUrl = LetsEncryptSetupUtils.StagingAcmeClientUrl;
+        Server.Configuration.Core.AcmeUrl = StagingAcmeClientUrl;
     }
 
     [LicenseRequiredFact]
@@ -307,7 +307,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url1,
                 [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
                 [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
-                [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = LetsEncryptSetupUtils.StagingAcmeClientUrl
+                [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = StagingAcmeClientUrl
             }
         });
 
@@ -392,7 +392,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             Total = 4
         },
             false,
-            useProduction: false,
+            StagingAcmeClientUrl,
             CancellationToken.None);
 
         X509Certificate2 serverCert;
@@ -444,7 +444,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
                 [RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = tcpServerUrl1,
                 [RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)] = publicTcpServerUrl1,
-                [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = LetsEncryptSetupUtils.StagingAcmeClientUrl
+                [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = StagingAcmeClientUrl
             }
 
         });
@@ -537,7 +537,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             Total = 4
         },
             false,
-            useProduction: false,
+            StagingAcmeClientUrl,
             CancellationToken.None);
 
         X509Certificate2 serverCert;
@@ -593,7 +593,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
                 [RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = tcpServerUrl1,
                 [RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)] = publicTcpServerUrl1,
-                [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = LetsEncryptSetupUtils.StagingAcmeClientUrl
+                [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = StagingAcmeClientUrl
             }
 
         });
@@ -611,7 +611,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
                 [RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = tcpServerUrl2,
                 [RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)] = publicTcpServerUrl2,
-                [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = LetsEncryptSetupUtils.StagingAcmeClientUrl
+                [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = StagingAcmeClientUrl
             }
         });
 
@@ -628,7 +628,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
                 [RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = tcpServerUrl3,
                 [RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)] = publicTcpServerUrl3,
-                [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = LetsEncryptSetupUtils.StagingAcmeClientUrl
+                [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = StagingAcmeClientUrl
             }
         });
 
@@ -714,4 +714,6 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
 
         Assert.True(await WaitForValueAsync(() => server.ServerStore.GetClusterTopology().Members.Count == numberOfExpectedNodes, true));
     }
+
+    private const string StagingAcmeClientUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
 }

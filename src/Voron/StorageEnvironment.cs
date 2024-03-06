@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -125,7 +126,8 @@ namespace Voron
 
         public event Action OnLogsApplied;
 
-        internal readonly long[] _validPages;
+        internal readonly long[] _validPagesAfterLoad;
+        internal readonly long _lastValidPageAfterLoad;
 
         public bool IsNew { get; }
 
@@ -142,12 +144,13 @@ namespace Voron
                 _headerAccessor = new HeaderAccessor(this);
                 TimeToSyncAfterFlushInSec = options.TimeToSyncAfterFlushInSec;
 
-                Debug.Assert(_dataPager.NumberOfAllocatedPages != 0);
+                _lastValidPageAfterLoad = _dataPager.NumberOfAllocatedPages;
+                Debug.Assert(_lastValidPageAfterLoad != 0);
 
-                var remainingBits = _dataPager.NumberOfAllocatedPages % (8 * sizeof(long));
+                var remainingBits = _lastValidPageAfterLoad % (8 * sizeof(long));
 
-                _validPages = new long[_dataPager.NumberOfAllocatedPages / (8 * sizeof(long)) + (remainingBits == 0 ? 0 : 1)];
-                _validPages[_validPages.Length - 1] |= unchecked(((long)ulong.MaxValue << (int)remainingBits));
+                _validPagesAfterLoad = new long[_lastValidPageAfterLoad / (8 * sizeof(long)) + (remainingBits == 0 ? 0 : 1)];
+                _validPagesAfterLoad[^1] |= unchecked(((long)ulong.MaxValue << (int)remainingBits));
 
                 _decompressionBuffers = new DecompressionBuffersPool(options);
 
@@ -208,7 +211,8 @@ namespace Voron
                 // the reference to storage environment won't be copied to the state-machine produced by await TimeoutManager.WaitFor() call
                 // otherwise the reference is hold and that prevents from running the finalizer of the environment
 
-                var result = await IdleFlushTimerInternal(weakRef);
+                var result = await IdleFlushTimerInternal(weakRef)
+                                            .ConfigureAwait(false);
                 switch (result)
                 {
                     case true:
@@ -216,7 +220,8 @@ namespace Voron
                     case false:
                         return;
                     case null:
-                        await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(1000), token);
+                        await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(1000), token)
+                                            .ConfigureAwait(false);
                         break;
                 }
             }
@@ -232,7 +237,9 @@ namespace Voron
 
                 try
                 {
-                    if (await env._writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(env.Options.IdleFlushTimeout)) == false)
+                    var result = await env._writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(env.Options.IdleFlushTimeout))
+                                                                       .ConfigureAwait(false);     
+                    if (result == false)
                     {
                         if (env.Journal.Applicator.ShouldFlush)
                             GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(env);
@@ -1522,19 +1529,18 @@ namespace Voron
                 ThrowInvalidChecksum(pageNumber, current, checksum);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void ValidatePageChecksum(long pageNumber, PageHeader* current)
         {
-            var index = pageNumber / (8 * sizeof(long));
-            var bitIndex = (int)(pageNumber % (8 * sizeof(long)));
-            var bitToSet = 1L << bitIndex;
-
             // If the page is beyond the initial size of the file we don't validate it. 
             // We assume that it is valid since we wrote it in this run.
-
-            if (index >= _validPages.Length)
+            if (pageNumber >= _lastValidPageAfterLoad)
                 return;
 
-            long old = _validPages[index];
+            var index = pageNumber / (8 * sizeof(long));
+
+            long old = _validPagesAfterLoad[index];
+            var bitToSet = 1L << (int)(pageNumber % (8 * sizeof(long)));
             if ((old & bitToSet) != 0)
                 return;
 
@@ -1557,11 +1563,9 @@ namespace Voron
             {
                 // PERF: This code used to have a spin-wait. While it makes sense where threads are competing on tight loops for
                 // for resources, the spin-wait here serves no purpose as the thread is going to bail out immediately after completion.
-                long modified = Interlocked.CompareExchange(ref _validPages[index], old | bitToSet, old);
+                long modified = Interlocked.CompareExchange(ref _validPagesAfterLoad[index], old | bitToSet, old);
                 if (modified == old || (modified & bitToSet) != 0)
                     break;
-
-                old = modified;
             }
         }
 

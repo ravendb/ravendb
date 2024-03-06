@@ -143,12 +143,13 @@ namespace Corax.Querying.Matches
                 children: new List<QueryInspectionNode> { _inner.Inspect() },
                 parameters: new Dictionary<string, string>()
                 {
-                    { nameof(IsBoosting), IsBoosting.ToString() },
-                    { nameof(Count), $"{Count} [{Confidence}]" },
-                    { "Operation", _operation.ToString() },
-                    { "Field", $"{_field.ToString()}" },
-                    { "Value", GetValue()},
-                    { "AuxValue", GetAuxValue()}
+                    { Constants.QueryInspectionNode.IsBoosting, IsBoosting.ToString() },
+                    { Constants.QueryInspectionNode.Count, Count.ToString() },
+                    { Constants.QueryInspectionNode.CountConfidence, Confidence.ToString() },
+                    { Constants.QueryInspectionNode.Operation, _operation.ToString() },
+                    { Constants.QueryInspectionNode.FieldName, $"{_field.ToString()}" },
+                    { Constants.QueryInspectionNode.LowValue, GetValue()},
+                    { Constants.QueryInspectionNode.HighValue, GetAuxValue()}
                 });
         }
 

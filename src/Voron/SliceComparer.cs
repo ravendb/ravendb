@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Sparrow.Server;
 
 namespace Voron
 {
@@ -45,10 +46,7 @@ namespace Voron
                 r = Memory.CompareInline(x1.Ptr, y1.Ptr, size);
             }
 
-            if (r != 0)
-                return r;
-
-            return keyDiff;
+            return r != 0 ? r : keyDiff;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

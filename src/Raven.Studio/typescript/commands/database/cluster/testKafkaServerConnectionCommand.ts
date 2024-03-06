@@ -3,10 +3,20 @@ import endpoints = require("endpoints");
 import database = require("models/resources/database");
 import KafkaConnectionSettings = Raven.Client.Documents.Operations.ETL.Queue.KafkaConnectionSettings;
 
-class testKafkaServerConnectionCommand extends commandBase {
+type ConnectionOptionsDto = {[optionKey: string]: string};
 
-    constructor(private db: database, private bootstrapServers: string, private useServerCertificate: boolean, private connectionOptionsDto: {[optionKey: string]: string}) {
+class testKafkaServerConnectionCommand extends commandBase {
+    private readonly db: database;
+    private readonly bootstrapServers: string;
+    private readonly useServerCertificate: boolean;
+    private readonly connectionOptionsDto: ConnectionOptionsDto;
+
+    constructor(db: database, bootstrapServers: string, useServerCertificate: boolean, connectionOptionsDto: ConnectionOptionsDto) {
         super();
+        this.db = db;
+        this.bootstrapServers = bootstrapServers;
+        this.useServerCertificate = useServerCertificate;
+        this.connectionOptionsDto = connectionOptionsDto;
     }
 
     execute(): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {

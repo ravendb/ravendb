@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax.Querying.Matches.Meta;
@@ -178,7 +179,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         // Initialize the important infrastructure for the sorting.
         TComparer1 entryComparer = new();
         entryComparer.Init(ref match, default, 0);
-        var pageCache = new PageLocator(llt);
+        var pageCache = llt.PageLocator;
         fixed (long* ptrBatchResults = batchResults)
         {
             var resultsPtr = new UnmanagedSpan<long>(ptrBatchResults, sizeof(long)* batchResults.Length);
@@ -196,7 +197,6 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             entryComparer.SortBatch(ref match, llt, pageCache, resultsPtr, batchTermIds, termsPtr, match._orderMetadata, comp2, comp3);
         }
 
-        pageCache.Release();
         bufScope.Dispose();
     }
 
@@ -225,12 +225,38 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
     public QueryInspectionNode Inspect()
     {
-        return new QueryInspectionNode($"{nameof(SortingMultiMatch)} [{_orderMetadata}]",
-            children: new List<QueryInspectionNode> { _inner.Inspect()},
-            parameters: new Dictionary<string, string>()
+        var parameters = new Dictionary<string, string>()
+        {
+            {Constants.QueryInspectionNode.IsBoosting, IsBoosting.ToString()},
+            {Constants.QueryInspectionNode.Count, "0"},
+            {Constants.QueryInspectionNode.CountConfidence, QueryCountConfidence.Low.ToString()},
+        };
+
+        for (int cmpId = 0; cmpId < _orderMetadata.Length; ++cmpId)
+        {
+            ref var order = ref _orderMetadata[cmpId];
+            var prefix = Constants.QueryInspectionNode.Comparer + cmpId.ToString() + "_";
+
+            parameters.Add(prefix+Constants.QueryInspectionNode.FieldName, order.Field.FieldName.ToString());
+            parameters.Add(prefix+Constants.QueryInspectionNode.Ascending, order.Ascending.ToString());
+            parameters.Add(prefix+Constants.QueryInspectionNode.FieldType, order.FieldType.ToString());
+            
+            switch (order.FieldType)
             {
-                { nameof(IsBoosting), IsBoosting.ToString() },
-            });
+                case MatchCompareFieldType.Spatial:
+                    parameters.Add(Constants.QueryInspectionNode.Point, order.Point.ToString());
+                    parameters.Add(Constants.QueryInspectionNode.Round, order.Round.ToString(CultureInfo.InvariantCulture));
+                    parameters.Add(Constants.QueryInspectionNode.Units, order.Units.ToString());
+                    break;
+                case MatchCompareFieldType.Random:
+                    parameters.Add(Constants.QueryInspectionNode.RandomSeed, order.RandomSeed.ToString());
+                    break;
+            }
+        }
+        
+        return new QueryInspectionNode($"{nameof(SortingMultiMatch)}",
+            children: new List<QueryInspectionNode> { _inner.Inspect()},
+            parameters: parameters);
     }
 
     string DebugView => Inspect().ToString();

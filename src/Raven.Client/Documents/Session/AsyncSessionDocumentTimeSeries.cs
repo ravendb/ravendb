@@ -30,11 +30,13 @@ namespace Raven.Client.Documents.Session
         {
         }
 
+        /// <inheritdoc cref="IAsyncSessionDocumentTimeSeries.GetAsync"/>
         public Task<TimeSeriesEntry[]> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
         {
             return GetAsync(from, to, includes: null, start, pageSize, token);
         }
 
+        /// <inheritdoc cref="IAsyncSessionDocumentTimeSeries.GetAsync(DateTime?, DateTime?, Action{ITimeSeriesIncludeBuilder}, int, int, CancellationToken)"/>
         public async Task<TimeSeriesEntry[]> GetAsync(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default) 
         {
             if (NotInCache(from, to))
@@ -449,6 +451,7 @@ namespace Raven.Client.Documents.Session
             return GetAsyncInternal(from, to, start, pageSize, token);
         }
 
+        /// <inheritdoc cref="IAsyncSessionDocumentTypedIncrementalTimeSeries{TValue}.GetAsync"/>
         Task<TimeSeriesEntry<TValues>[]> IAsyncSessionDocumentTypedIncrementalTimeSeries<TValues>.GetAsync(DateTime? from, DateTime? to, int start, int pageSize, CancellationToken token)
         {
             return GetAsyncInternal(from, to, start, pageSize, token);
@@ -464,6 +467,7 @@ namespace Raven.Client.Documents.Session
             Append(entry.Timestamp, entry.Value, entry.Tag);
         }
 
+        /// <inheritdoc cref="IAsyncSessionDocumentRollupTypedTimeSeries{TValue}.GetAsync"/>
         async Task<TimeSeriesRollupEntry<TValues>[]> IAsyncSessionDocumentRollupTypedTimeSeries<TValues>.GetAsync(DateTime? from, DateTime? to, int start, int pageSize, CancellationToken token)
         {
             if (NotInCache(from, to))

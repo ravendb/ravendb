@@ -5,12 +5,14 @@ namespace Raven.Client.Documents.Session
 {
     public partial class DocumentQuery<T>
     {
+        /// <inheritdoc />
         ISuggestionDocumentQuery<T> IDocumentQuery<T>.SuggestUsing(SuggestionBase suggestion)
         {
             SuggestUsing(suggestion);
             return new SuggestionDocumentQuery<T>(this);
         }
 
+        /// <inheritdoc />
         ISuggestionDocumentQuery<T> IDocumentQuery<T>.SuggestUsing(Action<ISuggestionBuilder<T>> builder)
         {
             var f = new SuggestionBuilder<T>(Conventions);

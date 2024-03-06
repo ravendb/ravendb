@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using Corax;
 using Corax.Analyzers;
-using Corax.Querying;
 using Corax.Mappings;
+using Corax.Pipeline;
+using Corax.Querying.Matches;
+using Corax.Querying.Matches.Meta;
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
@@ -12,9 +14,11 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using Assert = Xunit.Assert;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
 
@@ -95,6 +99,91 @@ public class RawCoraxFlag : StorageTest
         
     }
 
+    [RavenFact(RavenTestCategory.Corax)]
+    public void PhraseMatchPrimitiveTest()
+    {
+        using var ctx = JsonOperationContext.ShortTermSingleUse();
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        _analyzers = CreateKnownFields(_bsc, true, shouldStore: true);
+
+        {
+            using var writer = new IndexWriter(Env, _analyzers);
+
+            using (var builder = writer.Index("us/1"u8))
+            {
+                builder.Write(IndexId, null, "us/1"u8);
+                builder.Write(ContentId, null, "First second third fourth");
+            }
+            using (var builder = writer.Index("us/2"u8))
+            {
+                builder.Write(IndexId, null, "us/2"u8);
+                builder.Write(ContentId, null, "First third fourth second");
+            }
+           
+            writer.Commit();
+        }
+
+        {
+            using var indexSearcher = new IndexSearcher(Env, _analyzers);
+            using var _ = Slice.From(Allocator, "second", out var str1);
+            using var __ = Slice.From(Allocator, "third", out var str2);
+            
+            var search = indexSearcher.PhraseQuery(indexSearcher.AllEntries(), _analyzers.GetByFieldId(ContentId).Metadata, new[]{str1, str2});
+            Span<long> ids = stackalloc long[16];
+            Assert.Equal(1, search.Fill(ids));
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Corax)]
+    [InlineData("Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. MOCKUPWORD Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.")]
+    public void TermVectorStoresRightOrderOfTokens(string sentence)
+    {
+        using var ctx = JsonOperationContext.ShortTermSingleUse();
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        _analyzers = CreateKnownFields(_bsc, true, shouldStore: true);
+
+        {
+            using var writer = new IndexWriter(Env, _analyzers);
+
+            using (var builder = writer.Index("us/1"u8))
+            {
+                builder.Write(IndexId, null, "us/1"u8);
+                builder.Write(ContentId, null, sentence);
+            }
+            writer.Commit();
+        }
+
+        {
+            using var indexSearcher = new IndexSearcher(Env, _analyzers);
+            var searchMatch = indexSearcher.SearchQuery(_analyzers.GetByFieldId(1).Metadata,
+                new[]
+                {
+                    "sanctus est Lorem ipsum dolor sit amet. MOCKUPWORD Lorem ipsum dolor sit amet, consetetur"
+                }, Constants.Search.Operator.Or);
+            
+            Span<long> ids = stackalloc long[16];
+            Assert.Equal(1, indexSearcher.AllEntries().Fill(ids));
+            
+            Assert.IsType<PhraseMatch<IQueryMatch>>(searchMatch);
+            var phraseQuery = (PhraseMatch<IQueryMatch>)searchMatch;
+
+            var projectedSentence = phraseQuery.RenderOriginalSentence(ids[0]);
+            var analyzer = _analyzers.GetByFieldId(1).Analyzer;
+            analyzer.GetOutputBuffersSize(Encodings.Utf8.GetByteCount(sentence), out var bC, out var tC);
+            var bufferOutput = new byte[bC].AsSpan();
+            var tokens = new Token[tC].AsSpan();
+            analyzer.Execute(Encodings.Utf8.GetBytes(sentence), ref bufferOutput, ref tokens);
+            var output = new List<string>();
+            foreach (var token in tokens)
+            {
+                output.Add(Encodings.Utf8.GetString(bufferOutput.Slice(token.Offset, (int)token.Length)));
+            }
+
+            var sentenceFromAnalyzer = string.Join(' ', output);
+            Assert.Equal(sentenceFromAnalyzer, projectedSentence);
+        }
+    }
+    
     [Fact]
     public unsafe void CanStoreBlittableWithWriterScope()
     {
@@ -166,7 +255,7 @@ public class RawCoraxFlag : StorageTest
         using var builder = (analyzers
             ? IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(IndexId, idSlice, Analyzer.CreateDefaultAnalyzer(ctx))
-                .AddBinding(ContentId, contentSlice, LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30)), shouldStore: shouldStore)
+                .AddBinding(ContentId, contentSlice, LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30)), shouldStore: shouldStore, fieldIndexingMode: FieldIndexingMode.Search)
             : IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(IndexId, idSlice)
                 .AddBinding(ContentId, contentSlice, fieldIndexingMode: FieldIndexingMode.No,shouldStore:shouldStore));

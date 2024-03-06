@@ -4,12 +4,14 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Indexes;
@@ -44,13 +46,13 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
     }
 
     protected override async ValueTask WaitForIndexesAsync(IndexBatchOptions options, string lastChangeVector, long lastTombstoneEtag,
-        HashSet<string> modifiedCollections)
+        HashSet<string> modifiedCollections, CancellationToken token = default)
     {
         long lastEtag = ChangeVectorUtils.GetEtagById(lastChangeVector, RequestHandler.Database.DbBase64Id);
-        await WaitForIndexesAsync(RequestHandler.Database, options.WaitForIndexesTimeout, options.WaitForSpecificIndexes, options.ThrowOnTimeoutInWaitForIndexes, lastEtag, lastTombstoneEtag, modifiedCollections);
+        await WaitForIndexesAsync(RequestHandler.Database, options.WaitForIndexesTimeout, options.WaitForSpecificIndexes, options.ThrowOnTimeoutInWaitForIndexes, lastEtag, lastTombstoneEtag, modifiedCollections, token);
     }
 
-    public static async Task WaitForIndexesAsync(DocumentDatabase database, TimeSpan timeout, string[] specifiedIndexesQueryString, bool throwOnTimeout, long lastDocumentEtag, long lastTombstoneEtag, HashSet<string> modifiedCollections)
+    public static async Task WaitForIndexesAsync(DocumentDatabase database, TimeSpan timeout, string[] specifiedIndexesQueryString, bool throwOnTimeout, long lastDocumentEtag, long lastTombstoneEtag, HashSet<string> modifiedCollections, CancellationToken token)
     {
         // waitForIndexesTimeout=timespan & waitForIndexThrow=false (default true)
         // waitForSpecificIndex=specific index1 & waitForSpecificIndex=specific index 2
@@ -103,8 +105,7 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
                         continue;
 
                     hadStaleIndexes = true;
-
-                    await waitForIndexItem.WaitForIndexing.WaitForIndexingAsync(waitForIndexItem.IndexBatchAwaiter);
+                    await waitForIndexItem.WaitForIndexing.WaitForIndexingAsync(waitForIndexItem.IndexBatchAwaiter).WithCancellation(token);
 
                     if (waitForIndexItem.WaitForIndexing.TimeoutExceeded)
                     {

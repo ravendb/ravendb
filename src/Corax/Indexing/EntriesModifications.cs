@@ -127,7 +127,7 @@ internal unsafe struct EntriesModifications
 
     public bool HasChanges => Additions.Count + Removals.Count > 0;
 
-    public EntriesModifications([NotNull] ByteStringContext context, int size)
+    public EntriesModifications(int size)
     {
         TermSize = size;
         //do not initialize native list by default since some of them never will be allocated.

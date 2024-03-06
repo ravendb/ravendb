@@ -1200,7 +1200,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
+        [RequiresMsSqlFact]
         public async Task SqlEtl_ReplicateMultipleBatches()
         {
             using (var store = Sharding.GetDocumentStore())

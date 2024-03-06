@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -569,9 +570,24 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
-    public Dictionary<long, string> GetIndexedFieldNamesByRootPage()
+    private long GetRootPageByFieldName(in Slice fieldName)
     {
-        var pageToField = new Dictionary<long, string>();
+        var it = _fieldsTree.Iterate(false);
+        var result = _fieldsTree.Read(fieldName);
+        if (result is null)
+            return -1;
+        
+        var state = (LookupState*)result.Reader.Base;
+        Debug.Assert(state->RootObjectType is RootObjectType.Lookup, "state->RootObjectType is RootObjectType.Lookup");
+        return state->RootPage;
+    }
+    
+    
+    private Dictionary<long, Slice> _pageToField;
+    public Dictionary<long, Slice> GetIndexedFieldNamesByRootPage()
+    {
+        if (_pageToField != null) return _pageToField;
+        var pageToField = new Dictionary<long, Slice>();
         var it = _fieldsTree.Iterate(prefetch: false);
         if (it.Seek(Slices.BeforeAllKeys))
         {
@@ -580,11 +596,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
                 var state = (LookupState*)it.CreateReaderForCurrent().Base;
                 if (state->RootObjectType == RootObjectType.Lookup)
                 {
-                    pageToField.Add(state->RootPage, it.CurrentKey.ToString());
+                    pageToField.Add(state->RootPage, it.CurrentKey.Clone(Allocator));
                 }
             } while (it.MoveNext());
         }
 
-        return pageToField;
+        _pageToField = pageToField;
+        return _pageToField;
     }
 }

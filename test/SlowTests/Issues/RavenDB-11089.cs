@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using FastTests;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Newtonsoft.Json.Serialization;

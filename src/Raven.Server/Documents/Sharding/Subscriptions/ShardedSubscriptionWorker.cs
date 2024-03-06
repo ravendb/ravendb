@@ -108,16 +108,19 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             // always try to reconnect until the task is canceled or assertLastConnectionFailure will throw when 'MaxErroneousPeriod' will elapse
             try
             {
-                assertLastConnectionFailure.Invoke();
-                var r = base.CheckIfShouldReconnectWorker(ex, assertLastConnectionFailure, onUnexpectedSubscriptionError, throwOnRedirectNodeNotFound: false);
-                if (_closedDueNoDocsLeft)
-                    return (ShouldTryToReconnect: false, NodeRedirectTo: null);
-
                 if (_state.CancellationTokenSource.IsCancellationRequested)
                 {
                     _processingCts.Cancel();
                     return (ShouldTryToReconnect: false, NodeRedirectTo: null);
                 }
+
+                // assertLastConnectionFailure will be null in case of AggregateException
+                assertLastConnectionFailure?.Invoke();
+
+                var r = base.CheckIfShouldReconnectWorker(ex, assertLastConnectionFailure: null, onUnexpectedSubscriptionError, throwOnRedirectNodeNotFound: false);
+
+                if (_closedDueNoDocsLeft)
+                    return (ShouldTryToReconnect: false, NodeRedirectTo: null);
 
                 return (r.ShouldTryToReconnect, r.NodeRedirectTo);
             }
@@ -159,9 +162,11 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             return (true, _redirectNode);
         }
 
-        protected override (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) HandleSubscriptionChangeVectorUpdateConcurrencyException()
+        protected override (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) HandleSubscriptionChangeVectorUpdateConcurrencyException(SubscriptionChangeVectorUpdateConcurrencyException subscriptionChangeVectorUpdateConcurrencyException)
         {
             // the orchestrator will reconnect (and restart the sharded workers) since the subscription was changed
+            _state.DropSubscription(subscriptionChangeVectorUpdateConcurrencyException);
+
             return (false, null);
         }
 

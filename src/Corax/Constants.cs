@@ -1,7 +1,9 @@
 using System;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
 using Voron;
+using Voron.Data.Lookups;
 
 namespace Corax
 {
@@ -16,6 +18,9 @@ namespace Corax
         
         public const string EmptyString = "\u0003";
         public static readonly ReadOnlyMemory<char> EmptyStringCharSpan = new(Constants.EmptyString.ToCharArray());
+        public static ReadOnlySpan<byte> PhraseQuerySuffix => "__PQ"u8; 
+        public const string  PhraseQuerySuffixAsStr = "__PQ"; 
+
         
         public const string IndexMetadata = "@index_metadata";
         public const string IndexTimeFields = "@index_time_fields";
@@ -55,6 +60,11 @@ namespace Corax
             public const int NonAnalyzer = -1;
         }
 
+        public static class IndexedField
+        {
+            public const long Invalid = -1L;
+        }
+        
         public static class IndexWriter
         {
             public static ReadOnlySpan<byte> DoubleTreeSuffix => "-D"u8;
@@ -70,6 +80,11 @@ namespace Corax
             public const int PrimaryKeyFieldId = 0;
 
             public const string SuggestionsTreePrefix = "__Suggestion_";
+
+            public const int TermFrequencyShift = 8;
+
+            public const int FrequencyTermFreeSpace = 0b1111_1111;
+            public const int MaxSizeOfTermVectorList = int.MaxValue >> 1;
 
             static IndexWriter()
             {
@@ -129,6 +144,116 @@ namespace Corax
             public const int DefaultNGramSize = 4;
 
             public const float DefaultAccuracy = 0.7f;
+        }
+        
+        /// <summary>
+        /// Constants used for QueryPlan.
+        /// </summary>
+        internal static class QueryInspectionNode
+        {
+            internal const string FieldName = nameof(FieldName);
+            internal const string IsBoosting = nameof(IsBoosting);
+            
+            /// <summary>
+            /// Term used in primitive. For primitives that uses multiple term we will output string as 'term1, term2,...'.
+            /// </summary>
+            internal const string Term = nameof(Term);
+            
+            /// <summary>
+            /// EndsWith term
+            /// </summary>
+            internal const string Suffix = nameof(Suffix);
+            
+            /// <summary>
+            /// StartsWith term
+            /// </summary>
+            internal const string Prefix = nameof(Prefix);
+            
+            /// <summary>
+            /// Values of range queries.
+            /// </summary>
+            internal const string LowValue = nameof(LowValue);
+            internal const string HighValue = nameof(HighValue);
+
+            /// <summary>
+            /// Indicates if Low/High value is inclusive or exclusive.
+            /// </summary>
+            internal const string LowOption = nameof(LowOption);
+            internal const string HighOption = nameof(HighOption);
+            
+            /// <summary>
+            /// Indicates direction of crawling on the tree. 
+            /// </summary>
+            internal const string IteratorDirection = nameof(IteratorDirection);
+            
+            /// <summary>
+            /// Confidence of count. Look into IQueryMatch.cs for details.
+            /// </summary>
+            internal const string CountConfidence = nameof(CountConfidence);
+            
+            /// <summary>
+            /// Count of documents from primitive.
+            /// </summary>
+            internal const string Count = nameof(Count);
+            
+            /// <summary>
+            /// Boost factor for boost(InnerQuery, BoostFactor)
+            /// </summary>
+            internal const string BoostFactor = nameof(BoostFactor);
+            
+            /// <summary>
+            /// Used for MultiUnaryMatch. This primitive can have multiple comparers inside, so we will output the settings as a string.
+            /// </summary>
+            internal const string Comparer = nameof(Comparer);
+            
+            /// <summary>
+            /// Used for UnaryMatch to determinate which operation is executed.
+            /// </summary>
+            internal const string Operation = nameof(Operation);
+            
+            //Sorting:
+            /// <summary>
+            /// Indicates central point for distance sorting
+            /// </summary>
+            internal const string Point = nameof(Point);
+            
+            /// <summary>
+            /// Round property for spatial order by distance()
+            /// </summary>
+            internal const string Round = nameof(Round);
+            /// <summary>
+            /// Kilometers or miles.
+            /// </summary>
+            internal const string Units = nameof(Units);
+            
+            /// <summary>
+            /// Seed for order by random()
+            /// </summary>
+            internal const string RandomSeed = nameof(RandomSeed);
+
+            /// <summary>
+            /// Indicates if order is ascending.
+            /// </summary>
+            internal const string Ascending = nameof(Ascending);
+            
+            /// <summary>
+            /// Indicates type of sorted field. (eg, long, alphanumerical etc)
+            /// </summary>
+            internal const string FieldType = nameof(FieldType);
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static string IterationDirectionName<TLookupIterator>(in TLookupIterator lookupIterator)
+                where TLookupIterator : struct, ILookupIterator
+            {
+                return lookupIterator.IsForward ? "Forward" : "Backward";
+            }
+            
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static string IterationDirectionName<TLookupIterator>()
+                where TLookupIterator : struct, ILookupIterator
+            {
+                return default(TLookupIterator).IsForward ? "Forward" : "Backward";
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
 using Raven.Client.Documents.Operations.ETL;
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.Etl)]
-        public async void DeletingDocumentWithRevisionsDoesntCorruptEtlProcess()
+        public async Task DeletingDocumentWithRevisionsDoesntCorruptEtlProcess()
         {
             using (var src = GetDocumentStore())
             using (var dst = GetDocumentStore())
@@ -32,22 +33,28 @@ namespace SlowTests.Issues
 
                 Etl.AddEtl(src, configuration, new RavenConnectionString { Name = "test", TopologyDiscoveryUrls = dst.Urls, Database = dst.Database, });
 
-                var loadDone = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LoadSuccesses == 2);
+                var loadDone1 = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LoadSuccesses == 1);
+                var loadDone2 = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LoadSuccesses == 2);
                 var deleteDone = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LoadSuccesses == 3);
 
                 using (var session = src.OpenSession())
                 {
-                    session.Store(new User(), "users/1");
+                    session.Store(new User { Name = "Bob" }, "users/1");
                     session.SaveChanges();
                 }
-                
-                var etlDone = Etl.WaitForEtlToComplete(src);
-                if (etlDone.Wait(TimeSpan.FromSeconds(30)) == false)
+
+                if (loadDone1.Wait(TimeSpan.FromSeconds(30)) == false)
                 {
                     Etl.TryGetLoadError(src.Database, configuration, out var loadError);
                     Etl.TryGetTransformationError(src.Database, configuration, out var transformationError);
 
                     Assert.Fail($"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
+                }
+
+                using (var session = dst.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    Assert.Equal("Bob", user.Name);
                 }
 
                 using (var session = src.OpenSession())
@@ -57,7 +64,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                if (loadDone.Wait(TimeSpan.FromSeconds(30)) == false)
+                if (loadDone2.Wait(TimeSpan.FromSeconds(30)) == false)
                 {
                     Etl.TryGetLoadError(src.Database, configuration, out var loadError);
                     Etl.TryGetTransformationError(src.Database, configuration, out var transformationError);
@@ -69,6 +76,7 @@ namespace SlowTests.Issues
                 {
                     var user = session.Load<User>("users/1");
                     Assert.NotNull(user);
+                    Assert.Equal("Gracjan", user.Name);
                 }
 
                 using (var session = src.OpenSession())

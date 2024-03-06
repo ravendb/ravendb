@@ -3,9 +3,10 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics;
 using System.Text;
+using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Json;
 using Sparrow.Server;
 using Voron.Exceptions;
 using Voron.Global;
@@ -19,20 +20,29 @@ namespace Voron.Data.CompactTrees;
 public sealed unsafe class CompactKey : IDisposable
 {
     public static readonly CompactKey NullInstance = new();
-    
-    private static readonly ArrayPool<byte> StoragePool = ArrayPool<byte>.Shared;
-    private static readonly ArrayPool<long> KeyMappingPool = ArrayPool<long>.Shared;
+
+    private static readonly PerCoreStatic<ArrayPool<byte>> StoragePool = new (ArrayPool<byte>.Create);
 
     private LowLevelTransaction _owner;
 
     private const int MappingTableSize = 64;
     private const int MappingTableMask = MappingTableSize - 1;
 
-    private long[] _keyMappingCache;
-    private ref long KeyMappingCache(int i) => ref _keyMappingCache[i];
-    private ref long KeyMappingCacheIndex(int i) => ref _keyMappingCache[MappingTableSize + i];
+    private struct KeyMappingCache
+    {
+        private fixed long _keyMappingCache[MappingTableSize * 2];
 
+        public long GetMap(int i) => _keyMappingCache[i];
+        public long GetIndex(int i) => _keyMappingCache[MappingTableSize + i];
 
+        public void Set(int i, long map, long index)
+        {
+            _keyMappingCache[i] = map;
+            _keyMappingCache[MappingTableSize + i] = index;
+        }
+    }
+
+    private KeyMappingCache _keyMappingCache;
     private byte[] _storage;
 
     // The storage data will be used in an arena fashion. If there is no enough, we just create a bigger one and
@@ -65,22 +75,18 @@ public sealed unsafe class CompactKey : IDisposable
         _currentIdx = 0;
         MaxLength = 0;
 
-        _storage = StoragePool.Rent(2 * Constants.CompactTree.MaximumKeySize);
-        _keyMappingCache = KeyMappingPool.Rent(2 * MappingTableMask);
+        _storage = StoragePool.Get().Rent(2 * Constants.CompactTree.MaximumKeySize);
     }
 
     public void Reset()
     {
-        if (_storage is null || _keyMappingCache is null)
+        if (_storage is null)
             throw new InvalidOperationException("The key has not been initialized before calling reset.");
 
         _owner = null;
 
-        StoragePool.Return(_storage);
+        StoragePool.Get().Return(_storage);
         _storage = null;
-
-        KeyMappingPool.Return(_keyMappingCache);
-        _keyMappingCache = null;
     }
 
     public bool IsValid => Dictionary > 0;
@@ -108,8 +114,7 @@ public sealed unsafe class CompactKey : IDisposable
 
             // We look for an appropriate place to put this key
             int buckedIdx = SelectBucketForWrite();
-            KeyMappingCache(buckedIdx) = dictionaryId;
-            KeyMappingCacheIndex(buckedIdx) = _currentIdx;
+            _keyMappingCache.Set(buckedIdx, dictionaryId, _currentIdx);
 
             var dictionary = _owner.GetEncodingDictionary(dictionaryId);
             int maxSize = dictionary.GetMaxEncodingBytes(decodedKey.Length) + 4;
@@ -146,12 +151,12 @@ public sealed unsafe class CompactKey : IDisposable
             }
             else
             {
-                startIdx = (int)KeyMappingCacheIndex(bucketIdx);
+                startIdx = (int)_keyMappingCache.GetIndex(bucketIdx);
             }
 
             // Because we are decoding for the current dictionary, we will update the lazy index to avoid searching again next time. 
             if (Dictionary == dictionaryId)
-                _currentKeyIdx = (int)KeyMappingCacheIndex(bucketIdx);
+                _currentKeyIdx = (int)_keyMappingCache.GetIndex(bucketIdx);
         }
 
 
@@ -166,11 +171,11 @@ public sealed unsafe class CompactKey : IDisposable
 
         long currentDictionary = Dictionary;
         int currentKeyIdx = _currentKeyIdx;
-        if (currentKeyIdx == Invalid && KeyMappingCache(0) != 0)
+        if (currentKeyIdx == Invalid && _keyMappingCache.GetMap(0) != 0)
         {
             // We don't have any decoded version, so we pick the first one and do it. 
-            currentDictionary = KeyMappingCache(0);
-            currentKeyIdx = (int)KeyMappingCacheIndex(0);
+            currentDictionary = _keyMappingCache.GetMap(0);
+            currentKeyIdx = (int)_keyMappingCache.GetIndex(0);
         }
 
         Debug.Assert(currentKeyIdx != Invalid);
@@ -219,10 +224,11 @@ public sealed unsafe class CompactKey : IDisposable
         // Request more memory, copy the content and return it.
         maxSize = Math.Max(maxSize, _storage.Length) * 2;
 
-        var storage = StoragePool.Rent(maxSize);
+        var storagePool = StoragePool.Get();
+        var storage = storagePool.Rent(maxSize);
         _storage.AsSpan(0, _currentIdx).CopyTo(storage.AsSpan());
-        
-        StoragePool.Return(_storage); // Return old to pool.
+
+        storagePool.Return(_storage); // Return old to pool.
         _storage = storage; // Update the new references.
     }
 
@@ -272,8 +278,7 @@ public sealed unsafe class CompactKey : IDisposable
         Dictionary = dictionaryId;
 
         int bucketIdx = SelectBucketForWrite();
-        KeyMappingCache(bucketIdx) = dictionaryId;
-        KeyMappingCacheIndex(bucketIdx) = _currentKeyIdx;
+        _keyMappingCache.Set(bucketIdx, dictionaryId, _currentKeyIdx);
 
         // We write the size and the key. 
         Unsafe.WriteUnaligned(ref _storage[0], keyLengthInBits);
@@ -294,7 +299,7 @@ public sealed unsafe class CompactKey : IDisposable
         int elementIdx = Math.Min(_lastKeyMappingItem, MappingTableSize - 1);
         while (elementIdx >= 0)
         {
-            long currentDictionary = _keyMappingCache[elementIdx];
+            long currentDictionary = _keyMappingCache.GetMap(elementIdx);
             if (currentDictionary == dictionaryId)
                 return elementIdx;
 
@@ -343,7 +348,7 @@ public sealed unsafe class CompactKey : IDisposable
         var length = Bits.ToBytes(lengthInBits);
         var nextEntryLength = Bits.ToBytes(nextEntryLengthInBits);
 
-        var result = AdvMemory.CompareInline(ref _storage[encodedStartIdx + sizeof(int)], ref Unsafe.AsRef<byte>(nextEntryPtr), Math.Min(length, nextEntryLength));
+        var result = Memory.CompareInline(ref _storage[encodedStartIdx + sizeof(int)], ref Unsafe.AsRef<byte>(nextEntryPtr), Math.Min(length, nextEntryLength));
         return result == 0 ? lengthInBits - nextEntryLengthInBits : result;
     }
 
@@ -377,7 +382,7 @@ public sealed unsafe class CompactKey : IDisposable
         int nextEntryLength = Bits.ToBytes(nextEntryLengthInBits);
         int encodedLength = Bits.ToBytes(encodedLengthInBits);
 
-        var result = AdvMemory.CompareInline(ref MemoryMarshal.GetReference(encodedKey), ref nextEntryRef, Math.Min(encodedLength, nextEntryLength));
+        var result = Memory.CompareInline(ref MemoryMarshal.GetReference(encodedKey), ref nextEntryRef, Math.Min(encodedLength, nextEntryLength));
         return result == 0 ? encodedLength - nextEntryLength : result;
     }
 

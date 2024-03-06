@@ -36,6 +36,7 @@ class queryCommand extends commandBase {
                 highlightings: results.Highlightings,
                 explanations: results.Explanations,
                 timings: results.Timings,
+                queryPlan: (results.Timings as any)?.QueryPlan,
                 includes: results.Includes,
                 includesRevisions: results.RevisionIncludes
             });

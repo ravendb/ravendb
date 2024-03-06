@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, CardBody, Col, Form, InputGroup } from "reactstrap";
+import { Card, CardBody, Col, Form } from "reactstrap";
 import "./GatherDebugInfo.scss";
 import { useForm, useWatch } from "react-hook-form";
 import {
@@ -76,7 +76,7 @@ function GatherDebugInfo() {
                                 <div className="position-sticky package-download-section d-flex flex-column align-items-center well border-radius-xs p-4 gap-4">
                                     <img src={createPackageImg} alt="Info Package" width="90" />
                                     <h4 className="m-0">Create package for</h4>
-                                    <InputGroup className="d-flex flex-column align-items-center gap-4">
+                                    <div className="d-flex flex-column w-100 gap-3">
                                         <FormSelect
                                             control={control}
                                             name="packageScope"
@@ -90,7 +90,7 @@ function GatherDebugInfo() {
                                         <ButtonWithSpinner
                                             type="submit"
                                             color="primary"
-                                            className="rounded-pill"
+                                            className="rounded-pill align-self-center"
                                             icon="default"
                                             isSpinning={isDownloading}
                                         >
@@ -98,7 +98,7 @@ function GatherDebugInfo() {
                                         </ButtonWithSpinner>
                                         {isDownloading && (
                                             <ButtonWithSpinner
-                                                className="rounded-pill"
+                                                className="rounded-pill align-self-center"
                                                 icon="cancel"
                                                 color="warning"
                                                 isSpinning={abortData.isAborting}
@@ -107,7 +107,7 @@ function GatherDebugInfo() {
                                                 Abort
                                             </ButtonWithSpinner>
                                         )}
-                                    </InputGroup>
+                                    </div>
                                 </div>
                             </div>
                         </div>

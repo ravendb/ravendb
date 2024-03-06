@@ -42,7 +42,7 @@ namespace Raven.Server.Config
 
         public string[] AvailableValues { get; private set; }
 
-        public ConfigurationEntryMetadata(PropertyInfo configurationCategoryProperty, PropertyInfo configurationProperty)
+        public ConfigurationEntryMetadata(PropertyInfo configurationCategoryProperty, PropertyInfo configurationProperty, RavenConfiguration configuration)
         {
             if (configurationCategoryProperty is null)
                 throw new ArgumentNullException(nameof(configurationCategoryProperty));
@@ -64,7 +64,7 @@ namespace Raven.Server.Config
             Keys = keys.ToArray();
             Description = configurationProperty.GetCustomAttribute<DescriptionAttribute>(inherit: true)?.Description;
             Type = GetConfigurationEntryType(configurationProperty);
-            DefaultValue = GetDefaultValue(configurationCategoryProperty, configurationProperty, out IsDefaultValueDynamic);
+            DefaultValue = GetDefaultValue(configurationCategoryProperty, configurationProperty, configuration, out IsDefaultValueDynamic);
 
             var categoryType = configurationCategoryProperty.PropertyType.GetCustomAttribute<ConfigurationCategoryAttribute>(inherit: true);
             if (categoryType == null)
@@ -105,7 +105,7 @@ namespace Raven.Server.Config
             };
         }
 
-        private string GetDefaultValue(PropertyInfo configurationCategoryProperty, PropertyInfo configurationProperty, out bool isDefaultValueDynamic)
+        private string GetDefaultValue(PropertyInfo configurationCategoryProperty, PropertyInfo configurationProperty, RavenConfiguration configuration, out bool isDefaultValueDynamic)
         {
             isDefaultValueDynamic = false;
             var defaultValue = configurationProperty.GetCustomAttribute<DefaultValueAttribute>(inherit: true)?.Value?.ToString();
@@ -113,7 +113,7 @@ namespace Raven.Server.Config
             {
                 isDefaultValueDynamic = true;
 
-                var configurationCategory = configurationCategoryProperty.GetValue(RavenConfiguration.Default);
+                var configurationCategory = configurationCategoryProperty.GetValue(configuration);
                 var configurationValue = configurationProperty.GetValue(configurationCategory);
                 if (configurationValue == null)
                     return null;

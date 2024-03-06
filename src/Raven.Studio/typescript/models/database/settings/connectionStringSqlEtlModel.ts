@@ -2,7 +2,7 @@
 import connectionStringModel = require("models/database/settings/connectionStringModel");
 import database = require("models/resources/database");
 import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
-import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
+import saveConnectionStringCommand_OLD = require("commands/database/settings/saveConnectionStringCommand_OLD");
 import jsonUtil = require("common/jsonUtil");
 import sqlConnectionStringSyntax = require("common/helpers/database/sqlConnectionStringSyntax");
 
@@ -111,7 +111,7 @@ class connectionStringSqlEtlModel extends connectionStringModel {
     }
 
     saveConnectionString(db: database): JQueryPromise<void> {
-        return new saveConnectionStringCommand(db, this)
+        return new saveConnectionStringCommand_OLD(db, this)
             .execute();
     }
     

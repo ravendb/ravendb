@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax.Indexing;
@@ -282,7 +283,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             _itBuffer = (long*)bs.Ptr;
             _containerItemsScope = llt.Allocator.Allocate(BufferSize * sizeof(UnmanagedSpan), out bs);
             _containerItems = (UnmanagedSpan*)bs.Ptr;
-            _pageLocator = new PageLocator(llt);
+            _pageLocator = llt.PageLocator;
         }
 
 
@@ -572,12 +573,9 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         // Initialize the important infrastructure for the sorting.
         TEntryComparer entryComparer = new();
         entryComparer.Init(ref match);
-            
-        var pageCache = new PageLocator(llt);
         
-        entryComparer.SortBatch(ref match, llt, pageCache, batchResults, batchTermIds, termsPtr);
+        entryComparer.SortBatch(ref match, llt, llt.PageLocator, batchResults, batchTermIds, termsPtr);
 
-        pageCache.Release();
         bufScope.Dispose();
     }
 
@@ -615,12 +613,29 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
     public QueryInspectionNode Inspect()
     {
-        return new QueryInspectionNode($"{nameof(SortingMatch)} [{_orderMetadata}]",
+        var parameters = new Dictionary<string, string>()
+        {
+            {Constants.QueryInspectionNode.IsBoosting, IsBoosting.ToString()},
+            {Constants.QueryInspectionNode.FieldName, _orderMetadata.Field.FieldName.ToString()},
+            {Constants.QueryInspectionNode.Ascending, _orderMetadata.Ascending.ToString()},
+            {Constants.QueryInspectionNode.FieldType, _orderMetadata.FieldType.ToString()},
+        };
+
+        switch (_orderMetadata.FieldType)
+        {
+            case MatchCompareFieldType.Spatial:
+                parameters.Add(Constants.QueryInspectionNode.Point, _orderMetadata.Point.ToString());
+                parameters.Add(Constants.QueryInspectionNode.Round, _orderMetadata.Round.ToString(CultureInfo.InvariantCulture));
+                parameters.Add(Constants.QueryInspectionNode.Units, _orderMetadata.Units.ToString());
+                break;
+            case MatchCompareFieldType.Random:
+                parameters.Add(Constants.QueryInspectionNode.RandomSeed, _orderMetadata.RandomSeed.ToString());
+                break;
+        }
+        
+        return new QueryInspectionNode($"{nameof(SortingMatch)}",
             children: new List<QueryInspectionNode> { _inner.Inspect()},
-            parameters: new Dictionary<string, string>()
-            {
-                { nameof(IsBoosting), IsBoosting.ToString() },
-            });
+            parameters: parameters);
     }
 
     string DebugView => Inspect().ToString();

@@ -145,6 +145,7 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<TResult>)queryable;
         }
 
+        /// <inheritdoc cref="IAggregationQuery{T}.AndAggregateBy(FacetBase)"/>
         public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, FacetBase facet)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -153,6 +154,8 @@ namespace Raven.Client.Documents
             return query.AndAggregateBy(facet);
         }
 
+        /// <inheritdoc cref="IAggregationQuery{T}.AndAggregateBy(FacetBase)"/>
+        /// <param name="facets">List of aggregations</param>
         public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, IEnumerable<FacetBase> facets)
         {
             IAggregationQuery<T> query = null;
@@ -170,6 +173,7 @@ namespace Raven.Client.Documents
             return query;
         }
 
+        /// <inheritdoc cref="IAggregationQuery{T}.AndAggregateBy(System.Action{Raven.Client.Documents.Queries.Facets.IFacetBuilder{T}})"/>
         public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, Action<IFacetBuilder<T>> builder)
         {
             var f = new FacetBuilder<T>(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions);
@@ -178,6 +182,8 @@ namespace Raven.Client.Documents
             return source.AggregateBy(f.Facet);
         }
 
+        /// <inheritdoc cref="IAggregationQuery{T}.AndAggregateBy(System.Action{Raven.Client.Documents.Queries.Facets.IFacetBuilder{T}})"/>
+        /// <param name="facetSetupDocumentId">ID of the document where facet definition is stored. See more at <see cref="FacetSetup"/>.</param>
         public static IAggregationQuery<T> AggregateUsing<T>(this IQueryable<T> source, string facetSetupDocumentId)
         {
             if (facetSetupDocumentId == null)
@@ -233,9 +239,7 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<TResult>)results;
         }
 
-        /// <summary>
-        /// Suggest alternative values for the queried term
-        /// </summary>
+        /// <inheritdoc cref="ISuggestionQuery{T}.AndSuggestUsing(SuggestionBase)"/>
         public static ISuggestionQuery<T> SuggestUsing<T>(this IQueryable<T> source, SuggestionBase suggestion)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -248,9 +252,7 @@ namespace Raven.Client.Documents
             return new SuggestionQuery<T>(source, ConvertExpressionIfNecessary, ConvertMethodIfNecessary, currentMethod);
         }
 
-        /// <summary>
-        /// Suggest alternative values for the queried term
-        /// </summary>
+        /// <inheritdoc cref="ISuggestionQuery{T}.AndSuggestUsing(Action{ISuggestionBuilder{T}})"/>
         public static ISuggestionQuery<T> SuggestUsing<T>(this IQueryable<T> source, Action<ISuggestionBuilder<T>> builder)
         {
             var f = new SuggestionBuilder<T>(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions);
@@ -1448,6 +1450,8 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="MoreLikeThisBase" />
+        /// <param name="moreLikeThis">Configure MoreLikeThis. You can use: <see cref="MoreLikeThisUsingDocumentForQuery{T}"/>, <see cref="MoreLikeThisUsingDocumentForDocumentQuery{T}"/>, <see cref="MoreLikeThisUsingAnyDocument"/> or <see cref="MoreLikeThisUsingDocument"/>.</param>
         public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, MoreLikeThisBase moreLikeThis)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1459,6 +1463,8 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="IMoreLikeThisBuilder{T}" />
+        /// <param name="builder">Configure MoreLikeThis by builder.</param>
         public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, Action<IMoreLikeThisBuilder<T>> builder)
         {
             var f = new MoreLikeThisBuilder<T>();

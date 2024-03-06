@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var processor = new DocumentHandlerProcessorForHead(this))
             {
-                await processor.ExecuteAsync();
+                await processor.ExecuteAsync().ConfigureAwait(false);
             }
         }
 
@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var processor = new DocumentHandlerProcessorForGetDocSize(this))
             {
-                await processor.ExecuteAsync();
+                await processor.ExecuteAsync().ConfigureAwait(false);
             }
         }
 
@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var processor = new DocumentHandlerProcessorForGet(HttpMethod.Get, this))
             {
-                await processor.ExecuteAsync();
+                await processor.ExecuteAsync().ConfigureAwait(false);
             }
         }
 
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var processor = new DocumentHandlerProcessorForGet(HttpMethod.Post, this))
             {
-                await processor.ExecuteAsync();
+                await processor.ExecuteAsync().ConfigureAwait(false);
             }
         }
 
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var processor = new DocumentHandlerProcessorForDelete(this))
             {
-                await processor.ExecuteAsync();
+                await processor.ExecuteAsync().ConfigureAwait(false);
             }
         }
 
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var processor = new DocumentHandlerProcessorForPut(this))
             {
-                await processor.ExecuteAsync();
+                await processor.ExecuteAsync().ConfigureAwait(false);
             }
         }
 
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var processor = new DocumentHandlerProcessorForPatch(this))
             {
-                await processor.ExecuteAsync();
+                await processor.ExecuteAsync().ConfigureAwait(false);
             }
         }
 
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var processor = new DocumentHandlerProcessorForGenerateClassFromDocument(this))
             {
-                await processor.ExecuteAsync();
+                await processor.ExecuteAsync().ConfigureAwait(false);
             }
         }
     }

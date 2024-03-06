@@ -21,7 +21,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
-using Raven.Server.Web.Authentication;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
@@ -189,6 +188,8 @@ namespace Raven.Server
 
                             server.BeforeSchemaUpgrade = x => BeforeSchemaUpgrade(x, server.ServerStore);
                             server.Initialize();
+
+                            configuration.UpdateLicenseType(server.ServerStore.LicenseManager.LicenseStatus.Type);
 
                             if (CommandLineSwitches.PrintServerId)
                                 Console.WriteLine($"Server ID is {server.ServerStore.GetServerId()}.");
@@ -382,8 +383,10 @@ namespace Raven.Server
         {
             try
             {
-                var response = await LicenseManager.GetUpdatedLicenseResponseMessage(license, contextPool);
-                var leasedLicense = await LicenseManager.ConvertResponseToLeasedLicense(response);
+                var response = await LicenseManager.GetUpdatedLicenseResponseMessage(license, contextPool)
+                                                   .ConfigureAwait(false);
+                var leasedLicense = await LicenseManager.ConvertResponseToLeasedLicense(response)
+                                                        .ConfigureAwait(false);
                 return leasedLicense.License;
             }
             catch
@@ -491,22 +494,20 @@ namespace Raven.Server
 
         private static void InitializeThreadPoolThreads(RavenConfiguration configuration)
         {
-            if (configuration.Server.ThreadPoolMinWorkerThreads != null || configuration.Server.ThreadPoolMinCompletionPortThreads != null)
-            {
-                ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
+            ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
 
-                int effectiveMinWorkerThreads = configuration.Server.ThreadPoolMinWorkerThreads ?? workerThreads;
-                int effectiveMinCompletionPortThreads = configuration.Server.ThreadPoolMinCompletionPortThreads ?? completionPortThreads;
+            int effectiveMinWorkerThreads = configuration.Server.ThreadPoolMinWorkerThreads ?? 2 * workerThreads;
+            int effectiveMinCompletionPortThreads = configuration.Server.ThreadPoolMinCompletionPortThreads ?? 2 * completionPortThreads;
 
-                ThreadPool.SetMinThreads(effectiveMinWorkerThreads, effectiveMinCompletionPortThreads);
+            ThreadPool.SetMinThreads(effectiveMinWorkerThreads, effectiveMinCompletionPortThreads);
 
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Thread Pool configuration was modified by calling {nameof(ThreadPool.SetMinThreads)}. Current values: workerThreads - {effectiveMinWorkerThreads}, completionPortThreads - {effectiveMinCompletionPortThreads}.");
-            }
+            if ((configuration.Server.ThreadPoolMinWorkerThreads != null || configuration.Server.ThreadPoolMinCompletionPortThreads != null) && Logger.IsInfoEnabled)
+                Logger.Info($"Thread Pool configuration was modified by calling {nameof(ThreadPool.SetMinThreads)}. Current values: workerThreads - {effectiveMinWorkerThreads}, completionPortThreads - {effectiveMinCompletionPortThreads}.");
+
 
             if (configuration.Server.ThreadPoolMaxWorkerThreads != null || configuration.Server.ThreadPoolMaxCompletionPortThreads != null)
             {
-                ThreadPool.GetMaxThreads(out var workerThreads, out var completionPortThreads);
+                ThreadPool.GetMaxThreads(out workerThreads, out completionPortThreads);
 
                 int effectiveMaxWorkerThreads = configuration.Server.ThreadPoolMaxWorkerThreads ?? workerThreads;
                 int effectiveMaxCompletionPortThreads = configuration.Server.ThreadPoolMaxCompletionPortThreads ?? completionPortThreads;

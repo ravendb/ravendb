@@ -24,6 +24,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -740,7 +741,7 @@ namespace Voron.Recovery
         private bool MacNotZero(PageHeader* pageHeader)
         {
             byte* zeroes = stackalloc byte[SizeOfMacInBytes];
-            return Sparrow.Memory.Compare(zeroes, pageHeader->Mac, SizeOfMacInBytes) != 0;
+            return Memory.IsEqualConstant(zeroes, SizeOfMacInBytes, pageHeader->Mac) == false;
         }
 
         private Size _maxTransactionSize = new Size(64, SizeUnit.Megabytes);

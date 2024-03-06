@@ -5,6 +5,7 @@ namespace Raven.Client.Documents.Session
 {
     public partial class AsyncDocumentQuery<T>
     {
+        /// <inheritdoc/>
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.MoreLikeThis(MoreLikeThisBase moreLikeThis)
         {
             using (var mlt = MoreLikeThis())
@@ -18,6 +19,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+        /// <inheritdoc/>
         IAsyncDocumentQuery<T> IAsyncDocumentQuery<T>.MoreLikeThis(Action<IMoreLikeThisBuilderForAsyncDocumentQuery<T>> builder)
         {
             var f = new MoreLikeThisBuilder<T>();

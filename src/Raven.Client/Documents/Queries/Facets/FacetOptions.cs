@@ -3,10 +3,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
+    /// <summary>
+    /// Optional configuration for facet query.
+    /// </summary>
     public sealed class FacetOptions
     {
         internal static readonly FacetOptions Default = new FacetOptions();
 
+        /// <inheritdoc cref="FacetOptions"/>
         public FacetOptions()
         {
             PageSize = int.MaxValue;
@@ -23,8 +27,14 @@ namespace Raven.Client.Documents.Queries.Facets
         /// </summary>
         public bool IncludeRemainingTerms { get; set; }
 
+        /// <summary>
+        /// The position from which to send items (how many to skip).
+        /// </summary>
         public int Start { get; set; }
 
+        /// <summary>
+        /// Number of items to return. Default: <b><see cref="int.MaxValue"/></b>.
+        /// </summary>
         public int PageSize { get; set; }
 
         internal static FacetOptions Create(BlittableJsonReaderObject json)

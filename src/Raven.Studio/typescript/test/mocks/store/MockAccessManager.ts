@@ -15,4 +15,8 @@ export class MockAccessManager {
 
         globalDispatch(accessManagerActions.onDatabaseAccessLoaded(access));
     }
+
+    with_secureServer(isSecured: boolean) {
+        accessManager.default.secureServer(isSecured);
+    }
 }

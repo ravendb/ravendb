@@ -2,7 +2,6 @@
 using System.Linq;
 using FastTests;
 using Orders;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;

@@ -78,21 +78,32 @@ namespace Raven.Client.Documents.Session
         Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval = null);
     }
 
+    /// <summary>
+    ///     Allows to express a query directly in RQL using string containing query syntax.
+    /// </summary>
+    /// <typeparam name="T">Query result type</typeparam>
+    /// <remarks><seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-query#session.advanced.rawquery"/></remarks>
     public interface IRawDocumentQuery<T> :
         IPagingDocumentQueryBase<T, IRawDocumentQuery<T>>,
         IQueryBase<T, IRawDocumentQuery<T>>,
         IDocumentQueryBase<T>
     {
-        IRawDocumentQuery<T> Projection(ProjectionBehavior projectionBehavior);
         /// <summary>
-        ///    Execute raw query aggregated by facet
+        ///     Allows to change the projection behavior of a query. The projection behavior allows to control where RavenDB will try to retrieve the fields values from.
         /// </summary>
+        /// <param name="projectionBehavior">Desired projection behavior type</param>
+        /// <remarks><seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/indexes/querying/projections#projection-behavior-with-a-static-index"/></remarks>
+        IRawDocumentQuery<T> Projection(ProjectionBehavior projectionBehavior);
+        
+        /// <summary>
+        ///     Execute raw query aggregated by facet.
+        /// </summary>
+        /// <returns>Dictionary with declared facet names keys and corresponding facet aggregation values</returns>
+        /// <remarks><seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/indexes/querying/faceted-search"/></remarks>
         Dictionary<string, FacetResult> ExecuteAggregation();
     }
 
-    /// <summary>
-    ///     A query against a Raven index
-    /// </summary>
+    /// <inheritdoc cref="IDocumentQueryBase{T, TSelf} "/>
     public interface IDocumentQuery<T> :
         IDocumentQueryBase<T, IDocumentQuery<T>>,
         IDocumentQueryBase<T>
@@ -165,6 +176,8 @@ namespace Raven.Client.Documents.Session
 
         IGroupByDocumentQuery<T> GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields);
 
+        /// <inheritdoc cref="IMoreLikeThisOperations{T}"/>
+        /// <param name="builder">Configure MoreLikeThis query by builder. See more at: <see cref="IMoreLikeThisBuilderForDocumentQuery{T}"/> or see <see cref="IMoreLikeThisBuilderForAsyncDocumentQuery{T}">here</see> for async operations.</param>
         IDocumentQuery<T> MoreLikeThis(Action<IMoreLikeThisBuilderForDocumentQuery<T>> builder);
         
         /// <summary>
@@ -183,8 +196,10 @@ namespace Raven.Client.Documents.Session
 
         IAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentId);
 
+        /// <inheritdoc cref="ISuggestionQuery{T}.AndSuggestUsing(SuggestionBase)"/>
         ISuggestionDocumentQuery<T> SuggestUsing(SuggestionBase suggestion);
 
+        /// <inheritdoc cref="ISuggestionQuery{T}.AndSuggestUsing(Action{ISuggestionBuilder{T}})"/>
         ISuggestionDocumentQuery<T> SuggestUsing(Action<ISuggestionBuilder<T>> builder);
 
         /// <summary>

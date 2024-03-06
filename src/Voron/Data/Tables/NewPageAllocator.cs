@@ -63,9 +63,10 @@ namespace Voron.Data.Tables
         {
             _llt = llt;
             _parentTree = parentTree;
-            var fixedSizeTreeSize = _parentTree.FixedTreeFor(AllocationStorageSize, valSize: sizeof(int));
+
             _numberOfPagesToAllocate = NumberOfPagesInSection;
 
+            var fixedSizeTreeSize = _parentTree.FixedTreeFor(AllocationStorageSize, valSize: sizeof(int));
             using (fixedSizeTreeSize.Read(0, out var slice))
             {
                 if (slice.HasValue)
@@ -174,7 +175,7 @@ namespace Voron.Data.Tables
                 {
                     if (it.SeekToLast() == false)
                     {
-                        // shouldn't actuallly happen, but same behavior as running out of space
+                        // shouldn't actually happen, but same behavior as running out of space
                         page = AllocateMoreSpace(fst);
                         SetValue(fst, page.PageNumber, 0);
                         return page;
@@ -183,8 +184,7 @@ namespace Voron.Data.Tables
                 var startPage = it.CurrentKey;
                 while (true)
                 {
-                    Slice slice;
-                    using (it.Value(out slice))
+                    using (it.Value(out Slice slice))
                     {
                         var hasSpace = false;
                         var buffer = (ulong*) (slice.Content.Ptr);
@@ -196,21 +196,24 @@ namespace Voron.Data.Tables
                                 break;
                             }
                         }
+
                         if (hasSpace == false)
                         {
                             if (TryMoveNextCyclic(it, startPage) == false)
                                 break;
                         }
+
                         for (int i = 0; i < BitmapSize*8; i++)
                         {
-                            if (PtrBitVector.GetBitInPointer(buffer, i) == false)
-                            {
-                                var currentSectionStart = it.CurrentKey;
-                                SetValue(fst, currentSectionStart, i);
+                            if (PtrBitVector.GetBitInPointer(buffer, i)) 
+                                continue;
+
+                            var currentSectionStart = it.CurrentKey;
+                            SetValue(fst, currentSectionStart, i);
                                 
-                                return _llt.ModifyPage(currentSectionStart + i);
-                            }
+                            return _llt.ModifyPage(currentSectionStart + i);
                         }
+
                         if (TryMoveNextCyclic(it, startPage) == false)
                             break;
                     }
@@ -229,35 +232,29 @@ namespace Voron.Data.Tables
                     return false; // we went full circle
                 return true;
             }
-            // we run out space to move forward, let us go to the start and search from there
+            // we run out of space to move forward, let us go to the start and search from there
             return it.Seek(0) && it.CurrentKey != startPage;
         }
 
         private unsafe void SetValue(FixedSizeTree fst, long pageNumber, int positionInBitmap)
         {
-            bool isNew;
-            byte* ptr;
-            using (fst.DirectAdd(pageNumber, out isNew, out ptr))
+            using (fst.DirectAdd(pageNumber, out bool isNew, out byte* ptr))
             {
                 if (isNew)
                     ThrowInvalidNewBuffer();
 
                 PtrBitVector.SetBitInPointer(ptr, positionInBitmap, true);
-                // ptr[positionInBitmap / 8] |= (byte) (1 << (positionInBitmap % 8));
             }
         }
 
         private unsafe void UnsetValue(FixedSizeTree fst, long pageNumber, int positionInBitmap)
         {
-            bool isNew;
-            byte* ptr;
-            using (fst.DirectAdd(pageNumber, out isNew, out ptr))
+            using (fst.DirectAdd(pageNumber, out bool isNew, out byte* ptr))
             {
                 if (isNew)
                     ThrowInvalidNewBuffer();
 
                 PtrBitVector.SetBitInPointer(ptr, positionInBitmap, false);
-                // ptr[positionInBitmap / 8] &= (byte) ~(1 << (positionInBitmap % 8));
             }
         }
 

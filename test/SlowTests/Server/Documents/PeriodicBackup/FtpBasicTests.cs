@@ -385,7 +385,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var ftpClient = client.CreateFtpClient(outputUrl, keepAlive: false))
             {
-                if (ftpClient.FileExists(path + "/" + backupName))
+                if (ftpClient.DirectoryExists(path + "/" + backupName))
                     return true;
             }
             return false;

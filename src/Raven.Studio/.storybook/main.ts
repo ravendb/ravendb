@@ -2,7 +2,7 @@ import type { StorybookConfig } from "@storybook/react-webpack5";
 const webpackConfigFunc = require("../webpack.config");
 const path = require("path");
 const CopyPlugin = require("copy-webpack-plugin");
-import { Configuration } from "webpack";
+const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin");
 
 const webpackConfig = webpackConfigFunc(null, {
     mode: "development",
@@ -51,6 +51,11 @@ const config: StorybookConfig = {
                 (x.test && x.test.toString().includes(".scss"))
         );
 
+        const scssRule = incomingRules.find((x) => x.test && x.test.toString().includes(".scss"));
+        scssRule.use[0].options = {
+            publicPath: "/",
+        };
+
         config.plugins?.push(webpackConfig.plugins[0]); // MiniCssExtractPlugin
 
         const copyPlugin = new CopyPlugin({
@@ -63,9 +68,21 @@ const config: StorybookConfig = {
         });
 
         config.plugins?.push(copyPlugin);
+        config.plugins?.push(
+            new ForkTsCheckerWebpackPlugin({
+                typescript: {
+                    configFile: path.resolve(__dirname, "../tsconfig.json"),
+                },
+            })
+        );
+
         config.module?.rules?.push(...incomingRules);
 
         return config;
+    },
+
+    docs: {
+        autodocs: false,
     },
 };
 export default config;

@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Corax;
 using Corax.Mappings;
+using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Raven.Client.Documents.Indexes;
@@ -13,7 +14,10 @@ using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.Server;
+using Sparrow.Threading;
 using Sparrow.Utils;
+using Voron;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Sharding.Persistence.Corax;
@@ -51,8 +55,11 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
     private ShardedQueryResultDocument AddOrderByFields(Document queryResult, IndexQueryServerSide query, ref EntryTermsReader reader, OrderMetadata[] orderByFields)
     {
         var result = ShardedQueryResultDocument.From(queryResult);
+        var currentCoraxOrderIndex = 0;
 
-        for (int i = 0; i < query.Metadata.OrderBy.Length; i++)
+        // Number of order by fields in Corax index can be smaller than in query metadata
+        // because we don't create OrderMetadata for fields with zero indexed terms
+        for (int i = 0; i < query.Metadata.OrderBy.Length && currentCoraxOrderIndex < orderByFields.Length; i++)
         {
             var orderByField = query.Metadata.OrderBy[i];
 
@@ -65,7 +72,24 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
                 throw new NotSupportedInShardingException("Ordering by score is not supported in sharding");
             }
 
-            var orderByFieldMetadata = orderByFields[i];
+            var orderByFieldMetadata = orderByFields[currentCoraxOrderIndex];
+
+            using (var byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None))
+            {
+                Slice.From(byteStringContext, orderByField.Name.Value, ByteStringType.Immutable, out var orderByFieldNameSlice);
+                
+                if (SliceComparer.Compare(orderByFieldMetadata.Field.FieldName, orderByFieldNameSlice) != 0)
+                    continue;
+            }
+                
+            if (orderByFieldMetadata.Ascending != orderByField.Ascending)
+                continue;
+
+            if (IsSameOrderType(orderByFieldMetadata.FieldType, orderByField.OrderingType) == false)
+                continue;
+
+            currentCoraxOrderIndex++;
+            
             reader.Reset();
             long fieldRootPage = IndexSearcher.FieldCache.GetLookupRootPage(orderByFieldMetadata.Field.FieldName);
             // Note that in here we have to check for the *lowest* value of the field, if there are multiple terms
@@ -128,6 +152,25 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
                 }
             }
         }
+
+        return result;
+    }
+
+    private static bool IsSameOrderType(MatchCompareFieldType coraxOrderField, OrderByFieldType queryOrderField)
+    {
+        bool result = (coraxOrderField, queryOrderField) switch
+        {
+            (MatchCompareFieldType.Random, OrderByFieldType.Random) => true,
+            (MatchCompareFieldType.Alphanumeric, OrderByFieldType.AlphaNumeric) => true,
+            (MatchCompareFieldType.Score, OrderByFieldType.Score) => true,
+            (MatchCompareFieldType.Integer, OrderByFieldType.Long) => true,
+            (MatchCompareFieldType.Floating, OrderByFieldType.Double) => true,
+            (MatchCompareFieldType.Spatial, OrderByFieldType.Distance) => true,
+            (MatchCompareFieldType.Sequence, OrderByFieldType.String) => true,
+            (MatchCompareFieldType.Sequence, OrderByFieldType.Implicit) => true,
+            (MatchCompareFieldType.Integer, OrderByFieldType.Implicit) => true,
+            _ => false
+        };
 
         return result;
     }

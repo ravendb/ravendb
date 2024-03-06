@@ -181,7 +181,7 @@ namespace Raven.Server.Documents
 
                 if (_readingMetadataObject == false)
                 {
-                    if ("@metadata"u8.CompareConstant(state.StringBuffer, state.StringSize) == true)
+                    if ("@metadata"u8.IsEqualConstant(state.StringBuffer, state.StringSize) == true)
                         _readingMetadataObject = true;
 
                     return true;
@@ -212,7 +212,7 @@ namespace Raven.Server.Documents
 
                 if (_readingMetadataObject == false)
                 {
-                    if ("@metadata"u8.CompareConstant(state.StringBuffer, state.StringSize) == true)
+                    if ("@metadata"u8.IsEqualConstant(state.StringBuffer, state.StringSize) == true)
                         _readingMetadataObject = true;
 
                     return true;
@@ -243,7 +243,7 @@ namespace Raven.Server.Documents
 
                 if (_readingMetadataObject == false)
                 {
-                    if ("@metadata"u8.CompareConstant(state.StringBuffer, state.StringSize) == true)
+                    if ("@metadata"u8.IsEqualConstant(state.StringBuffer, state.StringSize) == true)
                         _readingMetadataObject = true;
 
                     return true;
@@ -296,7 +296,7 @@ namespace Raven.Server.Documents
 
                 case 3: // @id
 
-                    if ("@id"u8.CompareConstant(state.StringBuffer) == false)
+                    if ("@id"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -314,7 +314,7 @@ namespace Raven.Server.Documents
                     break;
 
                 case 5: // @etag
-                    if ("@etag"u8.CompareConstant(state.StringBuffer) == false)
+                    if ("@etag"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -358,7 +358,7 @@ namespace Raven.Server.Documents
 
                     goto case -1;
                 case 6: // @flags
-                    if ("@flags"u8.CompareConstant(state.StringBuffer) == false)
+                    if ("@flags"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -379,7 +379,7 @@ namespace Raven.Server.Documents
                     // always remove the @counters metadata
                     // not doing so might cause us to have counter on the document but not in the storage.
                     // the counters will be updated when we import the counters themselves
-                    if ("@counters"u8.CompareConstant(state.StringBuffer) == false)
+                    if ("@counters"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -397,7 +397,7 @@ namespace Raven.Server.Documents
                     goto case -2;
                 case 11: // @timeseries
                     // always remove the @timeseries metadata
-                    if ("@timeseries"u8.CompareConstant(state.StringBuffer) == false)
+                    if ("@timeseries"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -419,11 +419,11 @@ namespace Raven.Server.Documents
                 case 12: // @index-score OR @attachments
                     if (state.StringBuffer[0] == (byte)'@')
                     {   // @index-score
-                        if ("@index-score"u8.CompareConstant(state.StringBuffer))
+                        if ("@index-score"u8.IsEqualConstant(state.StringBuffer))
                             goto case -1;
 
                         // @attachments
-                        if ("@attachments"u8.CompareConstant(state.StringBuffer))
+                        if ("@attachments"u8.IsEqualConstant(state.StringBuffer))
                         {
                             SeenAttachments = true;
                             if (OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false)
@@ -444,7 +444,7 @@ namespace Raven.Server.Documents
                     return true;
 
                 case 13: //Last-Modified
-                    if ("Last-Modified"u8.CompareConstant(state.StringBuffer) == false)
+                    if ("Last-Modified"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -456,7 +456,7 @@ namespace Raven.Server.Documents
                     if (state.StringBuffer[0] == (byte)'@')
                     {
                         // @change-vector
-                        if ("@change-vector"u8.CompareConstant(state.StringBuffer))
+                        if ("@change-vector"u8.IsEqualConstant(state.StringBuffer))
                         {
                             if (reader.Read() == false)
                             {
@@ -475,7 +475,7 @@ namespace Raven.Server.Documents
                         }
 
                         // @last-modified
-                        if ("@last-modified"u8.CompareConstant(state.StringBuffer))
+                        if ("@last-modified"u8.IsEqualConstant(state.StringBuffer))
                         {
                             if (reader.Read() == false)
                             {
@@ -494,7 +494,7 @@ namespace Raven.Server.Documents
                     return true;
 
                 case 15: //Raven-Read-Only
-                    if ("Raven-Read-Only"u8.CompareConstant(state.StringBuffer) == false)
+                    if ("Raven-Read-Only"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -503,7 +503,7 @@ namespace Raven.Server.Documents
                     goto case -1;
 
                 case 17: //Raven-Entity-Name --> @collection
-                    if ("Raven-Entity-Name"u8.CompareConstant(state.StringBuffer) == false)
+                    if ("Raven-Entity-Name"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -517,7 +517,7 @@ namespace Raven.Server.Documents
 
                 case 19: //Raven-Last-Modified or Raven-Delete-Marker
 
-                    if ("Raven-"u8.CompareConstant(state.StringBuffer) == false)
+                    if ("Raven-"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -525,8 +525,8 @@ namespace Raven.Server.Documents
 
                     // PERF: We are aiming to ensure that on Vector128 architectures and AVX2 architecture we use
                     // the vectorial implementation. 
-                    if ("en-Last-Modified"u8.CompareConstant(state.StringBuffer + "Rav"u8.Length) == false &&
-                        "en-Delete-Marker"u8.CompareConstant(state.StringBuffer + "Rav"u8.Length) == false)
+                    if ("en-Last-Modified"u8.IsEqualConstant(state.StringBuffer + "Rav"u8.Length) == false &&
+                        "en-Delete-Marker"u8.IsEqualConstant(state.StringBuffer + "Rav"u8.Length) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -556,7 +556,7 @@ namespace Raven.Server.Documents
                     break;
 
                 case 21: //Raven-Expiration-Date
-                    if ("Raven-Expiration-Date"u8.CompareConstant(state.StringBuffer) == false)
+                    if ("Raven-Expiration-Date"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -569,7 +569,7 @@ namespace Raven.Server.Documents
                     return true;
 
                 case 23: //Raven-Document-Revision
-                    if ("Raven-Document-Revision"u8.CompareConstant(state.StringBuffer) == false)
+                    if ("Raven-Document-Revision"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -577,7 +577,7 @@ namespace Raven.Server.Documents
 
                     goto case -1;
                 case 24: //Raven-Replication-Source
-                    if ("Raven-Replication-Source"u8.CompareConstant(state.StringBuffer) == false)
+                    if ("Raven-Replication-Source"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -593,8 +593,8 @@ namespace Raven.Server.Documents
                         return true;
                     }
                     
-                    if ("Raven-Replication-Version"u8.CompareConstant(state.StringBuffer) == false ||
-                        "Raven-Replication-History"u8.CompareConstant(state.StringBuffer) == false)
+                    if ("Raven-Replication-Version"u8.IsEqualConstant(state.StringBuffer) == false ||
+                        "Raven-Replication-History"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -619,7 +619,7 @@ namespace Raven.Server.Documents
 
                 case 29: //Non-Authoritative-Information
 
-                    if ("Non-Authoritative-Information"u8.CompareConstant(state.StringBuffer) == false)
+                    if ("Non-Authoritative-Information"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -629,8 +629,8 @@ namespace Raven.Server.Documents
 
                 case 30: //Raven-Document-Parent-Revision OR Raven-Document-Revision-Status
 
-                    if ("Raven-Document-Parent-Revision"u8.CompareConstant(state.StringBuffer) == false &&
-                        "Raven-Document-Revision-Status"u8.CompareConstant(state.StringBuffer) == false)
+                    if ("Raven-Document-Parent-Revision"u8.IsEqualConstant(state.StringBuffer) == false &&
+                        "Raven-Document-Revision-Status"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -665,7 +665,7 @@ namespace Raven.Server.Documents
                     break;
 
                 case 32: //Raven-Replication-Merged-History
-                    if ("Raven-Replication-Merged-History"u8.CompareConstant(state.StringBuffer) == false)
+                    if ("Raven-Replication-Merged-History"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;

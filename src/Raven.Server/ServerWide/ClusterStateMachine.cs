@@ -338,12 +338,8 @@ namespace Raven.Server.ServerWide
                 switch (type)
                 {
                     case nameof(ClusterTransactionCommand):
-                        var errors = ExecuteClusterTransaction(context, cmd, index);
-                        if (errors != null)
-                        {
-                            result = errors;
-                            leader?.SetStateOf(index, errors);
-                        }
+                        result = ExecuteClusterTransaction(context, cmd, index);
+                        leader?.SetStateOf(index, result);
                         break;
 
                     case nameof(CleanUpClusterStateCommand):
@@ -781,7 +777,9 @@ namespace Raven.Server.ServerWide
 
             T updateCommand = null;
             Exception exception = null;
-            var actionsByDatabase = new Dictionary<string, List<Func<Task>>>();
+            var actions = new List<Func<Task>>();
+            var databases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             try
             {
@@ -800,20 +798,16 @@ namespace Raven.Server.ServerWide
                     var id = updateCommand.FindFreeId(context, index);
                     updateCommand.Execute(context, items, id, record: null, _parent.CurrentState, out _);
 
-                    if (actionsByDatabase.ContainsKey(database) == false)
+                    if (databases.Add(database))
                     {
-                        actionsByDatabase[database] = new List<Func<Task>>();
-                    }
-
-                    actionsByDatabase[database].Add(() =>
+                        actions.Add(() =>
                         Changes.OnDatabaseChanges(database, index, nameof(T), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, changeState: null));
                 }
-
-                foreach (var action in actionsByDatabase)
-                {
-                    ExecuteManyOnDispose(context, index, type, action.Value);
                 }
-            }
+
+                ExecuteManyOnDispose(context, index, type, actions);
+
+                }
             catch (Exception e)
             {
                 exception = e;
@@ -995,20 +989,21 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private List<ClusterTransactionCommand.ClusterTransactionErrorInfo> ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
+        private object ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
             ClusterTransactionCommand clusterTransaction = null;
             Exception exception = null;
+            RawDatabaseRecord rawRecord = null;
             try
             {
                 clusterTransaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
-                using var rawRecord = ReadRawDatabaseRecord(context, clusterTransaction.DatabaseName);
+                rawRecord = ReadRawDatabaseRecord(context, clusterTransaction.DatabaseName);
                 if (rawRecord == null)
                     throw DatabaseDoesNotExistException.CreateWithMessage(clusterTransaction.DatabaseName, $"Could not execute update command of type '{nameof(ClusterTransactionCommand)}'.");
 
                 if (rawRecord.IsSharded == false)
                     //This function is used to set cluster & database id for backward compatibility so no need if for shardNumber
-                    UpdateDatabaseRecordId(context, rawRecord, index, clusterTransaction);
+                    UpdateDatabaseRecordId(context, ref rawRecord, index, clusterTransaction);
 
                 if (clusterTransaction.SerializedDatabaseCommands != null &&
                     clusterTransaction.SerializedDatabaseCommands.TryGet(nameof(ClusterTransactionCommand.Options), out BlittableJsonReaderObject blittableOptions))
@@ -1017,13 +1012,15 @@ namespace Raven.Server.ServerWide
                 }
 
                 var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
-                var error = clusterTransaction.ExecuteCompareExchangeCommands(rawRecord.GetClusterTransactionId(), context, index, compareExchangeItems);
-                if (error == null)
+
+                var errors = clusterTransaction.ExecuteCompareExchangeCommands(rawRecord.GetClusterTransactionId(), context, index, compareExchangeItems);
+                if (errors == null)
                 {
                     DatabasesLandlord.ClusterDatabaseChangeType notify;
+                    var clusterTransactionResult = new ClusterTransactionResult();
                     if (clusterTransaction.HasDocumentsInTransaction)
                     {
-                        clusterTransaction.SaveCommandsBatch(context, rawRecord, index, ClusterTransactionWaiter);
+                        clusterTransactionResult.GeneratedResult = clusterTransaction.SaveCommandsBatch(context, rawRecord, index);
                         notify = DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions;
                     }
                     else
@@ -1033,11 +1030,11 @@ namespace Raven.Server.ServerWide
 
                     NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify, null);
 
-                    return null;
+                    return clusterTransactionResult;
                 }
 
                 OnTransactionDispose(context, index);
-                return error;
+                return errors;
             }
             catch (Exception e)
             {
@@ -1046,11 +1043,12 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
+                rawRecord?.Dispose();
                 LogCommand(nameof(ClusterTransactionCommand), index, exception, clusterTransaction);
             }
         }
 
-        private void UpdateDatabaseRecordId(ClusterOperationContext context, RawDatabaseRecord rawRecord, long index,
+        private void UpdateDatabaseRecordId(ClusterOperationContext context, ref RawDatabaseRecord rawRecord, long index,
             ClusterTransactionCommand clusterTransaction)
         {
             if (rawRecord == null)
@@ -1072,12 +1070,13 @@ namespace Raven.Server.ServerWide
                         [nameof(DatabaseRecord.Topology)] = topology.ToJson()
                     };
 
-                    using (var old = databaseRecordJson)
+                    using (rawRecord)
                     {
                         databaseRecordJson = context.ReadObject(databaseRecordJson, dbKey);
                     }
 
                     UpdateValue(index, items, valueNameLowered, valueName, databaseRecordJson);
+                    rawRecord = new RawDatabaseRecord(context, databaseRecordJson);
                 }
             }
         }

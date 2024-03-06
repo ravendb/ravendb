@@ -77,8 +77,8 @@ namespace Corax.Querying.Matches.TermProviders
             return new QueryInspectionNode($"{nameof(NotStartsWithTermProvider<TLookupIterator>)}",
                             parameters: new Dictionary<string, string>()
                             {
-                                { "Field", _field.ToString() },
-                                { "Terms", _startWith.ToString()}
+                                { Constants.QueryInspectionNode.FieldName, _field.ToString() },
+                                { Constants.QueryInspectionNode.Prefix, _startWith.ToString()}
                             });
         }
 

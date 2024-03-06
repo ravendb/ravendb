@@ -600,18 +600,17 @@ namespace Voron.Impl
 
         public FixedSizeTree GetGlobalFixedSizeTree(Slice name, ushort valSize, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
-            if (_globalFixedSizeTree == null)
-                _globalFixedSizeTree = new Dictionary<Slice, FixedSizeTree>(SliceStructComparer.Instance);
+            _globalFixedSizeTree ??= new Dictionary<Slice, FixedSizeTree>(SliceStructComparer.Instance);
 
-            FixedSizeTree tree;
-            if (_globalFixedSizeTree.TryGetValue(name, out tree) == false)
+            if (_globalFixedSizeTree.TryGetValue(name, out FixedSizeTree tree) == false)
             {
-                tree = new FixedSizeTree(LowLevelTransaction, LowLevelTransaction.RootObjects, name, valSize, isIndexTree: isIndexTree,
-                    newPageAllocator: newPageAllocator);
+                tree = new FixedSizeTree(LowLevelTransaction, LowLevelTransaction.RootObjects, name, valSize, isIndexTree: isIndexTree, newPageAllocator: newPageAllocator);
                 _globalFixedSizeTree[tree.Name] = tree;
             }
             else if (newPageAllocator != null && tree.HasNewPageAllocator == false)
+            {
                 tree.SetNewPageAllocator(newPageAllocator);
+            }
 
             return tree;
         }
@@ -621,6 +620,7 @@ namespace Voron.Impl
         {
             if (reader == null)
                 return;
+
             Debug.Assert(tx != null);
             // this method is called to ensure that after the transaction is completed, all the readers are disposed
             // so we won't have read-after-tx use scenario, which can in rare case corrupt memory. This is a debug
