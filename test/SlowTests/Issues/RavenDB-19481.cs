@@ -11,9 +11,11 @@ using FastTests.Graph;
 using FastTests.Utils;
 using Nest;
 using NetTopologySuite.Utilities;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Session;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
@@ -101,5 +103,55 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.Smuggler)]
+        public async Task RestoredDocThatCreatedByClusterWideTransactionShouldntHaveDeleteRevision()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using var store = GetDocumentStore();
+
+            const string id = "users/1";
+
+            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                await session.StoreAsync(new Company { Name = "Grisha" }, id);
+                await session.SaveChangesAsync();
+            }
+
+            var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+            Assert.Equal(1, stats.CountOfRevisionDocuments);
+
+            var config = Backup.CreateBackupConfiguration(backupPath);
+            var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+            await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: 2);
+
+            var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+            using (Backup.RestoreDatabase(store,
+                       new RestoreBackupConfiguration { BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = databaseName }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<Company>(id);
+                    Assert.NotNull(user);
+
+                    var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
+                    foreach (var metadata in revisionsMetadata)
+                    {
+                        Assert.False(metadata.GetString(Constants.Documents.Metadata.Flags).Contains(DocumentFlags.DeleteRevision.ToString()),
+                            $"Restored document \"{id}\" has \'DeleteRevision\'");
+                    }
+                }
+            }
+
+        }
+
+        private class Company
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+        }
     }
 }
