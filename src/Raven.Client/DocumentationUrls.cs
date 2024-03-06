@@ -57,7 +57,7 @@ internal static class DocumentationUrls
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/Csharp/client-api/session/querying/how-to-use-morelikethis"/></remarks>
             public const string MoreLikeThisQuery = nameof(MoreLikeThisQuery);
             
-            ///<remarks><seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-work-with-suggestions"/></remarks>
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-work-with-suggestions"/></remarks>
             public const string SuggestionsQuery = nameof(SuggestionsQuery);
 
             /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-use-intersect"/></remarks>
@@ -80,6 +80,15 @@ internal static class DocumentationUrls
             
             /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/indexes/querying/distinct"/></remarks>
             public const string Distinct = nameof(Distinct);
+
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/Csharp/client-api/session/querying/how-to-perform-group-by-query"/></remarks>
+            public const string GroupByQuery = nameof(GroupByQuery);
+
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-perform-group-by-query#group-by-array"/></remarks>
+            public const string GroupByArrayQuery = nameof(GroupByArrayQuery);
+
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-perform-group-by-query#by-array-content"/></remarks>
+            public const string GroupByArrayContent = nameof(GroupByArrayContent);
         }
 
         internal static class Transactions

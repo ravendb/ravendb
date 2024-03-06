@@ -360,11 +360,13 @@ namespace Raven.Client.Documents.Session
             QueryParameters[name] = value;
         }
 
+        /// <inheritdoc cref="IDocumentQuery{T}.GroupBy(string,string[])"/>
         public void GroupBy(string fieldName, params string[] fieldNames)
         {
             GroupBy((fieldName, GroupByMethod.None), fieldNames?.Select(x => (x, GroupByMethod.None)).ToArray());
         }
 
+        /// <inheritdoc cref="IAbstractDocumentQuery{T}.GroupBy(ValueTuple{string, GroupByMethod}, ValueTuple{string, GroupByMethod}[])"/>
         public void GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields)
         {
             if (FromToken.IsDynamic == false)
@@ -387,6 +389,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        /// <inheritdoc />
         public void GroupByKey(string fieldName = null, string projectedName = null)
         {
             AssertNoRawQuery();
@@ -405,6 +408,7 @@ namespace Raven.Client.Documents.Session
             SelectTokens.AddLast(GroupByKeyToken.Create(fieldName, projectedName));
         }
 
+        /// <inheritdoc />
         public void GroupBySum(string fieldName, string projectedName = null)
         {
             AssertNoRawQuery();
@@ -415,6 +419,7 @@ namespace Raven.Client.Documents.Session
             SelectTokens.AddLast(GroupBySumToken.Create(fieldName, projectedName));
         }
 
+        /// <inheritdoc />
         public void GroupByCount(string projectedName = null)
         {
             AssertNoRawQuery();

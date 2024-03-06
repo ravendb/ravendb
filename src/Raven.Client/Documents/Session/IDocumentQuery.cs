@@ -172,8 +172,10 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IDocumentQuery<TResult> OfType<TResult>();
 
+        /// <inheritdoc cref="IAbstractDocumentQuery{T}.GroupBy(string,string[])"/>
         IGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
 
+        /// <inheritdoc cref="IAbstractDocumentQuery{T}.GroupBy(ValueTuple{string, GroupByMethod}, ValueTuple{string, GroupByMethod}[])" />
         IGroupByDocumentQuery<T> GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields);
 
         /// <inheritdoc cref="IMoreLikeThisOperations{T}"/>
