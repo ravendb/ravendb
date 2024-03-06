@@ -54,10 +54,10 @@ namespace Raven.Server.Documents.Queries.Results
                 throw new InvalidQueryException($"Invalid projection behavior '{_query.ProjectionBehavior}'. You can only extract values from index.", _query.Query, _query.QueryParameters);
         }
 
-        protected override QueriedDocument LoadDocument(QueriedDocument parentDocument, string id)
+        protected override QueriedDocument LoadDocument(QueriedDocument parentDocument, string id, ref RetrieverInput retrieverInput)
         {
             if (DocumentsStorage != null && _context is DocumentsOperationContext ctx)
-                return base.LoadDocument(parentDocument, id);
+                return base.LoadDocument(parentDocument, id, ref retrieverInput);
             // can happen during some debug endpoints that should never load a document
             return null;
         }
@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Queries.Results
             return djv;
         }
         
-        public override unsafe QueriedDocument DirectGet(ref RetrieverInput retrieverInput,string id, DocumentFields fields)
+        public override unsafe QueriedDocument DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
         {
             BlittableJsonReaderObject result;
             if (retrieverInput.IsLuceneDocument() == false)
