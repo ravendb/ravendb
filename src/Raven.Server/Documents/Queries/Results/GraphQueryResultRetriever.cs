@@ -61,8 +61,13 @@ namespace Raven.Server.Documents.Queries.Results
         {
             throw new NotSupportedException("Graph Queries do not deal with Corax indexes.");
         }
-        
-        protected override Document LoadDocument(Document parent, string id) => DocumentsStorage.Get(DocumentContext, id);
+
+        protected override Document LoadDocument(Document parent, string id, ref RetrieverInput retrieverInput)
+        {
+            return id == string.Empty 
+                ? parent 
+                : DocumentsStorage.Get(DocumentContext, id);
+        }
 
         protected override long? GetCounter(string docId, string name)
         {

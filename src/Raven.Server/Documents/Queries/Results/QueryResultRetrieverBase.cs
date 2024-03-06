@@ -194,8 +194,11 @@ namespace Raven.Server.Documents.Queries.Results
             return doc;
         }
 
-        protected virtual TDocument LoadDocument(TDocument parentDocument, string id)
+        protected virtual TDocument LoadDocument(TDocument parentDocument, string id, ref RetrieverInput retrieverInput)
         {
+            if (id == string.Empty) // main doc
+                return parentDocument;
+            
             _loadedDocumentMarshall.MaybeClean();
             
             if (_loadedDocumentMarshall.TryGetValue(id, out var doc))
@@ -212,7 +215,7 @@ namespace Raven.Server.Documents.Queries.Results
                 return doc;
             }
 
-            doc = DocumentsStorage.Get<TDocument>(DocumentContext, id);
+            doc = DirectGet(ref retrieverInput, id, DocumentFields.All);
             if (doc != null)
                 _loadedDocumentMarshall[id] = doc;
 
@@ -1084,7 +1087,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (docId == null)
                     continue;
 
-                var doc = LoadDocument(document, docId.ToLowerInvariant());
+                var doc = LoadDocument(document, docId.ToLowerInvariant(), ref retrieverInput);
                 if (doc == null)
                     continue;
 
