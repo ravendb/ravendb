@@ -168,27 +168,30 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IAsyncDocumentQuery<TResult> OfType<TResult>();
 
+        ///<inheritdoc cref="IDocumentQuery{T}.GroupBy(string,string[])"/>
         IAsyncGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
 
+        /// <inheritdoc cref="IAbstractDocumentQuery{T}.GroupBy(ValueTuple{string, GroupByMethod}, ValueTuple{string, GroupByMethod}[])" />
         IAsyncGroupByDocumentQuery<T> GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields);
 
         /// <inheritdoc cref="IDocumentQuery{T}.MoreLikeThis(System.Action{Raven.Client.Documents.Queries.MoreLikeThis.IMoreLikeThisBuilderForDocumentQuery{T}})"/>
         IAsyncDocumentQuery<T> MoreLikeThis(Action<IMoreLikeThisBuilderForAsyncDocumentQuery<T>> builder);
 
-        /// <summary>
-        /// Filter allows querying on documents without the need for issuing indexes. It is meant for exploratory queries or post query filtering. Criteria are evaluated at query time so please use Filter wisely to avoid performance issues.
-        /// </summary>
-        /// <param name="builder">Builder of a Filter query</param>
-        /// <param name="limit">Limits the number of documents processed by Filter.</param>
-        /// <returns></returns>
+        /// <inheritdoc cref="IDocumentQuery{T}.Filter"/>
         IAsyncDocumentQuery<T> Filter(Action<IFilterFactory<T>> builder, int limit = int.MaxValue);
         
+        /// <inheritdoc cref="IAsyncAggregationDocumentQuery{T}.AndAggregateBy(System.Action{Raven.Client.Documents.Queries.Facets.IFacetBuilder{T}})"/>
         IAsyncAggregationDocumentQuery<T> AggregateBy(Action<IFacetBuilder<T>> builder);
 
+        /// <inheritdoc cref="IAsyncAggregationDocumentQuery{T}.AndAggregateBy(FacetBase)" />
         IAsyncAggregationDocumentQuery<T> AggregateBy(FacetBase facet);
 
+        /// <inheritdoc cref="IAsyncAggregationDocumentQuery{T}.AndAggregateBy(FacetBase)" />
+        /// <param name="facets">List of FacetBase used to create aggregations.</param>
         IAsyncAggregationDocumentQuery<T> AggregateBy(IEnumerable<FacetBase> facets);
 
+        /// <inheritdoc cref="IAsyncAggregationDocumentQuery{T}.AndAggregateBy(FacetBase)" />
+        /// <param name="facetSetupDocumentId">ID of document where facet setup is stored.</param>
         IAsyncAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentId);
 
         /// <inheritdoc cref="ISuggestionQuery{T}.AndSuggestUsing(SuggestionBase)"/>

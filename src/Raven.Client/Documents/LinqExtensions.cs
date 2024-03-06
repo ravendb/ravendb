@@ -1067,6 +1067,11 @@ namespace Raven.Client.Documents
             await session.Advanced.StreamIntoAsync(self, stream, token).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Perform dynamic group by on collection data. AutoMapReduce index is created if none of the indexes in the database are sufficient to match the query criteria.
+        /// </summary>
+        /// <param name="fieldSelector">Path of the array</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.GroupByArrayQuery"/>
         public static IRavenQueryable<IGrouping<TKey, TSource>> GroupByArrayValues<TSource, TKey>(this IQueryable<TSource> source,
             Expression<Func<TSource, IEnumerable<TKey>>> fieldSelector)
         {
@@ -1080,6 +1085,12 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<IGrouping<TKey, TSource>>)queryable;
         }
 
+        /// <summary>
+        /// Perform dynamic group by on collection data. AutoMapReduce index is created if none of the indexes in the database are sufficient to match the query criteria.
+        /// The reduction key will be calculated based on all values of an array specified in GroupBy.
+        /// </summary>
+        /// <param name="fieldSelector">Path of the array</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.GroupByArrayContent"/>
         public static IRavenQueryable<IGrouping<IEnumerable<TKey>, TSource>> GroupByArrayContent<TSource, TKey>(this IQueryable<TSource> source,
             Expression<Func<TSource, IEnumerable<TKey>>> fieldSelector)
         {
