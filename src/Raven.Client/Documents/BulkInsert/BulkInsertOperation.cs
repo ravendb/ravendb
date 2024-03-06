@@ -218,6 +218,14 @@ namespace Raven.Client.Documents.BulkInsert
                             finally
                             {
                                 _streamLock.Release();
+                                try
+                                {
+                                    _timer?.Dispose();
+                                }
+                                catch
+                                {
+                                    // ignored
+                                }
                             }
                         }
                         catch (Exception e)
@@ -251,14 +259,6 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     _streamExposerContent?.Dispose();
                     _resetContext.Dispose();
-                    try
-                    {
-                        _timer?.Dispose();
-                    }
-                    catch
-                    {
-                        // ignored
-                    }
                 }
             });
             CompressionLevel = options?.CompressionLevel ?? CompressionLevel.NoCompression;
