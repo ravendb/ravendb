@@ -16,62 +16,67 @@ namespace Raven.Server.Web.Studio;
 
 public sealed class UpgradeInfoHandler : ServerRequestHandler
 {
+    private const string ErrorPropertyName = "Error";
+    
     [RavenAction("/studio/upgrade-info", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
     public async Task GetUpgradeInfo()
     {
         if (ServerVersion.Build == ServerVersion.DevBuildNumber)
         {
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            NoContentStatus();
             return;
         }
 
-        var pageNumber = GetStart(defaultStart: 1);
+        var pageNumber = GetStart() + 1;
         var pageSize = GetPageSize();
 
-        var licenseId = ServerStore.LicenseManager.LicenseStatus.Id.ToString();
-        
-        var request = new UpgradeInfoRequest()
+        using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
         {
-            UserFullVersion = ServerVersion.FullVersion, 
-            UserVersion =  ServerVersion.Version,
-            LicenseId = licenseId, 
-            ChangelogPageNumber = pageNumber, 
-            ChangelogPageSize = pageSize
-        };
-
-        var requestPayload = JsonConvert.SerializeObject(request);
-
-        var content = new StringContent(requestPayload, Encoding.UTF8, "application/json");
-        
-        try
-        {
-            var upgradeInfoResponse = await ApiHttpClient.Instance.PostAsync("api/v1/upgrade/info", content);
-
-            if (upgradeInfoResponse.IsSuccessStatusCode == false)
+            if (pageNumber <= 0 || pageSize <= 0)
             {
-                HttpContext.Response.StatusCode = (int)upgradeInfoResponse.StatusCode;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                
+                context.Write(writer,
+                    new DynamicJsonValue { [ErrorPropertyName] = $"Incorrect values of query string parameters - '{StartParameter}' cannot be negative, '{PageSizeParameter}' has to be greater than zero." });
                 return;
             }
 
-            var upgradeInfoContentStream = await upgradeInfoResponse.Content.ReadAsStreamAsync();
-            
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            var licenseId = ServerStore.LicenseManager.LicenseStatus.Id.ToString();
+
+            var request = new UpgradeInfoRequest()
             {
+                UserFullVersion = ServerVersion.FullVersion,
+                UserVersion = ServerVersion.Version,
+                LicenseId = licenseId,
+                ChangelogPageNumber = pageNumber,
+                ChangelogPageSize = pageSize
+            };
+
+            var requestPayload = JsonConvert.SerializeObject(request);
+
+            var content = new StringContent(requestPayload, Encoding.UTF8, "application/json");
+
+            try
+            {
+                var upgradeInfoResponse = await ApiHttpClient.Instance.PostAsync("api/v1/upgrade/info", content);
+
+                if (upgradeInfoResponse.IsSuccessStatusCode == false)
+                {
+                    HttpContext.Response.StatusCode = (int)upgradeInfoResponse.StatusCode;
+                    return;
+                }
+
+                var upgradeInfoContentStream = await upgradeInfoResponse.Content.ReadAsStreamAsync();
+                
                 var json = await context.ReadForMemoryAsync(upgradeInfoContentStream, "about-view/data");
                 var response = JsonDeserializationServer.UpgradeInfoResponse(json);
 
                 context.Write(writer, response.ToJson());
             }
-        }
-        catch (Exception e)
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            catch (Exception e)
             {
-                var response = new UpgradeInfoResponse() { ErrorMessage = e.Message };
-
-                context.Write(writer, response.ToJson());
+                context.Write(writer, new DynamicJsonValue { [ErrorPropertyName] = e.Message });
             }
         }
     }
@@ -111,7 +116,6 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
         public long TotalBuildsForUserMajorMinor { get; set; }
         public long TotalBuildsForLatestMajorMinor { get; set; }
         public bool IsLicenseEligibleForUpgrade { get; set; }
-        public string ErrorMessage { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -122,7 +126,6 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
                 [nameof(TotalBuildsForUserMajorMinor)] = TotalBuildsForUserMajorMinor,
                 [nameof(TotalBuildsForLatestMajorMinor)] = TotalBuildsForLatestMajorMinor,
                 [nameof(IsLicenseEligibleForUpgrade)] = IsLicenseEligibleForUpgrade,
-                [nameof(ErrorMessage)] = ErrorMessage
             };
         }
     }
