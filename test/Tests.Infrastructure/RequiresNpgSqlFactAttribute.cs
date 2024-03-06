@@ -1,5 +1,4 @@
 ﻿using System;
-using FastTests;
 using Npgsql;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
@@ -10,6 +9,12 @@ namespace Tests.Infrastructure
     {
         public RequiresNpgSqlFactAttribute()
         {
+            if (RavenTestHelper.SkipIntegrationTests)
+            {
+                Skip = RavenTestHelper.SkipIntegrationMessage;
+                return;
+            }
+
             if (RavenTestHelper.IsRunningOnCI)
                 return;
 

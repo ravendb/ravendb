@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         public static async Task BuildCommandsAsync(JsonOperationContext context, BatchHandler.MergedBatchCommand command, Stream stream,
-            DocumentDatabase database, ServerStore serverStore)
+            DocumentDatabase database, ServerStore serverStore, CancellationToken token = default)
         {
             CommandData[] cmds = Empty;
             List<string> identities = null;
@@ -144,13 +144,13 @@ namespace Raven.Server.Documents.Handlers
             using (var modifier = new BlittableMetadataModifier(context, legacyImport: false, readLegacyEtag: false,DatabaseItemType.Attachments))
             {
                 while (parser.Read() == false)
-                    await RefillParserBuffer(stream, buffer, parser);
+                    await RefillParserBuffer(stream, buffer, parser, token);
 
                 if (state.CurrentTokenType != JsonParserToken.StartObject)
                     ThrowUnexpectedToken(JsonParserToken.StartObject, state);
 
                 while (parser.Read() == false)
-                    await RefillParserBuffer(stream, buffer, parser);
+                    await RefillParserBuffer(stream, buffer, parser, token);
 
                 if (state.CurrentTokenType != JsonParserToken.String)
                     ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Handlers
                     ThrowUnexpectedToken(JsonParserToken.String, state);
 
                 while (parser.Read() == false)
-                    await RefillParserBuffer(stream, buffer, parser);
+                    await RefillParserBuffer(stream, buffer, parser, token);
 
                 if (state.CurrentTokenType != JsonParserToken.StartArray)
                     ThrowUnexpectedToken(JsonParserToken.StartArray, state);
@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Handlers
                 while (true)
                 {
                     while (parser.Read() == false)
-                        await RefillParserBuffer(stream, buffer, parser);
+                        await RefillParserBuffer(stream, buffer, parser, token);
 
                     if (state.CurrentTokenType == JsonParserToken.EndArray)
                         break;
@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Handlers
                         cmds = IncreaseSizeOfCommandsBuffer(index, cmds);
                     }
 
-                    var commandData = await ReadSingleCommand(context, stream, state, parser, buffer, modifier, default);
+                    var commandData = await ReadSingleCommand(context, stream, state, parser, buffer, modifier, token);
 
                     if (commandData.Type == CommandType.PATCH)
                     {

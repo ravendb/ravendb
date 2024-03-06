@@ -42,11 +42,10 @@ namespace SlowTests.Issues
                         .ToList();
                 }
 
-                Assert.True(
-                    SpinWait.SpinUntil(() =>
-                            store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Count(x => x.Name.StartsWith("Auto/")) == 1,
-                        1000)
-                );
+                WaitForValue(() =>
+                {
+                    return store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Count(x => x.Name.StartsWith("Auto/"));
+                }, 1);
 
                 var autoIndexes = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
 

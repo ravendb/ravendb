@@ -1,57 +1,79 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents
 {
-    public class ClusterTransactionWaiter
+    public sealed class ClusterTransactionWaiter : AsyncWaiter<HashSet<string>>
     {
         internal readonly DocumentDatabase Database;
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<object>> _results = new ConcurrentDictionary<string, TaskCompletionSource<object>>();
 
         public ClusterTransactionWaiter(DocumentDatabase database)
         {
             Database = database;
         }
 
-        public RemoveTask CreateTask(out string id)
+        public RemoveTask CreateTask(string id, out TaskCompletionSource<HashSet<string>> tcs)
         {
-            id = Guid.NewGuid().ToString();
-            _results.TryAdd(id, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
+            tcs = _results.GetOrAdd(id, static (key) => new TaskCompletionSource<HashSet<string>>(TaskCreationOptions.RunContinuationsAsynchronously));
             return new RemoveTask(this, id);
         }
 
-        public TaskCompletionSource<object> Get(string id)
+        public void TrySetException(string id, long index, Exception e)
+        {
+            Database.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+            TrySetException(id, e);
+        }
+
+        public void TrySetResult(string id, long index, HashSet<string> result)
+        {
+            Database.RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+            TrySetResult(id, result);
+        }
+    }
+
+    public class AsyncWaiter<T>
+    {
+        protected readonly ConcurrentDictionary<string, TaskCompletionSource<T>> _results = new ConcurrentDictionary<string, TaskCompletionSource<T>>();
+
+        public RemoveTask CreateTask(out string id)
+        {
+            id = Guid.NewGuid().ToString();
+            _results.TryAdd(id, new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously));
+            return new RemoveTask(this, id);
+        }
+
+        public TaskCompletionSource<T> Get(string id)
         {
             _results.TryGetValue(id, out var val);
             return val;
         }
 
-        public void SetResult(string id, long index, object result)
+        public void TrySetResult(string id, T result)
         {
-            Database.RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             if (_results.TryGetValue(id, out var task))
             {
-                task.SetResult(result);
+                task.TrySetResult(result);
             }
         }
 
-        public void SetException(string id, long index, Exception e)
+        public void TrySetException(string id, Exception e)
         {
-            Database.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
             if (_results.TryGetValue(id, out var task))
             {
-                task.SetException(e);
+                task.TrySetException(e);
             }
         }
 
-        public struct RemoveTask : IDisposable
+        public readonly struct RemoveTask : IDisposable
         {
-            private readonly ClusterTransactionWaiter _parent;
+            private readonly AsyncWaiter<T> _parent;
             private readonly string _id;
 
-            public RemoveTask(ClusterTransactionWaiter parent, string id)
+            public RemoveTask(AsyncWaiter<T> parent, string id)
             {
                 _parent = parent;
                 _id = id;
@@ -61,11 +83,11 @@ namespace Raven.Server.Documents
             {
                 _parent._results.TryRemove(_id, out var task);
                 // cancel it, if someone still awaits
-                task.TrySetCanceled();
+                task?.TrySetCanceled();
             }
         }
 
-        public async Task<object> WaitForResults(string id, CancellationToken token)
+        public async Task<T> WaitForResults(string id, CancellationToken token)
         {
             if (_results.TryGetValue(id, out var task) == false)
             {

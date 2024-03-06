@@ -790,6 +790,9 @@ namespace SlowTests.Authentication
                     ("POST", "/setup/finish"),                          // only available in setup mode
                     ("POST", "/server/notification-center/dismiss"),    // access handled internally
                     ("POST", "/server/notification-center/postpone"),   // access handled internally
+                    ("GET", "/admin/debug/cluster-info-package"),       // heavy
+                    ("GET", "/admin/debug/remote-cluster-info-package"),// heavy
+                    ("GET", "/admin/debug/info-package"),               // heavy
                 };
 
                 using (var httpClientHandler = new HttpClientHandler())
@@ -902,6 +905,9 @@ namespace SlowTests.Authentication
                     ("POST", "/setup/finish"),                          // only available in setup mode
                     ("POST", "/server/notification-center/dismiss"),    // access handled internally
                     ("POST", "/server/notification-center/postpone"),   // access handled internally
+                    ("GET", "/admin/debug/cluster-info-package"),       // heavy
+                    ("GET", "/admin/debug/remote-cluster-info-package"),// heavy
+                    ("GET", "/admin/debug/info-package"),               // heavy
                 };
 
                 using (var httpClientHandler = new HttpClientHandler())
@@ -1008,6 +1014,9 @@ namespace SlowTests.Authentication
                     ("POST", "/setup/finish"),                          // only available in setup mode
                     ("POST", "/server/notification-center/dismiss"),    // access handled internally
                     ("POST", "/server/notification-center/postpone"),   // access handled internally
+                    ("GET", "/admin/debug/cluster-info-package"),       // heavy
+                    ("GET", "/admin/debug/remote-cluster-info-package"),// heavy
+                    ("GET", "/admin/debug/info-package"),               // heavy
                 };
 
                 using (var httpClientHandler = new HttpClientHandler())
@@ -1102,7 +1111,7 @@ namespace SlowTests.Authentication
                     ("POST", "/setup/hosts"),                           // only available in setup mode
                     ("POST", "/setup/unsecured"),                       // only available in setup mode
                     ("POST", "/setup/unsecured/package"),               // only available in setup mode
-                    ("POST", "/setup/continue/unsecured"),               // only available in setup mode
+                    ("POST", "/setup/continue/unsecured"),              // only available in setup mode
                     ("POST", "/setup/secured"),                         // only available in setup mode
                     ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
                     ("POST", "/setup/letsencrypt"),                     // only available in setup mode
@@ -1111,6 +1120,9 @@ namespace SlowTests.Authentication
                     ("POST", "/setup/finish"),                          // only available in setup mode
                     ("POST", "/server/notification-center/dismiss"),    // access handled internally
                     ("POST", "/server/notification-center/postpone"),   // access handled internally
+                    ("GET", "/admin/debug/cluster-info-package"),       // heavy
+                    ("GET", "/admin/debug/remote-cluster-info-package"),// heavy
+                    ("GET", "/admin/debug/info-package"),               // heavy
                 };
 
                 using (var httpClientHandler = new HttpClientHandler())
@@ -1209,6 +1221,9 @@ namespace SlowTests.Authentication
                     ("POST", "/setup/finish"),                          // only available in setup mode
                     ("POST", "/server/notification-center/dismiss"),    // access handled internally
                     ("POST", "/server/notification-center/postpone"),   // access handled internally
+                    ("GET", "/admin/debug/cluster-info-package"),       // heavy
+                    ("GET", "/admin/debug/remote-cluster-info-package"),// heavy
+                    ("GET", "/admin/debug/info-package"),               // heavy
                 };
 
                 using (var httpClientHandler = new HttpClientHandler())

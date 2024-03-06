@@ -295,8 +295,8 @@ public class MicrosoftLogTests : RavenTestBase
     private class MyDummyWebSocket : WebSocket
     {
         private readonly Predicate<string> _assert;
-        private readonly TaskCompletionSource<WebSocketReceiveResult> _tcs = new TaskCompletionSource<WebSocketReceiveResult>();
-        private readonly TaskCompletionSource _checkTcs = new TaskCompletionSource();
+        private readonly TaskCompletionSource<WebSocketReceiveResult> _tcs = new TaskCompletionSource<WebSocketReceiveResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _checkTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Task Task => _checkTcs.Task;
         
@@ -311,7 +311,7 @@ public class MicrosoftLogTests : RavenTestBase
         }
         
         public string LogsReceived { get; private set; } = "";
-        public void Close() => _tcs.SetCanceled();
+        public void Close() => _tcs.TrySetCanceled();
         public override void Abort() { }
         public override Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken)
             => Task.CompletedTask;
@@ -332,7 +332,7 @@ public class MicrosoftLogTests : RavenTestBase
             }
             catch (Exception e)
             {
-                _checkTcs.SetException(e);
+                _checkTcs.TrySetException(e);
             }
         }
         public override WebSocketCloseStatus? CloseStatus => default;

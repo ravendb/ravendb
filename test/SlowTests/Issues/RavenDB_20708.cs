@@ -1,8 +1,10 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -20,39 +22,35 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ShouldNotBlockClusterTransactionOnDatabaseStartup()
         {
-            DoNotReuseServer();
-
-            using (var store = GetDocumentStore(new Options { DeleteDatabaseOnDispose = false, RunInMemory = false }))
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+            using (var server = GetNewServer())
+            using (var store = GetDocumentStore(new Options { Server = server,DeleteDatabaseOnDispose = false, RunInMemory = false }))
             {
-                Cluster.SuspendObserver(Server);
+                Cluster.SuspendObserver(server);
 
-                var testingStuff = Server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly();
-                testingStuff.BeforeHandleClusterTransactionOnDatabaseChanged = (server) => server.DatabasesLandlord.RestartDatabase(store.Database);
+                var testingStuff = server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly();
+                testingStuff.BeforeHandleClusterTransactionOnDatabaseChanged = (s) => s.DatabasesLandlord.RestartDatabase(store.Database).WithCancellation(cts.Token);
                 testingStuff.DelayNotifyFeaturesAboutStateChange = () => Thread.Sleep(1000);
 
+                var user1 = new User { Name = "Karmel" };
+                var user2 = new User { Name = "Karmel2" };
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
-                    var user1 = new User { Name = "Karmel" };
-                    var user2 = new User { Name = "Karmel2" };
+                    await session.StoreAsync(user1, "users/1", cts.Token);
+                    await session.StoreAsync(user2, "users/2", cts.Token);
 
-                    await session.StoreAsync(user1, "users/1");
-                    await session.StoreAsync(user2, "users/2");
+                    await Assert.ThrowsAsync<DatabaseDisabledException>(async () => await session.SaveChangesAsync(cts.Token));
 
-                    await Assert.ThrowsAsync<DatabaseDisabledException>(async () => await session.SaveChangesAsync());
-
-                    Assert.True(await WaitForValueAsync(() => Server.ServerStore.DatabasesLandlord.IsDatabaseLoaded(store.Database),
+                    Assert.True(await WaitForValueAsync(() => server.ServerStore.DatabasesLandlord.IsDatabaseLoaded(store.Database),
                         true, 10_000));
 
-                    var database = await GetDatabase(store.Database);
+                    var database = await GetDatabase(server, store.Database);
                     var key = AlertRaised.GetKey(AlertType.ClusterTransactionFailure, $"{database.Name}/ClusterTransaction");
                     Assert.False(database.NotificationCenter.Exists(key));
-
-                    var user = await session.LoadAsync<User>("users/1");
-                    Assert.Equal(user1.Name, user.Name);
-
-                    user = await session.LoadAsync<User>("users/2");
-                    Assert.Equal(user2.Name, user.Name);
                 }
+
+                WaitForDocument<User>(store, "users/1", u => u.Name == user1.Name, timeout: 5_000);
+                WaitForDocument<User>(store, "users/2", u => u.Name == user2.Name, timeout: 5_000);
             }
         }
     }

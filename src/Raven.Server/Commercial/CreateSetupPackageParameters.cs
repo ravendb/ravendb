@@ -17,5 +17,6 @@ public class CreateSetupPackageParameters
     public string HelmValuesOutputPath;
     public SetupProgressAndResult Progress;
     public bool RegisterTcpDnsRecords;
+    public string AcmeUrl;
     public CancellationToken CancellationToken;
 }

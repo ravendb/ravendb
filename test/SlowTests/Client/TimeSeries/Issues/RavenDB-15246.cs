@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

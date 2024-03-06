@@ -26,6 +26,7 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -40,6 +41,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Exceptions;
 using Voron.Exceptions;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server
 {
@@ -189,6 +191,8 @@ namespace Raven.Server
                     sp?.Stop();
                     exception = e;
 
+                    CheckDatabaseShutdownAndThrowIfNeeded(requestHandlerContext.Database, ref e);
+
                     CheckVersionAndWrapException(context, ref e);
 
                     MaybeSetExceptionStatusCode(context, _server.ServerStore, e);
@@ -256,6 +260,12 @@ namespace Raven.Server
                     _logger.Info($"{context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString.Value} - {context.Response.StatusCode} - {(sp?.ElapsedMilliseconds ?? 0):#,#;;0} ms", exception);
                 }
             }
+        }
+
+        private static void CheckDatabaseShutdownAndThrowIfNeeded(DocumentDatabase database, ref Exception e)
+        {
+            if (e is OperationCanceledException && database != null && (database.DatabaseShutdownCompleted.IsSet || database.DatabaseShutdown.IsCancellationRequested))
+                e = new DatabaseDisabledException("The database " + database.Name + " is shutting down", e);
         }
 
         private static void CheckVersionAndWrapException(HttpContext context, ref Exception e)

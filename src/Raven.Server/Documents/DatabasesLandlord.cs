@@ -163,7 +163,7 @@ namespace Raven.Server.Documents
                     switch (changeType)
                     {
                         case ClusterDatabaseChangeType.RecordChanged:
-                            database.StateChanged(index);
+                            await database.StateChangedAsync(index);
                             if (type == ClusterStateMachine.SnapshotInstalled)
                             {
                                 database.NotifyOnPendingClusterTransaction(index, changeType);
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents
                             break;
 
                         case ClusterDatabaseChangeType.ValueChanged:
-                            database.ValueChanged(index, type, changeState);
+                            await database.ValueChangedAsync(index, type, changeState);
                             break;
 
                         case ClusterDatabaseChangeType.PendingClusterTransactions:
@@ -205,7 +205,11 @@ namespace Raven.Server.Documents
                 }
                 catch (ObjectDisposedException)
                 {
-                    // the server is disposed when we are trying to access to database
+                    // the server is disposed when we are trying to access the database
+                }
+                catch (OperationCanceledException)
+                {
+                    // the server is disposed when we are trying to access the database
                 }
                 catch (DatabaseConcurrentLoadTimeoutException e)
                 {

@@ -17,6 +17,7 @@ using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

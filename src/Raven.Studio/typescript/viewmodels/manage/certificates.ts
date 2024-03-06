@@ -94,7 +94,7 @@ class certificates extends viewModelBase {
     showUserCertificates = ko.observable<boolean>(true);
 
     showValidCertificates = ko.observable<boolean>(true);
-    showExpiredCertificates = ko.observable<boolean>(true);
+    showExpiredCertificates = ko.observable<boolean>(false);
     showAboutToExpireCertificates = ko.observable<boolean>(true);
     
     databases = databasesManager.default.databases;

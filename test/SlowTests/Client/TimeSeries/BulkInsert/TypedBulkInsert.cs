@@ -13,6 +13,7 @@ using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.Attachments;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using static SlowTests.Client.TimeSeries.Session.TimeSeriesTypedSessionTests;

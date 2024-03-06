@@ -27,6 +27,7 @@ using SlowTests.Issues;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Utils;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;

@@ -2,8 +2,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-using FastTests;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;

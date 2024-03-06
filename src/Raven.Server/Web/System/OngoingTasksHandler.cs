@@ -1356,7 +1356,7 @@ namespace Raven.Server.Web.System
                             {
                                 connectionStatus = OngoingTaskConnectionStatus.NotOnThisNode;
                             }
-                            else if (Database.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(key, out var connectionsState))
+                            else if (Database.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(subscriptionState.SubscriptionId, out var connectionsState))
                             {
                                 connectionStatus = connectionsState.IsSubscriptionActive() ? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
                             }

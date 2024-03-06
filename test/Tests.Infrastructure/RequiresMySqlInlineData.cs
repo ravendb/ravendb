@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Reflection;
-using FastTests;
 using Raven.Server.SqlMigration;
 using Tests.Infrastructure.ConnectionString;
 using Xunit.Sdk;
@@ -11,6 +10,12 @@ namespace Tests.Infrastructure
     {
         public RequiresMySqlInlineData()
         {
+            if (RavenTestHelper.SkipIntegrationTests)
+            {
+                Skip = RavenTestHelper.SkipIntegrationMessage;
+                return;
+            }
+            
             if (RavenTestHelper.IsRunningOnCI)
                 return;
 

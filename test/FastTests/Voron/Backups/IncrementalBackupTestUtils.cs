@@ -7,6 +7,7 @@
 using System;
 using System.IO;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron.Backups
 {

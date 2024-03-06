@@ -52,6 +52,7 @@ using Sparrow.Server;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
@@ -75,8 +76,7 @@ namespace Raven.Server.Documents
 
         private readonly object _idleLocker = new object();
 
-        private readonly object _clusterLocker = new object();
-
+        private readonly SemaphoreSlim _clusterLocker = new SemaphoreSlim(1, 1);
         public Action<string> AddToInitLog => _addToInitLog;
 
         /// <summary>
@@ -302,7 +302,7 @@ namespace Raven.Server.Documents
 
                 _addToInitLog("Initializing DocumentStorage");
                 DocumentsStorage.Initialize((options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId);
-               
+
                 _addToInitLog("Initializing ConfigurationStorage");
                 ConfigurationStorage.Initialize();
 
@@ -361,18 +361,26 @@ namespace Raven.Server.Documents
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
 
-                ThreadPool.QueueUserWorkItem(_ =>
+                using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var lastCompletedClusterTransactionIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(ctx.Transaction.InnerTransaction);
+                    Interlocked.Exchange(ref LastCompletedClusterTransactionIndex, lastCompletedClusterTransactionIndex);
+                }
+
+                _ = Task.Run(async () =>
                 {
                     try
                     {
-                        NotifyFeaturesAboutStateChange(record, index);
+                        await NotifyFeaturesAboutStateChangeAsync(record, index);
                         RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                     }
                     catch (Exception e)
                     {
                         RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                     }
-                }, null);
+                });
+
                 var clusterTransactionThreadName = ThreadNames.GetNameToUse(ThreadNames.ForClusterTransactions($"Cluster Transaction Thread {Name}", Name));
                 _clusterTransactionsThread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
                 {
@@ -451,6 +459,8 @@ namespace Raven.Server.Documents
         private long? _nextClusterCommand;
         private long _lastCompletedClusterTransaction;
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
+
+        public long LastCompletedClusterTransactionIndex;
         public bool IsEncrypted => MasterKey != null;
 
         private PoolOfThreads.LongRunningWork _clusterTransactionsThread;
@@ -575,7 +585,7 @@ namespace Raven.Server.Documents
                     if (command.Processed)
                         continue;
 
-                    ClusterTransactionWaiter.SetException(command.Options.TaskId, command.Index, exception);
+                    OnClusterTransactionCompletion(command, exception);
                 }
             }
             finally
@@ -606,7 +616,7 @@ namespace Raven.Server.Documents
                 }
                 catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
                 {
-                    OnClusterTransactionCompletion(command, mergedCommand, exception: e);
+                    OnClusterTransactionCompletion(command, exception: e);
                     NotificationCenter.Add(AlertRaised.Create(
                         Name,
                         "Cluster transaction failed to execute",
@@ -626,35 +636,38 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command,
-            BatchHandler.ClusterTransactionMergedCommand mergedCommands, Exception exception = null)
+        private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command, BatchHandler.ClusterTransactionMergedCommand mergedCommands)
         {
             try
             {
                 var index = command.Index;
                 var options = mergedCommands.Options[index];
-                if (exception == null)
+
+                ClusterTransactionWaiter.TrySetResult(options.TaskId, index, mergedCommands.ModifiedCollections);
+
+                ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
+
+                _nextClusterCommand = command.PreviousCount + command.Commands.Length;
+                _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
+            }
+            catch (Exception e)
+            {
+                // nothing we can do
+                if (_logger.IsInfoEnabled)
                 {
-                    Task indexTask = null;
-                    if (options.WaitForIndexesTimeout != null)
-                    {
-                        indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
-                            options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
-                            mergedCommands.LastDocumentEtag, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
-                    }
-
-                    var result = new BatchHandler.ClusterTransactionCompletionResult
-                    {
-                        Array = mergedCommands.Replies[index],
-                        IndexTask = indexTask,
-                    };
-                    ClusterTransactionWaiter.SetResult(options.TaskId, index, result);
-                    _nextClusterCommand = command.PreviousCount + command.Commands.Length;
-                    _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
-                    return;
+                    _logger.Info($"Failed to notify about transaction completion for database '{Name}'.", e);
                 }
+            }
+        }
 
-                ClusterTransactionWaiter.SetException(options.TaskId, index, exception);
+        private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command, Exception exception)
+        {
+            try
+            {
+                var index = command.Index;
+                var options = command.Options;
+
+                ClusterTransactionWaiter.TrySetException(options.TaskId, index, exception);
             }
             catch (Exception e)
             {
@@ -755,8 +768,7 @@ namespace Raven.Server.Documents
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
 
-            var lockTaken = false;
-            Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref lockTaken);
+            var lockTaken = _clusterLocker.Wait(TimeSpan.FromSeconds(5));
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Acquired cluster lock. Taken: {lockTaken}");
 
@@ -793,9 +805,13 @@ namespace Raven.Server.Documents
             if (lockTaken == false)
             {
                 ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
-                Monitor.Enter(_clusterLocker);
+                // ReSharper disable once MethodSupportsCancellation
+                _clusterLocker.Wait();
                 ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquired cluster lock");
             }
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing the cluster locker");
+            exceptionAggregator.Execute(() => _clusterLocker.Dispose());
 
             var indexStoreTask = _indexStoreTask;
             if (indexStoreTask != null)
@@ -1318,14 +1334,14 @@ namespace Raven.Server.Documents
         /// </summary>
         public event Action<DatabaseRecord> DatabaseRecordChanged;
 
-        public void ValueChanged(long index, string type, object changeState)
+        public async ValueTask ValueChangedAsync(long index, string type, object changeState)
         {
             try
             {
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                NotifyFeaturesAboutValueChange(index, type, changeState);
+                await NotifyFeaturesAboutValueChangeAsync(index, type, changeState);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
@@ -1339,7 +1355,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void StateChanged(long index)
+        public async ValueTask StateChangedAsync(long index)
         {
             try
             {
@@ -1362,7 +1378,7 @@ namespace Raven.Server.Documents
                     : Constants.Identities.DefaultSeparator;
                 StudioConfiguration = record.Studio;
 
-                NotifyFeaturesAboutStateChange(record, index);
+                await NotifyFeaturesAboutStateChangeAsync(record, index);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
@@ -1385,7 +1401,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
+        private async ValueTask NotifyFeaturesAboutStateChangeAsync(DatabaseRecord record, long index)
         {
             if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
                 return;
@@ -1397,7 +1413,7 @@ namespace Raven.Server.Documents
 
             while (taken == false)
             {
-                Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
+                taken = await _clusterLocker.WaitAsync(TimeSpan.FromSeconds(5));
 
                 try
                 {
@@ -1448,7 +1464,7 @@ namespace Raven.Server.Documents
                 {
                     if (taken)
                     {
-                        Monitor.Exit(_clusterLocker);
+                        _clusterLocker.Release();
 
                         sp?.Stop();
 
@@ -1533,7 +1549,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        private void NotifyFeaturesAboutValueChange(long index, string type, object changeState)
+        private async ValueTask NotifyFeaturesAboutValueChangeAsync(long index, string type, object changeState)
         {
             if (CanSkipValueChange(index, type))
                 return;
@@ -1541,7 +1557,7 @@ namespace Raven.Server.Documents
             var taken = false;
             while (taken == false)
             {
-                Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
+                taken = await _clusterLocker.WaitAsync(TimeSpan.FromSeconds(5));
 
                 try
                 {
@@ -1570,12 +1586,12 @@ namespace Raven.Server.Documents
                 finally
                 {
                     if (taken)
-                        Monitor.Exit(_clusterLocker);
+                        _clusterLocker.Release();
                 }
             }
         }
 
-        public void RefreshFeatures()
+        public ValueTask RefreshFeaturesAsync()
         {
             if (_databaseShutdown.IsCancellationRequested)
                 ThrowDatabaseShutdown();
@@ -1587,7 +1603,8 @@ namespace Raven.Server.Documents
             {
                 record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
             }
-            NotifyFeaturesAboutStateChange(record, index);
+
+            return NotifyFeaturesAboutStateChangeAsync(record, index);
         }
 
         private void InitializeFromDatabaseRecord(DatabaseRecord record)

@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

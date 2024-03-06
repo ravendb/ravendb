@@ -16,6 +16,7 @@ using FastTests;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using xRetry;
@@ -29,78 +30,57 @@ namespace SlowTests.Authentication
         public AuthenticationLetsEncryptTests(ITestOutputHelper output) : base(output)
         {
         }
+        
+        [RetryFact(delayBetweenRetriesMs: 1000)]
+        public async Task CanGetPebbleCertificate()
+        {
+            var acmeUrl = Environment.GetEnvironmentVariable("RAVEN_PEBBLE_URL") ?? string.Empty;
+            Assert.NotEmpty(acmeUrl);
+            
+            RemoveAcmeCache(acmeUrl);
+
+            SetupLocalServer();
+            SetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
+
+            await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl);
+
+            Server.Dispose();
+        }
 
         [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanGetLetsEncryptCertificateAndRenewIt()
+        {
+            var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
+            
+            SetupLocalServer();
+            SetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
+
+            var serverCert = await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl);
+            var firstServerCertThumbprint = serverCert.Thumbprint;
+            Server.Dispose();
+
+            UseNewLocalServer();
+            await RenewCertificate(serverCert, firstServerCertThumbprint);
+        }
+
+        private static void RemoveAcmeCache(string acmeUrl)
+        {
+            var path = LetsEncryptClient.GetCachePath(acmeUrl);
+            IOExtensions.DeleteFile(path);
+        }
+
+        private void SetupLocalServer()
         {
             var settingPath = Path.Combine(NewDataPath(forceCreateDir: true), "settings.json");
             var defaultSettingsPath = new PathSetting("settings.default.json").FullPath;
             File.Copy(defaultSettingsPath, settingPath, true);
 
             UseNewLocalServer(customConfigPath: settingPath);
+        }
 
-            // Use this when testing against pebble
-            //var acmeStaging = "https://localhost:14000/";
-
-            var acmeStaging = "https://acme-staging-v02.api.letsencrypt.org/";
-
-            Server.Configuration.Core.AcmeUrl = acmeStaging;
-            Server.ServerStore.Configuration.Core.SetupMode = SetupMode.Initial;
-
-            var domain = "RavenClusterTest" + Environment.MachineName.Replace("-", "");
-            string email;
-            string rootDomain;
-
-            await Server.ServerStore.EnsureNotPassiveAsync();
-            var license = Server.ServerStore.LoadLicense();
-
-            using (var store = GetDocumentStore())
-            using (var commands = store.Commands())
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                var command = new ClaimDomainCommand(store.Conventions, context, new ClaimDomainInfo
-                {
-                    Domain = domain,
-                    License = license
-                });
-
-                await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
-
-                Assert.True(command.Result.RootDomains.Length > 0);
-                rootDomain = command.Result.RootDomains[0];
-                email = command.Result.Email;
-            }
-
-            var setupInfo = new SetupInfo
-            {
-                Domain = domain,
-                RootDomain = rootDomain,
-                ZipOnly = false, // N/A here
-                RegisterClientCert = false, // N/A here
-                Password = null,
-                Certificate = null,
-                LocalNodeTag = "A",
-                License = license,
-                Email = email,
-                NodeSetupInfos = new Dictionary<string, NodeInfo>()
-                {
-                    ["A"] = new NodeInfo
-                    {
-                        Port = GetAvailablePort(),
-                        TcpPort = GetAvailablePort(),
-                        Addresses = new List<string>
-                        {
-                            "127.0.0.1"
-                        }
-                    }
-                }
-            };
-
+        private async Task<X509Certificate2> GetCertificateFromLetsEncrypt(SetupInfo setupInfo, string acmeUrl)
+        {
             X509Certificate2 serverCert;
-            byte[] serverCertBytes;
-            string firstServerCertThumbprint;
-            BlittableJsonReaderObject settingsJsonObject;
-
             using (var store = GetDocumentStore())
             using (var commands = store.Commands())
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -113,10 +93,12 @@ namespace SlowTests.Authentication
 
                 var zipBytes = command.Result;
 
+                BlittableJsonReaderObject settingsJsonObject;
+                byte[] serverCertBytes;
                 try
                 {
-                    settingsJsonObject = SetupManager.ExtractCertificatesAndSettingsJsonFromZip(zipBytes, "A", context, out serverCertBytes, out serverCert, out _, out _, out _, out _);
-                    firstServerCertThumbprint = serverCert.Thumbprint;
+                    settingsJsonObject =
+                        SetupManager.ExtractCertificatesAndSettingsJsonFromZip(zipBytes, "A", context, out serverCertBytes, out serverCert, out _, out _, out _, out _);
                 }
                 catch (Exception e)
                 {
@@ -145,25 +127,22 @@ namespace SlowTests.Authentication
                     [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl,
                     [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
                     [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
-                    [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = acmeStaging
+                    [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = acmeUrl
                 };
 
                 DoNotReuseServer(customSettings);
             }
 
-            Server.Dispose();
+            return serverCert;
+        }
 
-            UseNewLocalServer();
-
+        private async Task RenewCertificate(X509Certificate2 serverCert, string firstServerCertThumbprint)
+        {
             // Note: because we use a staging lets encrypt cert, the chain is not trusted.
             // It only works because in the TestBase ctor we do:
             // RequestExecutor.ServerCertificateCustomValidationCallback += (msg, cert, chain, errors) => true;
 
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = serverCert,
-                ClientCertificate = serverCert
-            }))
+            using (var store = GetDocumentStore(new Options { AdminCertificate = serverCert, ClientCertificate = serverCert }))
             using (var commands = store.Commands())
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -199,6 +178,50 @@ namespace SlowTests.Authentication
 
                 Assert.NotEqual(firstServerCertThumbprint, Server.Certificate.Certificate.Thumbprint);
             }
+        }
+
+        private async Task<SetupInfo> SetupClusterInfo(string acmeUrl)
+        {
+            Server.Configuration.Core.AcmeUrl = acmeUrl;
+            Server.ServerStore.Configuration.Core.SetupMode = SetupMode.Initial;
+
+            var domain = "RavenClusterTest" + Environment.MachineName.Replace("-", "");
+            string email;
+            string rootDomain;
+
+            await Server.ServerStore.EnsureNotPassiveAsync();
+            var license = Server.ServerStore.LoadLicense();
+
+            using (var store = GetDocumentStore())
+            using (var commands = store.Commands())
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var command = new ClaimDomainCommand(store.Conventions, context, new ClaimDomainInfo { Domain = domain, License = license });
+
+                await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
+
+                Assert.True(command.Result.RootDomains.Length > 0);
+                rootDomain = command.Result.RootDomains[0];
+                email = command.Result.Email;
+            }
+
+            var setupInfo = new SetupInfo
+            {
+                Domain = domain,
+                RootDomain = rootDomain,
+                ZipOnly = false, // N/A here
+                RegisterClientCert = false, // N/A here
+                Password = null,
+                Certificate = null,
+                LocalNodeTag = "A",
+                License = license,
+                Email = email,
+                NodeSetupInfos = new Dictionary<string, NodeInfo>()
+                {
+                    ["A"] = new NodeInfo { Port = GetAvailablePort(), TcpPort = GetAvailablePort(), Addresses = new List<string> { "127.0.0.1" } }
+                }
+            };
+            return setupInfo;
         }
     }
 }

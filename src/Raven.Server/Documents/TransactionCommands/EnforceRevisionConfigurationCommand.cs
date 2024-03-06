@@ -26,14 +26,24 @@ namespace Raven.Server.Documents.TransactionCommands
     
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            MoreWork = false;
+            var idsToRemove = new List<string>();
             foreach (var id in _ids)
             {
                 _token.ThrowIfCancellationRequested();
-                _result.RemovedRevisions += (int)_revisionsStorage.EnforceConfigurationFor(context, id, _includeForceCreatedRevisionsOnDeleteInCaseOfNoConfiguration == false, ref MoreWork);
+                _result.RemovedRevisions += (int)_revisionsStorage.EnforceConfigurationFor(context, id, _includeForceCreatedRevisionsOnDeleteInCaseOfNoConfiguration == false, out var moreWork);
+
+                if (moreWork == false)
+                    idsToRemove.Add(id);
             }
-    
-            return _ids.Count;
+
+            foreach (var id in idsToRemove)
+            {
+                _ids.Remove(id);
+            }
+
+            MoreWork = _ids.Count > 0;
+
+            return idsToRemove.Count;
         }
     
         public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
