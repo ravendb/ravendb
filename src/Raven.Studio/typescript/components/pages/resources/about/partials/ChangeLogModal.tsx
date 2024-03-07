@@ -1,4 +1,4 @@
-﻿import { Button, Modal, ModalBody, ModalFooter, UncontrolledPopover } from "reactstrap";
+﻿import { Button, Modal, ModalBody, ModalFooter, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
 import React, { ReactNode } from "react";
@@ -8,6 +8,8 @@ import { useAsync } from "react-async-hook";
 import { LazyLoad } from "components/common/LazyLoad";
 import { LoadError } from "components/common/LoadError";
 import genUtils from "common/generalUtils";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
 
 interface ChangelogModalProps {
     mode: "whatsNew" | "changeLog" | "hidden";
@@ -16,8 +18,8 @@ interface ChangelogModalProps {
 
 export function ChangeLogModal(props: ChangelogModalProps) {
     const { mode, onClose } = props;
-
     const { licenseService } = useServices();
+    const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
 
     //TODO: pagining?
     const asyncGetChangeLog = useAsync(() => licenseService.getChangeLog(), []);
@@ -64,68 +66,78 @@ export function ChangeLogModal(props: ChangelogModalProps) {
 
     return (
         <ModalWrapper onClose={onClose} mode={mode}>
-            <div>
-                {mode === "whatsNew" && (
-                    <div key="updateLicenseInfo">
-                        <div className="well px-3 py-1 small rounded-pill" id="updateLicenseInfo">
+            <div className="changelog-modal">
+                {!isCloud && mode === "whatsNew" && (
+                    <>
+                        <div
+                            className="well px-3 mx-auto w-fit-content mb-4 py-1 small rounded-pill"
+                            id="updateLicenseInfo"
+                        >
                             {canUpgrade ? (
                                 <>
-                                    <Icon icon="check" color="success" /> License compatible{" "}
+                                    <Icon icon="check" color="success" /> Your license is compatible{" "}
                                 </>
                             ) : (
                                 <>
-                                    <Icon icon="license" color="warning" /> Requires License Upgrade{" "}
+                                    <Icon icon="license" color="warning" /> Your license needs to be upgraded in order
+                                    to update{" "}
                                 </>
                             )}
                         </div>
                         <UncontrolledPopover trigger="hover" className="bs5" placement="top" target="updateLicenseInfo">
                             <div className="px-2 py-1">
                                 {canUpgrade ? (
-                                    <>
-                                        This update is compatible with your license. In order to upgrade to the latest
-                                        version
-                                    </>
+                                    <>Your license can be used with the target version</>
                                 ) : (
-                                    <>LatestVersion your license must be updated</>
+                                    <>
+                                        Your license can&apos;t be used with the target version. Prior updating, please
+                                        contact Sales and update your license beforehand.
+                                    </>
                                 )}
                             </div>
                         </UncontrolledPopover>
-                    </div>
+                    </>
                 )}
 
-                {versionsList.map((build) => {
+                {versionsList.map((build, index) => {
+                    const downgradeTooltipId = `canDowngradeTooltip-${index}`;
+
                     return (
-                        <div key={build.FullVersion}>
-                            <h3>
-                                {mode === "whatsNew" && (
+                        <div key={build.FullVersion} className="mb-5">
+                            <div className="d-flex align-items-center justify-content-between">
+                                <h3>
+                                    {mode === "whatsNew" && (
+                                        <>
+                                            <strong className="text-warning">
+                                                <Icon icon="star-filled" />
+                                                NEW
+                                            </strong>{" "}
+                                            -{" "}
+                                        </>
+                                    )}
+                                    {build.FullVersion} -{" "}
+                                    {genUtils.formatUtcDateAsLocal(build.ReleasedAt, genUtils.basicDateFormat)}{" "}
+                                </h3>
+                                {!isCloud && build.CanDowngradeFollowingUpgrade && (
                                     <>
-                                        <strong className="text-warning">NEW</strong> -{" "}
-                                    </>
-                                )}
-                                {build.FullVersion} -{" "}
-                                {genUtils.formatUtcDateAsLocal(build.ReleasedAt, genUtils.basicDateFormat)}{" "}
-                            </h3>
-                            <div className="d-flex gap-3">
-                                {build.CanDowngradeFollowingUpgrade && (
-                                    <React.Fragment key="updateDowngradeInfo">
-                                        <div className="well px-3 py-1 small rounded-pill" id="updateDowngradeInfo">
+                                        <div className="well px-3 py-1 small rounded-pill" id={downgradeTooltipId}>
                                             <Icon icon="check" color="success" /> Can downgrade
                                         </div>
-                                        <UncontrolledPopover
+                                        <UncontrolledTooltip
                                             trigger="hover"
                                             className="bs5"
                                             placement="top"
-                                            target="updateDowngradeInfo"
+                                            target={downgradeTooltipId}
                                         >
                                             <div className="px-2 py-1">
-                                                This update is safe to revert to current version
+                                                This update allows you to switch back to the current version
                                             </div>
-                                        </UncontrolledPopover>
-                                    </React.Fragment>
+                                        </UncontrolledTooltip>
+                                    </>
                                 )}
                             </div>
                             <div
-                                className="mt-4 vstack gap-2"
+                                className="well rounded-3 p-4 mt-2 vstack changelog-content"
                                 dangerouslySetInnerHTML={{ __html: build.ChangelogHtml }}
                             ></div>
                         </div>

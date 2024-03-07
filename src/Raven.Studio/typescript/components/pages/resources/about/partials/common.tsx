@@ -34,9 +34,10 @@ export const aboutPageUrls = {
     updateInstructions: "https://ravendb.net/l/LC9K4B",
     getLicense: "https://ravendb.net/buy",
     supportTerms: "https://ravendb.net/terms",
-    gitHubDiscussions: "https://github.com/ravendb/ravendb/discussions",
+    cloudSupportTerms: "https://cloud.ravendb.net/terms",
+    askCommunity: "https://ravendb.net/l/ITXUEA",
     social: {
-        facebook: "https://github.com/ravendb/ravendb/discussions",
+        facebook: "https://www.facebook.com/profile.php?id=100063550929698",
         x: "https://twitter.com/ravendb",
         linkedIn: "https://www.linkedin.com/company/ravendb",
     },

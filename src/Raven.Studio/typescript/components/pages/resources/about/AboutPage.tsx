@@ -41,12 +41,9 @@ export function AboutPage() {
     return (
         <div className="d-flex flex-column">
             <div className="m-4 vstack flex-wrap gap-4 flex-grow-1 align-items-stretch justify-content-evenly about-page">
-                <div className="hstack flex-wrap gap-4 flex-grow-1 align-items-stretch justify-content-evenly">
-                    <div
-                        className="vstack gap-3 align-items-center justify-content-center"
-                        style={{ maxWidth: "650px" }}
-                    >
-                        <div className="vstack gap-3 flex-grow-0">
+                <div className="hstack flex-wrap gap-4 flex-grow-1 align-items-stretch">
+                    <div className="d-flex" style={{ maxWidth: "600px", minWidth: "540px" }}>
+                        <div className="vstack gap-4 flex-grow-0">
                             <PassiveState />
                             <LicenseSummary
                                 recheckConnectivity={refreshLicenseServerConnectivity}
@@ -62,7 +59,7 @@ export function AboutPage() {
                             <SupportSummary asyncCheckLicenseServerConnectivity={asyncCheckLicenseServerConnectivity} />
                         </div>
                     </div>
-                    <Card className="flex-grow" style={{ maxWidth: "1100px" }}>
+                    <Card className="flex-grow">
                         <Row className="about-page-tabs">
                             <Col>
                                 <a

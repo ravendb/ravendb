@@ -119,3 +119,22 @@
         }
     }
 }
+.changelog-modal {
+    h3 {
+        margin-bottom: 0;
+    }
+    div:last-of-type {
+        margin-bottom: 0!important;
+    }
+    .changelog-content {
+        h3 {
+            margin-bottom: sizes.$gutter-xs;
+        }
+        hr {
+            margin: sizes.$gutter-xxs 0 sizes.$gutter-sm 0;
+        }
+        ul:last-of-type {
+            margin-bottom: 0;
+        }
+    }
+}

@@ -64,6 +64,10 @@ function LicenseTable(props: LicenseTableProps) {
     const licenseStatus = useAppSelector(licenseSelectors.status);
     const { columns, current: currentColumn } = getColumns(licenseType);
 
+    const upgradeLicenseBtnHandler = () => {
+        window.open(`https://ravendb.net/buy`, "_blank");
+    };
+
     const getEffectiveValue = (feature: FeatureAvailabilityItem, column: LicenseColumn) => {
         const valueFromLicense = column === currentColumn ? (licenseStatus[feature.fieldInLicense] as any) : null;
         return valueFromLicense ?? feature[column].value;
@@ -138,7 +142,11 @@ function LicenseTable(props: LicenseTableProps) {
                                 <th></th>
                                 <th className={classNames({ "bg-current": columns.length !== 4 })}></th>
                                 <th colSpan={columns.length < 4 ? columns.length - 1 : 2} className="px-3">
-                                    <Button color="primary" className="w-100 rounded-pill">
+                                    <Button
+                                        color="primary"
+                                        className="w-100 rounded-pill"
+                                        onClick={upgradeLicenseBtnHandler}
+                                    >
                                         <Icon icon="upgrade-arrow" />
                                         Upgrade license
                                     </Button>
@@ -150,7 +158,7 @@ function LicenseTable(props: LicenseTableProps) {
                     <tbody>
                         {filteredSections.length === 0 && (
                             <tr>
-                                <td>No matches</td>
+                                <td>No matches found</td>
                             </tr>
                         )}
                         {filteredSections.map((section) => (

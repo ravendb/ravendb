@@ -9,7 +9,6 @@ const {
     NoSupportOnPremise,
     NoSupportCloud,
     ProfessionalSupportOnPremise,
-    ProfessionalSupportCloud,
     ProductionSupportCloud,
     ProductionSupportOnPremise,
     NoLicense,
@@ -161,20 +160,6 @@ describe("AboutPage", function () {
 
         it("professional support - on premise", async function () {
             const { screen, fireClick } = rtlRender(<ProfessionalSupportOnPremise />);
-
-            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
-
-            await fireClick(screen.queryByText(selectors.support.supportPlanTab));
-
-            expect(screen.queryByText(selectors.support.productionSla)).not.toBeInTheDocument();
-            expect(screen.queryByText(selectors.support.professionalSla)).toBeInTheDocument();
-
-            expect(screen.queryByText(selectors.support.upgradeYourSupport)).not.toBeInTheDocument();
-            expect(screen.queryByText(selectors.support.upgradeToProduction)).toBeInTheDocument();
-        });
-
-        it("professional support - cloud", async function () {
-            const { screen, fireClick } = rtlRender(<ProfessionalSupportCloud />);
 
             expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
 
