@@ -23,9 +23,18 @@ export function SupportDetails(props: SupportDetailsProps) {
     const { asyncCheckLicenseServerConnectivity } = props;
 
     const license = useAppSelector(licenseSelectors.status);
+    const licenseId = useAppSelector(licenseSelectors.statusValue("Id"));
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
     const support = useAppSelector(licenseSelectors.support);
     const supportType = licenseModel.supportLabelProvider(license, support);
+    const isPaidSupport = ["Professional", "Production", "Partial"].includes(supportType);
+    const requestSupportBtnHandler = () => {
+        {
+            isCloud
+                ? window.open(`https://cloud.ravendb.net/portal`, "_blank")
+                : window.open(`https://ravendb.net/support/supportrequest?licenseId=${licenseId}`, "_blank");
+        }
+    };
 
     const upgradeLink = isCloud ? aboutPageUrls.upgradeSupport.cloud : aboutPageUrls.upgradeSupport.onPremise;
 
@@ -68,7 +77,7 @@ export function SupportDetails(props: SupportDetailsProps) {
                         </p>
                         <Button
                             outline
-                            href={aboutPageUrls.gitHubDiscussions}
+                            href={aboutPageUrls.askCommunity}
                             className="rounded-pill align-self-center px-3"
                             target="_blank"
                         >
@@ -82,9 +91,9 @@ export function SupportDetails(props: SupportDetailsProps) {
                         </h2>
                         <div>
                             <p className="max-paragraph-width">
-                                RavenDB Cloud Support has you covered. Whether it’s a simple question or a
-                                mission-critical emergency, our core developers will be on hand to provide expert
-                                assistance and advice around the clock.
+                                RavenDB Support has you covered. Whether it’s a simple question or a mission-critical
+                                emergency, our core developers will be on hand to provide expert assistance and advice
+                                around the clock.
                             </p>
                             <p>Here’s what you’ll get:</p>
                         </div>
@@ -127,7 +136,7 @@ export function SupportDetails(props: SupportDetailsProps) {
                                                 { "text-enterprise": supportType === "Production" }
                                             )}
                                         >
-                                            {supportType} Support
+                                            {isCloud && supportType === "Production" ? "Cloud" : supportType} Support
                                         </h2>
                                     </div>
                                     <img alt="Support" src={supportImg} width={70} className="ms-4" />
@@ -135,28 +144,44 @@ export function SupportDetails(props: SupportDetailsProps) {
                             </Col>
                             <Col xs={12} sm={6}>
                                 <div className="vstack gap-4">
-                                    {(supportType === "Professional" || supportType === "Production") && (
-                                        <div className="hstack">
-                                            <Icon icon="clock" className="fs-2" />
+                                    <div className="hstack">
+                                        {(supportType === "Professional" || supportType === "Production") && (
+                                            <>
+                                                <Icon icon="clock" className="fs-2" />
 
-                                            <div className="small">
-                                                {supportType === "Professional" && (
-                                                    <>
-                                                        <strong>Next business day SLA</strong>
-                                                        <div>24/7 availability</div>
-                                                    </>
-                                                )}
-                                                {supportType === "Production" && (
-                                                    <>
-                                                        <strong>2 hour SLA</strong>
-                                                        <div>24/7 availability</div>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
+                                                <div className="small me-3">
+                                                    {supportType === "Professional" && (
+                                                        <>
+                                                            <strong>Next business day SLA</strong>
+                                                            <div>24/7 availability</div>
+                                                        </>
+                                                    )}
+                                                    {supportType === "Production" && (
+                                                        <>
+                                                            <strong>2 hour SLA</strong>
+                                                            <div>24/7 availability</div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
+                                        {isPaidSupport && (
+                                            <Button
+                                                className="rounded-pill"
+                                                color={isCloud ? "cloud" : "primary"}
+                                                onClick={() => requestSupportBtnHandler()}
+                                            >
+                                                <Icon icon="notifications" /> Request support
+                                            </Button>
+                                        )}
+                                    </div>
                                     <div>
-                                        <a href={aboutPageUrls.supportTerms} className="d-inline-flex no-decor">
+                                        <a
+                                            href={
+                                                isCloud ? aboutPageUrls.cloudSupportTerms : aboutPageUrls.supportTerms
+                                            }
+                                            className="d-inline-flex no-decor"
+                                        >
                                             <Icon icon="terms" className="fs-2" />
                                             <div className="small">Terms and conditions</div>
                                         </a>
@@ -172,27 +197,12 @@ export function SupportDetails(props: SupportDetailsProps) {
                             <Col>
                                 <Button
                                     outline
-                                    href={aboutPageUrls.gitHubDiscussions}
+                                    href={aboutPageUrls.askCommunity}
                                     className="rounded-pill align-self-center px-3"
                                     target="_blank"
                                 >
                                     <Icon icon="group" /> Ask community <Icon icon="newtab" margin="ms-2" />
                                 </Button>
-                            </Col>
-                        </Row>
-                        <Row className="g-md">
-                            <Col className="text-right">
-                                Message support directly, with access to RavenDB core developers.
-                            </Col>
-                            <Col>
-                                {/* TODO we hide this for now 
-                                <Button
-                                    className="rounded-pill"
-                                    color="primary"
-                                    onClick={() => requestSupportBtnHandler()}
-                                >
-                                    <Icon icon="notifications" /> Request support
-                                </Button>*/}
                             </Col>
                         </Row>
                     </RichPanelHeader>

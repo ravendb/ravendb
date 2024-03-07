@@ -174,15 +174,6 @@ export const ProfessionalSupportOnPremise: StoryObj<AboutPageStoryProps> = {
     },
 };
 
-export const ProfessionalSupportCloud: StoryObj<AboutPageStoryProps> = {
-    render,
-    args: {
-        ...defaultArgs,
-        cloud: true,
-        supportStatus: "ProfessionalSupport",
-    },
-};
-
 export const ProductionSupportOnPremise: StoryObj<AboutPageStoryProps> = {
     render,
     args: {

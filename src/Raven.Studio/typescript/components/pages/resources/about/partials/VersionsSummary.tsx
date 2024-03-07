@@ -8,6 +8,7 @@ import { AsyncState } from "react-async-hook";
 import { LazyLoad } from "components/common/LazyLoad";
 import { LoadError } from "components/common/LoadError";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
 
 interface VersionsSummaryProps {
     asyncLatestVersion: AsyncState<Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo>;
@@ -19,7 +20,7 @@ interface VersionsSummaryProps {
 export function VersionsSummary(props: VersionsSummaryProps) {
     const serverVersion = useAppSelector(clusterSelectors.serverVersion);
     const serverFullVersion = serverVersion?.FullVersion ?? "n/a";
-
+    const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
     const { asyncLatestVersion } = props;
 
     const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -49,25 +50,27 @@ export function VersionsSummary(props: VersionsSummaryProps) {
                         </Button>
                     </Col>
                 </Row>
-                <Row>
-                    <OverallInfoItem icon="global" label="Updates">
-                        <LatestVersion
-                            asyncLatestVersion={asyncLatestVersion}
-                            serverVersion={serverVersion}
-                            showWhatsNewModal={showWhatsNewModal}
-                        />
-                    </OverallInfoItem>
-                    <Col className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
-                        <ButtonWithSpinner
-                            isSpinning={refreshing}
-                            outline
-                            className="rounded-pill"
-                            onClick={checkForUpdates}
-                        >
-                            <Icon icon="refresh" /> Check for updates
-                        </ButtonWithSpinner>
-                    </Col>
-                </Row>
+                {!isCloud && (
+                    <Row>
+                        <OverallInfoItem icon="global" label="Updates">
+                            <LatestVersion
+                                asyncLatestVersion={asyncLatestVersion}
+                                serverVersion={serverVersion}
+                                showWhatsNewModal={showWhatsNewModal}
+                            />
+                        </OverallInfoItem>
+                        <Col className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
+                            <ButtonWithSpinner
+                                isSpinning={refreshing}
+                                outline
+                                className="rounded-pill"
+                                onClick={checkForUpdates}
+                            >
+                                <Icon icon="refresh" /> Check for updates
+                            </ButtonWithSpinner>
+                        </Col>
+                    </Row>
+                )}
             </CardBody>
         </Card>
     );
@@ -119,10 +122,12 @@ function LatestVersion(props: {
                     <Icon icon="star-filled" />
                     Update Available
                 </span>
-                <div className="small text-muted fw-light">{latestVersion}</div>
-                <Button className="rounded-pill" color="primary" onClick={showWhatsNewModal}>
-                    What's New?
-                </Button>
+                <div className="small text-muted fw-light">
+                    {latestVersion}
+                    <Button size="xs" color="link" onClick={showWhatsNewModal} className="fw-bold">
+                        What&apos;s new?
+                    </Button>
+                </div>
             </>
         );
     }

@@ -150,6 +150,7 @@ function LicenseActions(props: LicenseActionsProps) {
     const { licenseService } = useServices();
     const { isClusterAdminOrClusterNode } = useAccessManager();
     const [forcingUpdate, setForcingUpdate] = useState<boolean>(false);
+    const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
 
     const { asyncGetConfigurationSettings } = props;
 
@@ -218,16 +219,27 @@ function LicenseActions(props: LicenseActionsProps) {
                         />
                     </React.Fragment>
                 )}
-                <span id="replace-license-btn">
-                    <Button
-                        outline
-                        className="rounded-pill"
-                        onClick={registerLicense}
-                        disabled={!isReplaceLicenseEnabled}
-                    >
-                        <Icon icon="replace" /> Replace
-                    </Button>
-                </span>
+                {!isCloud && (
+                    <React.Fragment key="replace-container">
+                        <span id="replace-license-btn">
+                            <Button
+                                outline
+                                className="rounded-pill"
+                                onClick={registerLicense}
+                                disabled={!isReplaceLicenseEnabled}
+                            >
+                                <Icon icon="replace" /> Replace
+                            </Button>
+                        </span>
+                        <LicenseTooltip
+                            target="replace-license-btn"
+                            operationEnabledInConfiguration={licenseConfiguration.CanActivate}
+                            hasPrivileges={isClusterAdminOrClusterNode()}
+                            operationAction="Replace the current license with another"
+                            operationTitle="Replacing license"
+                        />
+                    </React.Fragment>
+                )}
 
                 <span id="force-update-license-btn">
                     <ButtonWithSpinner
@@ -240,19 +252,11 @@ function LicenseActions(props: LicenseActionsProps) {
                         <Icon icon="force" /> Force Update
                     </ButtonWithSpinner>
                 </span>
-
-                <LicenseTooltip
-                    target="replace-license-btn"
-                    operationEnabledInConfiguration={licenseConfiguration.CanActivate}
-                    hasPrivileges={isClusterAdminOrClusterNode()}
-                    operationAction="Replace the current license with another license"
-                    operationTitle="Replacing license"
-                />
                 <LicenseTooltip
                     target="force-update-license-btn"
                     operationEnabledInConfiguration={licenseConfiguration.CanForceUpdate}
                     hasPrivileges={isClusterAdminOrClusterNode()}
-                    operationAction="Apply the license that was set for you"
+                    operationAction="Synchronize the current license with license server"
                     operationTitle="Force license update"
                 />
             </Col>
