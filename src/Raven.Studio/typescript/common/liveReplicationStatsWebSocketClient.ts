@@ -98,7 +98,7 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<result
             replicationStatsFromEndpoint.Performance.forEach(perf => {  // each obj in Performance can be either outgoing or incoming..
                 liveReplicationStatsWebSocketClient.fillCache(perf, replicationStatsFromEndpoint.Type, replicationStatsFromEndpoint.Description);
                 
-                if (this.dateCutOff && this.dateCutOff.getTime() >= (perf as ReplicationPerformanceBaseWithCache).StartedAsDate.getTime()) {
+                if (this.dateCutOff && this.dateCutOff.getTime() >= (perf as ReplicationPerformanceWithCache).StartedAsDate.getTime()) {
                     return;
                 }
                 
@@ -122,7 +122,7 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<result
                      type: Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceType,
                      description: string) {
 
-        const withCache = perf as ReplicationPerformanceBaseWithCache;
+        const withCache = perf as ReplicationPerformanceWithCache;
         withCache.CompletedAsDate = perf.Completed ? liveReplicationStatsWebSocketClient.isoParser.parse(perf.Completed) : undefined;
         withCache.StartedAsDate = liveReplicationStatsWebSocketClient.isoParser.parse(perf.Started);
         withCache.Type = type;
