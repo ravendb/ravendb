@@ -41,7 +41,7 @@ type taskOperation = Raven.Client.Documents.Replication.ReplicationPerformanceOp
                      Raven.Server.Documents.Subscriptions.Stats.SubscriptionConnectionPerformanceOperation |
                      Raven.Server.Documents.Subscriptions.Stats.SubscriptionBatchPerformanceOperation;
 
-type performanceBaseWithCache = ReplicationPerformanceBaseWithCache |
+type performanceBaseWithCache = ReplicationPerformanceWithCache |
                                 EtlPerformanceBaseWithCache |
                                 QueueSinkPerformanceBaseWithCache |
                                 SubscriptionConnectionPerformanceStatsWithCache |
@@ -2072,10 +2072,11 @@ class ongoingTasksStats extends shardViewModelBase {
                     case "IncomingPull": {
                         const elementWithData = context.rootStats as any as Raven.Client.Documents.Replication.IncomingReplicationPerformanceStats;
                         tooltipHtml += `<div class="tooltip-li">Received last Etag: <div class="value">${elementWithData.ReceivedLastEtag} </div></div>`;
-                        tooltipHtml += `<div class="tooltip-li">Network input count: <div class="value">${elementWithData.Network.InputCount.toLocaleString()} </div></div>`;
-                        tooltipHtml += `<div class="tooltip-li">Documents read count: <div class="value">${elementWithData.Network.DocumentReadCount.toLocaleString()} </div></div>`;
-                        tooltipHtml += `<div class="tooltip-li">Attachments read count: <div class="value">${elementWithData.Network.AttachmentReadCount.toLocaleString()} </div></div>`;
-                        tooltipHtml += `<div class="tooltip-li">Counters read count: <div class="value">${elementWithData.Network.CounterReadCount.toLocaleString()} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Batch Size: <div class="value">${generalUtils.formatBytesToSize(elementWithData.BatchSizeInBytes)}</div></div>`;
+
+                        if (elementWithData.DatabaseChangeVector) {
+                            tooltipHtml += `<div class="tooltip-li">Change vector: <div class="value">${elementWithData.DatabaseChangeVector}</div></div>`;
+                        }
                     }
                         break;
                     case "OutgoingExternal":
@@ -2083,10 +2084,12 @@ class ongoingTasksStats extends shardViewModelBase {
                     case "OutgoingPull": {
                         const elementWithData = context.rootStats as any as Raven.Client.Documents.Replication.OutgoingReplicationPerformanceStats;
                         tooltipHtml += `<div class="tooltip-li">Sent last Etag: <div class="value">${elementWithData.SendLastEtag}</div></div>`;
-                        tooltipHtml += `<div class="tooltip-li">Storage input count: <div class="value">${elementWithData.Storage.InputCount.toLocaleString()}</div></div>`;
-                        tooltipHtml += `<div class="tooltip-li">Documents output count: <div class="value">${elementWithData.Network.DocumentOutputCount.toLocaleString()}</div></div>`;
-                        tooltipHtml += `<div class="tooltip-li">Attachments output count: <div class="value">${elementWithData.Network.AttachmentOutputCount.toLocaleString()}</div></div>`;
-                        tooltipHtml += `<div class="tooltip-li">Counters output count: <div class="value">${elementWithData.Network.CounterOutputCount.toLocaleString()}</div></div>`;                    }
+                        tooltipHtml += `<div class="tooltip-li">Batch Size: <div class="value">${generalUtils.formatBytesToSize(elementWithData.BatchSizeInBytes)}</div></div>`;
+                        
+                        if (elementWithData.LastAcceptedChangeVector) {
+                            tooltipHtml += `<div class="tooltip-li">Last accepted change vector: <div class="value">${elementWithData.LastAcceptedChangeVector}</div></div>`;
+                        }
+                    }
                         break;
                     case "Raven":
                     case "Sql":
@@ -2145,6 +2148,75 @@ class ongoingTasksStats extends shardViewModelBase {
                     }
                 }
             } else { // child item
+                if (isReplication) {
+                    switch (context.item.Name) {
+                        case "Network/Read":
+                        {
+                            const elementWithData = context.rootStats as IncomingReplicationPerformanceWithCache;
+                            
+                            const appendCounts = (sectionName: string, count: number, sizeInBytes: number) => {
+                                if (count || sizeInBytes) {
+                                    tooltipHtml += `<div class="tooltip-li">${sectionName}: <div class="value">${count.toLocaleString()} (${generalUtils.formatBytesToSize(sizeInBytes)})</div></div>`;
+                                }
+                            }
+
+                            tooltipHtml += `<div class="tooltip-li">Input count: <div class="value">${elementWithData.Network.InputCount.toLocaleString()}</div></div>`;
+
+                            appendCounts("Documents input", elementWithData.Network.DocumentReadCount, elementWithData.Network.DocumentReadSizeInBytes);
+                            appendCounts("Documents Tombstone input", elementWithData.Network.DocumentTombstoneReadCount, elementWithData.Network.DocumentTombstoneReadSizeInBytes);
+                            appendCounts("Attachments input", elementWithData.Network.AttachmentReadCount, elementWithData.Network.AttachmentReadSizeInBytes);
+                            appendCounts("Attachments Stream input", elementWithData.Network.AttachmentStreamReadCount, elementWithData.Network.AttachmentStreamReadSizeInBytes);
+                            appendCounts("Attachments Tombstone input", elementWithData.Network.AttachmentTombstoneReadCount, elementWithData.Network.AttachmentTombstoneReadSizeInBytes);
+                            appendCounts("Counters input", elementWithData.Network.CounterReadCount, elementWithData.Network.CounterReadSizeInBytes);
+                            appendCounts("Time Series Segments input", elementWithData.Network.TimeSeriesReadCount, elementWithData.Network.TimeSeriesReadSizeInBytes);
+                            appendCounts("Time Series Deleted Ranges input", elementWithData.Network.TimeSeriesDeletedRangeReadCount, elementWithData.Network.TimeSeriesDeletedRangeReadSizeInBytes);
+                            appendCounts("Revisions input", elementWithData.Network.RevisionReadCount, elementWithData.Network.RevisionReadSizeInBytes);
+                            appendCounts("Revisions Tombstone input", elementWithData.Network.RevisionTombstoneReadCount, elementWithData.Network.RevisionTombstoneReadSizeInBytes);
+
+                            break;
+                        }
+                        case "Storage/Write":
+                        {
+                            tooltipHtml += `<div class="text-info"><small>Information about read size/count,<br /> can be found in 'Network/Read' block.</small></div>`;
+                            
+                            break;
+                        }
+                        case "Storage/Read":
+                        {
+                            const elementWithData = context.rootStats as OutgoingReplicationPerformanceWithCache;
+                            tooltipHtml += `<div class="tooltip-li">Storage input count: <div class="value">${elementWithData.Storage.InputCount.toLocaleString()}</div></div>`;
+
+                            tooltipHtml += `<div class="tooltip-li">Artificial document skip count: <div class="value">${elementWithData.Storage.ArtificialDocumentSkipCount.toLocaleString()}</div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">System document skip count: <div class="value">${elementWithData.Storage.SystemDocumentSkipCount.toLocaleString()}</div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Change Vector skip count: <div class="value">${elementWithData.Storage.ChangeVectorSkipCount.toLocaleString()}</div></div>`;
+                            
+                            tooltipHtml += `<div class="text-info"><small>Information about read size/count,<br /> can be found in 'Network/Write' block.</small></div>`;
+                            break;
+                        }
+                        case "Network/Write":
+                        {
+                            const elementWithData = context.rootStats as OutgoingReplicationPerformanceWithCache;
+                            const appendCounts = (sectionName: string, count: number, sizeInBytes: number) => {
+                                if (count || sizeInBytes) {
+                                    tooltipHtml += `<div class="tooltip-li">${sectionName}: <div class="value">${count.toLocaleString()} (${generalUtils.formatBytesToSize(sizeInBytes)})</div></div>`;
+                                }
+                            }
+
+                            appendCounts("Documents output", elementWithData.Network.DocumentOutputCount, elementWithData.Network.DocumentOutputSizeInBytes);
+                            appendCounts("Documents Tombstone output", elementWithData.Network.DocumentTombstoneOutputCount, elementWithData.Network.DocumentTombstoneOutputSizeInBytes);
+                            appendCounts("Attachments output", elementWithData.Network.AttachmentOutputCount, elementWithData.Network.AttachmentOutputSizeInBytes);
+                            appendCounts("Attachments Stream output", elementWithData.Network.AttachmentStreamOutputCount, elementWithData.Network.AttachmentStreamOutputSizeInBytes);
+                            appendCounts("Attachments Tombstone output", elementWithData.Network.AttachmentTombstoneOutputCount, elementWithData.Network.AttachmentTombstoneOutputSizeInBytes);
+                            appendCounts("Counters output", elementWithData.Network.CounterOutputCount, elementWithData.Network.CounterOutputSizeInBytes);
+                            appendCounts("Time Series Segments output", elementWithData.Network.TimeSeriesSegmentsOutputCount, elementWithData.Network.TimeSeriesSegmentsSizeInBytes);
+                            appendCounts("Time Series Deleted Ranges output", elementWithData.Network.TimeSeriesDeletedRangeOutputCount, elementWithData.Network.TimeSeriesDeletedRangeOutputSizeInBytes);
+                            appendCounts("Revisions output", elementWithData.Network.RevisionOutputCount, elementWithData.Network.RevisionOutputSizeInBytes);
+                            
+                            break;
+                        }
+                    }
+                }
+                
                 if (isEtl) {
                     const baseElement = context.rootStats as EtlPerformanceBaseWithCache;
                     switch (context.item.Name) {
@@ -2410,7 +2482,7 @@ class ongoingTasksStats extends shardViewModelBase {
     private setCutOffDate() {
         const replicationMax = d3.max(this.replicationData,
             d => d3.max(d.Performance,
-                (p: ReplicationPerformanceBaseWithCache) => p.StartedAsDate));
+                (p: ReplicationPerformanceWithCache) => p.StartedAsDate));
         
         const etlMax = d3.max(this.etlData, 
                 taskData => d3.max(taskData.Stats,
