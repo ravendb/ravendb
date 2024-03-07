@@ -717,7 +717,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
              Debug.Assert(yIdx < SortingMatch.SortBatchSize && xIdx < SortingMatch.SortBatchSize);
 
-             var cmp = 0;
+            var cmp = 0;
             for (int comparerId = 0; cmp == 0 && comparerId < _maxDegreeOfInnerComparer; ++comparerId)
             {
                 cmp = comparerId switch
@@ -729,7 +729,9 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 };
             }
             
-            return cmp;
+            return _descending 
+                ? -cmp
+                : cmp;
         }
 
 
