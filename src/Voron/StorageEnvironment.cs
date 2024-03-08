@@ -1102,7 +1102,6 @@ namespace Voron
         public unsafe Dictionary<long, string> GetPageOwners(Transaction tx, Func<PostingList, List<long>> onPostingList = null)
         {
             var r = new Dictionary<long, string>();
-            r[tx.LowLevelTransaction.RootObjects.State.RootPageNumber] = "RootObjects";
             RegisterPages(_freeSpaceHandling.AllPages(tx.LowLevelTransaction), "Freed Page");
             for (long pageNumber = NextPageNumber; pageNumber < _dataPager.NumberOfAllocatedPages; pageNumber++)
             {
@@ -1112,7 +1111,7 @@ namespace Voron
             var globalAllocator = new NewPageAllocator(tx.LowLevelTransaction, tx.LowLevelTransaction.RootObjects);
             RegisterPages(globalAllocator.GetAllocationStorageFst().AllPages(), "Global/PreAllocatedPages/Bitmaps");
             RegisterPages(globalAllocator.AllPages(), "Global/PreAllocatedPages");
-
+            RegisterPages(tx.LowLevelTransaction.RootObjects.AllPages(), "RootObjects");
             using (var rootIterator = tx.LowLevelTransaction.RootObjects.Iterate(false))
             {
                 if (rootIterator.Seek(Slices.BeforeAllKeys))
