@@ -2211,6 +2211,7 @@ class ongoingTasksStats extends shardViewModelBase {
                             appendCounts("Time Series Segments output", elementWithData.Network.TimeSeriesSegmentsOutputCount, elementWithData.Network.TimeSeriesSegmentsSizeInBytes);
                             appendCounts("Time Series Deleted Ranges output", elementWithData.Network.TimeSeriesDeletedRangeOutputCount, elementWithData.Network.TimeSeriesDeletedRangeOutputSizeInBytes);
                             appendCounts("Revisions output", elementWithData.Network.RevisionOutputCount, elementWithData.Network.RevisionOutputSizeInBytes);
+                            appendCounts("Revisions Tombstone output", elementWithData.Network.RevisionTombstoneOutputCount, elementWithData.Network.RevisionTombstoneOutputSizeInBytes);
                             
                             break;
                         }
