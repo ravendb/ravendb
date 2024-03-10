@@ -91,6 +91,8 @@ namespace Raven.Server.Documents.Indexes
 
         public int HandleDatabaseRecordChange(DatabaseRecord record, long raftIndex, bool startIndexes = true)
         {
+            ForTestingPurposes?.BeforeHandleDatabaseRecordChange?.Invoke();
+
             try
             {
                 if (record == null)
@@ -2559,6 +2561,8 @@ namespace Raven.Server.Documents.Indexes
 
             internal Action<Index> BeforeIndexThreadExit;
             internal Action<Index> BeforeIndexStart;
+
+            public Action BeforeHandleDatabaseRecordChange;
 
             public TestingStuff(IndexStore parent)
             {
