@@ -42,6 +42,9 @@ namespace Raven.Client.Documents.Replication
             public int RevisionOutputCount { get; set; }
             public long RevisionOutputSizeInBytes { get; set; }
 
+            public int RevisionTombstoneOutputCount { get; set; }
+            public long RevisionTombstoneOutputSizeInBytes { get; set; }
+
             public int CounterOutputCount { get; set; }
             public long CounterOutputSizeInBytes { get; set; }
 
