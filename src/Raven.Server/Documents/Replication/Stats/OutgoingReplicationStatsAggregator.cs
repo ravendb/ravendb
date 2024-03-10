@@ -79,6 +79,8 @@ namespace Raven.Server.Documents.Replication.Stats
                     AttachmentStreamOutputSizeInBytes = Stats.AttachmentStreamOutputSize.GetValue(SizeUnit.Bytes),
                     RevisionOutputCount = Stats.RevisionOutputCount,
                     RevisionOutputSizeInBytes = Stats.RevisionOutputSize.GetValue(SizeUnit.Bytes),
+                    RevisionTombstoneOutputCount = Stats.RevisionTombstoneOutputCount,
+                    RevisionTombstoneOutputSizeInBytes = Stats.RevisionTombstoneOutputSize.GetValue(SizeUnit.Bytes),
                     AttachmentTombstoneOutputCount = Stats.AttachmentTombstoneOutputCount,
                     AttachmentTombstoneOutputSizeInBytes = Stats.AttachmentTombstoneOutputSize.GetValue(SizeUnit.Bytes),
                     DocumentTombstoneOutputCount = Stats.DocumentTombstoneOutputCount,
