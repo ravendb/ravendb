@@ -1068,7 +1068,7 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        /// Perform dynamic group by on collection data. AutoMapReduce index is created if none of the indexes in the database are sufficient to match the query criteria.
+        /// Creates a dynamic query which does an aggregation of data grouped by individual values of an array. Underneath a fanout auto map-reduce index will be created to handle such query.
         /// </summary>
         /// <param name="fieldSelector">Path of the array</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.GroupByArrayQuery"/>
@@ -1086,8 +1086,8 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        /// Perform dynamic group by on collection data. AutoMapReduce index is created if none of the indexes in the database are sufficient to match the query criteria.
-        /// The reduction key will be calculated based on all values of an array specified in GroupBy.
+        /// Creates a dynamic query which does an aggregation of data grouped by entire content of an array. The group by key will be calculated by hashing all values of the array.
+        /// Underneath an auto map-reduce index will be created to handle such query.
         /// </summary>
         /// <param name="fieldSelector">Path of the array</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.GroupByArrayContent"/>

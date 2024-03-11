@@ -4,7 +4,7 @@ using Raven.Client.Documents.Queries;
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
-    /// Perform dynamic group by on collection data. AutoMapReduce index is created if none of the indexes in the database are sufficient to match the query criteria.
+    /// Dynamic group-by query on collection data. 
     /// </summary>
     /// <typeparam name="T">Document type.</typeparam>
     /// <inheritdoc cref="DocumentationUrls.Session.Querying.GroupByQuery"/>
@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Session
         IGroupByDocumentQuery<T> SelectKey(string fieldName = null, string projectedName = null);
 
         /// <summary>
-        /// Sum elements for a specific group-by key.
+        /// Computes the sum of numeric values for a specified field.
         /// </summary>
         /// <param name="field">GroupBy field to sum.</param>
         /// <param name="fields">Additional fields to sum.</param>
@@ -27,14 +27,15 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<T> SelectSum(GroupByField field, params GroupByField[] fields);
 
         /// <summary>
-        /// Get count of elements in GroupBy key.
+        /// Returns the number of elements in a group.
         /// </summary>
         /// <param name="projectedName">Set alias for field with count value. (Default: 'Count')</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.GroupByQuery"/>
         IDocumentQuery<T> SelectCount(string projectedName = null);
 
         /// <summary>
-        /// Filter allows querying on documents without the need for issuing indexes. It is meant for exploratory queries or post query filtering. Criteria are evaluated at query time so please use Filter wisely to avoid performance issues.
+        /// Filter allows querying on documents without the need for issuing indexes. It is meant for exploratory queries or post query filtering.
+        /// Criteria are evaluated at query time so please use Filter wisely to avoid performance issues.
         /// </summary>
         /// <param name="builder">Builder of a Filter query</param>
         /// <param name="limit">Limits the number of documents processed by Filter.</param>
