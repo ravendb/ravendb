@@ -2865,6 +2865,7 @@ namespace Raven.Server
                 if (SkipCertificateDispose == false)
                     ea.Execute(() => Certificate?.Dispose());
 
+                ea.Execute(() => DiskStatsGetter?.Dispose());
                 // this should be last
                 ea.Execute(() => AfterDisposal?.Invoke());
 

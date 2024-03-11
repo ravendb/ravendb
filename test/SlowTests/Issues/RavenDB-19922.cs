@@ -52,7 +52,7 @@ namespace SlowTests.Issues
                 Database = databaseName
             })
             {
-                var mentorNode = Servers.First(s => s.ServerStore.NodeTag != leaderServer.ServerStore.NodeTag);
+                var mentorNode = nodes.First(s => s.ServerStore.NodeTag != leaderServer.ServerStore.NodeTag);
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: mentorNode.ServerStore.NodeTag, name: "backup");
 
                 long taskId = await InitializeBackup(store, clusterSize, leaderServer, nodes, config);
@@ -61,8 +61,8 @@ namespace SlowTests.Issues
                 var tag1 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
 
                 CheckDecisionLog(leaderServer, new MentorNode(tag1, config.Name).ReasonForDecisionLog);
-
-                var disposedServer = Servers.First(s => s.ServerStore.NodeTag == tag1);
+                
+                var disposedServer = nodes.First(s => s.ServerStore.NodeTag == tag1);
 
                 await DisposeServerAndWaitForFinishOfDisposalAsync(disposedServer);
 
@@ -108,7 +108,7 @@ namespace SlowTests.Issues
                 Database = databaseName
             })
             {
-                var mentorNode = Servers.First(s => s.ServerStore.NodeTag != leaderServer.ServerStore.NodeTag);
+                var mentorNode = nodes.First(s => s.ServerStore.NodeTag != leaderServer.ServerStore.NodeTag);
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: mentorNode.ServerStore.NodeTag, name: "backup");
                 long taskId = await InitializeBackup(store, clusterSize, leaderServer, nodes, config);
 
@@ -117,7 +117,7 @@ namespace SlowTests.Issues
 
                 CheckDecisionLog(leaderServer, new MentorNode(tag1, config.Name).ReasonForDecisionLog);
 
-                var disposedServer = Servers.First(s => s.ServerStore.NodeTag == tag1);
+                var disposedServer = nodes.First(s => s.ServerStore.NodeTag == tag1);
                 var result = await DisposeServerAndWaitForFinishOfDisposalAsync(disposedServer);
                 nodes.Remove(disposedServer);
                 Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, taskId);
@@ -135,13 +135,11 @@ namespace SlowTests.Issues
                 CheckDecisionLog(leaderServer, new CurrentResponsibleNodeNotResponding(tag2, config.Name, tag1,TimeSpan.FromMinutes(0)).ReasonForDecisionLog);
 
                 settings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url;
-                nodes.Add(GetNewServer(new ServerCreationOptions
+                using var server = GetNewServer(new ServerCreationOptions
                 {
-                    DeletePrevious = false,
-                    RunInMemory = false,
-                    DataDirectory = result.DataDirectory,
-                    CustomSettings = settings
-                }));
+                    DeletePrevious = false, RunInMemory = false, DataDirectory = result.DataDirectory, CustomSettings = settings
+                });
+                nodes.Add(server);
                 var val = await WaitForValueAsync(async () => await GetMembersCount(store), clusterSize);
                 Assert.Equal(clusterSize, val);
 
@@ -186,8 +184,8 @@ namespace SlowTests.Issues
                 Database = databaseName
             })
             {
-                var mentorNode = Servers.First(s => s.ServerStore.NodeTag != leaderServer.ServerStore.NodeTag);
-                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: mentorNode.ServerStore.NodeTag, name: "backup", pinToMentorNode: true);
+                var mentorNode = nodes.First(s => s.ServerStore.NodeTag != leaderServer.ServerStore.NodeTag);
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: mentorNode.ServerStore.NodeTag, name: "backup", pinToMentorNode:true);
                 long taskId = await InitializeBackup(store, clusterSize, leaderServer, nodes, config);
 
                 var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
@@ -195,7 +193,7 @@ namespace SlowTests.Issues
 
                 CheckDecisionLog(leaderServer, new PinnedMentorNode(tag1, config.Name).ReasonForDecisionLog);
 
-                var disposedServer = Servers.First(s => s.ServerStore.NodeTag == tag1);
+                var disposedServer = nodes.First(s => s.ServerStore.NodeTag == tag1);
                 nodes.Remove(disposedServer);
                 var result = await DisposeServerAndWaitForFinishOfDisposalAsync(disposedServer);
 
@@ -211,13 +209,11 @@ namespace SlowTests.Issues
                 Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, taskId);
 
                 settings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url;
-                nodes.Add(GetNewServer(new ServerCreationOptions
+                using var server = GetNewServer(new ServerCreationOptions
                 {
-                    DeletePrevious = false,
-                    RunInMemory = false,
-                    DataDirectory = result.DataDirectory,
-                    CustomSettings = settings
-                }));
+                    DeletePrevious = false, RunInMemory = false, DataDirectory = result.DataDirectory, CustomSettings = settings
+                });
+                nodes.Add(server);
                 var val = await WaitForValueAsync(async () => await GetMembersCount(store), clusterSize);
                 Assert.Equal(clusterSize, val);
 
@@ -261,7 +257,7 @@ namespace SlowTests.Issues
                 Database = databaseName
             })
             {
-                var mentorNode = Servers.First(s => s.ServerStore.NodeTag != leaderServer.ServerStore.NodeTag);
+                var mentorNode = nodes.First(s => s.ServerStore.NodeTag != leaderServer.ServerStore.NodeTag);
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: mentorNode.ServerStore.NodeTag, name: "backup");
                 long taskId = await InitializeBackup(store, clusterSize, leaderServer, nodes, config);
 
@@ -269,7 +265,7 @@ namespace SlowTests.Issues
                 var tag1 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
                 CheckDecisionLog(leaderServer, new MentorNode(tag1, config.Name).ReasonForDecisionLog);
 
-                var removedNode = Servers.First(s => s.ServerStore.NodeTag == tag1);
+                var removedNode = nodes.First(s => s.ServerStore.NodeTag == tag1);
 
                 await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(removedNode.ServerStore.NodeTag));
 

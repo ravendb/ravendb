@@ -61,5 +61,6 @@ public enum RavenTestCategory : long
     Security = 1L << 45,
     Core = 1L << 46,
     Intrinsics = 1L << 47,
-    Sinks = 1L << 48
+    Sinks = 1L << 48,
+    Monitoring = 1L << 50,
 }
