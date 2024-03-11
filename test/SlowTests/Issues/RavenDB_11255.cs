@@ -49,10 +49,21 @@ namespace SlowTests.Issues
 
                     for (int i = 0; i < 10; i++)
                     {
-                        persistedDef = MapIndexDefinition.Load(index._indexStorage.Environment(), out var version);
+                        try
+                        {
+                            persistedDef = MapIndexDefinition.Load(index._indexStorage.Environment(), out var version);
 
-                        if (persistedDef.Priority == IndexPriority.High)
-                            break;
+                            if (persistedDef.Priority == IndexPriority.High)
+                                break;
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // index is being replaced, storage environment is being disposed
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            // index is being replaced, storage environment is being disposed
+                        }
 
                         Thread.Sleep(1000);
                     }
