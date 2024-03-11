@@ -98,18 +98,9 @@ namespace SlowTests.Issues
                     using (context.OpenReadTransaction())
                     {
                         var currentTime = database.Time.GetUtcNow();
-                        var options = new ExpirationStorage.ExpiredDocumentsOptions(context, currentTime, false, batchSize);
+                        var options = new ExpirationStorage.ExpiredDocumentsOptions(context, currentTime, false, batchSize, 1024);
                         
-                        var expired = database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, out _, CancellationToken.None);
-                        var totalCount = 0;
-                        if (expired != null)
-                        {
-                            foreach (var singleExpired in expired)
-                            {
-                                totalCount += singleExpired.Value.Count;
-                            }
-                        }
-
+                        var expired = database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, out _, out var totalCount, CancellationToken.None);
                         Assert.Equal(expected, totalCount);
                     }
 
