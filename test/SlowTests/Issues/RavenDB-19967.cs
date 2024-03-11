@@ -325,7 +325,7 @@ namespace SlowTests.Issues
                 switch (etlType)
                 {
                     case EtlType.Raven:
-                        var ravenConnectionString = new RavenConnectionString { Name = store.Identifier, Database = store.Database, TopologyDiscoveryUrls = store.Urls };
+                        var ravenConnectionString = new RavenConnectionString { Name = store.Identifier, Database = store.Database + "-non-existing", TopologyDiscoveryUrls = store.Urls };
                         var ravenConfiguration = new RavenEtlConfiguration { Name = _customTaskName, ConnectionStringName = ravenConnectionString.Name, Transforms = { transforms } };
                         taskId = await AddEtlAndDisableIt(store, ravenConnectionString, ravenConfiguration, OngoingTaskType.RavenEtl);
                         blockerType = ITombstoneAware.TombstoneDeletionBlockerType.RavenEtl;
