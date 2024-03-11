@@ -84,7 +84,10 @@ internal static class DocumentationUrls
             /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/Csharp/client-api/session/querying/how-to-perform-group-by-query"/></remarks>
             public const string GroupByQuery = nameof(GroupByQuery);
 
-            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-perform-group-by-query#group-by-array"/></remarks>
+            /// <remarks>
+            /// <seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-perform-group-by-query#group-by-array"/>
+            /// <seealso href="https://ravendb.net/docs/article-page/6.0/Csharp/indexes/indexing-nested-data" />
+            /// </remarks>
             public const string GroupByArrayQuery = nameof(GroupByArrayQuery);
 
             /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-perform-group-by-query#by-array-content"/></remarks>
