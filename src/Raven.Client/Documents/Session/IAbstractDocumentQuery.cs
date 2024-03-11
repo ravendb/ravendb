@@ -295,14 +295,24 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         void ContainsAll(string fieldName, IEnumerable<object> values);
 
+        /// <inheritdoc cref="IAsyncGroupByDocumentQuery{T}"/>
+        /// <param name="fieldName">Aggregation field</param>
+        /// <param name="fieldNames">Additional aggregation field</param>
         void GroupBy(string fieldName, params string[] fieldNames);
 
+        /// <inheritdoc cref="IAsyncGroupByDocumentQuery{T}"/>
+        /// <param name="field">A tuple of field name to reduce and configuration how to calculate reduce key. See more at <seealso cref="GroupByMethod"/>.</param>
+        /// <param name="fields">Additional fields.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.GroupByArrayContent"/>
         void GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields);
 
+        /// <inheritdoc cref="IAsyncGroupByDocumentQuery{T}.SelectKey"/>
         void GroupByKey(string fieldName, string projectedName = null);
 
+        /// <inheritdoc cref="IAsyncGroupByDocumentQuery{T}.SelectSum"/>
         void GroupBySum(string fieldName, string projectedName = null);
 
+        /// <inheritdoc cref="IAsyncGroupByDocumentQuery{T}.SelectCount"/>
         void GroupByCount(string projectedName = null);
 
         void WhereTrue();

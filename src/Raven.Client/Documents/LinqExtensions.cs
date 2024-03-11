@@ -1067,6 +1067,11 @@ namespace Raven.Client.Documents
             await session.Advanced.StreamIntoAsync(self, stream, token).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Creates a dynamic query which does an aggregation of data grouped by individual values of an array. Underneath a fanout auto map-reduce index will be created to handle such query.
+        /// </summary>
+        /// <param name="fieldSelector">Path of the array</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.GroupByArrayQuery"/>
         public static IRavenQueryable<IGrouping<TKey, TSource>> GroupByArrayValues<TSource, TKey>(this IQueryable<TSource> source,
             Expression<Func<TSource, IEnumerable<TKey>>> fieldSelector)
         {
@@ -1080,6 +1085,12 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<IGrouping<TKey, TSource>>)queryable;
         }
 
+        /// <summary>
+        /// Creates a dynamic query which does an aggregation of data grouped by entire content of an array. The group by key will be calculated by hashing all values of the array.
+        /// Underneath an auto map-reduce index will be created to handle such query.
+        /// </summary>
+        /// <param name="fieldSelector">Path of the array</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.GroupByArrayContent"/>
         public static IRavenQueryable<IGrouping<IEnumerable<TKey>, TSource>> GroupByArrayContent<TSource, TKey>(this IQueryable<TSource> source,
             Expression<Func<TSource, IEnumerable<TKey>>> fieldSelector)
         {

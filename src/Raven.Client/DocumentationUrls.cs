@@ -48,6 +48,19 @@ internal static class DocumentationUrls
                 public const string CustomSorters = nameof(CustomSorters);
             }
 
+            internal static class StreamQueryResults
+            {
+                /// <remarks>See <seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-stream-query-results#stream-by-query">
+                /// How to stream query results
+                /// </seealso></remarks>
+                public const string ByQuery = nameof(ByQuery);
+
+                /// <remarks>See <seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-stream-query-results#stream-results-by-prefix">
+                /// How to stream query results by prefix
+                /// </seealso></remarks>
+                public const string ByPrefix = nameof(ByPrefix);
+            }
+
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/indexes/querying/faceted-search"/></remarks>
             public const string AggregationQuery = nameof(AggregationQuery);
 
@@ -57,7 +70,7 @@ internal static class DocumentationUrls
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/Csharp/client-api/session/querying/how-to-use-morelikethis"/></remarks>
             public const string MoreLikeThisQuery = nameof(MoreLikeThisQuery);
             
-            ///<remarks><seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-work-with-suggestions"/></remarks>
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-work-with-suggestions"/></remarks>
             public const string SuggestionsQuery = nameof(SuggestionsQuery);
 
             /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-use-intersect"/></remarks>
@@ -80,6 +93,18 @@ internal static class DocumentationUrls
             
             /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/indexes/querying/distinct"/></remarks>
             public const string Distinct = nameof(Distinct);
+
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/Csharp/client-api/session/querying/how-to-perform-group-by-query"/></remarks>
+            public const string GroupByQuery = nameof(GroupByQuery);
+
+            /// <remarks>
+            /// <seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-perform-group-by-query#group-by-array"/>
+            /// <seealso href="https://ravendb.net/docs/article-page/6.0/Csharp/indexes/indexing-nested-data" />
+            /// </remarks>
+            public const string GroupByArrayQuery = nameof(GroupByArrayQuery);
+
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-perform-group-by-query#by-array-content"/></remarks>
+            public const string GroupByArrayContent = nameof(GroupByArrayContent);
         }
 
         internal static class Counters
