@@ -48,16 +48,13 @@ namespace Raven.Server.Documents
             child._refCount++;
         }
         
-        public new TDocument Clone<TDocument>(JsonOperationContext context)
-            where TDocument : Document, new()
+        public override TDocument Clone<TDocument>(JsonOperationContext context)
         {
             var data = Data.Clone(context);
             return CloneWith<TDocument>(context, data);
         }
 
-        public new TDocument CloneWith<TDocument>(JsonOperationContext context, BlittableJsonReaderObject newData)
-            where TDocument : Document, new()
-
+        public override TDocument CloneWith<TDocument>(JsonOperationContext context, BlittableJsonReaderObject newData)
         {
             if (typeof(TDocument) != typeof(QueriedDocument))
                 return base.Clone<TDocument>(context);
@@ -84,6 +81,8 @@ namespace Raven.Server.Documents
         public override void Dispose()
         {
             _refCount--;
+            
+            Debug.Assert(_refCount >= 0, "Disposed twice.");
             if (_refCount == 0)
             {
                 base.Dispose();
@@ -137,7 +136,8 @@ namespace Raven.Server.Documents
         public short TransactionMarker;
         private bool _metadataEnsured;
         private bool _disposed;
-
+        public bool IsDisposed => _disposed;
+        
         public unsafe ulong DataHash
         {
             get
@@ -226,7 +226,7 @@ namespace Raven.Server.Documents
             return CloneWith(context, newData);
         }
         
-        public TDocument Clone<TDocument>(JsonOperationContext context)
+        public virtual TDocument Clone<TDocument>(JsonOperationContext context)
             where TDocument : Document, new()
         {
             var newData = Data.Clone(context);
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents
 
         public Document CloneWith(JsonOperationContext context, BlittableJsonReaderObject newData) => CloneWith<Document>(context, newData);
         
-        public TDocument CloneWith<TDocument>(JsonOperationContext context, BlittableJsonReaderObject newData)
+        public virtual TDocument CloneWith<TDocument>(JsonOperationContext context, BlittableJsonReaderObject newData)
             where TDocument : Document, new()
         {
             var newId = context.GetLazyString(Id);
