@@ -181,7 +181,13 @@ namespace Raven.Server.Documents.Queries.Results
 
         public abstract bool TryGetKeyCorax(IndexSearcher searcher, long id, out UnmanagedSpan key);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public virtual TDocument DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
+        {
+            return DirectGetInternal(ref retrieverInput, id, fields);
+        }
+
+        private TDocument DirectGetInternal(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
         {
             if (_loadedDocumentMarshall.TryGetValue(id, out var doc))
             {
@@ -211,11 +217,16 @@ namespace Raven.Server.Documents.Queries.Results
                         ((QueriedDocument)(object)parentDocument).AddChild((QueriedDocument)(object)doc);
                     }
                 }
+
+                if (typeof(TDocument) == typeof(Document) && doc.IsDisposed)
+                {
+                    goto LoadDocument;
+                }
                 
                 return doc;
             }
-
-            doc = DirectGet(ref retrieverInput, id, DocumentFields.All);
+            LoadDocument:
+            doc = DirectGetInternal(ref retrieverInput, id, DocumentFields.All);
             if (doc != null)
                 _loadedDocumentMarshall[id] = doc;
 
@@ -361,7 +372,7 @@ namespace Raven.Server.Documents.Queries.Results
                                 {
                                     if (ReferenceEquals(nested, doc.Data) == false)
                                     {
-                                        using (doc)
+                                        using (var _ = doc)
                                             doc.CloneWith<TDocument>(_context, nested);
                                     }
                                 }
@@ -373,7 +384,7 @@ namespace Raven.Server.Documents.Queries.Results
                                 }
                                 else if (fieldVal is Document d)
                                 {
-                                    using (d)
+                                    using (var _ = doc)
                                         doc = d.Clone<TDocument>(_context);
                                 }
                                 else
@@ -532,10 +543,6 @@ namespace Raven.Server.Documents.Queries.Results
                 case BlittableJsonReaderObject nested:
                 {
                     using var _ = doc;
-                    
-                    if (typeof(TDocument) == typeof(QueriedDocument))
-                        return (((QueriedDocument)(object)doc).CloneWith<TDocument>(_context, nested), null);
-                    
                     return (doc.CloneWith<TDocument>(_context, nested), null);
                 }
                 case TDocument td:
@@ -545,16 +552,12 @@ namespace Raven.Server.Documents.Queries.Results
                 case Document d:
                     using (d)
                     {
-                        if (typeof(TDocument) == typeof(QueriedDocument))
-                            return (((QueriedDocument)(object)doc).Clone<TDocument>(_context), null);
                         return (d.Clone<TDocument>(_context), null);
                     }
                 case TimeSeriesRetrieverBase.TimeSeriesStreamingRetrieverResult ts:
                 {
                     var newData = _context.ReadObject(ts.Metadata, "time-series-metadata");
-                    var clonedDocument = typeof(TDocument) != typeof(QueriedDocument)
-                        ? doc.CloneWith<TDocument>(_context, newData)
-                        : (TDocument)(((QueriedDocument)(object)doc).CloneWith<TDocument>(_context, newData));
+                    var clonedDocument = doc.CloneWith<TDocument>(_context, newData);
                     clonedDocument.TimeSeriesStream = new TimeSeriesStream { TimeSeries = ts.Stream, Key = key };
                     return (clonedDocument, null);
                 }
@@ -606,19 +609,16 @@ namespace Raven.Server.Documents.Queries.Results
 
             var newData = context.ReadObject(result, "projection result");
             var sameBlittable = ReferenceEquals(newData, doc.Data);
-            var returnDoc = doc;
             if (sameBlittable == false)
             {
-                returnDoc = typeof(TDocument) == typeof(QueriedDocument) 
-                    ? ((QueriedDocument)(object)doc).CloneWith<TDocument>(context, newData) 
-                    : doc.CloneWith<TDocument>(context, newData);
-                doc.Dispose();
+                using (var _ = doc)
+                    doc = doc.CloneWith<TDocument>(context, newData);
             }
             
             if (scoreDoc != null)
-                FinishDocumentSetup(returnDoc, scoreDoc);
+                FinishDocumentSetup(doc, scoreDoc);
 
-            return returnDoc;
+            return doc;
         }
 
         private bool LuceneTryExtractValueFromIndex(FieldsToFetch.FieldToFetch fieldToFetch, Lucene.Net.Documents.Document indexDocument, DynamicJsonValue toFill, IState state)
