@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Util;
 using Tests.Infrastructure;
 using Xunit;
@@ -24,7 +25,7 @@ public class AsyncHelperTest : RavenTestBase
             SynchronizationContext.SetSynchronizationContext(null);
             var withoutContext = Assert.ThrowsAny<Exception>(() => AsyncHelpers.RunSync(() => throw testException));
 
-            SynchronizationContext.SetSynchronizationContext(new SynchronizationContext());
+            SynchronizationContext.SetSynchronizationContext(new SimpleSynchronizationContext());
             var withContext = Assert.ThrowsAny<Exception>(() => AsyncHelpers.RunSync(() => throw testException));
                 
             Assert.Equal(withoutContext.GetType(), withContext.GetType());
@@ -36,7 +37,7 @@ public class AsyncHelperTest : RavenTestBase
     }
         
     [RavenFact(RavenTestCategory.ClientApi)]
-    public void RunSync_WhenThrowAggregateException_ShouldThrowSameExceptionWithAndWithoutAsyncContest()
+    public void RunSyncVoid_WhenThrowAggregateException_ShouldThrowSameExceptionWithAndWithoutAsyncContest()
     {
         var oldContext = SynchronizationContext.Current;
 
@@ -44,10 +45,10 @@ public class AsyncHelperTest : RavenTestBase
         try
         {
             SynchronizationContext.SetSynchronizationContext(null);
-            var withoutContext = Assert.ThrowsAny<Exception>(() => AsyncHelpers.RunSync(() => throw aggregateException));
+            var withoutContext = Assert.ThrowsAny<Exception>(() => AsyncHelpers.RunSync(ThrowAggregateExceptionAsync));
 
-            SynchronizationContext.SetSynchronizationContext(new SynchronizationContext());
-            var withContext = Assert.ThrowsAny<Exception>(() => AsyncHelpers.RunSync(() => throw aggregateException));
+            SynchronizationContext.SetSynchronizationContext(new SimpleSynchronizationContext());
+            var withContext = Assert.ThrowsAny<Exception>(() => AsyncHelpers.RunSync(ThrowAggregateExceptionAsync));
         
             Assert.Equal(withoutContext.GetType(), withContext.GetType());
         }
@@ -55,8 +56,61 @@ public class AsyncHelperTest : RavenTestBase
         {
             SynchronizationContext.SetSynchronizationContext(oldContext);
         }
+
+        return;
+        Task ThrowAggregateExceptionAsync() => Task.FromException(aggregateException);
     }
         
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void RunSyncReturnWithTask_WhenThrowAggregateException_ShouldThrowSameExceptionWithAndWithoutAsyncContest()
+    {
+        var oldContext = SynchronizationContext.Current;
+
+        var aggregateException = new AggregateException(new List<Exception>{new TestException()});
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(null);
+            var withoutContext = Assert.ThrowsAny<Exception>(() => AsyncHelpers.RunSync(ThrowAggregateExceptionAsync));
+
+            SynchronizationContext.SetSynchronizationContext(new SimpleSynchronizationContext());
+            var withContext = Assert.ThrowsAny<Exception>(() => AsyncHelpers.RunSync(ThrowAggregateExceptionAsync));
+        
+            Assert.Equal(withoutContext.GetType(), withContext.GetType());
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(oldContext);
+        }
+
+        return;
+        Task<int> ThrowAggregateExceptionAsync() => Task.FromException<int>(aggregateException);
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void RunSyncReturnWithValueTask_WhenThrowAggregateException_ShouldThrowSameExceptionWithAndWithoutAsyncContest()
+    {
+        var oldContext = SynchronizationContext.Current;
+
+        var aggregateException = new AggregateException(new List<Exception>{new TestException()});
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(null);
+            var withoutContext = Assert.ThrowsAny<Exception>(() => AsyncHelpers.RunSync(ThrowAggregateExceptionAsync));
+
+            SynchronizationContext.SetSynchronizationContext(new SimpleSynchronizationContext());
+            var withContext = Assert.ThrowsAny<Exception>(() => AsyncHelpers.RunSync(ThrowAggregateExceptionAsync));
+        
+            Assert.Equal(withoutContext.GetType(), withContext.GetType());
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(oldContext);
+        }
+
+        return;
+        ValueTask<int> ThrowAggregateExceptionAsync() => ValueTask.FromException<int>(aggregateException);
+    }
+    
     private class TestException : Exception
     {
             
