@@ -1171,6 +1171,12 @@ namespace RachisTests.DatabaseCluster
 
                 await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
 
+                var res = await WaitForValueAsync(() =>
+                {
+                    return re?._nodeSelector?.Topology != null;
+                }, true);
+                Assert.True(res);
+
                 var selectorNodes = re._nodeSelector.Topology.Nodes;
                 Assert.Equal(3, selectorNodes.Count);
                 Assert.True(selectorNodes.All(x => x.ServerRole == ServerNode.Role.Member));
