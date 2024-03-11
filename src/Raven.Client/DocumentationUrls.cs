@@ -48,6 +48,19 @@ internal static class DocumentationUrls
                 public const string CustomSorters = nameof(CustomSorters);
             }
 
+            internal static class StreamQueryResults
+            {
+                /// <remarks>See <seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-stream-query-results#stream-by-query">
+                /// How to stream query results
+                /// </seealso></remarks>
+                public const string ByQuery = nameof(ByQuery);
+
+                /// <remarks>See <seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-stream-query-results#stream-results-by-prefix">
+                /// How to stream query results by prefix
+                /// </seealso></remarks>
+                public const string ByPrefix = nameof(ByPrefix);
+            }
+
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/indexes/querying/faceted-search"/></remarks>
             public const string AggregationQuery = nameof(AggregationQuery);
 
