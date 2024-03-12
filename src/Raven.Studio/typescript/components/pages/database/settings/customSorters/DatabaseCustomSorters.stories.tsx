@@ -1,6 +1,6 @@
 ﻿import React from "react";
-import { Meta } from "@storybook/react";
-import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
+import { Meta, StoryObj } from "@storybook/react";
+import { withStorybookContexts, withBootstrap5, databaseAccessArgType } from "test/storybookTestUtils";
 import DatabaseCustomSorters from "./DatabaseCustomSorters";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
@@ -9,73 +9,52 @@ import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 
 export default {
     title: "Pages/Database/Settings/Custom Sorters",
-    component: DatabaseCustomSorters,
     decorators: [withStorybookContexts, withBootstrap5],
-} satisfies Meta<typeof DatabaseCustomSorters>;
+} satisfies Meta;
 
 const db = DatabasesStubs.nonShardedClusterDatabase();
 
-function commonInit() {
-    const { accessManager } = mockStore;
-    const { manageServerService, licenseService } = mockServices;
-
-    accessManager.with_securityClearance("ValidUser");
-
-    licenseService.withLimitsUsage();
-    manageServerService.withServerWideCustomSorters();
+interface DefaultDatabaseCustomSortersProps {
+    isEmpty: boolean;
+    databaseAccess: databaseAccessLevel;
+    hasServerWideCustomSorters: boolean;
+    maxNumberOfCustomSortersPerDatabase: number;
+    maxNumberOfCustomSortersPerCluster: number;
 }
 
-export function NoLimits() {
-    commonInit();
+export const CustomSorters: StoryObj<DefaultDatabaseCustomSortersProps> = {
+    render: (props: DefaultDatabaseCustomSortersProps) => {
+        const { accessManager, license } = mockStore;
+        const { databasesService, manageServerService, licenseService } = mockServices;
 
-    const { accessManager, license } = mockStore;
-    const { databasesService } = mockServices;
+        accessManager.with_securityClearance("ValidUser");
+        accessManager.with_databaseAccess({
+            [db.name]: props.databaseAccess,
+        });
 
-    accessManager.with_databaseAccess({
-        [db.name]: "DatabaseAdmin",
-    });
+        manageServerService.withServerWideCustomSorters(
+            props.isEmpty ? [] : ManageServerStubs.serverWideCustomSorters()
+        );
 
-    databasesService.withCustomSorters([
-        ...DatabasesStubs.customSorters(),
-        ManageServerStubs.serverWideCustomSorters()[0],
-    ]);
+        databasesService.withCustomSorters(props.isEmpty ? [] : DatabasesStubs.customSorters());
 
-    license.with_License();
+        licenseService.withLimitsUsage();
+        license.with_License({
+            HasServerWideCustomSorters: props.hasServerWideCustomSorters,
+            MaxNumberOfCustomSortersPerDatabase: props.maxNumberOfCustomSortersPerDatabase,
+            MaxNumberOfCustomSortersPerCluster: props.maxNumberOfCustomSortersPerCluster,
+        });
 
-    return <DatabaseCustomSorters db={db} />;
-}
-
-export function BelowDatabaseAdmin() {
-    commonInit();
-
-    const { accessManager, license } = mockStore;
-    const { databasesService } = mockServices;
-
-    accessManager.with_databaseAccess({
-        [db.name]: "DatabaseRead",
-    });
-
-    databasesService.withCustomSorters();
-
-    license.with_License();
-
-    return <DatabaseCustomSorters db={db} />;
-}
-
-export function LicenseLimits() {
-    commonInit();
-
-    const { accessManager, license } = mockStore;
-    const { databasesService } = mockServices;
-
-    accessManager.with_databaseAccess({
-        [db.name]: "DatabaseAdmin",
-    });
-
-    databasesService.withCustomSorters();
-
-    license.with_LicenseLimited();
-    license.with_LimitsUsage();
-
-    return <DatabaseCustomSorters db={db} />;
-}
+        return <DatabaseCustomSorters db={db} />;
+    },
+    args: {
+        isEmpty: false,
+        databaseAccess: "DatabaseAdmin",
+        hasServerWideCustomSorters: true,
+        maxNumberOfCustomSortersPerDatabase: 3,
+        maxNumberOfCustomSortersPerCluster: 10,
+    },
+    argTypes: {
+        databaseAccess: databaseAccessArgType,
+    },
+};

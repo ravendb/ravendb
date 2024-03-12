@@ -157,14 +157,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.customAnalyzers
         }),
         new leafMenuItem({
-            route: 'databases/settings/editCustomSorter',
-            moduleId: require('viewmodels/database/settings/editCustomSorter'),
-            title: 'Custom Sorter',
-            nav: false,
-            dynamicHash: appUrls.editCustomSorter, 
-            itemRouteToHighlight: 'databases/settings/customSorters'
-        }),
-        new leafMenuItem({
             route: 'databases/settings/editCustomAnalyzer',
             moduleId: require('viewmodels/database/settings/editCustomAnalyzer'),
             title: 'Custom Analyzer',

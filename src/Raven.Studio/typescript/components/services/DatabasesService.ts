@@ -62,6 +62,7 @@ import deleteConnectionStringCommand = require("commands/database/settings/delet
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
+import saveCustomSorterCommand = require("commands/database/settings/saveCustomSorterCommand");
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -203,6 +204,10 @@ export default class DatabasesService {
 
     async deleteCustomSorter(db: database, name: string) {
         return new deleteCustomSorterCommand(db, name).execute();
+    }
+
+    async saveCustomSorter(...args: ConstructorParameters<typeof saveCustomSorterCommand>) {
+        return new saveCustomSorterCommand(...args).execute();
     }
 
     async getDocumentsCompressionConfiguration(db: database) {

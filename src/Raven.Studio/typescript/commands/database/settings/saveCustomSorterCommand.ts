@@ -3,9 +3,13 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class saveCustomSorterCommand extends commandBase {
+    private db: database
+    private sorterDto: Raven.Client.Documents.Queries.Sorting.SorterDefinition
 
-    constructor(private db: database, private sorterDto: Raven.Client.Documents.Queries.Sorting.SorterDefinition) {
+    constructor(db: database, sorterDto: Raven.Client.Documents.Queries.Sorting.SorterDefinition) {
         super();
+        this.db = db;
+        this.sorterDto = sorterDto;
     }
 
     execute(): JQueryPromise<void> {
