@@ -4,19 +4,19 @@ import endpoints = require("endpoints");
 class getChangeLogCommand extends commandBase {
 
     private readonly start: number;
-    private readonly perPage: number;
+    private readonly pageSize: number;
     
-    public constructor(start: number, perPage: number) {
+    public constructor(start: number, pageSize: number) {
         super();
         
         this.start = start;
-        this.perPage = perPage;
+        this.pageSize = pageSize;
     }
     
     execute(): JQueryPromise<Raven.Server.Web.Studio.UpgradeInfoHandler.UpgradeInfoResponse> {
         const args = { 
             start: this.start,
-            perPage: this.perPage
+            pageSize: this.pageSize
         }
         const url = endpoints.global.upgradeInfo.studioUpgradeInfo + this.urlEncodeArgs(args);
         
