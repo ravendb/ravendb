@@ -64,6 +64,11 @@ export function ChangeLogModal(props: ChangelogModalProps) {
             ? asyncGetChangeLog.result.BuildCompatibilitiesForLatestMajorMinor
             : asyncGetChangeLog.result.BuildCompatibilitiesForUserMajorMinor;
 
+    const totalResults =
+        mode === "whatsNew"
+            ? asyncGetChangeLog.result.TotalBuildsForLatestMajorMinor
+            : asyncGetChangeLog.result.TotalBuildsForUserMajorMinor;
+
     return (
         <ModalWrapper onClose={onClose} mode={mode}>
             <div className="changelog-modal">
@@ -147,7 +152,7 @@ export function ChangeLogModal(props: ChangelogModalProps) {
                 <div className="mt-1">
                     <CustomPagination
                         page={page}
-                        totalPages={versionsList.length / changeLogItemsPerPage}
+                        totalPages={Math.ceil(totalResults / changeLogItemsPerPage)}
                         onPageChange={setPage}
                     />
                 </div>
@@ -196,4 +201,4 @@ function ModalWrapper(props: { children: ReactNode } & ChangelogModalProps) {
     );
 }
 
-const changeLogItemsPerPage = 10;
+const changeLogItemsPerPage = 2;
