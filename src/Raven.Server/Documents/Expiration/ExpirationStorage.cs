@@ -89,19 +89,19 @@ namespace Raven.Server.Documents.Expiration
                 = (context, currentTime, isFirstInTopology, amountToTake, maxItemsToProcess);
         }
 
-        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetExpiredDocuments(ExpiredDocumentsOptions options, out Stopwatch duration, out int count, CancellationToken cancellationToken)
+        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetExpiredDocuments(ExpiredDocumentsOptions options, ref int totalCount, out Stopwatch duration,  CancellationToken cancellationToken)
         {
-            return GetDocuments(options, DocumentsByExpiration, Constants.Documents.Metadata.Expires, out duration, out count, cancellationToken);
+            return GetDocuments(options, DocumentsByExpiration, Constants.Documents.Metadata.Expires, ref totalCount, out duration, cancellationToken);
         }
 
-        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocumentsToRefresh(ExpiredDocumentsOptions options, out Stopwatch duration, out int count, CancellationToken cancellationToken)
+        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocumentsToRefresh(ExpiredDocumentsOptions options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
         {
-            return GetDocuments(options, DocumentsByRefresh, Constants.Documents.Metadata.Refresh, out duration, out count, cancellationToken);
+            return GetDocuments(options, DocumentsByRefresh, Constants.Documents.Metadata.Refresh, ref totalCount, out duration, cancellationToken);
         }
 
-        private Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(ExpiredDocumentsOptions options, string treeName, string metadataPropertyToCheck, out Stopwatch duration, out int count, CancellationToken cancellationToken)
+        private Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(ExpiredDocumentsOptions options, string treeName, string metadataPropertyToCheck, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
         {
-            count = 0;
+            var count = 0;
             var currentTicks = options.CurrentTime.Ticks;
 
             var expirationTree = options.Context.Transaction.InnerTransaction.ReadTree(treeName);
@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Expiration
                                             HasPassed(metadata, metadataPropertyToCheck, options.CurrentTime) == false)
                                         {
                                             expiredDocs.Add((clonedId, null));
-                                            count++;
+                                            totalCount++;
                                             continue;
                                         }
 
@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Expiration
                                         }
 
                                         expiredDocs.Add((clonedId, document.Id));
-                                        count++;
+                                        totalCount++;
                                     }
                                 }
                                 catch (DocumentConflictException)
@@ -179,17 +179,18 @@ namespace Raven.Server.Documents.Expiration
                                     }
                                 }
                             } while (multiIt.MoveNext() 
-                                     && count < options.AmountToTake 
-                                     && count < options.MaxItemsToProcess);
+                                     && expiredDocs.Count + count < options.AmountToTake 
+                                     && totalCount < options.MaxItemsToProcess);
                         }
                     }
 
+                    count += expiredDocs.Count;
                     if (expiredDocs.Count > 0)
                         expired.Add(ticksAsSlice, expiredDocs);
 
                 } while (it.MoveNext() 
                          && count < options.AmountToTake
-                         && count < options.MaxItemsToProcess);
+                         && totalCount < options.MaxItemsToProcess);
 
                 return expired;
             }

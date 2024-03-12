@@ -27,6 +27,10 @@ namespace Raven.Server.Documents.Expiration
             ? 4096
             : 1024;
 
+        internal static int MaxItemsToProcess = PlatformDetails.Is32Bits == false
+            ? int.MaxValue
+            : BatchSize * 16;
+
         private readonly DocumentDatabase _database;
         private readonly TimeSpan _refreshPeriod;
         private readonly TimeSpan _expirationPeriod;
@@ -119,12 +123,12 @@ namespace Raven.Server.Documents.Expiration
 
         internal Task CleanupExpiredDocs(int? batchSize = null)
         {
-            return CleanupDocs(batchSize ?? BatchSize, ExpirationConfiguration.ExpirationMaxItemsToProcess ?? BatchSize, forExpiration: true);
+            return CleanupDocs(batchSize ?? BatchSize, ExpirationConfiguration.ExpirationMaxItemsToProcess ?? MaxItemsToProcess, forExpiration: true);
         }
 
         internal Task RefreshDocs(int? batchSize = null)
         {
-            return CleanupDocs(batchSize ?? BatchSize, RefreshConfiguration.RefreshMaxItemsToProcess ?? BatchSize, forExpiration: false);
+            return CleanupDocs(batchSize ?? BatchSize, RefreshConfiguration.RefreshMaxItemsToProcess ?? MaxItemsToProcess, forExpiration: false);
         }
         
         private async Task CleanupDocs(int batchSize, long maxItemsToProcess, bool forExpiration)
@@ -155,8 +159,8 @@ namespace Raven.Server.Documents.Expiration
 
                             var expired =
                                 forExpiration ?
-                                    _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, out var duration, out var count, CancellationToken) :
-                                    _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, out duration, out count, CancellationToken);
+                                    _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, ref totalCount, out var duration, CancellationToken) :
+                                    _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, ref totalCount, out duration, CancellationToken);
 
                             if (expired == null || expired.Count == 0)
                                 return;
@@ -166,8 +170,6 @@ namespace Raven.Server.Documents.Expiration
 
                             if (Logger.IsInfoEnabled)
                                 Logger.Info($"Successfully {(forExpiration ? "deleted" : "refreshed")} {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
-
-                            totalCount += count;
                         }
                     }
                 }
