@@ -9,6 +9,7 @@ interface patchCommandOptions {
     staleTimeout?: string;
     maxOpsPerSecond?: number;
     disableAutoIndexCreation?: boolean;
+    ignoreMaxStepsForScript?: boolean;
 }
 
 class patchCommand extends commandBase {
@@ -31,7 +32,8 @@ class patchCommand extends commandBase {
             staleTimeout: this.options.staleTimeout,
             maxOpsPerSec: this.options.maxOpsPerSecond,
             id: this.options.test ? this.options.documentId : undefined,
-            disableAutoIndexCreation: this.options.disableAutoIndexCreation
+            disableAutoIndexCreation: this.options.disableAutoIndexCreation,
+            ignoreMaxStepsForScript: this.options.ignoreMaxStepsForScript ? true : undefined
         };
 
         const payload = {
