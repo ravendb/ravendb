@@ -209,11 +209,12 @@ namespace SlowTests.Server.Documents.Expiration
                 using (context.OpenReadTransaction())
                 {
                     var options = new ExpirationStorage.ExpiredDocumentsOptions(context, SystemTime.UtcNow.AddMinutes(10), true, 10, 10);
-                    
-                    var expired = database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, out _, out _, CancellationToken.None);
+
+                    var totalCount = 0;
+                    var expired = database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, ref totalCount, out _, CancellationToken.None);
                     Assert.Equal(1, expired.Count);
 
-                    var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, out _, out _, CancellationToken.None);
+                    var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, ref totalCount, out _, CancellationToken.None);
                     Assert.Equal(1, toRefresh.Count);
                 }
             }
@@ -244,7 +245,8 @@ namespace SlowTests.Server.Documents.Expiration
                 {
                     DateTime time = SystemTime.UtcNow.AddMinutes(10);
                     var options = new ExpirationStorage.ExpiredDocumentsOptions(context, time, true, 10, 10);
-                    var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, out _, out _, CancellationToken.None);
+                    var totalCount = 0;
+                    var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, ref totalCount, out _, CancellationToken.None);
                     database.DocumentsStorage.ExpirationStorage.RefreshDocuments(context, toRefresh, time);
                 }
             }
@@ -284,8 +286,9 @@ namespace SlowTests.Server.Documents.Expiration
         }
 
         [RavenTheory(RavenTestCategory.ExpirationRefresh)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task ExpirationWithMaxItemsToProcessConfiguredShouldWork(Options options)
+        [RavenData(10, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(5, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ExpirationWithMaxItemsToProcessConfiguredShouldWork(Options options, int batchSize)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -315,7 +318,7 @@ namespace SlowTests.Server.Documents.Expiration
                 var database = await GetDatabase(store.Database);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
-                await expiredDocumentsCleaner.CleanupExpiredDocs();
+                await expiredDocumentsCleaner.CleanupExpiredDocs(batchSize);
 
                 var count = 0;
                 for (int i = 0; i < 10; i++)
@@ -368,7 +371,8 @@ namespace SlowTests.Server.Documents.Expiration
                 using (context.OpenWriteTransaction())
                 {
                     var refreshOptions = new ExpirationStorage.ExpiredDocumentsOptions(context, time, true, 10, 10);
-                    var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(refreshOptions, out _, out var totalCount, CancellationToken.None);
+                    var totalCount = 0;
+                    var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(refreshOptions, ref totalCount,out _, CancellationToken.None);
                     Assert.Equal(10, totalCount);
                 }
 
@@ -379,7 +383,8 @@ namespace SlowTests.Server.Documents.Expiration
                 using (context.OpenWriteTransaction())
                 {
                     var refreshOptions = new ExpirationStorage.ExpiredDocumentsOptions(context, time, true, 10, 10);
-                    var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(refreshOptions, out _, out var totalCount, CancellationToken.None);
+                    var totalCount = 0;
+                    var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(refreshOptions, ref totalCount, out _, CancellationToken.None);
                     Assert.Equal(1, totalCount);
                 }
             }
