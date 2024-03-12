@@ -76,7 +76,6 @@ interface computedAppUrls {
     timeSeries: KnockoutComputed<string>;
     refresh: KnockoutComputed<string>;
     customSorters: KnockoutComputed<string>;
-    editCustomSorter: KnockoutComputed<string>;
     customAnalyzers: KnockoutComputed<string>;
     editCustomAnalyzer: KnockoutComputed<string>;
     integrations: KnockoutComputed<string>;

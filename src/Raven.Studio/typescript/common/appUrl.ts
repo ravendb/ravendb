@@ -102,7 +102,6 @@ class appUrl {
         refresh: ko.pureComputed(() => appUrl.forRefresh(appUrl.currentDatabase())),
         customSorters: ko.pureComputed(() => appUrl.forCustomSorters(appUrl.currentDatabase())),
         customAnalyzers: ko.pureComputed(() => appUrl.forCustomAnalyzers(appUrl.currentDatabase())),
-        editCustomSorter: ko.pureComputed(() => appUrl.forEditCustomSorter(appUrl.currentDatabase())),
         editCustomAnalyzer: ko.pureComputed(() => appUrl.forEditCustomAnalyzer(appUrl.currentDatabase())),
         integrations: ko.pureComputed(() => appUrl.forIntegrations(appUrl.currentDatabase())),
         connectionStrings: ko.pureComputed(() => appUrl.forConnectionStrings(appUrl.currentDatabase())),
@@ -406,13 +405,6 @@ class appUrl {
 
     static forCustomAnalyzers(db: database): string {
         return "#databases/settings/customAnalyzers?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forEditCustomSorter(db: database, sorterName?: string): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        const namePart = sorterName ? "&name=" + encodeURIComponent(sorterName) : "";
-
-        return "#databases/settings/editCustomSorter?" + databasePart + namePart;
     }
 
     static forEditCustomAnalyzer(db: database, analyzerName?: string): string {

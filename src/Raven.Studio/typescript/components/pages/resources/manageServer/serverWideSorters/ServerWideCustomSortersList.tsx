@@ -10,7 +10,6 @@ import {
     RichPanelInfo,
     RichPanelName,
     RichPanelActions,
-    RichPanelDetails,
 } from "components/common/RichPanel";
 import DeleteCustomSorterConfirm from "components/common/customSorters/DeleteCustomSorterConfirm";
 import { useAppUrls } from "components/hooks/useAppUrls";
@@ -19,7 +18,7 @@ import React, { useState } from "react";
 import { AsyncStateStatus, useAsyncCallback } from "react-async-hook";
 import { Button, Collapse } from "reactstrap";
 import useBoolean from "hooks/useBoolean";
-import EditCustomSorter from "components/pages/database/settings/customSorters/EditCustomSorter";
+// import EditCustomSorter from "components/pages/database/settings/customSorters/EditCustomSorter";
 
 interface ServerWideCustomSortersListProps {
     fetchStatus: AsyncStateStatus;
@@ -111,11 +110,11 @@ export default function ServerWideCustomSortersList({
                             </RichPanelActions>
                         )}
                     </RichPanelHeader>
-                    <Collapse isOpen={!panelCollapsed}>
+                    {/* <Collapse isOpen={!panelCollapsed}>
                         <RichPanelDetails className="vstack gap-3 p-4">
                             <EditCustomSorter />
                         </RichPanelDetails>
-                    </Collapse>
+                    </Collapse> */}
                 </RichPanel>
             ))}
         </div>
