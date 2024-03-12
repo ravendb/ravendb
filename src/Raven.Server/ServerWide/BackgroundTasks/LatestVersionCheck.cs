@@ -131,6 +131,12 @@ namespace Raven.Server.ServerWide.BackgroundTasks
                     continue;
                 }
 
+                if (serverStore.LicenseManager.LicenseStatus.IsCloud)
+                {
+                    // we don't notify servers in cloud about new versions
+                    return;
+                }
+
                 try
                 {
                     serverStore.NotificationCenter.Add(_alert);
