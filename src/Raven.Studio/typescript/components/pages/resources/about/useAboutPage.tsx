@@ -5,8 +5,8 @@ import licenseModel from "models/auth/licenseModel";
 
 export function useAboutPage() {
     const { licenseService } = useServices();
-    const fetchLatestVersion = useCallback(async () => licenseService.getLatestVersion(), []);
-    const asyncFetchLatestVersion = useAsync(fetchLatestVersion, []);
+    const fetchLatestVersion = useCallback(async (refresh: boolean) => licenseService.getLatestVersion(refresh), []);
+    const asyncFetchLatestVersion = useAsync(fetchLatestVersion, [false]);
     const asyncGetConfigurationSettings = useAsync(licenseService.getConfigurationSettings, []);
 
     useAsync(async () => licenseService.getLicenseStatus(), [], {

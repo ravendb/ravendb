@@ -10,5 +10,6 @@ export default {
 } satisfies Meta<typeof DefaultPagination>;
 
 export function Pagination() {
-    return <DefaultPagination totalPages={122} />;
+    const [page, setPage] = useState(1);
+    return <DefaultPagination totalPages={12} page={page} onPageChange={setPage} />;
 }

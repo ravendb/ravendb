@@ -31,7 +31,7 @@ export function AboutPage() {
     const [changeLogMode, setChangeLogMode] = useState<"whatsNew" | "changeLog" | "hidden">("hidden");
 
     const refreshLatestVersion = useCallback(async () => {
-        await asyncFetchLatestVersion.execute();
+        await asyncFetchLatestVersion.execute(true);
     }, []);
 
     const refreshLicenseServerConnectivity = useCallback(async () => {

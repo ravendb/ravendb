@@ -148,7 +148,6 @@ export class LicenseStubs {
 
     static changeLog(): Raven.Server.Web.Studio.UpgradeInfoHandler.UpgradeInfoResponse {
         return {
-            ErrorMessage: null,
             IsLicenseEligibleForUpgrade: true,
             BuildCompatibilitiesForLatestMajorMinor: [
                 LicenseStubs.buildCompatibilityInfo("6.0.100"),
