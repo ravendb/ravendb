@@ -251,7 +251,7 @@ namespace Raven.Server.NotificationCenter
         
         private AlertRaised GetCpuCreditsExhaustionAlert(CpuCreditsExhaustionWarning cpuCreditsExhaustionWarning)
         {
-            return AlertRaised.Create(_notificationCenter.Database, "Indexing stopped because of CPU credits exhaustion",
+            return AlertRaised.Create(_notificationCenter.Database, "Indexing paused because of CPU credits exhaustion",
                 "Indexing has been paused because the CPU credits balance is almost completely used, will be resumed when there are enough CPU credits to use.",
                 AlertType.Throttling_CpuCreditsBalance, NotificationSeverity.Warning, Source, cpuCreditsExhaustionWarning);
         }
