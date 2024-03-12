@@ -1,7 +1,7 @@
 ﻿import { Button, Modal, ModalBody, ModalFooter, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
-import React, { ReactNode } from "react";
+import React, { ReactNode, useState } from "react";
 import { aboutPageUrls } from "components/pages/resources/about/partials/common";
 import { useServices } from "hooks/useServices";
 import { useAsync } from "react-async-hook";
@@ -10,6 +10,7 @@ import { LoadError } from "components/common/LoadError";
 import genUtils from "common/generalUtils";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
+import CustomPagination from "components/common/Pagination";
 
 interface ChangelogModalProps {
     mode: "whatsNew" | "changeLog" | "hidden";
@@ -21,8 +22,12 @@ export function ChangeLogModal(props: ChangelogModalProps) {
     const { licenseService } = useServices();
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
 
-    //TODO: pagining?
-    const asyncGetChangeLog = useAsync(() => licenseService.getChangeLog(), []);
+    const [page, setPage] = useState(1);
+
+    const asyncGetChangeLog = useAsync(
+        () => licenseService.getChangeLog((page - 1) * changeLogItemsPerPage, changeLogItemsPerPage),
+        [page]
+    );
 
     if (asyncGetChangeLog.loading) {
         return (
@@ -48,14 +53,9 @@ export function ChangeLogModal(props: ChangelogModalProps) {
         );
     }
 
-    if (asyncGetChangeLog.status === "success" && asyncGetChangeLog.result.ErrorMessage) {
-        return (
-            <ModalWrapper onClose={onClose} mode={mode}>
-                <div className="m-3">
-                    <LoadError error={asyncGetChangeLog.result.ErrorMessage} />
-                </div>
-            </ModalWrapper>
-        );
+    if (!asyncGetChangeLog.result) {
+        console.error("Change log isn't available in the Developer build.");
+        return null;
     }
 
     const canUpgrade = asyncGetChangeLog.result.IsLicenseEligibleForUpgrade;
@@ -143,6 +143,14 @@ export function ChangeLogModal(props: ChangelogModalProps) {
                         </div>
                     );
                 })}
+
+                <div className="mt-1">
+                    <CustomPagination
+                        page={page}
+                        totalPages={versionsList.length / changeLogItemsPerPage}
+                        onPageChange={setPage}
+                    />
+                </div>
             </div>
         </ModalWrapper>
     );
@@ -187,3 +195,5 @@ function ModalWrapper(props: { children: ReactNode } & ChangelogModalProps) {
         </Modal>
     );
 }
+
+const changeLogItemsPerPage = 10;

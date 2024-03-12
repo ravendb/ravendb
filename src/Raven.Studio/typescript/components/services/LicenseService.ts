@@ -14,8 +14,8 @@ export default class LicenseService {
         return new getClusterLicenseLimitsUsage().execute();
     }
 
-    async getChangeLog() {
-        return new getChangeLogCommand().execute();
+    async getChangeLog(page: number, perPage: number) {
+        return new getChangeLogCommand(page, perPage).execute();
     }
 
     async getLatestVersion(refresh: boolean = false) {

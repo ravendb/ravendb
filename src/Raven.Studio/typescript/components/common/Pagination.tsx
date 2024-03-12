@@ -1,26 +1,23 @@
-import React, { useState } from "react";
+import React from "react";
 import { Pagination, PaginationItem, PaginationLink } from "reactstrap";
 import "./Pagination.scss";
 import { Icon } from "components/common/Icon";
+import { withPreventDefault } from "components/utils/common";
 
 interface CustomPaginationProps {
+    page: number;
     totalPages: number;
-    onPageChange?: (page: number) => void;
+    showOnSinglePage?: number;
+    onPageChange: (page: number) => void;
 }
 
 export default function CustomPagination(props: CustomPaginationProps) {
-    const { totalPages, onPageChange } = props;
-    const [currentPage, setCurrentPage] = useState(1);
-
-    const handlePageClick = (page: number) => {
-        setCurrentPage(page);
-        onPageChange?.(page);
-    };
+    const { totalPages, onPageChange, showOnSinglePage, page } = props;
 
     const getPaginationItems = () => {
-        const pages = [];
-        let startRange = currentPage - 1;
-        let endRange = currentPage + 1;
+        const pages: React.ReactNode[] = [];
+        let startRange = page - 1;
+        let endRange = page + 1;
 
         if (startRange <= 2) {
             startRange = 1;
@@ -35,8 +32,12 @@ export default function CustomPagination(props: CustomPaginationProps) {
         for (let i = startRange; i <= endRange; i++) {
             if (i > 0 && i <= totalPages) {
                 pages.push(
-                    <PaginationItem active={i === currentPage} key={i}>
-                        <PaginationLink href="#" onClick={() => handlePageClick(i)} className="no-decor">
+                    <PaginationItem active={i === page} key={i}>
+                        <PaginationLink
+                            href="#"
+                            onClick={withPreventDefault(() => onPageChange(i))}
+                            className="no-decor"
+                        >
                             {i}
                         </PaginationLink>
                     </PaginationItem>
@@ -54,7 +55,7 @@ export default function CustomPagination(props: CustomPaginationProps) {
             );
             pages.unshift(
                 <PaginationItem key="1">
-                    <PaginationLink href="#" onClick={() => handlePageClick(1)} className="no-decor">
+                    <PaginationLink href="#" onClick={withPreventDefault(() => onPageChange(1))} className="no-decor">
                         1
                     </PaginationLink>
                 </PaginationItem>
@@ -71,7 +72,11 @@ export default function CustomPagination(props: CustomPaginationProps) {
             );
             pages.push(
                 <PaginationItem key={totalPages}>
-                    <PaginationLink href="#" onClick={() => handlePageClick(totalPages)} className="no-decor">
+                    <PaginationLink
+                        href="#"
+                        onClick={withPreventDefault(() => onPageChange(totalPages))}
+                        className="no-decor"
+                    >
                         {totalPages}
                     </PaginationLink>
                 </PaginationItem>
@@ -81,24 +86,28 @@ export default function CustomPagination(props: CustomPaginationProps) {
         return pages;
     };
 
+    if (totalPages <= 1 && !showOnSinglePage) {
+        return;
+    }
+
     return (
         <Pagination size="sm">
             <div className="d-flex gap-1">
-                <PaginationItem disabled={currentPage === 1}>
+                <PaginationItem disabled={page === 1}>
                     <PaginationLink
                         href="#"
-                        onClick={() => handlePageClick(Math.max(1, currentPage - 1))}
+                        onClick={withPreventDefault(() => onPageChange(Math.max(1, page - 1)))}
                         className="no-decor nav-arrow-btn"
                     >
                         <Icon icon="arrow-thin-left" margin="m-0" />
                     </PaginationLink>
                 </PaginationItem>
                 {getPaginationItems()}
-                <PaginationItem disabled={currentPage === totalPages}>
+                <PaginationItem disabled={page === totalPages}>
                     <PaginationLink
                         next
                         href="#"
-                        onClick={() => handlePageClick(Math.min(totalPages, currentPage + 1))}
+                        onClick={withPreventDefault(() => onPageChange(Math.min(totalPages, page + 1)))}
                         className="no-decor nav-arrow-btn"
                     >
                         <Icon icon="arrow-thin-right" margin="m-0" />
