@@ -27,13 +27,13 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
             return;
         }
 
-        var pageNumber = GetStart() + 1;
+        var start = GetStart();
         var pageSize = GetPageSize();
 
         using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
         await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
         {
-            if (pageNumber <= 0 || pageSize <= 0)
+            if (start < 0 || pageSize <= 0)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 
@@ -41,6 +41,8 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
                     new DynamicJsonValue { [ErrorPropertyName] = $"Incorrect values of query string parameters - '{StartParameter}' cannot be negative, '{PageSizeParameter}' has to be greater than zero." });
                 return;
             }
+            
+            var pageNumber = (start / pageSize) + 1;
 
             var licenseId = ServerStore.LicenseManager.LicenseStatus.Id.ToString();
 
@@ -76,6 +78,7 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
             }
             catch (Exception e)
             {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 context.Write(writer, new DynamicJsonValue { [ErrorPropertyName] = e.Message });
             }
         }
