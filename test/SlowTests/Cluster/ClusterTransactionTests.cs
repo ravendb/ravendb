@@ -1281,6 +1281,15 @@ namespace SlowTests.Cluster
                     await session.SaveChangesAsync();
                 }
 
+                await WaitAndAssertForValueAsync(async () =>
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        var u = await session.LoadAsync<User>("users/1");
+                        return u.Name;
+                    }
+                }, "Karmel");
+
                 using (var session = store2.OpenAsyncSession(new SessionOptions
                 {
                     TransactionMode = TransactionMode.ClusterWide
@@ -1292,6 +1301,15 @@ namespace SlowTests.Cluster
                     }, "users/1");
                     await session.SaveChangesAsync();
                 }
+
+                await WaitAndAssertForValueAsync(async () =>
+                {
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var u = await session.LoadAsync<User>("users/1");
+                        return u.Name;
+                    }
+                }, "Grisha");
 
                 await Task.WhenAll(SetupReplicationAsync(store1, store2), SetupReplicationAsync(store2, store1));
 
