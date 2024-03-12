@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Graph;
 using FastTests.Utils;
 using Nest;
 using NetTopologySuite.Utilities;
@@ -71,17 +70,14 @@ namespace SlowTests.Issues
                 {
                     if (dbName == databaseName)
                     {
-                        lock (clusterTransactions) 
+                        foreach (var clusterTx in batch)
                         {
-                            foreach (var clusterTx in batch)
-                            {
-                                var raftRequestId = clusterTx.Options.TaskId;
+                            var raftRequestId = clusterTx.Options.TaskId;
 
-                                if (clusterTransactions.ContainsKey(clusterTx.Options.TaskId) == false)
-                                    clusterTransactions.Add(raftRequestId, 1);
-                                else
-                                    clusterTransactions[raftRequestId]++;
-                            }
+                            if (clusterTransactions.ContainsKey(clusterTx.Options.TaskId) == false)
+                                clusterTransactions.Add(raftRequestId, 1);
+                            else
+                                clusterTransactions[raftRequestId]++;
                         }
                     }
                 };
@@ -132,7 +128,10 @@ namespace SlowTests.Issues
             using (Backup.RestoreDatabase(store,
                        new RestoreBackupConfiguration { BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = databaseName }))
             {
-                using (var session = store.OpenAsyncSession())
+                using (var session = store.OpenAsyncSession(new SessionOptions()
+                       {
+                           Database = databaseName
+                }))
                 {
                     var user = await session.LoadAsync<Company>(id);
                     Assert.NotNull(user);
@@ -149,6 +148,12 @@ namespace SlowTests.Issues
         }
 
         private class Company
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+        }
+        
+        private class User
         {
             public string Id { get; set; }
             public string Name { get; set; }
