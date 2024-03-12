@@ -1120,20 +1120,26 @@ class editDocument extends shardViewModelBase {
             })
             .fail((xhr: JQueryXHR) => {
                 // if revisions is enabled try to load revisions bin entry
-                if (xhr.status === 404 && db.hasRevisionsConfiguration()) {
-                    this.loadRevisionsBinEntry(id)
-                        .done(doc => {
-                            if (doc) {
-                                loadTask.resolve(doc);
-                            } else {
-                                messagePublisher.reportWarning("Could not find document: " + id);
-                                loadTask.reject();
-                            }
-                        })
-                        .fail(() => loadTask.reject());
+                if (xhr.status === 404) {
+                    if (db.hasRevisionsConfiguration()) {
+                        this.loadRevisionsBinEntry(id)
+                            .done(doc => {
+                                if (doc) {
+                                    loadTask.resolve(doc);
+                                } else {
+                                    messagePublisher.reportWarning("Could not find document: " + id);
+                                    loadTask.reject();
+                                }
+                            })
+                            .fail(() => loadTask.reject());
+                    } else {
+                        this.dirtyFlag().reset();
+                        messagePublisher.reportWarning("Could not find document: " + id);
+                        loadTask.reject();
+                    }
                 } else {
                     this.dirtyFlag().reset();
-                    messagePublisher.reportWarning("Could not find document: " + id);
+                    messagePublisher.reportError("Could not load document: " + id);
                     loadTask.reject();
                 }
             })
