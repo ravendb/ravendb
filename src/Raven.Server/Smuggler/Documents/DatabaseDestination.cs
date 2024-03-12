@@ -1566,7 +1566,7 @@ namespace Raven.Server.Smuggler.Documents
                             (_missingDocumentsForRevisions != null))
                         {
                             if (_database.DocumentsStorage.Get(context, document.Id) == null && 
-                                document.ChangeVector.Contains(ChangeVectorParser.RaftTag) == false)
+                                document.ChangeVector.Contains(ChangeVectorParser.TrxnTag) == false)
                             {
                                 var collection = _database.DocumentsStorage.ExtractCollectionName(context, document.Data);
                                 _missingDocumentsForRevisions.TryAdd(document.Id.ToString(), collection);
