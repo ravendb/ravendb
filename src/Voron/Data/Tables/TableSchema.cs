@@ -166,7 +166,7 @@ namespace Voron.Data.Tables
                                                     "otherwise we can't compact it, this is a bug in the table schema.");
 
             var tableTree = tx.CreateTree(name, RootObjectType.Table);
-            if (tableTree.State.NumberOfEntries > 0)
+            if (tableTree.State.Header.NumberOfEntries > 0)
                 return; // this was already created
 
             tableTree.Add(CurrentCompressionDictionaryIdSlice, 0);

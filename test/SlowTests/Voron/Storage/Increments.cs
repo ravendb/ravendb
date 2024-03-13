@@ -65,7 +65,7 @@ namespace SlowTests.Voron.Storage
 
             using (var tx = Env.ReadTransaction())
             {
-                Assert.Equal(1, tx.ReadTree("tree0").State.NumberOfEntries);
+                Assert.Equal(1, tx.ReadTree("tree0").State.Header.NumberOfEntries);
             }
         }
     }
