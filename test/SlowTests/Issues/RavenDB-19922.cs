@@ -12,6 +12,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -191,6 +192,11 @@ namespace SlowTests.Issues
                 var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                 var tag1 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
 
+
+                var op = new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup);
+                var pinToMentorNode = store.Maintenance.Send(op).PinToMentorNode;
+
+                Assert.True(pinToMentorNode);
                 CheckDecisionLog(leaderServer, new PinnedMentorNode(tag1, config.Name).ReasonForDecisionLog);
 
                 var disposedServer = nodes.First(s => s.ServerStore.NodeTag == tag1);
@@ -365,9 +371,15 @@ namespace SlowTests.Issues
 
         private static void CheckDecisionLog(RavenServer leaderServer, string reasonForDecisionLog)
         {
-            var dbDecisions = leaderServer.ServerStore.Observer.ReadDecisionsForDatabase();
-            bool equals = dbDecisions.List.Any(x => x.ToString().Contains(reasonForDecisionLog, StringComparison.OrdinalIgnoreCase));
-            Assert.True(equals, reasonForDecisionLog);
+            (ClusterObserverLogEntry[] List, long Iteration) dbDecisions = leaderServer.ServerStore.Observer.ReadDecisionsForDatabase();
+            bool equals = false;
+            WaitForValue(() =>
+            {
+                dbDecisions = leaderServer.ServerStore.Observer.ReadDecisionsForDatabase();
+                equals = dbDecisions.List.Any(x => x.ToString().Contains(reasonForDecisionLog, StringComparison.OrdinalIgnoreCase));
+                return equals;
+            }, true);
+            Assert.True(equals, $"looking for :{reasonForDecisionLog}\n\nContents of dbDecisions:\n{string.Join("\n", dbDecisions.List.Select(entry => entry.ToString()))}");
         }
 
         private async Task<long> InitializeBackup(DocumentStore store, int clusterSize, RavenServer leaderServer, List<RavenServer> nodes, PeriodicBackupConfiguration config)
