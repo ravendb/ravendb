@@ -8,6 +8,7 @@ import {
     RenderOptions,
     screen,
     cleanup,
+    waitForElementToBeRemoved,
 } from "@testing-library/react";
 import { mockServices } from "./mocks/services/MockServices";
 import { Screen } from "@testing-library/dom/types/screen";
@@ -47,11 +48,14 @@ function genericRtlRender(
     const localScreen = getQueriesForElementFunc(document.body) as Screen<typeof allQueries>;
     localScreen.logTestingPlaygroundURL = screen.logTestingPlaygroundURL;
 
+    const waitForLoad = () => waitForElementToBeRemoved(localScreen.getAllByTestId("loader"));
+
     return {
         ...container,
         screen: localScreen,
         fillInput,
         fireClick,
+        waitForLoad,
         cleanup,
         getQueriesForElement: getQueriesForElementFunc,
     };
