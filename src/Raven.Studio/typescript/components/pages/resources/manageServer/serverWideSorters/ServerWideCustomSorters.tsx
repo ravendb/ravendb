@@ -15,14 +15,24 @@ import ServerWideCustomSortersInfoHub from "components/pages/resources/manageSer
 export default function ServerWideCustomSorters() {
     const { sorters, setSorters, addNewSorter, removeSorter, mapFromDto } = useCustomSorters();
 
-    const { manageServerService } = useServices();
-    const asyncGetSorters = useAsync(manageServerService.getServerWideCustomSorters, [], {
-        onSuccess(result) {
-            setSorters(mapFromDto(result));
-        },
-    });
-
     const hasServerWideCustomSorters = useAppSelector(licenseSelectors.statusValue("HasServerWideCustomSorters"));
+
+    const { manageServerService } = useServices();
+
+    const asyncGetSorters = useAsync(
+        async () => {
+            if (!hasServerWideCustomSorters) {
+                return [];
+            }
+            return await manageServerService.getServerWideCustomSorters();
+        },
+        [],
+        {
+            onSuccess(result) {
+                setSorters(mapFromDto(result));
+            },
+        }
+    );
 
     return (
         <div className="content-margin">

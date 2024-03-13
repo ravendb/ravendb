@@ -16,7 +16,7 @@ interface DefaultServerWideCustomSortersProps {
     hasServerWideCustomSorters: boolean;
 }
 
-export const DefaultServerWideCustomSorters: StoryObj<DefaultServerWideCustomSortersProps> = {
+export const ServerWideCustomSortersStory: StoryObj<DefaultServerWideCustomSortersProps> = {
     name: "Server-Wide Sorters",
     render: (props: DefaultServerWideCustomSortersProps) => {
         const { manageServerService } = mockServices;
