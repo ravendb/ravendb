@@ -109,7 +109,7 @@ namespace Voron.Benchmark
                     var values = new List<Tuple<Slice, Slice>>();
                     var tree = tx.CreateTree(treeNameSlice);
 
-                    while (tree.State.NumberOfEntries < generationTreeSize)
+                    while (tree.State.Header.NumberOfEntries < generationTreeSize)
                     {
                         int deletions = 0;
 
@@ -144,9 +144,9 @@ namespace Voron.Benchmark
                         // Delete the number of deletions given by the binomial rv
                         // We may have gone a little bit over the limit during
                         // insertion, but we rebalance here.
-                        if (tree.State.NumberOfEntries > generationTreeSize)
+                        if (tree.State.Header.NumberOfEntries > generationTreeSize)
                         {
-                            while (tree.State.NumberOfEntries > generationTreeSize)
+                            while (tree.State.Header.NumberOfEntries > generationTreeSize)
                             {
                                 var keyIndex = generator.Next(treeKeys.Count);
                                 tree.Delete(treeKeys[keyIndex]);
@@ -155,7 +155,7 @@ namespace Voron.Benchmark
                         }
                         else
                         {
-                            while (deletions > 0 && tree.State.NumberOfEntries > 0)
+                            while (deletions > 0 && tree.State.Header.NumberOfEntries > 0)
                             {
                                 var keyIndex = generator.Next(treeKeys.Count);
                                 tree.Delete(treeKeys[keyIndex]);

@@ -757,12 +757,12 @@ namespace Raven.Server.Documents.Indexes
             {
                 var referencesTree = tx.InnerTransaction.ReadTree(_referenceTreeName);
 
-                var referencesCount = referencesTree.State.NumberOfEntries;
+                var referencesCount = referencesTree.State.Header.NumberOfEntries;
 
                 var collectionTree = tx.InnerTransaction.ReadTree(_referenceCollectionPrefix + collection);
 
                 if (collectionTree != null)
-                    return (referencesCount, collectionTree.State.NumberOfEntries);
+                    return (referencesCount, collectionTree.State.Header.NumberOfEntries);
 
                 return (referencesCount, 0);
             }

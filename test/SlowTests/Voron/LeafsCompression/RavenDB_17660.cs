@@ -26,7 +26,7 @@ namespace SlowTests.Voron.LeafsCompression
             {
                 var tree = tx.CreateTree("tree", flags: TreeFlags.LeafsCompressed);
 
-                Page modifyPage = tx.LowLevelTransaction.ModifyPage(tree.State.RootPageNumber);
+                Page modifyPage = tx.LowLevelTransaction.ModifyPage(tree.State.Header.RootPageNumber);
 
                 // it is a special page which after the below sequence of delete and add operations resulted in splitting and
                 // caching the outdated version of the decompressed page in DecompressedPagesCache
@@ -51,7 +51,7 @@ namespace SlowTests.Voron.LeafsCompression
                     Memory.Copy(modifyPage.Pointer, dataPtr, data.Length);
                 }
 
-                modifyPage.PageNumber = tree.State.RootPageNumber; // set the original page number
+                modifyPage.PageNumber = tree.State.Header.RootPageNumber; // set the original page number
 
 
                 var items = new List<(long, OperationOnTree, int)>()
