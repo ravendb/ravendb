@@ -10,6 +10,7 @@ import deleteServerWideCustomAnalyzerCommand = require("commands/serverWide/anal
 import getServerWideCustomSortersCommand = require("commands/serverWide/sorters/getServerWideCustomSortersCommand");
 import deleteServerWideCustomSorterCommand = require("commands/serverWide/sorters/deleteServerWideCustomSorterCommand");
 import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testPeriodicBackupCredentialsCommand");
+import saveServerWideCustomSorterCommand = require("commands/serverWide/sorters/saveServerWideCustomSorterCommand");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -46,6 +47,10 @@ export default class ManageServerService {
 
     async deleteServerWideCustomSorter(name: string) {
         return new deleteServerWideCustomSorterCommand(name).execute();
+    }
+
+    async saveServerWideCustomSorter(...args: ConstructorParameters<typeof saveServerWideCustomSorterCommand>) {
+        return new saveServerWideCustomSorterCommand(...args).execute();
     }
 
     async testPeriodicBackupCredentials(
