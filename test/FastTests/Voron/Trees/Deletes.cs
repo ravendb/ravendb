@@ -35,8 +35,8 @@ namespace FastTests.Voron.Trees
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.ReadTree("foo");
-                Assert.Equal(4, tree.State.PageCount);
-                Assert.Equal(3, tree.State.OverflowPages);
+                Assert.Equal(4, tree.State.Header.PageCount);
+                Assert.Equal(3, tree.State.Header.OverflowPages);
             }
 
             using (var tx = Env.WriteTransaction())
@@ -51,8 +51,8 @@ namespace FastTests.Voron.Trees
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.ReadTree("foo");
-                Assert.Equal(1, tree.State.PageCount);
-                Assert.Equal(0, tree.State.OverflowPages);
+                Assert.Equal(1, tree.State.Header.PageCount);
+                Assert.Equal(0, tree.State.Header.OverflowPages);
             }
 
             using (var tx = Env.ReadTransaction())

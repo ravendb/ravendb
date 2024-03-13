@@ -27,9 +27,9 @@ namespace FastTests.Voron.Bugs
                 while (true)
                 {
                     tree.Add(i.ToString("D19"), buffer);
-                    if (tree.State.Depth == 3)
+                    if (tree.State.Header.Depth == 3)
                     {
-                        page = tree.GetReadOnlyTreePage(tree.State.RootPageNumber);
+                        page = tree.GetReadOnlyTreePage(tree.State.Header.RootPageNumber);
                         if (page.NumberOfEntries == 3)
                         {
                             page = tree.GetReadOnlyTreePage(page.GetNode(page.NumberOfEntries - 1)->PageNumber);
@@ -41,7 +41,7 @@ namespace FastTests.Voron.Bugs
                 }
 
 
-                page = tree.GetReadOnlyTreePage(tree.State.RootPageNumber);
+                page = tree.GetReadOnlyTreePage(tree.State.Header.RootPageNumber);
                 page = tree.GetReadOnlyTreePage(page.GetNode(page.NumberOfEntries - 1)->PageNumber);
                 page = tree.GetReadOnlyTreePage(page.GetNode(0)->PageNumber);
 
@@ -54,7 +54,7 @@ namespace FastTests.Voron.Bugs
                 }
                 using (page.GetNodeKey(tx.LowLevelTransaction, 0, out var key))
                     tree.Delete(key);
-                tree.ValidateTree_Forced(tree.State.RootPageNumber);
+                tree.ValidateTree_Forced(tree.State.Header.RootPageNumber);
             }
         }
 
