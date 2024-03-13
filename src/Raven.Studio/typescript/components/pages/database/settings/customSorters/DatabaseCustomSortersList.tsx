@@ -2,7 +2,7 @@ import { EmptySet } from "components/common/EmptySet";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import DatabaseCustomSortersListItem from "components/pages/database/settings/customSorters/DatabaseCustomSortersListItem";
-import { CustomSorterFormData } from "components/pages/database/settings/customSorters/EditCustomSorterValidation";
+import { CustomSorterFormData } from "components/common/customSorters/editCustomSorterValidation";
 import database from "models/resources/database";
 import React from "react";
 import { AsyncStateStatus } from "react-async-hook";

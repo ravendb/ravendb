@@ -19,7 +19,7 @@ import { useServices } from "components/hooks/useServices";
 import {
     CustomSorterFormData,
     customSorterYupResolver,
-} from "components/pages/database/settings/customSorters/EditCustomSorterValidation";
+} from "components/common/customSorters/editCustomSorterValidation";
 import { useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { Icon } from "components/common/Icon";

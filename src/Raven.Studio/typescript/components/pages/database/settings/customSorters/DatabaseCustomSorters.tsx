@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+﻿import React from "react";
 import { Alert, Button, Col, Row, UncontrolledPopover } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
@@ -17,30 +17,22 @@ import { LicenseLimitReachStatus, getLicenseLimitReachStatus } from "components/
 import { useRavenLink } from "components/hooks/useRavenLink";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { CustomSortersInfoHub } from "components/pages/database/settings/customSorters/CustomSortersInfoHub";
-import { CustomSorterFormData } from "components/pages/database/settings/customSorters/EditCustomSorterValidation";
 import DatabaseCustomSortersList from "components/pages/database/settings/customSorters/DatabaseCustomSortersList";
 import CustomSortersReadOnlyList from "components/pages/database/settings/customSorters/CustomSortersReadOnlyList";
+import { useCustomSorters } from "components/common/customSorters/useCustomSorters";
 
 todo("Feature", "Damian", "Add 'Test custom sorter' button");
 
 export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
     const { databasesService, manageServerService } = useServices();
 
-    const [sorters, setSorters] = useState<CustomSorterFormData[]>([]);
+    const { sorters, setSorters, addNewSorter, removeSorter, mapFromDto } = useCustomSorters();
 
     const asyncGetDatabaseSorters = useAsync(() => databasesService.getCustomSorters(db), [db], {
         onSuccess(result) {
             setSorters(mapFromDto(result));
         },
     });
-
-    const addNewSorter = () => {
-        setSorters((prev) => [{ name: "", code: "" } satisfies CustomSorterFormData, ...prev]);
-    };
-
-    const removeSorter = (idx: number) => {
-        setSorters((prev) => prev.filter((_, i) => i !== idx));
-    };
 
     const { appUrl } = useAppUrls();
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
@@ -233,8 +225,4 @@ function AddButtonLicensePopover({ databaseLimitReachStatus, upgradeLicenseLink 
             </div>
         </UncontrolledPopover>
     );
-}
-
-function mapFromDto(dto: Raven.Client.Documents.Queries.Sorting.SorterDefinition[]): CustomSorterFormData[] {
-    return dto.map((x) => ({ code: x.Code, name: x.Name }) satisfies CustomSorterFormData);
 }
