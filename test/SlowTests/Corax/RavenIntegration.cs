@@ -1,5 +1,11 @@
-﻿using FastTests;
+﻿using System;
+using System.Linq;
+using FastTests;
+using FastTests.Voron.FixedSize;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Json;
+using Sparrow.Extensions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -11,7 +17,27 @@ public class RavenIntegration : RavenTestBase
     public RavenIntegration(ITestOutputHelper output) : base(output)
     {
     }
-    
+
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Corax)]
+    public void CanIndexAndDeleteDoubleWithOneBitSet()
+    {
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var session = store.OpenSession();
+        var dto = new Dto(51.00000000000001);
+        Assert.True(dto.Value.AlmostEquals(51L));
+        session.Store(dto);
+        session.SaveChanges();
+
+        Dto first = session.Query<Dto>().Customize(x => x.WaitForNonStaleResults().NoTracking().NoCaching()).First(x => x.Value > 1.0);
+        Assert.Equal(dto.Id, first.Id);
+        session.Delete(dto.Id);
+        session.SaveChanges();
+        Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(15), allowErrors: true);
+        var indexStats = store.Maintenance.Send(new GetIndexesStatisticsOperation()).First();
+        Assert.NotEqual(IndexState.Error, indexStats.State);
+    }
+
+    private record Dto(double Value, string Id = null);
       
     
     [RavenTheory(RavenTestCategory.Querying)]

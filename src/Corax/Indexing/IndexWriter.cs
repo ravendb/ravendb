@@ -1487,8 +1487,9 @@ namespace Corax.Indexing
                         recordedTermContainerId |= 1; // marker!
                         recordedTerm.Long = entries.Long.Value;
 
-                        // only if the double value can not be computed by casting from long, we store it 
-                        if (entries.Double != null && entries.Double.Value.AlmostEquals(recordedTerm.Long) == false)
+                        // only if the double value can not be computed by casting from long, we store it
+                        // Since we store double values internally as longs, converted via BitConverter, it is good to check whether equal elements have exactly the same value in this form.
+                        if (entries.Double != null && BitConverter.DoubleToInt64Bits(entries.Double.Value) != BitConverter.DoubleToInt64Bits(recordedTerm.Long))
                         {
                             recordedTermContainerId |= 2; // marker!
                             recordedTerm.Double = entries.Double.Value;

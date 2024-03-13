@@ -67,7 +67,7 @@ public struct DoubleLookupKey : ILookupKey
         }
 
         var o = (DoubleLookupKey)(object)k;
-        return Value.AlmostEquals(o.Value);
+        return BitConverter.DoubleToInt64Bits(Value) == BitConverter.DoubleToInt64Bits(o.Value);
     }
 
     public void OnNewKeyAddition<T>(Lookup<T> parent) where T : struct, ILookupKey
