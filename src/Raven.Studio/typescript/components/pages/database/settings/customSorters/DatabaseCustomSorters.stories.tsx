@@ -22,10 +22,11 @@ interface DefaultDatabaseCustomSortersProps {
     maxNumberOfCustomSortersPerCluster: number;
 }
 
-export const CustomSorters: StoryObj<DefaultDatabaseCustomSortersProps> = {
+export const DatabaseCustomSortersStory: StoryObj<DefaultDatabaseCustomSortersProps> = {
+    name: "Custom Sorters",
     render: (props: DefaultDatabaseCustomSortersProps) => {
         const { accessManager, license } = mockStore;
-        const { databasesService, manageServerService, licenseService } = mockServices;
+        const { databasesService, manageServerService } = mockServices;
 
         accessManager.with_securityClearance("ValidUser");
         accessManager.with_databaseAccess({
@@ -38,7 +39,10 @@ export const CustomSorters: StoryObj<DefaultDatabaseCustomSortersProps> = {
 
         databasesService.withCustomSorters(props.isEmpty ? [] : DatabasesStubs.customSorters());
 
-        licenseService.withLimitsUsage();
+        license.with_LimitsUsage({
+            NumberOfCustomSortersInCluster: ManageServerStubs.serverWideCustomSorters().length,
+        });
+
         license.with_License({
             HasServerWideCustomSorters: props.hasServerWideCustomSorters,
             MaxNumberOfCustomSortersPerDatabase: props.maxNumberOfCustomSortersPerDatabase,
