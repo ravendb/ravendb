@@ -254,6 +254,7 @@ namespace Raven.Server.Documents
                 Id = newId,
                 LowerId = newLowerId,
                 Data = newData,
+                TimeSeriesStream = TimeSeriesStream,
             };
         }
 

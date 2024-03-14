@@ -39,10 +39,6 @@ public sealed class LruDictionary<TKey, TValue>
         value = node.Value;
         return true;
     }
-
-    public void MaybeClean()
-    {
-    }
     
     public TValue this[TKey key]
     {
