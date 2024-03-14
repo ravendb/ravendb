@@ -37,7 +37,9 @@ export const DatabaseCustomSortersStory: StoryObj<DefaultDatabaseCustomSortersPr
             props.isEmpty ? [] : ManageServerStubs.serverWideCustomSorters()
         );
 
+        databasesService.withEssentialStats();
         databasesService.withCustomSorters(props.isEmpty ? [] : DatabasesStubs.customSorters());
+        databasesService.withQueryResult();
 
         license.with_LimitsUsage({
             NumberOfCustomSortersInCluster: ManageServerStubs.serverWideCustomSorters().length,

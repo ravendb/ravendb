@@ -63,6 +63,7 @@ import getConnectionStringsCommand = require("commands/database/settings/getConn
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import saveCustomSorterCommand = require("commands/database/settings/saveCustomSorterCommand");
+import queryCommand = require("commands/database/query/queryCommand");
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -77,7 +78,7 @@ export default class DatabasesService {
         return new deleteDatabaseCommand(toDelete, hardDelete).execute();
     }
 
-    async getEssentialStats(db: DatabaseSharedInfo): Promise<EssentialDatabaseStatistics> {
+    async getEssentialStats(db: database | DatabaseSharedInfo): Promise<EssentialDatabaseStatistics> {
         return new getEssentialDatabaseStatsCommand(db).execute();
     }
 
@@ -288,5 +289,9 @@ export default class DatabasesService {
 
     async saveDatabaseRecord(db: database, databaseRecord: documentDto, etag: number) {
         return new saveDatabaseRecordCommand(db, databaseRecord, etag).execute();
+    }
+
+    async query(...args: ConstructorParameters<typeof queryCommand>) {
+        return new queryCommand(...args).execute();
     }
 }
