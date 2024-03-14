@@ -176,6 +176,7 @@ namespace Raven.Server.Documents.Expiration
                                     if (allExpired)
                                     {
                                         expiredDocs.Add((clonedId, id));
+                                        totalCount++;
                                     }
                                 }
                             } while (multiIt.MoveNext() 

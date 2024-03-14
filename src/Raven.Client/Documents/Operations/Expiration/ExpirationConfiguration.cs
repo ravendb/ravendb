@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Operations.Expiration
 
         public long? DeleteFrequencyInSec { get; set; }
 
-        public long? ExpirationMaxItemsToProcess { get; set; }
+        public long? MaxItemsToProcess { get; set; }
 
         public override int GetHashCode()
         {
@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Operations.Expiration
             {
                 int hashCode = Disabled.GetHashCode();
                 hashCode = (hashCode * 397) ^ (DeleteFrequencyInSec?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (ExpirationMaxItemsToProcess?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (MaxItemsToProcess?.GetHashCode() ?? 0);
                 return hashCode;
             }
         }
@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Operations.Expiration
 
         protected bool Equals(ExpirationConfiguration other)
         {
-            return Disabled == other.Disabled && DeleteFrequencyInSec == other.DeleteFrequencyInSec && ExpirationMaxItemsToProcess == other.ExpirationMaxItemsToProcess;
+            return Disabled == other.Disabled && DeleteFrequencyInSec == other.DeleteFrequencyInSec && MaxItemsToProcess == other.MaxItemsToProcess;
         }
 
         public DynamicJsonValue ToJson()
@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Operations.Expiration
             {
                 [nameof(Disabled)] = Disabled,
                 [nameof(DeleteFrequencyInSec)] = DeleteFrequencyInSec,
-                [nameof(ExpirationMaxItemsToProcess)] = ExpirationMaxItemsToProcess
+                [nameof(MaxItemsToProcess)] = MaxItemsToProcess
             };
         }
     }

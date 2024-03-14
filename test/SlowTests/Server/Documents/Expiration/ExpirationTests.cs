@@ -309,8 +309,8 @@ namespace SlowTests.Server.Documents.Expiration
                 var config = new ExpirationConfiguration
                 {
                     Disabled = false,
-                    DeleteFrequencyInSec = TimeSpan.FromMinutes(10).Ticks,
-                    ExpirationMaxItemsToProcess = 9
+                    DeleteFrequencyInSec = (long)TimeSpan.FromMinutes(10).TotalSeconds,
+                    MaxItemsToProcess = 9
                 };
 
                 await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
@@ -357,8 +357,8 @@ namespace SlowTests.Server.Documents.Expiration
                 var config = new RefreshConfiguration()
                 {
                     Disabled = false,
-                    RefreshFrequencyInSec = TimeSpan.FromMinutes(10).Ticks,
-                    RefreshMaxItemsToProcess = 9
+                    RefreshFrequencyInSec = (long)TimeSpan.FromMinutes(10).TotalSeconds,
+                    MaxItemsToProcess = 9
                 };
 
                 await RefreshHelper.SetupExpiration(store, Server.ServerStore, config);
