@@ -243,14 +243,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                 : LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal;
         }
 
-        protected override void RecordDatabaseChangeVector(DocumentsOperationContext context, IncomingReplicationStatsScope stats)
-        {
-            using (context.OpenReadTransaction())
-            {
-                stats.RecordDatabaseChangeVector(DocumentsStorage.GetDatabaseChangeVector(context)?.AsString());
-            }
-        }
-
         protected override Task HandleBatchAsync(DocumentsOperationContext context, DataForReplicationCommand batch, long lastEtag)
         {
             var replicationCommand = GetMergeDocumentsCommand(context, batch, lastEtag);
@@ -728,6 +720,8 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                     // instead of : SetLastReplicatedEtagFrom -> _incoming.ConnectionInfo.SourceDatabaseId, _lastEtag , we will store in context and write once right before commit (one time instead of repeating on all docs in the same Tx)
                     SaveSourceEtag(context);
+                    RecordDatabaseChangeVector(context);
+
                     return operationsCount;
                 }
                 finally
@@ -745,6 +739,30 @@ namespace Raven.Server.Documents.Replication.Incoming
             {
                 context.LastReplicationEtagFrom ??= new Dictionary<string, long>();
                 context.LastReplicationEtagFrom[_replicationInfo.SourceDatabaseId] = _lastEtag;
+            }
+
+            private void RecordDatabaseChangeVector(DocumentsOperationContext context)
+            {
+                try
+                {
+                    var stats = context.DocumentDatabase.ReplicationLoader.IncomingHandlers.
+                        Single(i => i.ConnectionInfo.SourceDatabaseId == _replicationInfo.SourceDatabaseId)
+                        .GetLatestReplicationPerformance();
+
+                    var scope = (IncomingReplicationStatsScope)stats.StatsScope;
+                    using (var networkStats = scope.For(ReplicationOperation.Incoming.Network))
+                    {
+                        networkStats.RecordDatabaseChangeVector(context.LastDatabaseChangeVector);
+                    }
+                }
+                catch (Exception e)
+                {
+                    var incomingHandler = context.DocumentDatabase.ReplicationLoader.IncomingHandlers.
+                        Single(i => i.ConnectionInfo.SourceDatabaseId == _replicationInfo.SourceDatabaseId);
+                    
+                    if (_replicationInfo.Logger.IsInfoEnabled)
+                        _replicationInfo.Logger.Info($"Failed to record the database change vector for incoming stats. {((IncomingReplicationHandler)incomingHandler).FromToString}.", e);
+                }
             }
 
             private static void UpdateTimeSeriesNameIfNeeded(DocumentsOperationContext context, LazyStringValue docId, TimeSeriesReplicationItem segment, TimeSeriesStorage tss)

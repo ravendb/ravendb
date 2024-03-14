@@ -355,10 +355,6 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
         }
 
-        protected virtual void RecordDatabaseChangeVector(TOperationContext context, IncomingReplicationStatsScope stats)
-        {
-        }
-
         protected void AddReplicationPerformance(IncomingReplicationStatsAggregator stats)
         {
             _lastReplicationStats.Enqueue(stats);
@@ -463,7 +459,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                 {
                     using (var networkStats = stats.For(ReplicationOperation.Incoming.Network))
                     {
-                        RecordDatabaseChangeVector(context, networkStats);
                         // this will read the documents to memory from the network
                         // without holding the write tx open
                         var reader = new Reader(_stream, _copiedBuffer, incomingReplicationAllocator);
