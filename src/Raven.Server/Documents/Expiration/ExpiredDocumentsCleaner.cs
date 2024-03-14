@@ -123,12 +123,12 @@ namespace Raven.Server.Documents.Expiration
 
         internal Task CleanupExpiredDocs(int? batchSize = null)
         {
-            return CleanupDocs(batchSize ?? BatchSize, ExpirationConfiguration.ExpirationMaxItemsToProcess ?? MaxItemsToProcess, forExpiration: true);
+            return CleanupDocs(batchSize ?? BatchSize, ExpirationConfiguration.MaxItemsToProcess ?? MaxItemsToProcess, forExpiration: true);
         }
 
         internal Task RefreshDocs(int? batchSize = null)
         {
-            return CleanupDocs(batchSize ?? BatchSize, RefreshConfiguration.RefreshMaxItemsToProcess ?? MaxItemsToProcess, forExpiration: false);
+            return CleanupDocs(batchSize ?? BatchSize, RefreshConfiguration.MaxItemsToProcess ?? MaxItemsToProcess, forExpiration: false);
         }
         
         private async Task CleanupDocs(int batchSize, long maxItemsToProcess, bool forExpiration)
