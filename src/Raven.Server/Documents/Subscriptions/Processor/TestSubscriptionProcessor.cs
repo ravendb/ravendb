@@ -70,6 +70,12 @@ namespace Raven.Server.Documents.Subscriptions.Processor
         {
             throw new NotSupportedException();
         }
+
+        protected override ValueTask SendHeartbeatIfNeededAsync(Stopwatch sendingCurrentBatchStopwatch)
+        {
+            // no op
+            return ValueTask.CompletedTask;
+        }
     }
 
     public sealed class TestRevisionsDatabaseSubscriptionProcessor : RevisionsDatabaseSubscriptionProcessor, IEtagSettable
@@ -130,6 +136,12 @@ namespace Raven.Server.Documents.Subscriptions.Processor
         public override Task AcknowledgeBatchAsync(long batchId, string changeVector)
         {
             throw new NotSupportedException();
+        }
+
+        protected override ValueTask SendHeartbeatIfNeededAsync(Stopwatch sendingCurrentBatchStopwatch)
+        {
+            // no op
+            return ValueTask.CompletedTask;
         }
     }
 
