@@ -189,23 +189,22 @@ namespace Raven.Server.Documents.Queries.Results
 
         private TDocument DirectGetInternal(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
         {
-            if (_loadedDocumentMarshall.TryGetValue(id, out var doc))
+            if (_loadedDocumentMarshall.TryGetValue(id, out var doc) == false)
             {
-                if (typeof(TDocument) == typeof(QueriedDocument))
-                    ((QueriedDocument)(object)doc).IncreaseReference();
-                return doc;
+                doc = _loadedDocumentMarshall[id] = DocumentsStorage.Get<TDocument>(DocumentContext, id, fields);
             }
 
-            doc = _loadedDocumentMarshall[id] = DocumentsStorage.Get<TDocument>(DocumentContext, id, fields);
+            if (typeof(TDocument) == typeof(QueriedDocument) && doc != null)
+                ((QueriedDocument)(object)doc).IncreaseReference();
+
             return doc;
         }
 
         protected virtual TDocument LoadDocument(TDocument parentDocument, string id, ref RetrieverInput retrieverInput)
         {
+            using var _ = (_loadScope = _loadScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Load)));
             if (id == string.Empty) // main doc
                 return parentDocument;
-            
-            _loadedDocumentMarshall.MaybeClean();
             
             if (_loadedDocumentMarshall.TryGetValue(id, out var doc))
             {
@@ -233,7 +232,6 @@ namespace Raven.Server.Documents.Queries.Results
             if (typeof(TDocument) == typeof(QueriedDocument) && doc != null)
             {
                 ((QueriedDocument)(object)parentDocument).AddChild((QueriedDocument)(object)doc);
-                ((QueriedDocument)(object)doc).IncreaseReference();
             }
 
             return doc;
@@ -373,7 +371,7 @@ namespace Raven.Server.Documents.Queries.Results
                                     if (ReferenceEquals(nested, doc.Data) == false)
                                     {
                                         using (var _ = doc)
-                                            doc.CloneWith<TDocument>(_context, nested);
+                                            doc = doc.CloneWith<TDocument>(_context, nested);
                                     }
                                 }
                                 else if (fieldVal is TDocument dt)
@@ -546,8 +544,6 @@ namespace Raven.Server.Documents.Queries.Results
                     return (doc.CloneWith<TDocument>(_context, nested), null);
                 }
                 case TDocument td:
-                    if (ReferenceEquals(td, doc) == false)
-                        doc.Dispose();
                     return (td, null);
                 case Document d:
                     using (d)
@@ -985,6 +981,9 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 foreach (var loadedDocId in _loadedDocumentIds)
                 {
+                    if (string.IsNullOrEmpty(loadedDocId))
+                        continue;
+                    
                     if (_loadedDocumentMarshall.TryGetValue(loadedDocId.ToLowerInvariant(), out var doc))
                         doc.Dispose();
                 }
