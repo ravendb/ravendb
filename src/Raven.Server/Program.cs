@@ -8,16 +8,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.AspNetCore.Connections;
-using Raven.Client.Exceptions.Commercial;
-using Raven.Client.Properties;
-using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Static.NuGet;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
@@ -186,7 +182,6 @@ namespace Raven.Server
                                 Console.WriteLine("Warning: Admin Channel is not available:" + e);
                             }
 
-                            server.BeforeSchemaUpgrade = x => BeforeSchemaUpgrade(x, server.ServerStore);
                             server.Initialize();
 
                             configuration.UpdateLicenseType(server.ServerStore.LicenseManager.LicenseStatus.Type);
@@ -321,153 +316,6 @@ namespace Raven.Server
             } while (rerun);
 
             return 0;
-        }
-
-        private static void BeforeSchemaUpgrade(StorageEnvironment environment, ServerStore serverStore)
-        {
-            // doing this before the schema upgrade to allow to downgrade in case we cannot start the server
-
-            using (var contextPool = new TransactionContextPool(environment, serverStore.Configuration.Memory.MaxContextSizeToKeep))
-            {
-                var license = serverStore.LoadLicense(contextPool);
-                if (license == null)
-                    return;
-
-                var licenseStatus = LicenseManager.GetLicenseStatus(license);
-
-                VerifyLicenseVersion(licenseStatus, license, serverStore, contextPool);
-                VerifyLicenseExpiration(licenseStatus, serverStore, environment, license, contextPool);
-            }
-        }
-
-        private static void VerifyLicenseVersion(LicenseStatus licenseStatus, License license, ServerStore serverStore, TransactionContextPool contextPool)
-        {
-            if (licenseStatus.Version.Major >= 6 || licenseStatus.IsCloud)
-                return;
-
-            var licenseFromApi = GetLicenseFromApi(license, contextPool).GetAwaiter().GetResult();
-            if (licenseFromApi != null)
-            {
-                licenseStatus = LicenseManager.GetLicenseStatus(licenseFromApi);
-                if (licenseStatus.Version.Major >= 6)
-                {
-                    serverStore.LicenseManager.OnBeforeInitialize += () =>
-                        serverStore.LicenseManager.ActivateAsync(licenseFromApi, RaftIdGenerator.NewId())
-                            .Wait(serverStore.ServerShutdown);
-                    return;
-                }
-            }
-
-            var licenseJson = GetLicenseJson(serverStore, out _);
-            if (string.IsNullOrEmpty(licenseJson) == false &&
-                LicenseHelper.TryDeserializeLicense(licenseJson, out License localLicense))
-            {
-                licenseStatus = LicenseManager.GetLicenseStatus(localLicense);
-                if (licenseStatus.Version.Major >= 6)
-                {
-                    serverStore.LicenseManager.OnBeforeInitialize += () =>
-                        serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure)
-                            .Wait(serverStore.ServerShutdown);
-                    return;
-                }
-            }
-
-            throw new LicenseLimitException($"Your license ('{licenseStatus.Id}') version '{licenseStatus.Version}' doesn't allow you to upgrade to server version '{RavenVersionAttribute.Instance.FullVersion}'. " +
-                                            $"Please proceed to the https://ravendb.net/l/8O2YU1 website to perform the license upgrade first. " +
-                                            $"After the upgrade, if your server has access to {ApiHttpClient.ApiRavenDbNet}, your license will be automatically updated. " +
-                                            $"In case of connectivity issues with {ApiHttpClient.ApiRavenDbNet} please either update the license via one of the configuration options '{RavenConfiguration.GetKey(x => x.Licensing.LicensePath)}', '{RavenConfiguration.GetKey(x => x.Licensing.License)}', " +
-                                            $"or downgrade to the previous version of RavenDB, apply the new license and continue the update procedure.");
-        }
-
-        private static async Task<License> GetLicenseFromApi(License license, TransactionContextPool contextPool)
-        {
-            try
-            {
-                var response = await LicenseManager.GetUpdatedLicenseResponseMessage(license, contextPool)
-                                                   .ConfigureAwait(false);
-                var leasedLicense = await LicenseManager.ConvertResponseToLeasedLicense(response)
-                                                        .ConfigureAwait(false);
-                return leasedLicense.License;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private static void VerifyLicenseExpiration(LicenseStatus licenseStatus, ServerStore serverStore, StorageEnvironment environment, License license, TransactionContextPool contextPool)
-        {
-            if (licenseStatus.Expiration >= RavenVersionAttribute.Instance.ReleaseDate)
-                return;
-
-            var licenseJson = GetLicenseJson(serverStore, out bool fromPath);
-
-            var errorMessage = $"Cannot start the RavenDB server because the expiration date of current license ({FormattedDateTime(licenseStatus.Expiration ?? DateTime.MinValue)}) " +
-                               $"is before the release date of this version ({FormattedDateTime(RavenVersionAttribute.Instance.ReleaseDate)})";
-
-            string expiredLicenseMessage = "";
-            if (string.IsNullOrEmpty(licenseJson) == false)
-            {
-                if (LicenseHelper.TryDeserializeLicense(licenseJson, out License localLicense))
-                {
-                    var localLicenseStatus = LicenseManager.GetLicenseStatus(localLicense);
-                    if (localLicenseStatus.Expiration >= RavenVersionAttribute.Instance.ReleaseDate)
-                    {
-                        serverStore.LicenseManager.OnBeforeInitialize += () => serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure).Wait(serverStore.ServerShutdown);
-                        return;
-                    }
-
-                    var configurationKey =
-                        fromPath ? RavenConfiguration.GetKey(x => x.Licensing.LicensePath) : RavenConfiguration.GetKey(x => x.Licensing.License);
-                    expiredLicenseMessage = localLicense.Id == license.Id
-                        ? ". You can update current license using the setting.json file"
-                        : $". The license '{localLicense.Id}' obtained from '{configurationKey}' with expiration date of '{FormattedDateTime(localLicenseStatus.Expiration ?? DateTime.MinValue)}' is also expired.";
-                }
-                else
-                {
-                    errorMessage += ". Could not parse the license from setting.json file.";
-                    throw new LicenseExpiredException(errorMessage);
-                }
-            }
-
-            var licenseStorage = new LicenseStorage();
-            licenseStorage.Initialize(environment, contextPool);
-
-            var buildInfo = licenseStorage.GetBuildInfo();
-            if (buildInfo != null)
-                errorMessage += $" You can downgrade to the latest build that was working ({buildInfo.FullVersion})";
-            if (string.IsNullOrEmpty(expiredLicenseMessage) == false)
-                errorMessage += expiredLicenseMessage;
-            throw new LicenseExpiredException(errorMessage);
-
-            static string FormattedDateTime(DateTime dateTime)
-            {
-                return dateTime.ToString("dd MMMM yyyy");
-            }
-        }
-
-        private static string GetLicenseJson(ServerStore serverStore, out bool fromPath)
-        {
-            string licenseJson = null;
-            fromPath = false;
-            if (string.IsNullOrEmpty(serverStore.Configuration.Licensing.License) == false)
-            {
-                licenseJson = serverStore.Configuration.Licensing.License;
-            }
-            else if (File.Exists(serverStore.Configuration.Licensing.LicensePath.FullPath))
-            {
-                try
-                {
-                    licenseJson = File.ReadAllText(serverStore.Configuration.Licensing.LicensePath.FullPath);
-                    fromPath = true;
-                }
-                catch
-                {
-                    // expected
-                }
-            }
-
-            return licenseJson;
         }
 
         private static void UseOnlyInvariantCultureInRavenDB()
