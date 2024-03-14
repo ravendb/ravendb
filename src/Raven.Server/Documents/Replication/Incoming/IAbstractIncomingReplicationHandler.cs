@@ -11,6 +11,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         public string SourceFormatted { get; }
         public long LastDocumentEtag { get; }
         public IncomingReplicationPerformanceStats[] GetReplicationPerformance();
+        public IncomingReplicationStatsAggregator GetLatestReplicationPerformance();
         public LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType();
     }
 }
