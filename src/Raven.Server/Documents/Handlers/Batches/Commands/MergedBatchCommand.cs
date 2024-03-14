@@ -132,18 +132,16 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                 case CommandType.BatchPATCH:
                     cmd.PatchCommand.ExecuteDirectly(context);
 
-                    var lastChangeVector = cmd.PatchCommand.HandleReply(Reply, ModifiedCollections);
-
+                    var lastChangeVector = cmd.PatchCommand.HandleReply(IncludeReply ? Reply : null, ModifiedCollections);
                     if (lastChangeVector != null)
                         LastChangeVector = lastChangeVector;
 
                     break;
 
                 case CommandType.JsonPatch:
-
                     cmd.JsonPatchCommand.ExecuteDirectly(context);
 
-                    var lastChangeVectorJsonPatch = cmd.JsonPatchCommand.HandleReply(Reply, ModifiedCollections, Database);
+                    var lastChangeVectorJsonPatch = cmd.JsonPatchCommand.HandleReply(IncludeReply ? Reply : null, ModifiedCollections, Database);
                     if (lastChangeVectorJsonPatch != null)
                         LastChangeVector = lastChangeVectorJsonPatch;
 
@@ -500,10 +498,11 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
     public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
     {
-        return new MergedBatchCommandDto(includeReply: true)
+        return new MergedBatchCommandDto
         {
             ParsedCommands = ParsedCommands.ToArray(),
-            AttachmentStreams = AttachmentStreams
+            AttachmentStreams = AttachmentStreams,
+            IncludeReply = IncludeReply
         };
     }
 

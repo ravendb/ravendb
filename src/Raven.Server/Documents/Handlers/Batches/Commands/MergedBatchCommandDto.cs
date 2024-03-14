@@ -8,14 +8,9 @@ namespace Raven.Server.Documents.Handlers.Batches.Commands;
 
 public sealed class MergedBatchCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedBatchCommand>
 {
-    public BatchRequestParser.CommandData[] ParsedCommands { get; set; }
-    public List<MergedBatchCommand.AttachmentStream> AttachmentStreams;
-    private readonly bool _includeReply;
-
-    public MergedBatchCommandDto(bool includeReply)
-    {
-        _includeReply = includeReply;
-    }
+    public BatchRequestParser.CommandData[] ParsedCommands { get; init; }
+    public List<MergedBatchCommand.AttachmentStream> AttachmentStreams { get; init; }
+    public bool IncludeReply { get; init; }
 
     public MergedBatchCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
     {
@@ -42,7 +37,7 @@ public sealed class MergedBatchCommandDto : IReplayableCommandDto<DocumentsOpera
 
         var newCmd = new MergedBatchCommand(database)
         {
-            IncludeReply = _includeReply,
+            IncludeReply = IncludeReply,
             ParsedCommands = ParsedCommands,
             AttachmentStreams = AttachmentStreams
         };
