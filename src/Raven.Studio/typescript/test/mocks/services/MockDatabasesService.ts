@@ -128,4 +128,8 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
     withDatabaseRecord(dto?: document) {
         return this.mockResolvedValue(this.mocks.getDatabaseRecord, dto, DatabasesStubs.databaseRecord());
     }
+
+    withQueryResult(dto?: MockedValue<pagedResultExtended<document>>) {
+        return this.mockResolvedValue(this.mocks.query, dto, DatabasesStubs.queryResult());
+    }
 }

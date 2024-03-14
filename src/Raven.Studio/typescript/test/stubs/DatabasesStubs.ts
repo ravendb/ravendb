@@ -204,7 +204,57 @@ export class DatabasesStubs {
             CountOfIndexes: 17,
             CountOfCounterEntries: 1_453,
             CountOfConflicts: 83,
-            Indexes: [],
+            Indexes: [
+                {
+                    Name: "Orders/ByCompany",
+                    LockMode: "Unlock",
+                    Priority: "Normal",
+                    Type: "MapReduce",
+                    SourceType: "Documents",
+                },
+                {
+                    Name: "Products/ByUnitOnStock",
+                    LockMode: "Unlock",
+                    Priority: "Normal",
+                    Type: "Map",
+                    SourceType: "Documents",
+                },
+                {
+                    Name: "Companies/StockPrices/TradeVolumeByMonth",
+                    LockMode: "Unlock",
+                    Priority: "Normal",
+                    Type: "MapReduce",
+                    SourceType: "TimeSeries",
+                },
+                {
+                    Name: "Product/Rating",
+                    LockMode: "Unlock",
+                    Priority: "Normal",
+                    Type: "MapReduce",
+                    SourceType: "Counters",
+                },
+                {
+                    Name: "Product/Search",
+                    LockMode: "Unlock",
+                    Priority: "Normal",
+                    Type: "Map",
+                    SourceType: "Documents",
+                },
+                {
+                    Name: "Orders/Totals",
+                    LockMode: "Unlock",
+                    Priority: "Normal",
+                    Type: "Map",
+                    SourceType: "Documents",
+                },
+                {
+                    Name: "Orders/ByShipment/Location",
+                    LockMode: "Unlock",
+                    Priority: "Normal",
+                    Type: "Map",
+                    SourceType: "Documents",
+                },
+            ],
         };
     }
 
@@ -599,5 +649,118 @@ return docs[0];`,
             UnusedDatabaseIds: [],
             Etag: 512,
         });
+    }
+
+    static queryResult(): pagedResultExtended<document> {
+        return {
+            includes: {},
+            items: [
+                new document({
+                    Company: "companies/85-A",
+                    Employee: "employees/5-A",
+                    Freight: 32.38,
+                    Lines: [
+                        {
+                            Discount: 0,
+                            PricePerUnit: 14,
+                            Product: "products/11-A",
+                            ProductName: "Queso Cabrales",
+                            Quantity: 12,
+                        },
+                        {
+                            Discount: 0,
+                            PricePerUnit: 9.8,
+                            Product: "products/42-A",
+                            ProductName: "Singaporean Hokkien Fried Mee",
+                            Quantity: 10,
+                        },
+                        {
+                            Discount: 0,
+                            PricePerUnit: 34.8,
+                            Product: "products/72-A",
+                            ProductName: "Mozzarella di Giovanni",
+                            Quantity: 5,
+                        },
+                    ],
+                    OrderedAt: "1996-07-04T00:00:00.0000000",
+                    RequireAt: "1996-08-01T00:00:00.0000000",
+                    ShipTo: {
+                        City: "Reims",
+                        Country: "France",
+                        Line1: "59 rue de l'Abbaye",
+                        Line2: null,
+                        Location: {
+                            Latitude: 49.25595819999999,
+                            Longitude: 4.1547448,
+                        },
+                        PostalCode: "51100",
+                        Region: null,
+                    },
+                    ShipVia: "shippers/3-A",
+                    ShippedAt: "1996-07-16T00:00:00.0000000",
+                    "@metadata": {
+                        "@collection": "Orders",
+                        "@change-vector": "A:81-ZQv/fVpd/Ea9NhnAR6VD4Q",
+                        "@flags": "HasRevisions",
+                        "@id": "orders/1-A",
+                        "@timeseries": [],
+                        "@last-modified": "2018-07-27T12:11:53.0447651Z",
+                    },
+                }),
+                new document({
+                    Company: "companies/79-A",
+                    Employee: "employees/6-A",
+                    Freight: 11.61,
+                    Lines: [
+                        {
+                            Discount: 0,
+                            PricePerUnit: 18.6,
+                            Product: "products/14-A",
+                            ProductName: "Tofu",
+                            Quantity: 9,
+                        },
+                        {
+                            Discount: 0,
+                            PricePerUnit: 42.4,
+                            Product: "products/51-A",
+                            ProductName: "Manjimup Dried Apples",
+                            Quantity: 40,
+                        },
+                    ],
+                    OrderedAt: "1996-07-05T00:00:00.0000000",
+                    RequireAt: "1996-08-16T00:00:00.0000000",
+                    ShipTo: {
+                        City: "Münster",
+                        Country: "Germany",
+                        Line1: "Luisenstr. 48",
+                        Line2: null,
+                        Location: {
+                            Latitude: 51.6566,
+                            Longitude: 7.09044,
+                        },
+                        PostalCode: "44087",
+                        Region: null,
+                    },
+                    ShipVia: "shippers/1-A",
+                    ShippedAt: "1996-07-10T00:00:00.0000000",
+                    "@metadata": {
+                        "@collection": "Orders",
+                        "@change-vector": "A:83-ZQv/fVpd/Ea9NhnAR6VD4Q",
+                        "@flags": "HasRevisions",
+                        "@id": "orders/2-A",
+                        "@timeseries": [],
+                        "@last-modified": "2018-07-27T12:11:53.0451613Z",
+                    },
+                }),
+            ],
+            totalResultCount: 2,
+            additionalResultInfo: {
+                Diagnostics: [
+                    "Executing 'SetNextReader' with 'reader = Lucene.Net.Index.ReadOnlySegmentReader, docBase = 0' arguments",
+                    "Executed 'SetNextReader' with 'reader = Lucene.Net.Index.ReadOnlySegmentReader, docBase = 0' arguments.",
+                    "Executing 'Copy' with 'slot = 0, doc = 0' arguments",
+                ],
+            },
+        };
     }
 }

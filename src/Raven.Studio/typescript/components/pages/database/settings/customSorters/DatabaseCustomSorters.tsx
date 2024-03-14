@@ -121,10 +121,12 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
 
                 <HrHeader
                     right={
-                        <a href={appUrl.forServerWideCustomSorters()} target="_blank">
-                            <Icon icon="link" />
-                            Server-wide custom sorters
-                        </a>
+                        hasServerWideCustomSorters ? (
+                            <a href={appUrl.forServerWideCustomSorters()} target="_blank">
+                                <Icon icon="link" />
+                                Server-wide custom sorters
+                            </a>
+                        ) : null
                     }
                     count={serverWideResultsCount}
                 >

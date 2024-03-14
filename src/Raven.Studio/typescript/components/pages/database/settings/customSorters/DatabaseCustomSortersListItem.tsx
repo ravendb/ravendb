@@ -29,6 +29,7 @@ import { useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import { useForm, useWatch, SubmitHandler } from "react-hook-form";
 import { Form, UncontrolledTooltip, Button, Collapse, InputGroup, Label } from "reactstrap";
+import TestCustomSorter from "components/pages/database/settings/customSorters/TestCustomSorter";
 
 interface DatabaseCustomSortersListItemProps {
     initialSorter: CustomSorterFormData;
@@ -36,6 +37,8 @@ interface DatabaseCustomSortersListItemProps {
     db: database;
     remove: () => void;
 }
+
+// TODO kalczur refactor action buttons?
 
 export default function DatabaseCustomSortersListItem(props: DatabaseCustomSortersListItemProps) {
     const { initialSorter, serverWideSorterNames, db, remove } = props;
@@ -47,6 +50,17 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
     const { control, formState, handleSubmit, reset, setValue } = form;
     const formValues = useWatch({ control });
     useDirtyFlag(formState.isDirty);
+
+    const isNew = !formState.defaultValues.name;
+    const isDatabaseAdmin =
+        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
+
+    const { value: isEditMode, toggle: toggleIsEditMode } = useBoolean(isNew);
+    const { value: isTestMode, toggle: toggleIsTestMode } = useBoolean(false);
+
+    const [nameToConfirmDelete, setNameToConfirmDelete] = useState<string>(null);
+
+    const tooltipId = useId("override-info");
 
     const { databasesService } = useServices();
 
@@ -77,15 +91,6 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
         }
     };
 
-    const isNew = !formState.defaultValues.name;
-    const { value: isEditMode, toggle: toggleIsEditMode } = useBoolean(isNew);
-    const [nameToConfirmDelete, setNameToConfirmDelete] = useState<string>(null);
-
-    const isDatabaseAdmin =
-        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
-
-    const tooltipId = useId("override-info");
-
     return (
         <RichPanel className="mt-3">
             <Form onSubmit={handleSubmit(onSave)}>
@@ -105,6 +110,12 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                         </>
                     )}
                     <RichPanelActions>
+                        {isDatabaseAdmin && (
+                            <Button key="test" onClick={() => toggleIsTestMode()} disabled={isEditMode}>
+                                <Icon icon="rocket" addon={isTestMode ? "cancel" : null} margin="m-0" />
+                            </Button>
+                        )}
+
                         {isEditMode ? (
                             isDatabaseAdmin ? (
                                 <>
@@ -123,7 +134,7 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                             )
                         ) : (
                             <>
-                                <Button key="edit" onClick={toggleIsEditMode}>
+                                <Button key="edit" onClick={toggleIsEditMode} disabled={isTestMode}>
                                     <Icon icon={isDatabaseAdmin ? "edit" : "preview"} margin="m-0" />
                                 </Button>
                                 {isDatabaseAdmin && (
@@ -148,6 +159,11 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                         )}
                     </RichPanelActions>
                 </RichPanelHeader>
+
+                <Collapse isOpen={isTestMode}>
+                    <TestCustomSorter db={db} name={formValues.name} />
+                </Collapse>
+
                 <Collapse isOpen={isEditMode}>
                     <RichPanelDetails className="vstack gap-3 p-4">
                         {isNew && (
