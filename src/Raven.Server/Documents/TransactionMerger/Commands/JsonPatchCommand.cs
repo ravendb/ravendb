@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
             if (_returnDocument)
                 patchReply[nameof(PatchResult.ModifiedDocument)] = _patchResult.ModifiedDocument;
 
-            reply.Add(patchReply);
+            reply?.Add(patchReply);
 
             return _patchResult.ChangeVector;
         }
