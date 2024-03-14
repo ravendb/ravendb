@@ -3,12 +3,11 @@ import { Icon } from "components/common/Icon";
 import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
-import React, { useEffect } from "react";
+import React from "react";
 import { useRavenLink } from "hooks/useRavenLink";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { getLicenseLimitReachStatus, useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
-import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 import { useAsync } from "react-async-hook";
 import { useServices } from "hooks/useServices";
 import { NonShardedViewProps } from "components/models/common";
@@ -41,10 +40,6 @@ export function CustomSortersInfoHub({ db }: NonShardedViewProps) {
     });
 
     const databaseResultsCount = asyncGetDatabaseSorters.result?.length ?? null;
-
-    useEffect(() => {
-        throttledUpdateLicenseLimitsUsage();
-    }, [databaseResultsCount]);
 
     const databaseLimitReachStatus = getLicenseLimitReachStatus(databaseResultsCount, licenseDatabaseLimit);
     const clusterLimitReachStatus = getLicenseLimitReachStatus(numberOfCustomSortersInCluster, licenseClusterLimit);
