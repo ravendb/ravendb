@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Replication
     /// <summary>
     /// Data class for replication destination
     /// </summary>
-    public abstract class ReplicationNode : IEquatable<ReplicationNode>
+    public class ReplicationNode : IEquatable<ReplicationNode>, IDynamicJson
     {
         /// <summary>
         /// The name of the connection string specified in the 
@@ -93,6 +93,6 @@ namespace Raven.Client.Documents.Replication
             return str;
         }
 
-        public abstract string FromString();
+        public virtual string FromString() => $"[{Database} @ {Url}]";
     }
 }
