@@ -1566,6 +1566,8 @@ namespace Voron
                 long modified = Interlocked.CompareExchange(ref _validPagesAfterLoad[index], old | bitToSet, old);
                 if (modified == old || (modified & bitToSet) != 0)
                     break;
+
+                old = modified;
             }
         }
 
