@@ -67,6 +67,13 @@ public struct DoubleLookupKey : ILookupKey
         }
 
         var o = (DoubleLookupKey)(object)k;
+
+        if (Value is 0 && o.Value is 0)
+        {
+            // It's possible that we have a negative zero, in which case BitConverter will return completely different numbers for 0 and -0. In such case we use standard double comparer.
+            return true;
+        }
+        
         return BitConverter.DoubleToInt64Bits(Value) == BitConverter.DoubleToInt64Bits(o.Value);
     }
 
