@@ -29,7 +29,7 @@ import { useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import { useForm, useWatch, SubmitHandler } from "react-hook-form";
 import { Form, UncontrolledTooltip, Button, Collapse, InputGroup, Label } from "reactstrap";
-import TestCustomSorter from "components/pages/database/settings/customSorters/TestCustomSorter";
+import DatabaseCustomSorterTest from "components/pages/database/settings/customSorters/DatabaseCustomSorterTest";
 
 interface DatabaseCustomSortersListItemProps {
     initialSorter: CustomSorterFormData;
@@ -161,7 +161,7 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                 </RichPanelHeader>
 
                 <Collapse isOpen={isTestMode}>
-                    <TestCustomSorter db={db} name={formValues.name} />
+                    <DatabaseCustomSorterTest db={db} name={formValues.name} />
                 </Collapse>
 
                 <Collapse isOpen={isEditMode}>

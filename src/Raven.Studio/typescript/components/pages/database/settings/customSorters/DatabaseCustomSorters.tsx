@@ -16,7 +16,7 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { LicenseLimitReachStatus, getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
-import { CustomSortersInfoHub } from "components/pages/database/settings/customSorters/CustomSortersInfoHub";
+import { DatabaseCustomSortersInfoHub } from "components/pages/database/settings/customSorters/DatabaseCustomSortersInfoHub";
 import DatabaseCustomSortersList from "components/pages/database/settings/customSorters/DatabaseCustomSortersList";
 import CustomSortersReadOnlyList from "components/pages/database/settings/customSorters/CustomSortersReadOnlyList";
 import { useCustomSorters } from "components/common/customSorters/useCustomSorters";
@@ -138,7 +138,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                 )}
             </Col>
             <Col sm={12} lg={4}>
-                <CustomSortersInfoHub db={db} />
+                <DatabaseCustomSortersInfoHub db={db} />
             </Col>
         </Row>
     );
