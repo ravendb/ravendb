@@ -1536,7 +1536,7 @@ namespace Raven.Server.ServerWide
 
         private static void CleanupDatabaseReplicationCertificate(ClusterOperationContext context, string databaseName)
         {
-            using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+            var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
 
             string prefixString = (databaseName + "/").ToLowerInvariant();
             using var _ = Slice.From(context.Allocator, prefixString, out var prefix);
@@ -4424,7 +4424,7 @@ namespace Raven.Server.ServerWide
 
         public IEnumerable<BlittableJsonReaderObject> GetReplicationHubCertificateByHub(TransactionOperationContext context, string database, string hub, string filter, int start, int pageSize)
         {
-            using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+            var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
 
             string prefixString = (database + "/" + hub + "/").ToLowerInvariant();
             using var _ = Slice.From(context.Allocator, prefixString, out var prefix);
@@ -4463,7 +4463,7 @@ namespace Raven.Server.ServerWide
 
         public IEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificateForDatabase(TransactionOperationContext context, string database)
         {
-            using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+            var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
 
             string prefixString = (database + "/").ToLowerInvariant();
             using var _ = Slice.From(context.Allocator, prefixString, out var prefix);
@@ -4501,7 +4501,7 @@ namespace Raven.Server.ServerWide
 
         public bool IsReplicationCertificate(TransactionOperationContext context, string database, string hub, X509Certificate2 userCert, out DetailedReplicationHubAccess access)
         {
-            using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+            var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
 
             using var __ = Slice.From(context.Allocator, (database + "/" + hub + "/" + userCert.Thumbprint).ToLowerInvariant(), out var key);
 
@@ -4519,7 +4519,7 @@ namespace Raven.Server.ServerWide
 
         public unsafe bool IsReplicationCertificateByPublicKeyPinningHash(TransactionOperationContext context, string database, string hub, X509Certificate2 userCert, SecurityConfiguration securityConfiguration, out DetailedReplicationHubAccess access)
         {
-            using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+            var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
             // maybe we need to check by public key hash?
             string publicKeyPinningHash = userCert.GetPublicKeyPinningHash();
 
