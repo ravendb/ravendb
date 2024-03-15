@@ -19,21 +19,21 @@ namespace SlowTests.Monitoring
         }
 
         [RavenMultiplatformFact(RavenTestCategory.Linux, RavenPlatform.Linux, NightlyBuildOnly = true)]
-        public async Task LinuxDiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet()
+        public async Task LinuxDiskStats_WhenGetInParallel_ShouldTakeTheSameAsSequential()
         {
 #pragma warning disable CA1416
             var diskStatsGetter = new LinuxDiskStatsGetter(TimeSpan.FromMilliseconds(100));
 #pragma warning restore CA1416
-            await DiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet(diskStatsGetter);
+            await DiskStats_WhenGetInParallel_ShouldTakeTheSameAsSequential(diskStatsGetter);
         }
 
         [NightlyBuildMultiplatformFact(RavenPlatform.Windows)]
-        public async Task WindowsDiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet()
+        public async Task WindowsDiskStats_WhenGetInParallel_ShouldTakeTheSameAsSequential()
         {
 #pragma warning disable CA1416
             var diskStatsGetter = new WindowsDiskStatsGetter(TimeSpan.FromMilliseconds(100));
 #pragma warning restore CA1416
-            await DiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet(diskStatsGetter);
+            await DiskStats_WhenGetInParallel_ShouldTakeTheSameAsSequential(diskStatsGetter);
         }
 
         [RavenFact(RavenTestCategory.Monitoring)]
@@ -106,7 +106,7 @@ namespace SlowTests.Monitoring
             public int Value { get; init; }
         }
 
-        private static async Task DiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet(IDiskStatsGetter diskStatsGetter)
+        private static async Task DiskStats_WhenGetInParallel_ShouldTakeTheSameAsSequential(IDiskStatsGetter diskStatsGetter)
         {
             var currentDirectory = Directory.GetCurrentDirectory();
 
@@ -142,7 +142,7 @@ namespace SlowTests.Monitoring
                 })).ToArray();
 
             await Task.WhenAll(tasks);
-            var α = (double)errorCount / taskCount * iterationsCount;
+            var α = (double)errorCount / (taskCount * iterationsCount);
             Assert.True(α < 0.01, $"baseTime:{baseTime} errorCount:{errorCount} total:{taskCount * iterationsCount} α:{α}");
         }
     }
