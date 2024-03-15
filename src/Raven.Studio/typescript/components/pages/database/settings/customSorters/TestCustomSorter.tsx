@@ -89,8 +89,10 @@ export default function TestCustomSorter(props: TestCustomSorterProps) {
         gridController?.reset();
     }, [asyncTest.result, gridController, currentTab]);
 
-    // TODO kalczur fix create on rerender
-    const languageService = new rqlLanguageService(db, () => asyncGetIndexNames.result ?? [], "Select");
+    const languageService = useMemo(
+        () => new rqlLanguageService(db, () => asyncGetIndexNames.result ?? [], "Select"),
+        [asyncGetIndexNames.result, db]
+    );
 
     return (
         <Card className="gap-2 p-4">
