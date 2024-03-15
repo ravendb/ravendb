@@ -1,10 +1,13 @@
 import React, { createRef } from "react";
 import { ReactToKnockoutComponent } from "common/reactUtils";
 import virtualGridController from "widgets/virtualGrid/virtualGridController";
+import { todo } from "common/developmentHelper";
 
 interface VirtualGridProps<T> {
     setGridController: (gridController: virtualGridController<T>) => void;
 }
+
+todo("Feature", "Damian", "Add collections selector");
 
 export default class VirtualGrid<T> extends ReactToKnockoutComponent<VirtualGridProps<T>> {
     ref = createRef<HTMLDivElement>();
