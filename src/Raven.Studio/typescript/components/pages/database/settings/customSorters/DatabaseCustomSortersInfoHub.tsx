@@ -12,7 +12,7 @@ import { useAsync } from "react-async-hook";
 import { useServices } from "hooks/useServices";
 import { NonShardedViewProps } from "components/models/common";
 
-export function CustomSortersInfoHub({ db }: NonShardedViewProps) {
+export function DatabaseCustomSortersInfoHub({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
     const asyncGetDatabaseSorters = useAsync(() => databasesService.getCustomSorters(db), [db]);
     const customSortersDocsLink = useRavenLink({ hash: "LGUJH8" });

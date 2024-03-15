@@ -20,14 +20,14 @@ interface DiagnosticsItem {
 
 type TestResultTab = "results" | "diagnostics";
 
-interface TestCustomSorterProps {
+interface DatabaseCustomSorterTestProps {
     db: database;
     name: string;
 }
 
 // TODO kalczur show Display selector
 
-export default function TestCustomSorter(props: TestCustomSorterProps) {
+export default function DatabaseCustomSorterTest(props: DatabaseCustomSorterTestProps) {
     const { db, name } = props;
 
     const [testRql, setTestRql] = useState(`from index <indexName>\r\norder by custom(<fieldName>, "${name}")`);
