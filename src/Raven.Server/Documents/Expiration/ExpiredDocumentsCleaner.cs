@@ -14,7 +14,6 @@ using Raven.Client.ServerWide;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Voron;
@@ -27,9 +26,7 @@ namespace Raven.Server.Documents.Expiration
             ? 4096
             : 1024;
 
-        internal static int MaxItemsToProcess = PlatformDetails.Is32Bits == false
-            ? int.MaxValue
-            : BatchSize * 16;
+        internal static int DefaultMaxItemsToProcessInSingleRun = int.MaxValue;
 
         private readonly DocumentDatabase _database;
         private readonly TimeSpan _refreshPeriod;
@@ -123,12 +120,12 @@ namespace Raven.Server.Documents.Expiration
 
         internal Task CleanupExpiredDocs(int? batchSize = null)
         {
-            return CleanupDocs(batchSize ?? BatchSize, ExpirationConfiguration.MaxItemsToProcess ?? MaxItemsToProcess, forExpiration: true);
+            return CleanupDocs(batchSize ?? BatchSize, ExpirationConfiguration.MaxItemsToProcess ?? DefaultMaxItemsToProcessInSingleRun, forExpiration: true);
         }
 
         internal Task RefreshDocs(int? batchSize = null)
         {
-            return CleanupDocs(batchSize ?? BatchSize, RefreshConfiguration.MaxItemsToProcess ?? MaxItemsToProcess, forExpiration: false);
+            return CleanupDocs(batchSize ?? BatchSize, RefreshConfiguration.MaxItemsToProcess ?? DefaultMaxItemsToProcessInSingleRun, forExpiration: false);
         }
         
         private async Task CleanupDocs(int batchSize, long maxItemsToProcess, bool forExpiration)
