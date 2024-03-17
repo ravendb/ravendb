@@ -15,13 +15,16 @@ namespace Raven.Server.ServerWide;
 
 public sealed partial class ClusterStateMachine
 {
-    private const int MinBuildVersion54111 = 54_111;
+    private const int MinBuildVersion54116 = 54_116;
 
     private void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context)
     {
         switch (type)
         {
             case nameof(PutIndexCommand):
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54116) == false)
+                    return;
+
                 if (serverStore.LicenseManager.LicenseStatus.HasAdditionalAssembliesFromNuGet)
                     return;
 
@@ -30,13 +33,10 @@ public sealed partial class ClusterStateMachine
 
                 throw new LicenseLimitException(LimitType.AdditionalAssembliesFromNuGet, "Your license doesn't support Additional Assemblies From NuGet feature.");
 
-            case nameof(EditExpirationCommand):
-                if (serverStore.LicenseManager.LicenseStatus.HasExpiration)
+            case nameof(UpdatePeriodicBackupCommand):
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54116) == false)
                     return;
 
-                throw new LicenseLimitException(LimitType.Expiration, "Your license doesn't support Expiration feature.");
-
-            case nameof(UpdatePeriodicBackupCommand):
                 var backupTypes = LicenseManager.GetBackupTypes(databaseRecord.PeriodicBackups);
 
                 if (backupTypes.HasSnapshotBackup)
@@ -54,7 +54,7 @@ public sealed partial class ClusterStateMachine
                 return;
 
             case nameof(UpdatePullReplicationAsSinkCommand):
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54111) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54116) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasPullReplicationAsSink)
@@ -63,7 +63,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.PullReplicationAsSink, "Your license doesn't support adding Sink Replication feature.");
 
             case nameof(UpdatePullReplicationAsHubCommand):
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54111) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54116) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasPullReplicationAsHub)
@@ -72,7 +72,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.PullReplicationAsHub, "Your license doesn't support adding Hub Replication feature.");
 
             case nameof(UpdateExternalReplicationCommand):
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54111) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54116) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasExternalReplication)
@@ -85,7 +85,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.DelayedExternalReplication, "Your license doesn't support adding Delayed External Replication.");
 
             case nameof(AddRavenEtlCommand):
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54111) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54116) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasRavenEtl)
@@ -94,7 +94,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.RavenEtl, "Your license doesn't support adding Raven ETL feature.");
 
             case nameof(AddSqlEtlCommand):
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54111) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54116) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasSqlEtl)
@@ -103,7 +103,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.SqlEtl, "Your license doesn't support adding SQL ETL feature.");
 
             case nameof(EditTimeSeriesConfigurationCommand):
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54111) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54116) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasTimeSeriesRollupsAndRetention)
@@ -115,7 +115,7 @@ public sealed partial class ClusterStateMachine
                 return;
 
             case nameof(EditDocumentsCompressionCommand):
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54111) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54116) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasDocumentsCompression)
@@ -124,7 +124,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.DocumentsCompression, "Your license doesn't support adding Documents Compression feature.");
 
             case nameof(AddElasticSearchEtlCommand):
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54111) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54116) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasElasticSearchEtl)
@@ -133,7 +133,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.ElasticSearchEtl, "Your license doesn't support adding Elastic Search ETL feature.");
 
             case nameof(AddOlapEtlCommand):
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54111) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54116) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasOlapEtl)
@@ -142,7 +142,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.OlapEtl, "Your license doesn't support adding Olap ETL feature.");
 
             case nameof(AddQueueEtlCommand):
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54111) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54116) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasQueueEtl)
