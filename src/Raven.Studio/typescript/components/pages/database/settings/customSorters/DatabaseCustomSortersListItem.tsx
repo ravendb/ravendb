@@ -223,7 +223,7 @@ function CustomSortersActions({
                     message: "To test, first exit edit mode.",
                 }}
             >
-                <Button key="test" onClick={() => toggleIsTestMode()} disabled={isEditMode}>
+                <Button key="test" onClick={toggleIsTestMode} disabled={isEditMode}>
                     <Icon icon="rocket" addon={isTestMode ? "cancel" : null} margin="m-0" />
                 </Button>
             </ConditionalPopover>
@@ -255,7 +255,7 @@ function CustomSortersActions({
                             {nameToConfirmDelete != null && (
                                 <DeleteCustomSorterConfirm
                                     name={nameToConfirmDelete}
-                                    onConfirm={(name) => asyncDeleteSorter.execute(name)}
+                                    onConfirm={asyncDeleteSorter.execute}
                                     toggle={() => setNameToConfirmDelete(null)}
                                 />
                             )}

@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Button, Col, Row } from "reactstrap";
+import { Alert, Button, Col, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -44,7 +44,13 @@ export default function ServerWideCustomSorters() {
                             icon="server-wide-custom-sorters"
                             licenseBadgeText={hasServerWideCustomSorters ? null : "Professional +"}
                         />
-                        <div id="newServerWideCustomSorter" className="w-fit-content">
+                        {sorters.length > 0 && (
+                            <Alert color="info">
+                                <Icon icon="info" />
+                                To test this server-wide sorter go to the Custom Sorters View in a database
+                            </Alert>
+                        )}
+                        <div id="newServerWideCustomSorter" className="w-fit-content mt-4">
                             <Button
                                 color="primary"
                                 className="mb-3"
