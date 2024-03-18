@@ -2,12 +2,10 @@
 using Raven.Server.ServerWide.Context;
 using System.Collections.Generic;
 using System.Diagnostics;
-using QueriedDocument = Raven.Server.Documents.QueriedDocument;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Queries;
 
 namespace Raven.Server.Utils;
-
-
-
 
 public sealed class LruDictionary<TKey, TValue> 
     where TKey : notnull, IComparable
@@ -40,18 +38,36 @@ public sealed class LruDictionary<TKey, TValue>
         return true;
     }
     
+    public void Clear()
+    {
+        foreach (var (_, valueTuple) in _cache)
+        {
+            if (valueTuple.Value is null)
+                continue;
+            
+#if DEBUG
+            if (typeof(TValue) == typeof(QueriedDocument))
+                Debug.Assert(((QueriedDocument)(object)valueTuple.Value).CanDispose);
+#endif
+
+            _releaser?.ReleaseItem(valueTuple.Value);
+            _cache.Clear();
+            _list.Clear();
+        }
+    }
+    
     public TValue this[TKey key]
     {
         get
         {
             TryGetValue(key, out var value);
+            Debug.Assert(value is not Document || value is Document {IsDisposed: false});
             return value;
         }
 
         set
         {
-            if (typeof(TValue) == typeof(QueriedDocument))
-                Debug.Assert(((QueriedDocument)(object)value).StorageId != -1);
+            Debug.Assert(value is not QueriedDocument queriedDocument || queriedDocument.StorageId != Voron.Global.Constants.Compression.NonReturnableStorageId );
             
             if (_cache.TryGetValue(key, out var node))
             {
@@ -65,38 +81,13 @@ public sealed class LruDictionary<TKey, TValue>
                 if (_cache.Count >= _maxCapacity)
                 {
                     var removeKey = _list.Last!.Value;
-                    if (_cache.TryGetValue(removeKey, out var toRemove) && typeof(TValue) == typeof(QueriedDocument) && _releaser != null)
+                    if (_cache.TryGetValue(removeKey, out var toRemove) && typeof(TValue) == typeof(QueriedDocument) && _releaser != null && toRemove.Value != null)
                     {
                         var element = (QueriedDocument)(object)(toRemove.Value);
-                        if (element.CanDispose == false)
-                        {
-                            var nodeToCheck = toRemove.Node.Previous;
-                            while (nodeToCheck != null)
-                            {
-                                if (_cache.TryGetValue(nodeToCheck.Value, out var valueAtNode) == false)
-                                    break;
-
-                                var previousValue = (QueriedDocument)(object)valueAtNode.Value;
-                                if (previousValue.CanDispose)
-                                {
-                                    _releaser?.ReleaseItem(valueAtNode.Value);
-                                    previousValue.Dispose();
-                                }
-                                else
-                                    break;
-                            
-                                var newNode = valueAtNode.Node.Previous;
-                                _cache.Remove(nodeToCheck.Value);
-                                _list.Remove(nodeToCheck);
-                                nodeToCheck = newNode;
-                            }
-                        }
-                        
-                        if (element.CanDispose == false)
+                        if (element is {CanDispose: false})
                             goto AddOnly;
                         
                         _releaser?.ReleaseItem(toRemove.Value);
-                        element.Dispose();
                     }
                     
                     _cache.Remove(removeKey);
@@ -104,7 +95,6 @@ public sealed class LruDictionary<TKey, TValue>
                 }
 
                 AddOnly:
-                // add cache
                 _cache.Add(key, (_list.AddFirst(key), value));
             }
         }
