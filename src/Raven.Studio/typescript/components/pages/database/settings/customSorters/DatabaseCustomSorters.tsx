@@ -18,7 +18,7 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { DatabaseCustomSortersInfoHub } from "components/pages/database/settings/customSorters/DatabaseCustomSortersInfoHub";
 import DatabaseCustomSortersList from "components/pages/database/settings/customSorters/DatabaseCustomSortersList";
-import CustomSortersReadOnlyList from "components/pages/database/settings/customSorters/CustomSortersReadOnlyList";
+import DatabaseCustomSortersServerWideList from "components/pages/database/settings/customSorters/DatabaseCustomSortersServerWideList";
 import { useCustomSorters } from "components/common/customSorters/useCustomSorters";
 
 todo("Feature", "Damian", "Add 'Test custom sorter' button");
@@ -134,7 +134,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                     {!hasServerWideCustomSorters && <LicenseRestrictedBadge licenseRequired="Professional +" />}
                 </HrHeader>
                 {hasServerWideCustomSorters && (
-                    <CustomSortersReadOnlyList asyncGetSorters={asyncGetServerWideSorters} />
+                    <DatabaseCustomSortersServerWideList db={db} asyncGetSorters={asyncGetServerWideSorters} />
                 )}
             </Col>
             <Col sm={12} lg={4}>
