@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly IncludeCompareExchangeValuesCommand _includeCompareExchangeValuesCommand;
         private readonly BlittableJsonTraverser _blittableTraverser;
 
-        private LruDictionary<string, TDocument> _loadedDocumentMarshall;
+        private readonly LruDictionary<string, TDocument> _loadedDocumentCache;
         private Dictionary<string, TDocument> _loadedDocumentsByAliasName;
         private HashSet<string> _loadedDocumentIds;
 
@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
 
-            _loadedDocumentMarshall = typeof(TDocument) == typeof(QueriedDocument) && DocumentContext != null
+            _loadedDocumentCache = typeof(TDocument) == typeof(QueriedDocument) && DocumentContext != null
                 ? (LruDictionary<string, TDocument>)(object)(new LruDictionary<string, QueriedDocument>(LoadedDocumentsCacheSize, new LruCacheHelpers.DocumentReleaser(DocumentContext)))
                 : new LruDictionary<string, TDocument>(LoadedDocumentsCacheSize);
         }
@@ -187,15 +187,21 @@ namespace Raven.Server.Documents.Queries.Results
             return DirectGetInternal(ref retrieverInput, id, fields);
         }
 
+        public virtual void ClearCache()
+        {
+            _loadedDocumentCache.Clear();
+        }
+
         private TDocument DirectGetInternal(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
         {
-            if (_loadedDocumentMarshall.TryGetValue(id, out var doc) == false)
+            if (_loadedDocumentCache.TryGetValue(id, out var doc) == false)
             {
-                doc = _loadedDocumentMarshall[id] = DocumentsStorage.Get<TDocument>(DocumentContext, id, fields);
+                doc = _loadedDocumentCache[id] = DocumentsStorage.Get<TDocument>(DocumentContext, id, fields);
             }
 
-            if (typeof(TDocument) == typeof(QueriedDocument) && doc != null)
-                ((QueriedDocument)(object)doc).IncreaseReference();
+            // When we take document from cache we've to increase the reference counter.
+            if (typeof(TDocument) == typeof(QueriedDocument))
+                ((QueriedDocument)(object)doc)?.IncreaseReference();
 
             return doc;
         }
@@ -203,35 +209,37 @@ namespace Raven.Server.Documents.Queries.Results
         protected virtual TDocument LoadDocument(TDocument parentDocument, string id, ref RetrieverInput retrieverInput)
         {
             using var _ = (_loadScope = _loadScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Load)));
-            if (id == string.Empty) // main doc
+            if (id == string.Empty) // string.Empty means it's from original document.
                 return parentDocument;
             
-            if (_loadedDocumentMarshall.TryGetValue(id, out var doc))
+            if (_loadedDocumentCache.TryGetValue(id, out var doc))
             {
                 if (typeof(TDocument) == typeof(QueriedDocument))
                 {
-                    ((QueriedDocument)(object)doc).IncreaseReference();
+                    ((QueriedDocument)(object)doc)?.IncreaseReference();
                     if (ReferenceEquals(parentDocument, doc) == false)
                     {
-                        ((QueriedDocument)(object)parentDocument).AddChild((QueriedDocument)(object)doc);
+                        ((QueriedDocument)(object)parentDocument).LinkReferencedDocument((QueriedDocument)(object)doc);
                     }
                 }
 
-                if (typeof(TDocument) == typeof(Document) && doc.IsDisposed)
+                if (typeof(TDocument) == typeof(Document) && doc is {IsDisposed: true})
                 {
                     goto LoadDocument;
                 }
                 
                 return doc;
             }
+            
             LoadDocument:
             doc = DirectGetInternal(ref retrieverInput, id, DocumentFields.All);
+            
             if (doc != null)
-                _loadedDocumentMarshall[id] = doc;
+                _loadedDocumentCache[id] = doc;
 
             if (typeof(TDocument) == typeof(QueriedDocument) && doc != null)
             {
-                ((QueriedDocument)(object)parentDocument).AddChild((QueriedDocument)(object)doc);
+                ((QueriedDocument)(object)parentDocument).LinkReferencedDocument((QueriedDocument)(object)doc);
             }
 
             return doc;
@@ -397,7 +405,7 @@ namespace Raven.Server.Documents.Queries.Results
                             if (fieldVal is TDocument d2)
                             {
                                 if (typeof(TDocument) == typeof(QueriedDocument))
-                                    ((QueriedDocument)(object)doc).AddChild((QueriedDocument)(object)d2);
+                                    ((QueriedDocument)(object)doc).LinkReferencedDocument((QueriedDocument)(object)d2);
                                 fieldVal = d2.Data;
                             }
 
@@ -489,7 +497,7 @@ namespace Raven.Server.Documents.Queries.Results
                 key.StartsWith(Constants.TimeSeries.QueryFunction))
             {
                 doc.TimeSeriesStream ??= new TimeSeriesStream();
-                var value = (TimeSeriesRetriever<TDocument>.TimeSeriesStreamingRetrieverResult)fieldVal;
+                var value = (TimeSeriesRetrieverBase.TimeSeriesStreamingRetrieverResult)fieldVal;
                 doc.TimeSeriesStream.TimeSeries = value.Stream;
                 doc.TimeSeriesStream.Key = key;
                 Json.BlittableJsonTextWriterExtensions.MergeMetadata(result, value.Metadata);
@@ -984,8 +992,8 @@ namespace Raven.Server.Documents.Queries.Results
                     if (string.IsNullOrEmpty(loadedDocId))
                         continue;
                     
-                    if (_loadedDocumentMarshall.TryGetValue(loadedDocId.ToLowerInvariant(), out var doc))
-                        doc.Dispose();
+                    if (_loadedDocumentCache.TryGetValue(loadedDocId.ToLowerInvariant(), out var doc))
+                        doc?.Dispose();
                 }
             }
             
@@ -1226,7 +1234,7 @@ namespace Raven.Server.Documents.Queries.Results
         {
             if (TryGetTimeSeriesFunction(methodName, query, out var func))
             {
-                _timeSeriesRetriever ??= new TimeSeriesRetriever<TDocument>(_includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocumentMarshall, token);
+                _timeSeriesRetriever ??= new TimeSeriesRetriever<TDocument>(_includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocumentCache, token);
                 var result = _timeSeriesRetriever.InvokeTimeSeriesFunction(func, documentId, args, out var type);
                 if (_query.IsStream)
                     return _timeSeriesRetriever.PrepareForStreaming(result, FieldsToFetch.SingleBodyOrMethodWithNoAlias, _query.AddTimeSeriesNames);
