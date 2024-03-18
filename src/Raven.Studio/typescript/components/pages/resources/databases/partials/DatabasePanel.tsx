@@ -97,7 +97,7 @@ function badgeText(db: DatabaseSharedInfo, localInfo: locationAwareLoadableData<
 export function DatabasePanel(props: DatabasePanelProps) {
     const { databaseName, selected, toggleSelection } = props;
     const db = useAppSelector(databaseSelectors.databaseByName(databaseName));
-    const activeDatabase = useAppSelector(databaseSelectors.activeDatabase);
+    const activeDatabase = useAppSelector(databaseSelectors.activeDatabaseName);
     const dbState = useAppSelector(selectDatabaseState(db.name));
     const { appUrl } = useAppUrls();
     const dispatch = useAppDispatch();
