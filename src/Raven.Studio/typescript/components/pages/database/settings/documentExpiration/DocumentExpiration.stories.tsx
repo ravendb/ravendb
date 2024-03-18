@@ -14,7 +14,10 @@ export default {
 
 function commonInit() {
     const { databasesService } = mockServices;
+    const { databases } = mockStore;
     databasesService.withExpirationConfiguration();
+
+    databases.withActiveDatabase(DatabasesStubs.nonShardedDatabaseInfo());
 }
 
 export const DefaultDocumentExpiration: StoryObj<typeof DocumentExpiration> = {
@@ -25,7 +28,7 @@ export const DefaultDocumentExpiration: StoryObj<typeof DocumentExpiration> = {
         const { license } = mockStore;
         license.with_License();
 
-        return <DocumentExpiration db={DatabasesStubs.nonShardedClusterDatabase()} />;
+        return <DocumentExpiration />;
     },
 };
 
@@ -36,6 +39,6 @@ export const LicenseRestricted: StoryObj<typeof DocumentExpiration> = {
         const { license } = mockStore;
         license.with_LicenseLimited();
 
-        return <DocumentExpiration db={DatabasesStubs.nonShardedClusterDatabase()} />;
+        return <DocumentExpiration />;
     },
 };

@@ -3,10 +3,10 @@ import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
 class saveConflictSolverConfigurationCommand extends commandBase {
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly configuration: Raven.Client.ServerWide.ConflictSolver;
 
-    constructor(db: database, configuration: Raven.Client.ServerWide.ConflictSolver) {
+    constructor(db: database | string, configuration: Raven.Client.ServerWide.ConflictSolver) {
         super();
         this.db = db;
         this.configuration = configuration;
@@ -14,7 +14,7 @@ class saveConflictSolverConfigurationCommand extends commandBase {
 
     execute(): JQueryPromise<updateConflictSolverConfigurationResponse> {
         const urlArgs = {
-            name: this.db.name
+            name: (_.isString(this.db) ? this.db : this.db)
         };
         const url = endpoints.global.adminDatabases.adminReplicationConflictsSolver + this.urlEncodeArgs(urlArgs);
         const args = ko.toJSON(this.configuration);

@@ -9,9 +9,9 @@ class saveIndexLockModeCommand extends commandBase {
 
     private lockMode: Raven.Client.Documents.Indexes.IndexLockMode;
 
-    private db: database;
+    private db: database | string;
 
-    constructor(indexes: Array<IndexSharedInfo>, lockMode: Raven.Client.Documents.Indexes.IndexLockMode, db: database) {
+    constructor(indexes: Array<IndexSharedInfo>, lockMode: Raven.Client.Documents.Indexes.IndexLockMode, db: database | string) {
         super();
         this.db = db;
         this.lockMode = lockMode;

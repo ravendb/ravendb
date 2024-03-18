@@ -25,12 +25,15 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 import DocumentsCompressionConfiguration = Raven.Client.ServerWide.DocumentsCompressionConfiguration;
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { SelectOption } from "components/common/select/Select";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import FormCollectionsSelect from "components/common/FormCollectionsSelect";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAccessManager } from "components/hooks/useAccessManager";
 
-export default function DocumentCompression({ db }: NonShardedViewProps) {
+export default function DocumentCompression() {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const { isAdminAccessOrAbove } = useAccessManager();
     const { databasesService } = useServices();
 
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames).filter(
@@ -39,10 +42,13 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
 
     const [customCollectionOptions, setCustomCollectionOptions] = useState<SelectOption[]>([]);
 
-    const asyncGetConfig = useAsyncCallback(() => databasesService.getDocumentsCompressionConfiguration(db), {
+    const asyncGetConfig = useAsyncCallback(() => databasesService.getDocumentsCompressionConfiguration(databaseName), {
         onSuccess: (result) => {
             setCustomCollectionOptions(
-                result.Collections.filter((x) => !allCollectionNames.includes(x)).map((x) => ({ value: x, label: x }))
+                result.Collections.filter((x) => !allCollectionNames.includes(x)).map((x) => ({
+                    value: x,
+                    label: x,
+                }))
             );
         },
     });
@@ -68,8 +74,6 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
             },
         ],
     });
-    const isDatabaseAdmin =
-        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
     useDirtyFlag(formState.isDirty);
     const { appUrl } = useAppUrls();
@@ -88,7 +92,7 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
         return tryHandleSubmit(async () => {
             reportEvent("documents-compression", "save");
 
-            await databasesService.saveDocumentsCompression(db, {
+            await databasesService.saveDocumentsCompression(databaseName, {
                 ...formData,
                 Collections: formData.CompressAllCollections ? [] : formData.Collections,
             });
@@ -111,7 +115,7 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                         />
                         <Form onSubmit={handleSubmit(onSave)}>
                             <div className="hstack mb-3">
-                                {isDatabaseAdmin && (
+                                {isAdminAccessOrAbove() && (
                                     <>
                                         <div id="saveConfigButton" className="w-fit-content">
                                             <ButtonWithSpinner
@@ -131,7 +135,7 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                                     </>
                                 )}
                                 <FlexGrow />
-                                <a href={appUrl.forStatusStorageReport(db)}>
+                                <a href={appUrl.forStatusStorageReport(databaseName)}>
                                     <Icon icon="link" /> Storage Report
                                 </a>
                             </div>
@@ -146,7 +150,7 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                                     allCollectionNames={allCollectionNames}
                                     setValue={setValue}
                                     customOptions={customCollectionOptions}
-                                    isReadOnly={!isDatabaseAdmin}
+                                    isReadOnly={!isAdminAccessOrAbove()}
                                 />
                                 <Collapse isOpen={CompressAllCollections || Collections.length > 0}>
                                     <Alert color="info" className="hstack gap-3 p-3 mt-4">
@@ -168,7 +172,11 @@ export default function DocumentCompression({ db }: NonShardedViewProps) {
                                     "item-disabled pe-none": !hasDocumentsCompression,
                                 })}
                             >
-                                <FormSwitch control={control} name="CompressRevisions" disabled={!isDatabaseAdmin}>
+                                <FormSwitch
+                                    control={control}
+                                    name="CompressRevisions"
+                                    disabled={!isAdminAccessOrAbove()}
+                                >
                                     Compress revisions for all collections
                                 </FormSwitch>
                             </Card>

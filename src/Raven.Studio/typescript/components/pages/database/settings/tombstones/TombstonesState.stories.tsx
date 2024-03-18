@@ -4,6 +4,7 @@ import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import TombstonesState from "./TombstonesState";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockServices } from "test/mocks/services/MockServices";
+import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
     title: "Pages/Database/Settings",
@@ -14,8 +15,10 @@ export default {
 export const Tombstones: StoryObj<typeof TombstonesState> = {
     render: () => {
         const { databasesService } = mockServices;
+        const { databases } = mockStore;
         databasesService.withTombstonesState();
+        databases.withActiveDatabase(DatabasesStubs.nonShardedDatabaseInfo());
 
-        return <TombstonesState db={DatabasesStubs.nonShardedClusterDatabase()} />;
+        return <TombstonesState />;
     },
 };

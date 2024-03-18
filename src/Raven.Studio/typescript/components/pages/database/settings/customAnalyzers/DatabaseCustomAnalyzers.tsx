@@ -23,7 +23,6 @@ import { CounterBadge } from "components/common/CounterBadge";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import ServerWideCustomAnalyzersList from "components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzersList";
-import { NonShardedViewProps } from "components/models/common";
 import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { getLicenseLimitReachStatus, useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
@@ -33,19 +32,20 @@ import FeatureAvailabilitySummaryWrapper, {
 } from "components/common/FeatureAvailabilitySummary";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
-export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
+export default function DatabaseCustomAnalyzers() {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isDatabaseAdminOrAbove = useAppSelector(accessManagerSelectors.isDatabaseAdminOrAbove());
+
     const { databasesService, manageServerService } = useServices();
 
     const asyncGetServerWideAnalyzers = useAsync(manageServerService.getServerWideCustomAnalyzers, []);
-    const asyncGetDatabaseAnalyzers = useAsync(() => databasesService.getCustomAnalyzers(db), [db]);
+    const asyncGetDatabaseAnalyzers = useAsync(() => databasesService.getCustomAnalyzers(databaseName), [databaseName]);
 
     const { appUrl } = useAppUrls();
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
     const customAnalyzersDocsLink = useRavenLink({ hash: "VWCQPI" });
-
-    const isDatabaseAdmin =
-        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
     const licenseClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
     const licenseDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerDatabase"));
@@ -127,11 +127,11 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                     <Row className="gy-sm">
                         <Col>
                             <AboutViewHeading title="Custom analyzers" icon="custom-analyzers" />
-                            {isDatabaseAdmin && (
+                            {isDatabaseAdminOrAbove && (
                                 <>
                                     <div id="newCustomAnalyzer" className="w-fit-content">
                                         <a
-                                            href={appUrl.forEditCustomAnalyzer(db)}
+                                            href={appUrl.forEditCustomAnalyzer(databaseName)}
                                             className={classNames("btn btn-primary mb-3", { disabled: isLimitReached })}
                                         >
                                             <Icon icon="plus" />
@@ -180,10 +180,12 @@ export default function DatabaseCustomAnalyzers({ db }: NonShardedViewProps) {
                                 fetchStatus={asyncGetDatabaseAnalyzers.status}
                                 analyzers={asyncGetDatabaseAnalyzers.result}
                                 reload={asyncGetDatabaseAnalyzers.execute}
-                                forEditLink={(name) => appUrl.forEditCustomAnalyzer(db, name)}
-                                deleteCustomAnalyzer={(name) => databasesService.deleteCustomAnalyzer(db, name)}
+                                forEditLink={(name) => appUrl.forEditCustomAnalyzer(databaseName, name)}
+                                deleteCustomAnalyzer={(name) =>
+                                    databasesService.deleteCustomAnalyzer(databaseName, name)
+                                }
                                 serverWideAnalyzerNames={asyncGetServerWideAnalyzers.result?.map((x) => x.Name) ?? []}
-                                isDatabaseAdmin={isDatabaseAdmin}
+                                isDatabaseAdmin={isDatabaseAdminOrAbove}
                             />
 
                             <HrHeader

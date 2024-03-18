@@ -29,8 +29,10 @@ export default {
 } satisfies Meta<typeof OngoingTasksPage>;
 
 function commonInit() {
-    const { accessManager, license } = mockStore;
+    const { accessManager, license, databases } = mockStore;
     const { tasksService, licenseService } = mockServices;
+
+    databases.withActiveDatabase(DatabasesStubs.shardedDatabaseInfo());
 
     accessManager.with_securityClearance("ClusterAdmin");
 
@@ -44,8 +46,6 @@ function commonInit() {
 }
 
 export const EmptyView: ComponentStory<typeof OngoingTasksPage> = () => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -59,12 +59,10 @@ export const EmptyView: ComponentStory<typeof OngoingTasksPage> = () => {
         dto.Results = [];
     });
 
-    return <OngoingTasksPage db={db} />;
+    return <OngoingTasksPage />;
 };
 
 export const FullView: ComponentStory<typeof OngoingTasksPage> = () => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -72,7 +70,7 @@ export const FullView: ComponentStory<typeof OngoingTasksPage> = () => {
     tasksService.withGetTasks();
     tasksService.withGetProgress();
 
-    return <OngoingTasksPage db={db} />;
+    return <OngoingTasksPage />;
 };
 
 export const ExternalReplicationTemplate = (args: {
@@ -81,8 +79,6 @@ export const ExternalReplicationTemplate = (args: {
     emptyScript?: boolean;
     customizeTask?: (x: OngoingTaskReplication) => void;
 }) => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -100,7 +96,7 @@ export const ExternalReplicationTemplate = (args: {
 
     mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 
-    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} />;
 };
 
 export const ExternalReplicationDisabled = boundCopy(ExternalReplicationTemplate, {
@@ -122,8 +118,6 @@ export const SubscriptionTemplate = (args: {
     disabled?: boolean;
     customizeTask?: (x: OngoingTaskSubscription) => void;
 }) => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -139,7 +133,7 @@ export const SubscriptionTemplate = (args: {
         x.SubscriptionsCount = 1;
     });
 
-    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} />;
 };
 
 export const SubscriptionsWithLicenseLimits = () => {
@@ -147,8 +141,6 @@ export const SubscriptionsWithLicenseLimits = () => {
 
     const { license } = mockStore;
     license.with_LicenseLimited();
-
-    const db = DatabasesStubs.shardedDatabase();
 
     const { tasksService } = mockServices;
 
@@ -164,7 +156,7 @@ export const SubscriptionsWithLicenseLimits = () => {
         x.SubscriptionsCount = 2;
     });
 
-    return <OngoingTasksPage db={db} />;
+    return <OngoingTasksPage />;
 };
 
 export const SubscriptionDisabled = boundCopy(SubscriptionTemplate, {
@@ -192,8 +184,6 @@ export const RavenEtlTemplate = (args: {
     emptyScript?: boolean;
     customizeTask?: (x: OngoingTaskRavenEtlListView) => void;
 }) => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -211,7 +201,7 @@ export const RavenEtlTemplate = (args: {
 
     mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 
-    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} />;
 };
 
 export const RavenEtlDisabled = boundCopy(RavenEtlTemplate, {
@@ -233,8 +223,6 @@ export const SqlTemplate = (args: {
     emptyScript?: boolean;
     customizeTask?: (x: OngoingTaskSqlEtlListView) => void;
 }) => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -252,7 +240,7 @@ export const SqlTemplate = (args: {
 
     mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 
-    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} />;
 };
 
 export const SqlDisabled = boundCopy(SqlTemplate, {
@@ -274,8 +262,6 @@ export const OlapTemplate = (args: {
     emptyScript?: boolean;
     customizeTask?: (x: OngoingTaskOlapEtlListView) => void;
 }) => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -293,7 +279,7 @@ export const OlapTemplate = (args: {
 
     mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 
-    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} />;
 };
 
 export const OlapDisabled = boundCopy(OlapTemplate, {
@@ -315,8 +301,6 @@ export const ElasticSearchTemplate = (args: {
     emptyScript?: boolean;
     customizeTask?: (x: OngoingTaskElasticSearchEtlListView) => void;
 }) => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -334,7 +318,7 @@ export const ElasticSearchTemplate = (args: {
 
     mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 
-    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} />;
 };
 
 export const ElasticSearchDisabled = boundCopy(ElasticSearchTemplate, {
@@ -356,8 +340,6 @@ export const KafkaEtlTemplate = (args: {
     emptyScript?: boolean;
     customizeTask?: (x: OngoingTaskQueueEtlListView) => void;
 }) => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -375,7 +357,7 @@ export const KafkaEtlTemplate = (args: {
 
     mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 
-    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} />;
 };
 
 export const KafkaEtlDisabled = boundCopy(KafkaEtlTemplate, {
@@ -397,8 +379,6 @@ export const RabbitEtlTemplate = (args: {
     emptyScript?: boolean;
     customizeTask?: (x: OngoingTaskQueueEtlListView) => void;
 }) => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -416,7 +396,7 @@ export const RabbitEtlTemplate = (args: {
 
     mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 
-    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} />;
 };
 
 export const RabbitEtlDisabled = boundCopy(RabbitEtlTemplate, {
@@ -436,8 +416,6 @@ export const KafkaSinkTemplate = (args: {
     disabled?: boolean;
     customizeTask?: (x: OngoingTaskQueueSinkListView) => void;
 }) => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -452,7 +430,7 @@ export const KafkaSinkTemplate = (args: {
         x.SubscriptionsCount = 0;
     });
 
-    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} />;
 };
 
 export const KafkaSinkDisabled = boundCopy(KafkaSinkTemplate, {
@@ -465,8 +443,6 @@ export const RabbitSinkTemplate = (args: {
     disabled?: boolean;
     customizeTask?: (x: OngoingTaskQueueSinkListView) => void;
 }) => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -481,7 +457,7 @@ export const RabbitSinkTemplate = (args: {
         x.SubscriptionsCount = 0;
     });
 
-    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} />;
 };
 
 export const RabbitSinkDisabled = boundCopy(RabbitSinkTemplate, {
@@ -494,8 +470,6 @@ export const ReplicationSinkTemplate = (args: {
     disabled?: boolean;
     customizeTask?: (x: OngoingTaskPullReplicationAsSink) => void;
 }) => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -511,7 +485,7 @@ export const ReplicationSinkTemplate = (args: {
         x.SubscriptionsCount = 0;
     });
 
-    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} />;
 };
 
 export const ReplicationSinkDisabled = boundCopy(ReplicationSinkTemplate, {
@@ -527,8 +501,6 @@ export const ReplicationHubTemplate = (args: {
     withOutConnections?: boolean;
     customizeTask?: (x: OngoingTaskPullReplicationAsHub) => void;
 }) => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -551,7 +523,7 @@ export const ReplicationHubTemplate = (args: {
         x.SubscriptionsCount = 0;
     });
 
-    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} />;
 };
 
 export const ReplicationHubDisabled = boundCopy(ReplicationHubTemplate, {
@@ -571,8 +543,6 @@ export const PeriodicBackupTemplate = (args: {
     disabled?: boolean;
     customizeTask?: (x: OngoingTaskBackup) => void;
 }) => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -588,7 +558,7 @@ export const PeriodicBackupTemplate = (args: {
         x.SubscriptionsCount = 0;
     });
 
-    return <OngoingTasksPage {...forceStoryRerender()} db={db} />;
+    return <OngoingTasksPage {...forceStoryRerender()} />;
 };
 
 export const PeriodicBackupDisabled = boundCopy(PeriodicBackupTemplate, {

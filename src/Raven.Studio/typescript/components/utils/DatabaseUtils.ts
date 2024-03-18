@@ -94,6 +94,16 @@ export default class DatabaseUtils {
         }
     }
 
+    static getFirstLocation(db: DatabaseSharedInfo, preferredNodeTag: string): databaseLocationSpecifier {
+        const locations = DatabaseUtils.getLocations(db);
+        const preferredMatch = locations.find((x) => x.nodeTag === preferredNodeTag);
+        if (preferredMatch) {
+            return preferredMatch;
+        }
+
+        return locations[0];
+    }
+
     static computeBackupStatus(backupInfo: BackupInfo): { color: string; text: string } {
         if (!backupInfo || !backupInfo.LastBackup) {
             return {

@@ -14,6 +14,8 @@ import ConnectionStringsPanels from "./ConnectionStringsPanels";
 import { exhaustiveStringTuple } from "components/utils/common";
 import useConnectionStringsLicense from "./useConnectionStringsLicense";
 import { LoadError } from "components/common/LoadError";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAccessManager } from "components/hooks/useAccessManager";
 
 export interface ConnectionStringsUrlParameters {
     name?: string;
@@ -21,11 +23,11 @@ export interface ConnectionStringsUrlParameters {
 }
 
 export default function ConnectionStrings(props: NonShardedViewProps & ConnectionStringsUrlParameters) {
-    const { db, name: nameFromUrl, type: typeFromUrl } = props;
+    const { name: nameFromUrl, type: typeFromUrl } = props;
 
     const { hasNone: hasNoneInLicense } = useConnectionStringsLicense();
-    const isDatabaseAdmin =
-        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
+    const db = useAppSelector(databaseSelectors.activeDatabase);
+    const { isAdminAccessOrAbove } = useAccessManager();
 
     const dispatch = useAppDispatch();
 
@@ -59,11 +61,11 @@ export default function ConnectionStrings(props: NonShardedViewProps & Connectio
 
     return (
         <Row className="content-margin gy-sm">
-            {initialEditConnection && <EditConnectionStrings initialConnection={initialEditConnection} db={db} />}
+            {initialEditConnection && <EditConnectionStrings initialConnection={initialEditConnection} />}
 
             <Col>
                 <AboutViewHeading title="Connection Strings" icon="manage-connection-strings" />
-                {isDatabaseAdmin && (
+                {isAdminAccessOrAbove() && (
                     <>
                         <div id={addNewButtonId} style={{ width: "fit-content" }}>
                             <Button
@@ -90,7 +92,6 @@ export default function ConnectionStrings(props: NonShardedViewProps & Connectio
                         allStudioEtlTypes.map((type) => (
                             <ConnectionStringsPanels
                                 key={type}
-                                db={db}
                                 connections={connections[type]}
                                 connectionsType={type}
                             />

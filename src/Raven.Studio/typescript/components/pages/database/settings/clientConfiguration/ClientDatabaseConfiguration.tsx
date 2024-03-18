@@ -29,13 +29,11 @@ import FeatureAvailabilitySummaryWrapper, {
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
-interface ClientDatabaseConfigurationProps {
-    db: database;
-}
-
-export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfigurationProps) {
+export default function ClientDatabaseConfiguration() {
     const { manageServerService } = useServices();
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const asyncGetClientConfiguration = useAsyncCallback(manageServerService.getClientConfiguration);
     const asyncGetClientGlobalConfiguration = useAsync(manageServerService.getGlobalClientConfiguration, []);
 
@@ -45,7 +43,10 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
         resolver: clientConfigurationYupResolver,
         mode: "all",
         defaultValues: async () =>
-            ClientConfigurationUtils.mapToFormData(await asyncGetClientConfiguration.execute(db), false),
+            ClientConfigurationUtils.mapToFormData(
+                await asyncGetClientConfiguration.execute(activeDatabaseName),
+                false
+            ),
     });
 
     useDirtyFlag(formState.isDirty);
@@ -88,12 +89,17 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
 
     const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
         tryHandleSubmit(async () => {
-            await manageServerService.saveClientConfiguration(ClientConfigurationUtils.mapToDto(formData, false), db);
+            await manageServerService.saveClientConfiguration(
+                ClientConfigurationUtils.mapToDto(formData, false),
+                activeDatabaseName
+            );
         });
     };
 
     const onRefresh = async () => {
-        reset(ClientConfigurationUtils.mapToFormData(await asyncGetClientConfiguration.execute(db), false));
+        reset(
+            ClientConfigurationUtils.mapToFormData(await asyncGetClientConfiguration.execute(activeDatabaseName), false)
+        );
     };
 
     if (asyncGetClientConfiguration.loading || asyncGetClientGlobalConfiguration.loading) {

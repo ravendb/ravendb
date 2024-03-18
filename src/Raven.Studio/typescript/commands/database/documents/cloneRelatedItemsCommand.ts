@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class cloneRelatedItemsCommand extends commandBase {
 
-    constructor(private sourceDocumentId: string, private fromRevision: boolean, private changeVector: string, private targetDocumentId: string, private db: database,
+    constructor(private sourceDocumentId: string, private fromRevision: boolean, private changeVector: string, private targetDocumentId: string, private db: database | string,
                 private attachmentsToClone: string[],
                 private timeseriesToClone: string[],
                 private countersToClone: Array<{ name: string, value: number }>) {

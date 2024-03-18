@@ -28,7 +28,6 @@ import useBoolean from "hooks/useBoolean";
 import { DatabaseDistribution } from "components/pages/resources/databases/partials/DatabaseDistribution";
 import { ValidDatabasePropertiesPanel } from "components/pages/resources/databases/partials/ValidDatabasePropertiesPanel";
 import { locationAwareLoadableData } from "components/models/common";
-import { useAccessManager } from "hooks/useAccessManager";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import genUtils from "common/generalUtils";
@@ -133,7 +132,9 @@ export function DatabasePanel(props: DatabasePanelProps) {
         ? localManageGroupUrl
         : appUrl.toExternalDatabaseUrl(db, localManageGroupUrl);
 
-    const { isOperatorOrAbove, isSecuredServer, isAdminAccessOrAbove } = useAccessManager();
+    const isOperatorOrAbove = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
+    const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
+    const isDatabaseAdminOrAbove = useAppSelector(accessManagerSelectors.isDatabaseAdminOrAbove(db.name));
 
     const canNavigateToDatabase = !db.disabled;
 
@@ -143,10 +144,10 @@ export function DatabasePanel(props: DatabasePanelProps) {
         (x) => x.status === "success" && x.data?.indexingStatus === "Paused"
     );
 
-    const canDisableIndexing = isOperatorOrAbove() && !indexingDisabled;
-    const canEnableIndexing = isOperatorOrAbove() && indexingDisabled;
+    const canDisableIndexing = isOperatorOrAbove && !indexingDisabled;
+    const canEnableIndexing = isOperatorOrAbove && indexingDisabled;
 
-    const canRestartDatabase = isAdminAccessOrAbove(db) && !db.disabled;
+    const canRestartDatabase = isDatabaseAdminOrAbove && !db.disabled;
 
     const onChangeLockMode = async (lockMode: DatabaseLockMode) => {
         if (db.lockMode === lockMode) {
@@ -264,14 +265,14 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
         for (const { nodeTag, shardNumbers, includeOrchestrator: includeOrchestrator } of contextPoints) {
             if (includeOrchestrator) {
-                await databasesService.restartDatabase(db, {
+                await databasesService.restartDatabase(db.name, {
                     nodeTag,
                 });
             }
 
             const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
             for (const location of locations) {
-                await databasesService.restartDatabase(db, location);
+                await databasesService.restartDatabase(db.name, location);
             }
         }
     };
@@ -289,7 +290,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                 <div className="flex-grow-1">
                     <RichPanelHeader onClick={(e) => onHeaderClicked(db, e)}>
                         <RichPanelInfo>
-                            {isOperatorOrAbove() && (
+                            {isOperatorOrAbove && (
                                 <RichPanelSelect>
                                     <Input type="checkbox" checked={selected} onChange={toggleSelection} />
                                 </RichPanelSelect>
@@ -325,12 +326,12 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 )}
                             </RichPanelName>
                             <div className="text-muted align-self-center">
-                                {dbAccess && isSecuredServer() && <AccessIcon dbAccess={dbAccess} />}
+                                {dbAccess && isSecureServer && <AccessIcon dbAccess={dbAccess} />}
                             </div>
                         </RichPanelInfo>
 
                         <RichPanelActions>
-                            {isOperatorOrAbove() && (
+                            {isOperatorOrAbove && (
                                 <Button
                                     href={manageGroupUrl}
                                     title="Manage the Database Group"
@@ -343,10 +344,10 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 </Button>
                             )}
 
-                            {isAdminAccessOrAbove(db) && (
+                            {isDatabaseAdminOrAbove && (
                                 <UncontrolledDropdown>
                                     <ButtonGroup>
-                                        {isOperatorOrAbove() && (
+                                        {isOperatorOrAbove && (
                                             <Button onClick={onToggleDatabase}>
                                                 {db.disabled ? (
                                                     <span>
@@ -383,10 +384,10 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                                 <Icon icon="play" /> Enable indexing
                                             </DropdownItem>
                                         )}
-                                        {isOperatorOrAbove() && (
+                                        {isOperatorOrAbove && (
                                             <>
                                                 <DropdownItem divider />
-                                                {isAdminAccessOrAbove(db) && (
+                                                {isDatabaseAdminOrAbove && (
                                                     <>
                                                         {isOpenDatabaseRestartConfirm && (
                                                             <BulkDatabaseResetConfirm
@@ -414,7 +415,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 </UncontrolledDropdown>
                             )}
 
-                            {isOperatorOrAbove() && (
+                            {isOperatorOrAbove && (
                                 <UncontrolledDropdown>
                                     <ButtonGroup>
                                         <Button

@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getReplicationHubTaskInfoCommand extends commandBase {
 
-    constructor(private db: database, private taskId: number) {
+    constructor(private db: database | string, private taskId: number) {
         super();
     }
 

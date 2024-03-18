@@ -3,10 +3,10 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class deleteCustomAnalyzerCommand extends commandBase {
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly name: string;
 
-    constructor(db: database, name: string) {
+    constructor(db: database | string, name: string) {
         super();
         this.db = db;
         this.name = name;

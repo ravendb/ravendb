@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class explainQueryCommand extends commandBase {
 
-    constructor(private queryText: string, private db: database) {
+    constructor(private queryText: string, private db: database | string) {
         super();
     }
 

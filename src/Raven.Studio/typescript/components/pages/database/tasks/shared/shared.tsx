@@ -1,5 +1,4 @@
-﻿import database from "models/resources/database";
-import {
+﻿import {
     AnyEtlOngoingTaskInfo,
     OngoingEtlTaskNodeInfo,
     OngoingTaskInfo,
@@ -25,9 +24,10 @@ import messagePublisher from "common/messagePublisher";
 import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
 import { useServices } from "components/hooks/useServices";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
-    db: database;
     data: T;
     isSelected: (id: number) => boolean;
     toggleSelection: (checked: boolean, taskName: OngoingTaskSharedInfo) => void;
@@ -274,7 +274,8 @@ interface OperationConfirm {
     taskSharedInfos: OngoingTaskSharedInfo[];
 }
 
-export function useOngoingTasksOperations(database: database, reload: () => void) {
+export function useOngoingTasksOperations(reload: () => void) {
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { tasksService } = useServices();
 
     const [togglingTaskIds, setTogglingTaskIds] = useState<number[]>([]);
@@ -295,7 +296,7 @@ export function useOngoingTasksOperations(database: database, reload: () => void
                     continue;
                 }
 
-                toggleRequests.push(tasksService.toggleOngoingTask(database, task, enable));
+                toggleRequests.push(tasksService.toggleOngoingTask(activeDatabaseName, task, enable));
             }
 
             if (toggleRequests.length === 0) {
@@ -317,7 +318,7 @@ export function useOngoingTasksOperations(database: database, reload: () => void
             setDeletingTaskIds((ids) => [...ids, ...taskSharedInfos.map((x) => x.taskId)]);
 
             const deleteRequests: Promise<ModifyOngoingTaskResult>[] = taskSharedInfos.map((task) =>
-                tasksService.deleteOngoingTask(database, task)
+                tasksService.deleteOngoingTask(activeDatabaseName, task)
             );
 
             await Promise.all(deleteRequests);

@@ -5,7 +5,7 @@ import document = require("models/database/documents/document");
 
 class testSubscriptionTaskCommand extends commandBase {
 
-    constructor(private db: database, private payload: Raven.Client.Documents.Subscriptions.SubscriptionTryout, private resultsLimit: number, private timeLimit: number) {
+    constructor(private db: database | string, private payload: Raven.Client.Documents.Subscriptions.SubscriptionTryout, private resultsLimit: number, private timeLimit: number) {
         super();
     }
 

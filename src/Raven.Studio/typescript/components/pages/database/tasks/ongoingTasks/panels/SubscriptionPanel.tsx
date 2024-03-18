@@ -27,6 +27,8 @@ import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
 import { SubscriptionConnectionsDetailsWithId } from "../OngoingTasksReducer";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
 
 type SubscriptionPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSubscriptionInfo> & {
     refreshSubscriptionInfo: () => void;
@@ -216,7 +218,6 @@ function ConnectedClients(props: ConnectedClientsProps) {
 
 export function SubscriptionPanel(props: SubscriptionPanelProps) {
     const {
-        db,
         data,
         connections,
         dropSubscription,
@@ -231,7 +232,8 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
     const { canReadWriteDatabase } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
 
-    const canEdit = canReadWriteDatabase(db) && !data.shared.serverWide;
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const canEdit = canReadWriteDatabase(activeDatabaseName) && !data.shared.serverWide;
     const editUrl = forCurrentDatabase.editSubscription(data.shared.taskId, data.shared.taskName)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);

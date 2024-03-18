@@ -113,7 +113,7 @@ export function ManageDatabaseGroupPage({ db }: NonShardedViewProps) {
                 <SortableModeCounterProvider>
                     {dbSharedInfo.sharded ? (
                         <React.Fragment key="sharded-db">
-                            <OrchestratorsGroup db={dbSharedInfo} />
+                            <OrchestratorsGroup />
                             {dbSharedInfo.shards.map((shard) => {
                                 return <ShardsGroup key={shard.name} db={shard} />;
                             })}

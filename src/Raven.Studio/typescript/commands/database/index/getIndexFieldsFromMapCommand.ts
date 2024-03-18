@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getIndexFieldsFromMapCommand extends commandBase {
 
-    constructor(private db: database,
+    constructor(private db: database | string,
                 private map: string,
                 private additionalSources: dictionary<string>,
                 private additionalAssemblies: Array<Raven.Client.Documents.Indexes.AdditionalAssembly>) {

@@ -21,8 +21,14 @@ import FormCollectionsSelect from "components/common/FormCollectionsSelect";
 import { useAsyncCallback } from "react-async-hook";
 import RevertRevisionsRequest = Raven.Server.Documents.Revisions.RevertRevisionsRequest;
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import { useAccessManager } from "components/hooks/useAccessManager";
 
-export default function RevertRevisions({ db }: NonShardedViewProps) {
+export default function RevertRevisions() {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const { isAdminAccessOrAbove } = useAccessManager();
+
     const { control, formState, handleSubmit, setValue } = useForm<RevertRevisionsFormData>({
         resolver: revertRevisionsYupResolver,
         defaultValues: {
@@ -39,15 +45,12 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
     const { forCurrentDatabase } = useAppUrls();
     const confirm = useConfirm();
 
-    const isDatabaseAdmin =
-        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
-
     const formattedPointInTimeUtc = moment(pointInTime).utc().format(defaultDateFormat) + " UTC";
 
     const { databasesService } = useServices();
 
     const asyncRevertRevisions = useAsyncCallback((dto: RevertRevisionsRequest) =>
-        databasesService.revertRevisions(db, dto)
+        databasesService.revertRevisions(databaseName, dto)
     );
 
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames).filter(
@@ -65,7 +68,10 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
         if (isConfirmed) {
             return tryHandleSubmit(async () => {
                 const result = await asyncRevertRevisions.execute(toDto(formData));
-                notificationCenter.instance.openDetailsForOperationById(db, result.OperationId);
+                notificationCenter.instance.openDetailsForOperationById(
+                    activeDatabaseTracker.default.database(),
+                    result.OperationId
+                );
             });
         }
     };
@@ -133,7 +139,7 @@ export default function RevertRevisions({ db }: NonShardedViewProps) {
                             </FormGroup>
                         </CardBody>
                     </Card>
-                    {isDatabaseAdmin && (
+                    {isAdminAccessOrAbove() && (
                         <Card className="mt-3">
                             <CardBody>
                                 <FormCollectionsSelect

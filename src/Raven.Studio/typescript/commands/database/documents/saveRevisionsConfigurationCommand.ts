@@ -4,10 +4,10 @@ import endpoint = require("endpoints");
 import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration;
 
 class saveRevisionsConfigurationCommand extends commandBase {
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly revisionsConfiguration: RevisionsConfiguration;
 
-    constructor(db: database, revisionsConfiguration: RevisionsConfiguration) {
+    constructor(db: database | string, revisionsConfiguration: RevisionsConfiguration) {
         super();
         this.db = db;
         this.revisionsConfiguration = revisionsConfiguration;

@@ -159,9 +159,9 @@ export const documentRevisionsSlice = createSlice({
     },
 });
 
-const fetchConfigs = createAsyncThunk(documentRevisionsSlice.name + "/fetchConfigs", async (db: database) => {
-    const config = await services.databasesService.getRevisionsConfiguration(db);
-    const conflictsConfig = await services.databasesService.getRevisionsForConflictsConfiguration(db);
+const fetchConfigs = createAsyncThunk(documentRevisionsSlice.name + "/fetchConfigs", async (databaseName: string) => {
+    const config = await services.databasesService.getRevisionsConfiguration(databaseName);
+    const conflictsConfig = await services.databasesService.getRevisionsForConflictsConfiguration(databaseName);
 
     return {
         config,

@@ -5,11 +5,11 @@ import endpoints = require("endpoints");
 class getIndexEntriesFieldsCommand extends commandBase {
 
     private readonly indexName: string;
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly location: databaseLocationSpecifier;
     private readonly reportFailure: boolean;
 
-    constructor(indexName: string, db: database, location: databaseLocationSpecifier, reportFailure = true) {
+    constructor(indexName: string, db: database | string, location: databaseLocationSpecifier, reportFailure = true) {
         super();
         this.indexName = indexName;
         this.db = db;

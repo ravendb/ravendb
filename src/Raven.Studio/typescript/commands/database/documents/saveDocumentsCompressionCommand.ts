@@ -4,10 +4,10 @@ import endpoint = require("endpoints");
 import DocumentsCompressionConfiguration = Raven.Client.ServerWide.DocumentsCompressionConfiguration;
 
 class saveDocumentsCompressionCommand extends commandBase {
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly config: DocumentsCompressionConfiguration;
 
-    constructor(db: database, config: DocumentsCompressionConfiguration) {
+    constructor(db: database | string, config: DocumentsCompressionConfiguration) {
         super();
         this.db = db;
         this.config = config;

@@ -2,7 +2,6 @@ import { EntityState, createAsyncThunk, createEntityAdapter, createSlice, Payloa
 import { services } from "components/hooks/useServices";
 import { loadStatus } from "components/models/common";
 import { RootState } from "components/store";
-import database from "models/resources/database";
 
 export interface ConflictResolutionCollectionConfig {
     id: string;
@@ -152,10 +151,10 @@ export const conflictResolutionSlice = createSlice({
     },
 });
 
-const fetchConfig = createAsyncThunk<Raven.Client.ServerWide.ConflictSolver, database>(
+const fetchConfig = createAsyncThunk<Raven.Client.ServerWide.ConflictSolver, string>(
     "conflictResolution/fetchConfig",
-    async (db) => {
-        return await services.databasesService.getConflictSolverConfiguration(db);
+    async (databaseName) => {
+        return await services.databasesService.getConflictSolverConfiguration(databaseName);
     }
 );
 

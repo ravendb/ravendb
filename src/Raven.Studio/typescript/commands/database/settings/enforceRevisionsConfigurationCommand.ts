@@ -3,11 +3,11 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class enforceRevisionsConfigurationCommand extends commandBase {
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly includeForceCreated: boolean;
     private readonly collections: string[];
     
-    constructor(db: database, includeForceCreated = false, collections: string[] = null) {
+    constructor(db: database | string, includeForceCreated = false, collections: string[] = null) {
         super();
         
         this.db = db;

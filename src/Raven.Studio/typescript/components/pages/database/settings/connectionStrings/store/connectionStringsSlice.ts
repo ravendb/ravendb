@@ -14,6 +14,8 @@ import {
     mapSqlConnectionsFromDto,
 } from "./connectionStringsMapsFromDto";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { DatabaseSharedInfo } from "components/models/databases";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 interface ConnectionStringsState {
     loadStatus: loadStatus;
@@ -135,7 +137,7 @@ interface FetchDataResult {
 
 const fetchData = createAsyncThunk<
     FetchDataResult,
-    database,
+    DatabaseSharedInfo,
     {
         state: RootState;
     }
@@ -143,10 +145,10 @@ const fetchData = createAsyncThunk<
     const state = getState();
 
     const ongoingTasksDto = await services.tasksService.getOngoingTasks(
-        db,
-        db.getFirstLocation(state.cluster.localNodeTag)
+        db.name,
+        DatabaseUtils.getFirstLocation(db, state.cluster.localNodeTag)
     );
-    const connectionStringsDto = await services.tasksService.getConnectionStrings(db);
+    const connectionStringsDto = await services.tasksService.getConnectionStrings(db.name);
 
     const isDatabaseAdmin = accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)(state) === "DatabaseAdmin";
 

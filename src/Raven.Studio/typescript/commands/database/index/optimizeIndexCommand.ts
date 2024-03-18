@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class optimizeIndexCommand extends commandBase {
 
-    constructor(private indexName: string, private db: database) {
+    constructor(private indexName: string, private db: database | string) {
         super();
     }
 

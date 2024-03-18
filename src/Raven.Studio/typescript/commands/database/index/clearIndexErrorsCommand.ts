@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class clearIndexErrorsCommand extends commandBase {
-    constructor(private indexesNames: string[], private db: database, private location: databaseLocationSpecifier) {
+    constructor(private indexesNames: string[], private db: database | string, private location: databaseLocationSpecifier) {
         super();
     }
 

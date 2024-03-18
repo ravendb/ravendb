@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class forceRevisionCreationCommand extends commandBase {
 
-    constructor(private id: string, private db: database, private reportSaveProgress: boolean = true) {
+    constructor(private id: string, private db: database | string, private reportSaveProgress: boolean = true) {
         super();
     }
 

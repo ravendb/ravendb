@@ -5,10 +5,10 @@ import RefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshC
 
 class saveRefreshConfigurationCommand extends commandBase {
     
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly refreshConfiguration: RefreshConfiguration;
     
-    constructor(db: database, refreshConfiguration: RefreshConfiguration) {
+    constructor(db: database | string, refreshConfiguration: RefreshConfiguration) {
         super();
         this.db = db;
         this.refreshConfiguration = refreshConfiguration;

@@ -4,7 +4,7 @@ import database = require("models/resources/database");
 
 class recordTransactionsCommand extends commandBase {
 
-    constructor(private db: database, private targetPath: string) {
+    constructor(private db: database | string, private targetPath: string) {
         super();
     }
     
@@ -15,7 +15,7 @@ class recordTransactionsCommand extends commandBase {
         };
         
         return this.post<operationIdDto>(url, JSON.stringify(payload), this.db, { dataType: undefined })
-            .done(() => this.reportSuccess("Transaction Commands Recoding was started for database: " + this.db.name))
+            .done(() => this.reportSuccess("Transaction Commands Recoding was started for database: " + this.db))
             .fail((response: JQueryXHR) => this.reportError("Failed to start recording transaction commands", response.responseText, response.statusText));
     }
 

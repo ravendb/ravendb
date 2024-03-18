@@ -13,11 +13,13 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof DatabaseCustomAnalyzers>;
 
-const db = DatabasesStubs.nonShardedClusterDatabase();
+const db = DatabasesStubs.nonShardedDatabaseInfo();
 
 function commonInit() {
-    const { accessManager } = mockStore;
+    const { accessManager, databases } = mockStore;
     const { manageServerService, licenseService } = mockServices;
+
+    databases.withActiveDatabase(db);
 
     accessManager.with_securityClearance("ValidUser");
 
@@ -42,7 +44,7 @@ export function NoLimits() {
 
     license.with_License();
 
-    return <DatabaseCustomAnalyzers db={db} />;
+    return <DatabaseCustomAnalyzers />;
 }
 
 export function BelowDatabaseAdmin() {
@@ -59,7 +61,7 @@ export function BelowDatabaseAdmin() {
 
     license.with_License();
 
-    return <DatabaseCustomAnalyzers db={db} />;
+    return <DatabaseCustomAnalyzers />;
 }
 
 export function LicenseLimits() {
@@ -77,5 +79,5 @@ export function LicenseLimits() {
     license.with_LicenseLimited();
     license.with_LimitsUsage();
 
-    return <DatabaseCustomAnalyzers db={db} />;
+    return <DatabaseCustomAnalyzers />;
 }

@@ -15,7 +15,7 @@ type killArgs = killByIndexAndQueryId | killByClientQueryId;
 
 class killQueryCommand extends commandBase {
 
-    private constructor(private db: database, private args: killArgs) {
+    private constructor(private db: database | string, private args: killArgs) {
         super();
     }
 
@@ -38,13 +38,13 @@ class killQueryCommand extends commandBase {
         return task;
     }
     
-    static byClientQueryId(db: database, clientQueryId: string) {
+    static byClientQueryId(db: database | string, clientQueryId: string) {
         return new killQueryCommand(db, {
             clientQueryId
         });
     }
     
-    static byIndexAndQueryId(db: database, indexName: string, queryId: number) {
+    static byIndexAndQueryId(db: database | string, indexName: string, queryId: number) {
         return new killQueryCommand(db, {
             indexName,
             id: queryId

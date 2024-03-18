@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { ShardedViewProps } from "components/models/common";
 import { useServices } from "components/hooks/useServices";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { LoadError } from "components/common/LoadError";
@@ -15,12 +14,20 @@ import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import TombstonesAlert from "components/pages/database/settings/tombstones/TombstonesAlert";
 import useConfirm from "components/common/ConfirmDialog";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
 
-export default function TombstonesState({ db, location }: ShardedViewProps) {
+export default function TombstonesState({ location }: { location?: databaseLocationSpecifier }) {
     const { databasesService } = useServices();
 
-    const asyncGetTombstonesState = useAsync(() => databasesService.getTombstonesState(db, location), []);
-    const asyncForceTombstonesCleanup = useAsyncCallback(() => databasesService.forceTombstonesCleanup(db, location));
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const asyncGetTombstonesState = useAsync(
+        () => databasesService.getTombstonesState(activeDatabaseName, location),
+        []
+    );
+    const asyncForceTombstonesCleanup = useAsyncCallback(() =>
+        databasesService.forceTombstonesCleanup(activeDatabaseName, location)
+    );
 
     const [collectionsGrid, setCollectionsGrid] = useState<virtualGridController<TombstoneItem>>();
     const [subscriptionsGrid, setSubscriptionsGrid] = useState<virtualGridController<SubscriptionInfo>>();

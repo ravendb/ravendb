@@ -64,10 +64,10 @@ export function ShardsGroup(props: ShardsGroupProps) {
     const saveNewOrder = useCallback(
         async (tagsOrder: string[], fixOrder: boolean) => {
             reportEvent("db-group", "save-order");
-            await databasesService.reorderNodesInGroup(db, tagsOrder, fixOrder);
+            await databasesService.reorderNodesInGroup(db.name, tagsOrder, fixOrder);
             exitReorder();
         },
-        [databasesService, db, reportEvent, exitReorder]
+        [databasesService, db.name, reportEvent, exitReorder]
     );
 
     const deleteNodeFromGroup = useCallback(
@@ -85,10 +85,10 @@ export function ShardsGroup(props: ShardsGroupProps) {
             });
 
             if (isConfirmed) {
-                await databasesService.deleteDatabaseFromNode(db, [nodeTag], hardDelete);
+                await databasesService.deleteDatabaseFromNode(db.name, [nodeTag], hardDelete);
             }
         },
-        [confirm, db, databasesService]
+        [confirm, db.name, databasesService]
     );
 
     const onSave = async () => {

@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class setCounterCommand extends commandBase {
 
-    constructor(private counterName: string, private deltaValue: number, private documentId: string, private db: database) {
+    constructor(private counterName: string, private deltaValue: number, private documentId: string, private db: database | string) {
         super();
     }
 

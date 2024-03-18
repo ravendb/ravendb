@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 
 class deleteDocumentsCommand extends executeBulkDocsCommand {
 
-    constructor(docIds: Array<string>, db: database) {
+    constructor(docIds: Array<string>, db: database | string) {
         const bulkDocs = docIds.map(id => deleteDocumentsCommand.createDeleteDocument(id));
         super(bulkDocs, db);
     }

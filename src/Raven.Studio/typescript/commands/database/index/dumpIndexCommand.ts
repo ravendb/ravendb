@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class dumpIndexCommand extends commandBase {
 
-    constructor(private indexName: string, private db: database, private dumpDirectoryPath: string, private location: databaseLocationSpecifier) {
+    constructor(private indexName: string, private db: database | string, private dumpDirectoryPath: string, private location: databaseLocationSpecifier) {
         super();
     }
 

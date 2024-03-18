@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class deleteDocsMatchingQueryCommand extends commandBase {
-    constructor(private queryText: string, private db: database) {
+    constructor(private queryText: string, private db: database | string) {
         super();
     }
 

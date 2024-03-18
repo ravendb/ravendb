@@ -8,7 +8,7 @@ class saveEtlTaskCommand<T extends Raven.Client.Documents.Operations.ETL.RavenEt
                                    Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration |
                                    Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration > extends commandBase {
     
-    private constructor(private db: database, private payload: T, private scriptsToReset?: string[]) {
+    private constructor(private db: database | string, private payload: T, private scriptsToReset?: string[]) {
         super();
     }  
 
@@ -34,23 +34,23 @@ class saveEtlTaskCommand<T extends Raven.Client.Documents.Operations.ETL.RavenEt
         return this.put(url, JSON.stringify(this.payload), this.db);
     }
 
-    static forRavenEtl(db: database, payload: Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration, scriptsToReset?: string[]) {
+    static forRavenEtl(db: database | string, payload: Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration, scriptsToReset?: string[]) {
         return new saveEtlTaskCommand<Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration>(db, payload, scriptsToReset);
     }
 
-    static forSqlEtl(db: database, payload: Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration, scriptsToReset?: string[]) {
+    static forSqlEtl(db: database | string, payload: Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration, scriptsToReset?: string[]) {
         return new saveEtlTaskCommand<Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration>(db, payload, scriptsToReset);
     }
 
-    static forOlapEtl(db: database, payload: Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration, scriptsToReset?: string[]) {
+    static forOlapEtl(db: database | string, payload: Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration, scriptsToReset?: string[]) {
         return new saveEtlTaskCommand<Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration>(db, payload, scriptsToReset);
     }
 
-    static forElasticSearchEtl(db: database, payload: Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration, scriptsToReset?: string[]) {
+    static forElasticSearchEtl(db: database | string, payload: Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration, scriptsToReset?: string[]) {
         return new saveEtlTaskCommand<Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration>(db, payload, scriptsToReset);
     }
 
-    static forQueueEtl(db: database, payload: Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration, scriptsToReset?: string[]) {
+    static forQueueEtl(db: database | string, payload: Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration, scriptsToReset?: string[]) {
         return new saveEtlTaskCommand<Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration>(db, payload, scriptsToReset);
     }
 }

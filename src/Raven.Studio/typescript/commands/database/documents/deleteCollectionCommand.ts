@@ -5,7 +5,7 @@ import endpoints = require("endpoints");
 class deleteCollectionCommand extends commandBase {
     private displayCollectionName: string;
 
-    constructor(private collectionName: string, private db: database, private excludedIds: Array<string>) {
+    constructor(private collectionName: string, private db: database | string, private excludedIds: Array<string>) {
         super();
 
         this.displayCollectionName = (collectionName === "*") ? "All Documents" : collectionName;

@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class savePeriodicBackupConfigurationCommand extends commandBase {
-    constructor(private db: database, private configuration: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration) {
+    constructor(private db: database | string, private configuration: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration) {
         super();
     }
  

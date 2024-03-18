@@ -4,13 +4,13 @@ import endpoints = require("endpoints");
 
 class etlProgressCommand extends commandBase {
 
-    private db: database;
+    private db: database | string;
 
     private location: databaseLocationSpecifier;
 
     private reportFailure = true;
 
-    constructor(db: database, location: databaseLocationSpecifier, reportFailure = true) {
+    constructor(db: database | string, location: databaseLocationSpecifier, reportFailure = true) {
         super();
         this.reportFailure = reportFailure;
         this.location = location;

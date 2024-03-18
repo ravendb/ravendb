@@ -14,6 +14,8 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import { useAccessManager } from "components/hooks/useAccessManager";
 import ConnectionTestError from "components/common/connectionTests/ConnectionTestError";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 type FormData = ConnectionFormData<KafkaConnection>;
 
@@ -22,7 +24,6 @@ interface KafkaConnectionStringProps extends EditConnectionStringFormProps {
 }
 
 export default function KafkaConnectionString({
-    db,
     initialConnection,
     isForNewConnection,
     onSave,
@@ -42,6 +43,7 @@ export default function KafkaConnectionString({
     const { forCurrentDatabase } = useAppUrls();
     const { tasksService } = useServices();
     const isSecureServer = useAccessManager().isSecuredServer();
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     useEffect(() => {
         if (
@@ -59,7 +61,7 @@ export default function KafkaConnectionString({
         }
 
         return tasksService.testKafkaServerConnection(
-            db,
+            activeDatabaseName,
             formValues.bootstrapServers,
             false,
             getConnectionOptionsDto(formValues.connectionOptions)

@@ -3,7 +3,7 @@ import commandBase = require("commands/commandBase");
 import endpoint = require("endpoints");
 
 class saveTimeSeriesConfigurationCommand extends commandBase {
-    constructor(private db: database, private configuration: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesConfiguration) {
+    constructor(private db: database | string, private configuration: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesConfiguration) {
         super();
     }
 

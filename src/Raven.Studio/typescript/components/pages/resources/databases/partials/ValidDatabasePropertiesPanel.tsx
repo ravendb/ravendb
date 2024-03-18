@@ -20,6 +20,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import AlertsPopover from "./ValidDatabasePropertiesPanelAlertsPopover";
 import PerfHintsPopover from "./ValidDatabasePropertiesPanelPerfHintsPopover";
 import "./ValidDatabasePropertiesPanel.scss";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 export interface ValidDatabasePropertiesPanelPopoverProps {
     isCurrentNodeRelevant: boolean;
@@ -108,22 +109,22 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
         ? localDocumentsUrl
         : appUrl.toExternalDatabaseUrl(db, localDocumentsUrl);
 
-    const localIndexingErrorsUrl = appUrl.forIndexErrors(db);
+    const localIndexingErrorsUrl = appUrl.forIndexErrors(db.name);
     const indexingErrorsUrl = db.currentNode.relevant
         ? localIndexingErrorsUrl
         : appUrl.toExternalDatabaseUrl(db, localIndexingErrorsUrl);
 
-    const localIndexingListUrl = appUrl.forIndexes(db);
+    const localIndexingListUrl = appUrl.forIndexes(db.name);
     const indexingListUrl = db.currentNode.relevant
         ? localIndexingListUrl
         : appUrl.toExternalDatabaseUrl(db, localIndexingListUrl);
 
-    const localStorageReportUrl = appUrl.forStatusStorageReport(db);
+    const localStorageReportUrl = appUrl.forStatusStorageReport(db.name);
     const storageReportUrl = db.currentNode.relevant
         ? localStorageReportUrl
         : appUrl.toExternalDatabaseUrl(db, localStorageReportUrl);
 
-    const localBackupUrl = appUrl.forBackups(db);
+    const localBackupUrl = appUrl.forBackups(db.name);
     const backupUrl = db.currentNode.relevant ? localBackupUrl : appUrl.toExternalDatabaseUrl(db, localBackupUrl);
 
     const linksTarget = db.currentNode.relevant ? undefined : "_blank";

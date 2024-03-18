@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class backupNowManualCommand extends commandBase {
-    constructor(private db: database, private manualBackupDto: Raven.Client.Documents.Operations.Backups.BackupConfiguration) {
+    constructor(private db: database | string, private manualBackupDto: Raven.Client.Documents.Operations.Backups.BackupConfiguration) {
         super();
     }
  

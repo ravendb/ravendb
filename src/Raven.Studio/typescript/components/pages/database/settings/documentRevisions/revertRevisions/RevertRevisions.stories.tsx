@@ -13,7 +13,7 @@ export default {
     },
 } satisfies Meta;
 
-const db = DatabasesStubs.nonShardedClusterDatabase();
+const db = DatabasesStubs.nonShardedDatabaseInfo();
 
 interface DefaultRevertRevisionsProps {
     databaseAccess: databaseAccessLevel;
@@ -22,7 +22,9 @@ interface DefaultRevertRevisionsProps {
 export const DefaultRevertRevisions: StoryObj<DefaultRevertRevisionsProps> = {
     name: "Revert Revisions",
     render: ({ databaseAccess }: DefaultRevertRevisionsProps) => {
-        const { collectionsTracker, accessManager } = mockStore;
+        const { collectionsTracker, accessManager, databases } = mockStore;
+
+        databases.withActiveDatabase(db);
 
         accessManager.with_securityClearance("ValidUser");
         accessManager.with_databaseAccess({
@@ -31,7 +33,7 @@ export const DefaultRevertRevisions: StoryObj<DefaultRevertRevisionsProps> = {
 
         collectionsTracker.with_Collections();
 
-        return <RevertRevisions db={db} />;
+        return <RevertRevisions />;
     },
     args: {
         databaseAccess: "DatabaseAdmin",

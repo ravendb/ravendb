@@ -4,13 +4,13 @@ import endpoints = require("endpoints");
 
 class dismissNotificationCommand extends commandBase {
 
-    private db: database;
+    private db: database | string;
 
     private notificationId: string;
 
     private forever = false;
 
-    constructor(db: database, notificationId: string, forever = false) {
+    constructor(db: database | string, notificationId: string, forever = false) {
         super();
         this.forever = forever;
         this.notificationId = notificationId;

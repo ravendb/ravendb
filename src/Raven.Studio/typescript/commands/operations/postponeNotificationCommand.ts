@@ -4,13 +4,13 @@ import endpoints = require("endpoints");
 
 class postponeNotificationCommand extends commandBase {
 
-    private db: database;
+    private db: database | string;
 
     private notificationId: string;
 
     private timeInSec: number;
 
-    constructor(db: database, notificationId: string, timeInSec: number) {
+    constructor(db: database | string, notificationId: string, timeInSec: number) {
         super();
         this.timeInSec = timeInSec;
         this.notificationId = notificationId;

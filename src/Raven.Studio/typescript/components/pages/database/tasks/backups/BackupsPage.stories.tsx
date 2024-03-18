@@ -18,15 +18,15 @@ export default {
 } satisfies Meta<typeof BackupsPage>;
 
 function commonInit() {
-    const { accessManager } = mockStore;
+    const { accessManager, databases } = mockStore;
+
+    databases.withActiveDatabase(DatabasesStubs.shardedDatabaseInfo());
     accessManager.with_securityClearance("ClusterAdmin");
 
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 }
 
 export const EmptyView: ComponentStory<typeof BackupsPage> = () => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -42,12 +42,10 @@ export const EmptyView: ComponentStory<typeof BackupsPage> = () => {
 
     tasksService.withGetManualBackup((x) => (x.Status = null));
 
-    return <BackupsPage db={db} />;
+    return <BackupsPage />;
 };
 
 export const FullView: ComponentStory<typeof BackupsPage> = () => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -56,15 +54,13 @@ export const FullView: ComponentStory<typeof BackupsPage> = () => {
     tasksService.withGetProgress();
     tasksService.withGetManualBackup();
 
-    return <BackupsPage db={db} />;
+    return <BackupsPage />;
 };
 
 export const PeriodicBackupTemplate = (args: {
     disabled?: boolean;
     customizeTask?: (x: OngoingTaskBackup) => void;
 }) => {
-    const db = DatabasesStubs.shardedDatabase();
-
     commonInit();
 
     const { tasksService } = mockServices;
@@ -82,7 +78,7 @@ export const PeriodicBackupTemplate = (args: {
 
     tasksService.withGetManualBackup();
 
-    return <BackupsPage {...forceStoryRerender()} db={db} />;
+    return <BackupsPage {...forceStoryRerender()} />;
 };
 
 export const PeriodicBackupDisabled = boundCopy(PeriodicBackupTemplate, {

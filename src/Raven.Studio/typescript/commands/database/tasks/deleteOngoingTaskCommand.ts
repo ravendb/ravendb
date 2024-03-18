@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class deleteOngoingTaskCommand extends commandBase {
     
-    private db: database;
+    private db: database | string;
 
     private taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
 
@@ -12,7 +12,7 @@ class deleteOngoingTaskCommand extends commandBase {
 
     private taskName: string;
 
-    constructor(db: database, taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType, taskId: number, taskName: string) {
+    constructor(db: database | string, taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType, taskId: number, taskName: string) {
         super();
         this.taskName = taskName;
         this.taskId = taskId;

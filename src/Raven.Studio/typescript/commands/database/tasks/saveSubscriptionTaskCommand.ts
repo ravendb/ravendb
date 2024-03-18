@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class saveSubscriptionTaskCommand extends commandBase {
 
-    constructor(private db: database, private payload: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions, private taskId?: number) {
+    constructor(private db: database | string, private payload: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions, private taskId?: number) {
         super();
     }
 
@@ -14,7 +14,7 @@ class saveSubscriptionTaskCommand extends commandBase {
                 this.reportError("Failed to save subscription task", response.responseText, response.statusText); 
             })
             .done(() => {
-                this.reportSuccess(`Saved subscription task ${this.payload.Name} from database ${this.db.name}`);
+                this.reportSuccess(`Saved subscription task ${this.payload.Name} from database ${this.db}`);
             });
     }
 
@@ -22,10 +22,10 @@ class saveSubscriptionTaskCommand extends commandBase {
         let args: any;
 
         if (this.taskId) {
-            args = { name: this.db.name, id: this.taskId };
+            args = { name: this.db, id: this.taskId };
         } else {
             // New task
-            args = { name: this.db.name };
+            args = { name: this.db };
         }
         
         const url = endpoints.databases.subscriptions.subscriptions + this.urlEncodeArgs(args);

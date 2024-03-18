@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class saveIndexDefinitionCommand extends commandBase {
 
-    constructor(private index: Raven.Client.Documents.Indexes.IndexDefinition, private isJsIndex: boolean, private db: database) {
+    constructor(private index: Raven.Client.Documents.Indexes.IndexDefinition, private isJsIndex: boolean, private db: database | string) {
         super();
     }
 

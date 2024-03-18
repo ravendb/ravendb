@@ -4,7 +4,7 @@ import database = require("models/resources/database");
 
 class getFolderPathOptionsCommand extends commandBase {
 
-    private readonly db: database;
+    private readonly db: database | string;
 
     private readonly inputPath: string;
     
@@ -17,7 +17,7 @@ class getFolderPathOptionsCommand extends commandBase {
     private readonly credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings;
 
     private constructor(
-        db: database, 
+        db: database | string, 
         inputPath: string, 
         nodeTag: string,
         isBackupFolder = false, 
@@ -59,7 +59,7 @@ class getFolderPathOptionsCommand extends commandBase {
         return this.post<Raven.Server.Web.Studio.FolderPathOptions>(url, this.preparePayload(), this.db);
     }
     
-    static forServerLocal(inputPath: string, isBackupFolder: boolean, nodeTag: string = null, db: database = null) {
+    static forServerLocal(inputPath: string, isBackupFolder: boolean, nodeTag: string = null, db: database | string = null) {
         return new getFolderPathOptionsCommand(db, inputPath, nodeTag, isBackupFolder, "Local");
     }
 

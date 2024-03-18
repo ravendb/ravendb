@@ -4,7 +4,7 @@ import database = require("models/resources/database");
 
 class getEnvironmentStorageReportCommand extends commandBase {
 
-    constructor(private db: database, private location: databaseLocationSpecifier, private name: string, private type: string, private detailed = false) {
+    constructor(private db: database | string, private location: databaseLocationSpecifier, private name: string, private type: string, private detailed = false) {
         super();
     }
 

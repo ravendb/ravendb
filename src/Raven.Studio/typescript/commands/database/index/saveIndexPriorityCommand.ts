@@ -8,9 +8,9 @@ class saveIndexPriorityCommand extends commandBase {
 
     private priority: Raven.Client.Documents.Indexes.IndexPriority;
 
-    private db: database;
+    private db: database | string;
 
-    constructor(indexName: string, priority: Raven.Client.Documents.Indexes.IndexPriority, db: database) {
+    constructor(indexName: string, priority: Raven.Client.Documents.Indexes.IndexPriority, db: database | string) {
         super();
         this.db = db;
         this.priority = priority;

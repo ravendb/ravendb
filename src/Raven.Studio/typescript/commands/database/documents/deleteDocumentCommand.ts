@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class deleteDocumentCommand extends commandBase {
 
-    constructor(private docId: string, private db: database) {
+    constructor(private docId: string, private db: database | string) {
         super();
     }
 

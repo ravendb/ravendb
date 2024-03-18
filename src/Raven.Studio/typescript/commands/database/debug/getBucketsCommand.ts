@@ -6,7 +6,7 @@ class getBucketsCommand extends commandBase {
     
     static expectedNumberOfRanges = 32;
     
-    constructor(private db: database, private range?: { from: number, to: number }) {
+    constructor(private db: database | string, private range?: { from: number, to: number }) {
         super();
     }
 

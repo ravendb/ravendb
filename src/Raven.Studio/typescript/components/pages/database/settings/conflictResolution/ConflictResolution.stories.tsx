@@ -11,13 +11,15 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof ConflictResolution>;
 
-const db = DatabasesStubs.nonShardedClusterDatabase();
+const db = DatabasesStubs.nonShardedDatabaseInfo();
 
 export const DefaultConflictResolution: StoryObj<{ databaseAccess: databaseAccessLevel }> = {
     name: "Conflict Resolution",
     render: (args) => {
-        const { accessManager, collectionsTracker } = mockStore;
+        const { accessManager, collectionsTracker, databases } = mockStore;
         const { databasesService } = mockServices;
+
+        databases.withActiveDatabase(db);
 
         accessManager.with_securityClearance("ValidUser");
         accessManager.with_databaseAccess({
@@ -27,7 +29,7 @@ export const DefaultConflictResolution: StoryObj<{ databaseAccess: databaseAcces
         collectionsTracker.with_Collections();
         databasesService.withConflictSolverConfiguration();
 
-        return <ConflictResolution db={db} />;
+        return <ConflictResolution />;
     },
     argTypes: {
         databaseAccess: databaseAccessArgType,

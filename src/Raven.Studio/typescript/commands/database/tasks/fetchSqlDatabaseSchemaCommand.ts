@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class fetchSqlDatabaseSchemaCommand extends commandBase {
     
-    constructor(private db: database, private dto: Raven.Server.SqlMigration.Model.SourceSqlDatabase) {
+    constructor(private db: database | string, private dto: Raven.Server.SqlMigration.Model.SourceSqlDatabase) {
           super();
     }
 

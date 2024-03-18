@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class deleteIntegrationsCredentialsCommand extends commandBase {
 
-    constructor(private db: database, private username: string) {
+    constructor(private db: database | string, private username: string) {
         super();
     }
 

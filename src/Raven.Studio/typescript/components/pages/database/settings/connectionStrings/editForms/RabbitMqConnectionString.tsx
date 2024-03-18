@@ -14,6 +14,8 @@ import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
 
 type FormData = ConnectionFormData<RabbitMqConnection>;
 
@@ -22,7 +24,6 @@ interface RabbitMqConnectionStringProps extends EditConnectionStringFormProps {
 }
 
 export default function RabbitMqConnectionString({
-    db,
     initialConnection,
     isForNewConnection,
     onSave,
@@ -36,6 +37,7 @@ export default function RabbitMqConnectionString({
     const formValues = useWatch({ control });
     const { forCurrentDatabase } = useAppUrls();
     const { tasksService } = useServices();
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     const asyncTest = useAsyncCallback(async () => {
         const isValid = await trigger("connectionString");
@@ -43,7 +45,7 @@ export default function RabbitMqConnectionString({
             return;
         }
 
-        return tasksService.testRabbitMqServerConnection(db, formValues.connectionString);
+        return tasksService.testRabbitMqServerConnection(activeDatabaseName, formValues.connectionString);
     });
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {

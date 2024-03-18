@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getDatabaseFooterStatsCommand extends commandBase {
 
-    constructor(private db: database, private longWait: boolean = false) {
+    constructor(private db: database | string, private longWait: boolean = false) {
         super();
     }
 
