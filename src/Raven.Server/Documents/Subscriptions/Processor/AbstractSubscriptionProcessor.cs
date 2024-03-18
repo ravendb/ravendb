@@ -50,7 +50,7 @@ public abstract class AbstractSubscriptionProcessor<TIncludesCommand, TItem> : I
         return true;
     }
 
-    protected async ValueTask SendHeartbeatIfNeededAsync(Stopwatch sendingCurrentBatchStopwatch)
+    protected virtual async ValueTask SendHeartbeatIfNeededAsync(Stopwatch sendingCurrentBatchStopwatch)
     {
         if (sendingCurrentBatchStopwatch.Elapsed >= ISubscriptionConnection.HeartbeatTimeout)
         {
