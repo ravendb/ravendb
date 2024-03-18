@@ -3535,15 +3535,20 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
+                    var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                    Assert.NotNull(responsibleDatabase);
+                    
                     var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
+                    var pb = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault();
+                    Assert.NotNull(pb);
+                    Assert.True(pb.HasScheduledBackup(), "Backup is not scheduled");
+                    
                     var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                     var backups1 = record1.PeriodicBackups;
                     Assert.Equal(1, backups1.Count);
+                    Assert.Equal(backupTaskId, backups1.First().TaskId);
 
-                    var taskId = backups1.First().TaskId;
-                    var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                    Assert.NotNull(responsibleDatabase);
-                    var tag = responsibleDatabase.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                    var tag = responsibleDatabase.PeriodicBackupRunner.WhoseTaskIsIt(backupTaskId);
                     Assert.Equal(server.ServerStore.NodeTag, tag);
 
                     responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus_UpdateConfigurations = true;
@@ -3554,7 +3559,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     tcs.TrySetResult(null);
 
                     responsibleDatabase.PeriodicBackupRunner._forTestingPurposes = null;
-                    var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(taskId);
+                    var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(backupTaskId);
                     PeriodicBackupStatus status = null;
                     var val = WaitForValue(() =>
                     {
@@ -3565,9 +3570,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Null(status.Error);
                     Assert.True(val, "Failed to complete the backup in time");
 
-                    var pb2 = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault();
-                    Assert.NotNull(pb2);
-                    Assert.True(pb2.HasScheduledBackup(), "Completed backup didn't schedule next one.");
+                    pb = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault();
+                    Assert.NotNull(pb);
+                    Assert.True(pb.HasScheduledBackup(), "Completed backup didn't schedule next one.");
                 }, tcs);
             }
         }
