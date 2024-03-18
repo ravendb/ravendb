@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax;
@@ -21,6 +22,7 @@ namespace Raven.Server.Documents.Queries.Results
         bool TryGetKeyCorax(Corax.IndexSearcher searcher, long id, out UnmanagedSpan key);
 
         TDocument DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
+        void ClearCache();
     }
 
     public struct RetrieverInput
