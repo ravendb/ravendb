@@ -97,7 +97,7 @@ function badgeText(db: DatabaseSharedInfo, localInfo: locationAwareLoadableData<
 export function DatabasePanel(props: DatabasePanelProps) {
     const { databaseName, selected, toggleSelection } = props;
     const db = useAppSelector(databaseSelectors.databaseByName(databaseName));
-    const activeDatabase = useAppSelector(databaseSelectors.activeDatabaseName);
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const dbState = useAppSelector(selectDatabaseState(db.name));
     const { appUrl } = useAppUrls();
     const dispatch = useAppDispatch();
@@ -280,7 +280,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
         <RichPanel
             hover={db.currentNode.relevant}
             className={classNames("flex-row", "with-status", {
-                active: activeDatabase === db.name,
+                active: activeDatabaseName === db.name,
                 relevant: true,
             })}
         >

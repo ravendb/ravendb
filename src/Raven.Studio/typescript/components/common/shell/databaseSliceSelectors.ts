@@ -26,8 +26,14 @@ function selectDatabaseByName(name: string) {
     };
 }
 
+function selectActiveDatabase(store: RootState) {
+    const activeDatabaseName = selectActiveDatabaseName(store);
+    return selectDatabaseByName(activeDatabaseName)(store);
+}
+
 export const databaseSelectors = {
     activeDatabaseName: selectActiveDatabaseName,
+    activeDatabase: selectActiveDatabase,
     allDatabases: selectAllDatabases,
     allDatabasesCount: selectAllDatabasesCount,
     databaseByName: selectDatabaseByName,
