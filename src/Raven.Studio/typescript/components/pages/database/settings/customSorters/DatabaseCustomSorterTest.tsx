@@ -13,6 +13,7 @@ import document from "models/database/documents/document";
 import VirtualGrid from "components/common/VirtualGrid";
 import virtualColumn from "widgets/virtualGrid/columns/virtualColumn";
 import textColumn from "widgets/virtualGrid/columns/textColumn";
+import { todo } from "common/developmentHelper";
 
 interface DiagnosticsItem {
     Message: string;
@@ -25,7 +26,7 @@ interface DatabaseCustomSorterTestProps {
     name: string;
 }
 
-// TODO kalczur show Display selector
+todo("Feature", "Damian", "Show virtual grid collections selector");
 
 export default function DatabaseCustomSorterTest(props: DatabaseCustomSorterTestProps) {
     const { db, name } = props;

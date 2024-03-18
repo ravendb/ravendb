@@ -26,10 +26,11 @@ import { Icon } from "components/common/Icon";
 import database from "models/resources/database";
 import React from "react";
 import { useState } from "react";
-import { useAsyncCallback } from "react-async-hook";
+import { UseAsyncReturn, useAsyncCallback } from "react-async-hook";
 import { useForm, useWatch, SubmitHandler } from "react-hook-form";
 import { Form, UncontrolledTooltip, Button, Collapse, InputGroup, Label } from "reactstrap";
 import DatabaseCustomSorterTest from "components/pages/database/settings/customSorters/DatabaseCustomSorterTest";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 interface DatabaseCustomSortersListItemProps {
     initialSorter: CustomSorterFormData;
@@ -37,8 +38,6 @@ interface DatabaseCustomSortersListItemProps {
     db: database;
     remove: () => void;
 }
-
-// TODO kalczur refactor action buttons?
 
 export default function DatabaseCustomSortersListItem(props: DatabaseCustomSortersListItemProps) {
     const { initialSorter, serverWideSorterNames, db, remove } = props;
@@ -110,53 +109,19 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                         </>
                     )}
                     <RichPanelActions>
-                        {isDatabaseAdmin && (
-                            <Button key="test" onClick={() => toggleIsTestMode()} disabled={isEditMode}>
-                                <Icon icon="rocket" addon={isTestMode ? "cancel" : null} margin="m-0" />
-                            </Button>
-                        )}
-
-                        {isEditMode ? (
-                            isDatabaseAdmin ? (
-                                <>
-                                    <Button key="save" type="submit" color="success" disabled={formState.isSubmitting}>
-                                        <Icon icon="save" /> Save changes
-                                    </Button>
-                                    <Button key="cancel" type="button" color="secondary" onClick={onDiscard}>
-                                        <Icon icon="cancel" />
-                                        Discard
-                                    </Button>
-                                </>
-                            ) : (
-                                <Button key="preview" onClick={toggleIsEditMode}>
-                                    <Icon icon="preview-off" margin="m-0" />
-                                </Button>
-                            )
-                        ) : (
-                            <>
-                                <Button key="edit" onClick={toggleIsEditMode} disabled={isTestMode}>
-                                    <Icon icon={isDatabaseAdmin ? "edit" : "preview"} margin="m-0" />
-                                </Button>
-                                {isDatabaseAdmin && (
-                                    <>
-                                        {nameToConfirmDelete != null && (
-                                            <DeleteCustomSorterConfirm
-                                                name={nameToConfirmDelete}
-                                                onConfirm={(name) => asyncDeleteSorter.execute(name)}
-                                                toggle={() => setNameToConfirmDelete(null)}
-                                            />
-                                        )}
-                                        <ButtonWithSpinner
-                                            key="delete"
-                                            color="danger"
-                                            onClick={() => setNameToConfirmDelete(formValues.name)}
-                                            icon="trash"
-                                            isSpinning={asyncDeleteSorter.status === "loading"}
-                                        />
-                                    </>
-                                )}
-                            </>
-                        )}
+                        <CustomSortersActions
+                            name={formValues.name}
+                            isDatabaseAdmin={isDatabaseAdmin}
+                            isTestMode={isTestMode}
+                            toggleIsTestMode={toggleIsTestMode}
+                            isEditMode={isEditMode}
+                            toggleIsEditMode={toggleIsEditMode}
+                            onDiscard={onDiscard}
+                            nameToConfirmDelete={nameToConfirmDelete}
+                            setNameToConfirmDelete={setNameToConfirmDelete}
+                            isSubmitting={formState.isSubmitting}
+                            asyncDeleteSorter={asyncDeleteSorter}
+                        />
                     </RichPanelActions>
                 </RichPanelHeader>
 
@@ -208,5 +173,103 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                 </Collapse>
             </Form>
         </RichPanel>
+    );
+}
+
+interface CustomSortersActionsProps {
+    isDatabaseAdmin: boolean;
+    toggleIsTestMode: () => void;
+    isEditMode: boolean;
+    isTestMode: boolean;
+    onDiscard: () => void;
+    toggleIsEditMode: () => void;
+    nameToConfirmDelete: string;
+    name: string;
+    setNameToConfirmDelete: (name: string) => void;
+    isSubmitting: boolean;
+    asyncDeleteSorter: UseAsyncReturn<void, [name: string]>;
+}
+
+function CustomSortersActions({
+    isDatabaseAdmin,
+    toggleIsTestMode,
+    isEditMode,
+    isTestMode,
+    onDiscard,
+    toggleIsEditMode,
+    nameToConfirmDelete,
+    name,
+    setNameToConfirmDelete,
+    isSubmitting,
+    asyncDeleteSorter,
+}: CustomSortersActionsProps) {
+    if (!isDatabaseAdmin) {
+        return isEditMode ? (
+            <Button key="preview" onClick={toggleIsEditMode}>
+                <Icon icon="preview-off" margin="m-0" />
+            </Button>
+        ) : (
+            <Button key="edit" onClick={toggleIsEditMode} disabled={isTestMode}>
+                <Icon icon="preview" margin="m-0" />
+            </Button>
+        );
+    }
+
+    return (
+        <>
+            <ConditionalPopover
+                conditions={{
+                    isActive: isTestMode,
+                    message: "To test, first exit edit mode.",
+                }}
+            >
+                <Button key="test" onClick={() => toggleIsTestMode()} disabled={isEditMode}>
+                    <Icon icon="rocket" addon={isTestMode ? "cancel" : null} margin="m-0" />
+                </Button>
+            </ConditionalPopover>
+
+            {isEditMode ? (
+                <>
+                    <Button key="save" type="submit" color="success" disabled={isSubmitting}>
+                        <Icon icon="save" /> Save changes
+                    </Button>
+                    <Button key="cancel" type="button" color="secondary" onClick={onDiscard}>
+                        <Icon icon="cancel" />
+                        Discard
+                    </Button>
+                </>
+            ) : (
+                <>
+                    <ConditionalPopover
+                        conditions={{
+                            isActive: isTestMode,
+                            message: "To edit, first exit test mode.",
+                        }}
+                    >
+                        <Button key="edit" onClick={toggleIsEditMode} disabled={isTestMode}>
+                            <Icon icon={isDatabaseAdmin ? "edit" : "preview"} margin="m-0" />
+                        </Button>
+                    </ConditionalPopover>
+                    {isDatabaseAdmin && (
+                        <>
+                            {nameToConfirmDelete != null && (
+                                <DeleteCustomSorterConfirm
+                                    name={nameToConfirmDelete}
+                                    onConfirm={(name) => asyncDeleteSorter.execute(name)}
+                                    toggle={() => setNameToConfirmDelete(null)}
+                                />
+                            )}
+                            <ButtonWithSpinner
+                                key="delete"
+                                color="danger"
+                                onClick={() => setNameToConfirmDelete(name)}
+                                icon="trash"
+                                isSpinning={asyncDeleteSorter.status === "loading"}
+                            />
+                        </>
+                    )}
+                </>
+            )}
+        </>
     );
 }
