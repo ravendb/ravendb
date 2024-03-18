@@ -26,7 +26,12 @@ interface DatabaseCustomSorterTestProps {
     name: string;
 }
 
-todo("Feature", "Damian", "Show virtual grid collections selector");
+todo(
+    "Feature",
+    "Damian",
+    "Show virtual grid collections selector",
+    "https://issues.hibernatingrhinos.com/issue/RavenDB-22159"
+);
 
 export default function DatabaseCustomSorterTest(props: DatabaseCustomSorterTestProps) {
     const { db, name } = props;

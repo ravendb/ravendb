@@ -1,12 +1,13 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
+type SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 
 class saveCustomSorterCommand extends commandBase {
-    private db: database
-    private sorterDto: Raven.Client.Documents.Queries.Sorting.SorterDefinition
+    private db: database;
+    private sorterDto: SorterDefinition;
 
-    constructor(db: database, sorterDto: Raven.Client.Documents.Queries.Sorting.SorterDefinition) {
+    constructor(db: database, sorterDto: SorterDefinition) {
         super();
         this.db = db;
         this.sorterDto = sorterDto;

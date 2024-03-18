@@ -3,7 +3,6 @@ import { Alert, Button, Col, Row, UncontrolledPopover } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
-import { todo } from "common/developmentHelper";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
@@ -20,8 +19,6 @@ import { DatabaseCustomSortersInfoHub } from "components/pages/database/settings
 import DatabaseCustomSortersList from "components/pages/database/settings/customSorters/DatabaseCustomSortersList";
 import DatabaseCustomSortersServerWideList from "components/pages/database/settings/customSorters/DatabaseCustomSortersServerWideList";
 import { useCustomSorters } from "components/common/customSorters/useCustomSorters";
-
-todo("Feature", "Damian", "Add 'Test custom sorter' button");
 
 export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
     const { databasesService, manageServerService } = useServices();

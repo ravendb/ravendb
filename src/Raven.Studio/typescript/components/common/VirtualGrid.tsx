@@ -7,7 +7,7 @@ interface VirtualGridProps<T> {
     setGridController: (gridController: virtualGridController<T>) => void;
 }
 
-todo("Feature", "Damian", "Add collections selector");
+todo("Feature", "Damian", "Add collections selector", "https://issues.hibernatingrhinos.com/issue/RavenDB-22159");
 
 export default class VirtualGrid<T> extends ReactToKnockoutComponent<VirtualGridProps<T>> {
     ref = createRef<HTMLDivElement>();
