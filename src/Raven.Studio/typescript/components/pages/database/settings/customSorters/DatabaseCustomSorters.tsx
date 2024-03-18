@@ -135,7 +135,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
                 )}
             </Col>
             <Col sm={12} lg={4}>
-                <DatabaseCustomSortersInfoHub db={db} />
+                <DatabaseCustomSortersInfoHub databaseSortersCount={databaseResultsCount} />
             </Col>
         </Row>
     );

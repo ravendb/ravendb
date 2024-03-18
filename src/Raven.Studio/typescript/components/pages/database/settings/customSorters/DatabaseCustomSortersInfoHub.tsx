@@ -8,13 +8,12 @@ import { useRavenLink } from "hooks/useRavenLink";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { getLicenseLimitReachStatus, useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
-import { useAsync } from "react-async-hook";
-import { useServices } from "hooks/useServices";
-import { NonShardedViewProps } from "components/models/common";
 
-export function DatabaseCustomSortersInfoHub({ db }: NonShardedViewProps) {
-    const { databasesService } = useServices();
-    const asyncGetDatabaseSorters = useAsync(() => databasesService.getCustomSorters(db), [db]);
+interface DatabaseCustomSortersInfoHubProps {
+    databaseSortersCount: number;
+}
+
+export function DatabaseCustomSortersInfoHub({ databaseSortersCount }: DatabaseCustomSortersInfoHubProps) {
     const customSortersDocsLink = useRavenLink({ hash: "XI6BMT" });
     const licenseClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
     const licenseDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerDatabase"));
@@ -39,9 +38,7 @@ export function DatabaseCustomSortersInfoHub({ db }: NonShardedViewProps) {
         ],
     });
 
-    const databaseResultsCount = asyncGetDatabaseSorters.result?.length ?? null;
-
-    const databaseLimitReachStatus = getLicenseLimitReachStatus(databaseResultsCount, licenseDatabaseLimit);
+    const databaseLimitReachStatus = getLicenseLimitReachStatus(databaseSortersCount, licenseDatabaseLimit);
     const clusterLimitReachStatus = getLicenseLimitReachStatus(numberOfCustomSortersInCluster, licenseClusterLimit);
 
     return (
