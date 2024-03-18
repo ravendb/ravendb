@@ -2,7 +2,7 @@
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databasesSliceInternal } from "components/common/shell/databasesSlice";
 
-const selectActiveDatabase = (store: RootState) => store.databases.activeDatabase;
+const selectActiveDatabaseName = (store: RootState) => store.databases.activeDatabaseName;
 
 const { databasesSelectors } = databasesSliceInternal;
 
@@ -27,7 +27,7 @@ function selectDatabaseByName(name: string) {
 }
 
 export const databaseSelectors = {
-    activeDatabase: selectActiveDatabase,
+    activeDatabaseName: selectActiveDatabaseName,
     allDatabases: selectAllDatabases,
     allDatabasesCount: selectAllDatabasesCount,
     databaseByName: selectDatabaseByName,

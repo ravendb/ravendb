@@ -41,8 +41,8 @@ export const openNotificationCenterForDatabase =
             return;
         }
 
-        const activeDatabase = databaseSelectors.activeDatabase(getState());
-        if (activeDatabase !== db.name) {
+        const activeDatabaseName = databaseSelectors.activeDatabaseName(getState());
+        if (activeDatabaseName !== db.name) {
             const dbRaw = databasesManager.default.getDatabaseByName(db.name);
             if (dbRaw) {
                 databasesManager.default.activate(dbRaw);
