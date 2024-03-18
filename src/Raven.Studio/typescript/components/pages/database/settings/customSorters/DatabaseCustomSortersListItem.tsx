@@ -219,8 +219,8 @@ function CustomSortersActions({
         <>
             <ConditionalPopover
                 conditions={{
-                    isActive: isTestMode,
-                    message: "To test, first exit edit mode.",
+                    isActive: isEditMode,
+                    message: "To test, first exit edit mode",
                 }}
             >
                 <Button key="test" onClick={toggleIsTestMode} disabled={isEditMode}>
@@ -243,7 +243,7 @@ function CustomSortersActions({
                     <ConditionalPopover
                         conditions={{
                             isActive: isTestMode,
-                            message: "To edit, first exit test mode.",
+                            message: "To edit, first exit test mode",
                         }}
                     >
                         <Button key="edit" onClick={toggleIsEditMode} disabled={isTestMode}>
