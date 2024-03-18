@@ -34,6 +34,8 @@ import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import useId from "hooks/useId";
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 interface PeriodicBackupPanelProps extends BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> {
     forceReload: () => void;
@@ -70,7 +72,7 @@ function findBackupNowBlockReason(data: OngoingTaskPeriodicBackupInfo, runningOn
 }
 
 function Details(props: PeriodicBackupPanelProps) {
-    const { data, db, forceReload } = props;
+    const { data, forceReload } = props;
 
     const backupDestinationsHumanized = data.shared.backupDestinations.length
         ? data.shared.backupDestinations.join(", ")
@@ -136,13 +138,17 @@ function Details(props: PeriodicBackupPanelProps) {
     const backupNowInProgress = !!onGoingBackup;
     const neverBackedUp = !data.shared.lastFullBackup;
 
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { isAdminAccessOrAbove } = useAccessManager();
 
-    const backupNowVisible = data.shared.serverWide || isAdminAccessOrAbove(db);
+    const backupNowVisible = data.shared.serverWide || isAdminAccessOrAbove();
 
     const onBackupNow = () => {
         if (onGoingBackup && onGoingBackup.RunningBackupTaskId) {
-            notificationCenter.instance.openDetailsForOperationById(db, onGoingBackup.RunningBackupTaskId);
+            notificationCenter.instance.openDetailsForOperationById(
+                activeDatabaseTracker.default.database(),
+                onGoingBackup.RunningBackupTaskId
+            );
             return;
         }
 
@@ -151,7 +157,7 @@ function Details(props: PeriodicBackupPanelProps) {
         backupNowViewModel.result.done((confirmResult: backupNowConfirmResult) => {
             if (confirmResult.can) {
                 const task = new backupNowPeriodicCommand(
-                    db,
+                    activeDatabaseName,
                     data.shared.taskId,
                     confirmResult.isFullBackup,
                     data.shared.taskName
@@ -165,7 +171,10 @@ function Details(props: PeriodicBackupPanelProps) {
                         if (backupNowResult && isCurrentNodeResponsibleResult) {
                             // running on this node
                             const operationId = backupNowResult.OperationId;
-                            notificationCenter.instance.openDetailsForOperationById(db, operationId);
+                            notificationCenter.instance.openDetailsForOperationById(
+                                activeDatabaseTracker.default.database(),
+                                operationId
+                            );
                         }
                     }
                 );
@@ -230,22 +239,13 @@ function BackupEncryption(props: { encrypted: boolean }) {
 }
 
 export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
-    const {
-        db,
-        data,
-        allowSelect,
-        toggleSelection,
-        isSelected,
-        onTaskOperation,
-        isDeleting,
-        isTogglingState,
-        sourceView,
-    } = props;
+    const { data, allowSelect, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, sourceView } =
+        props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
 
-    const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
+    const canEdit = isAdminAccessOrAbove() && !data.shared.serverWide;
     const isServerWide = data.shared.serverWide;
     const editUrl = forCurrentDatabase.editPeriodicBackupTask(sourceView, data.shared.taskId)();
 

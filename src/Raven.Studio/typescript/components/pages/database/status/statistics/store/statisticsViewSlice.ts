@@ -15,8 +15,6 @@ import {
 } from "components/utils/common";
 import { IndexItem, PerLocationIndexStats } from "components/pages/database/status/statistics/store/models";
 import { Draft } from "immer";
-import { DatabaseSharedInfo } from "components/models/databases";
-import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 interface StatisticsState {
     databaseName: string;
@@ -71,8 +69,7 @@ const selectAllIndexesLoadStatus = (state: RootState) => state.statistics.indexD
 const fetchEssentialStats = createAsyncThunk(sliceName + "/fetchEssentialStats", async (_, thunkAPI: AppThunkApi) => {
     const state = thunkAPI.getState();
     const dbName = databaseNameSelector(state);
-    const db = databaseSelectors.databaseByName(dbName)(state);
-    return services.databasesService.getEssentialStats(db);
+    return services.databasesService.getEssentialStats(dbName);
 });
 
 export const refresh = () => async (dispatch: AppDispatch, getState: () => RootState) => {
@@ -95,17 +92,17 @@ export const refresh = () => async (dispatch: AppDispatch, getState: () => RootS
 const fetchDetailedDatabaseStats = createAsyncThunk(
     sliceName + "/fetchDetailedDatabaseStats",
     async (payload: {
-        db: DatabaseSharedInfo;
+        databaseName: string;
         location: databaseLocationSpecifier;
     }): Promise<DetailedDatabaseStatistics> => {
-        return await services.databasesService.getDetailedStats(payload.db, payload.location);
+        return await services.databasesService.getDetailedStats(payload.databaseName, payload.location);
     }
 );
 
 const fetchDetailedIndexStats = createAsyncThunk(
     sliceName + "/fetchDetailedIndexStats",
-    async (payload: { db: DatabaseSharedInfo; location: databaseLocationSpecifier }): Promise<IndexStats[]> => {
-        return await services.indexesService.getStats(payload.db, payload.location);
+    async (payload: { databaseName: string; location: databaseLocationSpecifier }): Promise<IndexStats[]> => {
+        return await services.indexesService.getStats(payload.databaseName, payload.location);
     }
 );
 
@@ -113,9 +110,9 @@ const fetchAllDetailedDatabaseStats = () => async (dispatch: AppDispatch, getSta
     const state = getState();
     const locations = databaseStatsSelectors.selectAll(state).map((x) => x.location);
 
-    const db = databaseSelectors.databaseByName(state.statistics.databaseName)(state);
-
-    const tasks = locations.map((location) => dispatch(fetchDetailedDatabaseStats({ db, location })).unwrap());
+    const tasks = locations.map((location) =>
+        dispatch(fetchDetailedDatabaseStats({ databaseName: state.statistics.databaseName, location })).unwrap()
+    );
     await Promise.all(tasks);
 };
 
@@ -124,9 +121,9 @@ const fetchAllDetailedIndexStats = () => async (dispatch: AppDispatch, getState:
 
     const locations = databaseStatsSelectors.selectAll(state).map((x) => x.location);
 
-    const db = databaseSelectors.databaseByName(state.statistics.databaseName)(state);
-
-    const tasks = locations.map((location) => dispatch(fetchDetailedIndexStats({ db, location })).unwrap());
+    const tasks = locations.map((location) =>
+        dispatch(fetchDetailedIndexStats({ databaseName: state.statistics.databaseName, location })).unwrap()
+    );
     await Promise.all(tasks);
 };
 

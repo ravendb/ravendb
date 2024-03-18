@@ -20,13 +20,16 @@ import genUtils from "common/generalUtils";
 import DatabaseRecordAboutView from "./DatabaseRecordAboutView";
 import ReactAce from "react-ace/lib/ace";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAccessManager } from "components/hooks/useAccessManager";
 
 interface VisibleDocument {
     text: string;
     isFromServer: boolean;
 }
 
-export default function DatabaseRecord({ db }: NonShardedViewProps) {
+export default function DatabaseRecord() {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
     const confirm = useConfirm();
     const { reportEvent } = useEventsCollector();
@@ -37,10 +40,11 @@ export default function DatabaseRecord({ db }: NonShardedViewProps) {
     const { value: isCollapsed, setValue: setIsCollapsed } = useBoolean(false);
     const [visibleDocument, setVisibleDocument] = useState<VisibleDocument>(null);
 
-    const isOperatorOrAbove = useAppSelector(accessManagerSelectors.operatorOrAbove);
+    const isOperatorOrAbove = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
 
     const asyncGetDatabaseRecord = useAsyncCallback(
-        async (reportRefreshProgress: boolean) => databasesService.getDatabaseRecord(db, reportRefreshProgress),
+        async (reportRefreshProgress: boolean) =>
+            databasesService.getDatabaseRecord(databaseName, reportRefreshProgress),
         {
             onSuccess: () => {
                 setIsCollapsed(false);
@@ -52,7 +56,7 @@ export default function DatabaseRecord({ db }: NonShardedViewProps) {
         const dto: documentDto = JSON.parse(visibleDocument.text);
         dto.Settings = genUtils.flattenObj(dto.Settings, "");
 
-        await databasesService.saveDatabaseRecord(db, dto, dto.Etag);
+        await databasesService.saveDatabaseRecord(databaseName, dto, dto.Etag);
         await asyncGetDatabaseRecord.execute(false);
     });
 

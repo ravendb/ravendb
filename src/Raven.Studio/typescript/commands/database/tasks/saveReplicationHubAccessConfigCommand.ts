@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class saveReplicationHubAccessConfigCommand extends commandBase {
 
-    constructor(private db: database, private hubTaskName: string, 
+    constructor(private db: database | string, private hubTaskName: string, 
                 private replicationAccess: Raven.Client.Documents.Operations.Replication.ReplicationHubAccess) {
         super();
     }

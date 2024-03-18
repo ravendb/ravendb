@@ -5,7 +5,6 @@ import "./CreateSampleData.scss";
 import useBoolean from "components/hooks/useBoolean";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
-import database from "models/resources/database";
 import copyToClipboard from "common/copyToClipboard";
 import appUrl from "common/appUrl";
 import Code from "components/common/Code";
@@ -13,21 +12,33 @@ import { LoadError } from "components/common/LoadError";
 import SmokeSvg from "./CreateSampleDataSmoke";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import collectionsTracker from "common/helpers/database/collectionsTracker";
+import { NonShardedViewProps } from "components/models/common";
 
-interface CreateSampleDataProps {
-    db: database;
-}
-
-function CreateSampleData({ db }: CreateSampleDataProps) {
+function CreateSampleData({ db }: NonShardedViewProps) {
     const { tasksService } = useServices();
 
     const { value: isCodeSampleOpen, toggle: toggleCodeSample } = useBoolean(false);
 
     const docsLink = useRavenLink({ hash: "SUTS29" });
 
-    const asyncFetchCollectionsStats = useAsync(() => tasksService.fetchCollectionsStats(db), []);
-    const asyncGetSampleDataClasses = useAsync(() => tasksService.getSampleDataClasses(db), []);
-    const asyncCreateSampleData = useAsyncCallback(() => tasksService.createSampleData(db));
+    const asyncFetchCollectionsStats = useAsync(() => tasksService.fetchCollectionsStats(db.name), []);
+    const asyncGetSampleDataClasses = useAsync(() => tasksService.getSampleDataClasses(db.name), []);
+    const asyncCreateSampleData = useAsyncCallback(async () => {
+        await tasksService.createSampleData(db.name);
+
+        if (db.hasRefreshConfiguration()) {
+            return;
+        }
+
+        const dbInfo = await tasksService.getDatabaseForStudio(db.name);
+        if (!dbInfo.HasRevisionsConfiguration) {
+            return;
+        }
+
+        db.hasRevisionsConfiguration(true);
+        collectionsTracker.default.configureRevisions(db);
+    });
 
     const canCreateSampleData = asyncFetchCollectionsStats.result
         ? asyncFetchCollectionsStats.result.collections.filter((x) => x.documentCount() > 0).length === 0

@@ -5,7 +5,6 @@ import appUrl = require("common/appUrl");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import twoFactorHelper from "common/twoFactorHelper";
 import database from "models/resources/database";
-import { DatabaseSharedInfo } from "components/models/databases";
 
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
 class commandBase {
@@ -26,7 +25,7 @@ class commandBase {
         return longWait ? 60000 : 9000;
     }
 
-    query<T>(relativeUrl: string, args: any, db?: database | DatabaseSharedInfo, resultsSelector?: (results: any, xhr: JQueryXHR) => T, options?: JQueryAjaxSettings, timeToAlert = 9000): JQueryPromise<T> {
+    query<T>(relativeUrl: string, args: any, db?: database | string, resultsSelector?: (results: any, xhr: JQueryXHR) => T, options?: JQueryAjaxSettings, timeToAlert = 9000): JQueryPromise<T> {
         const ajax = this.ajax<T>(relativeUrl, args, "GET", db, options, timeToAlert);
         if (resultsSelector) {
             const task = $.Deferred<T>();
@@ -71,27 +70,27 @@ class commandBase {
         }
     }
 
-    protected put<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert = 9000): JQueryPromise<T> {
+    protected put<T>(relativeUrl: string, args: any, db?: database | string, options?: JQueryAjaxSettings, timeToAlert = 9000): JQueryPromise<T> {
         return this.ajax<T>(relativeUrl, args, "PUT", db, options, timeToAlert);
     }
 
-    protected reset<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings): JQueryPromise<T> {
+    protected reset<T>(relativeUrl: string, args: any, db?: database | string, options?: JQueryAjaxSettings): JQueryPromise<T> {
         return this.ajax<T>(relativeUrl, args, "RESET", db, options);
     }
 
-    protected del<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert = 9000): JQueryPromise<T> {
+    protected del<T>(relativeUrl: string, args: any, db?: database | string, options?: JQueryAjaxSettings, timeToAlert = 9000): JQueryPromise<T> {
         return this.ajax<T>(relativeUrl, args, "DELETE", db, options, timeToAlert);
     }
 
-    protected post<T>(relativeUrl: string, args: any, db?: database | DatabaseSharedInfo, options?: JQueryAjaxSettings, timeToAlert = 9000, baseUrl?: string): JQueryPromise<any> {
+    protected post<T>(relativeUrl: string, args: any, db?: database | string, options?: JQueryAjaxSettings, timeToAlert = 9000, baseUrl?: string): JQueryPromise<any> {
         return this.ajax<T>(relativeUrl, args, "POST", db, options, timeToAlert, baseUrl);
     }
 
-    protected patch<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings): JQueryPromise<T> {
+    protected patch<T>(relativeUrl: string, args: any, db?: database | string, options?: JQueryAjaxSettings): JQueryPromise<T> {
         return this.ajax<T>(relativeUrl, args, "PATCH", db, options);
     }
 
-    protected ajax<T>(relativeUrl: string, args: any, method: string, db?: database | DatabaseSharedInfo, options?: JQueryAjaxSettings, timeToAlert = 9000, baseUrl?: string): JQueryPromise<T> {
+    protected ajax<T>(relativeUrl: string, args: any, method: string, db?: database | string, options?: JQueryAjaxSettings, timeToAlert = 9000, baseUrl?: string): JQueryPromise<T> {
         const requestExecution = protractedCommandsDetector.instance.requestStarted(4000, timeToAlert);
 
         // ContentType:

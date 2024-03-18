@@ -1,23 +1,22 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
-import { DatabaseSharedInfo } from "components/models/databases";
 
 class deleteOrchestratorFromNodeCommand extends commandBase {
 
-    private db: DatabaseSharedInfo;
+    private databaseName: string;
 
     private node: string;
 
-    constructor(db: DatabaseSharedInfo, node: string) {
+    constructor(databaseName: string, node: string) {
         super();
         this.node = node;
-        this.db = db;
+        this.databaseName = databaseName;
     }
 
     execute(): JQueryPromise<updateDatabaseConfigurationsResult> {
         const url = endpoints.global.shardedAdminDatabase.adminDatabasesOrchestrator;
         const args = {
-            name: [this.db.name],
+            name: [this.databaseName],
             node: this.node
         };
 

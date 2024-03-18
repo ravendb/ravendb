@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class detectIndexTypeCommand extends commandBase {
 
-    constructor(private index: Raven.Client.Documents.Indexes.IndexDefinition, private db: database) {
+    constructor(private index: Raven.Client.Documents.Indexes.IndexDefinition, private db: database | string) {
         super();
     }
 

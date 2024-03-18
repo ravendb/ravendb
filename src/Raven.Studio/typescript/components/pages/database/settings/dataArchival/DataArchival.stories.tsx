@@ -12,27 +12,36 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof DataArchival>;
 
+function commonInit() {
+    const { databases } = mockStore;
+    databases.withActiveDatabase(DatabasesStubs.nonShardedDatabaseInfo());
+}
+
 export const DefaultDataArchival: StoryObj<typeof DataArchival> = {
     name: "Data Archival",
     render: () => {
+        commonInit();
+
         const { databasesService } = mockServices;
         const { license } = mockStore;
 
         databasesService.withDataArchivalConfiguration();
         license.with_License();
 
-        return <DataArchival db={DatabasesStubs.nonShardedClusterDatabase()} />;
+        return <DataArchival />;
     },
 };
 
 export const LicenseRestricted: StoryObj<typeof DataArchival> = {
     render: () => {
+        commonInit();
+
         const { databasesService } = mockServices;
         const { license } = mockStore;
 
         databasesService.withDataArchivalConfiguration();
         license.with_LicenseLimited({ HasDataArchival: false });
 
-        return <DataArchival db={DatabasesStubs.nonShardedClusterDatabase()} />;
+        return <DataArchival />;
     },
 };

@@ -20,7 +20,10 @@ import DatabaseCustomSortersList from "components/pages/database/settings/custom
 import DatabaseCustomSortersServerWideList from "components/pages/database/settings/customSorters/DatabaseCustomSortersServerWideList";
 import { useCustomSorters } from "components/common/customSorters/useCustomSorters";
 
-export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
+export default function DatabaseCustomSorters() {
+    const db = useAppSelector(databaseSelectors.activeDatabase);
+    const isDatabaseAdminOrAbove = useAppSelector(accessManagerSelectors.isDatabaseAdminOrAbove());
+
     const { databasesService, manageServerService } = useServices();
 
     const { sorters, setSorters, addNewSorter, removeSorter, mapFromDto } = useCustomSorters();
@@ -57,7 +60,7 @@ export default function DatabaseCustomSorters({ db }: NonShardedViewProps) {
 
     const isLimitReached = databaseLimitReachStatus === "limitReached" || clusterLimitReachStatus === "limitReached";
 
-    if (db.isSharded()) {
+    if (db.sharded) {
         return (
             <FeatureNotAvailable>
                 <span>

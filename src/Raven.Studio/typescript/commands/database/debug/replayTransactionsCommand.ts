@@ -4,7 +4,7 @@ import database = require("models/resources/database");
 
 class replayTransactionsCommand extends commandBase {
 
-    constructor(private db: database, private operationId: number, private file: File,
+    constructor(private db: database | string, private operationId: number, private file: File,
                 private isUploading: KnockoutObservable<boolean>, private uploadStatus: KnockoutObservable<number>) {
         super();
     }

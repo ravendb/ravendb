@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class testIndexCommand extends commandBase {
 
-    constructor(private testRequest: Raven.Server.Documents.Indexes.Test.TestIndexParameters, private db: database, private location: databaseLocationSpecifier) {
+    constructor(private testRequest: Raven.Server.Documents.Indexes.Test.TestIndexParameters, private db: database | string, private location: databaseLocationSpecifier) {
         super();
     }
 

@@ -5,9 +5,9 @@ import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.Cli
 
 class saveClientConfigurationCommand extends commandBase {
     private dto: ClientConfiguration;
-    private db: database;
+    private db: database | string;
 
-    constructor(dto: ClientConfiguration,  db: database) {
+    constructor(dto: ClientConfiguration,  db: database | string) {
         super();
         this.dto = dto;
         this.db = db;

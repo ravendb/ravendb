@@ -16,7 +16,7 @@ class patchCommand extends commandBase {
 
     private static readonly missingUpdateClause = "Update operations must end with UPDATE clause";
     
-    constructor(private queryStr: string, private db: database, private options: patchCommandOptions = null) {
+    constructor(private queryStr: string, private db: database | string, private options: patchCommandOptions = null) {
         super();
                 
         this.options = this.options || {

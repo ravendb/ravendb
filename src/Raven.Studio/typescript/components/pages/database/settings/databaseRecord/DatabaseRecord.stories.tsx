@@ -21,13 +21,15 @@ interface DefaultDatabaseRecordProps {
 export const DefaultDatabaseRecord: StoryObj<DefaultDatabaseRecordProps> = {
     name: "Database Record",
     render: (props: DefaultDatabaseRecordProps) => {
-        const { accessManager } = mockStore;
+        const { accessManager, databases } = mockStore;
         const { databasesService } = mockServices;
+
+        databases.withActiveDatabase(DatabasesStubs.nonShardedDatabaseInfo());
 
         accessManager.with_securityClearance(props.securityClearance);
         databasesService.withDatabaseRecord();
 
-        return <DatabaseRecord db={DatabasesStubs.nonShardedClusterDatabase()} />;
+        return <DatabaseRecord />;
     },
     args: {
         securityClearance: "Operator",

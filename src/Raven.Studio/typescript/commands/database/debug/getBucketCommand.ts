@@ -4,7 +4,7 @@ import database = require("models/resources/database");
 
 class getBucketCommand extends commandBase {
     
-    constructor(private db: database, private bucket: number) {
+    constructor(private db: database | string, private bucket: number) {
         super();
     }
 

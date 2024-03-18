@@ -25,12 +25,15 @@ import FeatureAvailabilitySummaryWrapper, {
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import moment = require("moment");
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
-export default function DocumentExpiration({ db }: NonShardedViewProps) {
+export default function DocumentExpiration() {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
 
     const asyncGetExpirationConfiguration = useAsyncCallback<DocumentExpirationFormData>(async () =>
-        mapToFormData(await databasesService.getExpirationConfiguration(db))
+        mapToFormData(await databasesService.getExpirationConfiguration(databaseName))
     );
 
     const { handleSubmit, control, formState, reset, setValue } = useForm<DocumentExpirationFormData>({
@@ -82,13 +85,13 @@ export default function DocumentExpiration({ db }: NonShardedViewProps) {
         return tryHandleSubmit(async () => {
             reportEvent("expiration-configuration", "save");
 
-            await databasesService.saveExpirationConfiguration(db, {
+            await databasesService.saveExpirationConfiguration(databaseName, {
                 Disabled: !formData.isDocumentExpirationEnabled,
                 DeleteFrequencyInSec: formData.isDeleteFrequencyEnabled ? formData.deleteFrequency : null,
             });
 
             messagePublisher.reportSuccess("Expiration configuration saved successfully");
-            db.hasExpirationConfiguration(formData.isDocumentExpirationEnabled);
+            activeDatabaseTracker.default.database().hasExpirationConfiguration(formData.isDocumentExpirationEnabled);
 
             reset(formData);
         });

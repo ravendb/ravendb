@@ -5,7 +5,7 @@ import endpoints = require("endpoints");
 
 class getDocumentWithMetadataCommand extends commandBase {
 
-    constructor(private id: string, private db: database, private shouldResolveNotFoundAsNull: boolean = false) {
+    constructor(private id: string, private db: database | string, private shouldResolveNotFoundAsNull: boolean = false) {
         super();
 
         if (!id) {

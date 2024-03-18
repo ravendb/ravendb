@@ -85,7 +85,6 @@ export type ConnectionStringDto = Partial<
 
 export interface EditConnectionStringFormProps {
     initialConnection: Connection;
-    db: database;
     isForNewConnection: boolean;
     onSave: (x: Connection) => void;
 }

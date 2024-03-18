@@ -5,7 +5,7 @@ import timeSeriesEntryModel = require("models/database/timeSeries/timeSeriesEntr
 
 class saveTimeSeriesCommand extends commandBase {
     constructor(private documentId: string, private name: string,
-                private dto: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.AppendOperation, private db: database) {
+                private dto: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.AppendOperation, private db: database | string) {
         super();
     }
     

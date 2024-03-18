@@ -4,10 +4,10 @@ import endpoints = require("endpoints");
 import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 
 class saveConnectionStringCommand extends commandBase {
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly connectionString: ConnectionStringDto;
 
-    constructor(db: database, connectionString: ConnectionStringDto) {
+    constructor(db: database | string, connectionString: ConnectionStringDto) {
         super();
         this.db = db;
         this.connectionString = connectionString;

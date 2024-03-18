@@ -11,16 +11,25 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof StudioDatabaseConfiguration>;
 
+function commonInit() {
+    const { databases } = mockStore;
+    databases.withActiveDatabase(DatabasesStubs.nonShardedDatabaseInfo());
+}
+
 export const StudioConfiguration: ComponentStory<typeof StudioDatabaseConfiguration> = () => {
+    commonInit();
+
     const { license } = mockStore;
     license.with_License();
 
-    return <StudioDatabaseConfiguration db={DatabasesStubs.nonShardedClusterDatabase()} />;
+    return <StudioDatabaseConfiguration />;
 };
 
 export const LicenseRestricted: ComponentStory<typeof StudioDatabaseConfiguration> = () => {
+    commonInit();
+
     const { license } = mockStore;
     license.with_LicenseLimited({ HasStudioConfiguration: false });
 
-    return <StudioDatabaseConfiguration db={DatabasesStubs.nonShardedClusterDatabase()} />;
+    return <StudioDatabaseConfiguration />;
 };

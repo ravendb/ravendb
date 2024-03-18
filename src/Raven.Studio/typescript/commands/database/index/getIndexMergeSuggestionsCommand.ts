@@ -5,9 +5,9 @@ import IndexMergeResults = Raven.Server.Documents.Indexes.IndexMerging.IndexMerg
 
 class getIndexMergeSuggestionsCommand extends commandBase {
 
-    private readonly db: database;
+    private readonly db: database | string;
 
-    constructor(db: database) {
+    constructor(db: database | string) {
         super();
         this.db = db;
     }

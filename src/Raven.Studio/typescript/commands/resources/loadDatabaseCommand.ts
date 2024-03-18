@@ -4,7 +4,7 @@ import database = require("models/resources/database");
 
 class loadDatabaseCommand extends commandBase {
 
-    constructor(private db: database) {
+    constructor(private db: database | string) {
         super();
     }
 

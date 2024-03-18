@@ -4,11 +4,11 @@ import database = require("models/resources/database");
 
 class testSqlConnectionStringCommand extends commandBase {
 
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly connectionString: string;
     private readonly factoryName: string;
 
-    constructor(db: database, connectionString: string, factoryName: string) {
+    constructor(db: database | string, connectionString: string, factoryName: string) {
         super();
         this.db = db;
         this.connectionString = connectionString;

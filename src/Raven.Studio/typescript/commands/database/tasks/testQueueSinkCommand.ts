@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class testQueueSinkCommand extends commandBase {
-    constructor(private db: database, private payload: Raven.Server.Documents.QueueSink.Test.TestQueueSinkScript,
+    constructor(private db: database | string, private payload: Raven.Server.Documents.QueueSink.Test.TestQueueSinkScript,
                 private brokerType: Raven.Client.Documents.Operations.ETL.Queue.QueueBrokerType) {
         super();
     }  

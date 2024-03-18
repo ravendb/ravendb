@@ -5,11 +5,11 @@ import { shardingTodo } from "common/developmentHelper";
 
 class getIndexNamesCommand extends commandBase {
 
-    private db: database;
+    private db: database | string;
 
     private readonly location: databaseLocationSpecifier = null;
 
-    constructor(db: database, location: databaseLocationSpecifier = null) {
+    constructor(db: database | string, location: databaseLocationSpecifier = null) {
         super();
         this.location = location;
         this.db = db;

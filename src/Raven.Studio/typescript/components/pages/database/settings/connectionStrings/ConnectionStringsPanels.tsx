@@ -10,17 +10,16 @@ import { Connection } from "./connectionStringsTypes";
 import { connectionStringsActions } from "./store/connectionStringsSlice";
 import { Icon } from "components/common/Icon";
 import IconName from "../../../../../../typings/server/icons";
+import { useAccessManager } from "components/hooks/useAccessManager";
 
 interface ConnectionStringsPanelsProps {
     connections: Connection[];
     connectionsType: Connection["type"];
-    db: database;
 }
 
-export default function ConnectionStringsPanels({ connections, connectionsType, db }: ConnectionStringsPanelsProps) {
-    const isDatabaseAdmin =
-        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
+export default function ConnectionStringsPanels({ connections, connectionsType }: ConnectionStringsPanelsProps) {
     const dispatch = useDispatch();
+    const { isAdminAccessOrAbove } = useAccessManager();
 
     if (connections.length === 0) {
         return null;
@@ -30,7 +29,7 @@ export default function ConnectionStringsPanels({ connections, connectionsType, 
         <div className="mb-4">
             <HrHeader
                 right={
-                    isDatabaseAdmin && (
+                    isAdminAccessOrAbove() && (
                         <Button
                             color="info"
                             size="sm"
@@ -50,7 +49,7 @@ export default function ConnectionStringsPanels({ connections, connectionsType, 
                 {getTypeLabel(connectionsType)}
             </HrHeader>
             {connections.map((connection) => (
-                <ConnectionStringsPanel key={connection.type + "_" + connection.name} db={db} connection={connection} />
+                <ConnectionStringsPanel key={connection.type + "_" + connection.name} connection={connection} />
             ))}
         </div>
     );

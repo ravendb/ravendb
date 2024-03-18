@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class executeBulkDocsCommand extends commandBase {
-    constructor(public docs: Partial<Raven.Server.Documents.Handlers.Batches.BatchRequestParser.CommandData>[], private db: database, private transactionMode: Raven.Client.Documents.Session.TransactionMode = "SingleNode") {
+    constructor(public docs: Partial<Raven.Server.Documents.Handlers.Batches.BatchRequestParser.CommandData>[], private db: database | string, private transactionMode: Raven.Client.Documents.Session.TransactionMode = "SingleNode") {
         super();
     }
 

@@ -26,7 +26,8 @@ import ConnectionTestResult from "../../../../../common/connectionTests/Connecti
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import ElasticSearchCertificate from "./ElasticSearchCertificate";
-import database = require("models/resources/database");
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
 
 type FormData = ConnectionFormData<ElasticSearchConnection>;
 
@@ -35,7 +36,6 @@ export interface ElasticSearchStringProps extends EditConnectionStringFormProps 
 }
 
 export default function ElasticSearchConnectionString({
-    db,
     initialConnection,
     isForNewConnection,
     onSave,
@@ -121,7 +121,6 @@ export default function ElasticSearchConnectionString({
                         <NodeUrl
                             key={urlField.id}
                             idx={idx}
-                            db={db}
                             control={control}
                             formValues={formValues}
                             isDeleteButtonVisible={urlFieldArray.fields.length > 1}
@@ -248,7 +247,6 @@ export default function ElasticSearchConnectionString({
 
 interface NodeUrlProps {
     idx: number;
-    db: database;
     control: any;
     formValues: FormData;
     isDeleteButtonVisible: boolean;
@@ -256,7 +254,8 @@ interface NodeUrlProps {
     trigger: UseFormTrigger<FormData>;
 }
 
-function NodeUrl({ idx, db, control, formValues, isDeleteButtonVisible, onDelete, trigger }: NodeUrlProps) {
+function NodeUrl({ idx, control, formValues, isDeleteButtonVisible, onDelete, trigger }: NodeUrlProps) {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { tasksService } = useServices();
 
     const asyncTest = useAsyncCallback(async () => {
@@ -266,7 +265,11 @@ function NodeUrl({ idx, db, control, formValues, isDeleteButtonVisible, onDelete
         }
 
         const url = formValues.nodes[idx].url;
-        return tasksService.testElasticSearchNodeConnection(db, url, mapElasticSearchAuthenticationToDto(formValues));
+        return tasksService.testElasticSearchNodeConnection(
+            databaseName,
+            url,
+            mapElasticSearchAuthenticationToDto(formValues)
+        );
     });
 
     return (

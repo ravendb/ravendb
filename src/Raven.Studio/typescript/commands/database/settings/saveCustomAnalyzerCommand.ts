@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class saveCustomAnalyzerCommand extends commandBase {
 
-    constructor(private db: database, private analyzerDto: Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition) {
+    constructor(private db: database | string, private analyzerDto: Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition) {
         super();
     }
 

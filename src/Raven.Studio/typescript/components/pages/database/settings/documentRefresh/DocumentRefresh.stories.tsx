@@ -14,7 +14,9 @@ export default {
 
 function commonInit() {
     const { databasesService } = mockServices;
+    const { databases } = mockStore;
     databasesService.withRefreshConfiguration();
+    databases.withActiveDatabase(DatabasesStubs.nonShardedDatabaseInfo());
 }
 
 export const DefaultDocumentRefresh: StoryObj<typeof DocumentRefresh> = {
@@ -25,7 +27,7 @@ export const DefaultDocumentRefresh: StoryObj<typeof DocumentRefresh> = {
         const { license } = mockStore;
         license.with_License();
 
-        return <DocumentRefresh db={DatabasesStubs.nonShardedClusterDatabase()} />;
+        return <DocumentRefresh />;
     },
 };
 
@@ -36,6 +38,6 @@ export const LicenseRestricted: StoryObj<typeof DocumentRefresh> = {
         const { license } = mockStore;
         license.with_LicenseLimited();
 
-        return <DocumentRefresh db={DatabasesStubs.nonShardedClusterDatabase()} />;
+        return <DocumentRefresh />;
     },
 };

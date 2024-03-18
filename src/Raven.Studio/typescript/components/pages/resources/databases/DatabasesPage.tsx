@@ -1,6 +1,5 @@
 ﻿import React, { useEffect, useState } from "react";
 import { DatabasePanel } from "./partials/DatabasePanel";
-import { useAccessManager } from "hooks/useAccessManager";
 import { DatabasesSelectActions } from "./partials/DatabasesSelectActions";
 import { DatabasesFilter } from "./partials/DatabasesFilter";
 import { NoDatabases } from "./partials/NoDatabases";
@@ -22,6 +21,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { databasesViewSelectors } from "components/pages/resources/databases/store/databasesViewSelectors";
 import { StickyHeader } from "components/common/StickyHeader";
 import { Icon } from "components/common/Icon";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
@@ -33,13 +33,12 @@ interface DatabasesPageProps {
     restore?: boolean;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function DatabasesPage(props: DatabasesPageProps) {
     const databases = useAppSelector(databaseSelectors.allDatabases);
+    const nodeTags = useAppSelector(clusterSelectors.allNodeTags);
+    const isOperatorOrAbove = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
 
     const dispatch = useAppDispatch();
-
-    const nodeTags = useAppSelector(clusterSelectors.allNodeTags);
 
     const [selectedDatabaseNames, setSelectedDatabaseNames] = useState<string[]>([]);
 
@@ -54,9 +53,6 @@ export function DatabasesPage(props: DatabasesPageProps) {
     const toggleFilterOptions = () => {
         setShowFilterOptions(!showFilterOptions);
     };
-
-    const { isOperatorOrAbove } = useAccessManager();
-    const canCreateNewDatabase = isOperatorOrAbove();
 
     const filteredDatabaseNames = useAppSelector(
         databasesViewSelectors.filteredDatabaseNames(filterCriteria),
@@ -117,7 +113,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
         <>
             <StickyHeader>
                 <div className="d-flex flex-wrap gap-3 align-items-end">
-                    {canCreateNewDatabase && (
+                    {isOperatorOrAbove && (
                         <UncontrolledDropdown>
                             <ButtonGroup className="rounded-group">
                                 <Button color="primary" onClick={() => dispatch(openCreateDatabaseDialog())}>

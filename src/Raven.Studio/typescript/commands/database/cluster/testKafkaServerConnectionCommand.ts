@@ -6,12 +6,12 @@ import KafkaConnectionSettings = Raven.Client.Documents.Operations.ETL.Queue.Kaf
 type ConnectionOptionsDto = {[optionKey: string]: string};
 
 class testKafkaServerConnectionCommand extends commandBase {
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly bootstrapServers: string;
     private readonly useServerCertificate: boolean;
     private readonly connectionOptionsDto: ConnectionOptionsDto;
 
-    constructor(db: database, bootstrapServers: string, useServerCertificate: boolean, connectionOptionsDto: ConnectionOptionsDto) {
+    constructor(db: database | string, bootstrapServers: string, useServerCertificate: boolean, connectionOptionsDto: ConnectionOptionsDto) {
         super();
         this.db = db;
         this.bootstrapServers = bootstrapServers;

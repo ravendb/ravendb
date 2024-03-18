@@ -16,7 +16,7 @@ export default {
     },
 } satisfies Meta;
 
-const db = DatabasesStubs.nonShardedClusterDatabase();
+const db = DatabasesStubs.nonShardedDatabaseInfo();
 
 interface DefaultDocumentRevisionsProps {
     licenseType: Raven.Server.Commercial.LicenseType;
@@ -37,8 +37,10 @@ export const DefaultDocumentRevisions: StoryObj<DefaultDocumentRevisionsProps> =
         maxNumberOfRevisionAgeToKeepInDays,
         databaseAccess,
     }: DefaultDocumentRevisionsProps) => {
-        const { collectionsTracker, accessManager, license } = mockStore;
+        const { collectionsTracker, accessManager, license, databases } = mockStore;
         const { databasesService } = mockServices;
+
+        databases.withActiveDatabase(db);
 
         accessManager.with_securityClearance("ValidUser");
 
@@ -59,7 +61,7 @@ export const DefaultDocumentRevisions: StoryObj<DefaultDocumentRevisionsProps> =
             MaxNumberOfRevisionsToKeep: maxNumberOfRevisionsToKeep,
         });
 
-        return <DocumentRevisions db={db} />;
+        return <DocumentRevisions />;
     },
     args: {
         licenseType: "Community",

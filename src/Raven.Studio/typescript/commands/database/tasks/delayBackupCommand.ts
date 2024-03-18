@@ -4,13 +4,13 @@ import endpoints = require("endpoints");
 
 
 class delayBackupCommand extends commandBase {
-    private db: database;
+    private db: database | string;
 
     private readonly taskId: number;
 
     private readonly duration: string;
 
-    constructor(db: database, taskId: number, duration: string) {
+    constructor(db: database | string, taskId: number, duration: string) {
         super();
         this.duration = duration;
         this.taskId = taskId;
@@ -21,7 +21,7 @@ class delayBackupCommand extends commandBase {
         const args = {
             taskId: this.taskId,
             duration: this.duration,
-            database: this.db.name
+            database: this.db
         }
         const url = endpoints.global.adminDatabases.adminBackupTaskDelay + this.urlEncodeArgs(args);
         

@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class deleteAttachmentCommand extends commandBase {
 
-    constructor(private documentId: string, private attachmentName: string, private db: database) {
+    constructor(private documentId: string, private attachmentName: string, private db: database | string) {
         super();
     }
 

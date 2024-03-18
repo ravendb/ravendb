@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getIndexesStatusCommand extends commandBase {
 
-    constructor(private db: database) {
+    constructor(private db: database | string) {
         super();
     }
 

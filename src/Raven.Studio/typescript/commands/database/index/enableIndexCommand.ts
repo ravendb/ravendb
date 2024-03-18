@@ -7,11 +7,11 @@ class enableIndexCommand extends commandBase {
 
     private indexName: string;
 
-    private db: database;
+    private db: database | string;
 
     private location: databaseLocationSpecifier;
 
-    constructor(indexName: string, db: database, location: databaseLocationSpecifier) {
+    constructor(indexName: string, db: database | string, location: databaseLocationSpecifier) {
         super();
         this.location = location;
         this.db = db;

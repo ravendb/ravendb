@@ -5,7 +5,7 @@ import endpoints = require("endpoints");
 
 class getRevisionsBinDocumentMetadataCommand extends commandBase {
 
-    constructor(private id: string, private db: database) {
+    constructor(private id: string, private db: database | string) {
         super();
 
         if (!id) {

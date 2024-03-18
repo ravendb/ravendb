@@ -5,7 +5,7 @@ import endpoints = require("endpoints");
 
 class migrateRavenDbDatabaseCommand extends commandBase {
 
-    constructor(private db: database, private model: migrateRavenDbDatabaseModel) {
+    constructor(private db: database | string, private model: migrateRavenDbDatabaseModel) {
         super();
     }
 

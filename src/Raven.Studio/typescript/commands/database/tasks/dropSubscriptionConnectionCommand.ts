@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class dropSubscriptionConnectionCommand extends commandBase {
 
-    private readonly db: database;
+    private readonly db: database | string;
 
     private readonly taskId: number;
 
@@ -14,7 +14,7 @@ class dropSubscriptionConnectionCommand extends commandBase {
 
     private readonly workerId: string = undefined;
 
-    constructor(db: database, taskId: number, taskName: string, nodeTag: string = undefined, workerId: string = undefined) {
+    constructor(db: database | string, taskId: number, taskName: string, nodeTag: string = undefined, workerId: string = undefined) {
         super();
         this.workerId = workerId;
         this.taskName = taskName;

@@ -12,7 +12,6 @@ import { DocumentRefreshFormData, documentRefreshYupResolver } from "./DocumentR
 import Code from "components/common/Code";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useServices } from "components/hooks/useServices";
-import { NonShardedViewProps } from "components/models/common";
 import ServerRefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshConfiguration;
 import messagePublisher = require("common/messagePublisher");
 import { LoadingView } from "components/common/LoadingView";
@@ -25,12 +24,15 @@ import FeatureAvailabilitySummaryWrapper, {
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import moment = require("moment");
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
-export default function DocumentRefresh({ db }: NonShardedViewProps) {
+export default function DocumentRefresh() {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
 
     const asyncGetRefreshConfiguration = useAsyncCallback<DocumentRefreshFormData>(async () =>
-        mapToFormData(await databasesService.getRefreshConfiguration(db))
+        mapToFormData(await databasesService.getRefreshConfiguration(databaseName))
     );
     const { handleSubmit, control, formState, reset, setValue } = useForm<DocumentRefreshFormData>({
         resolver: documentRefreshYupResolver,
@@ -80,13 +82,13 @@ export default function DocumentRefresh({ db }: NonShardedViewProps) {
         return tryHandleSubmit(async () => {
             reportEvent("refresh-configuration", "save");
 
-            await databasesService.saveRefreshConfiguration(db, {
+            await databasesService.saveRefreshConfiguration(databaseName, {
                 Disabled: !formData.isDocumentRefreshEnabled,
                 RefreshFrequencyInSec: formData.isRefreshFrequencyEnabled ? formData.refreshFrequency : null,
             });
 
             messagePublisher.reportSuccess("Refresh configuration saved successfully");
-            db.hasRefreshConfiguration(formData.isDocumentRefreshEnabled);
+            activeDatabaseTracker.default.database().hasRefreshConfiguration(formData.isDocumentRefreshEnabled);
 
             reset(formData);
         });

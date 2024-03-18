@@ -1,36 +1,38 @@
 ﻿import accessManager from "common/shell/accessManager";
-import database from "models/resources/database";
-import { DatabaseSharedInfo } from "components/models/databases";
-
-function canHandleOperation(requiredAccess: accessLevel, dbName: string = null) {
-    return accessManager.canHandleOperation(requiredAccess, dbName);
-}
-
-function canReadWriteDatabase(db: database) {
-    return canHandleOperation("DatabaseReadWrite", db.name);
-}
-
-function canReadOnlyDatabase(db: database) {
-    return accessManager.default.readOnlyOrAboveForDatabase(db);
-}
-
-function isOperatorOrAbove() {
-    return accessManager.default.isOperatorOrAbove();
-}
-
-function isClusterAdminOrClusterNode() {
-    return accessManager.default.isClusterAdminOrClusterNode();
-}
-
-function isSecuredServer() {
-    return accessManager.default.secureServer();
-}
-
-function isAdminAccessOrAbove(db: database | DatabaseSharedInfo) {
-    return accessManager.default.adminAccessOrAboveForDatabase(db);
-}
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
 
 export function useAccessManager() {
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
+    function canHandleOperation(requiredAccess: accessLevel, databaseName: string = activeDatabaseName) {
+        return accessManager.canHandleOperation(requiredAccess, databaseName);
+    }
+
+    function canReadWriteDatabase(databaseName: string = activeDatabaseName) {
+        return canHandleOperation("DatabaseReadWrite", databaseName);
+    }
+
+    function canReadOnlyDatabase(databaseName: string = activeDatabaseName) {
+        return accessManager.default.readOnlyOrAboveForDatabase(databaseName);
+    }
+
+    function isOperatorOrAbove() {
+        return accessManager.default.isOperatorOrAbove();
+    }
+
+    function isClusterAdminOrClusterNode() {
+        return accessManager.default.isClusterAdminOrClusterNode();
+    }
+
+    function isSecuredServer() {
+        return accessManager.default.secureServer();
+    }
+
+    function isAdminAccessOrAbove(databaseName: string = activeDatabaseName) {
+        return accessManager.default.adminAccessOrAboveForDatabase(databaseName);
+    }
+
     return {
         canHandleOperation,
         canReadWriteDatabase,

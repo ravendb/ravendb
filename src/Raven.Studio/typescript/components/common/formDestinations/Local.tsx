@@ -6,9 +6,10 @@ import OverrideConfiguration from "./OverrideConfiguration";
 import { FormDestinations } from "./utils/formDestinationsTypes";
 import { useServices } from "components/hooks/useServices";
 import { UseAsyncReturn, useAsync } from "react-async-hook";
-import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 import { InputNotHidden, SelectOption } from "../select/Select";
 import { InputActionMeta } from "react-select";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
 
 export default function Local() {
     const { control, setValue } = useFormContext<FormDestinations>();
@@ -16,17 +17,18 @@ export default function Local() {
         destinations: { local: formValues },
     } = useWatch({ control });
 
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { tasksService } = useServices();
 
     const asyncGetLocalFolderPathOptions = useAsync(
-        () => tasksService.getLocalFolderPathOptions(formValues.folderPath, activeDatabaseTracker.default.database()),
+        () => tasksService.getLocalFolderPathOptions(formValues.folderPath, activeDatabaseName),
         [formValues.folderPath]
     );
     const asyncGetBackupLocation = useAsync(() => {
         if (!formValues.folderPath) {
             return;
         }
-        return tasksService.getBackupLocation(formValues.folderPath, activeDatabaseTracker.default.database());
+        return tasksService.getBackupLocation(formValues.folderPath, activeDatabaseName);
     }, [formValues.folderPath]);
 
     const onPathChange = (value: string, action: InputActionMeta) => {

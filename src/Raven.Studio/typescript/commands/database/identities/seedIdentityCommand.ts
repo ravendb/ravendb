@@ -4,7 +4,7 @@ import database = require("models/resources/database");
 
 class seedIdentityCommand extends commandBase {
 
-    constructor(private db: database, private prefix: string, private value: number) {
+    constructor(private db: database | string, private prefix: string, private value: number) {
         super();
     }
 

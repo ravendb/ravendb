@@ -19,14 +19,15 @@ import { connectionStringsActions } from "./store/connectionStringsSlice";
 import { useDispatch } from "react-redux";
 import useConfirm from "components/common/ConfirmDialog";
 import useId from "components/hooks/useId";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAccessManager } from "components/hooks/useAccessManager";
 
 interface ConnectionStringsPanelProps {
-    db: database;
     connection: Connection;
 }
 
 export default function ConnectionStringsPanel(props: ConnectionStringsPanelProps) {
-    const { db, connection } = props;
+    const { connection } = props;
 
     const confirm = useConfirm();
     const dispatch = useDispatch();
@@ -35,11 +36,11 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
     const deleteButtonId = useId("delete");
     const isDeleteDisabled = connection.usedByTasks?.length > 0;
 
-    const isDatabaseAdmin =
-        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const { isAdminAccessOrAbove } = useAccessManager();
 
     const asyncDelete = useAsyncCallback(async () => {
-        await tasksService.deleteConnectionString(db, getDtoEtlType(connection.type), connection.name);
+        await tasksService.deleteConnectionString(activeDatabaseName, getDtoEtlType(connection.type), connection.name);
         dispatch(connectionStringsActions.deleteConnection(connection));
     });
 
@@ -67,7 +68,7 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
                     <RichPanelInfo>
                         <RichPanelName>{connection.name}</RichPanelName>
                     </RichPanelInfo>
-                    {isDatabaseAdmin && (
+                    {isAdminAccessOrAbove() && (
                         <RichPanelActions>
                             <Button
                                 color="secondary"

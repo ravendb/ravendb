@@ -21,33 +21,36 @@ import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import ConflictResolutionAboutView from "./ConflictResolutionAboutView";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAccessManager } from "components/hooks/useAccessManager";
 
-export default function ConflictResolution({ db }: NonShardedViewProps) {
-    const { databasesService } = useServices();
-    const { reportEvent } = useEventsCollector();
-    const isDatabaseAdmin =
-        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
-
+export default function ConflictResolution() {
     const dispatch = useAppDispatch();
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const loadStatus = useAppSelector(conflictResolutionSelectors.loadStatus);
     const isResolveToLatest = useAppSelector(conflictResolutionSelectors.isResolveToLatest);
     const collectionConfigs = useAppSelector(conflictResolutionSelectors.collectionConfigs);
     const isDirty = useAppSelector(conflictResolutionSelectors.isDirty);
     const isSomeInEditMode = useAppSelector(conflictResolutionSelectors.isSomeInEditMode);
 
+    const { isAdminAccessOrAbove } = useAccessManager();
+
+    const { databasesService } = useServices();
+    const { reportEvent } = useEventsCollector();
+
     useEffect(() => {
-        dispatch(conflictResolutionActions.fetchConfig(db));
+        dispatch(conflictResolutionActions.fetchConfig(activeDatabaseName));
 
         return () => {
             dispatch(conflictResolutionActions.reset());
         };
-    }, [db, dispatch]);
+    }, [activeDatabaseName, dispatch]);
 
     const asyncSave = useAsyncCallback(async () => {
         reportEvent("conflict-resolution", "save");
 
         const response = await databasesService.saveConflictSolverConfiguration(
-            db,
+            activeDatabaseName,
             mapToDto(isResolveToLatest, collectionConfigs)
         );
         dispatch(conflictResolutionActions.allSaved(response.ConflictSolverConfig));
@@ -57,7 +60,7 @@ export default function ConflictResolution({ db }: NonShardedViewProps) {
         return (
             <LoadError
                 error="Unable to load conflict resolution"
-                refresh={() => dispatch(conflictResolutionActions.fetchConfig(db))}
+                refresh={() => dispatch(conflictResolutionActions.fetchConfig(activeDatabaseName))}
             />
         );
     }
@@ -67,7 +70,7 @@ export default function ConflictResolution({ db }: NonShardedViewProps) {
             <Col>
                 <AboutViewHeading title="Conflict Resolution" icon="conflicts-resolution" />
                 <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"}>
-                    {isDatabaseAdmin && (
+                    {isAdminAccessOrAbove() && (
                         <>
                             <div id="saveConflictResolutionScript" className="d-flex w-fit-content gap-3 mb-3">
                                 <ButtonWithSpinner
@@ -90,7 +93,7 @@ export default function ConflictResolution({ db }: NonShardedViewProps) {
                     <div className="mb-3">
                         <HrHeader
                             right={
-                                isDatabaseAdmin && (
+                                isAdminAccessOrAbove() && (
                                     <div id="addNewScriptButton">
                                         <Button
                                             color="info"
@@ -112,11 +115,7 @@ export default function ConflictResolution({ db }: NonShardedViewProps) {
                         </HrHeader>
                         {collectionConfigs.length > 0 ? (
                             collectionConfigs.map((config) => (
-                                <ConflictResolutionConfigPanel
-                                    key={config.id}
-                                    initialConfig={config}
-                                    isDatabaseAdmin={isDatabaseAdmin}
-                                />
+                                <ConflictResolutionConfigPanel key={config.id} initialConfig={config} />
                             ))
                         ) : (
                             <EmptySet>No scripts have been defined</EmptySet>
@@ -128,7 +127,7 @@ export default function ConflictResolution({ db }: NonShardedViewProps) {
                                 color="primary"
                                 selected={isResolveToLatest}
                                 toggleSelection={() => dispatch(conflictResolutionActions.toggleIsResolveToLatest())}
-                                disabled={!isDatabaseAdmin}
+                                disabled={!isAdminAccessOrAbove()}
                             >
                                 If no script was defined for a collection, resolve the conflict using the latest version
                             </Switch>

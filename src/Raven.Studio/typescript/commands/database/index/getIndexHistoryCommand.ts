@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getIndexHistoryCommand extends commandBase {
 
-    constructor(private db: database, private indexName: string) {
+    constructor(private db: database | string, private indexName: string) {
         super();
     }
 

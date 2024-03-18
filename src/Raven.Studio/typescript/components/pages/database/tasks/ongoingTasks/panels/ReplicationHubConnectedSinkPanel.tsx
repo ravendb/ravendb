@@ -1,6 +1,5 @@
 ﻿import React from "react";
 import { OngoingTaskReplicationHubInfo } from "components/models/tasks";
-import database from "models/resources/database";
 import {
     RichPanel,
     RichPanelActions,
@@ -12,7 +11,6 @@ import {
 import { OngoingTaskName, OngoingTaskResponsibleNode } from "../../shared/shared";
 
 interface ReplicationHubConnectedSinkPanelProps {
-    db: database;
     data: OngoingTaskReplicationHubInfo;
 }
 

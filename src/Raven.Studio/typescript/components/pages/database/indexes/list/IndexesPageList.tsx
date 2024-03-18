@@ -4,14 +4,12 @@ import React from "react";
 import { Card } from "reactstrap";
 import { IndexPanel } from "./IndexPanel";
 import { IndexSharedInfo } from "components/models/indexes";
-import database from "models/resources/database";
 import { Icon } from "components/common/Icon";
 import { ResetIndexData, SwapSideBySideData } from "./useIndexesPage";
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 
 export interface IndexesPageListProps {
-    db: database;
     indexes: IndexSharedInfo[];
     replacements: IndexSharedInfo[];
     selectedIndexes: string[];
@@ -25,13 +23,12 @@ export interface IndexesPageListProps {
     startIndexes: (indexes: IndexSharedInfo[]) => Promise<void>;
     disableIndexes: (indexes: IndexSharedInfo[]) => Promise<void>;
     pauseIndexes: (indexes: IndexSharedInfo[]) => Promise<void>;
-    confirmDeleteIndexes: (db: database, indexes: IndexSharedInfo[]) => Promise<void>;
+    confirmDeleteIndexes: (indexes: IndexSharedInfo[]) => Promise<void>;
     toggleSelection: (index: IndexSharedInfo) => void;
     highlightCallback: (node: HTMLElement) => void;
 }
 
 export default function IndexesPageList({
-    db,
     indexes,
     replacements,
     selectedIndexes,
@@ -66,8 +63,7 @@ export default function IndexesPageList({
                             pauseIndexing={() => pauseIndexes([index])}
                             index={index}
                             hasReplacement={!!replacement}
-                            database={db}
-                            deleteIndex={() => confirmDeleteIndexes(db, [index])}
+                            deleteIndex={() => confirmDeleteIndexes([index])}
                             selected={selectedIndexes.includes(index.name)}
                             toggleSelection={() => toggleSelection(index)}
                             key={index.name}
@@ -103,8 +99,7 @@ export default function IndexesPageList({
                                 disableIndexing={() => disableIndexes([replacement])}
                                 pauseIndexing={() => pauseIndexes([replacement])}
                                 index={replacement}
-                                database={db}
-                                deleteIndex={() => confirmDeleteIndexes(db, [replacement])}
+                                deleteIndex={() => confirmDeleteIndexes([replacement])}
                                 selected={selectedIndexes.includes(replacement.name)}
                                 toggleSelection={() => toggleSelection(replacement)}
                                 key={replacement.name}

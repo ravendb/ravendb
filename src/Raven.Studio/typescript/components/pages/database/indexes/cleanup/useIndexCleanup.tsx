@@ -94,7 +94,7 @@ export default function useIndexCleanup(db: database) {
     };
 
     const fetchIndexMergeSuggestions = async (indexStats: IndexStats) => {
-        const results = await indexesService.getIndexMergeSuggestions(db);
+        const results = await indexesService.getIndexMergeSuggestions(db.name);
 
         const suggestions = results.Suggestions;
         const mergeCandidatesRaw = suggestions.filter((x) => x.MergedIndex);
@@ -141,7 +141,7 @@ export default function useIndexCleanup(db: database) {
 
     const fetchStats = async () => {
         const locations = db.getLocations();
-        const allStats = locations.map((location) => indexesService.getStats(db, location));
+        const allStats = locations.map((location) => indexesService.getStats(db.name, location));
 
         const resultMap = new Map<string, Raven.Client.Documents.Indexes.IndexStats>();
 
@@ -253,7 +253,7 @@ export default function useIndexCleanup(db: database) {
             return;
         }
 
-        const tasks = confirmData.indexesInfoForDelete.map((x) => indexesService.deleteIndex(x.indexName, db));
+        const tasks = confirmData.indexesInfoForDelete.map((x) => indexesService.deleteIndex(x.indexName, db.name));
         await Promise.all(tasks);
 
         if (tasks.length > 1) {

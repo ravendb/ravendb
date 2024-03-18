@@ -5,11 +5,11 @@ import Authentication = Raven.Client.Documents.Operations.ETL.ElasticSearch.Auth
 
 class testElasticSearchNodeConnectionCommand extends commandBase {
 
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly serverUrl: string;
     private readonly authenticationDto: Authentication;
 
-    constructor(db: database, serverUrl: string, authenticationDto: Authentication) {
+    constructor(db: database | string, serverUrl: string, authenticationDto: Authentication) {
         super();
         this.db = db;
         this.serverUrl = serverUrl;

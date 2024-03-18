@@ -10,6 +10,7 @@ interface DatabaseAccessInfo {
 interface AccessManagerState {
     databaseAccess: EntityState<DatabaseAccessInfo, string>;
     securityClearance: SecurityClearance;
+    isSecureServer: boolean;
 }
 
 const databaseAccessAdapter = createEntityAdapter<DatabaseAccessInfo, string>({
@@ -21,6 +22,7 @@ const databaseAccessSelectors = databaseAccessAdapter.getSelectors();
 const initialState: AccessManagerState = {
     databaseAccess: databaseAccessAdapter.getInitialState(),
     securityClearance: "ClusterAdmin",
+    isSecureServer: false,
 };
 
 const sliceName = "accessManager";
@@ -41,13 +43,16 @@ export const accessManagerSlice = createSlice({
         onSecurityClearanceSet: (state, action: PayloadAction<SecurityClearance>) => {
             state.securityClearance = action.payload;
         },
+        onIsSecureServerSet: (state, action: PayloadAction<boolean>) => {
+            state.isSecureServer = action.payload;
+        },
     },
 });
 
 const selectDatabaseAccessLevel = (databaseName: string) => (store: RootState) =>
     databaseAccessSelectors.selectById(store.accessManager.databaseAccess, databaseName)?.level;
 
-const selectOperatorOrAbove = (store: RootState) => {
+const selectIsOperatorOrAbove = (store: RootState) => {
     const clearance = store.accessManager.securityClearance;
 
     return clearance === "ClusterAdmin" || clearance === "ClusterNode" || clearance === "Operator";
@@ -57,7 +62,7 @@ const selectEffectiveDatabaseAccessLevel = (databaseName: string) => {
     const accessLevel = selectDatabaseAccessLevel(databaseName);
 
     return (store: RootState): databaseAccessLevel => {
-        const operatorOrAbove = selectOperatorOrAbove(store);
+        const operatorOrAbove = selectIsOperatorOrAbove(store);
         if (operatorOrAbove) {
             return "DatabaseAdmin";
         }
@@ -66,13 +71,22 @@ const selectEffectiveDatabaseAccessLevel = (databaseName: string) => {
     };
 };
 
-export const accessManagerActions = {
-    onDatabaseAccessLoaded: accessManagerSlice.actions.onDatabaseAccessLoaded,
-    onSecurityClearanceSet: accessManagerSlice.actions.onSecurityClearanceSet,
+const selectIsDatabaseAdminOrAbove = (databaseName?: string) => {
+    return (store: RootState) => {
+        const effectiveDatabaseAccessLevel = selectEffectiveDatabaseAccessLevel(
+            databaseName ?? store.databases.activeDatabaseName
+        )(store);
+
+        return effectiveDatabaseAccessLevel === "DatabaseAdmin";
+    };
 };
+
+export const accessManagerActions = accessManagerSlice.actions;
 
 export const accessManagerSelectors = {
     databaseAccessLevel: selectDatabaseAccessLevel,
-    operatorOrAbove: selectOperatorOrAbove,
+    isSecureServer: (store: RootState) => store.accessManager.isSecureServer,
+    isOperatorOrAbove: selectIsOperatorOrAbove,
+    isDatabaseAdminOrAbove: selectIsDatabaseAdminOrAbove,
     effectiveDatabaseAccessLevel: selectEffectiveDatabaseAccessLevel,
 };

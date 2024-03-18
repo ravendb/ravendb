@@ -29,6 +29,11 @@ export class MockDatabaseManager {
         globalDispatch(databaseActions.databasesLoaded(dbs));
     }
 
+    withActiveDatabase(db: DatabaseSharedInfo) {
+        globalDispatch(databaseActions.activeDatabaseChanged(db.name));
+        globalDispatch(databaseActions.databasesLoaded([db]));
+    }
+
     protected createValue<T>(value: MockedValue<T>, defaultValue: T): T {
         return createValue(value, defaultValue);
     }

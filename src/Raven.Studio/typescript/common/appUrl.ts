@@ -4,6 +4,7 @@ import activeDatabase = require("common/shell/activeDatabaseTracker");
 import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");
 import { DatabaseSharedInfo } from "components/models/databases";
+// import { DatabaseSharedInfo } from "components/models/databases";
 
 class appUrl {
 
@@ -321,7 +322,7 @@ class appUrl {
         return '#databases/indexes/cleanup?' + appUrl.getEncodedDbPart(db);
     }
 
-    static forStatusStorageReport(db: database | string | DatabaseSharedInfo): string {
+    static forStatusStorageReport(db: database | string): string {
         return '#databases/status/storage/report?' + appUrl.getEncodedDbPart(db);
     }
 
@@ -333,7 +334,7 @@ class appUrl {
         return "#databases/settings/databaseRecord?" + appUrl.getEncodedDbPart(db);
     }
     
-    static forIndexErrors(db: database | DatabaseSharedInfo): string {
+    static forIndexErrors(db: database | string): string {
         return "#databases/indexes/indexErrors?" + appUrl.getEncodedDbPart(db);
     }
 
@@ -402,7 +403,7 @@ class appUrl {
         return "#databases/settings/customAnalyzers?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forEditCustomAnalyzer(db: database, analyzerName?: string): string {
+    static forEditCustomAnalyzer(db: database | string, analyzerName?: string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const namePart = analyzerName ? "&name=" + encodeURIComponent(analyzerName) : "";
 
@@ -413,7 +414,7 @@ class appUrl {
         return "#databases/settings/integrations?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forConnectionStrings(db: database, type?: StudioEtlType, name?: string): string {
+    static forConnectionStrings(db: database | string, type?: StudioEtlType, name?: string): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const typeUrlPart = type ? "&type=" + encodeURIComponent(type) : "";
         const nameUrlPart = name ? "&name=" + encodeURIComponent(name) : "";
@@ -483,7 +484,7 @@ class appUrl {
         }
     }
 
-    static forIndexes(db: database | DatabaseSharedInfo, indexName: string = null, staleOnly = false): string {
+    static forIndexes(db: database | string, indexName: string = null, staleOnly = false): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const indexNamePart = indexName ? `&indexName=${indexName}` : "";
         const stalePart = staleOnly ? "&stale=true" : "";
@@ -512,9 +513,9 @@ class appUrl {
         return "#databases/query/index" + indexPart + "?" + databasePart + extraParameters;
     }
 
-    static forDatabaseQuery(db: database | DatabaseSharedInfo): string {
+    static forDatabaseQuery(db: database | string): string {
         if (db) {
-            return appUrl.baseUrl + "/databases/" + db.name;
+            return appUrl.baseUrl + "/databases/" + (_.isString(db) ? db : db.name);
         }
 
         return this.baseUrl;
@@ -555,97 +556,97 @@ class appUrl {
         return "#databases/tasks/import/migrate?" + databasePart;
     }
 
-    static forBackups(db: database | DatabaseSharedInfo): string {
+    static forBackups(db: database | string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/backups?" + databasePart;
     }
     
-    static forOngoingTasks(db: database): string {
+    static forOngoingTasks(db: database | string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/ongoingTasks?" + databasePart;
     }
 
-    static forEditExternalReplication(db: database, taskId?: number): string {
+    static forEditExternalReplication(db: database | string, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editExternalReplicationTask?" + databasePart + taskPart;
     }
     
-    static forEditReplicationHub(db: database, taskId?: number): string {
+    static forEditReplicationHub(db: database | string, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editReplicationHubTask?" + databasePart + taskPart;
     }
     
-    static forEditReplicationSink(db: database, taskId?: number): string {
+    static forEditReplicationSink(db: database | string, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editReplicationSinkTask?" + databasePart + taskPart;
     }
 
-    static forEditPeriodicBackupTask(db: database, sourceView: EditPeriodicBackupTaskSourceView, taskId?: number): string {
+    static forEditPeriodicBackupTask(db: database | string, sourceView: EditPeriodicBackupTaskSourceView, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const sourceViewPart = "&sourceView=" + sourceView;
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editPeriodicBackupTask?" + databasePart + sourceViewPart + taskPart;
     }
     
-    static forEditManualBackup(db: database): string {
+    static forEditManualBackup(db: database | string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const manualPart = "&manual=true";
         return "#databases/tasks/editPeriodicBackupTask?" + databasePart + manualPart;
     }
 
-    static forEditSubscription(db: database, taskId?: number, taskName?: string): string {
+    static forEditSubscription(db: database | string, taskId?: number, taskName?: string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         const taskNamePart = taskName ? "&taskName=" + taskName : ""; 
         return "#databases/tasks/editSubscriptionTask?" + databasePart + taskPart + taskNamePart;
     }
 
-    static forEditRavenEtl(db: database, taskId?: number): string {
+    static forEditRavenEtl(db: database | string, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editRavenEtlTask?" + databasePart + taskPart;
     }
 
-    static forEditSqlEtl(db: database, taskId?: number): string {
+    static forEditSqlEtl(db: database | string, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editSqlEtlTask?" + databasePart + taskPart;
     }
 
-    static forEditOlapEtl(db: database, taskId?: number): string {
+    static forEditOlapEtl(db: database | string, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editOlapEtlTask?" + databasePart + taskPart;
     }
 
-    static forEditElasticSearchEtl(db: database, taskId?: number): string {
+    static forEditElasticSearchEtl(db: database | string, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editElasticSearchEtlTask?" + databasePart + taskPart;
     }
 
-    static forEditKafkaEtl(db: database, taskId?: number): string {
+    static forEditKafkaEtl(db: database | string, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editKafkaEtlTask?" + databasePart + taskPart;
     }
 
-    static forEditRabbitMqEtl(db: database, taskId?: number): string {
+    static forEditRabbitMqEtl(db: database | string, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editRabbitMqEtlTask?" + databasePart + taskPart;
     }
 
-    static forEditKafkaSink(db: database, taskId?: number): string {
+    static forEditKafkaSink(db: database | string, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editKafkaSinkTask?" + databasePart + taskPart;
     }
 
-    static forEditRabbitMqSink(db: database, taskId?: number): string {
+    static forEditRabbitMqSink(db: database | string, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editRabbitMqSinkTask?" + databasePart + taskPart;
@@ -742,7 +743,7 @@ class appUrl {
         return appUrl.currentDbComputeds;
     }
 
-    private static getEncodedDbPart(db?: database | string | DatabaseSharedInfo) {
+    private static getEncodedDbPart(db?: database | string) {
         if (!db) {
             return "";
         }

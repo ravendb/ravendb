@@ -4,11 +4,11 @@ import endpoints = require("endpoints");
 
 class killOperationCommand extends commandBase {
 
-    private db: database;
+    private db: database | string;
 
     private taskId: number;
 
-    constructor(db: database, taskId: number) {
+    constructor(db: database | string, taskId: number) {
         super();
         this.taskId = taskId;
         this.db = db;

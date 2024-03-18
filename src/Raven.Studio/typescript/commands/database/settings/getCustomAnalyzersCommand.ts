@@ -4,10 +4,10 @@ import endpoints = require("endpoints");
 
 class getCustomAnalyzersCommand extends commandBase {
 
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly getNamesOnly: boolean;
 
-    constructor(db: database, getNamesOnly = false) {
+    constructor(db: database | string, getNamesOnly = false) {
         super();
         this.db = db;
         this.getNamesOnly = getNamesOnly;

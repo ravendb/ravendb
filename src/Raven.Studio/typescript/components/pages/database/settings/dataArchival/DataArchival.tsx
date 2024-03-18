@@ -29,11 +29,15 @@ import FeatureAvailabilitySummaryWrapper, {
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
-export default function DataArchival({ db }: NonShardedViewProps) {
+export default function DataArchival() {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
     const { databasesService } = useServices();
     const asyncGetDataArchivalConfiguration = useAsyncCallback<DataArchivalFormData>(async () =>
-        mapToFormData(await databasesService.getDataArchivalConfiguration(db))
+        mapToFormData(await databasesService.getDataArchivalConfiguration(databaseName))
     );
     const { handleSubmit, control, formState, reset, setValue } = useForm<DataArchivalFormData>({
         resolver: dataArchivalYupResolver,
@@ -69,13 +73,13 @@ export default function DataArchival({ db }: NonShardedViewProps) {
         return tryHandleSubmit(async () => {
             reportEvent("data-archival-configuration", "save");
 
-            await databasesService.saveDataArchivalConfiguration(db, {
+            await databasesService.saveDataArchivalConfiguration(databaseName, {
                 Disabled: !formData.isDataArchivalEnabled,
                 ArchiveFrequencyInSec: formData.isArchiveFrequencyEnabled ? formData.archiveFrequency : null,
             });
 
             messagePublisher.reportSuccess("Data archival configuration saved successfully");
-            db.hasArchivalConfiguration(formData.isDataArchivalEnabled);
+            activeDatabaseTracker.default.database().hasArchivalConfiguration(formData.isDataArchivalEnabled);
             reset(formData);
         });
     };

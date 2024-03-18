@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getDocumentsMetadataByIDPrefixCommand extends commandBase {
 
-    constructor(private prefix:string, private pageSize: number, private db: database) {
+    constructor(private prefix:string, private pageSize: number, private db: database | string) {
         super();
     }
 

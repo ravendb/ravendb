@@ -28,7 +28,7 @@ interface ReplicationHubPanelProps extends BaseOngoingTaskPanelProps<OngoingTask
 }
 
 function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
-    const { connectedSinks, db, data } = props;
+    const { connectedSinks, data } = props;
 
     const delayHumane = data.shared.delayReplicationTime
         ? genUtils.formatTimeSpan(data.shared.delayReplicationTime * 1000, true)
@@ -46,11 +46,7 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
             {connectedSinks.length > 0 && (
                 <div className="my-1 mx-3">
                     {connectedSinks.map((sink) => (
-                        <ReplicationHubConnectedSinkPanel
-                            key={sink.shared.taskId + sink.shared.taskName}
-                            db={db}
-                            data={sink}
-                        />
+                        <ReplicationHubConnectedSinkPanel key={sink.shared.taskId + sink.shared.taskName} data={sink} />
                     ))}
                 </div>
             )}
@@ -60,13 +56,13 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
 }
 
 export function ReplicationHubDefinitionPanel(props: ReplicationHubPanelProps) {
-    const { data, db, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
+    const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
 
     const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editReplicationHub(data.shared.taskId)();
-    const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
+    const canEdit = isAdminAccessOrAbove() && !data.shared.serverWide;
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
 
     return (

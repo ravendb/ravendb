@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class getConnectionStringInfoCommand extends commandBase {
-    private constructor(private db: database, private type: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType, private connectionStringName: string) {
+    private constructor(private db: database | string, private type: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType, private connectionStringName: string) {
         super();
     }
     
@@ -21,27 +21,27 @@ class getConnectionStringInfoCommand extends commandBase {
         return this.query(url, null, this.db);
     }
 
-    static forRavenEtl(db: database, connectionStringName: string) {
+    static forRavenEtl(db: database | string, connectionStringName: string) {
         return new getConnectionStringInfoCommand(db, "Raven", connectionStringName);
     }
 
-    static forSqlEtl(db: database, connectionStringName: string) {
+    static forSqlEtl(db: database | string, connectionStringName: string) {
         return new getConnectionStringInfoCommand(db, "Sql", connectionStringName);
     }
 
-    static forOlapEtl(db: database, connectionStringName: string) {
+    static forOlapEtl(db: database | string, connectionStringName: string) {
         return new getConnectionStringInfoCommand(db, "Olap", connectionStringName);
     }
 
-    static forElasticSearchEtl(db: database, connectionStringName: string) {
+    static forElasticSearchEtl(db: database | string, connectionStringName: string) {
         return new getConnectionStringInfoCommand(db, "ElasticSearch", connectionStringName);
     }
 
-    static forKafkaEtl(db: database, connectionStringName: string) {
+    static forKafkaEtl(db: database | string, connectionStringName: string) {
         return new getConnectionStringInfoCommand(db, "Queue", connectionStringName);
     }
 
-    static forRabbitMqEtl(db: database, connectionStringName: string) {
+    static forRabbitMqEtl(db: database | string, connectionStringName: string) {
         return new getConnectionStringInfoCommand(db, "Queue", connectionStringName);
     }
 }

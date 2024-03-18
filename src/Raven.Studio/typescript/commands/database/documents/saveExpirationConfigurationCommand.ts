@@ -5,10 +5,10 @@ import ExpirationConfiguration = Raven.Client.Documents.Operations.Expiration.Ex
 
 class saveExpirationConfigurationCommand extends commandBase {
 
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly expirationConfiguration: ExpirationConfiguration
 
-    constructor(db: database, expirationConfiguration: ExpirationConfiguration) {
+    constructor(db: database | string, expirationConfiguration: ExpirationConfiguration) {
         super();
         this.db = db;
         this.expirationConfiguration = expirationConfiguration;

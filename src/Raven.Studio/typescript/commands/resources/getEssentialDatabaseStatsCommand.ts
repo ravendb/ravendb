@@ -1,13 +1,12 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
-import { DatabaseSharedInfo } from "components/models/databases";
 
 class getEssentialDatabaseStatsCommand extends commandBase {
 
-    private db: database | DatabaseSharedInfo;
+    private db: database | string;
 
-    constructor(db: database | DatabaseSharedInfo) {
+    constructor(db: database | string) {
         super();
         this.db = db;
     }

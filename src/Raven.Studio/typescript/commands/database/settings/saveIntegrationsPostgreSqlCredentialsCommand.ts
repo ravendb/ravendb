@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class saveIntegrationsPostgreSqlCredentialsCommand extends commandBase {
 
-    constructor(private db: database, private username: string, private password: string) {
+    constructor(private db: database | string, private username: string, private password: string) {
         super();
     }
 

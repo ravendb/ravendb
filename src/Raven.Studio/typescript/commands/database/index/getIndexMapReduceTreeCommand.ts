@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getIndexMapReduceTreeCommand extends commandBase {
 
-    constructor(private db: database, private location: databaseLocationSpecifier, private indexName: string, private documentIds: Array<string>) {
+    constructor(private db: database | string, private location: databaseLocationSpecifier, private indexName: string, private documentIds: Array<string>) {
         super();
     }
 

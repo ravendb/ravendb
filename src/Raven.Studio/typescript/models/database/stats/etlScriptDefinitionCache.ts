@@ -8,9 +8,9 @@ import EtlType = Raven.Client.Documents.Operations.ETL.EtlType;
 
 class etlScriptDefinitionCache {
     private readonly taskInfoCache = new Map<number, etlScriptDefinitionCacheItem>();
-    private readonly db: database;
+    private readonly db: database | string;
 
-    constructor(db: database) {
+    constructor(db: database | string) {
         this.db = db;
     }
 
@@ -25,21 +25,24 @@ class etlScriptDefinitionCache {
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl |
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl |
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl>;
+
+            const databaseName = (_.isString(this.db) ? this.db : this.db.name);
+            
             switch (etlType) {
                 case "Raven":
-                    command = getOngoingTaskInfoCommand.forRavenEtl(this.db, taskId);
+                    command = getOngoingTaskInfoCommand.forRavenEtl(databaseName, taskId);
                     break;
                 case "Sql":
-                    command = getOngoingTaskInfoCommand.forSqlEtl(this.db, taskId);
+                    command = getOngoingTaskInfoCommand.forSqlEtl(databaseName, taskId);
                     break;
                 case "Olap":
-                    command = getOngoingTaskInfoCommand.forOlapEtl(this.db, taskId);
+                    command = getOngoingTaskInfoCommand.forOlapEtl(databaseName, taskId);
                     break;
                 case "ElasticSearch":
-                    command = getOngoingTaskInfoCommand.forElasticSearchEtl(this.db, taskId);
+                    command = getOngoingTaskInfoCommand.forElasticSearchEtl(databaseName, taskId);
                     break;
                 case "Queue":
-                    command = getOngoingTaskInfoCommand.forQueueEtl(this.db, taskId);
+                    command = getOngoingTaskInfoCommand.forQueueEtl(databaseName, taskId);
                     break;
                 default: 
                     genUtils.assertUnreachable(etlType, "Unknown studioEtlType: " + etlType);

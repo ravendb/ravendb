@@ -6,10 +6,10 @@ import genUtils = require("common/generalUtils");
 class forceIndexReplace extends commandBase {
 
     private readonly indexName: string;
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly location: databaseLocationSpecifier;
 
-    constructor(indexName: string, db: database, location: databaseLocationSpecifier) {
+    constructor(indexName: string, db: database | string, location: databaseLocationSpecifier) {
         super();
         this.indexName = indexName;
         this.db = db;

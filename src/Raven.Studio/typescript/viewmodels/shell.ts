@@ -308,6 +308,7 @@ class shell extends viewModelBase {
                 }
                 
                 globalDispatch(accessManagerActions.onSecurityClearanceSet(this.accessManager.securityClearance()));
+                globalDispatch(accessManagerActions.onIsSecureServerSet(this.accessManager.secureServer()));
             })
             .then(() => this.onBootstrapFinishedTask.resolve(), () => this.onBootstrapFinishedTask.reject());
 

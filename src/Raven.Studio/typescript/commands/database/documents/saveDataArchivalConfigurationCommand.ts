@@ -3,11 +3,11 @@ import commandBase = require("commands/commandBase");
 import endpoint = require("endpoints");
 
 class saveDataArchivalConfigurationCommand extends commandBase {
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly configuration: Raven.Client.Documents.Operations.DataArchival.DataArchivalConfiguration;
     
 
-    constructor(db: database, configuration: Raven.Client.Documents.Operations.DataArchival.DataArchivalConfiguration) {
+    constructor(db: database | string, configuration: Raven.Client.Documents.Operations.DataArchival.DataArchivalConfiguration) {
         super();
         this.db = db;
         this.configuration = configuration;

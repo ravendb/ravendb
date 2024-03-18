@@ -1,6 +1,5 @@
 ﻿/// <reference path="../../../typings/tsd.d.ts"/>
 import database = require("models/resources/database");
-import { DatabaseSharedInfo } from "components/models/databases";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 
 class accessManager {
@@ -95,25 +94,25 @@ class accessManager {
         }
     }
     
-    readOnlyOrAboveForDatabase(db: database) {
+    readOnlyOrAboveForDatabase(db: database | string) {
         if (db) {
-            const accessLevel = this.getEffectiveDatabaseAccessLevel(db.name);
+            const accessLevel = this.getEffectiveDatabaseAccessLevel((_.isString(db) ? db : db.name));
             return accessLevel === "DatabaseRead";
         }
         return null;
     }
     
-    readWriteAccessOrAboveForDatabase(db: database) {
+    readWriteAccessOrAboveForDatabase(db: database | string) {
         if (db) {
-            const accessLevel = this.getEffectiveDatabaseAccessLevel(db.name);
+            const accessLevel = this.getEffectiveDatabaseAccessLevel((_.isString(db) ? db : db.name));
             return accessLevel === "DatabaseReadWrite" || accessLevel === "DatabaseAdmin";
         } 
         return null;
     }
     
-    adminAccessOrAboveForDatabase(db: database | DatabaseSharedInfo) {
+    adminAccessOrAboveForDatabase(db: database | string) {
         if (db) {
-            const accessLevel = this.getEffectiveDatabaseAccessLevel(db.name);
+            const accessLevel = this.getEffectiveDatabaseAccessLevel((_.isString(db) ? db : db.name));
             return accessLevel === "DatabaseAdmin";
         }
         return null;

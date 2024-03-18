@@ -70,11 +70,11 @@ export function IndexesPage(props: IndexesPageProps) {
         getSelectedIndexes,
         confirmDeleteIndexes,
         globalIndexingStatus,
-    } = useIndexesPage(db, stale);
+    } = useIndexesPage(stale);
 
     const deleteSelectedIndexes = () => {
         reportEvent("indexes", "delete-selected");
-        return confirmDeleteIndexes(db, getSelectedIndexes());
+        return confirmDeleteIndexes(getSelectedIndexes());
     };
 
     const startSelectedIndexes = () => startIndexes(getSelectedIndexes());
@@ -112,11 +112,10 @@ export function IndexesPage(props: IndexesPageProps) {
     }
 
     if (stats.indexes.length === 0) {
-        return <NoIndexes database={db} />;
+        return <NoIndexes />;
     }
 
     const indexesPageListCommonProps: Omit<IndexesPageListProps, "indexes"> = {
-        db,
         replacements,
         selectedIndexes,
         indexToHighlight,
@@ -213,7 +212,7 @@ export function IndexesPage(props: IndexesPageProps) {
 
                     {/*  TODO  <IndexGlobalIndexing /> */}
 
-                    {canReadWriteDatabase(db) && (
+                    {canReadWriteDatabase(db.name) && (
                         <IndexSelectActions
                             indexNames={indexNames}
                             selectedIndexes={selectedIndexes}

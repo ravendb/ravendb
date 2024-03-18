@@ -26,10 +26,10 @@ export const toggleIndexing =
         const { indexesService } = getServices();
 
         if (disable) {
-            await indexesService.disableAllIndexes(db);
+            await indexesService.disableAllIndexes(db.name);
             dispatch(databasesViewSlice.actions.disabledIndexing(db.name));
         } else {
-            await indexesService.enableAllIndexes(db);
+            await indexesService.enableAllIndexes(db.name);
             dispatch(databasesViewSlice.actions.enabledIndexing(db.name));
         }
     };
@@ -60,13 +60,13 @@ export const togglePauseIndexing =
 
         if (pause) {
             const tasks = locations.map(async (l) => {
-                await indexesService.pauseAllIndexes(db, l);
+                await indexesService.pauseAllIndexes(db.name, l);
                 dispatch(databasesViewSlice.actions.pausedIndexing(db.name, l));
             });
             await Promise.all(tasks);
         } else {
             const tasks = locations.map(async (l) => {
-                await indexesService.resumeAllIndexes(db, l);
+                await indexesService.resumeAllIndexes(db.name, l);
                 dispatch(databasesViewSlice.actions.resumedIndexing(db.name, l));
             });
             await Promise.all(tasks);
@@ -144,7 +144,10 @@ export const toggleDatabases =
     async (dispatch, getState, getServices) => {
         const { databasesService } = getServices();
         // TODO: lazy update UI
-        await databasesService.toggle(databases, enable);
+        await databasesService.toggle(
+            databases.map((x) => x.name),
+            enable
+        );
     };
 
 export const throttledReloadDatabaseDetails = _.throttle(reloadDatabasesDetails, 100);
@@ -154,7 +157,10 @@ export const changeDatabasesLockMode =
     async (dispatch, getState, getServices) => {
         const { databasesService } = getServices();
 
-        await databasesService.setLockMode(databases, lockMode);
+        await databasesService.setLockMode(
+            databases.map((x) => x.name),
+            lockMode
+        );
     };
 
 /* TODO

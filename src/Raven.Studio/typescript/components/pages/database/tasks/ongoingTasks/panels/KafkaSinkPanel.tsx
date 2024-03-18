@@ -21,13 +21,21 @@ import {
     RichPanelSelect,
 } from "components/common/RichPanel";
 import { Collapse, Input } from "reactstrap";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
 
 type KafkaSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskKafkaSinkInfo>;
 
 function Details(props: KafkaSinkPanelProps & { canEdit: boolean }) {
-    const { data, canEdit, db } = props;
+    const { data, canEdit } = props;
     const { appUrl } = useAppUrls();
-    const connectionStringsUrl = appUrl.forConnectionStrings(db, "Kafka", data.shared.connectionStringName);
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const connectionStringsUrl = appUrl.forConnectionStrings(
+        activeDatabaseName,
+        "Kafka",
+        data.shared.connectionStringName
+    );
+
     return (
         <RichPanelDetails>
             <RichPanelDetailItem label="Bootstrap Servers">{data.shared.url}</RichPanelDetailItem>
@@ -42,12 +50,12 @@ function Details(props: KafkaSinkPanelProps & { canEdit: boolean }) {
 }
 
 export function KafkaSinkPanel(props: KafkaSinkPanelProps) {
-    const { db, data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
+    const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
     const { isAdminAccessOrAbove } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
 
-    const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
+    const canEdit = isAdminAccessOrAbove() && !data.shared.serverWide;
     const editUrl = forCurrentDatabase.editKafkaSink(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);

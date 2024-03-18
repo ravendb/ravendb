@@ -1,28 +1,27 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
-import { DatabaseSharedInfo } from "components/models/databases";
 
 class deleteDatabaseFromNodeCommand extends commandBase {
 
-    private db: DatabaseSharedInfo;
+    private databaseName: string;
 
     private nodes: Array<string>;
 
     private isHardDelete: boolean;
 
-    constructor(db: DatabaseSharedInfo, nodes: Array<string>, isHardDelete: boolean) {
+    constructor(databaseName: string, nodes: Array<string>, isHardDelete: boolean) {
         super();
         this.isHardDelete = isHardDelete;
         this.nodes = nodes;
-        this.db = db;
+        this.databaseName = databaseName;
     }
 
     execute(): JQueryPromise<updateDatabaseConfigurationsResult> {
         const url = endpoints.global.adminDatabases.adminDatabases;
         const args = {
             HardDelete: this.isHardDelete,
-            DatabaseNames: [this.db.name],
+            DatabaseNames: [this.databaseName],
             FromNodes: this.nodes
         };
 

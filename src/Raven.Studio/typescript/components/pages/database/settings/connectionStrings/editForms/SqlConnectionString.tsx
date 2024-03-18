@@ -16,6 +16,8 @@ import { Icon } from "components/common/Icon";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import { FlexGrow } from "components/common/FlexGrow";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
 
 type FormData = ConnectionFormData<SqlConnection>;
 
@@ -24,11 +26,11 @@ export interface SqlConnectionStringProps extends EditConnectionStringFormProps 
 }
 
 export default function SqlConnectionString({
-    db,
     initialConnection,
     isForNewConnection,
     onSave,
 }: SqlConnectionStringProps) {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { control, handleSubmit, trigger } = useForm<FormData>({
         mode: "all",
         defaultValues: getDefaultValues(initialConnection, isForNewConnection),
@@ -46,7 +48,7 @@ export default function SqlConnectionString({
             return;
         }
 
-        return tasksService.testSqlConnectionString(db, formValues.connectionString, formValues.factoryName);
+        return tasksService.testSqlConnectionString(databaseName, formValues.connectionString, formValues.factoryName);
     });
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {

@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getDocumentPhysicalSizeCommand extends commandBase {
 
-    constructor(private id: string, private db: database) {
+    constructor(private id: string, private db: database | string) {
         super();
     }
 

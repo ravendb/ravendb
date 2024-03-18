@@ -7,7 +7,7 @@ class saveCustomSorterCommand extends commandBase {
     private db: database;
     private sorterDto: SorterDefinition;
 
-    constructor(db: database, sorterDto: SorterDefinition) {
+    constructor(db: database | string, sorterDto: SorterDefinition) {
         super();
         this.db = db;
         this.sorterDto = sorterDto;

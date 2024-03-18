@@ -6,7 +6,7 @@ import queryCriteria = require("models/database/query/queryCriteria");
 import queryUtil = require("common/queryUtil");
 
 interface QueryCommandProps {
-    db: database;
+    db: database | string;
     skip: number;
     take: number;
     criteria: queryCriteria;

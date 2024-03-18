@@ -6,9 +6,9 @@ class verifyDocumentsIDsCommand extends commandBase {
 
     private docIDs: string[];
 
-    private db: database;
+    private db: database | string;
 
-    constructor(docIDs: string[], db: database) {
+    constructor(docIDs: string[], db: database | string) {
         super();
         this.db = db;
         this.docIDs = docIDs;

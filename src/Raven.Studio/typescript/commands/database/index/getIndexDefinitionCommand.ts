@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getIndexDefinitionCommand extends commandBase {
 
-    constructor(private indexName: string, private db: database, private location: databaseLocationSpecifier) {
+    constructor(private indexName: string, private db: database | string, private location: databaseLocationSpecifier) {
         super();
     }
 

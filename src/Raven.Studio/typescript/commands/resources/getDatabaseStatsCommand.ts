@@ -6,7 +6,7 @@ import genUtils from "common/generalUtils";
 
 class getDatabaseStatsCommand extends commandBase {
 
-    constructor(private db: database, private location: databaseLocationSpecifier) {
+    constructor(private db: database | string, private location: databaseLocationSpecifier) {
         super();
     }
 

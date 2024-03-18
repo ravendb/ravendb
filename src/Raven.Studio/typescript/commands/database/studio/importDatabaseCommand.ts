@@ -5,7 +5,7 @@ import importDatabaseModel = require("models/database/tasks/importDatabaseModel"
 
 class importDatabaseCommand extends commandBase {
 
-    constructor(private db: database, private operationId: number, private file: File, private model: importDatabaseModel,
+    constructor(private db: database | string, private operationId: number, private file: File, private model: importDatabaseModel,
         private isUploading: KnockoutObservable<boolean>, private uploadStatus: KnockoutObservable<number>) {
         super();
     }

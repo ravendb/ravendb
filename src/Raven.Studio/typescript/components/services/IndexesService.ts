@@ -3,7 +3,6 @@
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import saveIndexPriorityCommand from "commands/database/index/saveIndexPriorityCommand";
-import database from "models/resources/database";
 import saveIndexLockModeCommand from "commands/database/index/saveIndexLockModeCommand";
 import { IndexSharedInfo } from "../models/indexes";
 import getIndexesStatsCommand from "commands/database/index/getIndexesStatsCommand";
@@ -15,79 +14,76 @@ import togglePauseIndexingCommand from "commands/database/index/togglePauseIndex
 import getIndexesProgressCommand from "commands/database/index/getIndexesProgressCommand";
 import openFaultyIndexCommand from "commands/database/index/openFaultyIndexCommand";
 import forceIndexReplace from "commands/database/index/forceIndexReplace";
-import { DatabaseSharedInfo } from "components/models/databases";
 import toggleDisableIndexingCommand from "commands/database/index/toggleDisableIndexingCommand";
 import getIndexMergeSuggestionsCommand = require("commands/database/index/getIndexMergeSuggestionsCommand");
 import deleteIndexCommand = require("commands/database/index/deleteIndexCommand");
 
 export default class IndexesService {
-    async getProgress(db: database, location: databaseLocationSpecifier) {
-        return new getIndexesProgressCommand(db, location).execute();
+    async getProgress(databaseName: string, location: databaseLocationSpecifier) {
+        return new getIndexesProgressCommand(databaseName, location).execute();
     }
 
-    async setLockMode(indexes: IndexSharedInfo[], lockMode: IndexLockMode, db: database) {
-        await new saveIndexLockModeCommand(indexes, lockMode, db).execute();
+    async setLockMode(indexes: IndexSharedInfo[], lockMode: IndexLockMode, databaseName: string) {
+        await new saveIndexLockModeCommand(indexes, lockMode, databaseName).execute();
     }
 
-    async setPriority(index: IndexSharedInfo, priority: IndexPriority, db: database) {
-        await new saveIndexPriorityCommand(index.name, priority, db).execute();
+    async setPriority(index: IndexSharedInfo, priority: IndexPriority, databaseName: string) {
+        await new saveIndexPriorityCommand(index.name, priority, databaseName).execute();
     }
 
-    async getStats(db: database | DatabaseSharedInfo, location: databaseLocationSpecifier): Promise<IndexStats[]> {
-        return new getIndexesStatsCommand(db, location).execute();
+    async getStats(databaseName: string, location: databaseLocationSpecifier): Promise<IndexStats[]> {
+        return new getIndexesStatsCommand(databaseName, location).execute();
     }
 
-    async resetIndex(indexName: string, db: database, location: databaseLocationSpecifier) {
-        await new resetIndexCommand(indexName, db, location).execute();
+    async resetIndex(indexName: string, databaseName: string, location: databaseLocationSpecifier) {
+        await new resetIndexCommand(indexName, databaseName, location).execute();
     }
 
-    async pauseAllIndexes(db: DatabaseSharedInfo, location: databaseLocationSpecifier) {
-        await new togglePauseIndexingCommand(false, db, null, location).execute();
+    async pauseAllIndexes(databaseName: string, location: databaseLocationSpecifier) {
+        await new togglePauseIndexingCommand(false, databaseName, null, location).execute();
     }
 
-    async resumeAllIndexes(db: DatabaseSharedInfo, location: databaseLocationSpecifier) {
-        await new togglePauseIndexingCommand(true, db, null, location).execute();
+    async resumeAllIndexes(databaseName: string, location: databaseLocationSpecifier) {
+        await new togglePauseIndexingCommand(true, databaseName, null, location).execute();
     }
 
-    async disableAllIndexes(db: DatabaseSharedInfo) {
-        await new toggleDisableIndexingCommand(false, db).execute();
+    async disableAllIndexes(databaseName: string) {
+        await new toggleDisableIndexingCommand(false, databaseName).execute();
     }
 
-    async enableAllIndexes(db: DatabaseSharedInfo) {
-        await new toggleDisableIndexingCommand(true, db).execute();
+    async enableAllIndexes(databaseName: string) {
+        await new toggleDisableIndexingCommand(true, databaseName).execute();
     }
 
-    async enable(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
-        await new enableIndexCommand(index.name, db, location).execute();
+    async enable(index: IndexSharedInfo, databaseName: string, location: databaseLocationSpecifier) {
+        await new enableIndexCommand(index.name, databaseName, location).execute();
     }
 
-    async disable(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
-        await new disableIndexCommand(index.name, db, location).execute();
+    async disable(index: IndexSharedInfo, databaseName: string, location: databaseLocationSpecifier) {
+        await new disableIndexCommand(index.name, databaseName, location).execute();
     }
 
-    async pause(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
-        await new togglePauseIndexingCommand(false, db, { name: index.name }, location).execute();
+    async pause(index: IndexSharedInfo, databaseName: string, location: databaseLocationSpecifier) {
+        await new togglePauseIndexingCommand(false, databaseName, { name: index.name }, location).execute();
     }
 
-    async resume(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
-        await new togglePauseIndexingCommand(true, db, { name: index.name }, location).execute();
+    async resume(index: IndexSharedInfo, databaseName: string, location: databaseLocationSpecifier) {
+        await new togglePauseIndexingCommand(true, databaseName, { name: index.name }, location).execute();
     }
 
-    async openFaulty(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
-        await new openFaultyIndexCommand(index.name, db, location).execute();
+    async openFaulty(index: IndexSharedInfo, databaseName: string, location: databaseLocationSpecifier) {
+        await new openFaultyIndexCommand(index.name, databaseName, location).execute();
     }
 
-    async forceReplace(indexName: string, database: database, location: databaseLocationSpecifier) {
-        await new forceIndexReplace(indexName, database, location).execute();
+    async forceReplace(indexName: string, databaseName: string, location: databaseLocationSpecifier) {
+        await new forceIndexReplace(indexName, databaseName, location).execute();
     }
 
-    async getIndexMergeSuggestions(
-        db: database
-    ): Promise<Raven.Server.Documents.Indexes.IndexMerging.IndexMergeResults> {
-        return await new getIndexMergeSuggestionsCommand(db).execute();
+    async getIndexMergeSuggestions(databaseName: string) {
+        return await new getIndexMergeSuggestionsCommand(databaseName).execute();
     }
 
-    async deleteIndex(indexName: string, database: database) {
-        await new deleteIndexCommand(indexName, database).execute();
+    async deleteIndex(indexName: string, databaseName: string) {
+        await new deleteIndexCommand(indexName, databaseName).execute();
     }
 }

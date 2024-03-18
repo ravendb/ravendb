@@ -5,9 +5,9 @@ import RevertRevisionsRequest = Raven.Server.Documents.Revisions.RevertRevisions
 
 class revertRevisionsCommand extends commandBase {
     private readonly payload: RevertRevisionsRequest;
-    private readonly db: database;
+    private readonly db: database | string;
 
-    constructor(payload: RevertRevisionsRequest, db: database) {
+    constructor(payload: RevertRevisionsRequest, db: database | string) {
         super();
         this.db = db;
         this.payload = payload;
