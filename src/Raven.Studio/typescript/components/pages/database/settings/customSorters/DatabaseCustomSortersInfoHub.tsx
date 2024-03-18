@@ -15,7 +15,7 @@ import { NonShardedViewProps } from "components/models/common";
 export function DatabaseCustomSortersInfoHub({ db }: NonShardedViewProps) {
     const { databasesService } = useServices();
     const asyncGetDatabaseSorters = useAsync(() => databasesService.getCustomSorters(db), [db]);
-    const customSortersDocsLink = useRavenLink({ hash: "LGUJH8" });
+    const customSortersDocsLink = useRavenLink({ hash: "XI6BMT" });
     const licenseClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
     const licenseDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerDatabase"));
     const numberOfCustomSortersInCluster = useAppSelector(licenseSelectors.limitsUsage).NumberOfCustomSortersInCluster;

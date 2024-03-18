@@ -10,7 +10,7 @@ import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUti
 import React from "react";
 
 export default function ServerWideCustomSortersInfoHub() {
-    const customSortersDocsLink = useRavenLink({ hash: "LGUJH8" });
+    const customSortersDocsLink = useRavenLink({ hash: "XI6BMT" });
 
     const hasServerWideCustomSorters = useAppSelector(licenseSelectors.statusValue("HasServerWideCustomSorters"));
     const featureAvailability = useLimitedFeatureAvailability({
