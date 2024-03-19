@@ -106,6 +106,41 @@ public class RavenDB_21900 : RavenTestBase
             }
         }
     }
+    
+    [RavenFact(RavenTestCategory.Querying)]
+    public void PreviouslyLoadedDocumentIsCurrentDocument()
+    {
+        using (var store = GetDocumentStore(new Options
+               {
+                   ModifyDatabaseRecord = x => x.DocumentsCompression = new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true)
+               }))
+        {
+            string orderId;
+            using (var session = store.OpenSession())
+            {
+                session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
+                session.Store(new Order(){Employee = "Maciej", Company = "orders/2"}, "orders/1");
+                session.Store(new Order(){Employee = "Test", Company = "orders/1"}, "orders/2");
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var query = session.Advanced.RawQuery<Order>($"from 'Orders' as a " +
+                                                             $"load a.Company as orderDoc " +
+                                                             "select orderDoc.Employee, a.Company");
+                
+                var stream = session.Advanced.Stream<Order>(query);
+                Assert.True(stream.MoveNext());
+                Assert.Equal("Test", stream.Current.Document.Employee);
+                Assert.Equal("orders/2", stream.Current.Document.Company);
+                Assert.True(stream.MoveNext());
+                Assert.Equal("Maciej", stream.Current.Document.Employee);
+                Assert.Equal("orders/1", stream.Current.Document.Company);
+                Assert.False(stream.MoveNext());
+            }
+        }
+    }
 
     public RavenDB_21900(ITestOutputHelper output) : base(output)
     {
