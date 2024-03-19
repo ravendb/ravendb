@@ -5,7 +5,6 @@ import useBoolean from "components/hooks/useBoolean";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useServices } from "components/hooks/useServices";
 import { milliSecondsInWeek } from "components/utils/common";
-import database from "models/resources/database";
 import moment from "moment";
 import router from "plugins/router";
 import { useEffect, useRef, useState } from "react";
@@ -15,6 +14,9 @@ import IndexUtils from "components/utils/IndexUtils";
 import useConfirm from "components/common/ConfirmDialog";
 import React from "react";
 import messagePublisher from "common/messagePublisher";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 type IndexStats = Map<string, Raven.Client.Documents.Indexes.IndexStats>;
 
@@ -48,7 +50,9 @@ interface UnmergableIndex {
     reason: string;
 }
 
-export default function useIndexCleanup(db: database) {
+export default function useIndexCleanup() {
+    const db = useAppSelector(databaseSelectors.activeDatabase);
+
     const [activeTab, setActiveTab] = useState(0);
     const [indexStats, setIndexStats] = useState<IndexStats>(null);
 
@@ -140,7 +144,7 @@ export default function useIndexCleanup(db: database) {
     };
 
     const fetchStats = async () => {
-        const locations = db.getLocations();
+        const locations = DatabaseUtils.getLocations(db);
         const allStats = locations.map((location) => indexesService.getStats(db.name, location));
 
         const resultMap = new Map<string, Raven.Client.Documents.Indexes.IndexStats>();
@@ -265,12 +269,12 @@ export default function useIndexCleanup(db: database) {
 
     const navigateToMergeSuggestion = (item: MergeIndex) => {
         const mergedIndexName = mergedIndexesStorage.saveMergedIndex(
-            db,
+            db.name,
             item.mergedIndexDefinition,
             item.toMerge.map((x) => x.name)
         );
 
-        const targetUrl = appUrl.forEditIndex(mergedIndexName, db);
+        const targetUrl = appUrl.forEditIndex(mergedIndexName, db.name);
 
         router.navigate(targetUrl);
     };

@@ -24,7 +24,7 @@ export const DefaultDatabaseRecord: StoryObj<DefaultDatabaseRecordProps> = {
         const { accessManager, databases } = mockStore;
         const { databasesService } = mockServices;
 
-        databases.withActiveDatabase(DatabasesStubs.nonShardedDatabaseInfo());
+        databases.withActiveDatabase_NonSharded_SingleNode();
 
         accessManager.with_securityClearance(props.securityClearance);
         databasesService.withDatabaseRecord();

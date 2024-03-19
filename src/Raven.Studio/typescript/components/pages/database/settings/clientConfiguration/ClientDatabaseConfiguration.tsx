@@ -5,9 +5,7 @@ import { FormCheckbox, FormInput, FormRadioToggleWithIcon, FormSelect, FormSwitc
 import { useServices } from "components/hooks/useServices";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
-import { useAccessManager } from "hooks/useAccessManager";
 import { LoadError } from "components/common/LoadError";
-import database = require("models/resources/database");
 import {
     ClientConfigurationFormData,
     clientConfigurationYupResolver,
@@ -30,23 +28,21 @@ import FeatureAvailabilitySummaryWrapper, {
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 export default function ClientDatabaseConfiguration() {
     const { manageServerService } = useServices();
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const asyncGetClientConfiguration = useAsyncCallback(manageServerService.getClientConfiguration);
     const asyncGetClientGlobalConfiguration = useAsync(manageServerService.getGlobalClientConfiguration, []);
 
-    const { isClusterAdminOrClusterNode: canNavigateToServerSettings } = useAccessManager();
+    const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
 
     const { handleSubmit, control, formState, setValue, reset } = useForm<ClientConfigurationFormData>({
         resolver: clientConfigurationYupResolver,
         mode: "all",
         defaultValues: async () =>
-            ClientConfigurationUtils.mapToFormData(
-                await asyncGetClientConfiguration.execute(activeDatabaseName),
-                false
-            ),
+            ClientConfigurationUtils.mapToFormData(await asyncGetClientConfiguration.execute(databaseName), false),
     });
 
     useDirtyFlag(formState.isDirty);
@@ -91,15 +87,13 @@ export default function ClientDatabaseConfiguration() {
         tryHandleSubmit(async () => {
             await manageServerService.saveClientConfiguration(
                 ClientConfigurationUtils.mapToDto(formData, false),
-                activeDatabaseName
+                databaseName
             );
         });
     };
 
     const onRefresh = async () => {
-        reset(
-            ClientConfigurationUtils.mapToFormData(await asyncGetClientConfiguration.execute(activeDatabaseName), false)
-        );
+        reset(ClientConfigurationUtils.mapToFormData(await asyncGetClientConfiguration.execute(databaseName), false));
     };
 
     if (asyncGetClientConfiguration.loading || asyncGetClientGlobalConfiguration.loading) {
@@ -141,7 +135,7 @@ export default function ClientDatabaseConfiguration() {
                                 <FeatureNotAvailableInYourLicensePopover target="saveClientConfiguration" />
                             )}
 
-                            {canNavigateToServerSettings() && (
+                            {isClusterAdminOrClusterNode && (
                                 <small title="Navigate to the server-wide Client Configuration View">
                                     <a target="_blank" href={appUrl.forGlobalClientConfiguration()}>
                                         <Icon icon="link" />
@@ -170,7 +164,7 @@ export default function ClientDatabaseConfiguration() {
                                         <h4 className="mb-3">
                                             <Icon icon="server" />
                                             Server Configuration
-                                            {canNavigateToServerSettings() && (
+                                            {isClusterAdminOrClusterNode && (
                                                 <a
                                                     target="_blank"
                                                     href={appUrl.forGlobalClientConfiguration()}

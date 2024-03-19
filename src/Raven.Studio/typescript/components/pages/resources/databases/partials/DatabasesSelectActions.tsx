@@ -1,5 +1,4 @@
 ﻿import React, { useCallback, useState } from "react";
-import { useAccessManager } from "hooks/useAccessManager";
 import {
     Button,
     ButtonGroup,
@@ -9,7 +8,7 @@ import {
     Spinner,
     UncontrolledDropdown,
 } from "reactstrap";
-import { useAppDispatch } from "components/store";
+import { useAppDispatch, useAppSelector } from "components/store";
 import { DatabaseSharedInfo } from "components/models/databases";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import { useEventsCollector } from "hooks/useEventsCollector";
@@ -24,6 +23,7 @@ import {
 import { databaseActions } from "components/common/shell/databaseSliceActions";
 import genUtils = require("common/generalUtils");
 import useConfirm from "components/common/ConfirmDialog";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 interface DatabasesSelectActionsProps {
     selectedDatabases: DatabaseSharedInfo[];
@@ -36,7 +36,7 @@ export function DatabasesSelectActions({
     databaseNames,
     setSelectedDatabaseNames,
 }: DatabasesSelectActionsProps) {
-    const { isOperatorOrAbove } = useAccessManager();
+    const isOperatorOrAbove = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
     const { reportEvent } = useEventsCollector();
 
     const [lockChanges, setLockChanges] = useState(false);
@@ -63,7 +63,7 @@ export function DatabasesSelectActions({
         }
     }, [databaseNames, selectedDatabaseNames, selectionState, setSelectedDatabaseNames]);
 
-    if (!isOperatorOrAbove()) {
+    if (!isOperatorOrAbove) {
         // no access
         return null;
     }
@@ -134,7 +134,7 @@ export function DatabasesSelectActions({
                         <strong className="text-emphasis me-1">{selectedDatabases.length}</strong> selected
                     </div>
                     <ButtonGroup className="gap-2 flex-wrap justify-content-center">
-                        {isOperatorOrAbove() && (
+                        {isOperatorOrAbove && (
                             <UncontrolledDropdown>
                                 <DropdownToggle
                                     caret
@@ -157,7 +157,7 @@ export function DatabasesSelectActions({
                             </UncontrolledDropdown>
                         )}
 
-                        {isOperatorOrAbove() && (
+                        {isOperatorOrAbove && (
                             <UncontrolledDropdown>
                                 <DropdownToggle
                                     title="Set the delete lock mode for the selected databases"
@@ -192,7 +192,7 @@ export function DatabasesSelectActions({
                                 </DropdownMenu>
                             </UncontrolledDropdown>
                         )}
-                        {isOperatorOrAbove() && (
+                        {isOperatorOrAbove && (
                             <Button
                                 color="danger"
                                 onClick={onDelete}

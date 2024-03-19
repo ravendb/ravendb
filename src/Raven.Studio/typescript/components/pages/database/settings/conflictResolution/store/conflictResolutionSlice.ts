@@ -1,4 +1,11 @@
-import { EntityState, createAsyncThunk, createEntityAdapter, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import {
+    EntityState,
+    createAsyncThunk,
+    createEntityAdapter,
+    createSlice,
+    PayloadAction,
+    createSelector,
+} from "@reduxjs/toolkit";
 import { services } from "components/hooks/useServices";
 import { loadStatus } from "components/models/common";
 import { RootState } from "components/store";
@@ -163,13 +170,17 @@ export const conflictResolutionActions = {
     fetchConfig,
 };
 
+const usedCollectionNames = createSelector(
+    (store: RootState) => collectionConfigsSelectors.selectAll(store.conflictResolution.config.collectionConfigs),
+    (collectionConfigs) => collectionConfigs.map((x) => x.name)
+);
+
 export const conflictResolutionSelectors = {
     loadStatus: (store: RootState) => store.conflictResolution.loadStatus,
     isResolveToLatest: (store: RootState) => store.conflictResolution.config.isResolveToLatest,
     collectionConfigs: (store: RootState) =>
         collectionConfigsSelectors.selectAll(store.conflictResolution.config.collectionConfigs),
-    usedCollectionNames: (store: RootState) =>
-        collectionConfigsSelectors.selectAll(store.conflictResolution.config.collectionConfigs).map((x) => x.name),
+    usedCollectionNames: usedCollectionNames,
     isDirty: (store: RootState) => store.conflictResolution.isDirty,
     isSomeInEditMode: (store: RootState) =>
         collectionConfigsSelectors

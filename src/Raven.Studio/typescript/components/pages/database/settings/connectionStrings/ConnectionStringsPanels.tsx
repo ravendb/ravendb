@@ -1,7 +1,6 @@
 import { HrHeader } from "components/common/HrHeader";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { useAppSelector } from "components/store";
-import database from "models/resources/database";
 import React from "react";
 import { useDispatch } from "react-redux";
 import { Button } from "reactstrap";
@@ -10,7 +9,6 @@ import { Connection } from "./connectionStringsTypes";
 import { connectionStringsActions } from "./store/connectionStringsSlice";
 import { Icon } from "components/common/Icon";
 import IconName from "../../../../../../typings/server/icons";
-import { useAccessManager } from "components/hooks/useAccessManager";
 
 interface ConnectionStringsPanelsProps {
     connections: Connection[];
@@ -19,7 +17,7 @@ interface ConnectionStringsPanelsProps {
 
 export default function ConnectionStringsPanels({ connections, connectionsType }: ConnectionStringsPanelsProps) {
     const dispatch = useDispatch();
-    const { isAdminAccessOrAbove } = useAccessManager();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
 
     if (connections.length === 0) {
         return null;
@@ -29,7 +27,7 @@ export default function ConnectionStringsPanels({ connections, connectionsType }
         <div className="mb-4">
             <HrHeader
                 right={
-                    isAdminAccessOrAbove() && (
+                    hasDatabaseAdminAccess && (
                         <Button
                             color="info"
                             size="sm"

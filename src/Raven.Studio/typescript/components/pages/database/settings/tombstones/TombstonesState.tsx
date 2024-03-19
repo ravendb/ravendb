@@ -20,13 +20,10 @@ import { useAppSelector } from "components/store";
 export default function TombstonesState({ location }: { location?: databaseLocationSpecifier }) {
     const { databasesService } = useServices();
 
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const asyncGetTombstonesState = useAsync(
-        () => databasesService.getTombstonesState(activeDatabaseName, location),
-        []
-    );
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const asyncGetTombstonesState = useAsync(() => databasesService.getTombstonesState(databaseName, location), []);
     const asyncForceTombstonesCleanup = useAsyncCallback(() =>
-        databasesService.forceTombstonesCleanup(activeDatabaseName, location)
+        databasesService.forceTombstonesCleanup(databaseName, location)
     );
 
     const [collectionsGrid, setCollectionsGrid] = useState<virtualGridController<TombstoneItem>>();

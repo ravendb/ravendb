@@ -17,18 +17,18 @@ export default function Local() {
         destinations: { local: formValues },
     } = useWatch({ control });
 
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { tasksService } = useServices();
 
     const asyncGetLocalFolderPathOptions = useAsync(
-        () => tasksService.getLocalFolderPathOptions(formValues.folderPath, activeDatabaseName),
+        () => tasksService.getLocalFolderPathOptions(formValues.folderPath, databaseName),
         [formValues.folderPath]
     );
     const asyncGetBackupLocation = useAsync(() => {
         if (!formValues.folderPath) {
             return;
         }
-        return tasksService.getBackupLocation(formValues.folderPath, activeDatabaseName);
+        return tasksService.getBackupLocation(formValues.folderPath, databaseName);
     }, [formValues.folderPath]);
 
     const onPathChange = (value: string, action: InputActionMeta) => {

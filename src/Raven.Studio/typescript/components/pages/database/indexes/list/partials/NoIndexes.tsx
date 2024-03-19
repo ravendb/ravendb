@@ -1,20 +1,20 @@
 ﻿import { useAppUrls } from "hooks/useAppUrls";
-import { useAccessManager } from "hooks/useAccessManager";
 import { EmptySet } from "components/common/EmptySet";
 import { Button } from "reactstrap";
 import React from "react";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { useAppSelector } from "components/store";
 
 export function NoIndexes() {
+    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.hasDatabaseWriteAccess());
     const { forCurrentDatabase } = useAppUrls();
-    const newIndexUrl = forCurrentDatabase.newIndex();
-    const { canReadWriteDatabase } = useAccessManager();
 
     return (
         <div className="text-center">
             <EmptySet>No indexes have been created for this database.</EmptySet>
 
-            {canReadWriteDatabase() && (
-                <Button outline color="primary" href={newIndexUrl}>
+            {hasDatabaseWriteAccess && (
+                <Button outline color="primary" href={forCurrentDatabase.newIndex()}>
                     Create new index
                 </Button>
             )}

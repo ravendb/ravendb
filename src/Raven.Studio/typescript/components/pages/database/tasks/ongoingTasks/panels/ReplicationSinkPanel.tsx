@@ -9,7 +9,6 @@ import {
     useTasksOperations,
 } from "../../shared/shared";
 import { OngoingTaskReplicationSinkInfo } from "components/models/tasks";
-import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
@@ -23,6 +22,7 @@ import {
 import { Collapse, Input } from "reactstrap";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 type ReplicationSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskReplicationSinkInfo>;
 
@@ -31,12 +31,8 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
     const connectionStringDefined = !!data.shared.destinationDatabase;
     const { appUrl } = useAppUrls();
 
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(
-        activeDatabaseName,
-        "Raven",
-        data.shared.connectionStringName
-    );
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Raven", data.shared.connectionStringName);
 
     return (
         <RichPanelDetails>
@@ -64,11 +60,10 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
 export function ReplicationSinkPanel(props: ReplicationSinkPanelProps) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
-    const { isAdminAccessOrAbove } = useAccessManager();
-    const { forCurrentDatabase } = useAppUrls();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
 
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const canEdit = isAdminAccessOrAbove(activeDatabaseName) && !data.shared.serverWide;
+    const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editReplicationSink(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);

@@ -1,18 +1,23 @@
-import { Meta, Story } from "@storybook/react";
+import { Meta, StoryFn } from "@storybook/react";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { IndexCleanup } from "./IndexCleanup";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
     title: "Pages/Indexes/Index Cleanup",
-    component: IndexCleanup,
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof IndexCleanup>;
 
-export const EmptyView: Story<typeof IndexCleanup> = () => {
+function commonInit() {
+    const { databases } = mockStore;
+    databases.withActiveDatabase_NonSharded_SingleNode();
+}
+
+export const EmptyView: StoryFn = () => {
+    commonInit();
+
     const { license } = mockStore;
     license.with_License();
 
@@ -24,10 +29,12 @@ export const EmptyView: Story<typeof IndexCleanup> = () => {
         Unmergables: {},
     });
 
-    return <IndexCleanup db={DatabasesStubs.nonShardedClusterDatabase()} />;
+    return <IndexCleanup />;
 };
 
-export const CleanupSuggestions: Story<typeof IndexCleanup> = () => {
+export const CleanupSuggestions: StoryFn = () => {
+    commonInit();
+
     const { license } = mockStore;
     license.with_License();
 
@@ -36,10 +43,12 @@ export const CleanupSuggestions: Story<typeof IndexCleanup> = () => {
     indexesService.withGetStats();
     indexesService.withGetIndexMergeSuggestions();
 
-    return <IndexCleanup db={DatabasesStubs.nonShardedClusterDatabase()} />;
+    return <IndexCleanup />;
 };
 
-export const LicenseRestricted: Story<typeof IndexCleanup> = () => {
+export const LicenseRestricted: StoryFn = () => {
+    commonInit();
+
     const { license } = mockStore;
     license.with_LicenseLimited({ HasIndexCleanup: false });
 
@@ -48,5 +57,5 @@ export const LicenseRestricted: Story<typeof IndexCleanup> = () => {
     indexesService.withGetStats();
     indexesService.withGetIndexMergeSuggestions();
 
-    return <IndexCleanup db={DatabasesStubs.nonShardedClusterDatabase()} />;
+    return <IndexCleanup />;
 };

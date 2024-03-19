@@ -134,7 +134,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
     const isOperatorOrAbove = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
     const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
-    const isDatabaseAdminOrAbove = useAppSelector(accessManagerSelectors.isDatabaseAdminOrAbove(db.name));
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess(db.name));
 
     const canNavigateToDatabase = !db.disabled;
 
@@ -147,7 +147,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const canDisableIndexing = isOperatorOrAbove && !indexingDisabled;
     const canEnableIndexing = isOperatorOrAbove && indexingDisabled;
 
-    const canRestartDatabase = isDatabaseAdminOrAbove && !db.disabled;
+    const canRestartDatabase = hasDatabaseAdminAccess && !db.disabled;
 
     const onChangeLockMode = async (lockMode: DatabaseLockMode) => {
         if (db.lockMode === lockMode) {
@@ -344,7 +344,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 </Button>
                             )}
 
-                            {isDatabaseAdminOrAbove && (
+                            {hasDatabaseAdminAccess && (
                                 <UncontrolledDropdown>
                                     <ButtonGroup>
                                         {isOperatorOrAbove && (
@@ -387,7 +387,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                         {isOperatorOrAbove && (
                                             <>
                                                 <DropdownItem divider />
-                                                {isDatabaseAdminOrAbove && (
+                                                {hasDatabaseAdminAccess && (
                                                     <>
                                                         {isOpenDatabaseRestartConfirm && (
                                                             <BulkDatabaseResetConfirm

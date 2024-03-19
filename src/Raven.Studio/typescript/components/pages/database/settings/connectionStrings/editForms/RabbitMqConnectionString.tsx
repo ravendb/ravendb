@@ -37,7 +37,7 @@ export default function RabbitMqConnectionString({
     const formValues = useWatch({ control });
     const { forCurrentDatabase } = useAppUrls();
     const { tasksService } = useServices();
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     const asyncTest = useAsyncCallback(async () => {
         const isValid = await trigger("connectionString");
@@ -45,7 +45,7 @@ export default function RabbitMqConnectionString({
             return;
         }
 
-        return tasksService.testRabbitMqServerConnection(activeDatabaseName, formValues.connectionString);
+        return tasksService.testRabbitMqServerConnection(databaseName, formValues.connectionString);
     });
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {

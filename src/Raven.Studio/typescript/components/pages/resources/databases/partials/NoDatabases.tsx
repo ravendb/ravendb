@@ -4,11 +4,13 @@ import app from "durandal/app";
 import { withPreventDefault } from "components/utils/common";
 import { Button } from "reactstrap";
 import { EmptySet } from "components/common/EmptySet";
-import { useAccessManager } from "hooks/useAccessManager";
 import { FlexGrow } from "components/common/FlexGrow";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { useAppSelector } from "components/store";
 
 export function NoDatabases() {
-    const { isOperatorOrAbove } = useAccessManager();
+    const isOperatorOrAbove = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
+
     const newDatabase = () => {
         const createDbView = new createDatabase("newDatabase");
         app.showBootstrapDialog(createDbView);
@@ -24,7 +26,7 @@ export function NoDatabases() {
             <div className="text-center">
                 <EmptySet>No databases have been created</EmptySet>
 
-                {isOperatorOrAbove() && (
+                {isOperatorOrAbove && (
                     <div className="d-flex gap-1">
                         <FlexGrow />
                         <Button outline color="primary" onClick={withPreventDefault(newDatabase)}>

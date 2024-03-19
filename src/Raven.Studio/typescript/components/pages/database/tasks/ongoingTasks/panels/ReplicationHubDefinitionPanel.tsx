@@ -17,11 +17,12 @@ import {
     RichPanelSelect,
 } from "components/common/RichPanel";
 import { useAppUrls } from "hooks/useAppUrls";
-import { useAccessManager } from "hooks/useAccessManager";
 import { ReplicationHubConnectedSinkPanel } from "./ReplicationHubConnectedSinkPanel";
 import genUtils from "common/generalUtils";
 import { Collapse, Input } from "reactstrap";
 import { EmptySet } from "components/common/EmptySet";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { useAppSelector } from "components/store";
 
 interface ReplicationHubPanelProps extends BaseOngoingTaskPanelProps<OngoingTaskHubDefinitionInfo> {
     connectedSinks: OngoingTaskReplicationHubInfo[];
@@ -58,11 +59,11 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
 export function ReplicationHubDefinitionPanel(props: ReplicationHubPanelProps) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
-    const { isAdminAccessOrAbove } = useAccessManager();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
 
     const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editReplicationHub(data.shared.taskId)();
-    const canEdit = isAdminAccessOrAbove() && !data.shared.serverWide;
+    const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
 
     return (

@@ -13,7 +13,7 @@ export default {
 
 function commonInit() {
     const { databases } = mockStore;
-    databases.withActiveDatabase(DatabasesStubs.nonShardedDatabaseInfo());
+    databases.withActiveDatabase_NonSharded_SingleNode();
 }
 
 export const StudioConfiguration: ComponentStory<typeof StudioDatabaseConfiguration> = () => {

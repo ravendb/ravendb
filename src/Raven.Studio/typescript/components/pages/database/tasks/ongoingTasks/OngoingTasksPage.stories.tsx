@@ -1,8 +1,7 @@
 ﻿import React from "react";
 import { OngoingTasksPage } from "./OngoingTasksPage";
-import { Meta, ComponentStory } from "@storybook/react";
+import { Meta, StoryFn } from "@storybook/react";
 import { forceStoryRerender, withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { mockServices } from "test/mocks/services/MockServices";
 import { TasksStubs } from "test/stubs/TasksStubs";
@@ -23,16 +22,15 @@ import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
     title: "Pages/Database/Tasks/Ongoing tasks",
-    component: OngoingTasksPage,
     decorators: [withStorybookContexts, withBootstrap5],
     excludeStories: /Template$/,
-} satisfies Meta<typeof OngoingTasksPage>;
+} satisfies Meta;
 
 function commonInit() {
     const { accessManager, license, databases } = mockStore;
     const { tasksService, licenseService } = mockServices;
 
-    databases.withActiveDatabase(DatabasesStubs.shardedDatabaseInfo());
+    databases.withActiveDatabase_Sharded();
 
     accessManager.with_securityClearance("ClusterAdmin");
 
@@ -45,7 +43,7 @@ function commonInit() {
     tasksService.withGetSubscriptionConnectionDetails();
 }
 
-export const EmptyView: ComponentStory<typeof OngoingTasksPage> = () => {
+export const EmptyView: StoryFn = () => {
     commonInit();
 
     const { tasksService } = mockServices;
@@ -62,7 +60,7 @@ export const EmptyView: ComponentStory<typeof OngoingTasksPage> = () => {
     return <OngoingTasksPage />;
 };
 
-export const FullView: ComponentStory<typeof OngoingTasksPage> = () => {
+export const FullView: StoryFn = () => {
     commonInit();
 
     const { tasksService } = mockServices;
@@ -208,8 +206,9 @@ export const RavenEtlDisabled = boundCopy(RavenEtlTemplate, {
     disabled: true,
 });
 
-export const RavenEtlCompleted = boundCopy(RavenEtlTemplate, {
+export const RavenEtlCompletedTOdo = boundCopy(RavenEtlTemplate, {
     completed: true,
+    disabled: true,
 });
 
 export const RavenEtlEmptyScript = boundCopy(RavenEtlTemplate, {

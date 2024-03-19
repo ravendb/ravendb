@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Button, Card, CardBody, Col, InputGroup, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
-import { NonShardedViewProps } from "components/models/common";
 import useConfirm from "components/common/ConfirmDialog";
 import classNames from "classnames";
 import FeatureNotAvailable from "components/common/FeatureNotAvailable";
@@ -21,7 +20,6 @@ import DatabaseRecordAboutView from "./DatabaseRecordAboutView";
 import ReactAce from "react-ace/lib/ace";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { useAccessManager } from "components/hooks/useAccessManager";
 
 interface VisibleDocument {
     text: string;
@@ -30,6 +28,8 @@ interface VisibleDocument {
 
 export default function DatabaseRecord() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isOperatorOrAbove = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
+
     const { databasesService } = useServices();
     const confirm = useConfirm();
     const { reportEvent } = useEventsCollector();
@@ -39,8 +39,6 @@ export default function DatabaseRecord() {
     const { value: isHideEmptyValues, toggle: toggleIsHideEmptyValues } = useBoolean(false);
     const { value: isCollapsed, setValue: setIsCollapsed } = useBoolean(false);
     const [visibleDocument, setVisibleDocument] = useState<VisibleDocument>(null);
-
-    const isOperatorOrAbove = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
 
     const asyncGetDatabaseRecord = useAsyncCallback(
         async (reportRefreshProgress: boolean) =>

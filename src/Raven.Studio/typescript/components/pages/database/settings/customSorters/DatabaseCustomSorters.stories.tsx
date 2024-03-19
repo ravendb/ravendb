@@ -12,7 +12,7 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta;
 
-const db = DatabasesStubs.nonShardedDatabaseInfo();
+const databaseName = "databaseName";
 
 interface DefaultDatabaseCustomSortersProps {
     isEmpty: boolean;

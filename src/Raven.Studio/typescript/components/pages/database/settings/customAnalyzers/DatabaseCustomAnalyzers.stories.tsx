@@ -13,13 +13,15 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof DatabaseCustomAnalyzers>;
 
-const db = DatabasesStubs.nonShardedDatabaseInfo();
+const databaseName = "databaseName";
 
 function commonInit() {
     const { accessManager, databases } = mockStore;
     const { manageServerService, licenseService } = mockServices;
 
-    databases.withActiveDatabase(db);
+    databases.withActiveDatabase_NonSharded_SingleNode((x) => {
+        x.name = databaseName;
+    });
 
     accessManager.with_securityClearance("ValidUser");
 
@@ -34,7 +36,7 @@ export function NoLimits() {
     const { databasesService } = mockServices;
 
     accessManager.with_databaseAccess({
-        [db.name]: "DatabaseAdmin",
+        [databaseName]: "DatabaseAdmin",
     });
 
     databasesService.withCustomAnalyzers([
@@ -54,7 +56,7 @@ export function BelowDatabaseAdmin() {
     const { databasesService } = mockServices;
 
     accessManager.with_databaseAccess({
-        [db.name]: "DatabaseRead",
+        [databaseName]: "DatabaseRead",
     });
 
     databasesService.withCustomAnalyzers();
@@ -71,7 +73,7 @@ export function LicenseLimits() {
     const { databasesService } = mockServices;
 
     accessManager.with_databaseAccess({
-        [db.name]: "DatabaseAdmin",
+        [databaseName]: "DatabaseAdmin",
     });
 
     databasesService.withCustomAnalyzers();

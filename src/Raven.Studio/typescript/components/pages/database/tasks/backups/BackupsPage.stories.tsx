@@ -1,7 +1,6 @@
 ﻿import React from "react";
 import { Meta, ComponentStory } from "@storybook/react";
 import { withBootstrap5, forceStoryRerender, withStorybookContexts } from "test/storybookTestUtils";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { mockServices } from "test/mocks/services/MockServices";
 import { TasksStubs } from "test/stubs/TasksStubs";
@@ -20,7 +19,7 @@ export default {
 function commonInit() {
     const { accessManager, databases } = mockStore;
 
-    databases.withActiveDatabase(DatabasesStubs.shardedDatabaseInfo());
+    databases.withActiveDatabase_Sharded();
     accessManager.with_securityClearance("ClusterAdmin");
 
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");

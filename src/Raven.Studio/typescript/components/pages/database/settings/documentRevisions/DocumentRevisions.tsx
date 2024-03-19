@@ -11,7 +11,6 @@ import EditRevision, {
 } from "components/pages/database/settings/documentRevisions/EditRevision";
 import EnforceConfiguration from "components/pages/database/settings/documentRevisions/EnforceConfiguration";
 import { todo } from "common/developmentHelper";
-import { NonShardedViewProps } from "components/models/common";
 import { LoadingView } from "components/common/LoadingView";
 import { DocumentRevisionsConfig, documentRevisionsActions } from "./store/documentRevisionsSlice";
 import { documentRevisionsSelectors } from "./store/documentRevisionsSliceSelectors";
@@ -38,7 +37,6 @@ import FeatureAvailabilitySummaryWrapper, {
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
-import { useAccessManager } from "components/hooks/useAccessManager";
 
 interface EditRevisionData {
     onConfirm: (config: DocumentRevisionsConfig) => void;
@@ -52,7 +50,7 @@ todo("Feature", "Damian", "Add the Revert revisions view");
 
 export default function DocumentRevisions() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const { isAdminAccessOrAbove } = useAccessManager();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
 
     const { value: isEnforceConfigurationModalOpen, toggle: toggleEnforceConfigurationModal } = useBoolean(false);
     const [editRevisionData, setEditRevisionData] = useState<EditRevisionData>(null);
@@ -179,7 +177,7 @@ export default function DocumentRevisions() {
                     <Col>
                         <AboutViewHeading title="Document Revisions" icon="revisions" marginBottom={2} />
 
-                        {isAdminAccessOrAbove() && (
+                        {hasDatabaseAdminAccess && (
                             <StickyHeader>
                                 <Row>
                                     <div className="d-flex flex-wrap gap-2">
@@ -230,7 +228,7 @@ export default function DocumentRevisions() {
                         <div className="mt-5">
                             <HrHeader
                                 right={
-                                    isAdminAccessOrAbove() && !defaultDocumentsConfig ? (
+                                    hasDatabaseAdminAccess && !defaultDocumentsConfig ? (
                                         <>
                                             <div id="add-default-config-button">
                                                 <Button
@@ -306,7 +304,7 @@ export default function DocumentRevisions() {
                         <div className="mt-5">
                             <HrHeader
                                 right={
-                                    isAdminAccessOrAbove() ? (
+                                    hasDatabaseAdminAccess ? (
                                         <Button
                                             color="info"
                                             size="sm"

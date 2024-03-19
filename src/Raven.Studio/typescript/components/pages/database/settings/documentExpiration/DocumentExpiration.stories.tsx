@@ -15,9 +15,9 @@ export default {
 function commonInit() {
     const { databasesService } = mockServices;
     const { databases } = mockStore;
-    databasesService.withExpirationConfiguration();
 
-    databases.withActiveDatabase(DatabasesStubs.nonShardedDatabaseInfo());
+    databasesService.withExpirationConfiguration();
+    databases.withActiveDatabase_NonSharded_SingleNode();
 }
 
 export const DefaultDocumentExpiration: StoryObj<typeof DocumentExpiration> = {

@@ -16,7 +16,7 @@ function commonInit() {
     const { databasesService } = mockServices;
     const { databases } = mockStore;
     databasesService.withRefreshConfiguration();
-    databases.withActiveDatabase(DatabasesStubs.nonShardedDatabaseInfo());
+    databases.withActiveDatabase_NonSharded_SingleNode();
 }
 
 export const DefaultDocumentRefresh: StoryObj<typeof DocumentRefresh> = {

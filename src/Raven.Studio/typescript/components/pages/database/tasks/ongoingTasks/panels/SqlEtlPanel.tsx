@@ -11,7 +11,6 @@ import {
     useTasksOperations,
 } from "../../shared/shared";
 import { OngoingTaskSqlEtlInfo } from "components/models/tasks";
-import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
@@ -26,6 +25,7 @@ import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 import { Collapse, Input } from "reactstrap";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 type SqlEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSqlEtlInfo>;
 
@@ -33,12 +33,8 @@ function Details(props: SqlEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
     const { appUrl } = useAppUrls();
     const connectionStringDefined = !!data.shared.destinationDatabase;
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(
-        activeDatabaseName,
-        "Sql",
-        data.shared.connectionStringName
-    );
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Sql", data.shared.connectionStringName);
 
     return (
         <RichPanelDetails>
@@ -61,11 +57,10 @@ function Details(props: SqlEtlPanelProps & { canEdit: boolean }) {
 export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { data, showItemPreview, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
-    const { isAdminAccessOrAbove } = useAccessManager();
-    const { forCurrentDatabase } = useAppUrls();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
 
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const canEdit = isAdminAccessOrAbove(activeDatabaseName) && !data.shared.serverWide;
+    const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editSqlEtl(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);

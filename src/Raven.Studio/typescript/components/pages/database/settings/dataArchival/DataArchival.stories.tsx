@@ -2,7 +2,6 @@
 import { Meta, StoryObj } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import DataArchival from "./DataArchival";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 
@@ -14,7 +13,7 @@ export default {
 
 function commonInit() {
     const { databases } = mockStore;
-    databases.withActiveDatabase(DatabasesStubs.nonShardedDatabaseInfo());
+    databases.withActiveDatabase_NonSharded_SingleNode();
 }
 
 export const DefaultDataArchival: StoryObj<typeof DataArchival> = {

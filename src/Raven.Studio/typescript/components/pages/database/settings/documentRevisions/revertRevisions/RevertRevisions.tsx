@@ -1,5 +1,4 @@
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
-import { NonShardedViewProps } from "components/models/common";
 import { useAppSelector } from "components/store";
 import React from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -23,11 +22,10 @@ import RevertRevisionsRequest = Raven.Server.Documents.Revisions.RevertRevisions
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
-import { useAccessManager } from "components/hooks/useAccessManager";
 
 export default function RevertRevisions() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const { isAdminAccessOrAbove } = useAccessManager();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
 
     const { control, formState, handleSubmit, setValue } = useForm<RevertRevisionsFormData>({
         resolver: revertRevisionsYupResolver,
@@ -139,7 +137,7 @@ export default function RevertRevisions() {
                             </FormGroup>
                         </CardBody>
                     </Card>
-                    {isAdminAccessOrAbove() && (
+                    {hasDatabaseAdminAccess && (
                         <Card className="mt-3">
                             <CardBody>
                                 <FormCollectionsSelect

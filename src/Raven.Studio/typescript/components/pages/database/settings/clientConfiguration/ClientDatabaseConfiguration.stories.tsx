@@ -3,7 +3,6 @@ import { Meta, ComponentStory } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import ClientDatabaseConfiguration from "./ClientDatabaseConfiguration";
 import { mockServices } from "test/mocks/services/MockServices";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
@@ -16,7 +15,7 @@ function commonInit() {
     const { accessManager, license, databases } = mockStore;
     const { manageServerService } = mockServices;
 
-    databases.withActiveDatabase(DatabasesStubs.nonShardedDatabaseInfo());
+    databases.withActiveDatabase_NonSharded_SingleNode();
     accessManager.with_securityClearance("ClusterAdmin");
     license.with_License();
     manageServerService.withGetDatabaseClientConfiguration();

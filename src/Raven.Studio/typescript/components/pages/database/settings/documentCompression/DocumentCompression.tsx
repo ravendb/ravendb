@@ -14,7 +14,6 @@ import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { FormSwitch } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
-import { NonShardedViewProps } from "components/models/common";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import { useRavenLink } from "components/hooks/useRavenLink";
@@ -29,11 +28,11 @@ import { SelectOption } from "components/common/select/Select";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import FormCollectionsSelect from "components/common/FormCollectionsSelect";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { useAccessManager } from "components/hooks/useAccessManager";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 export default function DocumentCompression() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const { isAdminAccessOrAbove } = useAccessManager();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
     const { databasesService } = useServices();
 
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames).filter(
@@ -115,7 +114,7 @@ export default function DocumentCompression() {
                         />
                         <Form onSubmit={handleSubmit(onSave)}>
                             <div className="hstack mb-3">
-                                {isAdminAccessOrAbove() && (
+                                {hasDatabaseAdminAccess && (
                                     <>
                                         <div id="saveConfigButton" className="w-fit-content">
                                             <ButtonWithSpinner
@@ -150,7 +149,7 @@ export default function DocumentCompression() {
                                     allCollectionNames={allCollectionNames}
                                     setValue={setValue}
                                     customOptions={customCollectionOptions}
-                                    isReadOnly={!isAdminAccessOrAbove()}
+                                    isReadOnly={!hasDatabaseAdminAccess}
                                 />
                                 <Collapse isOpen={CompressAllCollections || Collections.length > 0}>
                                     <Alert color="info" className="hstack gap-3 p-3 mt-4">
@@ -175,7 +174,7 @@ export default function DocumentCompression() {
                                 <FormSwitch
                                     control={control}
                                     name="CompressRevisions"
-                                    disabled={!isAdminAccessOrAbove()}
+                                    disabled={!hasDatabaseAdminAccess}
                                 >
                                     Compress revisions for all collections
                                 </FormSwitch>

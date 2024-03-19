@@ -9,7 +9,6 @@ import Select, {
 } from "components/common/select/Select";
 import { Connection, EditConnectionStringFormProps } from "./connectionStringsTypes";
 import RavenConnectionString from "./editForms/RavenConnectionString";
-import database from "models/resources/database";
 import { useDispatch } from "react-redux";
 import { connectionStringsActions } from "./store/connectionStringsSlice";
 import ElasticSearchConnectionString from "./editForms/ElasticSearchConnectionString";
@@ -43,8 +42,8 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
 
     const EditConnectionStringComponent = getEditConnectionStringComponent(connectionStringType);
 
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const asyncSave = useAsyncCallback((dto: any) => tasksService.saveConnectionString(activeDatabaseName, dto));
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const asyncSave = useAsyncCallback((dto: any) => tasksService.saveConnectionString(databaseName, dto));
 
     const save = async (newConnection: Connection) => {
         return tryHandleSubmit(async () => {

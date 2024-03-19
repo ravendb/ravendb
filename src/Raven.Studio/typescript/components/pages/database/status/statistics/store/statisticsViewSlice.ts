@@ -5,7 +5,6 @@ import { AppDispatch, AppThunkApi, RootState } from "components/store";
 import { services } from "hooks/useServices";
 import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
 import { loadableData, loadStatus, locationAwareLoadableData } from "components/models/common";
-import database from "models/resources/database";
 import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 import {
     createFailureState,
@@ -15,6 +14,8 @@ import {
 } from "components/utils/common";
 import { IndexItem, PerLocationIndexStats } from "components/pages/database/status/statistics/store/models";
 import { Draft } from "immer";
+import { DatabaseSharedInfo } from "components/models/databases";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 interface StatisticsState {
     databaseName: string;
@@ -293,8 +294,8 @@ export const statisticsViewSlice = createSlice({
 
 const { initForDatabase, refreshStarted, refreshFinished } = statisticsViewSlice.actions;
 
-export const initView = (db: database) => async (dispatch: AppDispatch, getState: () => RootState) => {
-    dispatch(initForDatabase(db.name, db.getLocations()));
+export const initView = (db: DatabaseSharedInfo) => async (dispatch: AppDispatch, getState: () => RootState) => {
+    dispatch(initForDatabase(db.name, DatabaseUtils.getLocations(db)));
 
     const firstTime = selectEssentialStats(getState()).status === "idle";
 
