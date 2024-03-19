@@ -1066,7 +1066,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
         private string GetCollection(string documentId)
         {
-            _loadedDocuments ??= new LruDictionary<string, TDocument>(QueryResultRetrieverBase<QueriedDocument>.LoadedDocumentsCacheSize);
+            _loadedDocuments ??= new LruDictionary<string, TDocument>(QueryResultRetrieverCommon.LoadedDocumentsCacheSize);
 
             if (_loadedDocuments.TryGetValue(documentId, out var doc) == false)
             {

@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Queries.Results
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
 
             _loadedDocumentCache = typeof(TDocument) == typeof(QueriedDocument) && DocumentContext != null
-                ? (LruDictionary<string, TDocument>)(object)(new LruDictionary<string, QueriedDocument>(LoadedDocumentsCacheSize, new LruCacheHelpers.DocumentReleaser(DocumentContext)))
+                ? (LruDictionary<string, TDocument>)(object)(new QueriedDocumentCache(DocumentContext, LoadedDocumentsCacheSize))
                 : new LruDictionary<string, TDocument>(LoadedDocumentsCacheSize);
         }
 
@@ -209,39 +209,41 @@ namespace Raven.Server.Documents.Queries.Results
         protected virtual TDocument LoadDocument(TDocument parentDocument, string id, ref RetrieverInput retrieverInput)
         {
             using var _ = (_loadScope = _loadScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Load)));
-            if (id == string.Empty) // string.Empty means it's from original document.
+            if (id == string.Empty) // string.Empty means it's original document.
                 return parentDocument;
             
             if (_loadedDocumentCache.TryGetValue(id, out var doc))
             {
                 if (typeof(TDocument) == typeof(QueriedDocument))
                 {
-                    ((QueriedDocument)(object)doc)?.IncreaseReference();
-                    if (ReferenceEquals(parentDocument, doc) == false)
-                    {
-                        ((QueriedDocument)(object)parentDocument).LinkReferencedDocument((QueriedDocument)(object)doc);
-                    }
+                    var queriedDocument = (QueriedDocument)(object)doc;
+                    queriedDocument?.IncreaseReference();
+                    
+                    var parent = (QueriedDocument)(object)parentDocument;
+                    parent.LinkReferencedDocument(queriedDocument);
+                    
                 }
 
-                if (typeof(TDocument) == typeof(Document) && doc is {IsDisposed: true})
-                {
-                    goto LoadDocument;
-                }
-                
-                return doc;
+                if (typeof(TDocument) != typeof(Document))
+                    return doc;
             }
-            
-            LoadDocument:
+
             doc = DirectGetInternal(ref retrieverInput, id, DocumentFields.All);
-            
+
             if (doc != null)
+            {
                 _loadedDocumentCache[id] = doc;
 
-            if (typeof(TDocument) == typeof(QueriedDocument) && doc != null)
-            {
-                ((QueriedDocument)(object)parentDocument).LinkReferencedDocument((QueriedDocument)(object)doc);
+                if (typeof(TDocument) == typeof(QueriedDocument))
+                {
+                    var queriedDocument = (QueriedDocument)(object)doc;
+                    queriedDocument?.IncreaseReference();
+                    
+                    var parent = (QueriedDocument)(object)parentDocument;
+                    parent.LinkReferencedDocument(queriedDocument);
+                }
             }
-
+            
             return doc;
         }
 
@@ -378,7 +380,7 @@ namespace Raven.Server.Documents.Queries.Results
                                 {
                                     if (ReferenceEquals(nested, doc.Data) == false)
                                     {
-                                        using (var _ = doc)
+                                        using (_ = doc)
                                             doc = doc.CloneWith<TDocument>(_context, nested);
                                     }
                                 }
@@ -390,7 +392,7 @@ namespace Raven.Server.Documents.Queries.Results
                                 }
                                 else if (fieldVal is Document d)
                                 {
-                                    using (var _ = doc)
+                                    using (_ = doc)
                                         doc = d.Clone<TDocument>(_context);
                                 }
                                 else
@@ -474,13 +476,15 @@ namespace Raven.Server.Documents.Queries.Results
                 else
                 {
                     doc.Dispose(); // suspended.
-                    Debug.Assert(documentFromCache.Data.BasePointer != null);
+                    Debug.Assert(documentFromCache.Data.BasePointer != null, "documentFromCache.Data.BasePointer != null");
                 }
                 
                 if (typeof(TDocument) == typeof(QueriedDocument))
                     ((QueriedDocument)(object)documentFromCache)?.IncreaseReference();
-                Debug.Assert(documentFromCache is not QueriedDocument qd || qd.RefCount >= 2);
-                
+#if DEBUG
+                Debug.Assert(documentFromCache is not QueriedDocument qd || qd.RefCount >= 2, "documentFromCache is not QueriedDocument qd || qd.RefCount >= 2");
+#endif
+
                 return documentFromCache;
             }
         }
@@ -569,8 +573,10 @@ namespace Raven.Server.Documents.Queries.Results
                     return (null, results);
                 case BlittableJsonReaderObject nested:
                 {
-                    using var _ = doc;
-                    return (doc.CloneWith<TDocument>(_context, nested), null);
+                    using (doc)
+                    {
+                        return (doc.CloneWith<TDocument>(_context, nested), null);
+                    }
                 }
                 case TDocument td:
                     return (td, null);
@@ -636,7 +642,7 @@ namespace Raven.Server.Documents.Queries.Results
             var sameBlittable = ReferenceEquals(newData, doc.Data);
             if (sameBlittable == false)
             {
-                using (var _ = doc)
+                using (_ = doc)
                     doc = doc.CloneWith<TDocument>(context, newData);
             }
             
@@ -701,52 +707,7 @@ namespace Raven.Server.Documents.Queries.Results
             
             return true;
         }
-
-        internal static FieldType GetFieldType(string field, Lucene.Net.Documents.Document indexDocument)
-        {
-            var isArray = false;
-            var isJson = false;
-            var isNumeric = false;
-
-            var arrayFieldName = field + LuceneDocumentConverterBase.IsArrayFieldSuffix;
-            var jsonConvertFieldName = field + LuceneDocumentConverterBase.ConvertToJsonSuffix;
-            var numericFieldName = field + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
-
-            foreach (var f in indexDocument.GetFields())
-            {
-                if (f.Name == arrayFieldName)
-                {
-                    isArray = true;
-                    continue;
-                }
-
-                if (f.Name == jsonConvertFieldName)
-                {
-                    isJson = true;
-                    break;
-                }
-
-                if (f.Name == numericFieldName)
-                {
-                    isNumeric = true;
-                }
-            }
-
-            return new FieldType
-            {
-                IsArray = isArray,
-                IsJson = isJson,
-                IsNumeric = isNumeric
-            };
-        }
-
-        internal class FieldType
-        {
-            public bool IsArray;
-            public bool IsJson;
-            public bool IsNumeric;
-        }
-
+        
         private static unsafe bool TryGetValueFromCoraxIndex(JsonOperationContext context, string fieldName, int fieldId, ref RetrieverInput retrieverInput, out object value)
         {
             var fieldReader = fieldId == Corax.Constants.IndexWriter.DynamicField 
@@ -1288,8 +1249,7 @@ namespace Raven.Server.Documents.Queries.Results
                    func.Type == DeclaredFunction.FunctionType.TimeSeries;
         }
 
-        private bool TryGetFieldValueFromDocument<TDocument>(TDocument document, FieldsToFetch.FieldToFetch field, out object value)
-        where TDocument : Document
+        private bool TryGetFieldValueFromDocument(TDocument document, FieldsToFetch.FieldToFetch field, out object value)
         {
             if (field.IsDocumentId)
             {
@@ -1320,8 +1280,7 @@ namespace Raven.Server.Documents.Queries.Results
             return true;
         }
 
-        private static string GetIdFromDocument<TDocument>(TDocument document)
-            where TDocument : Document
+        private static string GetIdFromDocument(TDocument document)
         {
             if (document.Id != null)
             {

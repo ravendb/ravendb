@@ -3316,8 +3316,9 @@ namespace Raven.Server.Documents.Indexes
                                             state => originalEnumerator,
                                             new QueryResultsIterationState(queryContext.Documents, DocumentDatabase.Configuration.Databases.PulseReadTransactionLimit));
                                         enumerator = pulsedTransactionEnumerator;
-                                            
-                                         pulsedTransactionEnumerator.OnPulse += retriever.ClearCache;
+                                        
+                                        //If we get a new transaction, we have to clear the cache in the retriever, because old allocations (documents, decompressed buffers) are no longer valid.
+                                        pulsedTransactionEnumerator.OnPulse += retriever.ClearCache;
                                     }
 
                                     using (enumerator)
