@@ -7,7 +7,6 @@ using System.Text;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
-using Sparrow.Server;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
@@ -119,8 +118,9 @@ public sealed unsafe class CompactKey : IDisposable
             var dictionary = _owner.GetEncodingDictionary(dictionaryId);
             int maxSize = dictionary.GetMaxEncodingBytes(decodedKey.Length) + 4;
 
-            if (maxSize + _currentIdx + sizeof(int) > _storage.Length)
-                UnlikelyGrowStorage(_storage.Length + sizeof(int) + maxSize);
+            int expectedSize = maxSize + _currentIdx + sizeof(int);
+            if (expectedSize > _storage.Length)
+                UnlikelyGrowStorage(expectedSize);
 
             int encodedStartIdx = _currentIdx;
             var encodedKey = _storage.AsSpan(encodedStartIdx + sizeof(int), maxSize);
@@ -187,10 +187,11 @@ public sealed unsafe class CompactKey : IDisposable
         int encodedKeyLength = Bits.ToBytes(encodedKeyLengthInBits);
 
         int maxSize = dictionary.GetMaxDecodingBytes(encodedKeyLength) + sizeof(int);
-        if (maxSize + sizeof(int) + _currentIdx > _storage.Length)
+        int expectedSize = maxSize + sizeof(int) + _currentIdx;
+        if (expectedSize > _storage.Length)
         {
             // IMPORTANT: Pointers are potentially invalidated by the grow storage call but not the indexes. 
-            UnlikelyGrowStorage(maxSize + _currentKeyIdx + sizeof(int));
+            UnlikelyGrowStorage(expectedSize);
             encodedStartIdx = currentKeyIdx;
         }
 
@@ -221,15 +222,19 @@ public sealed unsafe class CompactKey : IDisposable
 
     private void UnlikelyGrowStorage(int maxSize)
     {
+        var oldStorage = _storage;
+
         // Request more memory, copy the content and return it.
-        maxSize = Math.Max(maxSize, _storage.Length) * 2;
+        maxSize = Math.Max(maxSize, oldStorage.Length) * 2;
 
-        var storagePool = StoragePool.Get();
-        var storage = storagePool.Rent(maxSize);
-        _storage.AsSpan(0, _currentIdx).CopyTo(storage.AsSpan());
-
-        storagePool.Return(_storage); // Return old to pool.
-        _storage = storage; // Update the new references.
+        var storagePool = StoragePool.Get();        
+        var newStorage = storagePool.Rent(maxSize);
+        oldStorage.AsSpan(0, _currentIdx).CopyTo(newStorage.AsSpan());
+        
+        storagePool.Return(oldStorage); // Return old to pool.
+        
+        _storage = newStorage; // Update the new references.
+        
     }
 
     public void Set(ReadOnlySpan<byte> key)
@@ -241,6 +246,12 @@ public sealed unsafe class CompactKey : IDisposable
         _decodedKeyIdx = 0;
         _currentKeyIdx = Invalid;
         Dictionary = Invalid;
+
+        int maxLength = key.Length + sizeof(int);
+        if (maxLength > _storage.Length)
+            UnlikelyGrowStorage(maxLength);
+
+        Debug.Assert(_storage.Length >= maxLength);
 
         // We write the size and the key. 
         Unsafe.WriteUnaligned<int>(ref _storage[0], key.Length);
@@ -280,11 +291,17 @@ public sealed unsafe class CompactKey : IDisposable
         int bucketIdx = SelectBucketForWrite();
         _keyMappingCache.Set(bucketIdx, dictionaryId, _currentKeyIdx);
 
+        int keyLength = Bits.ToBytes(keyLengthInBits);
+        int maxLength = keyLength + sizeof(int);
+        if (maxLength > _storage.Length)
+            UnlikelyGrowStorage(maxLength);
+
+        Debug.Assert(_storage.Length >= maxLength);
+
         // We write the size and the key. 
         Unsafe.WriteUnaligned(ref _storage[0], keyLengthInBits);
 
         // PERF: Between pinning the pointer and just execute the Unsafe.CopyBlock unintuitively it is faster to just copy. 
-        int keyLength = Bits.ToBytes(keyLengthInBits);
         Unsafe.CopyBlock(ref _storage[sizeof(int)], ref keyRef, (uint)keyLength);
 
         _currentIdx = keyLength + sizeof(int); // We update the new pointer. 
