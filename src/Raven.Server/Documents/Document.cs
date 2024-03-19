@@ -36,7 +36,6 @@ namespace Raven.Server.Documents
         public short TransactionMarker;
         private bool _metadataEnsured;
         private bool _disposed;
-        public bool IsDisposed => _disposed;
         
         public unsafe ulong DataHash
         {
@@ -143,7 +142,7 @@ namespace Raven.Server.Documents
             return new TDocument()
             {
                 Etag = Etag,
-                StorageId = Voron.Global.Constants.Compression.NonReturnableStorageId, // this is basically in-memory copy, so we should care about storage...
+                StorageId = Voron.Global.Constants.Compression.NonReturnableStorageId,
                 IndexScore = IndexScore,
                 Distance = Distance,
                 ChangeVector = ChangeVector,
@@ -178,6 +177,12 @@ namespace Raven.Server.Documents
         public override string ToString()
         {
             return Id;
+        }
+        
+        [Conditional("DEBUG")]
+        internal void AssertNotDisposed()
+        {
+            Debug.Assert(_disposed == false, $"{nameof(Document)}.{nameof(AssertNotDisposed)}()");
         }
     }
 

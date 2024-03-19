@@ -7,46 +7,55 @@ namespace Raven.Server.Documents.Queries;
 
 public sealed class QueriedDocument : Document
 {
-    private static readonly QueriedDocument ExplicitNullReference = new();
     private int _refCount = 1;
-    public int RefCount => _refCount;
 
     // Cloned document is not stored in LRU, that means disposing this object should only decrease reference at original document. 
     private QueriedDocument _sourceDocument;
 
-    // This is used by document that were loaded additionaly to our document from query.
+    // This is used for document(s) that were loaded additionally to our document from query.
+    private bool _useList;
     private QueriedDocument _referencingSingle;
     private List<QueriedDocument> _referencing;
 
     public bool CanDispose => _refCount == 1;
-    public bool IsCloned;
+    
+#if DEBUG
+    private bool _isCloned;
+    internal int RefCount => _refCount;
+#endif
 
-    public void LinkReferencedDocument(QueriedDocument additionalDocument)
+    public void LinkReferencedDocument(QueriedDocument referencedDocument)
     {
         // loaded document doesn't exists
-        if (additionalDocument is null)
+        if (referencedDocument is null)
             return;
 
-        // Since most of queries loads only one document
-        // e.g. load originalDoc.ReferenceId as ref
-        // We can avoid creating a list object for single reference and store it in variable.
-        if (_referencingSingle == null)
+        //Cycle reference doesn't make sense.
+        if (ReferenceEquals(this, referencedDocument))
+            return;
+
+        switch (_useList)
         {
-            _referencingSingle = additionalDocument;
-        }
-        else if (ReferenceEquals(_referencingSingle, ExplicitNullReference) == false)
-        {
-            _referencing ??= new();
-            _referencing.Add(_referencingSingle);
-            // ExplicitNullReference means we've multiple references.
-            _referencingSingle = ExplicitNullReference;
-        }
-        else
-        {
-            _referencing.Add(additionalDocument);
+            // Since most of queries loads only one document
+            // e.g. load originalDoc.ReferenceId as ref
+            // We can avoid creating a list object for single reference and store it in variable.
+            case false:
+                _referencingSingle = referencedDocument;
+                _useList = true;
+                break;
+            
+            case true when _referencingSingle != null:
+                _referencing ??= new();
+                _referencing.Add(_referencingSingle);
+                _referencingSingle = null;
+                break;
+            
+            default:
+                _referencing.Add(referencedDocument);
+                break;
         }
 
-        additionalDocument.IncreaseReference();
+        referencedDocument.IncreaseReference();
     }
 
     public override TDocument Clone<TDocument>(JsonOperationContext context)
@@ -64,16 +73,21 @@ public sealed class QueriedDocument : Document
         IncreaseReference();
 
         var cloned = (QueriedDocument)(object)base.CloneWith<TDocument>(context, newData);
-
-        cloned.IsCloned = true;
+#if DEBUG
+        cloned._isCloned = true;
+#endif
         cloned._sourceDocument = this;
 
         //We cloned document for projection purposes. That indicates that all loaded references are related to the copy.
         cloned._referencing = _referencing;
         _referencing = null;
+        
         cloned._referencingSingle = _referencingSingle;
         _referencingSingle = null;
-
+        
+        cloned._useList = _useList;
+        _useList = false;
+        
         return (TDocument)(object)cloned;
     }
 
@@ -87,30 +101,32 @@ public sealed class QueriedDocument : Document
 
         if (_sourceDocument != null)
         {
-            Debug.Assert(IsCloned);
-            Debug.Assert(_refCount == 0, "We should not have reference copy to clone.");
-            //Decrease reference at parent document.
-            Debug.Assert(_sourceDocument._refCount >= 2);
-            Debug.Assert(_sourceDocument.Data != null);
+#if DEBUG
+            Debug.Assert(_isCloned, "IsCloned");
+            Debug.Assert(_refCount == 0, $"We should not have reference copy to clone. {_refCount}");
+            Debug.Assert(_sourceDocument._refCount >= 2, $"_sourceDocument._refCount ({_sourceDocument._refCount}) >= 2");
+            Debug.Assert(_sourceDocument.Data != null, "_sourceDocument.Data != null (0)");
 
             Debug.Assert(ReferenceEquals(_sourceDocument.Data, Data) == false);
+#endif            
+            //Decrease reference at parent document.
             _sourceDocument.Dispose();
-            Debug.Assert(_sourceDocument.Data != null);
-
+            
+            Debug.Assert(_sourceDocument.Data != null, "_sourceDocument.Data != null (1)");
             // We can dispose this document since it's owns a copy of the data.
             base.Dispose();
-            Debug.Assert(_sourceDocument.Data != null);
-
-            if (_referencingSingle != null)
+            Debug.Assert(_sourceDocument.Data != null, "_sourceDocument.Data != null (2)");
+            
+            if (_referencingSingle != null || _useList)
             {
-                if (ReferenceEquals(_referencingSingle, ExplicitNullReference) == false)
+                if (_referencingSingle != null)
                 {
                     _referencingSingle.Dispose();
                     _referencingSingle = null;
                 }
                 else
                 {
-                    Debug.Assert(_referencing != null);
+                    Debug.Assert(_referencing != null, "_referencing != null");
                     foreach (var reference in _referencing)
                     {
                         reference.Dispose();
@@ -122,8 +138,10 @@ public sealed class QueriedDocument : Document
 
             return;
         }
-
-        Debug.Assert(IsCloned == false);
+#if DEBUG
+        Debug.Assert(_isCloned == false, "IsCloned == false");
+#endif        
+        
         // Disposing item must happened when document is only referenced in LRU.
         if (_refCount >= 1)
             return;
