@@ -29,9 +29,28 @@ export class MockDatabaseManager {
         globalDispatch(databaseActions.databasesLoaded(dbs));
     }
 
-    withActiveDatabase(db: DatabaseSharedInfo) {
-        globalDispatch(databaseActions.activeDatabaseChanged(db.name));
-        globalDispatch(databaseActions.databasesLoaded([db]));
+    withActiveDatabase_NonSharded_Cluster(db?: MockedValue<ShardedDatabaseInfo>) {
+        const value = this.createValue(db, DatabasesStubs.nonShardedClusterDatabase().toDto());
+        return this.withActiveDatabase(value);
+    }
+
+    withActiveDatabase_NonSharded_SingleNode(db?: MockedValue<ShardedDatabaseInfo>) {
+        const value = this.createValue(db, DatabasesStubs.nonShardedSingleNodeDatabase().toDto());
+        return this.withActiveDatabase(value);
+    }
+
+    withActiveDatabase_Sharded(db?: MockedValue<ShardedDatabaseInfo>) {
+        const value = this.createValue(db, DatabasesStubs.shardedDatabase().toDto());
+        return this.withActiveDatabase(value);
+    }
+
+    withActiveDatabase(db?: MockedValue<DatabaseSharedInfo>) {
+        const value = this.createValue(db, DatabasesStubs.nonShardedSingleNodeDatabase().toDto());
+
+        globalDispatch(databaseActions.activeDatabaseChanged(value.name));
+        globalDispatch(databaseActions.databasesLoaded([value]));
+
+        return value;
     }
 
     protected createValue<T>(value: MockedValue<T>, defaultValue: T): T {

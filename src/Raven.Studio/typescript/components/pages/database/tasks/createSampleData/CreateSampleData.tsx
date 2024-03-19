@@ -12,33 +12,20 @@ import { LoadError } from "components/common/LoadError";
 import SmokeSvg from "./CreateSampleDataSmoke";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import collectionsTracker from "common/helpers/database/collectionsTracker";
-import { NonShardedViewProps } from "components/models/common";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
-function CreateSampleData({ db }: NonShardedViewProps) {
+function CreateSampleData() {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { tasksService } = useServices();
 
     const { value: isCodeSampleOpen, toggle: toggleCodeSample } = useBoolean(false);
 
     const docsLink = useRavenLink({ hash: "SUTS29" });
 
-    const asyncFetchCollectionsStats = useAsync(() => tasksService.fetchCollectionsStats(db.name), []);
-    const asyncGetSampleDataClasses = useAsync(() => tasksService.getSampleDataClasses(db.name), []);
-    const asyncCreateSampleData = useAsyncCallback(async () => {
-        await tasksService.createSampleData(db.name);
-
-        if (db.hasRefreshConfiguration()) {
-            return;
-        }
-
-        const dbInfo = await tasksService.getDatabaseForStudio(db.name);
-        if (!dbInfo.HasRevisionsConfiguration) {
-            return;
-        }
-
-        db.hasRevisionsConfiguration(true);
-        collectionsTracker.default.configureRevisions(db);
-    });
+    const asyncFetchCollectionsStats = useAsync(() => tasksService.fetchCollectionsStats(databaseName), []);
+    const asyncGetSampleDataClasses = useAsync(() => tasksService.getSampleDataClasses(databaseName), []);
+    const asyncCreateSampleData = useAsyncCallback(() => tasksService.createSampleData(databaseName));
 
     const canCreateSampleData = asyncFetchCollectionsStats.result
         ? asyncFetchCollectionsStats.result.collections.filter((x) => x.documentCount() > 0).length === 0
@@ -90,7 +77,7 @@ function CreateSampleData({ db }: NonShardedViewProps) {
 
                             {asyncCreateSampleData.status === "success" && (
                                 <div className="padding padding-xs margin-top-sm">
-                                    <a href={appUrl.forDocuments("", db)}>
+                                    <a href={appUrl.forDocuments("", databaseName)}>
                                         <Icon icon="arrow-thin-right" />
                                         Go to documents
                                     </a>

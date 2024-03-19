@@ -16,8 +16,6 @@ export default {
     },
 } satisfies Meta;
 
-const db = DatabasesStubs.nonShardedDatabaseInfo();
-
 interface DefaultDocumentRevisionsProps {
     licenseType: Raven.Server.Commercial.LicenseType;
     isCloud: boolean;
@@ -40,7 +38,7 @@ export const DefaultDocumentRevisions: StoryObj<DefaultDocumentRevisionsProps> =
         const { collectionsTracker, accessManager, license, databases } = mockStore;
         const { databasesService } = mockServices;
 
-        databases.withActiveDatabase(db);
+        const db = databases.withActiveDatabase_NonSharded_SingleNode();
 
         accessManager.with_securityClearance("ValidUser");
 

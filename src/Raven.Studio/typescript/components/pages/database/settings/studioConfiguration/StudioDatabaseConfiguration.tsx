@@ -29,11 +29,11 @@ import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNo
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 export default function StudioDatabaseConfiguration() {
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
 
     const asyncDatabaseSettings = useAsyncCallback<StudioDatabaseConfigurationFormData>(async () => {
-        const settings = await databasesService.getDatabaseStudioConfiguration(activeDatabaseName);
+        const settings = await databasesService.getDatabaseStudioConfiguration(databaseName);
 
         return {
             Environment: settings ? settings.Environment : "None",
@@ -67,7 +67,7 @@ export default function StudioDatabaseConfiguration() {
     const onSave: SubmitHandler<StudioDatabaseConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
             reportEvent("studio-configuration-database", "save");
-            databasesService.saveDatabaseStudioConfiguration(formData, activeDatabaseName);
+            databasesService.saveDatabaseStudioConfiguration(formData, databaseName);
             reset(formData);
         });
     };

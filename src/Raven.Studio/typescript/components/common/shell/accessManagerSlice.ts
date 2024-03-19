@@ -25,11 +25,9 @@ const initialState: AccessManagerState = {
     isSecureServer: false,
 };
 
-const sliceName = "accessManager";
-
 export const accessManagerSlice = createSlice({
     initialState,
-    name: sliceName,
+    name: "accessManager",
     reducers: {
         onDatabaseAccessLoaded: (state, action: PayloadAction<dictionary<databaseAccessLevel>>) => {
             const items: DatabaseAccessInfo[] = Object.entries(action.payload).map((value) => {
@@ -58,35 +56,49 @@ const selectIsOperatorOrAbove = (store: RootState) => {
     return clearance === "ClusterAdmin" || clearance === "ClusterNode" || clearance === "Operator";
 };
 
-const selectEffectiveDatabaseAccessLevel = (databaseName: string) => {
-    const accessLevel = selectDatabaseAccessLevel(databaseName);
+const selectIsClusterAdminOrClusterNode = (store: RootState) => {
+    const clearance = store.accessManager.securityClearance;
 
+    return clearance === "ClusterAdmin" || clearance === "ClusterNode";
+};
+
+// If name is not provided, it will use the active database
+const selectEffectiveDatabaseAccessLevel = (databaseName?: string) => {
     return (store: RootState): databaseAccessLevel => {
-        const operatorOrAbove = selectIsOperatorOrAbove(store);
-        if (operatorOrAbove) {
+        const isOperatorOrAbove = selectIsOperatorOrAbove(store);
+        if (isOperatorOrAbove) {
             return "DatabaseAdmin";
         }
 
-        return accessLevel(store);
+        return selectDatabaseAccessLevel(databaseName ?? store.databases.activeDatabaseName)(store);
     };
 };
 
-const selectIsDatabaseAdminOrAbove = (databaseName?: string) => {
+const selectHasDatabaseAccessAdmin = (databaseName?: string) => {
     return (store: RootState) => {
-        const effectiveDatabaseAccessLevel = selectEffectiveDatabaseAccessLevel(
-            databaseName ?? store.databases.activeDatabaseName
-        )(store);
+        const effectiveDatabaseAccessLevel = selectEffectiveDatabaseAccessLevel(databaseName)(store);
 
         return effectiveDatabaseAccessLevel === "DatabaseAdmin";
     };
 };
 
+const selectHasDatabaseAccessWrite = (databaseName?: string) => {
+    return (store: RootState) => {
+        const effectiveDatabaseAccessLevel = selectEffectiveDatabaseAccessLevel(databaseName)(store);
+
+        return effectiveDatabaseAccessLevel === "DatabaseAdmin" || effectiveDatabaseAccessLevel === "DatabaseReadWrite";
+    };
+};
+
+const selectIsSecureServer = (store: RootState) => store.accessManager.isSecureServer;
+
 export const accessManagerActions = accessManagerSlice.actions;
 
 export const accessManagerSelectors = {
-    databaseAccessLevel: selectDatabaseAccessLevel,
-    isSecureServer: (store: RootState) => store.accessManager.isSecureServer,
+    isSecureServer: selectIsSecureServer,
     isOperatorOrAbove: selectIsOperatorOrAbove,
-    isDatabaseAdminOrAbove: selectIsDatabaseAdminOrAbove,
+    isClusterAdminOrClusterNode: selectIsClusterAdminOrClusterNode,
+    hasDatabaseAdminAccess: selectHasDatabaseAccessAdmin,
+    hasDatabaseWriteAccess: selectHasDatabaseAccessWrite,
     effectiveDatabaseAccessLevel: selectEffectiveDatabaseAccessLevel,
 };

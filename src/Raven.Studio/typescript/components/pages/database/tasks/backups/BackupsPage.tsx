@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useReducer, useState } from "react";
 import { PeriodicBackupPanel } from "../ongoingTasks/panels/PeriodicBackupPanel";
-import { useAccessManager } from "hooks/useAccessManager";
 import appUrl from "common/appUrl";
 import { useServices } from "hooks/useServices";
 import { ongoingTasksReducer, ongoingTasksReducerInitializer } from "../ongoingTasks/OngoingTasksReducer";
@@ -28,6 +27,7 @@ import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import DatabaseUtils from "components/utils/DatabaseUtils";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 interface manualBackupListModel {
     backupType: Raven.Client.Documents.Operations.Backups.BackupType;
@@ -140,7 +140,9 @@ function ManualBackup(props: ManualBackupProps) {
 }
 
 export function BackupsPage() {
-    const { canReadWriteDatabase, isClusterAdminOrClusterNode, isAdminAccessOrAbove } = useAccessManager();
+    const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.hasDatabaseWriteAccess());
 
     const { tasksService } = useServices();
     const [manualBackup, setManualBackup] = useState<loadableData<manualBackupListModel>>({
@@ -233,7 +235,7 @@ export function BackupsPage() {
         fetchManualBackup();
     }, [fetchManualBackup, fetchTasks, db]);
 
-    const canNavigateToServerWideTasks = isClusterAdminOrClusterNode();
+    const canNavigateToServerWideTasks = isClusterAdminOrClusterNode;
     const serverWideTasksUrl = appUrl.forServerWideTasks();
 
     const navigateToRestoreDatabase = () => {
@@ -271,7 +273,7 @@ export function BackupsPage() {
             {operationConfirm && <OngoingTaskOperationConfirm {...operationConfirm} toggle={cancelOperationConfirm} />}
 
             <div className="flex-vertical">
-                {isAdminAccessOrAbove() && (
+                {hasDatabaseAdminAccess && (
                     <div className="flex-shrink-0 hstack gap-2 mb-4">
                         <Button
                             onClick={navigateToRestoreDatabase}
@@ -324,7 +326,7 @@ export function BackupsPage() {
                         <span>Manual Backup</span>
                     </HrHeader>
 
-                    {isAdminAccessOrAbove() && (
+                    {hasDatabaseAdminAccess && (
                         <div className="mb-3 flex-shrink-0">
                             <Button color="primary" title="Backup the database now" onClick={createManualBackup}>
                                 <Icon icon="backup" /> Create a Backup
@@ -357,7 +359,7 @@ export function BackupsPage() {
                             {!hasPeriodicBackups && <LicenseRestrictedBadge licenseRequired="Professional +" />}
                         </span>
                     </HrHeader>
-                    {canReadWriteDatabase() && (
+                    {hasDatabaseWriteAccess && (
                         <div className="mb-3">
                             <Button
                                 color="primary"

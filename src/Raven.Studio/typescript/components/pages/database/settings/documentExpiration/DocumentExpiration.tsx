@@ -14,7 +14,6 @@ import messagePublisher from "common/messagePublisher";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import Code from "components/common/Code";
-import { NonShardedViewProps } from "components/models/common";
 import { useAsyncCallback } from "react-async-hook";
 import ServerExpirationConfiguration = Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration;
 import { useAppSelector } from "components/store";

@@ -15,8 +15,6 @@ export default {
     },
 } satisfies Meta;
 
-const db = DatabasesStubs.nonShardedDatabaseInfo();
-
 interface DefaultDocumentCompressionProps {
     licenseType: Raven.Server.Commercial.LicenseType;
     hasDocumentsCompression: boolean;
@@ -29,7 +27,7 @@ export const DefaultDocumentCompression: StoryObj<DefaultDocumentCompressionProp
         const { collectionsTracker, accessManager, license, databases } = mockStore;
         const { databasesService } = mockServices;
 
-        databases.withActiveDatabase(db);
+        const db = databases.withActiveDatabase_NonSharded_SingleNode();
 
         accessManager.with_securityClearance("ValidUser");
         collectionsTracker.with_Collections();

@@ -275,7 +275,7 @@ interface OperationConfirm {
 }
 
 export function useOngoingTasksOperations(reload: () => void) {
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { tasksService } = useServices();
 
     const [togglingTaskIds, setTogglingTaskIds] = useState<number[]>([]);
@@ -296,7 +296,7 @@ export function useOngoingTasksOperations(reload: () => void) {
                     continue;
                 }
 
-                toggleRequests.push(tasksService.toggleOngoingTask(activeDatabaseName, task, enable));
+                toggleRequests.push(tasksService.toggleOngoingTask(databaseName, task, enable));
             }
 
             if (toggleRequests.length === 0) {
@@ -318,7 +318,7 @@ export function useOngoingTasksOperations(reload: () => void) {
             setDeletingTaskIds((ids) => [...ids, ...taskSharedInfos.map((x) => x.taskId)]);
 
             const deleteRequests: Promise<ModifyOngoingTaskResult>[] = taskSharedInfos.map((task) =>
-                tasksService.deleteOngoingTask(activeDatabaseName, task)
+                tasksService.deleteOngoingTask(databaseName, task)
             );
 
             await Promise.all(deleteRequests);

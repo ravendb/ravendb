@@ -11,7 +11,6 @@ import {
     useTasksOperations,
 } from "../../shared/shared";
 import { OngoingTaskRabbitMqEtlInfo } from "components/models/tasks";
-import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
@@ -25,6 +24,7 @@ import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 import { Collapse, Input } from "reactstrap";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 type RabbitMqEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskRabbitMqEtlInfo>;
 
@@ -32,9 +32,9 @@ function Details(props: RabbitMqEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
     const { appUrl } = useAppUrls();
 
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const connectionStringsUrl = appUrl.forConnectionStrings(
-        activeDatabaseName,
+        databaseName,
         "RabbitMQ",
         data.shared.connectionStringName
     );
@@ -55,10 +55,10 @@ function Details(props: RabbitMqEtlPanelProps & { canEdit: boolean }) {
 export function RabbitMqEtlPanel(props: RabbitMqEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { data, showItemPreview, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
-    const { isAdminAccessOrAbove } = useAccessManager();
-    const { forCurrentDatabase } = useAppUrls();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
 
-    const canEdit = isAdminAccessOrAbove() && !data.shared.serverWide;
+    const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editRabbitMqEtl(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);

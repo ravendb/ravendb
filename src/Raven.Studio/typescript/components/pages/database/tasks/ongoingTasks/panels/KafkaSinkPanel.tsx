@@ -9,7 +9,6 @@ import {
     useTasksOperations,
 } from "../../shared/shared";
 import { OngoingTaskKafkaSinkInfo } from "components/models/tasks";
-import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
@@ -23,18 +22,15 @@ import {
 import { Collapse, Input } from "reactstrap";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 type KafkaSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskKafkaSinkInfo>;
 
 function Details(props: KafkaSinkPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
     const { appUrl } = useAppUrls();
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(
-        activeDatabaseName,
-        "Kafka",
-        data.shared.connectionStringName
-    );
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Kafka", data.shared.connectionStringName);
 
     return (
         <RichPanelDetails>
@@ -52,10 +48,10 @@ function Details(props: KafkaSinkPanelProps & { canEdit: boolean }) {
 export function KafkaSinkPanel(props: KafkaSinkPanelProps) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
-    const { isAdminAccessOrAbove } = useAccessManager();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
     const { forCurrentDatabase } = useAppUrls();
 
-    const canEdit = isAdminAccessOrAbove() && !data.shared.serverWide;
+    const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
     const editUrl = forCurrentDatabase.editKafkaSink(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);

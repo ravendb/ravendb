@@ -1,6 +1,5 @@
 import { EntityState, PayloadAction, createAsyncThunk, createEntityAdapter, createSlice } from "@reduxjs/toolkit";
 import { services } from "hooks/useServices";
-import database from "models/resources/database";
 import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
 import { loadStatus } from "components/models/common";
 

@@ -4,7 +4,6 @@ import activeDatabase = require("common/shell/activeDatabaseTracker");
 import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");
 import { DatabaseSharedInfo } from "components/models/databases";
-// import { DatabaseSharedInfo } from "components/models/databases";
 
 class appUrl {
 
@@ -666,8 +665,8 @@ class appUrl {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/stats";
     }
 
-    static forEssentialStatsRawData(db: database): string {
-        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/stats/essential";
+    static forEssentialStatsRawData(db: database | string): string {
+        return window.location.protocol + "//" + window.location.host + "/databases/" + (_.isString(db) ? db : db.name) + "/stats/essential";
     }
 
     static forIndexesRawData(db: database): string {

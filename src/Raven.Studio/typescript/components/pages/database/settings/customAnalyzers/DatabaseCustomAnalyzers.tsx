@@ -36,7 +36,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 
 export default function DatabaseCustomAnalyzers() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const isDatabaseAdminOrAbove = useAppSelector(accessManagerSelectors.isDatabaseAdminOrAbove());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
 
     const { databasesService, manageServerService } = useServices();
 
@@ -127,7 +127,7 @@ export default function DatabaseCustomAnalyzers() {
                     <Row className="gy-sm">
                         <Col>
                             <AboutViewHeading title="Custom analyzers" icon="custom-analyzers" />
-                            {isDatabaseAdminOrAbove && (
+                            {hasDatabaseAdminAccess && (
                                 <>
                                     <div id="newCustomAnalyzer" className="w-fit-content">
                                         <a
@@ -185,7 +185,7 @@ export default function DatabaseCustomAnalyzers() {
                                     databasesService.deleteCustomAnalyzer(databaseName, name)
                                 }
                                 serverWideAnalyzerNames={asyncGetServerWideAnalyzers.result?.map((x) => x.Name) ?? []}
-                                isDatabaseAdmin={isDatabaseAdminOrAbove}
+                                isDatabaseAdmin={hasDatabaseAdminAccess}
                             />
 
                             <HrHeader

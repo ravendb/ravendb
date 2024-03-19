@@ -9,7 +9,6 @@ import {
     useTasksOperations,
 } from "../../shared/shared";
 import { OngoingTaskRabbitMqSinkInfo } from "components/models/tasks";
-import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
@@ -22,6 +21,7 @@ import {
 import { Collapse, Input } from "reactstrap";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 type RabbitMqSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskRabbitMqSinkInfo>;
 
@@ -29,9 +29,9 @@ function Details(props: RabbitMqSinkPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
     const { appUrl } = useAppUrls();
 
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const connectionStringsUrl = appUrl.forConnectionStrings(
-        activeDatabaseName,
+        databaseName,
         "RabbitMQ",
         data.shared.connectionStringName
     );
@@ -50,10 +50,10 @@ function Details(props: RabbitMqSinkPanelProps & { canEdit: boolean }) {
 export function RabbitMqSinkPanel(props: RabbitMqSinkPanelProps) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
-    const { isAdminAccessOrAbove } = useAccessManager();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
     const { forCurrentDatabase } = useAppUrls();
 
-    const canEdit = isAdminAccessOrAbove() && !data.shared.serverWide;
+    const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
     const editUrl = forCurrentDatabase.editRabbitMqSink(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);

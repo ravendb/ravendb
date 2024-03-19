@@ -3,7 +3,6 @@ import { Button, Card, CardBody, Col, Row, UncontrolledTooltip } from "reactstra
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { NonShardedViewProps } from "components/models/common";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { HrHeader } from "components/common/HrHeader";
 import ConflictResolutionConfigPanel from "components/pages/database/settings/conflictResolution/ConflictResolutionConfigPanel";
@@ -22,35 +21,34 @@ import { useServices } from "components/hooks/useServices";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import ConflictResolutionAboutView from "./ConflictResolutionAboutView";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { useAccessManager } from "components/hooks/useAccessManager";
 
 export default function ConflictResolution() {
     const dispatch = useAppDispatch();
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const loadStatus = useAppSelector(conflictResolutionSelectors.loadStatus);
     const isResolveToLatest = useAppSelector(conflictResolutionSelectors.isResolveToLatest);
     const collectionConfigs = useAppSelector(conflictResolutionSelectors.collectionConfigs);
     const isDirty = useAppSelector(conflictResolutionSelectors.isDirty);
     const isSomeInEditMode = useAppSelector(conflictResolutionSelectors.isSomeInEditMode);
 
-    const { isAdminAccessOrAbove } = useAccessManager();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
 
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
 
     useEffect(() => {
-        dispatch(conflictResolutionActions.fetchConfig(activeDatabaseName));
+        dispatch(conflictResolutionActions.fetchConfig(databaseName));
 
         return () => {
             dispatch(conflictResolutionActions.reset());
         };
-    }, [activeDatabaseName, dispatch]);
+    }, [databaseName, dispatch]);
 
     const asyncSave = useAsyncCallback(async () => {
         reportEvent("conflict-resolution", "save");
 
         const response = await databasesService.saveConflictSolverConfiguration(
-            activeDatabaseName,
+            databaseName,
             mapToDto(isResolveToLatest, collectionConfigs)
         );
         dispatch(conflictResolutionActions.allSaved(response.ConflictSolverConfig));
@@ -60,7 +58,7 @@ export default function ConflictResolution() {
         return (
             <LoadError
                 error="Unable to load conflict resolution"
-                refresh={() => dispatch(conflictResolutionActions.fetchConfig(activeDatabaseName))}
+                refresh={() => dispatch(conflictResolutionActions.fetchConfig(databaseName))}
             />
         );
     }
@@ -70,7 +68,7 @@ export default function ConflictResolution() {
             <Col>
                 <AboutViewHeading title="Conflict Resolution" icon="conflicts-resolution" />
                 <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"}>
-                    {isAdminAccessOrAbove() && (
+                    {hasDatabaseAdminAccess && (
                         <>
                             <div id="saveConflictResolutionScript" className="d-flex w-fit-content gap-3 mb-3">
                                 <ButtonWithSpinner
@@ -93,7 +91,7 @@ export default function ConflictResolution() {
                     <div className="mb-3">
                         <HrHeader
                             right={
-                                isAdminAccessOrAbove() && (
+                                hasDatabaseAdminAccess && (
                                     <div id="addNewScriptButton">
                                         <Button
                                             color="info"
@@ -127,7 +125,7 @@ export default function ConflictResolution() {
                                 color="primary"
                                 selected={isResolveToLatest}
                                 toggleSelection={() => dispatch(conflictResolutionActions.toggleIsResolveToLatest())}
-                                disabled={!isAdminAccessOrAbove()}
+                                disabled={!hasDatabaseAdminAccess}
                             >
                                 If no script was defined for a collection, resolve the conflict using the latest version
                             </Switch>

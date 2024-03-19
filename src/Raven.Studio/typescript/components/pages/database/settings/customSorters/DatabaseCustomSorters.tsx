@@ -22,7 +22,7 @@ import { useCustomSorters } from "components/common/customSorters/useCustomSorte
 
 export default function DatabaseCustomSorters() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
-    const isDatabaseAdminOrAbove = useAppSelector(accessManagerSelectors.isDatabaseAdminOrAbove());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
 
     const { databasesService, manageServerService } = useServices();
 

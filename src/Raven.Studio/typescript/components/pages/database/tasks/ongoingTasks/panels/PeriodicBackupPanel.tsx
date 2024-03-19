@@ -8,7 +8,6 @@ import {
     useTasksOperations,
 } from "../../shared/shared";
 import { OngoingTaskPeriodicBackupInfo } from "components/models/tasks";
-import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
@@ -36,6 +35,7 @@ import { clusterSelectors } from "components/common/shell/clusterSlice";
 import useId from "hooks/useId";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 interface PeriodicBackupPanelProps extends BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> {
     forceReload: () => void;
@@ -138,10 +138,10 @@ function Details(props: PeriodicBackupPanelProps) {
     const backupNowInProgress = !!onGoingBackup;
     const neverBackedUp = !data.shared.lastFullBackup;
 
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const { isAdminAccessOrAbove } = useAccessManager();
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
 
-    const backupNowVisible = data.shared.serverWide || isAdminAccessOrAbove();
+    const backupNowVisible = data.shared.serverWide || hasDatabaseAdminAccess;
 
     const onBackupNow = () => {
         if (onGoingBackup && onGoingBackup.RunningBackupTaskId) {
@@ -157,7 +157,7 @@ function Details(props: PeriodicBackupPanelProps) {
         backupNowViewModel.result.done((confirmResult: backupNowConfirmResult) => {
             if (confirmResult.can) {
                 const task = new backupNowPeriodicCommand(
-                    activeDatabaseName,
+                    databaseName,
                     data.shared.taskId,
                     confirmResult.isFullBackup,
                     data.shared.taskName
@@ -242,10 +242,10 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
     const { data, allowSelect, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, sourceView } =
         props;
 
-    const { isAdminAccessOrAbove } = useAccessManager();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
     const { forCurrentDatabase } = useAppUrls();
 
-    const canEdit = isAdminAccessOrAbove() && !data.shared.serverWide;
+    const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
     const isServerWide = data.shared.serverWide;
     const editUrl = forCurrentDatabase.editPeriodicBackupTask(sourceView, data.shared.taskId)();
 

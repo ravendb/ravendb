@@ -11,7 +11,6 @@ import { Icon } from "components/common/Icon";
 import { Connection } from "./connectionStringsTypes";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { useAppSelector } from "components/store";
-import database from "models/resources/database";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useServices } from "components/hooks/useServices";
@@ -20,7 +19,6 @@ import { useDispatch } from "react-redux";
 import useConfirm from "components/common/ConfirmDialog";
 import useId from "components/hooks/useId";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { useAccessManager } from "components/hooks/useAccessManager";
 
 interface ConnectionStringsPanelProps {
     connection: Connection;
@@ -36,11 +34,11 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
     const deleteButtonId = useId("delete");
     const isDeleteDisabled = connection.usedByTasks?.length > 0;
 
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const { isAdminAccessOrAbove } = useAccessManager();
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
 
     const asyncDelete = useAsyncCallback(async () => {
-        await tasksService.deleteConnectionString(activeDatabaseName, getDtoEtlType(connection.type), connection.name);
+        await tasksService.deleteConnectionString(databaseName, getDtoEtlType(connection.type), connection.name);
         dispatch(connectionStringsActions.deleteConnection(connection));
     });
 
@@ -68,7 +66,7 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
                     <RichPanelInfo>
                         <RichPanelName>{connection.name}</RichPanelName>
                     </RichPanelInfo>
-                    {isAdminAccessOrAbove() && (
+                    {hasDatabaseAdminAccess && (
                         <RichPanelActions>
                             <Button
                                 color="secondary"

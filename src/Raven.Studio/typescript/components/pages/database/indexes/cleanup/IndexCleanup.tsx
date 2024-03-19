@@ -6,7 +6,6 @@ import { Checkbox } from "components/common/Checkbox";
 import moment from "moment";
 import { EmptySet } from "components/common/EmptySet";
 import classNames from "classnames";
-import database from "models/resources/database";
 import useIndexCleanup from "./useIndexCleanup";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { LoadError } from "components/common/LoadError";
@@ -20,20 +19,17 @@ import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 const mergeIndexesImg = require("Content/img/pages/indexCleanup/merge-indexes.svg");
 const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
 const removeUnusedImg = require("Content/img/pages/indexCleanup/remove-unused.svg");
 const unmergableIndexesImg = require("Content/img/pages/indexCleanup/unmergable-indexes.svg");
 
-interface IndexCleanupProps {
-    db: database;
-}
+export function IndexCleanup() {
+    const { asyncFetchStats, carousel, mergable, surpassing, unused, unmergable } = useIndexCleanup();
 
-export function IndexCleanup(props: IndexCleanupProps) {
-    const { db } = props;
-
-    const { asyncFetchStats, carousel, mergable, surpassing, unused, unmergable } = useIndexCleanup(db);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { appUrl } = useAppUrls();
 
     const hasIndexCleanup = useAppSelector(licenseSelectors.statusValue("HasIndexCleanup"));
@@ -261,7 +257,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                                                                         <a
                                                                                                             href={appUrl.forEditIndex(
                                                                                                                 index.name,
-                                                                                                                db
+                                                                                                                databaseName
                                                                                                             )}
                                                                                                         >
                                                                                                             {index.name}{" "}
@@ -396,7 +392,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                                                     <a
                                                                                         href={appUrl.forEditIndex(
                                                                                             index.name,
-                                                                                            db
+                                                                                            databaseName
                                                                                         )}
                                                                                     >
                                                                                         {index.name}{" "}
@@ -415,7 +411,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                                                     <a
                                                                                         href={appUrl.forEditIndex(
                                                                                             index.containingIndexName,
-                                                                                            db
+                                                                                            databaseName
                                                                                         )}
                                                                                     >
                                                                                         {index.containingIndexName}{" "}
@@ -535,7 +531,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                                                     <a
                                                                                         href={appUrl.forEditIndex(
                                                                                             index.name,
-                                                                                            db
+                                                                                            databaseName
                                                                                         )}
                                                                                     >
                                                                                         {index.name}{" "}
@@ -608,7 +604,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                                                     <a
                                                                                         href={appUrl.forEditIndex(
                                                                                             index.name,
-                                                                                            db
+                                                                                            databaseName
                                                                                         )}
                                                                                     >
                                                                                         {index.name}

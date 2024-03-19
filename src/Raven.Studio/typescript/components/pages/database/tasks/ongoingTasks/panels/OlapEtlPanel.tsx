@@ -11,7 +11,6 @@ import {
     useTasksOperations,
 } from "../../shared/shared";
 import { OngoingTaskOlapEtlInfo } from "components/models/tasks";
-import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
@@ -26,6 +25,7 @@ import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 import { Collapse, Input } from "reactstrap";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 type OlapEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskOlapEtlInfo>;
 
@@ -33,12 +33,8 @@ function Details(props: OlapEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
     const { appUrl } = useAppUrls();
 
-    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(
-        activeDatabaseName,
-        "Olap",
-        data.shared.connectionStringName
-    );
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Olap", data.shared.connectionStringName);
 
     return (
         <RichPanelDetails>
@@ -61,10 +57,10 @@ function Details(props: OlapEtlPanelProps & { canEdit: boolean }) {
 export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { data, showItemPreview, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
-    const { isAdminAccessOrAbove } = useAccessManager();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
     const { forCurrentDatabase } = useAppUrls();
 
-    const canEdit = isAdminAccessOrAbove() && !data.shared.serverWide;
+    const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
     const editUrl = forCurrentDatabase.editOlapEtl(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);

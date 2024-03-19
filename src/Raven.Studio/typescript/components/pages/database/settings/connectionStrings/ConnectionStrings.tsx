@@ -3,7 +3,6 @@ import { Button, Col, Row, UncontrolledTooltip } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { NonShardedViewProps } from "components/models/common";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { ConnectionStringsInfoHub } from "./ConnectionStringsInfoHub";
 import EditConnectionStrings from "./EditConnectionStrings";
@@ -15,19 +14,18 @@ import { exhaustiveStringTuple } from "components/utils/common";
 import useConnectionStringsLicense from "./useConnectionStringsLicense";
 import { LoadError } from "components/common/LoadError";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { useAccessManager } from "components/hooks/useAccessManager";
 
 export interface ConnectionStringsUrlParameters {
     name?: string;
     type?: StudioEtlType;
 }
 
-export default function ConnectionStrings(props: NonShardedViewProps & ConnectionStringsUrlParameters) {
+export default function ConnectionStrings(props: ConnectionStringsUrlParameters) {
     const { name: nameFromUrl, type: typeFromUrl } = props;
 
     const { hasNone: hasNoneInLicense } = useConnectionStringsLicense();
     const db = useAppSelector(databaseSelectors.activeDatabase);
-    const { isAdminAccessOrAbove } = useAccessManager();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
 
     const dispatch = useAppDispatch();
 
@@ -65,7 +63,7 @@ export default function ConnectionStrings(props: NonShardedViewProps & Connectio
 
             <Col>
                 <AboutViewHeading title="Connection Strings" icon="manage-connection-strings" />
-                {isAdminAccessOrAbove() && (
+                {hasDatabaseAdminAccess && (
                     <>
                         <div id={addNewButtonId} style={{ width: "fit-content" }}>
                             <Button

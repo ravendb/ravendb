@@ -1,5 +1,4 @@
 ﻿import React from "react";
-import database from "models/resources/database";
 import { withPreventDefault } from "components/utils/common";
 import genUtils from "common/generalUtils";
 import { useEventsCollector } from "hooks/useEventsCollector";
@@ -15,6 +14,7 @@ import app from "durandal/app";
 import { Icon } from "components/common/Icon";
 import { EmptySet } from "components/common/EmptySet";
 import { statisticsViewSelectors } from "components/pages/database/status/statistics/store/statisticsViewSlice";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 interface IndexBlockProps {
     children: (locationData: PerLocationIndexStats, location: databaseLocationSpecifier) => JSX.Element;
@@ -22,14 +22,15 @@ interface IndexBlockProps {
     alwaysRenderValue?: boolean;
 }
 
-function IndexStatistics(props: { indexName: string; database: database }) {
-    const { indexName, database } = props;
+function IndexStatistics(props: { indexName: string }) {
+    const { indexName } = props;
 
+    const db = useAppSelector(databaseSelectors.activeDatabase);
     const index = useAppSelector(statisticsViewSelectors.indexByName(indexName));
 
     const showErrorCounts = index.details.some((x) => x && x.errorsCount > 0);
     const showMapErrors = index.details.some((x) => x && x.mapErrors > 0);
-    const performanceUrl = appUrl.forIndexPerformance(database, indexName);
+    const performanceUrl = appUrl.forIndexPerformance(db.name, indexName);
 
     const showMapReferenceSection = index.details.some(
         (x) => x && (x.mapReferenceSuccesses > 0 || x.mapReferenceErrors > 0 || x.mapReferenceAttempts > 0)
@@ -39,12 +40,12 @@ function IndexStatistics(props: { indexName: string; database: database }) {
     const showReducedPerSecondRate = index.details.some((x) => x && x.reducedPerSecondRate > 1);
     const showReduceErrors = index.details.some((x) => x && x.reduceErrors > 0);
 
-    const sharded = database.isSharded();
+    const isSharded = db.sharded;
 
     const { reportEvent } = useEventsCollector();
 
     const showStaleReasons = (index: IndexItem, location: databaseLocationSpecifier) => {
-        const view = new indexStalenessReasons(database, index.sharedInfo.name, location);
+        const view = new indexStalenessReasons(db.name, index.sharedInfo.name, location);
         reportEvent("indexes", "show-stale-reasons");
         app.showBootstrapDialog(view);
     };
@@ -85,7 +86,7 @@ function IndexStatistics(props: { indexName: string; database: database }) {
                             {(data, location) => <>{location.nodeTag}</>}
                         </DetailsBlock>
                     </tr>
-                    {sharded && (
+                    {isSharded && (
                         <tr>
                             <td>Shard #</td>
                             <DetailsBlock index={index} alwaysRenderValue>
@@ -263,9 +264,7 @@ function DetailsBlock(props: IndexBlockProps): JSX.Element {
     );
 }
 
-export function IndexesDatabaseStats(props: { database: database }) {
-    const { database } = props;
-
+export function IndexesDatabaseStats() {
     const globalIndexDetailsStatus = useAppSelector(statisticsViewSelectors.globalIndexDetailsStatus);
     const mapIndexNames = useAppSelector(statisticsViewSelectors.mapIndexNames, shallowEqual);
     const mapReduceIndexNames = useAppSelector(statisticsViewSelectors.mapReduceIndexNames, shallowEqual);
@@ -295,7 +294,7 @@ export function IndexesDatabaseStats(props: { database: database }) {
                     <h3>Map Indexes</h3>
                     <div>
                         {mapIndexNames.map((index) => (
-                            <IndexStatistics key={index} indexName={index} database={database} />
+                            <IndexStatistics key={index} indexName={index} />
                         ))}
                     </div>
                 </Card>
@@ -306,7 +305,7 @@ export function IndexesDatabaseStats(props: { database: database }) {
                     <h3>MapReduce Indexes</h3>
                     <div>
                         {mapReduceIndexNames.map((index) => (
-                            <IndexStatistics key={index} indexName={index} database={database} />
+                            <IndexStatistics key={index} indexName={index} />
                         ))}
                     </div>
                 </Card>

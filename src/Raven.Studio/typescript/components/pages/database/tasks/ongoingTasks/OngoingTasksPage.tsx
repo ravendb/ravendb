@@ -1,7 +1,6 @@
 ﻿import React, { useCallback, useEffect, useReducer, useState } from "react";
 import { useServices } from "hooks/useServices";
 import { OngoingTasksState, ongoingTasksReducer, ongoingTasksReducerInitializer } from "./OngoingTasksReducer";
-import { useAccessManager } from "hooks/useAccessManager";
 import appUrl from "common/appUrl";
 import { ExternalReplicationPanel } from "./panels/ExternalReplicationPanel";
 import {
@@ -61,11 +60,14 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 export function OngoingTasksPage() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
+    const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.hasDatabaseWriteAccess());
 
-    const { canReadWriteDatabase, isClusterAdminOrClusterNode, isAdminAccessOrAbove } = useAccessManager();
     const { tasksService } = useServices();
     const [tasks, dispatch] = useReducer(ongoingTasksReducer, db, ongoingTasksReducerInitializer);
 
@@ -140,7 +142,6 @@ export function OngoingTasksPage() {
         [definitionCache]
     );
 
-    const canNavigateToServerWideTasks = isClusterAdminOrClusterNode();
     const serverWideTasksUrl = appUrl.forServerWideTasks();
 
     const filteredTasks = getFilteredTasks(tasks, filter);
@@ -329,7 +330,7 @@ export function OngoingTasksPage() {
             {operationConfirm && <OngoingTaskOperationConfirm {...operationConfirm} toggle={cancelOperationConfirm} />}
             <StickyHeader>
                 <div className="hstack gap-3 flex-wrap">
-                    {canReadWriteDatabase() && (
+                    {hasDatabaseWriteAccess && (
                         <>
                             {isNewTaskModalOpen && (
                                 <OngoingTaskAddModal
@@ -348,7 +349,7 @@ export function OngoingTasksPage() {
 
                     <FlexGrow />
 
-                    {canNavigateToServerWideTasks && (
+                    {isClusterAdminOrClusterNode && (
                         <Button
                             color="link"
                             size="sm"
@@ -417,7 +418,7 @@ export function OngoingTasksPage() {
                     </div>
                 )}
 
-                {allTasksCount > 0 && isAdminAccessOrAbove() && (
+                {allTasksCount > 0 && hasDatabaseAdminAccess && (
                     <OngoingTaskSelectActions
                         allTasks={filteredDatabaseTaskIds}
                         selectedTasks={selectedTaskIds}

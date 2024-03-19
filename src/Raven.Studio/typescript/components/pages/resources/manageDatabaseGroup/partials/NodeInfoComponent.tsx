@@ -22,8 +22,9 @@ import { Icon } from "components/common/Icon";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
-import { useAccessManager } from "components/hooks/useAccessManager";
 import useConfirm from "components/common/ConfirmDialog";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { useAppSelector } from "components/store";
 
 interface OrchestratorInfoComponentProps {
     node: NodeInfo;
@@ -103,9 +104,9 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
     const { node, db, deleteFromGroup } = props;
 
     const deleteLockId = useId("delete-lock");
-    const { isOperatorOrAbove } = useAccessManager();
+    const isOperatorOrAbove = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
 
-    const canPromote = isOperatorOrAbove() && node.type === "Promotable";
+    const canPromote = isOperatorOrAbove && node.type === "Promotable";
     const canDelete = db.lockMode === "Unlock";
 
     return (
@@ -165,15 +166,14 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
     const { node, deleteFromGroup, db } = props;
 
     const deleteLockId = useId("delete-lock");
-
-    const { isOperatorOrAbove } = useAccessManager();
+    const isOperatorOrAbove = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
 
     const canDelete = db.lockMode === "Unlock";
 
     const documentsUrl = appUrl.forDocuments(null, db.name);
     const debugUrl = appUrl.toExternalUrl(node.nodeUrl, documentsUrl);
 
-    const canPromote = isOperatorOrAbove() && node.type === "Promotable";
+    const canPromote = isOperatorOrAbove && node.type === "Promotable";
 
     return (
         <DatabaseGroupItem>
