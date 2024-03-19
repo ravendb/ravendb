@@ -454,13 +454,34 @@ namespace Raven.Server.Documents.Queries.Results
 
             return false;
         }
-
+        
         public (TDocument Document, List<TDocument> List) GetProjectionFromDocument(TDocument doc, ref RetrieverInput retrieverInput, FieldsToFetch fieldsToFetch, JsonOperationContext context, CancellationToken token)
         {
             using (RetrieverScope?.Start())
             using (_projectionScope = _projectionScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Projection)))
             {
-                return GetProjectionFromDocumentInternal(doc, ref retrieverInput, fieldsToFetch, context, token);
+                var documentFromCache = GetOrPersistDocumentInCache();
+                return GetProjectionFromDocumentInternal(documentFromCache, ref retrieverInput, fieldsToFetch, context, token);
+            }
+
+            unsafe TDocument GetOrPersistDocumentInCache()
+            {
+                if (_loadedDocumentCache.TryGetValue(doc.LowerId, out var documentFromCache) == false)
+                {
+                    _loadedDocumentCache[doc.LowerId] = doc;
+                    documentFromCache = doc;
+                }
+                else
+                {
+                    doc.Dispose(); // suspended.
+                    Debug.Assert(documentFromCache.Data.BasePointer != null);
+                }
+                
+                if (typeof(TDocument) == typeof(QueriedDocument))
+                    ((QueriedDocument)(object)documentFromCache)?.IncreaseReference();
+                Debug.Assert(documentFromCache is not QueriedDocument qd || qd.RefCount >= 2);
+                
+                return documentFromCache;
             }
         }
 
