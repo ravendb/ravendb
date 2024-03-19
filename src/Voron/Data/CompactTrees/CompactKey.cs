@@ -3,10 +3,10 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics;
 using System.Text;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Json;
 using Sparrow.Server;
 using Voron.Exceptions;
 using Voron.Global;
@@ -21,8 +21,7 @@ public sealed unsafe class CompactKey : IDisposable
 {
     public static readonly CompactKey NullInstance = new();
 
-    [ThreadStatic]
-    private static ArrayPool<byte> StoragePool;
+    private static readonly PerCoreStatic<ArrayPool<byte>> StoragePool = new (ArrayPool<byte>.Create);
 
     private LowLevelTransaction _owner;
 
@@ -76,9 +75,7 @@ public sealed unsafe class CompactKey : IDisposable
         _currentIdx = 0;
         MaxLength = 0;
 
-        StoragePool ??= ArrayPool<byte>.Create();
-
-        _storage = StoragePool.Rent(2 * Constants.CompactTree.MaximumKeySize);
+        _storage = StoragePool.Get().Rent(2 * Constants.CompactTree.MaximumKeySize);
     }
 
     public void Reset()
@@ -88,7 +85,7 @@ public sealed unsafe class CompactKey : IDisposable
 
         _owner = null;
 
-        StoragePool.Return(_storage);
+        StoragePool.Get().Return(_storage);
         _storage = null;
     }
 
@@ -227,10 +224,11 @@ public sealed unsafe class CompactKey : IDisposable
         // Request more memory, copy the content and return it.
         maxSize = Math.Max(maxSize, _storage.Length) * 2;
 
-        var storage = StoragePool.Rent(maxSize);
+        var storagePool = StoragePool.Get();
+        var storage = storagePool.Rent(maxSize);
         _storage.AsSpan(0, _currentIdx).CopyTo(storage.AsSpan());
-        
-        StoragePool.Return(_storage); // Return old to pool.
+
+        storagePool.Return(_storage); // Return old to pool.
         _storage = storage; // Update the new references.
     }
 
