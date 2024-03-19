@@ -231,7 +231,8 @@ internal static class BackupUtils
 
     public static NextBackup GetNextBackupDetails(NextBackupDetailsParameters parameters)
     {
-        var nowUtc = SystemTime.UtcNow;
+        var nowUtc = DateTime.UtcNow;
+
         var lastFullBackupUtc = parameters.BackupStatus.LastFullBackupInternal ?? parameters.DatabaseWakeUpTimeUtc ?? parameters.Configuration.CreatedAt ?? nowUtc;
         var lastIncrementalBackupUtc = parameters.BackupStatus.LastIncrementalBackupInternal ?? parameters.BackupStatus.LastFullBackupInternal ?? parameters.DatabaseWakeUpTimeUtc ?? nowUtc;
         var nextFullBackup = GetNextBackupOccurrence(new NextBackupOccurrenceParameters
@@ -258,10 +259,9 @@ internal static class BackupUtils
         Debug.Assert(parameters.Configuration.TaskId != 0);
 
         var isFullBackup = IsFullBackup(parameters.BackupStatus, parameters.Configuration, nextFullBackup, nextIncrementalBackup, parameters.ResponsibleNodeTag);
-        var nextBackupTimeLocal = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup, parameters.BackupStatus.DelayUntil);
+        var nextBackupTimeUtc = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup, parameters.BackupStatus.DelayUntil);
 
-        var nowLocalTime = SystemTime.UtcNow.ToLocalTime();
-        var timeSpan = nextBackupTimeLocal - nowLocalTime;
+        var timeSpan = nextBackupTimeUtc - nowUtc;
 
         TimeSpan nextBackupTimeSpan;
         if (timeSpan.Ticks <= 0)
@@ -271,13 +271,13 @@ internal static class BackupUtils
             {
                 // the backup will run now
                 nextBackupTimeSpan = TimeSpan.Zero;
-                nextBackupTimeLocal = nowLocalTime;
+                nextBackupTimeUtc = nowUtc;
             }
             else
             {
                 // overdue backup from other node
                 nextBackupTimeSpan = TimeSpan.FromMinutes(1);
-                nextBackupTimeLocal = nowLocalTime + nextBackupTimeSpan;
+                nextBackupTimeUtc = nowUtc + nextBackupTimeSpan;
             }
         }
         else
@@ -285,10 +285,11 @@ internal static class BackupUtils
             nextBackupTimeSpan = timeSpan;
         }
 
+        nextBackupTimeUtc = DateTime.SpecifyKind(nextBackupTimeUtc, DateTimeKind.Utc);
         return new NextBackup
         {
             TimeSpan = nextBackupTimeSpan,
-            DateTime = nextBackupTimeLocal.ToUniversalTime(),
+            DateTime = nextBackupTimeUtc,
             OriginalBackupTime = parameters.BackupStatus.OriginalBackupTime,
             IsFull = isFullBackup,
             TaskId = parameters.Configuration.TaskId
@@ -303,7 +304,7 @@ internal static class BackupUtils
         try
         {
             var backupParser = CrontabSchedule.Parse(parameters.BackupFrequency);
-            return backupParser.GetNextOccurrence(parameters.LastBackupUtc.ToLocalTime());
+            return backupParser.GetNextOccurrence(parameters.LastBackupUtc);
         }
         catch (Exception e)
         {
@@ -330,9 +331,8 @@ internal static class BackupUtils
         else
             nextBackup = nextFullBackup <= nextIncrementalBackup ? nextFullBackup.Value : nextIncrementalBackup.Value;
 
-        return delayUntil.HasValue && delayUntil.Value.ToLocalTime() > nextBackup.Value
-            ? delayUntil.Value.ToLocalTime()
-            : nextBackup.Value;
+        return delayUntil.HasValue && delayUntil.Value > nextBackup.Value
+            ? delayUntil.Value : nextBackup.Value;
     }
 
     private static bool IsFullBackup(PeriodicBackupStatus backupStatus,
@@ -473,7 +473,7 @@ internal static class BackupUtils
             return null;
         }
 
-        var nowUtc = SystemTime.UtcNow;
+        var nowUtc = DateTime.UtcNow;
         if (nextBackup.DateTime < nowUtc)
         {
             // this backup is delayed

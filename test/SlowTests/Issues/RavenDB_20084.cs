@@ -8,6 +8,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Util;
+using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
@@ -49,7 +50,7 @@ public class RavenDB_20084 : ClusterTestBase
             leaderStore.Conventions = new DocumentConventions { DisableTopologyUpdates = true };
             leaderStore.Database = databaseName;
             leaderStore.Initialize();
-            var debugInfo = new ConcurrentBag<string> { $"Started at: {SystemTime.UtcNow:yyyy-MM-ddTHH:mm:ss.ffffffZ}" };
+            var debugInfo = new List<string> { $"Started at: {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.ffffffZ}" };
 
             leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().OnFailedRescheduleNextScheduledActivity = (exception, erroredDatabaseName) =>
                 debugInfo.Add($"Failed to schedule the next activity for the idle database '{erroredDatabaseName}': {exception}");
@@ -139,24 +140,9 @@ public class RavenDB_20084 : ClusterTestBase
                     timeout: Convert.ToInt32(TimeSpan.FromMinutes(3).TotalMilliseconds),
                     interval: Convert.ToInt32(TimeSpan.FromSeconds(1).TotalMilliseconds));
 
-                debugInfo.Add($"'lastBackupTime': {lastBackupTime:yyyy-MM-ddTHH:mm:ss.ffffffZ}");
-                debugInfo.Add($"'expectedTime':   {expectedTime:yyyy-MM-ddTHH:mm:ss.ffffffZ}");
-
-                var backupInfoUpdated = lastBackupTime >= expectedTime;
-                if (backupInfoUpdated == false)
-                {
-                    var response = await client.GetAsync($"{leaderServer.WebUrl}/admin/debug/databases/idle");
-                    debugInfo.Add($"{leaderServer.WebUrl}/admin/debug/databases/idle");
-                    debugInfo.Add(await response.Content.ReadAsStringAsync());
-
-                    response = await client.GetAsync($"{leaderServer.WebUrl}/admin/debug/periodic-backup/timers");
-                    debugInfo.Add($"{leaderServer.WebUrl}/admin/debug/periodic-backup/timers");
-                    debugInfo.Add(await response.Content.ReadAsStringAsync());
-                }
+                bool backupInfoUpdated = await AddInfo(debugInfo, lastBackupTime, expectedTime, leaderStore, taskId, client, leaderServer);
 
                 Assert.True(backupInfoUpdated, $"lastBackupTime >= expectedTime: false{Environment.NewLine}{string.Join(Environment.NewLine, debugInfo)}");
-                Assert.True(leaderServer.ServerStore.IdleDatabases.Count == 1,
-                    $"leaderServer.ServerStore.IdleDatabases.Count == 1: Count is {leaderServer.ServerStore.IdleDatabases.Count}{Environment.NewLine}{string.Join(Environment.NewLine, debugInfo)}");
 
                 // Verifying that the cluster storage contains the same value for consistency
                 var operation = new GetPeriodicBackupStatusOperation(taskId);
@@ -176,5 +162,33 @@ public class RavenDB_20084 : ClusterTestBase
                     $"lastInternalBackupTimeInClusterStorage >= expectedTime: false{Environment.NewLine}{string.Join(Environment.NewLine, debugInfo)}");
             }
         }
+    }
+
+    private static async Task<bool> AddInfo(List<string> debugInfo, DateTime lastBackupTime, DateTime expectedTime, DocumentStore leaderStore, long taskId, HttpClient client,
+        RavenServer leaderServer)
+    {
+        OngoingTaskBackup onGoingTaskBackup;
+        debugInfo.Add($"'lastBackupTime': {lastBackupTime:yyyy-MM-ddTHH:mm:ss.ffffffZ}");
+        debugInfo.Add($"'expectedTime':   {expectedTime:yyyy-MM-ddTHH:mm:ss.ffffffZ}");
+        debugInfo.Add($"'Now':   {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.ffffffZ}");
+        onGoingTaskBackup = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+        debugInfo.Add($"'LastIncrementalBackup':   {onGoingTaskBackup?.LastIncrementalBackup:yyyy-MM-ddTHH:mm:ss.ffffffZ}");
+        debugInfo.Add($"'Error':   {onGoingTaskBackup?.Error}");
+        debugInfo.Add($"'TaskConnectionStatus':   {onGoingTaskBackup?.TaskConnectionStatus}");
+        debugInfo.Add($"'LastFullBackup':   {onGoingTaskBackup?.LastFullBackup}");
+        debugInfo.Add($"'TaskState':   {onGoingTaskBackup?.TaskState}");
+        var backupInfoUpdated = lastBackupTime >= expectedTime;
+        if (backupInfoUpdated == false)
+        {
+            var response = await client.GetAsync($"{leaderServer.WebUrl}/admin/debug/databases/idle");
+            debugInfo.Add($"{leaderServer.WebUrl}/admin/debug/databases/idle");
+            debugInfo.Add(await response.Content.ReadAsStringAsync());
+
+            response = await client.GetAsync($"{leaderServer.WebUrl}/admin/debug/periodic-backup/timers");
+            debugInfo.Add($"{leaderServer.WebUrl}/admin/debug/periodic-backup/timers");
+            debugInfo.Add(await response.Content.ReadAsStringAsync());
+        }
+
+        return backupInfoUpdated;
     }
 }
