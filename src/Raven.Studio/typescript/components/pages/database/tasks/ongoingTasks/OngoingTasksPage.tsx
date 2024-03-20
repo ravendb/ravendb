@@ -106,7 +106,7 @@ export function OngoingTasksPage() {
         // if database is sharded we need to load from both orchestrator and target node point of view
         // in case of non-sharded - we have single level: node
 
-        if (db.sharded) {
+        if (db.isSharded) {
             const orchestratorTasks = db.nodes.map((node) => fetchTasks({ nodeTag: node.tag }));
             await Promise.all(orchestratorTasks);
         }

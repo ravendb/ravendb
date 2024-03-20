@@ -49,14 +49,14 @@ export function NodeGroup(props: NodeGroupProps) {
         sortableMode,
         enableReorder,
         exitReorder,
-    } = useGroup(db.nodes, db.fixOrder);
+    } = useGroup(db.nodes, db.isFixOrder);
 
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
     const confirm = useConfirm();
 
     const addNode = useCallback(() => {
-        const addKeyView = new addNewNodeToDatabaseGroup(db.name, db.nodes, db.encrypted);
+        const addKeyView = new addNewNodeToDatabaseGroup(db.name, db.nodes, db.isEncrypted);
         app.showBootstrapDialog(addKeyView);
     }, [db]);
 

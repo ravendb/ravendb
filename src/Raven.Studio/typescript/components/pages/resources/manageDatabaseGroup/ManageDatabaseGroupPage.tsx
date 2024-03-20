@@ -46,7 +46,7 @@ export function ManageDatabaseGroupPage() {
     const { databasesService } = useServices();
 
     const { value: dynamicDatabaseDistribution, toggle: toggleDynamicDatabaseDistribution } = useBoolean(
-        db.dynamicNodesDistribution
+        db.isDynamicNodesDistribution
     );
 
     const settingsUniqueId = useId("settings");
@@ -64,7 +64,7 @@ export function ManageDatabaseGroupPage() {
 
     const dynamicDatabaseDistributionWarning = getDynamicDatabaseDistributionWarning(
         hasDynamicNodesDistribution,
-        db.encrypted,
+        db.isEncrypted,
         db.nodes.length
     );
     const enableDynamicDatabaseDistribution = isOperatorOrAbove && !dynamicDatabaseDistributionWarning;
@@ -73,7 +73,7 @@ export function ManageDatabaseGroupPage() {
         <>
             <StickyHeader>
                 <div className="flex-horizontal">
-                    {!db.sharded && (
+                    {!db.isSharded && (
                         <UncontrolledButtonWithDropdownPanel buttonText="Settings">
                             <>
                                 <Label className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
@@ -99,7 +99,7 @@ export function ManageDatabaseGroupPage() {
                     )}
 
                     <FlexGrow />
-                    {db.sharded && (
+                    {db.isSharded && (
                         <Button color="shard" onClick={addNewShard}>
                             <Icon icon="shard" addon="plus" />
                             Add Shard
@@ -109,7 +109,7 @@ export function ManageDatabaseGroupPage() {
             </StickyHeader>
             <div className="content-margin">
                 <SortableModeCounterProvider>
-                    {db.sharded ? (
+                    {db.isSharded ? (
                         <React.Fragment key="sharded-db">
                             <OrchestratorsGroup />
                             {db.shards.map((shard) => {

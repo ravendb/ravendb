@@ -17,7 +17,7 @@ interface DatabaseDistributionProps {
 
 export function DatabaseDistribution(props: DatabaseDistributionProps) {
     const { db } = props;
-    const sharded = db.sharded;
+    const isSharded = db.isSharded;
     const [hoveredShardNumber, setHoveredShardNumber] = useState<number | null>(null);
     const dbState = useAppSelector(selectDatabaseState(db.name));
 
@@ -25,7 +25,7 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
         <LocationDistribution>
             <DistributionLegend>
                 <div className="top"></div>
-                {sharded && (
+                {isSharded && (
                     <div className="node">
                         <Icon icon="node" /> Node
                     </div>
@@ -67,25 +67,25 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
 
                 const shardNumber = localState.location.shardNumber;
 
-                const nodesToUse = db.sharded ? db.shards[localState.location.shardNumber].nodes : db.nodes;
+                const nodesToUse = db.isSharded ? db.shards[localState.location.shardNumber].nodes : db.nodes;
                 const node = nodesToUse.find((x) => x.tag === localState.location.nodeTag);
 
                 const uptime = localState.data ? DatabaseUtils.formatUptime(localState.data.upTime) : "";
-                const isOfflineOrDisabled = uptime === "Offline" || db.disabled;
+                const isOfflineOrDisabled = uptime === "Offline" || db.isDisabled;
 
                 return (
                     <DistributionItem
                         key={genUtils.formatLocation(localState.location)}
                         loading={localState.status === "idle" || localState.status === "loading"}
                         className={classNames("distribution-item pb-2", {
-                            [`shard-${localState.location.shardNumber}`]: sharded && shardNumber != null,
-                            hovered: sharded ? shardNumber === hoveredShardNumber : false,
+                            [`shard-${localState.location.shardNumber}`]: isSharded && shardNumber != null,
+                            hovered: isSharded ? shardNumber === hoveredShardNumber : false,
                         })}
                         onMouseEnter={() => setHoveredShardNumber(localState.location.shardNumber)}
                         onMouseLeave={() => setHoveredShardNumber(null)}
                     >
-                        {sharded && shard}
-                        <div className={classNames("node", { top: !sharded })}>
+                        {isSharded && shard}
+                        <div className={classNames("node", { top: !isSharded })}>
                             <DatabaseNodeSetItem node={node} isOfflineOrDisabled={isOfflineOrDisabled} />
                         </div>
                         <div className="entries">

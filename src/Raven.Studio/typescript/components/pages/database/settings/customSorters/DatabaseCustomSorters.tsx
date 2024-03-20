@@ -60,7 +60,7 @@ export default function DatabaseCustomSorters() {
 
     const isLimitReached = databaseLimitReachStatus === "limitReached" || clusterLimitReachStatus === "limitReached";
 
-    if (db.sharded) {
+    if (db.isSharded) {
         return (
             <FeatureNotAvailable>
                 <span>

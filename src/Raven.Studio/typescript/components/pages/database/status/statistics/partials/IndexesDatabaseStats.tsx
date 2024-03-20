@@ -40,8 +40,6 @@ function IndexStatistics(props: { indexName: string }) {
     const showReducedPerSecondRate = index.details.some((x) => x && x.reducedPerSecondRate > 1);
     const showReduceErrors = index.details.some((x) => x && x.reduceErrors > 0);
 
-    const isSharded = db.sharded;
-
     const { reportEvent } = useEventsCollector();
 
     const showStaleReasons = (index: IndexItem, location: databaseLocationSpecifier) => {
@@ -86,7 +84,7 @@ function IndexStatistics(props: { indexName: string }) {
                             {(data, location) => <>{location.nodeTag}</>}
                         </DetailsBlock>
                     </tr>
-                    {isSharded && (
+                    {db.isSharded && (
                         <tr>
                             <td>Shard #</td>
                             <DetailsBlock index={index} alwaysRenderValue>

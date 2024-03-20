@@ -544,7 +544,7 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
 
 export const ongoingTasksReducerInitializer = (db: DatabaseSharedInfo): OngoingTasksState => {
     const locations = DatabaseUtils.getLocations(db);
-    const orchestrators = db.sharded ? db.nodes.map((x) => x.tag) : [];
+    const orchestrators = db.isSharded ? db.nodes.map((x) => x.tag) : [];
 
     return {
         tasks: [],

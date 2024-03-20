@@ -40,7 +40,7 @@ class shardedDatabase extends database {
     toDto(): ShardedDatabaseInfo {
         return {
             ...super.toDto(),
-            sharded: true,
+            isSharded: true,
             shards: this.shards().map(x => x.toDto() as NonShardedDatabaseInfo)
         }
     }

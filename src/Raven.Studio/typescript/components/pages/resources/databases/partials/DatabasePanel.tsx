@@ -123,12 +123,12 @@ export function DatabasePanel(props: DatabasePanelProps) {
     } = useBoolean(false);
 
     const localDocumentsUrl = appUrl.forDocuments(null, db.name);
-    const documentsUrl = db.currentNode.relevant
+    const documentsUrl = db.currentNode.isRelevant
         ? localDocumentsUrl
         : appUrl.toExternalDatabaseUrl(db, localDocumentsUrl);
 
     const localManageGroupUrl = appUrl.forManageDatabaseGroup(db.name);
-    const manageGroupUrl = db.currentNode.relevant
+    const manageGroupUrl = db.currentNode.isRelevant
         ? localManageGroupUrl
         : appUrl.toExternalDatabaseUrl(db, localManageGroupUrl);
 
@@ -136,7 +136,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess(db.name));
 
-    const canNavigateToDatabase = !db.disabled;
+    const canNavigateToDatabase = !db.isDisabled;
 
     const indexingDisabled = dbState.some((x) => x.status === "success" && x.data.indexingStatus === "Disabled");
     const canPauseAnyIndexing = dbState.some((x) => x.status === "success" && x.data.indexingStatus === "Running");
@@ -147,7 +147,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const canDisableIndexing = isOperatorOrAbove && !indexingDisabled;
     const canEnableIndexing = isOperatorOrAbove && indexingDisabled;
 
-    const canRestartDatabase = hasDatabaseAdminAccess && !db.disabled;
+    const canRestartDatabase = hasDatabaseAdminAccess && !db.isDisabled;
 
     const onChangeLockMode = async (lockMode: DatabaseLockMode) => {
         if (db.lockMode === lockMode) {
@@ -219,7 +219,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
     };
 
     const onToggleDatabase = async () => {
-        const enable = db.disabled;
+        const enable = db.isDisabled;
 
         const confirmation = await dispatch(confirmToggleDatabases([db], enable));
         if (confirmation) {
@@ -229,7 +229,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
     const onHeaderClicked = async (db: DatabaseSharedInfo, e: MouseEvent<HTMLElement>) => {
         if (genUtils.canConsumeDelegatedEvent(e)) {
-            if (!db || db.disabled || !db.currentNode.relevant) {
+            if (!db || db.isDisabled || !db.currentNode.isRelevant) {
                 return true;
             }
 
@@ -279,7 +279,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
     return (
         <RichPanel
-            hover={db.currentNode.relevant}
+            hover={db.currentNode.isRelevant}
             className={classNames("flex-row", "with-status", {
                 active: activeDatabaseName === db.name,
                 relevant: true,
@@ -302,14 +302,14 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                         href={documentsUrl}
                                         className={classNames(
                                             { "link-disabled": db.currentNode.isBeingDeleted },
-                                            { "link-shard": db.sharded }
+                                            { "link-shard": db.isSharded }
                                         )}
-                                        target={db.currentNode.relevant ? undefined : "_blank"}
+                                        target={db.currentNode.isRelevant ? undefined : "_blank"}
                                         title={db.name}
                                     >
                                         <Icon
-                                            icon={db.sharded ? "sharding" : "database"}
-                                            addon={db.currentNode.relevant ? "home" : null}
+                                            icon={db.isSharded ? "sharding" : "database"}
+                                            addon={db.currentNode.isRelevant ? "home" : null}
                                             margin="me-2"
                                         />
                                         {db.name}
@@ -318,7 +318,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     <span title="Database is disabled" className="d-block text-truncate">
                                         <Icon
                                             icon="database"
-                                            addon={db.currentNode.relevant ? "home" : null}
+                                            addon={db.currentNode.isRelevant ? "home" : null}
                                             margin="me-2"
                                         />
                                         {db.name}
@@ -335,7 +335,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 <Button
                                     href={manageGroupUrl}
                                     title="Manage the Database Group"
-                                    target={db.currentNode.relevant ? undefined : "_blank"}
+                                    target={db.currentNode.isRelevant ? undefined : "_blank"}
                                     disabled={!canNavigateToDatabase || db.currentNode.isBeingDeleted}
                                 >
                                     <span>
@@ -349,7 +349,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     <ButtonGroup>
                                         {isOperatorOrAbove && (
                                             <Button onClick={onToggleDatabase}>
-                                                {db.disabled ? (
+                                                {db.isDisabled ? (
                                                     <span>
                                                         <Icon icon="database" addon="play2" /> Enable
                                                     </span>

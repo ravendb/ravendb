@@ -16,7 +16,7 @@ function selectDatabaseByName(name: string) {
             const rootDatabaseName = DatabaseUtils.shardGroupKey(name);
             const rootDatabase = databasesSelectors.selectById(store.databases.databases, rootDatabaseName);
 
-            if (!rootDatabase || !rootDatabase.sharded) {
+            if (!rootDatabase || !rootDatabase.isSharded) {
                 return null;
             }
 

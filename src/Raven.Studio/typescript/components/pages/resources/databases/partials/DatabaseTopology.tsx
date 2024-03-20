@@ -14,7 +14,7 @@ interface DatabaseTopologyProps {
 export function DatabaseTopology(props: DatabaseTopologyProps) {
     const { db, localInfos, togglePanelCollapsed } = props;
 
-    if (db.sharded) {
+    if (db.isSharded) {
         return (
             <div>
                 <NodeSet
@@ -31,7 +31,7 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                             key={node.tag}
                             node={node}
                             localInfos={localInfos}
-                            isDisabled={db.disabled}
+                            isDisabled={db.isDisabled}
                         />
                     ))}
                 </NodeSet>
@@ -55,7 +55,7 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                                         node={node}
                                         localInfos={localInfos}
                                         shardNumber={shardNumber}
-                                        isDisabled={db.disabled}
+                                        isDisabled={db.isDisabled}
                                     />
                                 ))}
                                 {shard.deletionInProgress.map((node) => {
@@ -91,7 +91,7 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                             key={node.tag}
                             node={node}
                             localInfos={localInfos}
-                            isDisabled={db.disabled}
+                            isDisabled={db.isDisabled}
                         />
                     ))}
                     {db.deletionInProgress.map((node) => {
