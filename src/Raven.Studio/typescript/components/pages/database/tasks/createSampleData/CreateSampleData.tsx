@@ -14,6 +14,8 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import collectionsTracker from "common/helpers/database/collectionsTracker";
+import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 
 function CreateSampleData() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -25,7 +27,23 @@ function CreateSampleData() {
 
     const asyncFetchCollectionsStats = useAsync(() => tasksService.fetchCollectionsStats(databaseName), []);
     const asyncGetSampleDataClasses = useAsync(() => tasksService.getSampleDataClasses(databaseName), []);
-    const asyncCreateSampleData = useAsyncCallback(() => tasksService.createSampleData(databaseName));
+
+    const asyncCreateSampleData = useAsyncCallback(async () => {
+        await tasksService.createSampleData(databaseName);
+
+        const db_old = activeDatabaseTracker.default.database();
+        if (db_old.hasRevisionsConfiguration()) {
+            return;
+        }
+
+        const dbInfo = await tasksService.getDatabaseForStudio(databaseName);
+        if (!dbInfo.HasRevisionsConfiguration) {
+            return;
+        }
+
+        db_old.hasRevisionsConfiguration(true);
+        collectionsTracker.default.configureRevisions(db_old);
+    });
 
     const canCreateSampleData = asyncFetchCollectionsStats.result
         ? asyncFetchCollectionsStats.result.collections.filter((x) => x.documentCount() > 0).length === 0
