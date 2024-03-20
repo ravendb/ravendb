@@ -6,6 +6,8 @@ import { TasksStubs } from "test/stubs/TasksStubs";
 import MockTasksService from "test/mocks/services/MockTasksService";
 import { Meta, StoryFn } from "@storybook/react";
 import { mockStore } from "test/mocks/store/MockStore";
+import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
     title: "Pages/Database/Tasks/CreateSampleData",
@@ -18,6 +20,10 @@ function commonInit(): MockTasksService {
 
     databases.withActiveDatabase_NonSharded_SingleNode();
     tasksService.withGetSampleDataClasses();
+
+    const nonShardedDatabase = DatabasesStubs.nonShardedSingleNodeDatabase();
+    nonShardedDatabase.hasRevisionsConfiguration = ko.observable(true);
+    activeDatabaseTracker.default.database(nonShardedDatabase);
 
     return tasksService;
 }
