@@ -21,7 +21,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
     const { toggle, subscriptionsDatabaseCount } = props;
 
     const db = useAppSelector(databaseSelectors.activeDatabase);
-    const isSharded = db.sharded;
+    const isSharded = db.isSharded;
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
     const hasExternalReplication = useAppSelector(licenseSelectors.statusValue("HasExternalReplication"));

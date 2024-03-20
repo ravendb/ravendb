@@ -124,16 +124,16 @@ abstract class database {
     toDto(): DatabaseSharedInfo {
         return {
             name: this.name,
-            encrypted: this.isEncrypted(),
-            sharded: false,
+            isEncrypted: this.isEncrypted(),
+            isSharded: false,
             nodes: this.nodes(),
-            disabled: this.disabled(),
+            isDisabled: this.disabled(),
             currentNode: { 
-                relevant: this.relevant(),
+                isRelevant: this.relevant(),
                 isBeingDeleted: this.isBeingDeleted()
             },
-            dynamicNodesDistribution: this.dynamicNodesDistribution(),
-            fixOrder: this.fixOrder(),
+            isDynamicNodesDistribution: this.dynamicNodesDistribution(),
+            isFixOrder: this.fixOrder(),
             indexesCount: this.indexesCount(),
             lockMode: this.lockMode(),
             deletionInProgress: this.deletionInProgress().map(x => x.tag)

@@ -56,7 +56,7 @@ export default class DatabaseUtils {
         if (localInfo.some((x) => x.status === "success" && x.data.loadError)) {
             return "Error";
         }
-        if (db.disabled) {
+        if (db.isDisabled) {
             return "Disabled";
         }
 
@@ -73,7 +73,7 @@ export default class DatabaseUtils {
     }
 
     static getLocations(db: DatabaseSharedInfo): databaseLocationSpecifier[] {
-        if (db.sharded) {
+        if (db.isSharded) {
             const locations: databaseLocationSpecifier[] = db.shards.flatMap((shard) => {
                 const shardNumber = DatabaseUtils.shardNumber(shard.name);
 

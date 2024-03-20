@@ -46,7 +46,7 @@ export function OrchestratorsGroup() {
         sortableMode,
         enableReorder,
         exitReorder,
-    } = useGroup(db.nodes, db.fixOrder);
+    } = useGroup(db.nodes, db.isFixOrder);
 
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();

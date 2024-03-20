@@ -57,7 +57,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
 
     const localNodeTag = useAppSelector(clusterSelectors.localNodeTag);
     const allNodes = useAppSelector(clusterSelectors.allNodes);
-    const isCurrentNodeRelevant = db.currentNode.relevant;
+    const isCurrentNodeRelevant = db.currentNode.isRelevant;
 
     const dispatch = useAppDispatch();
     const { appUrl } = useAppUrls();
@@ -105,29 +105,29 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
     const hasAnyLoadError = dbState.some((x) => x.data?.loadError);
 
     const localDocumentsUrl = appUrl.forDocuments(null, db.name);
-    const documentsUrl = db.currentNode.relevant
+    const documentsUrl = db.currentNode.isRelevant
         ? localDocumentsUrl
         : appUrl.toExternalDatabaseUrl(db, localDocumentsUrl);
 
     const localIndexingErrorsUrl = appUrl.forIndexErrors(db.name);
-    const indexingErrorsUrl = db.currentNode.relevant
+    const indexingErrorsUrl = db.currentNode.isRelevant
         ? localIndexingErrorsUrl
         : appUrl.toExternalDatabaseUrl(db, localIndexingErrorsUrl);
 
     const localIndexingListUrl = appUrl.forIndexes(db.name);
-    const indexingListUrl = db.currentNode.relevant
+    const indexingListUrl = db.currentNode.isRelevant
         ? localIndexingListUrl
         : appUrl.toExternalDatabaseUrl(db, localIndexingListUrl);
 
     const localStorageReportUrl = appUrl.forStatusStorageReport(db.name);
-    const storageReportUrl = db.currentNode.relevant
+    const storageReportUrl = db.currentNode.isRelevant
         ? localStorageReportUrl
         : appUrl.toExternalDatabaseUrl(db, localStorageReportUrl);
 
     const localBackupUrl = appUrl.forBackups(db.name);
-    const backupUrl = db.currentNode.relevant ? localBackupUrl : appUrl.toExternalDatabaseUrl(db, localBackupUrl);
+    const backupUrl = db.currentNode.isRelevant ? localBackupUrl : appUrl.toExternalDatabaseUrl(db, localBackupUrl);
 
-    const linksTarget = db.currentNode.relevant ? undefined : "_blank";
+    const linksTarget = db.currentNode.isRelevant ? undefined : "_blank";
 
     const backupInfo = findLatestBackup(nonEmptyDbState);
     const backupStatus = DatabaseUtils.computeBackupStatus(backupInfo);
@@ -173,12 +173,12 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
             </RichPanelDetailItem>
             <RichPanelDetailItem>
                 <div className="encryption">
-                    {db.encrypted && (
+                    {db.isEncrypted && (
                         <span title="This database is encrypted">
                             <Icon icon="key" color="success" margin="m-0" />
                         </span>
                     )}
-                    {!db.encrypted && (
+                    {!db.isEncrypted && (
                         <span title="This database is not encrypted">
                             <Icon icon="unencrypted" color="muted" margin="m-0" />
                         </span>
@@ -245,7 +245,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                     <>
                         <RichPanelDetailItem
                             key="alerts"
-                            title={db.currentNode.relevant ? "Click to view alerts in Notification Center" : ""}
+                            title={db.currentNode.isRelevant ? "Click to view alerts in Notification Center" : ""}
                         >
                             <Badge color="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
                                 <a
@@ -284,7 +284,9 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                         <RichPanelDetailItem
                             key="performance-hints"
                             title={
-                                db.currentNode.relevant ? "Click to view performance hints in Notification Center" : ""
+                                db.currentNode.isRelevant
+                                    ? "Click to view performance hints in Notification Center"
+                                    : ""
                             }
                         >
                             <Badge color="faded-info" className="d-flex align-items-center lh-base rounded-pill">

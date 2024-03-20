@@ -37,7 +37,7 @@ export const toggleIndexing =
 export const openNotificationCenterForDatabase =
     (db: DatabaseSharedInfo): AppThunk =>
     (dispatch, getState) => {
-        if (!db.currentNode.relevant) {
+        if (!db.currentNode.isRelevant) {
             return;
         }
 
