@@ -8,16 +8,13 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.LowMemory;
-using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 using Size = Sparrow.Size;
-using TimeoutException = System.TimeoutException;
 
 namespace SlowTests.Bugs.Caching
 {
@@ -110,16 +107,14 @@ namespace SlowTests.Bugs.Caching
 
             if (createVersion2)
             {
-                var amre = new AsyncManualResetEvent();
-                var observable = store.Changes().ForDocument(docId);
-                await observable.EnsureSubscribedNow();
-                observable.Subscribe(_ => amre.Set());
+                var httpCache = store.GetRequestExecutor().Cache;
+                var prev = httpCache.Generation;
 
                 using var session = store.OpenAsyncSession();
                 await session.StoreAsync(new Doc { Version = "2" }, docId);
                 await session.SaveChangesAsync();
 
-                await amre.WaitAsync(TimeSpan.FromSeconds(30));
+                await WaitForGreaterThanAsync(() => Task.FromResult(httpCache.Generation), prev);
             }
 
             using (var session = store.OpenAsyncSession())
@@ -209,19 +204,17 @@ namespace SlowTests.Bugs.Caching
             {
                 loadFunc(session, docId);
             }
-
+            
             if (createVersion2)
             {
-                var amre = new AsyncManualResetEvent();
-                var observable = store.Changes().ForDocument(docId);
-                await observable.EnsureSubscribedNow();
-                observable.Subscribe(_ => amre.Set());
+                var httpCache = store.GetRequestExecutor().Cache;
+                var prev = httpCache.Generation;
 
                 using var session = store.OpenAsyncSession();
                 await session.StoreAsync(new Doc { Version = "2" }, docId);
                 await session.SaveChangesAsync();
 
-                await amre.WaitAsync(TimeSpan.FromSeconds(30));
+                await WaitForGreaterThanAsync(() => Task.FromResult(httpCache.Generation), prev);
             }
 
             using (var session = store.OpenSession())
