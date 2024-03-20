@@ -619,7 +619,7 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(AddDatabaseCommand):
-                        var addedNodes = AddDatabase(context, cmd, index, leader);
+                        var addedNodes = AddDatabase(context, type, cmd, index, serverStore);
                         if (addedNodes != null)
                         {
                             result = addedNodes;
@@ -1612,7 +1612,7 @@ namespace Raven.Server.ServerWide
 
         };
 
-        private unsafe List<string> AddDatabase(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private unsafe List<string> AddDatabase(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
             Exception exception = null;
@@ -1639,6 +1639,13 @@ namespace Raven.Server.ServerWide
                             throw new RachisConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " has etag " + actualEtag +
                                                                  " but was expecting " + addDatabaseCommand.RaftCommandIndex);
                         }
+                    }
+
+                    AssertLicenseLimits(type, serverStore, addDatabaseCommand.Record, items, context);
+
+                    foreach (var command in _licenseLimitsCommandsForCreateDatabase)
+                    {
+                        AssertLicenseLimits(command, serverStore, addDatabaseCommand.Record, items, context);
                     }
 
                     bool shouldSetClientConfigEtag;
@@ -2454,6 +2461,7 @@ namespace Raven.Server.ServerWide
                         return;
                     }
                     AssertLicenseLimits(type, serverStore, databaseRecord, items, context);
+
                     UpdateIndexForBackup(databaseRecord, type, index);
                     var updatedDatabaseBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);

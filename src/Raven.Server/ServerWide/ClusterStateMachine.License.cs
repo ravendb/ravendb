@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
@@ -17,11 +18,29 @@ public sealed partial class ClusterStateMachine
 {
     private const int MinBuildVersion54116 = 54_116;
 
-    private void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context)
+    private static readonly List<string> _licenseLimitsCommandsForCreateDatabase = new()
+    {
+        nameof(PutIndexCommand),
+        nameof(PutIndexesCommand),
+        nameof(UpdatePeriodicBackupCommand),
+        nameof(UpdatePullReplicationAsSinkCommand),
+        nameof(UpdatePullReplicationAsHubCommand),
+        nameof(UpdateExternalReplicationCommand),
+        nameof(AddRavenEtlCommand),
+        nameof(AddSqlEtlCommand),
+        nameof(EditTimeSeriesConfigurationCommand),
+        nameof(EditDocumentsCompressionCommand),
+        nameof(AddElasticSearchEtlCommand),
+        nameof(AddOlapEtlCommand),
+        nameof(AddQueueEtlCommand)
+    };
+
+    private void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table item, ClusterOperationContext context)
     {
         switch (type)
         {
             case nameof(PutIndexCommand):
+            case nameof(PutIndexesCommand):
                 if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54116) == false)
                     return;
 
@@ -79,8 +98,8 @@ public sealed partial class ClusterStateMachine
                     if (serverStore.LicenseManager.LicenseStatus.HasDelayedExternalReplication)
                         return;
 
-                if (databaseRecord.ExternalReplications.Last().DelayReplicationFor == TimeSpan.Zero)
-                    throw new LicenseLimitException(LimitType.ExternalReplication, "Your license doesn't support adding External Replication feature.");
+                if (databaseRecord.ExternalReplications.All(exRep => exRep.DelayReplicationFor == TimeSpan.Zero))
+                    return;
 
                 throw new LicenseLimitException(LimitType.DelayedExternalReplication, "Your license doesn't support adding Delayed External Replication.");
 
@@ -109,16 +128,19 @@ public sealed partial class ClusterStateMachine
                 if (serverStore.LicenseManager.LicenseStatus.HasTimeSeriesRollupsAndRetention)
                     return;
 
-                if (databaseRecord.TimeSeries.Collections.Count > 0 && databaseRecord.TimeSeries.Collections.Last().Value.Disabled == false)
-                    throw new LicenseLimitException(LimitType.TimeSeriesRollupsAndRetention, "Your license doesn't support adding Time Series Rollups And Retention feature.");
+                if (databaseRecord.TimeSeries.Collections.Count > 0 && databaseRecord.TimeSeries.Collections.All(x => x.Value.Disabled))
+                    return;
 
-                return;
+                throw new LicenseLimitException(LimitType.TimeSeriesRollupsAndRetention, "Your license doesn't support adding Time Series Rollups And Retention feature.");
 
             case nameof(EditDocumentsCompressionCommand):
                 if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54116) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasDocumentsCompression)
+                    return;
+
+                if (databaseRecord.DocumentsCompression.CompressAllCollections == false && databaseRecord.DocumentsCompression.CompressRevisions == false)
                     return;
 
                 throw new LicenseLimitException(LimitType.DocumentsCompression, "Your license doesn't support adding Documents Compression feature.");

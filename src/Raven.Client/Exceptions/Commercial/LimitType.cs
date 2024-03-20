@@ -90,11 +90,5 @@ namespace Raven.Client.Exceptions.Commercial
 
         [Description("Concurrent Subscriptions")]
         ConcurrentSubscriptions,
-
-        [Description("TCP Data Compression")]
-        TcpDataCompression,
-
-        [Description("Expiration")]
-        Expiration,
     }
 }
