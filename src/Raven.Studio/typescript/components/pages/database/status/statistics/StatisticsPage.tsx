@@ -13,7 +13,6 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 
 export function StatisticsPage() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
-    console.log("kalczur active db", db.name);
     const dispatch = useAppDispatch();
     const detailsVisible = useAppSelector(statisticsViewSelectors.detailsVisible);
 

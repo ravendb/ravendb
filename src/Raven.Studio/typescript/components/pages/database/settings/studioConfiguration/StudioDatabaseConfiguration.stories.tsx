@@ -2,7 +2,6 @@ import React from "react";
 import { Meta, ComponentStory } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import StudioDatabaseConfiguration from "./StudioDatabaseConfiguration";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {

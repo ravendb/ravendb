@@ -2,7 +2,6 @@
 import { Meta, StoryObj } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5, databaseAccessArgType, licenseArgType } from "test/storybookTestUtils";
 import DocumentRevisions from "./DocumentRevisions";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 

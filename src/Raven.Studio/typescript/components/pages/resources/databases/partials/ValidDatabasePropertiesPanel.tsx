@@ -20,7 +20,6 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import AlertsPopover from "./ValidDatabasePropertiesPanelAlertsPopover";
 import PerfHintsPopover from "./ValidDatabasePropertiesPanelPerfHintsPopover";
 import "./ValidDatabasePropertiesPanel.scss";
-import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 export interface ValidDatabasePropertiesPanelPopoverProps {
     isCurrentNodeRelevant: boolean;
