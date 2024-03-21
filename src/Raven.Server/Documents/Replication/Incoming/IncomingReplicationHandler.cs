@@ -743,11 +743,23 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             private void RecordDatabaseChangeVector(DocumentsOperationContext context)
             {
+                IAbstractIncomingReplicationHandler incomingHandler = null;
                 try
                 {
-                    var stats = context.DocumentDatabase.ReplicationLoader.IncomingHandlers.
-                        Single(i => i.ConnectionInfo.SourceDatabaseId == _replicationInfo.SourceDatabaseId)
-                        .GetLatestReplicationPerformance();
+                    try
+                    {
+                        incomingHandler = context.DocumentDatabase.ReplicationLoader.IncomingHandlers.Single(i =>
+                            i.ConnectionInfo.SourceDatabaseId == _replicationInfo.SourceDatabaseId);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_replicationInfo.Logger.IsInfoEnabled)
+                            _replicationInfo.Logger.Info("Failed to get incoming replication handler instance.", e);
+
+                        return;
+                    }
+                    
+                    var stats = incomingHandler.GetLatestReplicationPerformance();
 
                     var scope = (IncomingReplicationStatsScope)stats.StatsScope;
                     using (var networkStats = scope.For(ReplicationOperation.Incoming.Network))
@@ -757,11 +769,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                 }
                 catch (Exception e)
                 {
-                    var incomingHandler = context.DocumentDatabase.ReplicationLoader.IncomingHandlers.
-                        Single(i => i.ConnectionInfo.SourceDatabaseId == _replicationInfo.SourceDatabaseId);
-                    
                     if (_replicationInfo.Logger.IsInfoEnabled)
-                        _replicationInfo.Logger.Info($"Failed to record the database change vector for incoming stats. {((IncomingReplicationHandler)incomingHandler).FromToString}.", e);
+                        _replicationInfo.Logger.Info($"Failed to record the database change vector for incoming stats. {((IncomingReplicationHandler)incomingHandler)!.FromToString}.", e);
                 }
             }
 
