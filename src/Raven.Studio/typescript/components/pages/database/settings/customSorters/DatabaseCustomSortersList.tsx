@@ -3,12 +3,10 @@ import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import DatabaseCustomSortersListItem from "components/pages/database/settings/customSorters/DatabaseCustomSortersListItem";
 import { CustomSorterFormData } from "components/common/customSorters/editCustomSorterValidation";
-import database from "models/resources/database";
 import React from "react";
 import { AsyncStateStatus } from "react-async-hook";
 
 interface DatabaseCustomSortersListProps {
-    db: database;
     sorters: CustomSorterFormData[];
     fetchStatus: AsyncStateStatus;
     reload: () => void;
@@ -17,7 +15,7 @@ interface DatabaseCustomSortersListProps {
 }
 
 export default function DatabaseCustomSortersList(props: DatabaseCustomSortersListProps) {
-    const { db, sorters, fetchStatus, reload, remove, serverWideSorterNames } = props;
+    const { sorters, fetchStatus, reload, remove, serverWideSorterNames } = props;
 
     if (fetchStatus === "loading") {
         return <LoadingView />;
@@ -38,7 +36,6 @@ export default function DatabaseCustomSortersList(props: DatabaseCustomSortersLi
                     key={sorter.name + idx}
                     initialSorter={sorter}
                     serverWideSorterNames={serverWideSorterNames}
-                    db={db}
                     remove={() => remove(idx)}
                 />
             ))}

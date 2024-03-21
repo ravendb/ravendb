@@ -3,7 +3,6 @@ import AceEditor from "components/common/AceEditor";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useServices } from "components/hooks/useServices";
 import queryCriteria from "models/database/query/queryCriteria";
-import database from "models/resources/database";
 import React, { useEffect, useMemo, useState } from "react";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { Card, InputGroup, Label, Button, Badge } from "reactstrap";
@@ -14,6 +13,8 @@ import VirtualGrid from "components/common/VirtualGrid";
 import virtualColumn from "widgets/virtualGrid/columns/virtualColumn";
 import textColumn from "widgets/virtualGrid/columns/textColumn";
 import { todo } from "common/developmentHelper";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 interface DiagnosticsItem {
     Message: string;
@@ -22,7 +23,6 @@ interface DiagnosticsItem {
 type TestResultTab = "results" | "diagnostics";
 
 interface DatabaseCustomSorterTestProps {
-    db: database;
     name: string;
 }
 
@@ -34,14 +34,15 @@ todo(
 );
 
 export default function DatabaseCustomSorterTest(props: DatabaseCustomSorterTestProps) {
-    const { db, name } = props;
+    const { name } = props;
 
+    const db = useAppSelector(databaseSelectors.activeDatabase);
     const [testRql, setTestRql] = useState(`from index <indexName>\r\norder by custom(<fieldName>, "${name}")`);
 
     const { databasesService } = useServices();
 
     const asyncGetIndexNames = useAsync(async () => {
-        const dto = await databasesService.getEssentialStats(db);
+        const dto = await databasesService.getEssentialStats(db.name);
         return dto?.Indexes?.map((x) => x.Name);
     }, []);
 
@@ -51,7 +52,7 @@ export default function DatabaseCustomSorterTest(props: DatabaseCustomSorterTest
         criteria.diagnostics(true);
 
         return databasesService.query({
-            db,
+            db: db.name,
             skip: 0,
             take: 128,
             criteria,
@@ -62,7 +63,7 @@ export default function DatabaseCustomSorterTest(props: DatabaseCustomSorterTest
 
     const documentsProvider = useMemo(
         () =>
-            new documentBasedColumnsProvider(db, gridController, {
+            new documentBasedColumnsProvider(db.name, gridController, {
                 showRowSelectionCheckbox: false,
                 showSelectAllCheckbox: false,
                 enableInlinePreview: true,

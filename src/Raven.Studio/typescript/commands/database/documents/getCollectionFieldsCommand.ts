@@ -4,11 +4,11 @@ import endpoints = require("endpoints");
 
 class getCollectionFieldsCommand extends commandBase {
 
-    private readonly database: database;
+    private readonly database: database | string;
     private readonly collectionName: string;
     private readonly prefix: string;
 
-    constructor(database: database, collectionName: string, prefix: string) {
+    constructor(database: database | string, collectionName: string, prefix: string) {
         super();
         this.database = database;
         this.collectionName = collectionName;

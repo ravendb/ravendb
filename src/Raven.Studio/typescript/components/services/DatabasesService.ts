@@ -287,4 +287,8 @@ export default class DatabasesService {
     async saveDatabaseRecord(databaseName: string, databaseRecord: documentDto, etag: number) {
         return new saveDatabaseRecordCommand(databaseName, databaseRecord, etag).execute();
     }
+
+    async query(...args: ConstructorParameters<typeof queryCommand>) {
+        return new queryCommand(...args).execute();
+    }
 }

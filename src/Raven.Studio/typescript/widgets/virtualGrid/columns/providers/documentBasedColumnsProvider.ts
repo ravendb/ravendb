@@ -42,7 +42,7 @@ class documentBasedColumnsProvider {
     private static readonly minColumnWidth = 150;
 
     showRowSelectionCheckbox: boolean;
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly gridController: virtualGridController<document>;
     private readonly enableInlinePreview: boolean;
     private readonly createHyperlinks: boolean;
@@ -57,7 +57,7 @@ class documentBasedColumnsProvider {
 
     private static readonly externalIdRegex = /^\w+\/\w+/ig;
 
-    constructor(db: database, gridController: virtualGridController<document>, opts: documentBasedColumnsProviderOpts) {
+    constructor(db: database | string, gridController: virtualGridController<document>, opts: documentBasedColumnsProviderOpts) {
         this.showRowSelectionCheckbox = _.isBoolean(opts.showRowSelectionCheckbox) ? opts.showRowSelectionCheckbox : false;
         this.db = db;
         this.gridController = gridController;
