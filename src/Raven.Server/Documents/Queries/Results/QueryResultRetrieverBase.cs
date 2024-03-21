@@ -888,8 +888,6 @@ namespace Raven.Server.Documents.Queries.Results
                 {
 
                     TryGetValue(fieldToFetch.FunctionArgs[i], document, ref retrieverInput, indexFields, anyDynamicIndexFields, out _, out args[i], token);
-                    // if (args[i] is QueriedDocument d)
-                    //     args[i] = d.Clone<Document>(_context);
                     
                     if (ReferenceEquals(args[i], document))
                     {

@@ -6,7 +6,7 @@ using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-
+#pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
 namespace SlowTests.Issues
 {
     public class RavenDB_17134 : RavenTestBase
@@ -14,30 +14,31 @@ namespace SlowTests.Issues
         public RavenDB_17134(ITestOutputHelper output) : base(output)
         {
         }
-
-        private interface IEqualsAssert<T>
-        {
-            void AssertEqual(T other);
-        }
         
-        private class TimeSeriesRange : IEqualsAssert<TimeSeriesRange>
+        private class TimeSeriesRange
         {
             public DateTime From, To;
             public string Key;
             public long[] Count;
             public double[] Sum;
 
-            public void AssertEqual(TimeSeriesRange tsr)
+            public override bool Equals(object obj)
             {
-                Assert.Equal(From, tsr.From);
-                Assert.Equal(To, tsr.To);
-                Assert.Equal(Key, tsr.Key);
-                Assert.Equal(Count, tsr.Count);
-                Assert.Equal(Sum, tsr.Sum);
+                if (obj is TimeSeriesRange tsr)
+                {
+                    Assert.Equal(From, tsr.From);
+                    Assert.Equal(To, tsr.To);
+                    Assert.Equal(Key, tsr.Key);
+                    Assert.Equal(Count, tsr.Count);
+                    Assert.Equal(Sum, tsr.Sum);
+                    return true;
+                }
+                
+                return base.Equals(obj);
             }
         }
 
-        private class Dog : IEqualsAssert<Dog>
+        private class Dog
         {
             public string Name;
             public int Age;
@@ -48,22 +49,35 @@ namespace SlowTests.Issues
                 Age = age;
             }
 
-            public void AssertEqual(Dog dog)
+            public override bool Equals(object obj)
             {
-                Assert.Equal(Name, dog.Name);
-                Assert.Equal(Age, dog.Age);
+                if (obj is Dog dog)
+                {
+                    Assert.Equal(Name, dog.Name);
+                    Assert.Equal(Age, dog.Age);
+                    return true;
+                }
+                
+                return base.Equals(obj);
             }
         }
-        private class User : IEqualsAssert<User>
+        private class User
         {
             public Dog[] Dogs;
             public string Id;
 
-            public void AssertEqual(User user)
+            public override bool Equals(object obj)
             {
-                Assert.Equal(Dogs.Length, user.Dogs.Length);
-                for (int i = 0; i < Dogs.Length; ++i)
-                    Dogs[i].AssertEqual(user.Dogs[i]);
+                if (obj is User user)
+                {
+                    Assert.Equal(Dogs.Length, user.Dogs.Length);
+
+                    for (int i = 0; i < Dogs.Length; ++i)
+                        Dogs[i].Equals(user.Dogs[i]);
+                    return true;
+                }
+                
+                return base.Equals(obj);
             }
         } 
         
@@ -325,7 +339,7 @@ select project(e)
             }
         }
 
-        private static async Task<(List<T>, QueryStatistics)> GetResultAndAssertWithStreaming<T>(IAsyncDocumentSession session, IAsyncRawDocumentQuery<T> rawDocumentQuery) where T : IEqualsAssert<T>
+        private static async Task<(List<T>, QueryStatistics)> GetResultAndAssertWithStreaming<T>(IAsyncDocumentSession session, IAsyncRawDocumentQuery<T> rawDocumentQuery)
         {
             List<T> result = await rawDocumentQuery.Statistics(out var statistics).ToListAsync();
             List<T> streamResult = new();
@@ -337,10 +351,11 @@ select project(e)
             
             Assert.Equal(result.Count, streamResult.Count);
             for (int i = 0; i < result.Count; ++i)
-                result[i].AssertEqual(streamResult[i]);
+                Assert.True(result[i].Equals(streamResult[i]));
             
             
             return (result, statistics) ;
         }
     }
 }
+#pragma warning restore CS0649 // Field is never assigned to, and will always have its default value

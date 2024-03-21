@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using FastTests;
 using Orders;
@@ -16,12 +14,12 @@ public class RavenDB_21900 : RavenTestBase
     [RavenFact(RavenTestCategory.Querying)]
     public void CanReferencePreviousDocumentInStreamCollectionQuery()
     {
+        string orderId;
         using (var store = GetDocumentStore(new Options
                {
                    ModifyDatabaseRecord = x => x.DocumentsCompression = new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true)
                }))
         {
-            string orderId;
             using (var session = store.OpenSession())
             {
                 var order = new Order { Company = "Companies/1-A" };
@@ -61,7 +59,6 @@ public class RavenDB_21900 : RavenTestBase
                    ModifyDatabaseRecord = x => x.DocumentsCompression = new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true)
                }))
         {
-            string orderId;
             using (var session = store.OpenSession())
             {
                 session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
@@ -83,6 +80,7 @@ public class RavenDB_21900 : RavenTestBase
                                                              $"load a.Employee as orderDoc " +
                                                              "select orderDoc.Company, a.Freight");
                 var list = query.WaitForNonStaleResults().ToList();
+                Assert.NotEmpty(list);
             }
 
             using (var session = store.OpenSession())
@@ -115,7 +113,6 @@ public class RavenDB_21900 : RavenTestBase
                    ModifyDatabaseRecord = x => x.DocumentsCompression = new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true)
                }))
         {
-            string orderId;
             using (var session = store.OpenSession())
             {
                 session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
