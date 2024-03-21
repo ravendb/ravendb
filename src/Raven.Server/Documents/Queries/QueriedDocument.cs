@@ -9,6 +9,9 @@ public sealed class QueriedDocument : Document
 {
     private int _refCount = 1;
 
+    // For example, Map Reduce output is projected from index storage and is not persisted within the LRU due to entry uniqueness.
+    public bool NotPersistedInCache;
+    
     // Cloned document is not stored in LRU, that means disposing this object should only decrease reference at original document. 
     private QueriedDocument _sourceDocument;
 
@@ -73,6 +76,10 @@ public sealed class QueriedDocument : Document
         IncreaseReference();
 
         var cloned = (QueriedDocument)(object)base.CloneWith<TDocument>(context, newData);
+
+        if (this.Data is null)
+            return (TDocument)(object)cloned;
+        
 #if DEBUG
         cloned._isCloned = true;
 #endif
@@ -87,6 +94,7 @@ public sealed class QueriedDocument : Document
         
         cloned._useList = _useList;
         _useList = false;
+        cloned.NotPersistedInCache = NotPersistedInCache;
         
         return (TDocument)(object)cloned;
     }
@@ -104,7 +112,7 @@ public sealed class QueriedDocument : Document
 #if DEBUG
             Debug.Assert(_isCloned, "IsCloned");
             Debug.Assert(_refCount == 0, $"We should not have reference copy to clone. {_refCount}");
-            Debug.Assert(_sourceDocument._refCount >= 2, $"_sourceDocument._refCount ({_sourceDocument._refCount}) >= 2");
+            Debug.Assert(NotPersistedInCache || _sourceDocument._refCount >= 2, $"_sourceDocument._refCount ({_sourceDocument._refCount}) >= 2");
             Debug.Assert(_sourceDocument.Data != null, "_sourceDocument.Data != null (0)");
 
             Debug.Assert(ReferenceEquals(_sourceDocument.Data, Data) == false);
@@ -112,10 +120,10 @@ public sealed class QueriedDocument : Document
             //Decrease reference at parent document.
             _sourceDocument.Dispose();
             
-            Debug.Assert(_sourceDocument.Data != null, "_sourceDocument.Data != null (1)");
+            Debug.Assert(NotPersistedInCache || _sourceDocument.Data != null, "_sourceDocument.Data != null (1)");
             // We can dispose this document since it's owns a copy of the data.
             base.Dispose();
-            Debug.Assert(_sourceDocument.Data != null, "_sourceDocument.Data != null (2)");
+            Debug.Assert(NotPersistedInCache || _sourceDocument.Data != null, "_sourceDocument.Data != null (2)");
             
             if (_referencingSingle != null || _useList)
             {
