@@ -1139,7 +1139,7 @@ class editDocument extends shardViewModelBase {
                     }
                 } else {
                     this.dirtyFlag().reset();
-                    messagePublisher.reportError("Could not load document: " + id);
+                    messagePublisher.reportError("Could not load document: " + id, xhr.responseText, xhr.statusText);  
                     loadTask.reject();
                 }
             })
