@@ -9,7 +9,6 @@ import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { useAsync } from "react-async-hook";
 import { CounterBadge } from "components/common/CounterBadge";
-import { NonShardedViewProps } from "components/models/common";
 import FeatureNotAvailable from "components/common/FeatureNotAvailable";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { LicenseLimitReachStatus, getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
@@ -19,6 +18,7 @@ import { DatabaseCustomSortersInfoHub } from "components/pages/database/settings
 import DatabaseCustomSortersList from "components/pages/database/settings/customSorters/DatabaseCustomSortersList";
 import DatabaseCustomSortersServerWideList from "components/pages/database/settings/customSorters/DatabaseCustomSortersServerWideList";
 import { useCustomSorters } from "components/common/customSorters/useCustomSorters";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 export default function DatabaseCustomSorters() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
@@ -28,7 +28,7 @@ export default function DatabaseCustomSorters() {
 
     const { sorters, setSorters, addNewSorter, removeSorter, mapFromDto } = useCustomSorters();
 
-    const asyncGetDatabaseSorters = useAsync(() => databasesService.getCustomSorters(db), [db], {
+    const asyncGetDatabaseSorters = useAsync(() => databasesService.getCustomSorters(db.name), [db.name], {
         onSuccess(result) {
             setSorters(mapFromDto(result));
         },
@@ -36,9 +36,6 @@ export default function DatabaseCustomSorters() {
 
     const { appUrl } = useAppUrls();
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
-
-    const isDatabaseAdmin =
-        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
     const licenseClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerCluster"));
     const licenseDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerDatabase"));
@@ -87,7 +84,7 @@ export default function DatabaseCustomSorters() {
             />
             <Col>
                 <AboutViewHeading title="Custom sorters" icon="custom-sorters" />
-                {isDatabaseAdmin && (
+                {hasDatabaseAdminAccess && (
                     <>
                         <div id="newCustomSorter" className="w-fit-content">
                             <Button color="primary" className="mb-3" onClick={addNewSorter} disabled={isLimitReached}>
@@ -111,7 +108,6 @@ export default function DatabaseCustomSorters() {
                     )}
                 </HrHeader>
                 <DatabaseCustomSortersList
-                    db={db}
                     sorters={sorters}
                     fetchStatus={asyncGetDatabaseSorters.status}
                     reload={asyncGetDatabaseSorters.execute}
@@ -134,7 +130,7 @@ export default function DatabaseCustomSorters() {
                     {!hasServerWideCustomSorters && <LicenseRestrictedBadge licenseRequired="Professional +" />}
                 </HrHeader>
                 {hasServerWideCustomSorters && (
-                    <DatabaseCustomSortersServerWideList db={db} asyncGetSorters={asyncGetServerWideSorters} />
+                    <DatabaseCustomSortersServerWideList asyncGetSorters={asyncGetServerWideSorters} />
                 )}
             </Col>
             <Col sm={12} lg={4}>

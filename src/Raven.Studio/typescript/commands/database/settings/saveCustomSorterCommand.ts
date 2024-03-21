@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 type SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 
 class saveCustomSorterCommand extends commandBase {
-    private db: database;
+    private db: database | string;
     private sorterDto: SorterDefinition;
 
     constructor(db: database | string, sorterDto: SorterDefinition) {

@@ -12,8 +12,6 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta;
 
-const databaseName = "databaseName";
-
 interface DefaultDatabaseCustomSortersProps {
     isEmpty: boolean;
     databaseAccess: databaseAccessLevel;
@@ -25,8 +23,10 @@ interface DefaultDatabaseCustomSortersProps {
 export const DatabaseCustomSortersStory: StoryObj<DefaultDatabaseCustomSortersProps> = {
     name: "Custom Sorters",
     render: (props: DefaultDatabaseCustomSortersProps) => {
-        const { accessManager, license } = mockStore;
+        const { accessManager, license, databases } = mockStore;
         const { databasesService, manageServerService } = mockServices;
+
+        const db = databases.withActiveDatabase_NonSharded_SingleNode();
 
         accessManager.with_securityClearance("ValidUser");
         accessManager.with_databaseAccess({
@@ -51,7 +51,7 @@ export const DatabaseCustomSortersStory: StoryObj<DefaultDatabaseCustomSortersPr
             MaxNumberOfCustomSortersPerCluster: props.maxNumberOfCustomSortersPerCluster,
         });
 
-        return <DatabaseCustomSorters db={db} />;
+        return <DatabaseCustomSorters />;
     },
     args: {
         isEmpty: false,

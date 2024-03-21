@@ -11,7 +11,6 @@ import {
 import useBoolean from "components/hooks/useBoolean";
 import DatabaseCustomSorterTest from "components/pages/database/settings/customSorters/DatabaseCustomSorterTest";
 import { Icon } from "components/common/Icon";
-import database from "models/resources/database";
 import React from "react";
 import { UseAsyncReturn } from "react-async-hook";
 import { Button, Collapse } from "reactstrap";
@@ -19,18 +18,15 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { useAppSelector } from "components/store";
 
 interface DatabaseCustomSortersServerWideListProps {
-    db: database;
     asyncGetSorters: UseAsyncReturn<Raven.Client.Documents.Queries.Sorting.SorterDefinition[], any[]>;
 }
 
 export default function DatabaseCustomSortersServerWideList({
-    db,
     asyncGetSorters,
 }: DatabaseCustomSortersServerWideListProps) {
-    const { value: isTestMode, toggle: toggleIsTestMode } = useBoolean(false);
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
 
-    const isDatabaseAdmin =
-        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
+    const { value: isTestMode, toggle: toggleIsTestMode } = useBoolean(false);
 
     if (asyncGetSorters.status === "loading") {
         return <LoadingView />;
@@ -52,7 +48,7 @@ export default function DatabaseCustomSortersServerWideList({
                         <RichPanelInfo>
                             <RichPanelName>{sorter.Name}</RichPanelName>
 
-                            {isDatabaseAdmin && (
+                            {hasDatabaseAdminAccess && (
                                 <RichPanelActions>
                                     <Button onClick={toggleIsTestMode}>
                                         <Icon icon="rocket" addon={isTestMode ? "cancel" : null} margin="m-0" />
@@ -62,7 +58,7 @@ export default function DatabaseCustomSortersServerWideList({
                         </RichPanelInfo>
                     </RichPanelHeader>
                     <Collapse isOpen={isTestMode}>
-                        <DatabaseCustomSorterTest db={db} name={sorter.Name} />
+                        <DatabaseCustomSorterTest name={sorter.Name} />
                     </Collapse>
                 </RichPanel>
             ))}

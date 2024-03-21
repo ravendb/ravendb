@@ -23,7 +23,6 @@ import {
 import { useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { Icon } from "components/common/Icon";
-import database from "models/resources/database";
 import React from "react";
 import { useState } from "react";
 import { UseAsyncReturn, useAsyncCallback } from "react-async-hook";
@@ -31,16 +30,16 @@ import { useForm, useWatch, SubmitHandler } from "react-hook-form";
 import { Form, UncontrolledTooltip, Button, Collapse, InputGroup, Label } from "reactstrap";
 import DatabaseCustomSorterTest from "components/pages/database/settings/customSorters/DatabaseCustomSorterTest";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 interface DatabaseCustomSortersListItemProps {
     initialSorter: CustomSorterFormData;
     serverWideSorterNames: string[];
-    db: database;
     remove: () => void;
 }
 
 export default function DatabaseCustomSortersListItem(props: DatabaseCustomSortersListItemProps) {
-    const { initialSorter, serverWideSorterNames, db, remove } = props;
+    const { initialSorter, serverWideSorterNames, remove } = props;
 
     const form = useForm<CustomSorterFormData>({
         resolver: customSorterYupResolver,
@@ -51,8 +50,8 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
     useDirtyFlag(formState.isDirty);
 
     const isNew = !formState.defaultValues.name;
-    const isDatabaseAdmin =
-        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
 
     const { value: isEditMode, toggle: toggleIsEditMode } = useBoolean(isNew);
     const { value: isTestMode, toggle: toggleIsTestMode } = useBoolean(false);
@@ -63,16 +62,19 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
 
     const { databasesService } = useServices();
 
-    const asyncDeleteSorter = useAsyncCallback((name: string) => databasesService.deleteCustomSorter(db, name), {
-        onSuccess: () => {
-            remove();
-            throttledUpdateLicenseLimitsUsage();
-        },
-    });
+    const asyncDeleteSorter = useAsyncCallback(
+        (sorterName: string) => databasesService.deleteCustomSorter(databaseName, sorterName),
+        {
+            onSuccess: () => {
+                remove();
+                throttledUpdateLicenseLimitsUsage();
+            },
+        }
+    );
 
     const onSave: SubmitHandler<CustomSorterFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
-            await databasesService.saveCustomSorter(db, {
+            await databasesService.saveCustomSorter(databaseName, {
                 Name: formData.name,
                 Code: formData.code,
             });
@@ -111,7 +113,6 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                     <RichPanelActions>
                         <CustomSortersActions
                             name={formValues.name}
-                            isDatabaseAdmin={isDatabaseAdmin}
                             isTestMode={isTestMode}
                             toggleIsTestMode={toggleIsTestMode}
                             isEditMode={isEditMode}
@@ -126,7 +127,7 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                 </RichPanelHeader>
 
                 <Collapse isOpen={isTestMode}>
-                    <DatabaseCustomSorterTest db={db} name={formValues.name} />
+                    <DatabaseCustomSorterTest name={formValues.name} />
                 </Collapse>
 
                 <Collapse isOpen={isEditMode}>
@@ -143,7 +144,7 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                             </InputGroup>
                         )}
                         <InputGroup className="vstack">
-                            {isDatabaseAdmin && (
+                            {hasDatabaseAdminAccess && (
                                 <div className="d-flex justify-content-end">
                                     <Label className="btn btn-link btn-xs text-right">
                                         <Icon icon="upload" />
@@ -166,7 +167,7 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                                 name="code"
                                 mode="csharp"
                                 height="400px"
-                                readOnly={!isDatabaseAdmin}
+                                readOnly={!hasDatabaseAdminAccess}
                             />
                         </InputGroup>
                     </RichPanelDetails>
@@ -177,7 +178,6 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
 }
 
 interface CustomSortersActionsProps {
-    isDatabaseAdmin: boolean;
     toggleIsTestMode: () => void;
     isEditMode: boolean;
     isTestMode: boolean;
@@ -191,7 +191,6 @@ interface CustomSortersActionsProps {
 }
 
 function CustomSortersActions({
-    isDatabaseAdmin,
     toggleIsTestMode,
     isEditMode,
     isTestMode,
@@ -203,7 +202,9 @@ function CustomSortersActions({
     isSubmitting,
     asyncDeleteSorter,
 }: CustomSortersActionsProps) {
-    if (!isDatabaseAdmin) {
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+
+    if (!hasDatabaseAdminAccess) {
         return isEditMode ? (
             <Button key="preview" onClick={toggleIsEditMode}>
                 <Icon icon="preview-off" margin="m-0" />
@@ -247,10 +248,10 @@ function CustomSortersActions({
                         }}
                     >
                         <Button key="edit" onClick={toggleIsEditMode} disabled={isTestMode}>
-                            <Icon icon={isDatabaseAdmin ? "edit" : "preview"} margin="m-0" />
+                            <Icon icon={hasDatabaseAdminAccess ? "edit" : "preview"} margin="m-0" />
                         </Button>
                     </ConditionalPopover>
-                    {isDatabaseAdmin && (
+                    {hasDatabaseAdminAccess && (
                         <>
                             {nameToConfirmDelete != null && (
                                 <DeleteCustomSorterConfirm
