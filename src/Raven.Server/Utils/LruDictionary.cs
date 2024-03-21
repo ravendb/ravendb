@@ -43,7 +43,7 @@ public class LruDictionary<TKey, TValue>
 
     public virtual bool IsTrackingSupported => false;
 
-    public virtual void TrackReferences(TValue parent, TValue queriedDocument)
+    public virtual void TrackReferences(TValue parent, TValue queriedDocument, bool shouldIncreaseReferences = true)
     {
         throw new NotSupportedException($"{nameof(LruDictionary<TKey, TValue>)} doesn't support {nameof(TrackReferences)} method.");
     }

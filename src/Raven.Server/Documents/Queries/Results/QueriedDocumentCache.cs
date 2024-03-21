@@ -23,9 +23,10 @@ public sealed class QueriedDocumentCache : LruDictionary<string, QueriedDocument
 
     public override bool IsTrackingSupported => true;
 
-    public override void TrackReferences(QueriedDocument parent, QueriedDocument queriedDocument)
+    public override void TrackReferences(QueriedDocument parent, QueriedDocument queriedDocument, bool shouldIncreaseReferences = true)
     {
-        queriedDocument?.IncreaseReference();
+        if (shouldIncreaseReferences)
+            queriedDocument?.IncreaseReference();
         parent.LinkReferencedDocument(queriedDocument);
     }
 
@@ -80,7 +81,7 @@ public sealed class QueriedDocumentCache : LruDictionary<string, QueriedDocument
                     if (Cache.TryGetValue(removeKey, out var toRemove) && toRemove.Value != null)
                     {
                         var element = toRemove.Value;
-                        if (element is {CanDispose: false})
+                        if (element.CanDispose == false)
                             goto AddOnly;
                         
                         Release(toRemove.Value);
