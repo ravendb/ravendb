@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -29,20 +31,31 @@ public partial class RavenTestBase
 
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             var bucket = _parent.Sharding.GetBucket(record.Sharding, id);
-            PrefixedShardingSetting prefixed = null;
+            PrefixedShardingSetting prefixedSetting = null;
             foreach (var setting in record.Sharding.Prefixed)
             {
                 if (id.StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
                 {
-                    prefixed = setting;
+                    prefixedSetting = setting;
                     break;
                 }
-            }
+            }  
 
             var shardNumber = ShardHelper.GetShardNumberFor(record.Sharding, bucket);
-            var moveToShard = toShard ?? (prefixed != null 
-                ? ShardingTestBase.GetNextSortedShardNumber(prefixed, shardNumber)
-                : ShardingTestBase.GetNextSortedShardNumber(record.Sharding.Shards, shardNumber));
+            var shards = prefixedSetting != null ? prefixedSetting.Shards : record.Sharding.Shards.Keys.ToList();
+
+            int moveToShard;
+            if (toShard.HasValue)
+            {
+                if (shards.Contains(toShard.Value) == false)
+                    throw new InvalidOperationException($"Cannot move bucket '{bucket}' from shard {shardNumber} to shard {toShard}. " +
+                                                        $"Sharding topology does not contain shard {toShard}");
+                moveToShard = toShard.Value;
+            }
+            else
+            {
+                moveToShard = ShardingTestBase.GetNextSortedShardNumber(shards, shardNumber);
+            }
 
             using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shardNumber)))
             {
@@ -53,7 +66,7 @@ public partial class RavenTestBase
             {
                 try
                 {
-                    await server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, moveToShard);
+                    await server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, moveToShard, prefix: prefixedSetting?.Prefix, raftId: RaftIdGenerator.NewId());
                     break;
                 }
                 catch

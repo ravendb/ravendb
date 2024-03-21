@@ -44,4 +44,17 @@ public sealed class ShardingConfiguration
 
         return false;
     }
+
+    internal bool DoesShardHavePrefixes(int shardNumber) => DoesShardHavePrefixes(Prefixed, shardNumber);
+
+    internal static bool DoesShardHavePrefixes(List<PrefixedShardingSetting> prefixes, int shardNumber)
+    {
+        foreach (var setting in prefixes)
+        {
+            if (setting.Shards.Contains(shardNumber))
+                return true;
+        }
+
+        return false;
+    }
 }

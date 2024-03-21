@@ -70,7 +70,8 @@ namespace FastTests.Client
                 "AddDatabaseShardCommand", "GetNextServerOperationIdCommand", "KillServerOperationCommand", "ModifyDatabaseTopologyCommand", "DelayBackupCommand",
                 "PutDatabaseClientConfigurationCommand", "PutDatabaseSettingsCommand", "PutDatabaseStudioConfigurationCommand", "GetTcpInfoForReplicationCommand",
                 "AddQueueSinkCommand", "UpdateQueueSinkCommand", "ConfigureDataArchivalCommand",
-                "AdoptOrphanedRevisionsCommand"
+                "AdoptOrphanedRevisionsCommand",
+                "AddPrefixedShardingSettingCommand", "DeletePrefixedShardingSettingCommand", "UpdatePrefixedShardingSettingCommand"
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);
