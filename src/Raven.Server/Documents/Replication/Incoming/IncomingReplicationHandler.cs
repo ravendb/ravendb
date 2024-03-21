@@ -743,34 +743,40 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             private void RecordDatabaseChangeVector(DocumentsOperationContext context)
             {
-                IAbstractIncomingReplicationHandler incomingHandler = null;
-                try
-                {
-                    try
-                    {
-                        incomingHandler = context.DocumentDatabase.ReplicationLoader.IncomingHandlers.Single(i =>
-                            i.ConnectionInfo.SourceDatabaseId == _replicationInfo.SourceDatabaseId);
-                    }
-                    catch (Exception e)
-                    {
-                        if (_replicationInfo.Logger.IsInfoEnabled)
-                            _replicationInfo.Logger.Info("Failed to get incoming replication handler instance.", e);
-
-                        return;
-                    }
-                    
-                    var stats = incomingHandler.GetLatestReplicationPerformance();
-
-                    var scope = (IncomingReplicationStatsScope)stats.StatsScope;
-                    using (var networkStats = scope.For(ReplicationOperation.Incoming.Network))
-                    {
-                        networkStats.RecordDatabaseChangeVector(context.LastDatabaseChangeVector);
-                    }
-                }
-                catch (Exception e)
+                if (context.DocumentDatabase.ReplicationLoader.IncomingHandlers.Any() == false)
                 {
                     if (_replicationInfo.Logger.IsInfoEnabled)
-                        _replicationInfo.Logger.Info($"Failed to record the database change vector for incoming stats. {((IncomingReplicationHandler)incomingHandler)!.FromToString}.", e);
+                        _replicationInfo.Logger.Info("Failed to retrieve incoming replication handler instance.");
+
+                    return;
+                }
+
+                IAbstractIncomingReplicationHandler incomingHandler;
+                try
+                {
+
+                    incomingHandler = context.DocumentDatabase.ReplicationLoader.IncomingHandlers.Single(i =>
+                        i.ConnectionInfo.SourceDatabaseId == _replicationInfo.SourceDatabaseId);
+                }
+                catch (InvalidOperationException e)
+                {
+                    if (_replicationInfo.Logger.IsInfoEnabled)
+                        _replicationInfo.Logger.Info(
+                            $"Failed to retrieve a unique incoming replication handler instance for SourceDatabaseId: {_replicationInfo.SourceDatabaseId}.", e);
+
+                    throw;
+                }
+
+                var stats = incomingHandler.GetLatestReplicationPerformance();
+                var scope = (IncomingReplicationStatsScope)stats.StatsScope;
+
+                // If the scope is null, it indicates that there are no replication statistics available, and we opt not to create a new one here
+                if (scope == null)
+                    return;
+
+                using (var networkStats = scope.For(ReplicationOperation.Incoming.Network))
+                {
+                    networkStats.RecordDatabaseChangeVector(context.LastDatabaseChangeVector);
                 }
             }
 
