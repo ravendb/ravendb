@@ -40,6 +40,18 @@ public class LruDictionary<TKey, TValue>
     public virtual void Clear()
     {
     }
+
+    public virtual bool IsTrackingSupported => false;
+
+    public virtual void TrackReferences(TValue parent, TValue queriedDocument)
+    {
+        throw new NotSupportedException($"{nameof(LruDictionary<TKey, TValue>)} doesn't support {nameof(TrackReferences)} method.");
+    }
+    
+    public virtual void IncreaseReference(TValue value)
+    {
+        throw new NotSupportedException($"{nameof(LruDictionary<TKey, TValue>)} doesn't support {nameof(IncreaseReference)} method.");
+    }
     
     public virtual TValue this[TKey key]
     {

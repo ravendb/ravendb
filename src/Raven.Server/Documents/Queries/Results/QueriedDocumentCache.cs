@@ -21,6 +21,19 @@ public sealed class QueriedDocumentCache : LruDictionary<string, QueriedDocument
         value.Dispose();
     }
 
+    public override bool IsTrackingSupported => true;
+
+    public override void TrackReferences(QueriedDocument parent, QueriedDocument queriedDocument)
+    {
+        queriedDocument?.IncreaseReference();
+        parent.LinkReferencedDocument(queriedDocument);
+    }
+
+    public override void IncreaseReference(QueriedDocument value)
+    {
+        value?.IncreaseReference();
+    }
+
     public override void Clear()
     {
         foreach (var (_, valueTuple) in Cache)
@@ -50,7 +63,7 @@ public sealed class QueriedDocumentCache : LruDictionary<string, QueriedDocument
         }
         set
         {
-            Debug.Assert(value.StorageId != Voron.Global.Constants.Compression.NonReturnableStorageId, "value.StorageId != Voron.Global.Constants.Compression.NonReturnableStorageId");
+            Debug.Assert(value?.StorageId != Voron.Global.Constants.Compression.NonReturnableStorageId, "value.StorageId != Voron.Global.Constants.Compression.NonReturnableStorageId");
             
             if (Cache.TryGetValue(key, out var node))
             {
