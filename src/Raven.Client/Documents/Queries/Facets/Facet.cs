@@ -10,6 +10,8 @@ namespace Raven.Client.Documents.Queries.Facets
     public sealed class Facet : FacetBase
     {
         internal Func<DocumentConventions, string> _originalFieldNamePathEvaluator;
+        
+        /// <summary>
         /// Name of field the facet aggregate on
         /// </summary>
         public string FieldName { get; set; }
