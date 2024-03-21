@@ -110,7 +110,8 @@ namespace Raven.Server.Documents.Queries.Results
 
             return new QueriedDocument()
             {
-                Data = result
+                Data = result,
+                NotPersistedInCache = true
             };
         }
 

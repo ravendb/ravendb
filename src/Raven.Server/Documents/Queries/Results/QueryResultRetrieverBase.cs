@@ -200,8 +200,8 @@ namespace Raven.Server.Documents.Queries.Results
             }
 
             // When we take document from cache we've to increase the reference counter.
-            if (typeof(TDocument) == typeof(QueriedDocument))
-                ((QueriedDocument)(object)doc)?.IncreaseReference();
+            if (_loadedDocumentCache.IsTrackingSupported)
+                _loadedDocumentCache.IncreaseReference(doc);
 
             return doc;
         }
@@ -214,15 +214,8 @@ namespace Raven.Server.Documents.Queries.Results
             
             if (_loadedDocumentCache.TryGetValue(id, out var doc))
             {
-                if (typeof(TDocument) == typeof(QueriedDocument))
-                {
-                    var queriedDocument = (QueriedDocument)(object)doc;
-                    queriedDocument?.IncreaseReference();
-                    
-                    var parent = (QueriedDocument)(object)parentDocument;
-                    parent.LinkReferencedDocument(queriedDocument);
-                    
-                }
+                if (_loadedDocumentCache.IsTrackingSupported)
+                    _loadedDocumentCache.TrackReferences(parentDocument, doc);
 
                 if (typeof(TDocument) != typeof(Document))
                     return doc;
@@ -234,14 +227,8 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 _loadedDocumentCache[id] = doc;
 
-                if (typeof(TDocument) == typeof(QueriedDocument))
-                {
-                    var queriedDocument = (QueriedDocument)(object)doc;
-                    queriedDocument?.IncreaseReference();
-                    
-                    var parent = (QueriedDocument)(object)parentDocument;
-                    parent.LinkReferencedDocument(queriedDocument);
-                }
+                if (_loadedDocumentCache.IsTrackingSupported)
+                    _loadedDocumentCache.TrackReferences(parentDocument, doc);
             }
             
             return doc;
@@ -406,8 +393,12 @@ namespace Raven.Server.Documents.Queries.Results
 
                             if (fieldVal is TDocument d2)
                             {
-                                if (typeof(TDocument) == typeof(QueriedDocument))
+                                if (_loadedDocumentCache.IsTrackingSupported)
+                                {
+                                    Debug.Assert(typeof(TDocument) == typeof(QueriedDocument), "typeof(TDocument) == typeof(QueriedDocument)");
                                     ((QueriedDocument)(object)doc).LinkReferencedDocument((QueriedDocument)(object)d2);
+                                }
+
                                 fieldVal = d2.Data;
                             }
 
@@ -478,9 +469,10 @@ namespace Raven.Server.Documents.Queries.Results
                     doc.Dispose(); // suspended.
                     Debug.Assert(documentFromCache.Data.BasePointer != null, "documentFromCache.Data.BasePointer != null");
                 }
-                
-                if (typeof(TDocument) == typeof(QueriedDocument))
-                    ((QueriedDocument)(object)documentFromCache)?.IncreaseReference();
+
+                if (_loadedDocumentCache.IsTrackingSupported)
+                    _loadedDocumentCache.IncreaseReference(documentFromCache);
+
 #if DEBUG
                 Debug.Assert(documentFromCache is not QueriedDocument qd || qd.RefCount >= 2, "documentFromCache is not QueriedDocument qd || qd.RefCount >= 2");
 #endif
@@ -553,24 +545,30 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 case List<object> list:
                     RuntimeHelpers.EnsureSufficientExecutionStack();
-                    var results = new List<TDocument>(list.Count);
-                    for (int i = 0; i < list.Count; i++)
+                    using (doc)
                     {
-                        var result = CreateNewDocument(doc, key, list[i]);
-                        if (result.Document != null)
+                        var results = new List<TDocument>(list.Count);
+                        for (int i = 0; i < list.Count; i++)
                         {
-                            results.Add(result.Document);
-                        }
-                        else if (result.List != null)
-                        {
-                            foreach (var document in result.List)
+                            if (_loadedDocumentCache.IsTrackingSupported)
+                                _loadedDocumentCache.IncreaseReference(doc);
+
+                            var result = CreateNewDocument(doc, key, list[i]);
+                            if (result.Document != null)
                             {
-                                results.Add(document);
+                                results.Add(result.Document);
+                            }
+                            else if (result.List != null)
+                            {
+                                foreach (var document in result.List)
+                                {
+                                    results.Add(document);
+                                }
                             }
                         }
+                        
+                        return (null, results);
                     }
-
-                    return (null, results);
                 case BlittableJsonReaderObject nested:
                 {
                     using (doc)
@@ -967,7 +965,7 @@ namespace Raven.Server.Documents.Queries.Results
                 _loadedDocumentsByAliasName = new Dictionary<string, TDocument>();
             }
 
-            if (typeof(TDocument) == typeof(QueriedDocument) && _loadedDocumentIds != null)
+            if (_loadedDocumentCache.IsTrackingSupported && _loadedDocumentIds != null)
             {
                 foreach (var loadedDocId in _loadedDocumentIds)
                 {
