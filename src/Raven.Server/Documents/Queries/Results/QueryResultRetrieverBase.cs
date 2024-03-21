@@ -394,10 +394,7 @@ namespace Raven.Server.Documents.Queries.Results
                             if (fieldVal is TDocument d2)
                             {
                                 if (_loadedDocumentCache.IsTrackingSupported)
-                                {
-                                    Debug.Assert(typeof(TDocument) == typeof(QueriedDocument), "typeof(TDocument) == typeof(QueriedDocument)");
-                                    ((QueriedDocument)(object)doc).LinkReferencedDocument((QueriedDocument)(object)d2);
-                                }
+                                    _loadedDocumentCache.TrackReferences(doc, d2, shouldIncreaseReferences: false);
 
                                 fieldVal = d2.Data;
                             }
