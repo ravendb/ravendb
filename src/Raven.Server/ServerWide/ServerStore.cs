@@ -35,6 +35,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
@@ -2953,33 +2954,30 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public Task<(long Index, object Result)> WriteDatabaseRecordAsync(
+        public async Task<(long Index, object Result)> WriteDatabaseRecordAsync(
             string databaseName, DatabaseRecord record, long? index, string raftRequestId,
-            Dictionary<string, BlittableJsonReaderObject> databaseValues = null, bool isRestore = false)
+            Dictionary<string, BlittableJsonReaderObject> databaseValues = null, bool isRestore = false, int replicationFactor = 1)
         {
             databaseValues ??= new Dictionary<string, BlittableJsonReaderObject>();
 
-            if (record.IsSharded == false)
+            using (Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                InitializeTopology(record.Topology, _engine, databaseName);
-            }
-            else
-            {
-                if (Sharding.BlockPrefixedSharding && record.Sharding.Prefixed is { Count: > 0 })
-                    throw new InvalidOperationException("Cannot use prefixed sharding, this feature is currently blocked");
-
-                InitializeTopology(record.Sharding.Orchestrator.Topology, _engine, databaseName);
-
-                foreach (var (shardNumber, shardTopology) in record.Sharding.Shards)
+                if (isRestore == false)
                 {
-                    InitializeTopology(shardTopology, _engine, databaseName);
+                    var dbRecordExist = Cluster.DatabaseExists(context, databaseName);
+                    if (index.HasValue && dbRecordExist == false)
+                        throw new BadRequestException($"Attempted to modify non-existing database: '{databaseName}'");
+
+                    if (dbRecordExist && index.HasValue == false)
+                        throw new ConcurrencyException($"Database '{databaseName}' already exists!");
                 }
 
-                if (string.IsNullOrEmpty(record.Sharding.DatabaseId))
+                DatabaseHelper.FillDatabaseTopology(this, context, databaseName, record, replicationFactor, index);
+
+                if (record.IsSharded)
                 {
-                    record.Sharding.DatabaseId = Guid.NewGuid().ToBase64Unpadded();
-                    record.UnusedDatabaseIds ??= new HashSet<string>();
-                    record.UnusedDatabaseIds.Add(record.Sharding.DatabaseId);
+                    await Sharding.UpdatePrefixedShardingIfNeeded(context, record);
                 }
             }
 
@@ -2992,29 +2990,7 @@ namespace Raven.Server.ServerWide
                 IsRestore = isRestore
             };
 
-            return SendToLeaderAsync(addDatabaseCommand);
-
-            static void InitializeTopology(DatabaseTopology topology, RachisConsensus<ClusterStateMachine> engine, string databaseName)
-            {
-                Debug.Assert(topology != null);
-
-                foreach (var node in topology.AllNodes)
-                {
-                    if (string.IsNullOrEmpty(node))
-                        throw new InvalidOperationException($"Attempting to save the database record of '{databaseName}' but one of its specified topology nodes is null.");
-                }
-
-                if (string.IsNullOrEmpty(topology.DatabaseTopologyIdBase64))
-                    topology.DatabaseTopologyIdBase64 = Guid.NewGuid().ToBase64Unpadded();
-
-                if (string.IsNullOrEmpty(topology.ClusterTransactionIdBase64))
-                    topology.ClusterTransactionIdBase64 = Guid.NewGuid().ToBase64Unpadded();
-
-                topology.Stamp ??= new LeaderStamp();
-                topology.Stamp.Term = engine.CurrentTerm;
-                topology.Stamp.LeadersTicks = engine.CurrentLeader?.LeaderShipDuration ?? 0;
-                topology.NodesModifiedAt = SystemTime.UtcNow;
-            }
+            return await SendToLeaderAsync(addDatabaseCommand);
         }
 
         public async Task EnsureNotPassiveAsync(string publicServerUrl = null, string nodeTag = "A", bool skipLicenseActivation = false)
