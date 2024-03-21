@@ -161,13 +161,15 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
         }
     }
     
-    protected override ClusterTransactionBatchCollector CollectCommandsBatch(ClusterOperationContext context, int take)
+    protected override ClusterTransactionBatchCollector CollectCommandsBatch(ClusterOperationContext context, long lastCompletedClusterTransactionIndex, int take)
     {
         var batchCollector = new ShardedClusterTransactionBatchCollector(this, take);
         var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, ShardedDatabaseName, fromCount: _nextClusterCommand, take: take);
 
         foreach (var command in readCommands)
         {
+            if (command.Index <= lastCompletedClusterTransactionIndex)
+                continue;
             batchCollector.MaxIndex = command.Index;
             batchCollector.MaxCommandCount = command.PreviousCount + command.Commands.Count;
             if (command.ShardNumber == ShardNumber)

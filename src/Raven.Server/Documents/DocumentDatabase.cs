@@ -74,6 +74,7 @@ using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
+using static Raven.Server.Smuggler.Documents.CounterItem;
 
 namespace Raven.Server.Documents
 {
@@ -631,7 +632,7 @@ namespace Raven.Server.Documents
             public virtual void Dispose() => ArrayPool<ClusterTransactionCommand.SingleClusterDatabaseCommand>.Shared.Return(_data);
         }
 
-        protected virtual ClusterTransactionBatchCollector CollectCommandsBatch(ClusterOperationContext context, int take)
+        protected virtual ClusterTransactionBatchCollector CollectCommandsBatch(ClusterOperationContext context, long lastCompletedClusterTransactionIndex, int take)
         {
             var batchCollector = new ClusterTransactionBatchCollector(take);
             var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take);
@@ -641,9 +642,11 @@ namespace Raven.Server.Documents
 
         public (long BatchSize, long CommandsCount) ExecuteClusterTransaction(ClusterOperationContext context, int batchSize)
         {
-            using var batchCollector = CollectCommandsBatch(context, batchSize);
-            Stopwatch stopwatch = null;
+            using var batchCollector = CollectCommandsBatch(context, LastCompletedClusterTransactionIndex, batchSize);
 
+            ServerStore.ForTestingPurposes?.BeforeExecuteClusterTransactionBatch?.Invoke(Name, batchCollector.GetData().ToList());
+
+            Stopwatch stopwatch = null;
             try
             {
                 if (_logger.IsInfoEnabled)
