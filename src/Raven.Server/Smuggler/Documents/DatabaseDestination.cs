@@ -16,6 +16,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
@@ -654,7 +655,8 @@ namespace Raven.Server.Smuggler.Documents
                         if ((document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler)) &&
                             (_missingDocumentsForRevisions != null))
                         {
-                            if (_database.DocumentsStorage.Get(context, document.Id) == null)
+                            if (_database.DocumentsStorage.Get(context, document.Id) == null &&
+                                document.ChangeVector.Contains(ChangeVectorParser.TrxnTag) == false)
                             {
                                 var collection = _database.DocumentsStorage.ExtractCollectionName(context, document.Data);
                                 _missingDocumentsForRevisions.TryAdd(document.Id.ToString(), collection);
