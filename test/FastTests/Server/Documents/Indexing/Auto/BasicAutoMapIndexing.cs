@@ -1482,11 +1482,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
             {
                 context.OpenReadTransaction();
 
-                var databaseRecord = Server.ServerStore.Cluster.ReadDatabase(context, databaseName);
+                var databaseRecord = Server.ServerStore.Cluster.ReadDatabase(context, databaseName, out var dbEtag);
 
                 modifySettings(databaseRecord);
 
-                var (etag, _) = await Server.ServerStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, Guid.NewGuid().ToString());
+                var (etag, _) = await Server.ServerStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, dbEtag, Guid.NewGuid().ToString());
                 await Server.ServerStore.Cluster.WaitForIndexNotification(etag);
             }
         }
