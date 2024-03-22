@@ -62,7 +62,8 @@ namespace SlowTests.Server.Documents.Migration
             }
         }
 
-        [NightlyBuildFact]
+        [NightlyBuildTheory]
+        [RequiresMsSqlInlineData]
         public async Task PatchCanAccessNestedObjects()
         {
             using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, "basic"))
