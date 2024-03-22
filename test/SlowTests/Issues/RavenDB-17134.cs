@@ -7,6 +7,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 #pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
+
 namespace SlowTests.Issues
 {
     public class RavenDB_17134 : RavenTestBase
@@ -36,6 +37,11 @@ namespace SlowTests.Issues
                 
                 return base.Equals(obj);
             }
+
+            public override int GetHashCode()
+            {
+                return base.GetHashCode();
+            }
         }
 
         private class Dog
@@ -60,6 +66,11 @@ namespace SlowTests.Issues
                 
                 return base.Equals(obj);
             }
+            
+            public override int GetHashCode()
+            {
+                return base.GetHashCode();
+            }
         }
         private class User
         {
@@ -78,6 +89,11 @@ namespace SlowTests.Issues
                 }
                 
                 return base.Equals(obj);
+            }
+            
+            public override int GetHashCode()
+            {
+                return base.GetHashCode();
             }
         } 
         
