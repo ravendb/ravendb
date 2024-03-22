@@ -336,7 +336,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 {
                     if (leafPage.NumberOfEntries == 0)
                     {
-                        if (leafPage.PageNumber == tree.State.RootPageNumber)
+                        if (leafPage.PageNumber == tree.State.Header.RootPageNumber)
                         {
                             writer.Value.DeleteReduceResult(reduceKeyHash, stats);
 

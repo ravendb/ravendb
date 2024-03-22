@@ -111,7 +111,7 @@ namespace StressTests.Voron
                         }
                         while (iterator.MoveNext());
 
-                        Assert.Equal(ids.Count, readTree.State.NumberOfEntries);
+                        Assert.Equal(ids.Count, readTree.State.Header.NumberOfEntries);
                         Assert.Equal(ids.Count, count);
                         Assert.Equal(ids.Count, keys.Count);
                     }

@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             var prefixesToDeleteTree = indexContext.Transaction.InnerTransaction.ReadTree(PrefixesOfReduceOutputDocumentsToDeleteTree);
 
             if (prefixesToDeleteTree != null)
-                return prefixesToDeleteTree.State.NumberOfEntries > 0;
+                return prefixesToDeleteTree.State.Header.NumberOfEntries > 0;
 
             return false;
         }

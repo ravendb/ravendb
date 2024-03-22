@@ -201,7 +201,9 @@ namespace Voron.Data.BTrees
 
                 _currentPage = nextPage;
                 _currentPage.Flags |= PageFlags.Stream;
-                _parent.State.OverflowPages += _numberOfPagesPerChunk;
+
+                ref var state = ref _parent.State.Modify();
+                state.OverflowPages += _numberOfPagesPerChunk;
                 _writePos = _currentPage.DataPointer;
 
                 ((StreamPageHeader*)_currentPage.Pointer)->StreamNextPageNumber = 0;
@@ -231,7 +233,8 @@ namespace Voron.Data.BTrees
             writer.Init(this, key, tag, initialNumberOfPagesPerChunk);
             writer.Write(stream);
 
-            State.Flags |= TreeFlags.Streams;
+            ref var state = ref State.Modify();
+            state.Flags |= TreeFlags.Streams;
         }
 
         public VoronStream ReadStream(string key)
@@ -450,7 +453,8 @@ namespace Voron.Data.BTrees
                 llt.FreePage(streamPages[i]);
             }
 
-            State.OverflowPages -= streamPages.Count;
+            ref var state = ref State.Modify();
+            state.OverflowPages -= streamPages.Count;
 
             DeleteFixedTreeFor(key, ChunkDetails.SizeOf);
 

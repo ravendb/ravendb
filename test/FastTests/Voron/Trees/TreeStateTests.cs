@@ -47,7 +47,7 @@ namespace FastTests.Voron.Trees
 
                 tx.Commit();
 
-                var treeState = tree.State;
+                ref readonly var treeState = ref tree.State.Header;
 
                 Assert.True(treeState.PageCount > 0);
                 Assert.Equal(treeState.PageCount, treeState.BranchPages + treeState.LeafPages + treeState.OverflowPages);
@@ -104,13 +104,15 @@ namespace FastTests.Voron.Trees
 
                 tx.Commit();
 
+                
+                ref readonly var state = ref tree.State.Header;
+                ref readonly var oldState = ref old.Header;
 
-                Assert.True(old.PageCount > tree.State.PageCount);
-                Assert.True(old.LeafPages > tree.State.LeafPages);
-                Assert.True(old.BranchPages >= tree.State.BranchPages);
-                Assert.True(old.OverflowPages > tree.State.OverflowPages);
-                Assert.True(old.Depth >= tree.State.Depth);
-
+                Assert.True(oldState.PageCount > state.PageCount);
+                Assert.True(oldState.LeafPages > state.LeafPages);
+                Assert.True(oldState.BranchPages >= state.BranchPages);
+                Assert.True(oldState.OverflowPages > state.OverflowPages);
+                Assert.True(oldState.Depth >= state.Depth);
             }
         }
 
@@ -147,7 +149,7 @@ namespace FastTests.Voron.Trees
                 {
                     tree.Delete(key + i);
                 }
-                Assert.True(old.Depth >= tree.State.Depth);
+                Assert.True(old.Header.Depth >= tree.State.Header.Depth);
 
                 tx.Commit();
             }
@@ -161,7 +163,7 @@ namespace FastTests.Voron.Trees
                     tree.Delete(key + i);
                 }
 
-                Assert.Equal(1, tree.State.Depth);
+                Assert.Equal(1, tree.State.Header.Depth);
             }
         }
 
@@ -210,8 +212,8 @@ namespace FastTests.Voron.Trees
                     tree.MultiDelete("key2", "items/" + i + "/" + new string('p', i));
                 }
 
-                Assert.True(tree.State.PageCount >= 0);
-                Assert.Equal(tree.AllPages().Count, tree.State.PageCount);
+                Assert.True(tree.State.Header.PageCount >= 0);
+                Assert.Equal(tree.AllPages().Count, tree.State.Header.PageCount);
             }
         }
     }
