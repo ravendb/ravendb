@@ -62,8 +62,7 @@ namespace SlowTests.Server.Documents.Migration
             }
         }
 
-        [NightlyBuildTheory]
-        [RequiresMsSqlInlineData]
+        [RavenFact(RavenTestCategory.Patching, NightlyBuildRequired = true, MsSqlRequired = true)]
         public async Task PatchCanAccessNestedObjects()
         {
             using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, "basic"))
