@@ -979,7 +979,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, long start, long take, Reference<long> totalCount)
+        public IEnumerable<Document>  GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, long start, long take, Reference<long> totalCount)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
