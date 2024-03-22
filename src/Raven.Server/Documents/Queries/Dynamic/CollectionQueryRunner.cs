@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var lastRaftId = Database.RachisLogIndexNotifications.LastModifiedIndex;
                 if (pulseReadingTransaction == false)
                 {
-                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, SearchEngineType.None, fieldsToFetch, collection, query, queryScope, context.Documents,
+                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents,
                         includeDocumentsCommand, includeRevisionsCommand: includeRevisionsCommand,
                         includeCompareExchangeValuesCommand: includeCompareExchangeValuesCommand, totalResults: totalResults, scannedResults, skippedResults, token);
 
@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         {
                             query.Start = state.Start;
                             query.PageSize = state.Take;
-                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, SearchEngineType.None, fieldsToFetch, collection, query, queryScope,
+                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope,
                                 context.Documents, includeDocumentsCommand, includeRevisionsCommand, includeCompareExchangeValuesCommand, totalResults, scannedResults,
                                 skippedResults, token);
 
