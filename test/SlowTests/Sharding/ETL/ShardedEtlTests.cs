@@ -1148,7 +1148,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
+        [RequiresMsSqlFact]
         public async Task SqlEtl_SimpleTransformation()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -1955,7 +1955,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
             }
         }
 
-        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
+        [RequiresElasticSearchRetryFact(1)]
         public void Sharded_Etl_DontAllowMentorNode()
         {
             using (var src = Sharding.GetDocumentStore())
