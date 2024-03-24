@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class AsyncDocumentSession
     {
-        /// <inheritdoc cref="IAsyncDocumentSession.TimeSeriesFor"/>
+        /// <inheritdoc cref="IAsyncDocumentSession.TimeSeriesFor(string, string)"/>
         public IAsyncSessionDocumentTimeSeries TimeSeriesFor(string documentId, string name)
         {
             ValidateTimeSeriesName(name);
@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Session
             return new AsyncSessionDocumentTimeSeries<TimeSeriesEntry>(this, entity, name);
         }
 
-        /// <inheritdoc cref="IAsyncDocumentSession.TimeSeriesFor{TValue}"/>
+        /// <inheritdoc cref="IAsyncDocumentSession.TimeSeriesFor{TValue}(string, string)"/>
         public IAsyncSessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(string documentId, string name = null) where TValues : new()
         {
             var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>(Conventions);
