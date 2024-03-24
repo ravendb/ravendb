@@ -61,11 +61,14 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         throw new InvalidOperationException(
             $"The due date format for document '{lowerId}' is not valid: '{expirationDate}'. Use the following format: {Database.Time.GetUtcNow():O}");
     }
-    
-    
-
 
     public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(BackgroundWorkParameters options, out Stopwatch duration, CancellationToken cancellationToken)
+    {
+        var totalCount = 0;
+        return GetDocuments(options, ref totalCount, out duration, cancellationToken);
+    }
+
+    public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(BackgroundWorkParameters options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
     {
         var count = 0;
         var currentTicks = options.CurrentTime.Ticks;
@@ -81,6 +84,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 
             var toProcess = new Dictionary<Slice, List<(Slice LowerId, string Id)>>();
             duration = Stopwatch.StartNew();
+            var maxItemsToProcess = options is ExpiredDocumentsParameters expiredOptions ? expiredOptions.MaxItemsToProcess : long.MaxValue;
 
             do
             {
@@ -114,6 +118,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                                         false)
                                     {
                                         docsToProcess.Add((clonedId, null));
+                                        totalCount++;
                                         continue;
                                     }
 
@@ -121,13 +126,16 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                                         break;
 
                                     docsToProcess.Add((clonedId, document.Id));
+                                    totalCount++;
                                 }
                             }
                             catch (DocumentConflictException)
                             {
-                                HandleDocumentConflict(options, clonedId, ref docsToProcess);
+                                HandleDocumentConflict(options, clonedId, ref totalCount, ref docsToProcess);
                             }
-                        } while (multiIt.MoveNext() && docsToProcess.Count + count < options.AmountToTake);
+                        } while (multiIt.MoveNext()
+                                 && docsToProcess.Count + count < options.AmountToTake 
+                                 && totalCount < maxItemsToProcess);
                     }
                 }
 
@@ -135,13 +143,15 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                 if (docsToProcess.Count > 0)
                     toProcess.Add(ticksAsSlice, docsToProcess);
 
-            } while (it.MoveNext() && count < options.AmountToTake);
+            } while (it.MoveNext() 
+                     && count < options.AmountToTake
+                     && totalCount < maxItemsToProcess);
 
             return toProcess;
         }
     }
 
-    protected abstract void HandleDocumentConflict(BackgroundWorkParameters options, Slice clonedId, ref List<(Slice LowerId, string Id)> docsToProcess);
+    protected abstract void HandleDocumentConflict(BackgroundWorkParameters options, Slice clonedId, ref int totalCount, ref List<(Slice LowerId, string Id)> docsToProcess);
 
     protected static bool ShouldHandleWorkOnCurrentNode(DatabaseTopology topology, string nodeTag)
     {

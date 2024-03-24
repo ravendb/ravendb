@@ -15,6 +15,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
@@ -219,8 +220,8 @@ namespace SlowTests.Server.Documents.Expiration
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var options = new BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, 10);
-                    
+                    var options = new ExpiredDocumentsParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, 10, MaxItemsToProcess: long.MaxValue);
+
                     var expired = database.DocumentsStorage.ExpirationStorage.GetDocuments(options, out _, CancellationToken.None);
                     Assert.Equal(1, expired.Count);
 
@@ -264,7 +265,7 @@ namespace SlowTests.Server.Documents.Expiration
                 using (context.OpenWriteTransaction())
                 {
                     DateTime time = SystemTime.UtcNow.AddMinutes(10);
-                    var options = new BackgroundWorkParameters(context, time, topology,nodeTag, 10);
+                    var options = new ExpiredDocumentsParameters(context, time, topology,nodeTag, 10, MaxItemsToProcess: long.MaxValue);
                     var toRefresh = database.DocumentsStorage.RefreshStorage.GetDocuments(options, out _, CancellationToken.None);
                     database.DocumentsStorage.RefreshStorage.ProcessDocuments(context, toRefresh, time);
                 }
@@ -440,6 +441,122 @@ namespace SlowTests.Server.Documents.Expiration
                             Assert.Null(company);
                         }
                     }
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [RavenData(10, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(5, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ExpirationWithMaxItemsToProcessConfiguredShouldWork(Options options, int batchSize)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                // Insert documents with expiration before activating the expiration
+                var expires = SystemTime.UtcNow.AddMinutes(5);
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var company = new Company { Name = "Company Name", Id = $"companies/{i}$companies/1" };
+                        await session.StoreAsync(company);
+                        var metadata = session.Advanced.GetMetadataFor(company);
+                        metadata[Constants.Documents.Metadata.Expires] = expires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                var config = new ExpirationConfiguration
+                {
+                    Disabled = false,
+                    DeleteFrequencyInSec = (long)TimeSpan.FromMinutes(10).TotalSeconds,
+                    MaxItemsToProcess = 9
+                };
+
+                var database = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "companies/1");
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+
+                await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config, database.Name);
+
+                var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
+                await expiredDocumentsCleaner.CleanupExpiredDocs(batchSize);
+
+                var count = 0;
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var company = await session.LoadAsync<Company>($"companies/{i}$companies/1");
+                        if (company != null)
+                            count++;
+                    }
+                }
+                Assert.Equal(1, count);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RefreshWithMaxItemsToProcessConfiguredShouldWork(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                // Insert documents with refresh before activating the refresh
+                var refresh = SystemTime.UtcNow.AddMinutes(5);
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var company = new Company { Name = "Company Name", Id = $"companies/{i}$companies/1" };
+                        await session.StoreAsync(company);
+                        var metadata = session.Advanced.GetMetadataFor(company);
+                        metadata[Constants.Documents.Metadata.Refresh] = refresh.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                var config = new RefreshConfiguration()
+                {
+                    Disabled = false,
+                    RefreshFrequencyInSec = (long)TimeSpan.FromMinutes(10).TotalSeconds,
+                    MaxItemsToProcess = 9
+                };
+
+                var database = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "companies/1");
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+
+                await RefreshHelper.SetupExpiration(store, Server.ServerStore, config, database.Name);
+
+                DatabaseTopology topology;
+                string nodeTag;
+
+                using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                using (serverContext.OpenReadTransaction())
+                {
+                    topology = database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, database.Name);
+                    nodeTag = database.ServerStore.NodeTag;
+                }
+
+                DateTime time = SystemTime.UtcNow.AddMinutes(10);
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenWriteTransaction())
+                {
+                    var refreshOptions = new ExpiredDocumentsParameters(context, time, topology, nodeTag, AmountToTake: 10, MaxItemsToProcess: 10);
+                    var totalCount = 0;
+                    var toRefresh = database.DocumentsStorage.RefreshStorage.GetDocuments(refreshOptions, ref totalCount, out _, CancellationToken.None);
+                    Assert.Equal(10, totalCount);
+                }
+
+                var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
+                await expiredDocumentsCleaner.RefreshDocs();
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenWriteTransaction())
+                {
+                    var refreshOptions = new ExpiredDocumentsParameters(context, time, topology, nodeTag, AmountToTake: 10, MaxItemsToProcess: 10);
+                    var totalCount = 0;
+                    var toRefresh = database.DocumentsStorage.RefreshStorage.GetDocuments(refreshOptions, ref totalCount, out _, CancellationToken.None);
+                    Assert.Equal(1, totalCount);
                 }
             }
         }
