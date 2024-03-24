@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Refresh
             }
         }
 
-        protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice clonedId, ref List<(Slice LowerId, string Id)> expiredDocs)
+        protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice clonedId, ref int totalCount, ref List<(Slice LowerId, string Id)> expiredDocs)
         {
             if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
                 return;
@@ -67,6 +67,7 @@ namespace Raven.Server.Documents.Refresh
             if (allExpired)
             {
                 expiredDocs.Add((clonedId, id));
+                totalCount++;
             }
         }
 

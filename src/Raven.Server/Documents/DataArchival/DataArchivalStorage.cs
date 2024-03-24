@@ -46,7 +46,7 @@ public sealed class DataArchivalStorage : AbstractBackgroundWorkStorage
         }
     }
 
-    protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice clonedId, ref List<(Slice LowerId, string Id)> docsToProcess)
+    protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice clonedId, ref int totalCount, ref List<(Slice LowerId, string Id)> docsToProcess)
     {
         // data archival ignores conflicts
     }
