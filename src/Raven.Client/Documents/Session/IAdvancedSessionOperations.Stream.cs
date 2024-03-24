@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Advanced synchronous session operations
     /// </summary>
-    public partial interface IAdvancedSessionOperations : 
+    public partial interface IAdvancedSessionOperations :
         IDocumentsSessionOperations,
         ITimeSeriesSessionStreamOperations<TimeSeriesAggregationResult>,
         ITimeSeriesSessionStreamOperations<TimeSeriesRawResult>,
@@ -95,46 +95,64 @@ namespace Raven.Client.Documents.Session
 
     public interface ITimeSeriesSessionStreamOperations<T>
     {
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IQueryable{T}) "/>
         IEnumerator<TimeSeriesStreamResult<T>> Stream(IQueryable<T> query);
 
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IQueryable{T}, out StreamQueryStatistics) "/>
         IEnumerator<TimeSeriesStreamResult<T>> Stream(IQueryable<T> query, out StreamQueryStatistics streamQueryStats);
 
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IDocumentQuery{T}) "/>
         IEnumerator<TimeSeriesStreamResult<T>> Stream(IDocumentQuery<T> query);
 
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IRawDocumentQuery{T}) "/>
         IEnumerator<TimeSeriesStreamResult<T>> Stream(IRawDocumentQuery<T> query);
-        
+
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IRawDocumentQuery{T}, out StreamQueryStatistics) "/>
         IEnumerator<TimeSeriesStreamResult<T>> Stream(IRawDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats);
 
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IDocumentQuery{T}, out StreamQueryStatistics) "/>
         IEnumerator<TimeSeriesStreamResult<T>> Stream(IDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats);
     }
 
     public interface ITimeSeriesSessionStreamAggregationResultOperations
     {
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IQueryable{T}) "/>
         IEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>> Stream<T>(IQueryable<TimeSeriesAggregationResult<T>> query) where T : new();
 
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IQueryable{T}, out StreamQueryStatistics) "/>
         IEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>> Stream<T>(IQueryable<TimeSeriesAggregationResult<T>> query, out StreamQueryStatistics streamQueryStats) where T : new();
 
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IDocumentQuery{T}) "/>
         IEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>> Stream<T>(IDocumentQuery<TimeSeriesAggregationResult<T>> query) where T : new();
 
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IRawDocumentQuery{T}) "/>
         IEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>> Stream<T>(IRawDocumentQuery<TimeSeriesAggregationResult<T>> query) where T : new();
-        
+
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IRawDocumentQuery{T}, out StreamQueryStatistics) "/>
         IEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>> Stream<T>(IRawDocumentQuery<TimeSeriesAggregationResult<T>> query, out StreamQueryStatistics streamQueryStats) where T : new();
 
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IDocumentQuery{T}, out StreamQueryStatistics) "/>
         IEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>> Stream<T>(IDocumentQuery<TimeSeriesAggregationResult<T>> query, out StreamQueryStatistics streamQueryStats) where T : new();
     }
 
     public interface ITimeSeriesSessionStreamRawResultOperations
     {
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IQueryable{T}) "/>
         IEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>> Stream<T>(IQueryable<TimeSeriesRawResult<T>> query) where T : new();
 
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IQueryable{T}, out StreamQueryStatistics) "/>
         IEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>> Stream<T>(IQueryable<TimeSeriesRawResult<T>> query, out StreamQueryStatistics streamQueryStats) where T : new();
 
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IDocumentQuery{T}) "/>
         IEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>> Stream<T>(IDocumentQuery<TimeSeriesRawResult<T>> query) where T : new();
 
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IRawDocumentQuery{T}) "/>
         IEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>> Stream<T>(IRawDocumentQuery<TimeSeriesRawResult<T>> query) where T : new();
-        
+
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IRawDocumentQuery{T}, out StreamQueryStatistics) "/>
         IEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>> Stream<T>(IRawDocumentQuery<TimeSeriesRawResult<T>> query, out StreamQueryStatistics streamQueryStats) where T : new();
 
+        /// <inheritdoc cref="IDocumentsSessionOperations.Stream{T}(IDocumentQuery{T}, out StreamQueryStatistics) "/>
         IEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>> Stream<T>(IDocumentQuery<TimeSeriesRawResult<T>> query, out StreamQueryStatistics streamQueryStats) where T : new();
     }
 }
