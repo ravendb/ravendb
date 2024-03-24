@@ -3022,8 +3022,17 @@ namespace Raven.Server.ServerWide
 
         public async Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd, CancellationToken? token = null)
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                return await SendToLeaderAsyncInternal(context, cmd, token ?? _shutdownNotification.Token);
+            token ??= CancellationToken.None;
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token.Value, _shutdownNotification.Token))
+            {
+                if (cmd.Timeout != null)
+                {
+                    cts.CancelAfter(cmd.Timeout.Value);
+                } 
+
+                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    return await SendToLeaderAsyncInternal(context, cmd, cts.Token);
+            }
         }
 
         private async Task<(long Index, object Result)> SendToLeaderAsyncInternal(TransactionOperationContext context, CommandBase cmd, CancellationToken token)
