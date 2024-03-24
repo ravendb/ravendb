@@ -65,10 +65,15 @@ public abstract unsafe class AbstractBackgroundWorkStorage
     public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(BackgroundWorkParameters options, out Stopwatch duration, CancellationToken cancellationToken)
     {
         var totalCount = 0;
-        return GetDocuments(options, ref totalCount, out duration, cancellationToken);
+        return GetDocumentsInternal(options, ref totalCount, out duration, cancellationToken);
     }
 
     public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(BackgroundWorkParameters options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
+    {
+        return GetDocumentsInternal(options, ref totalCount, out duration, cancellationToken);
+    }
+
+    private Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocumentsInternal(BackgroundWorkParameters options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
     {
         var count = 0;
         var currentTicks = options.CurrentTime.Ticks;
