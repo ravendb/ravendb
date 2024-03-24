@@ -42,17 +42,13 @@ namespace SlowTests.Issues
                 try
                 {
                     await tasks[i];
+                    var res = await AssertWaitForNotNullAsync(() => store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>("test/" + i)));
+                    Assert.Equal("Karmel/" + i, res.Value);
                 }
-                catch (RavenException e) when (e.InnerException is TimeoutException)
+                catch (RavenException e) when (e.InnerException is OperationCanceledException)
                 {
 
                 }
-            }
-
-            for (int i = 0; i < size; i++)
-            {
-                var res = await AssertWaitForNotNullAsync(() => store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>("test/" + i)));
-                Assert.Equal("Karmel/" + i, res.Value);
             }
         }
     }
