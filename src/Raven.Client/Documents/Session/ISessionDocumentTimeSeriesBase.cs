@@ -139,11 +139,19 @@ namespace Raven.Client.Documents.Session
 
     public interface ITimeSeriesStreamingBase<out T>
     {
+        /// <summary>
+        ///  Creates a stream to fetch time series entries within the specified time range.
+        /// </summary>
+        /// <param name="from">The starting timestamp for fetching time series entries (inclusive). If not specified, will start from the earliest possible date and time (DateTime.MinValue).</param>
+        /// <param name="to">The ending timestamp for fetching time series entries (inclusive). If not specified, will continue until the latest possible date and time (DateTime.MaxValue).</param>
+        /// <param name="offset">The offset to apply to the timestamps when fetching entries. If not specified, considered as 0.</param>
+        /// <returns>An enumerator used to iterate over the time series entries received via the stream.</returns>
         IEnumerator<T> Stream(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null);
     }
 
     public interface IAsyncTimeSeriesStreamingBase<T>
     {
+        /// <inheritdoc cref = "ITimeSeriesStreamingBase{T}.Stream" />
         Task<IAsyncEnumerator<T>> StreamAsync(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null, CancellationToken token = default);
     }
 }
