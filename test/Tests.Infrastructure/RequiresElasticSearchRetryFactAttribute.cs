@@ -30,17 +30,18 @@ namespace Tests.Infrastructure
                 Skip = "Test requires ElasticSearch instance";
         }
 
-        public static bool ShouldSkip(bool elasticSearchRequired, out string skipMessage)
+        public static bool ShouldSkip(out string skipMessage)
         {
-            skipMessage = null;
             if (RavenTestHelper.SkipIntegrationTests)
             {
                 skipMessage = RavenTestHelper.SkipIntegrationMessage;
                 return true;
             }
 
-            if (RavenTestHelper.IsRunningOnCI)
+            if (RavenTestHelper.IsRunningOnCI){
+                skipMessage = null;
                 return false;
+            }
 
             if (_canConnect == false)
             {
@@ -48,6 +49,7 @@ namespace Tests.Infrastructure
                 return true;
             }
 
+            skipMessage = null;
             return false;
         }
     }

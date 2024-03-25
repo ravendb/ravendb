@@ -30,7 +30,7 @@ public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
                     return RavenDataAttributeBase.ShardingSkipMessage;
             }
 
-            if (LicenseRequiredFactAttribute.ShouldSkip(LicenseRequired))
+            if (LicenseRequired && LicenseRequiredFactAttribute.ShouldSkip())
                 return LicenseRequiredFactAttribute.SkipMessage;
 
             return null;

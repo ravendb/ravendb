@@ -18,18 +18,15 @@ namespace Tests.Infrastructure
         {
             get
             {
-                if (ShouldSkip(licenseRequired: true))
+                if (ShouldSkip())
                     return SkipMessage;
 
                 return null;
             }
         }
 
-        internal static bool ShouldSkip(bool licenseRequired)
+        internal static bool ShouldSkip()
         {
-            if (licenseRequired == false)
-                return false;
-
             return HasLicense == false;
         }
     }

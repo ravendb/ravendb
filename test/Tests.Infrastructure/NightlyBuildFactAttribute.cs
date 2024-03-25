@@ -15,17 +15,15 @@ namespace Tests.Infrastructure
             }
         }
 
-        public static bool ShouldSkip(bool nightlyBuildRequired, out string skip)
+        public static bool ShouldSkip(out string skipMessage)
         {
-            skip = null;
             
-            if (nightlyBuildRequired == false)
+            if (NightlyBuildTheoryAttribute.IsNightlyBuild){
+                skipMessage = null;
                 return false;
-            
-            if (NightlyBuildTheoryAttribute.IsNightlyBuild)
-                return false;
+            }
 
-            skip = NightlyBuildTheoryAttribute.SkipMessage;
+            skipMessage = NightlyBuildTheoryAttribute.SkipMessage;
             return true;
         }
     }
