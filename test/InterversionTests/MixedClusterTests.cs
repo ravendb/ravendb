@@ -171,7 +171,13 @@ namespace InterversionTests
                         foreach (var node in nodes)
                         {
                             await UpgradeServerAsync(nextVersion, node);
-                            await during.TestClustering(stores, $"during/{nextVersion}/{node.Url}");
+                            var versions = nodes.Select(x => x.Version).ToArray();
+
+                            if (ShouldTestClustering(versions))
+                            {
+                                await during.TestClustering(stores, $"during/{nextVersion}/{node.Url}");
+                            }
+
                             await during.TestReplication(stores);
                         }
                     }
@@ -185,6 +191,32 @@ namespace InterversionTests
                     throw;
                 }
             }
+        }
+
+        private static bool ShouldTestClustering(string[] versions)
+        {
+            var last = IsGreaterOrEqual421(versions[0]);
+
+            foreach (var version in versions)
+            {
+                var current = IsGreaterOrEqual421(version);
+                if (last != current)
+                    return false;
+            }
+
+            return true;
+        }
+
+        public static bool IsGreaterOrEqual421(string version)
+        {
+            if (version == "current")
+                return true;
+
+            const string threshold = "4.2.1";
+            Version inputVersion = Version.Parse(version);
+            Version thresholdVersion = Version.Parse(threshold);
+
+            return inputVersion >= thresholdVersion;
         }
 
         private static async Task CreateDatabase(List<DocumentStore> stores, string database, int size)
