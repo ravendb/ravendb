@@ -1658,7 +1658,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                     session.SaveChanges();
                 }
-                
+
                 var ordersCountAfterDelete = await WaitForValueAsync(async () =>
                 {
                     EnsureNonStaleElasticResults(client);
@@ -2275,10 +2275,10 @@ loadToAddresses(this.Address);
             foreach (var indexName in indices.Indices.Keys)
             {
                 var response = client.Indices.Delete(Indices.Index(indexName));
-                
+
                 if (response.IsValidResponse)
                     continue;
-                
+
                 response.TryGetOriginalException(out var originalException);
                 response.TryGetElasticsearchServerError(out var elasticsearchServerError);
                 throw new InvalidOperationException($"Failed to delete elasticsearch index '{indexName}'. Elasticsearch Server Error: {elasticsearchServerError.Error}",

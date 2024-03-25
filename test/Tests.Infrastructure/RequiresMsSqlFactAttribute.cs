@@ -28,16 +28,18 @@ public class RequiresMsSqlFactAttribute : FactAttribute
             return true;
         }
 
-        if (RavenTestHelper.IsRunningOnCI){
+        if (RavenTestHelper.IsRunningOnCI)
+        {
             skipMessage = null;
             return false;
         }
 
-        if (MsSqlConnectionString.Instance.CanConnect){
+        if (MsSqlConnectionString.Instance.CanConnect)
+        {
             skipMessage = null;
             return false;
         }
-        
+
         skipMessage = "Test requires MsSQL database";
         return true;
 

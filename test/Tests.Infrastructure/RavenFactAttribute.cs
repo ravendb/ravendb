@@ -40,7 +40,7 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
 
             if (MsSqlRequired && RequiresMsSqlFactAttribute.ShouldSkip(out skip))
                 return skip;
-            
+
             if (ElasticSearchRequired && RequiresElasticSearchRetryFactAttribute.ShouldSkip(out skip))
                 return skip;
 

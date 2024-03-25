@@ -38,7 +38,8 @@ namespace Tests.Infrastructure
                 return true;
             }
 
-            if (RavenTestHelper.IsRunningOnCI){
+            if (RavenTestHelper.IsRunningOnCI)
+            {
                 skipMessage = null;
                 return false;
             }
