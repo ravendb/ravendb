@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 // When opening the read transaction for a single map covering all of its referenced collections,
                 // we can efficiently skip indexing documents that have already been indexed.
                 var readTransaction = queryContext.OpenReadTransaction();
-                var indexed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var indexed = new HashSet<Slice>(SliceComparer.Instance);
 
                 try
                 {
@@ -363,6 +363,11 @@ namespace Raven.Server.Documents.Indexes.Workers
                 }
                 finally
                 {
+                    foreach (var slice in indexed)
+                    {
+                        slice.Release(queryContext.Documents.Allocator);
+                    }
+
                     readTransaction?.Dispose();
                 }
             }
@@ -396,7 +401,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
         }
 
-        private static void RenewTransactionIfNeeded(QueryOperationContext queryContext, Index.CanContinueBatchResult batchContinuationResult, HashSet<string> indexed, ref IDisposable readTransaction)
+        private static void RenewTransactionIfNeeded(QueryOperationContext queryContext, Index.CanContinueBatchResult batchContinuationResult, HashSet<Slice> indexed, ref IDisposable readTransaction)
         {
             if (batchContinuationResult != Index.CanContinueBatchResult.RenewTransaction)
                 return;
@@ -405,6 +410,11 @@ namespace Raven.Server.Documents.Indexes.Workers
             readTransaction = null; // prevent double dispose in case of an error
             toDispose.Dispose();
 
+            foreach (var slice in indexed)
+            {
+                slice.Release(queryContext.Documents.Allocator);
+            }
+
             // the documents that have already been indexed become irrelevant once the new transaction is opened.
             indexed.Clear();
 
@@ -412,20 +422,22 @@ namespace Raven.Server.Documents.Indexes.Workers
         }
 
         private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(QueryOperationContext queryContext, TransactionOperationContext indexContext,
-            string collection, Reference referencedItem, long lastIndexedEtag, HashSet<string> indexed, ReferencesState.ReferenceState referenceState)
+            string collection, Reference referencedItem, long lastIndexedEtag, HashSet<Slice> indexed, ReferencesState.ReferenceState referenceState)
         {
             var lastProcessedItemId = referenceState?.GetLastProcessedItemId(referencedItem);
             foreach (var key in _referencesStorage.GetItemKeysFromCollectionThatReference(collection, referencedItem.Key, indexContext.Transaction, lastProcessedItemId))
             {
+                // we check if we already indexed the document BEFORE we fetch it from the disk.
+                var clonedKey = key.Clone(queryContext.Documents.Allocator);
+                if (indexed.Add(clonedKey) == false)
+                {
+                    clonedKey.Release(queryContext.Documents.Allocator);
+                    continue;
+                }
+
                 var item = GetItem(queryContext.Documents, key);
                 if (item == null)
                     continue;
-
-                if (indexed.Add(item.Id) == false)
-                {
-                    item.Dispose();
-                    continue;
-                }
 
                 if (item.Etag > lastIndexedEtag)
                 {
@@ -435,7 +447,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                 if (ItemsAndReferencesAreUsingSameEtagPool && item.Etag > referencedItem.Etag)
                 {
-                    //if the map worker already mapped this "doc" version it must be with this version of "referencedItem" and if the map worker didn't mapped the "doc" so it will process it later
+                    // if the map worker already mapped this "doc" version it must be with this version of "referencedItem" and if the map worker didn't mapped the "doc" so it will process it later
                     item.Dispose();
                     continue;
                 }
