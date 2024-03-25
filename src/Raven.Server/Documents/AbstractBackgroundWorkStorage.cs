@@ -62,18 +62,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
             $"The due date format for document '{lowerId}' is not valid: '{expirationDate}'. Use the following format: {Database.Time.GetUtcNow():O}");
     }
 
-    public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(BackgroundWorkParameters options, out Stopwatch duration, CancellationToken cancellationToken)
-    {
-        var totalCount = 0;
-        return GetDocumentsInternal(options, ref totalCount, out duration, cancellationToken);
-    }
-
     public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(BackgroundWorkParameters options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
-    {
-        return GetDocumentsInternal(options, ref totalCount, out duration, cancellationToken);
-    }
-
-    private Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocumentsInternal(BackgroundWorkParameters options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
     {
         var count = 0;
         var currentTicks = options.CurrentTime.Ticks;
@@ -89,7 +78,6 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 
             var toProcess = new Dictionary<Slice, List<(Slice LowerId, string Id)>>();
             duration = Stopwatch.StartNew();
-            var maxItemsToProcess = options is ExpiredDocumentsParameters expiredOptions ? expiredOptions.MaxItemsToProcess : long.MaxValue;
 
             do
             {
@@ -140,7 +128,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                             }
                         } while (multiIt.MoveNext()
                                  && docsToProcess.Count + count < options.AmountToTake 
-                                 && totalCount < maxItemsToProcess);
+                                 && totalCount < options.MaxItemsToProcess);
                     }
                 }
 
@@ -150,7 +138,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 
             } while (it.MoveNext() 
                      && count < options.AmountToTake
-                     && totalCount < maxItemsToProcess);
+                     && totalCount < options.MaxItemsToProcess);
 
             return toProcess;
         }

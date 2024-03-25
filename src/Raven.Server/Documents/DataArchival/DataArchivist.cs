@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.ServerWide;
@@ -16,6 +15,8 @@ public class DataArchivist : BackgroundWorkBase
     internal static int BatchSize = PlatformDetails.Is32Bits == false
         ? 4096
         : 1024;
+
+    internal static int DefaultMaxItemsToProcessInSingleRun = int.MaxValue;
 
     private readonly DocumentDatabase _database;
     private readonly TimeSpan _archivePeriod;
@@ -90,10 +91,10 @@ public class DataArchivist : BackgroundWorkBase
 
     internal Task ArchiveDocs(int? batchSize = null)
     {
-        return ArchiveDocs(batchSize ?? BatchSize);
+        return ArchiveDocs(batchSize ?? BatchSize, DataArchivalConfiguration.MaxItemsToProcess ?? DefaultMaxItemsToProcessInSingleRun);
     }
 
-    private async Task ArchiveDocs(int batchSize)
+    private async Task ArchiveDocs(int batchSize, long maxItemsToProcess)
     {
         var currentTime = _database.Time.GetUtcNow();
 
@@ -109,19 +110,19 @@ public class DataArchivist : BackgroundWorkBase
                 nodeTag = _database.ServerStore.NodeTag;
             }
 
-
+            var totalCount = 0;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                while (true)
+                while (totalCount < maxItemsToProcess)
                 {
                     context.Reset();
                     context.Renew();
 
                     using (context.OpenReadTransaction())
                     {
-                        var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize);
+                        var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize, maxItemsToProcess);
 
-                        var toArchive = _database.DocumentsStorage.DataArchivalStorage.GetDocuments(options, out var duration, CancellationToken);
+                        var toArchive = _database.DocumentsStorage.DataArchivalStorage.GetDocuments(options, ref totalCount, out var duration, CancellationToken);
 
                         if (toArchive == null || toArchive.Count == 0)
                             return;
