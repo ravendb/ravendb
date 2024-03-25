@@ -635,7 +635,7 @@ namespace Raven.Server.Documents
         protected virtual ClusterTransactionBatchCollector CollectCommandsBatch(ClusterOperationContext context, long lastCompletedClusterTransactionIndex, int take)
         {
             var batchCollector = new ClusterTransactionBatchCollector(take);
-            var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take);
+            var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take, lastCompletedClusterTransactionIndex);
             batchCollector.Add(readCommands);
             return batchCollector;
         }
