@@ -8,11 +8,16 @@ namespace Raven.Client.Documents.Operations.DataArchival
 
         public long? ArchiveFrequencyInSec { get; set; }
 
+        public long? MaxItemsToProcess { get; set; }
+
         public override int GetHashCode()
         {
             unchecked
             {
-                return (Disabled.GetHashCode() * 397) ^ ArchiveFrequencyInSec.GetHashCode();
+                int hashCode = Disabled.GetHashCode();
+                hashCode = (hashCode * 397) ^ (ArchiveFrequencyInSec?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (MaxItemsToProcess?.GetHashCode() ?? 0);
+                return hashCode;
             }
         }
 
@@ -26,7 +31,7 @@ namespace Raven.Client.Documents.Operations.DataArchival
 
         protected bool Equals(DataArchivalConfiguration other)
         {
-            return Disabled == other.Disabled && ArchiveFrequencyInSec == other.ArchiveFrequencyInSec;
+            return Disabled == other.Disabled && ArchiveFrequencyInSec == other.ArchiveFrequencyInSec && MaxItemsToProcess == other.MaxItemsToProcess;
         }
 
         public DynamicJsonValue ToJson()
@@ -34,7 +39,8 @@ namespace Raven.Client.Documents.Operations.DataArchival
             return new DynamicJsonValue
             {
                 [nameof(Disabled)] = Disabled,
-                [nameof(ArchiveFrequencyInSec)] = ArchiveFrequencyInSec
+                [nameof(ArchiveFrequencyInSec)] = ArchiveFrequencyInSec,
+                [nameof(MaxItemsToProcess)] = MaxItemsToProcess
             };
         }
     }

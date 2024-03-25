@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Expiration
 
                         using (context.OpenReadTransaction())
                         {
-                            var options = new ExpiredDocumentsParameters(context, currentTime, topology, nodeTag, batchSize, maxItemsToProcess);
+                            var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize, maxItemsToProcess);
 
                             var expired =
                                 forExpiration ?
