@@ -35,16 +35,16 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
                     return RavenDataAttributeBase.ShardingSkipMessage;
             }
 
-            if (LicenseRequiredFactAttribute.ShouldSkip(LicenseRequired))
+            if (LicenseRequired && LicenseRequiredFactAttribute.ShouldSkip())
                 return LicenseRequiredFactAttribute.SkipMessage;
 
-            if (RequiresMsSqlFactAttribute.ShouldSkip(MsSqlRequired, out skip))
+            if (MsSqlRequired && RequiresMsSqlFactAttribute.ShouldSkip(out skip))
                 return skip;
             
-            if (RequiresElasticSearchRetryFactAttribute.ShouldSkip(ElasticSearchRequired, out skip))
+            if (ElasticSearchRequired && RequiresElasticSearchRetryFactAttribute.ShouldSkip(out skip))
                 return skip;
 
-            if (NightlyBuildFactAttribute.ShouldSkip(NightlyBuildRequired, out skip))
+            if (NightlyBuildRequired && NightlyBuildFactAttribute.ShouldSkip(out skip))
                 return skip;
 
             return null;

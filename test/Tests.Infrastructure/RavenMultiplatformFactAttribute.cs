@@ -98,7 +98,7 @@ public class RavenMultiplatformFactAttribute : RavenFactAttribute
 
     internal static string ShouldSkip(RavenPlatform platform, RavenArchitecture architecture, RavenIntrinsics intrinsics, bool licenseRequired, bool nightlyBuildOnly)
     {
-        if (licenseRequired && LicenseRequiredFactAttribute.ShouldSkip(licenseRequired: true))
+        if (licenseRequired && LicenseRequiredFactAttribute.ShouldSkip())
             return LicenseRequiredFactAttribute.SkipMessage;
 
         if (nightlyBuildOnly && NightlyBuildTheoryAttribute.IsNightlyBuild == false)
