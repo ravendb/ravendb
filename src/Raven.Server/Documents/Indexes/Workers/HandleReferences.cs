@@ -137,6 +137,13 @@ namespace Raven.Server.Documents.Indexes.Workers
                 if (lastIndexedEtag == 0) // we haven't indexed yet, so we are skipping references for now
                     continue;
 
+                // When opening the read transaction for a single map covering all of its referenced collections,
+                // we can efficiently skip indexing documents that have already been indexed.
+                var readTransaction = queryContext.OpenReadTransaction();
+                var indexed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                try
+                {
                 var referenceState = _referencesState.For(actionType, collection);
                 foreach (var referencedCollection in referencedCollections)
                 {
@@ -173,12 +180,11 @@ namespace Raven.Server.Documents.Indexes.Workers
                         {
                             UpdateReferences(indexContext, collection);
 
+                            RenewTransactionIfNeeded(queryContext, batchContinuationResult, indexed, ref readTransaction);
+
                             var hasChanges = false;
                             earlyExit = false;
 
-                            var indexed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                            using (queryContext.OpenReadTransaction())
                             {
                                 sw.Restart();
 
@@ -354,6 +360,11 @@ namespace Raven.Server.Documents.Indexes.Workers
                         _referencesState.Clear(earlyExit, actionType, collection, indexContext);
                     }
                 }
+                }
+                finally
+                {
+                    readTransaction?.Dispose();
+                }
             }
 
             if (moreWorkFound == false)
@@ -383,6 +394,21 @@ namespace Raven.Server.Documents.Indexes.Workers
                 _indexStorage.ReferencesForCompareExchange.WriteReferencesForSingleCollection(collection, values, indexContext.Transaction);
                 values.Clear();
             }
+        }
+
+        private static void RenewTransactionIfNeeded(QueryOperationContext queryContext, Index.CanContinueBatchResult batchContinuationResult, HashSet<string> indexed, ref IDisposable readTransaction)
+        {
+            if (batchContinuationResult != Index.CanContinueBatchResult.RenewTransaction)
+                return;
+
+            var toDispose = readTransaction;
+            readTransaction = null; // prevent double dispose in case of an error
+            toDispose.Dispose();
+
+            // the documents that have already been indexed become irrelevant once the new transaction is opened.
+            indexed.Clear();
+
+            readTransaction = queryContext.OpenReadTransaction();
         }
 
         private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(QueryOperationContext queryContext, TransactionOperationContext indexContext,
