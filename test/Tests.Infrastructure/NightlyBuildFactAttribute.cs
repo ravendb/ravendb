@@ -17,8 +17,8 @@ namespace Tests.Infrastructure
 
         public static bool ShouldSkip(out string skipMessage)
         {
-            
-            if (NightlyBuildTheoryAttribute.IsNightlyBuild){
+            if (NightlyBuildTheoryAttribute.IsNightlyBuild)
+            {
                 skipMessage = null;
                 return false;
             }

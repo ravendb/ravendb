@@ -67,7 +67,7 @@ public class RavenMultiplatformFactAttribute : RavenFactAttribute
         : this(category, RavenPlatform.All, architecture)
     {
     }
-    
+
     public RavenMultiplatformFactAttribute(RavenTestCategory category, RavenIntrinsics intrinsics = RavenIntrinsics.None)
         : this(category, RavenPlatform.All, RavenArchitecture.All, intrinsics)
     {
@@ -121,13 +121,13 @@ public class RavenMultiplatformFactAttribute : RavenFactAttribute
                     {
                         if (flag is RavenIntrinsics.None)
                             continue;
-                        
+
                         if (intrinsics.HasFlag(flag))
                             yield return intrinsics.ToString();
                     }
                 }
             }
-            
+
             return message;
         }
 
@@ -164,25 +164,25 @@ public class RavenMultiplatformFactAttribute : RavenFactAttribute
 
         if (intrinsics.HasFlag(RavenIntrinsics.AdvSimd) && AdvSimd.IsSupported == false)
             return false;
-        
+
         if (intrinsics.HasFlag(RavenIntrinsics.Sse) && Sse.IsSupported == false)
             return false;
-        
+
         if (intrinsics.HasFlag(RavenIntrinsics.Sse2) && Sse2.IsSupported == false)
             return false;
-        
+
         if (intrinsics.HasFlag(RavenIntrinsics.Sse3) && Sse3.IsSupported == false)
             return false;
-        
+
         if (intrinsics.HasFlag(RavenIntrinsics.Sse41) && Sse41.IsSupported == false)
             return false;
-        
+
         if (intrinsics.HasFlag(RavenIntrinsics.Sse42) && Sse42.IsSupported == false)
             return false;
-        
+
         return true;
     }
-    
+
     private static bool Match(RavenArchitecture architecture)
     {
         if (architecture == RavenArchitecture.All)
