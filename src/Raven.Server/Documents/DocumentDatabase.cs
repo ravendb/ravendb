@@ -814,8 +814,12 @@ namespace Raven.Server.Documents
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing the update database record lock");
             exceptionAggregator.Execute(() => _updateDatabaseRecordLocker.Dispose());
 
-            // we must acquire the update values lock after the update database record lock
+            // To avoid potential deadlocks, it's vital to maintain a consistent lock acquisition order,
+            // especially considering the nested locks involved.
+            // Specifically, we need to acquire the 'update database record' lock
+            // BEFORE obtaining the 'update values' lock.
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring the update values lock");
+            // ReSharper disable once MethodSupportsCancellation
             _updateValuesLocker.Wait();
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing the update values lock");
@@ -1421,15 +1425,14 @@ namespace Raven.Server.Documents
 
             while (taken == false)
             {
-                taken = await _updateDatabaseRecordLocker.WaitAsync(TimeSpan.FromSeconds(5));
+                taken = await _updateDatabaseRecordLocker.WaitAsync(TimeSpan.FromSeconds(5), DatabaseShutdown);
 
                 try
                 {
                     if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
                         return;
 
-                    if (DatabaseShutdown.IsCancellationRequested)
-                        return;
+                    DatabaseShutdown.ThrowIfCancellationRequested();
 
                     if (taken == false)
                         continue;
@@ -1452,6 +1455,8 @@ namespace Raven.Server.Documents
                         IndexStore.HandleDatabaseRecordChange(record, index);
                         ReplicationLoader?.HandleDatabaseRecordChange(record, index);
 
+                        // We've already begun executing the operation and aim to see it through without interruption,
+                        // hence we won't be passing the cancellation token.
                         // ReSharper disable once MethodSupportsCancellation
                         await _updateValuesLocker.WaitAsync();
 
@@ -1577,20 +1582,17 @@ namespace Raven.Server.Documents
             var taken = false;
             while (taken == false)
             {
-                taken = await _updateValuesLocker.WaitAsync(TimeSpan.FromSeconds(5));
+                taken = await _updateValuesLocker.WaitAsync(TimeSpan.FromSeconds(5), DatabaseShutdown);
 
                 try
                 {
                     if (CanSkipValueChange(index, type))
                         return;
 
-                    if (DatabaseShutdown.IsCancellationRequested)
-                        return;
+                    DatabaseShutdown.ThrowIfCancellationRequested();
 
                     if (taken == false)
                         continue;
-
-                    DatabaseShutdown.ThrowIfCancellationRequested();
 
                     using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
