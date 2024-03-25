@@ -191,7 +191,7 @@ namespace SlowTests.Server.Documents.DataArchival
         {
             using (var store = GetDocumentStore(options))
             {
-                // Insert documents with refresh before activating the refresh
+                // Insert documents with ArchiveAt before activating the archival
                 var archiveDateTime = SystemTime.UtcNow.AddMinutes(5);
                 for (int i = 0; i < 10; i++)
                 {
