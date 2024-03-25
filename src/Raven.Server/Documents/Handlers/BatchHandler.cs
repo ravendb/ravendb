@@ -316,7 +316,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             throw new InvalidOperationException(
-                "Cluster-transaction was succeeded, but Leader is outdated and its results are inaccessible (the command has been already deleted from the history log).  We recommend you to update all nodes in the cluster to the last stable version.");
+                "We are not able to verify that the cluster-wide transaction was succeeded. please consider to upgrade your leader to the latest stable version.");
         }
 
         private void ThrowClusterTransactionConcurrencyException(List<ClusterTransactionErrorInfo> errors)
