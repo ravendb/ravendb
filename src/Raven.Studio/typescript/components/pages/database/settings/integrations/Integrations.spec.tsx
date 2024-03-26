@@ -1,5 +1,5 @@
 import React from "react";
-import { rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
+import { rtlRender, rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import * as Stories from "./Integrations.stories";
 import { composeStories } from "@storybook/react";
 type PostgreSqlUsernames = Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlUsernames;
@@ -86,8 +86,8 @@ describe("Integrations", () => {
     });
 
     it("can render feature not available for sharded database", async () => {
-        const { screen } = await rtlRender_WithWaitForLoad(<IntegrationsStory isSharded={true} />);
+        const { screen } = rtlRender(<IntegrationsStory isSharded={true} />);
 
-        expect(screen.getByText(/Integrations are not available/)).toBeInTheDocument();
+        expect(await screen.findByText(/Integrations are not available/)).toBeInTheDocument();
     });
 });

@@ -2,6 +2,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 import { useState } from "react";
 import { useAsync } from "react-async-hook";
 
@@ -15,12 +16,13 @@ export function useIntegrations() {
     const hasPostgreSqlIntegration = useAppSelector(licenseSelectors.statusValue("HasPostgreSqlIntegration"));
     const hasPowerBi = useAppSelector(licenseSelectors.statusValue("HasPowerBI"));
 
+    const isSharded = db.isSharded || DatabaseUtils.isSharded(db.name);
     const isLicenseUpgradeRequired = !hasPostgreSqlIntegration && !hasPowerBi;
 
     const { databasesService } = useServices();
 
     const asyncGetIsPostgreSqlSupportEnabled = useAsync(async () => {
-        if (isLicenseUpgradeRequired) {
+        if (isLicenseUpgradeRequired || isSharded) {
             return false;
         }
 
@@ -30,7 +32,7 @@ export function useIntegrations() {
 
     const asyncGetPostgreSqlUsers = useAsync(
         async () => {
-            if (isLicenseUpgradeRequired) {
+            if (isLicenseUpgradeRequired || isSharded) {
                 return [];
             }
 
@@ -61,6 +63,7 @@ export function useIntegrations() {
     };
 
     return {
+        isSharded,
         isLicenseUpgradeRequired,
         isPostgreSqlSupportEnabled: asyncGetIsPostgreSqlSupportEnabled.result,
         asyncGetPostgreSqlUsers,
