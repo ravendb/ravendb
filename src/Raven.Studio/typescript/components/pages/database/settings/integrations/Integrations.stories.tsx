@@ -10,6 +10,7 @@ import Integrations from "./Integrations";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
 import { DatabaseSharedInfo } from "components/models/databases";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
     title: "Pages/Database/Settings/Integrations",
@@ -64,8 +65,6 @@ export const IntegrationsStory: StoryObj<IntegrationsStoryArgs> = {
         hasPowerBi: true,
         hasPostgreSqlIntegration: true,
         isPostgreSqlSupport: true,
-        credentialsDto: {
-            Users: [{ Username: "user1" }, { Username: "user2" }],
-        },
+        credentialsDto: DatabasesStubs.integrationsPostgreSqlCredentials(),
     },
 };
