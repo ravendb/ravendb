@@ -410,7 +410,7 @@ namespace SlowTests.Client.Attachments
         private async Task SetupAttachmentReplicationAsync(DocumentStore store1, DocumentStore store2, bool waitOnMarker = true)
         {
             //var database1 = GetDocumentDatabaseInstanceFor(store1).Result;
-            var database1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
+            var database1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
             database1.Configuration.Replication.MaxItemsCount = null;
             database1.Configuration.Replication.MaxSizeToSend = null;
             await SetupReplicationAsync(store1, store2);

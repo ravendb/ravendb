@@ -300,7 +300,7 @@ namespace Tests.Infrastructure
                 if (hasResult == false)
                     continue;
 
-                var line = readLineTask.Result;
+                var line = await readLineTask;
 
                 readLineTask = null;
 
@@ -379,7 +379,7 @@ namespace Tests.Infrastructure
         {
             using var client = new HttpClient();
             var url = new Uri("https://ravendb.net/wp-json/ravendb/downloads");
-            var rawVersionRespond = (await client.GetAsync(url)).Content.ReadAsStringAsync().Result;
+            var rawVersionRespond = await (await client.GetAsync(url)).Content.ReadAsStringAsync();
             dynamic versionRespond = JsonConvert.DeserializeObject<ExpandoObject>(rawVersionRespond);
 
             var ravenDbBuilds = ((IEnumerable<dynamic>)versionRespond.downloadsInfo.ravenDbBuilds);

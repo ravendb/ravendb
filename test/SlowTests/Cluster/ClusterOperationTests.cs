@@ -184,9 +184,9 @@ namespace SlowTests.Cluster
 
                 server.ServerStore.Initialized = true;
 
-                var current = WaitForValue(() =>
+                var current = await WaitForValueAsync(async() =>
                 {
-                    var p = re.GetPreferredNode().Result;
+                    var p = await re.GetPreferredNode();
 
                     return p.Item2.ClusterTag;
                 }, tag);

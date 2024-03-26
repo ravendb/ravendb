@@ -63,12 +63,12 @@ namespace SlowTests.Issues
                 using (var session = store.OpenAsyncSession())
                 {
 
-                    var revisionCount = session.Advanced.Revisions.GetForAsync<User>("users/1", 0, 1000).Result.Count;
-                    Assert.Equal(501, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 1000).Result.Count;
-                    Assert.Equal(631, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<User>("orders/1", 0, 1000).Result.Count;
-                    Assert.Equal(501, revisionCount);
+                    var revisionCount = await session.Advanced.Revisions.GetForAsync<User>("users/1", 0, 1000);
+                    Assert.Equal(501, revisionCount.Count);
+                    revisionCount = await session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 1000);
+                    Assert.Equal(631, revisionCount.Count);
+                    revisionCount = await session.Advanced.Revisions.GetForAsync<User>("orders/1", 0, 1000);
+                    Assert.Equal(501, revisionCount.Count);
                 }
 
                 configuration = new RevisionsConfiguration
@@ -99,12 +99,12 @@ namespace SlowTests.Issues
                     await session.StoreAsync(new Order { Employee = "Toli" }, "orders/1");
                     await session.SaveChangesAsync();
 
-                    var revisionCount = session.Advanced.Revisions.GetForAsync<User>("users/1", 0, 1000).Result.Count;
-                    Assert.Equal(402, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 1000).Result.Count;
-                    Assert.Equal(532, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<Order>("orders/1", 0, 1000).Result.Count;
-                    Assert.Equal(467, revisionCount);
+                    var revisionCount = await session.Advanced.Revisions.GetForAsync<User>("users/1", 0, 1000);
+                    Assert.Equal(402, revisionCount.Count);
+                    revisionCount = await session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 1000);
+                    Assert.Equal(532, revisionCount.Count);
+                    var orderRevisionCount = await session.Advanced.Revisions.GetForAsync<Order>("orders/1", 0, 1000);
+                    Assert.Equal(467, orderRevisionCount.Count);
                 }
 
                 for (int i = 0; i < 4; i++)
@@ -120,12 +120,12 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var revisionCount = session.Advanced.Revisions.GetForAsync<User>("users/1", 0, 1000).Result.Count;
-                    Assert.Equal(10, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 1000).Result.Count;
-                    Assert.Equal(136, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<Order>("orders/1", 0, 1000).Result.Count;
-                    Assert.Equal(331, revisionCount);
+                    var revisionCount = await session.Advanced.Revisions.GetForAsync<User>("users/1", 0, 1000);
+                    Assert.Equal(10, revisionCount.Count);
+                    revisionCount = await session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 1000);
+                    Assert.Equal(136, revisionCount.Count);
+                    var orderRevisionCount = await session.Advanced.Revisions.GetForAsync<Order>("orders/1", 0, 1000);
+                    Assert.Equal(331, orderRevisionCount.Count);
                 }
 
                 for (int i = 4; i < 13; i++)
@@ -141,12 +141,12 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var revisionCount = session.Advanced.Revisions.GetForAsync<User>("users/1", 0, 1000).Result.Count;
-                    Assert.Equal(10, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 1000).Result.Count;
-                    Assert.Equal(10, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<Order>("orders/1", 0, 1000).Result.Count;
-                    Assert.Equal(33, revisionCount);
+                    var revisionCount = await session.Advanced.Revisions.GetForAsync<User>("users/1", 0, 1000);
+                    Assert.Equal(10, revisionCount.Count);
+                    revisionCount = await session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 1000);
+                    Assert.Equal(10, revisionCount.Count);
+                    var orderRevisionCount = await session.Advanced.Revisions.GetForAsync<Order>("orders/1", 0, 1000);
+                    Assert.Equal(33, orderRevisionCount.Count);
                 }
                 WaitForUserToContinueTheTest(store);
             }
@@ -196,12 +196,12 @@ namespace SlowTests.Issues
                 using (var session = store.OpenAsyncSession())
                 {
 
-                    var revisionCount = session.Advanced.Revisions.GetForAsync<User>("users/1", 0, 1000).Result.Count;
-                    Assert.Equal(501, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 1000).Result.Count;
-                    Assert.Equal(631, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<User>("orders/1", 0, 1000).Result.Count;
-                    Assert.Equal(501, revisionCount);
+                    var revisionCount = await session.Advanced.Revisions.GetForAsync<User>("users/1", 0, 1000);
+                    Assert.Equal(501, revisionCount.Count);
+                    revisionCount = await session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 1000);
+                    Assert.Equal(631, revisionCount.Count);
+                    revisionCount = await session.Advanced.Revisions.GetForAsync<User>("orders/1", 0, 1000);
+                    Assert.Equal(501, revisionCount.Count);
                 }
 
                 configuration = new RevisionsConfiguration
@@ -231,12 +231,12 @@ namespace SlowTests.Issues
                 WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenAsyncSession())
                 {
-                    var revisionCount = session.Advanced.Revisions.GetForAsync<User>("users/1", 0, 100).Result.Count;
-                    Assert.Equal(10, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 100).Result.Count;
-                    Assert.Equal(10, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<Order>("orders/1", 0, 100).Result.Count;
-                    Assert.Equal(33, revisionCount);
+                    var revisionCount = await session.Advanced.Revisions.GetForAsync<User>("users/1", 0, 100);
+                    Assert.Equal(10, revisionCount.Count);
+                    revisionCount = await session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 100);
+                    Assert.Equal(10, revisionCount.Count);
+                    var orderRevisionCount = await session.Advanced.Revisions.GetForAsync<Order>("orders/1", 0, 100);
+                    Assert.Equal(33, orderRevisionCount.Count);
                 }
             }
         }

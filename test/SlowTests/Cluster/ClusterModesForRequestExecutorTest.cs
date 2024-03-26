@@ -160,10 +160,10 @@ namespace SlowTests.Cluster
                     }
                 }
 
-                var fastest = leaderRequestExecutor.GetFastestNode().Result.Node;
+                var fastest = await leaderRequestExecutor.GetFastestNode();
                 var follower2Proxy = ReplacePort(followers[1].WebUrl, serversToProxies[followers[1]].Port);
 
-                Assert.Equal(follower2Proxy, fastest.Url);
+                Assert.Equal(follower2Proxy, fastest.Node.Url);
             }
         }
 

@@ -37,7 +37,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     await session.SaveChangesAsync();
 
-                    var database = GetDatabase(store.Database).Result;
+                    var database = await GetDatabase(store.Database);
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
@@ -113,7 +113,7 @@ loadToOrders(orderData);
 
                     await session.SaveChangesAsync();
 
-                    var database = GetDatabase(store.Database).Result;
+                    var database = await GetDatabase(store.Database);
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
