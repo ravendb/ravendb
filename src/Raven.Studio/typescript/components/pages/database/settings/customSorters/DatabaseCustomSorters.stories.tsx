@@ -1,6 +1,11 @@
 ﻿import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
-import { withStorybookContexts, withBootstrap5, databaseAccessArgType } from "test/storybookTestUtils";
+import {
+    withStorybookContexts,
+    withBootstrap5,
+    databaseAccessArgType,
+    withForceRerender,
+} from "test/storybookTestUtils";
 import DatabaseCustomSorters from "./DatabaseCustomSorters";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
@@ -9,7 +14,7 @@ import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 
 export default {
     title: "Pages/Database/Settings/Custom Sorters",
-    decorators: [withStorybookContexts, withBootstrap5],
+    decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 
 interface DefaultDatabaseCustomSortersProps {

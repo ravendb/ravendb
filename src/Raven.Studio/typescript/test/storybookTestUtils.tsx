@@ -50,6 +50,10 @@ export function withBootstrap5(storyFn: any) {
     );
 }
 
+export function withForceRerender(storyFn: any) {
+    return <React.Fragment {...forceStoryRerender()}>{storyFn()}</React.Fragment>;
+}
+
 export const licenseArgType = {
     control: {
         type: "select",
