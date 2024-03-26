@@ -21,9 +21,11 @@ namespace Voron.Data.CompactTrees;
 public sealed unsafe class CompactKey : IDisposable
 {
     public static readonly CompactKey NullInstance = new();
-    
-    private static readonly ArrayPool<byte> StoragePool = ArrayPool<byte>.Shared;
-    private static readonly ArrayPool<long> KeyMappingPool = ArrayPool<long>.Shared;
+
+    [ThreadStatic]
+    private static ArrayPool<byte> StoragePool;
+    [ThreadStatic]
+    private static ArrayPool<long> KeyMappingPool;
 
     private LowLevelTransaction _owner;
 
@@ -66,6 +68,9 @@ public sealed unsafe class CompactKey : IDisposable
 
         _currentIdx = 0;
         MaxLength = 0;
+
+        StoragePool ??= ArrayPool<byte>.Create();
+        KeyMappingPool ??= ArrayPool<long>.Create();
 
         _storage = StoragePool.Rent(2 * Constants.CompactTree.MaximumKeySize);
         _keyMappingCache = KeyMappingPool.Rent(2 * MappingTableMask);
