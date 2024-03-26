@@ -132,4 +132,22 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
     withQueryResult(dto?: MockedValue<pagedResultExtended<document>>) {
         return this.mockResolvedValue(this.mocks.query, dto, DatabasesStubs.queryResult());
     }
+
+    withIntegrationsPostgreSqlSupport(isActive?: boolean) {
+        return this.mockResolvedValue(
+            this.mocks.getIntegrationsPostgreSqlSupport,
+            { Active: isActive },
+            { Active: true }
+        );
+    }
+
+    withIntegrationsPostgreSqlCredentials(
+        dto?: MockedValue<Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlUsernames>
+    ) {
+        return this.mockResolvedValue(
+            this.mocks.getIntegrationsPostgreSqlCredentials,
+            dto,
+            DatabasesStubs.integrationsPostgreSqlCredentials()
+        );
+    }
 }

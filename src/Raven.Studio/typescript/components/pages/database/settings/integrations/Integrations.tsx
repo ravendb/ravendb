@@ -1,83 +1,81 @@
-﻿import React, { useState } from "react";
-import { Alert, Button, Col, Row } from "reactstrap";
+﻿import React from "react";
+import { Button, Col, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { todo } from "common/developmentHelper";
 import { useAppSelector } from "components/store";
-import { NonShardedViewProps } from "components/models/common";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
-import { useRavenLink } from "components/hooks/useRavenLink";
 import { HrHeader } from "components/common/HrHeader";
-import IntegrationsConfigPanel from "components/pages/database/settings/integrations/IntegrationsConfigPanel";
 import { IntegrationsInfoHub } from "viewmodels/database/settings/IntegrationsInfoHub";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import IntegrationsUserList from "components/pages/database/settings/integrations/IntegrationsUserList";
+import { useIntegrations } from "components/pages/database/settings/integrations/useIntegrations";
+import IntegrationsAlerts from "components/pages/database/settings/integrations/IntegrationsAlerts";
+import FeatureNotAvailable from "components/common/FeatureNotAvailable";
 
-todo("Feature", "Damian", "Add missing logic");
 todo("Feature", "Damian", "Connect to Studio");
 todo("Feature", "Damian", "Remove legacy code");
 
-export default function Integrations({ db }: NonShardedViewProps) {
-    const postgreSqlDocsLink = useRavenLink({ hash: "HDTCH7" });
+export default function Integrations() {
+    const {
+        isLicenseUpgradeRequired,
+        isPostgreSqlSupportEnabled,
+        asyncGetPostgreSqlUsers,
+        users,
+        addNewUser,
+        removeUser,
+    } = useIntegrations();
 
-    const isDatabaseAdmin =
-        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const isSharded = useAppSelector(databaseSelectors.activeDatabase).isSharded;
 
-    const [isPostgreSqlSupportEnabled] = useState(false);
-
-    const [configPanels, setConfigPanels] = useState([{ panelCollapsed: true }]);
-
-    const addNewPanel = () => {
-        setConfigPanels([...configPanels, { panelCollapsed: false }]);
-    };
+    // TODO or is view for one shard?
+    if (isSharded) {
+        return (
+            <FeatureNotAvailable>
+                Integrations are not available for <Icon icon="sharding" color="shard" margin="m-0" /> sharded databases
+            </FeatureNotAvailable>
+        );
+    }
 
     return (
-        <>
-            <div className="content-margin">
-                <Col xxl={12}>
-                    <Row className="gy-sm">
-                        <Col>
-                            <AboutViewHeading title="Integrations" icon="integrations" />
-                            <div className="mb-3">
-                                <HrHeader
-                                    right={
-                                        isDatabaseAdmin && (
-                                            <div id="addNewCredentialsButton">
-                                                <Button
-                                                    color="info"
-                                                    size="sm"
-                                                    className="rounded-pill"
-                                                    title="Add new credentials"
-                                                    onClick={addNewPanel}
-                                                >
-                                                    <Icon icon="plus" />
-                                                    Add new
-                                                </Button>
-                                            </div>
-                                        )
-                                    }
+        <Row className="gy-sm content-margin">
+            <Col>
+                <AboutViewHeading title="Integrations" icon="integrations" />
+                <div className="mb-3">
+                    <HrHeader
+                        right={
+                            hasDatabaseAdminAccess && (
+                                <Button
+                                    color="info"
+                                    size="sm"
+                                    className="rounded-pill"
+                                    title="Add new credentials"
+                                    onClick={addNewUser}
                                 >
-                                    PostgreSQL Protocol Credentials
-                                </HrHeader>
-                                {configPanels.map((panel, index) => (
-                                    <IntegrationsConfigPanel
-                                        key={index}
-                                        isDatabaseAdmin={isDatabaseAdmin}
-                                        panelCollapsed={panel.panelCollapsed}
-                                    />
-                                ))}
-                            </div>
-                            {!isPostgreSqlSupportEnabled && (
-                                <Alert color="warning" className="mt-3">
-                                    PostgreSQL support must be explicitly enabled in your <code>settings.json</code>{" "}
-                                    file. Learn more <a href={postgreSqlDocsLink}>here</a>.
-                                </Alert>
-                            )}
-                        </Col>
-                        <Col sm={12} lg={4}>
-                            <IntegrationsInfoHub />
-                        </Col>
-                    </Row>
-                </Col>
-            </div>
-        </>
+                                    <Icon icon="plus" />
+                                    Add new
+                                </Button>
+                            )
+                        }
+                    >
+                        PostgreSQL Protocol Credentials
+                    </HrHeader>
+                    <IntegrationsUserList
+                        fetchState={asyncGetPostgreSqlUsers.status}
+                        reload={asyncGetPostgreSqlUsers.execute}
+                        users={users}
+                        removeUser={removeUser}
+                    />
+                </div>
+                <IntegrationsAlerts
+                    isLicenseUpgradeRequired={isLicenseUpgradeRequired}
+                    isPostgreSqlSupportEnabled={isPostgreSqlSupportEnabled}
+                />
+            </Col>
+            <Col sm={12} lg={4}>
+                <IntegrationsInfoHub />
+            </Col>
+        </Row>
     );
 }

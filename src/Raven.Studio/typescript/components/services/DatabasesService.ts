@@ -59,6 +59,10 @@ import saveConnectionStringCommand = require("commands/database/settings/saveCon
 import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import saveCustomSorterCommand = require("commands/database/settings/saveCustomSorterCommand");
 import queryCommand = require("commands/database/query/queryCommand");
+import getIntegrationsPostgreSqlSupportCommand = require("commands/database/settings/getIntegrationsPostgreSqlSupportCommand");
+import getIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/getIntegrationsPostgreSqlCredentialsCommand");
+import saveIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/saveIntegrationsPostgreSqlCredentialsCommand");
+import deleteIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/deleteIntegrationsPostgreSqlCredentialsCommand");
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -290,5 +294,21 @@ export default class DatabasesService {
 
     async query(...args: ConstructorParameters<typeof queryCommand>) {
         return new queryCommand(...args).execute();
+    }
+
+    async getIntegrationsPostgreSqlSupport(databaseName: string) {
+        return new getIntegrationsPostgreSqlSupportCommand(databaseName).execute();
+    }
+
+    async getIntegrationsPostgreSqlCredentials(databaseName: string) {
+        return new getIntegrationsPostgreSqlCredentialsCommand(databaseName).execute();
+    }
+
+    async saveIntegrationsPostgreSqlCredentials(databaseName: string, username: string, password: string) {
+        return new saveIntegrationsPostgreSqlCredentialsCommand(databaseName, username, password).execute();
+    }
+
+    async deleteIntegrationsPostgreSqlCredentials(databaseName: string, username: string) {
+        return new deleteIntegrationsPostgreSqlCredentialsCommand(databaseName, username);
     }
 }

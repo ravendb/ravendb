@@ -49,3 +49,7 @@ export interface InputItem<T extends string | number = string> {
 }
 
 export type SortDirection = "asc" | "desc";
+
+export interface ClassNameProps {
+    className?: string;
+}

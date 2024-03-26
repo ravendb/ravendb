@@ -1,11 +1,7 @@
-﻿import React, { ReactNode } from "react";
+﻿import React, { PropsWithChildren } from "react";
 import classNames from "classnames";
+import { ClassNameProps } from "components/models/common";
 
-interface VstackProps {
-    className?: string;
-    children: ReactNode;
-}
-export function VStack(props: VstackProps) {
-    const { className, children } = props;
+export function VStack({ className, children }: PropsWithChildren<ClassNameProps>) {
     return <div className={classNames("vstack", className)}>{children}</div>;
 }
