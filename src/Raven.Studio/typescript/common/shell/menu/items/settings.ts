@@ -17,6 +17,7 @@ import RevertRevisions from "components/pages/database/settings/documentRevision
 import ConnectionStrings from "components/pages/database/settings/connectionStrings/ConnectionStrings";
 import DatabaseRecord from "components/pages/database/settings/databaseRecord/DatabaseRecord";
 import ConflictResolution from "components/pages/database/settings/conflictResolution/ConflictResolution";
+import Integrations from "components/pages/database/settings/integrations/Integrations";
 
 export = getSettingsMenuItem;
 
@@ -174,7 +175,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/integrations',
-            moduleId: require('viewmodels/database/settings/integrations'),
+            moduleId: bridgeToReact(Integrations, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Integrations',
             nav: true,
