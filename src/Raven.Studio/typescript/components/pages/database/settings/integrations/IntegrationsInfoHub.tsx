@@ -1,11 +1,13 @@
-import {AboutViewAnchored, AccordionItemWrapper} from "components/common/AboutView";
-import FeatureAvailabilitySummaryWrapper, {FeatureAvailabilityData} from "components/common/FeatureAvailabilitySummary";
+import { AboutViewAnchored, AccordionItemWrapper } from "components/common/AboutView";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import React from "react";
-import {Icon} from "components/common/Icon";
-import {useRavenLink} from "hooks/useRavenLink";
+import { Icon } from "components/common/Icon";
+import { useRavenLink } from "hooks/useRavenLink";
 
 export function IntegrationsInfoHub() {
     const hasPostgreSql = useAppSelector(licenseSelectors.statusValue("HasPostgreSqlIntegration"));
@@ -23,7 +25,7 @@ export function IntegrationsInfoHub() {
             {
                 featureName: defaultFeatureAvailability[1].featureName,
                 value: hasPowerBi,
-            }
+            },
         ],
     });
 
@@ -45,7 +47,7 @@ export function IntegrationsInfoHub() {
                 <p>
                     Providing the credentials is only required of clients when RavenDB is installed as a Secure Server.
                 </p>
-                <hr/>
+                <hr />
                 <div>
                     PostgreSQL support:
                     <ul>
@@ -55,8 +57,9 @@ export function IntegrationsInfoHub() {
                         </li>
                         <li className="margin-top-xxs">
                             Verify your license supports the PostgreSQL Protocol.
-                            <br/>
-                            The PostgreSQL protocol support must also be explicitly enabled in your RavendB&apos;s settings.
+                            <br />
+                            The PostgreSQL protocol support must also be explicitly enabled in your RavendB&apos;s
+                            settings.
                         </li>
                     </ul>
                 </div>
@@ -66,10 +69,7 @@ export function IntegrationsInfoHub() {
                     <Icon icon="newtab" /> Docs - Integrations
                 </a>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper
-                isUnlimited={hasAllFeaturesInLicense}
-                data={featureAvailability}
-            />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasAllFeaturesInLicense} data={featureAvailability} />
         </AboutViewAnchored>
     );
 }
@@ -81,11 +81,12 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: true },
         professional: { value: true },
         enterprise: { value: true },
-    },{
+    },
+    {
         featureName: "Power BI",
         featureIcon: "powerbi",
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
-    }
+    },
 ];
