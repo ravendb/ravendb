@@ -58,6 +58,19 @@ namespace Voron.Data.BTrees
             header->RootPageNumber = RootPageNumber;
         }
 
+        public void CopyTo(ref TreeRootHeader header)
+        {
+            header.RootObjectType = RootObjectType;
+            header.Flags = Flags;
+            header.BranchPages = BranchPages;
+            header.Depth = Depth;
+            header.LeafPages = LeafPages;
+            header.OverflowPages = OverflowPages;
+            header.PageCount = PageCount;
+            header.NumberOfEntries = NumberOfEntries;
+            header.RootPageNumber = RootPageNumber;
+        }
+
         public TreeMutableState Clone()
         {
             return new TreeMutableState(_tx)

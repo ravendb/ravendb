@@ -419,8 +419,7 @@ namespace Voron.Impl.Backup
                 var root = Tree.Open(txw, null, Constants.RootTreeNameSlice, &lastTxHeader->Root);
 
                 txw.UpdateRootsIfNeeded(root);
-
-                txw.State.NextPageNumber = lastTxHeader->LastPageNumber + 1;
+                txw.State.UpdateNextPage(lastTxHeader->LastPageNumber + 1);
 
                 txw.Commit();
 
