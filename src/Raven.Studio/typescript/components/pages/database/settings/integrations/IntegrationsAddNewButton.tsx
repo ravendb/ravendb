@@ -4,6 +4,7 @@ import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import React from "react";
 import { Button } from "reactstrap";
+import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMessage";
 
 interface IntegrationsAddNewButtonProps {
     isLicenseUpgradeRequired: boolean;
@@ -20,7 +21,11 @@ export default function IntegrationsAddNewButton(props: IntegrationsAddNewButton
             conditions={[
                 {
                     isActive: isLicenseUpgradeRequired,
-                    message: "You need to upgrade your license to add new credentials.",
+                    message: (
+                        <LicenseRestrictedMessage>
+                            Your license doesn&apos;t allow adding new credentials.
+                        </LicenseRestrictedMessage>
+                    ),
                 },
                 { isActive: !hasDatabaseAdminAccess, message: "You don't have permissions to add new credentials." },
             ]}
