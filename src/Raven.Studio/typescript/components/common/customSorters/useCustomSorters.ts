@@ -1,11 +1,15 @@
 import { CustomSorterFormData } from "components/common/customSorters/editCustomSorterValidation";
 import { useState } from "react";
 
+export interface CustomSorter extends CustomSorterFormData {
+    id: string;
+}
+
 export function useCustomSorters() {
-    const [sorters, setSorters] = useState<CustomSorterFormData[]>([]);
+    const [sorters, setSorters] = useState<CustomSorter[]>([]);
 
     const addNewSorter = () => {
-        setSorters((prev) => [{ name: "", code: "" } satisfies CustomSorterFormData, ...prev]);
+        setSorters((prev) => [{ id: createId(), name: "", code: "" } satisfies CustomSorter, ...prev]);
     };
 
     const removeSorter = (idx: number) => {
@@ -21,6 +25,10 @@ export function useCustomSorters() {
     };
 }
 
-function mapFromDto(dto: Raven.Client.Documents.Queries.Sorting.SorterDefinition[]): CustomSorterFormData[] {
-    return dto.map((x) => ({ code: x.Code, name: x.Name }) satisfies CustomSorterFormData);
+function mapFromDto(dto: Raven.Client.Documents.Queries.Sorting.SorterDefinition[]): CustomSorter[] {
+    return dto.map((x) => ({ id: createId(), code: x.Code, name: x.Name }) satisfies CustomSorter);
+}
+
+function createId() {
+    return _.uniqueId("custom-sorter");
 }
