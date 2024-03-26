@@ -763,4 +763,17 @@ return docs[0];`,
             },
         };
     }
+
+    static integrationsPostgreSqlCredentials(): Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlUsernames {
+        return {
+            Users: [
+                {
+                    Username: "user1",
+                },
+                {
+                    Username: "user2",
+                },
+            ],
+        };
+    }
 }

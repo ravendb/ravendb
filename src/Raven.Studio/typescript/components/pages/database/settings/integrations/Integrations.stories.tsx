@@ -1,43 +1,70 @@
 ﻿﻿import React from "react";
-import { Meta } from "@storybook/react";
-import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
+import { Meta, StoryObj } from "@storybook/react";
+import {
+    forceStoryRerender,
+    withStorybookContexts,
+    withBootstrap5,
+    databaseAccessArgType,
+} from "test/storybookTestUtils";
 import Integrations from "./Integrations";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
+import { mockServices } from "test/mocks/services/MockServices";
+import { DatabaseSharedInfo } from "components/models/databases";
 
 export default {
     title: "Pages/Database/Settings/Integrations",
-    component: Integrations,
     decorators: [withStorybookContexts, withBootstrap5],
-} satisfies Meta<typeof Integrations>;
+} satisfies Meta;
 
-const db = DatabasesStubs.nonShardedClusterDatabase();
-
-function commonInit() {
-    const { accessManager } = mockStore;
-    accessManager.with_securityClearance("ValidUser");
+interface IntegrationsStoryArgs {
+    databaseAccess: databaseAccessLevel;
+    isSharded: boolean;
+    hasPowerBi: boolean;
+    hasPostgreSqlIntegration: boolean;
+    credentialsDto: Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlUsernames;
+    isPostgreSqlSupport: boolean;
 }
 
-export function NoLimits() {
-    commonInit();
+export const IntegrationsStory: StoryObj<IntegrationsStoryArgs> = {
+    name: "Integrations",
+    render: (args) => {
+        const { databases, accessManager, license } = mockStore;
+        const { databasesService } = mockServices;
 
-    const { accessManager } = mockStore;
+        let db: DatabaseSharedInfo = null;
 
-    accessManager.with_databaseAccess({
-        [db.name]: "DatabaseAdmin",
-    });
+        if (args.isSharded) {
+            db = databases.withActiveDatabase_Sharded();
+        } else {
+            db = databases.withActiveDatabase_NonSharded_SingleNode();
+        }
 
-    return <Integrations db={db} />;
-}
+        accessManager.with_securityClearance("ValidUser");
+        accessManager.with_databaseAccess({
+            [db.name]: args.databaseAccess,
+        });
 
-export function BelowDatabaseAdmin() {
-    commonInit();
+        license.with_License({
+            HasPowerBI: args.hasPowerBi,
+            HasPostgreSqlIntegration: args.hasPostgreSqlIntegration,
+        });
 
-    const { accessManager } = mockStore;
+        databasesService.withIntegrationsPostgreSqlSupport(args.isPostgreSqlSupport);
+        databasesService.withIntegrationsPostgreSqlCredentials(args.credentialsDto);
 
-    accessManager.with_databaseAccess({
-        [db.name]: "DatabaseRead",
-    });
-
-    return <Integrations db={db} />;
-}
+        return <Integrations {...forceStoryRerender()} />;
+    },
+    argTypes: {
+        databaseAccess: databaseAccessArgType,
+    },
+    args: {
+        databaseAccess: "DatabaseAdmin",
+        isSharded: false,
+        hasPowerBi: true,
+        hasPostgreSqlIntegration: true,
+        isPostgreSqlSupport: true,
+        credentialsDto: {
+            Users: [{ Username: "user1" }, { Username: "user2" }],
+        },
+    },
+};

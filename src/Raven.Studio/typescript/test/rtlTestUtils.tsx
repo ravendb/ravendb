@@ -101,6 +101,13 @@ export function rtlRender(
     return genericRtlRender(AllProviders, ui, options);
 }
 
+export async function rtlRender_WithWaitForLoad(...args: Parameters<typeof rtlRender>) {
+    const renderResult = rtlRender(...args);
+    await renderResult.waitForLoad();
+
+    return renderResult;
+}
+
 export * from "@testing-library/react";
 
 export const commonSelectors = {

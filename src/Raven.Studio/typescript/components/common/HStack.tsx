@@ -1,11 +1,7 @@
-﻿import React, { ReactNode } from "react";
+﻿import React, { PropsWithChildren } from "react";
 import classNames from "classnames";
+import { ClassNameProps } from "components/models/common";
 
-interface HstackProps {
-    className?: string;
-    children: ReactNode;
-}
-export function HStack(props: HstackProps) {
-    const { className, children } = props;
+export function HStack({ className, children }: PropsWithChildren<ClassNameProps>) {
     return <div className={classNames("hstack", className)}>{children}</div>;
 }
