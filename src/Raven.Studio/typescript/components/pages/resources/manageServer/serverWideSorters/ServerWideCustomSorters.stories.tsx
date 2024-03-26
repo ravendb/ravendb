@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
-import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
+import { withStorybookContexts, withBootstrap5, withForceRerender } from "test/storybookTestUtils";
 import ServerWideCustomSorters from "./ServerWideCustomSorters";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
@@ -8,7 +8,7 @@ import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 
 export default {
     title: "Pages/ManageServer/Server-Wide Sorters",
-    decorators: [withStorybookContexts, withBootstrap5],
+    decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 
 interface DefaultServerWideCustomSortersProps {
