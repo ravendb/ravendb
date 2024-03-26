@@ -45,17 +45,17 @@ namespace SlowTests.Issues
                 using (index.ForTestingPurposesOnly().CallDuringFinallyOfExecuteIndexing(() =>
                 {
                     // simulating a long indexing batch completion
-                    mreWasSet = indexDisposeMre.Wait(Server.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
+                    mreWasSet = indexDisposeMre.Wait(Server.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan * 2);
                 }))
                 {
-                    var deleteIndexTask = store.Maintenance.SendAsync(new DeleteIndexOperation(indexDefinition.IndexName));
-
                     database.IndexStore.ForTestingPurposesOnly().BeforeHandleDatabaseRecordChange = () =>
                     {
                         mreBeforeSendingCommand.Set();
                     };
 
-                    mreBeforeSendingCommand.Wait(Server.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
+                    var deleteIndexTask = store.Maintenance.SendAsync(new DeleteIndexOperation(indexDefinition.IndexName));
+
+                    mreBeforeSendingCommand.Wait(Server.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan * 2);
 
                     var command = new AcknowledgeSubscriptionBatchCommand(store.Database, RaftIdGenerator.NewId())
                     {
