@@ -27,7 +27,6 @@ namespace Raven.Server.ServerWide;
 
 public sealed partial class ClusterStateMachine
 {
-    private const int MinBuildVersion54116 = 54_116;
     private const int MinBuildVersion60000 = 60_000;
     private const int MinBuildVersion60101 = 60_101;
 
@@ -71,7 +70,7 @@ public sealed partial class ClusterStateMachine
                 if (maxReplicationFactorForSharding == null && multiNodeSharding)
                     return;
 
-                if (CanAssertLicenseLimits(context, new List<int>(MinBuildVersion60000)) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                     return;
 
                 var nodes = new HashSet<string>();
@@ -123,7 +122,7 @@ public sealed partial class ClusterStateMachine
                     maxRevisionsToKeep == null && maxRevisionAgeToKeepInDays == null)
                     return;
 
-                if (CanAssertLicenseLimits(context, minBuildVersion: new List<int>(MinBuildVersion60000)) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.CanSetupDefaultRevisionsConfiguration == false &&
@@ -167,7 +166,7 @@ public sealed partial class ClusterStateMachine
                     var minPeriodForExpiration = new TimeSetting(minPeriodForExpirationInHours.Value, TimeUnit.Hours);
                     if (deleteFrequency.AsTimeSpan < minPeriodForExpiration.AsTimeSpan)
                     {
-                        if (CanAssertLicenseLimits(context, minBuildVersion: new List<int>(MinBuildVersion60000)) == false)
+                        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                             return;
 
                         throw new LicenseLimitException(LimitType.Expiration, $"Your license doesn't allow modifying the expiration frequency below {minPeriodForExpirationInHours} hours.");
@@ -185,7 +184,7 @@ public sealed partial class ClusterStateMachine
                     var minPeriodForRefresh = new TimeSetting(minPeriodForRefreshInHours.Value, TimeUnit.Hours);
                     if (refreshFrequency.AsTimeSpan < minPeriodForRefresh.AsTimeSpan)
                     {
-                        if (CanAssertLicenseLimits(context, minBuildVersion: new List<int>(MinBuildVersion60000)) == false)
+                        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                             return;
 
                         throw new LicenseLimitException(LimitType.Refresh, $"Your license doesn't allow modifying the refresh frequency below {minPeriodForRefreshInHours} hours.");
@@ -198,7 +197,7 @@ public sealed partial class ClusterStateMachine
                 var maxCustomSortersPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomSortersPerDatabase;
                 if (maxCustomSortersPerDatabase != null && maxCustomSortersPerDatabase >= 0 && databaseRecord.Sorters.Count > maxCustomSortersPerDatabase)
                 {
-                    if (CanAssertLicenseLimits(context, minBuildVersion: new List<int>(MinBuildVersion60000)) == false)
+                    if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                         return;
 
                     throw new LicenseLimitException(LimitType.CustomSorters, $"The maximum number of custom sorters per database cannot exceed the limit of: {maxCustomSortersPerDatabase}");
@@ -211,8 +210,8 @@ public sealed partial class ClusterStateMachine
                     if (totalSortersCount <= maxCustomSortersPerCluster)
                         return;
 
-                    if (CanAssertLicenseLimits(context, minBuildVersion: new List<int>(MinBuildVersion60000)) == false)
-                        return;
+                    if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                        return; 
 
                     throw new LicenseLimitException(LimitType.CustomSorters, $"The maximum number of custom sorters per cluster cannot exceed the limit of: {maxCustomSortersPerCluster}");
                 }
@@ -222,7 +221,7 @@ public sealed partial class ClusterStateMachine
                 var maxAnalyzersPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomAnalyzersPerDatabase;
                 if (maxAnalyzersPerDatabase != null && maxAnalyzersPerDatabase >= 0 && databaseRecord.Analyzers.Count > maxAnalyzersPerDatabase)
                 {
-                    if (CanAssertLicenseLimits(context, minBuildVersion: new List<int>(MinBuildVersion60000)) == false)
+                    if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                         return;
 
                     throw new LicenseLimitException(LimitType.CustomAnalyzers, $"The maximum number of analyzers per database cannot exceed the limit of: {maxAnalyzersPerDatabase}");
@@ -235,7 +234,7 @@ public sealed partial class ClusterStateMachine
                     if (totalAnalyzersCount <= maxAnalyzersPerCluster)
                         return;
 
-                    if (CanAssertLicenseLimits(context, minBuildVersion: new List<int>(MinBuildVersion60000)) == false)
+                    if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                         return;
 
                     throw new LicenseLimitException(LimitType.CustomAnalyzers, $"The maximum number of analyzers per cluster cannot exceed the limit of: {maxAnalyzersPerCluster}");
@@ -243,7 +242,7 @@ public sealed partial class ClusterStateMachine
                 break;
 
             case nameof(UpdatePeriodicBackupCommand):
-                if (CanAssertLicenseLimits(context, minBuildVersion: new List<int>(MinBuildVersion60000)))
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000))
                 {
                     if (serverStore.LicenseManager.LicenseStatus.HasPeriodicBackup == false)
                         throw new LicenseLimitException(LimitType.PeriodicBackup, "Your license doesn't support adding periodic backups.");
@@ -259,7 +258,7 @@ public sealed partial class ClusterStateMachine
                 if (databaseRecord.Client == null || databaseRecord.Client.Disabled)
                     return;
 
-                if (CanAssertLicenseLimits(context, new List<int>(MinBuildVersion60000)) == false)
+                if (CanAssertLicenseLimits(context, MinBuildVersion60000) == false)
                     return;
 
                 throw new LicenseLimitException(LimitType.ClientConfiguration, "Your license doesn't support adding the client configuration.");
@@ -268,7 +267,7 @@ public sealed partial class ClusterStateMachine
                 if (serverStore.LicenseManager.LicenseStatus.HasClientConfiguration)
                     return;
 
-                if (CanAssertLicenseLimits(context, new List<int>(MinBuildVersion60000)) == false)
+                if (CanAssertLicenseLimits(context, MinBuildVersion60000) == false)
                     return;
 
                 throw new LicenseLimitException(LimitType.ClientConfiguration, "Your license doesn't support adding the client configuration.");
@@ -280,7 +279,7 @@ public sealed partial class ClusterStateMachine
                 if (databaseRecord.Studio == null || databaseRecord.Studio.Disabled)
                     return;
 
-                if (CanAssertLicenseLimits(context, new List<int>(MinBuildVersion60000)) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                     return;
 
                 throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support adding the studio configuration.");
@@ -289,7 +288,7 @@ public sealed partial class ClusterStateMachine
                 if (serverStore.LicenseManager.LicenseStatus.HasStudioConfiguration)
                     return;
 
-                if (CanAssertLicenseLimits(context, new List<int>(MinBuildVersion60000)) == false)
+                if (CanAssertLicenseLimits(context, MinBuildVersion60000) == false)
                     return;
 
                 throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support adding the studio configuration.");
@@ -299,7 +298,7 @@ public sealed partial class ClusterStateMachine
                 if (serverStore.LicenseManager.LicenseStatus.HasQueueSink)
                     return;
 
-                if (CanAssertLicenseLimits(context, new List<int>(MinBuildVersion60000)) == false)
+                if (CanAssertLicenseLimits(context, MinBuildVersion60000) == false)
                     return;
 
                 throw new LicenseLimitException(LimitType.QueueSink, "Your license doesn't support using the queue sink feature.");
@@ -308,12 +307,12 @@ public sealed partial class ClusterStateMachine
                 if (serverStore.LicenseManager.LicenseStatus.HasDataArchival)
                     return;
 
-                if (CanAssertLicenseLimits(context, new List<int>(MinBuildVersion60000)) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                     return;
 
                 throw new LicenseLimitException(LimitType.DataArchival, "Your license doesn't support using the data archival feature.");
             case nameof(UpdatePullReplicationAsSinkCommand):
-                if (CanAssertLicenseLimits(context, new List<int> { MinBuildVersion54116, MinBuildVersion60101 }) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60101) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasPullReplicationAsSink)
@@ -321,7 +320,7 @@ public sealed partial class ClusterStateMachine
 
                 throw new LicenseLimitException(LimitType.PullReplicationAsSink, "Your license doesn't support adding Sink Replication feature.");
             case nameof(UpdatePullReplicationAsHubCommand):
-                if (CanAssertLicenseLimits(context, new List<int> { MinBuildVersion54116, MinBuildVersion60101 }) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60101) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasPullReplicationAsHub)
@@ -330,7 +329,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.PullReplicationAsHub, "Your license doesn't support adding Hub Replication feature.");
 
             case nameof(UpdateExternalReplicationCommand):
-                if (CanAssertLicenseLimits(context, new List<int> { MinBuildVersion54116, MinBuildVersion60101 }) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60101) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasExternalReplication)
@@ -343,7 +342,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.DelayedExternalReplication, "Your license doesn't support adding Delayed External Replication.");
 
             case nameof(AddRavenEtlCommand):
-                if (CanAssertLicenseLimits(context, new List<int> { MinBuildVersion54116, MinBuildVersion60101 }) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60101) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasRavenEtl)
@@ -352,7 +351,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.RavenEtl, "Your license doesn't support adding Raven ETL feature.");
 
             case nameof(AddSqlEtlCommand):
-                if (CanAssertLicenseLimits(context, new List<int> { MinBuildVersion54116, MinBuildVersion60101 }) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60101) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasSqlEtl)
@@ -361,7 +360,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.SqlEtl, "Your license doesn't support adding SQL ETL feature.");
 
             case nameof(EditTimeSeriesConfigurationCommand):
-                if (CanAssertLicenseLimits(context, new List<int> { MinBuildVersion54116, MinBuildVersion60101 }) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60101) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasTimeSeriesRollupsAndRetention)
@@ -373,7 +372,7 @@ public sealed partial class ClusterStateMachine
                 return;
 
             case nameof(EditDocumentsCompressionCommand):
-                if (CanAssertLicenseLimits(context, new List<int> { MinBuildVersion54116, MinBuildVersion60101 }) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60101) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasDocumentsCompression)
@@ -382,7 +381,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.DocumentsCompression, "Your license doesn't support adding Documents Compression feature.");
 
             case nameof(AddElasticSearchEtlCommand):
-                if (CanAssertLicenseLimits(context, new List<int> { MinBuildVersion54116, MinBuildVersion60101 }) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60101) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasElasticSearchEtl)
@@ -391,7 +390,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.ElasticSearchEtl, "Your license doesn't support adding Elastic Search ETL feature.");
 
             case nameof(AddOlapEtlCommand):
-                if (CanAssertLicenseLimits(context, new List<int> { MinBuildVersion54116, MinBuildVersion60101 }) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60101) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasOlapEtl)
@@ -400,7 +399,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.OlapEtl, "Your license doesn't support adding Olap ETL feature.");
 
             case nameof(AddQueueEtlCommand):
-                if (CanAssertLicenseLimits(context, new List<int> { MinBuildVersion54116, MinBuildVersion60101 }) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60101) == false)
                     return;
 
                 if (serverStore.LicenseManager.LicenseStatus.HasQueueEtl)
@@ -453,7 +452,7 @@ public sealed partial class ClusterStateMachine
             var maxStaticIndexesPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerDatabase;
             if (maxStaticIndexesPerDatabase != null && maxStaticIndexesPerDatabase >= 0 && databaseRecord.Indexes.Count > maxStaticIndexesPerDatabase)
             {
-                if (CanAssertLicenseLimits(context, new List<int>(MinBuildVersion60000)) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                     return;
 
                 throw new LicenseLimitException(LimitType.Indexes,
@@ -467,7 +466,7 @@ public sealed partial class ClusterStateMachine
                 if (totalStaticIndexesCount <= maxStaticIndexesPerCluster)
                     return;
 
-                if (CanAssertLicenseLimits(context, minBuildVersion: new List<int>(MinBuildVersion60000)) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                     return;
 
                 throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of static indexes per cluster cannot exceed the limit of: {maxStaticIndexesPerCluster}");
@@ -479,7 +478,7 @@ public sealed partial class ClusterStateMachine
             var maxAutoIndexesPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfAutoIndexesPerDatabase;
             if (maxAutoIndexesPerDatabase != null && maxAutoIndexesPerDatabase >= 0 && databaseRecord.AutoIndexes.Count > maxAutoIndexesPerDatabase)
             {
-                if (CanAssertLicenseLimits(context, minBuildVersion: new List<int>(MinBuildVersion60000)) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                     return;
 
                 throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per database cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
@@ -492,7 +491,7 @@ public sealed partial class ClusterStateMachine
                 if (totalAutoIndexesCount <= maxAutoIndexesPerCluster)
                     return;
 
-                if (CanAssertLicenseLimits(context, minBuildVersion: new List<int>(MinBuildVersion60000)) == false)
+                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                     return;
 
                 throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per cluster cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
@@ -504,7 +503,7 @@ public sealed partial class ClusterStateMachine
         List<PeriodicBackupConfiguration> periodicBackups)
     {
         (bool HasSnapshotBackup, bool HasCloudBackup, bool HasEncryptedBackup) backupTypes = LicenseManager.GetBackupTypes(periodicBackups);
-        if (CanAssertLicenseLimits(context, minBuildVersion: new List<int> { MinBuildVersion54116, MinBuildVersion60101 }) == false)
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60101) == false)
             return;
 
         if (backupTypes.HasSnapshotBackup)
@@ -522,7 +521,7 @@ public sealed partial class ClusterStateMachine
 
     private void AssertAdditionalAssemblies(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
     {
-        if (CanAssertLicenseLimits(context, minBuildVersion: new List<int> {MinBuildVersion54116, MinBuildVersion60101}) == false)
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60101) == false)
             return;
 
         if (serverStore.LicenseManager.LicenseStatus.HasAdditionalAssembliesFromNuGet)
@@ -598,7 +597,7 @@ public sealed partial class ClusterStateMachine
         if (maxSubscriptionsPerDatabase is not >= 0)
             return false;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: new List<int>(MinBuildVersion60000)) == false)
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
             return true;
 
         foreach ((string databaseName, List<string> subscriptionsNames) in subscriptionsNamesPerDatabase)
@@ -622,7 +621,7 @@ public sealed partial class ClusterStateMachine
         if (maxSubscriptionsPerCluster is not >= 0)
             return false;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: new List<int>(MinBuildVersion60000)) == false)
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
             return true;
 
         var clusterSubscriptionsCounts =
@@ -642,7 +641,7 @@ public sealed partial class ClusterStateMachine
         if (serverStore.LicenseManager.LicenseStatus.HasRevisionsInSubscriptions || includeRevisions == false)
             return true;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: new List<int>(MinBuildVersion60000)) == false)
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
             return true;
 
         throw new LicenseLimitException(LimitType.Subscriptions,
@@ -673,7 +672,7 @@ public sealed partial class ClusterStateMachine
         }
     }
 
-    private bool CanAssertLicenseLimits(ClusterOperationContext context, List<int> minBuildVersion)
+    private bool CanAssertLicenseLimits(ClusterOperationContext context, int minBuildVersion)
     {
         var licenseLimitsBlittable = Read(context, ServerStore.LicenseLimitsStorageKey);
         if (licenseLimitsBlittable == null)
@@ -699,16 +698,11 @@ public sealed partial class ClusterStateMachine
             if (ServerVersion.IsNightlyOrDev(limit.Value.BuildInfo.BuildVersion))
                 continue;
 
-            foreach (var version in minBuildVersion)
-            {
-                if (Version.TryParse(version.ToString(), out var minVer) &&
-                    Version.TryParse(limit.Value.BuildInfo.BuildVersion.ToString(), out var buildVer) &&
-                    minVer.Major == buildVer.Major)
-                {
-                    if (limit.Value.BuildInfo.BuildVersion < version)
-                        return false;
-                }
-            }
+            if (limit.Value.BuildInfo.BuildVersion < 60)
+                return false;
+
+            if (limit.Value.BuildInfo.BuildVersion < minBuildVersion)
+                return false;
         }
 
         return true;
