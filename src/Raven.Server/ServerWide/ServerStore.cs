@@ -3209,9 +3209,9 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task PutLicenseAsync(License license, string raftRequestId)
+        public async Task PutLicenseAsync(License license, string raftRequestId, bool fromApi = false)
         {
-            var command = new PutLicenseCommand(LicenseStorageKey, license, raftRequestId);
+            var command = new PutLicenseCommand(LicenseStorageKey, license, raftRequestId, fromApi);
 
             var result = await SendToLeaderAsync(command);
 

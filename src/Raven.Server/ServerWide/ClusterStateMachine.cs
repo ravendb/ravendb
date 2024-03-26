@@ -570,6 +570,7 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutLicenseCommand):
+                        AssertLicense(context, type, cmd, serverStore);
                         PutValue<License>(context, type, cmd, index);
                         break;
 
