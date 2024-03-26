@@ -820,7 +820,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public override string AdditionalDebugInformation(Exception exception)
         {
-            return $"guid: {UniqueRequestId} {string.Join(", ", ClusterCommands.Select(c => c.Id))}";
+            return $"guid: {UniqueRequestId} {string.Join(", ", ClusterCommands.Select(c => $"({c.Id}, {c.Index})"))}";
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
