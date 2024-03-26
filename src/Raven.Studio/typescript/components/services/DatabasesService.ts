@@ -63,6 +63,7 @@ import getIntegrationsPostgreSqlSupportCommand = require("commands/database/sett
 import getIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/getIntegrationsPostgreSqlCredentialsCommand");
 import saveIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/saveIntegrationsPostgreSqlCredentialsCommand");
 import deleteIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/deleteIntegrationsPostgreSqlCredentialsCommand");
+import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -310,5 +311,10 @@ export default class DatabasesService {
 
     async deleteIntegrationsPostgreSqlCredentials(databaseName: string, username: string) {
         return new deleteIntegrationsPostgreSqlCredentialsCommand(databaseName, username);
+    }
+
+    async generateSecret() {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        return new generateSecretCommand().execute();
     }
 }

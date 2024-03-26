@@ -1,10 +1,9 @@
 ﻿import React from "react";
-import { Button, Col, Row } from "reactstrap";
+import { Col, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { todo } from "common/developmentHelper";
 import { useAppSelector } from "components/store";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { HrHeader } from "components/common/HrHeader";
 import { IntegrationsInfoHub } from "viewmodels/database/settings/IntegrationsInfoHub";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -12,8 +11,9 @@ import IntegrationsUserList from "components/pages/database/settings/integration
 import { useIntegrations } from "components/pages/database/settings/integrations/useIntegrations";
 import IntegrationsAlerts from "components/pages/database/settings/integrations/IntegrationsAlerts";
 import FeatureNotAvailable from "components/common/FeatureNotAvailable";
+import DatabaseUtils from "components/utils/DatabaseUtils";
+import IntegrationsAddNewButton from "components/pages/database/settings/integrations/IntegrationsAddNewButton";
 
-todo("Feature", "Damian", "Connect to Studio");
 todo("Feature", "Damian", "Remove legacy code");
 
 export default function Integrations() {
@@ -26,14 +26,15 @@ export default function Integrations() {
         removeUser,
     } = useIntegrations();
 
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
-    const isSharded = useAppSelector(databaseSelectors.activeDatabase).isSharded;
+    const db = useAppSelector(databaseSelectors.activeDatabase);
 
-    // TODO or is view for one shard?
-    if (isSharded) {
+    if (db.isSharded || DatabaseUtils.isSharded(db.name)) {
         return (
             <FeatureNotAvailable>
-                Integrations are not available for <Icon icon="sharding" color="shard" margin="m-0" /> sharded databases
+                <span>
+                    Integrations are not available for <Icon icon="sharding" color="shard" margin="m-0" /> sharded
+                    databases
+                </span>
             </FeatureNotAvailable>
         );
     }
@@ -45,18 +46,10 @@ export default function Integrations() {
                 <div className="mb-3">
                     <HrHeader
                         right={
-                            hasDatabaseAdminAccess && (
-                                <Button
-                                    color="info"
-                                    size="sm"
-                                    className="rounded-pill"
-                                    title="Add new credentials"
-                                    onClick={addNewUser}
-                                >
-                                    <Icon icon="plus" />
-                                    Add new
-                                </Button>
-                            )
+                            <IntegrationsAddNewButton
+                                isLicenseUpgradeRequired={isLicenseUpgradeRequired}
+                                addNewUser={addNewUser}
+                            />
                         }
                     >
                         PostgreSQL Protocol Credentials

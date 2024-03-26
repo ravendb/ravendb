@@ -150,4 +150,12 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
             DatabasesStubs.integrationsPostgreSqlCredentials()
         );
     }
+
+    withGenerateSecret(secret?: MockedValue<string>) {
+        return this.mockResolvedValue(
+            this.mocks.generateSecret,
+            secret,
+            "MXEv4ntxod7qM4mOeF9YZlKIuar1RKU8yQcQSESCzys="
+        );
+    }
 }

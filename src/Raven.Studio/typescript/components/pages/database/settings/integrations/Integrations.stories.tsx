@@ -51,6 +51,7 @@ export const IntegrationsStory: StoryObj<IntegrationsStoryArgs> = {
 
         databasesService.withIntegrationsPostgreSqlSupport(args.isPostgreSqlSupport);
         databasesService.withIntegrationsPostgreSqlCredentials(args.credentialsDto);
+        databasesService.withGenerateSecret();
 
         return <Integrations {...forceStoryRerender()} />;
     },

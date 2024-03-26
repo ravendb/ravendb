@@ -23,20 +23,28 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { tryHandleSubmit } from "components/utils/common";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
+import copyToClipboard from "common/copyToClipboard";
+import { todo } from "common/developmentHelper";
 
 interface IntegrationsUserListProps {
     initialUsername: string;
     removeUser: () => void;
 }
 
+todo(
+    "Feature",
+    "Damian",
+    "Implement Test Connection button when server-side is ready.",
+    "https://issues.hibernatingrhinos.com/issue/RavenDB-22189/PostgreSQL-test-credentials"
+);
+
 export default function IntegrationsUserList(props: IntegrationsUserListProps) {
     const { initialUsername, removeUser } = props;
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
-    const isNew = !initialUsername;
 
-    const { control, formState, handleSubmit, reset } = useForm<FormData>({
+    const { control, formState, handleSubmit, reset, setValue } = useForm<FormData>({
         resolver: formResolver,
         defaultValues: {
             username: initialUsername,
@@ -46,8 +54,16 @@ export default function IntegrationsUserList(props: IntegrationsUserListProps) {
     useDirtyFlag(formState.isDirty);
     const formValues = useWatch({ control });
 
+    const isNew = !formState.defaultValues.username;
+
     const { databasesService } = useServices();
     const confirm = useConfirm();
+
+    const asyncGeneratePassword = useAsyncCallback(databasesService.generateSecret, {
+        onSuccess(result) {
+            setValue("password", result);
+        },
+    });
 
     const asyncDeleteUser = useAsyncCallback(() => {
         databasesService.deleteIntegrationsPostgreSqlCredentials(databaseName, initialUsername);
@@ -68,9 +84,9 @@ export default function IntegrationsUserList(props: IntegrationsUserListProps) {
         }
     };
 
-    const saveCredentials: SubmitHandler<any> = (formData: any) => {
+    const saveCredentials: SubmitHandler<FormData> = (formData) => {
         return tryHandleSubmit(async () => {
-            databasesService.saveIntegrationsPostgreSqlCredentials(databaseName, formData.user, formData.password);
+            databasesService.saveIntegrationsPostgreSqlCredentials(databaseName, formData.username, formData.password);
             reset(formData);
         });
     };
@@ -126,8 +142,8 @@ export default function IntegrationsUserList(props: IntegrationsUserListProps) {
                         <InputGroup className="vstack mb-1">
                             <Label>Username</Label>
                             <FormInput
-                                name="username"
                                 control={control}
+                                name="username"
                                 type="text"
                                 placeholder="Enter your username"
                                 autoComplete="off"
@@ -138,18 +154,29 @@ export default function IntegrationsUserList(props: IntegrationsUserListProps) {
                             <HStack className="gap-1">
                                 <div className="position-relative flex-grow">
                                     <FormInput
-                                        name="password"
                                         control={control}
+                                        name="password"
                                         type="password"
                                         placeholder="Enter your password"
                                         passwordPreview
                                     />
                                 </div>
-                                <Button title="Generate a random password">
-                                    <Icon icon="random" />
+                                <ButtonWithSpinner
+                                    type="button"
+                                    title="Generate a random password"
+                                    onClick={asyncGeneratePassword.execute}
+                                    icon="random"
+                                    isSpinning={asyncGeneratePassword.loading}
+                                >
                                     Generate password
-                                </Button>
-                                <Button title="Copy to clipboard">
+                                </ButtonWithSpinner>
+                                <Button
+                                    type="button"
+                                    title="Copy to clipboard"
+                                    onClick={() =>
+                                        copyToClipboard.copy(formValues.password, "Password was copied to clipboard.")
+                                    }
+                                >
                                     <Icon icon="copy-to-clipboard" margin="m-0" />
                                 </Button>
                             </HStack>
