@@ -3,10 +3,12 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
 using System.Text;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Server;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
@@ -20,7 +22,8 @@ public sealed unsafe class CompactKey : IDisposable
 {
     public static readonly CompactKey NullInstance = new();
 
-    private static readonly PerCoreStatic<ArrayPool<byte>> StoragePool = new (ArrayPool<byte>.Create);
+    [ThreadStatic]
+    private static ArrayPool<byte> StoragePool;
 
     private LowLevelTransaction _owner;
 
@@ -74,7 +77,9 @@ public sealed unsafe class CompactKey : IDisposable
         _currentIdx = 0;
         MaxLength = 0;
 
-        _storage = StoragePool.Get().Rent(2 * Constants.CompactTree.MaximumKeySize);
+        StoragePool ??= ArrayPool<byte>.Create();
+
+        _storage = StoragePool.Rent(2 * Constants.CompactTree.MaximumKeySize);
     }
 
     public void Reset()
@@ -84,7 +89,7 @@ public sealed unsafe class CompactKey : IDisposable
 
         _owner = null;
 
-        StoragePool.Get().Return(_storage);
+        StoragePool.Return(_storage);
         _storage = null;
     }
 
@@ -227,14 +232,11 @@ public sealed unsafe class CompactKey : IDisposable
         // Request more memory, copy the content and return it.
         maxSize = Math.Max(maxSize, oldStorage.Length) * 2;
 
-        var storagePool = StoragePool.Get();        
-        var newStorage = storagePool.Rent(maxSize);
-        oldStorage.AsSpan(0, _currentIdx).CopyTo(newStorage.AsSpan());
+        var storage = StoragePool.Rent(maxSize);
+        _storage.AsSpan(0, _currentIdx).CopyTo(storage.AsSpan());
         
-        storagePool.Return(oldStorage); // Return old to pool.
-        
-        _storage = newStorage; // Update the new references.
-        
+        StoragePool.Return(_storage); // Return old to pool.
+        _storage = storage; // Update the new references.
     }
 
     public void Set(ReadOnlySpan<byte> key)
