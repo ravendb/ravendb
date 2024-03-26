@@ -3,11 +3,11 @@ import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import React from "react";
 import { AsyncStateStatus } from "react-async-hook";
-import { CustomSorterFormData } from "components/common/customSorters/editCustomSorterValidation";
 import ServerWideCustomSortersListItem from "components/pages/resources/manageServer/serverWideSorters/ServerWideCustomSortersListItem";
+import { CustomSorter } from "components/common/customSorters/useCustomSorters";
 
 interface ServerWideCustomSortersListProps {
-    sorters: CustomSorterFormData[];
+    sorters: CustomSorter[];
     fetchStatus: AsyncStateStatus;
     reload: () => void;
     remove: (idx: number) => void;
@@ -28,15 +28,7 @@ export default function ServerWideCustomSortersList(props: ServerWideCustomSorte
         return <EmptySet>No server-wide custom sorters have been defined</EmptySet>;
     }
 
-    return (
-        <div>
-            {sorters.map((sorter, idx) => (
-                <ServerWideCustomSortersListItem
-                    key={sorter.name + idx}
-                    initialSorter={sorter}
-                    remove={() => remove(idx)}
-                />
-            ))}
-        </div>
-    );
+    return sorters.map((sorter, idx) => (
+        <ServerWideCustomSortersListItem key={sorter.id} initialSorter={sorter} remove={() => remove(idx)} />
+    ));
 }

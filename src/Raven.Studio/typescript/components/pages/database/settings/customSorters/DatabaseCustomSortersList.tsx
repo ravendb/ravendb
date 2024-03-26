@@ -2,12 +2,12 @@ import { EmptySet } from "components/common/EmptySet";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import DatabaseCustomSortersListItem from "components/pages/database/settings/customSorters/DatabaseCustomSortersListItem";
-import { CustomSorterFormData } from "components/common/customSorters/editCustomSorterValidation";
 import React from "react";
 import { AsyncStateStatus } from "react-async-hook";
+import { CustomSorter } from "components/common/customSorters/useCustomSorters";
 
 interface DatabaseCustomSortersListProps {
-    sorters: CustomSorterFormData[];
+    sorters: CustomSorter[];
     fetchStatus: AsyncStateStatus;
     reload: () => void;
     serverWideSorterNames: string[];
@@ -29,16 +29,12 @@ export default function DatabaseCustomSortersList(props: DatabaseCustomSortersLi
         return <EmptySet>No custom sorters have been defined</EmptySet>;
     }
 
-    return (
-        <div>
-            {sorters.map((sorter, idx) => (
-                <DatabaseCustomSortersListItem
-                    key={sorter.name + idx}
-                    initialSorter={sorter}
-                    serverWideSorterNames={serverWideSorterNames}
-                    remove={() => remove(idx)}
-                />
-            ))}
-        </div>
-    );
+    return sorters.map((sorter, idx) => (
+        <DatabaseCustomSortersListItem
+            key={sorter.id}
+            initialSorter={sorter}
+            serverWideSorterNames={serverWideSorterNames}
+            remove={() => remove(idx)}
+        />
+    ));
 }
