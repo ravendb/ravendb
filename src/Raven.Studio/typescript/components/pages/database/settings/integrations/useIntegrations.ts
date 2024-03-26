@@ -5,6 +5,11 @@ import { useAppSelector } from "components/store";
 import { useState } from "react";
 import { useAsync } from "react-async-hook";
 
+export interface IntegrationsUser {
+    id: string;
+    username: string;
+}
+
 export function useIntegrations() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
     const hasPostgreSqlIntegration = useAppSelector(licenseSelectors.statusValue("HasPostgreSqlIntegration"));
@@ -30,7 +35,12 @@ export function useIntegrations() {
             }
 
             const result = await databasesService.getIntegrationsPostgreSqlCredentials(db.name);
-            return result?.Users?.map((x) => x.Username) ?? [];
+            return (
+                result?.Users?.map((x) => ({
+                    id: _.uniqueId(),
+                    username: x.Username,
+                })) ?? []
+            );
         },
         [db.name, isLicenseUpgradeRequired],
         {
@@ -40,10 +50,10 @@ export function useIntegrations() {
         }
     );
 
-    const [users, setUsers] = useState([]);
+    const [users, setUsers] = useState<IntegrationsUser[]>([]);
 
     const addNewUser = () => {
-        setUsers((prev) => ["", ...prev]);
+        setUsers((prev) => [{ id: _.uniqueId(), username: "" }, ...prev]);
     };
 
     const removeUser = (index: number) => {

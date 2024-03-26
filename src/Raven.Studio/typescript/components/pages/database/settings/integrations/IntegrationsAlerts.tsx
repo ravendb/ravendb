@@ -12,15 +12,22 @@ export default function IntegrationsAlerts(props: IntegrationsAlertsProps) {
     const { isLicenseUpgradeRequired, isPostgreSqlSupportEnabled } = props;
 
     const postgreSqlDocsLink = useRavenLink({ hash: "HDTCH7" });
+    const buyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
 
     if (isLicenseUpgradeRequired) {
         return (
-            <Alert color="warning">
+            <Alert color="warning" className="text-center">
                 <Icon icon="warning" />
                 <span>
                     To use this feature, your license must include either of the following features: PostgreSQL
                     integration or Power BI.
                 </span>
+
+                <div className="text-center mt-1">
+                    <a href={buyLink} target="_blank" className="btn btn-primary btn-xs rounded-pill">
+                        Licensing options <Icon icon="newtab" margin="ms-1" />
+                    </a>
+                </div>
             </Alert>
         );
     }
