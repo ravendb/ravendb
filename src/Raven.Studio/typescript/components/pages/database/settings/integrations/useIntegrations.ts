@@ -39,7 +39,7 @@ export function useIntegrations() {
             const result = await databasesService.getIntegrationsPostgreSqlCredentials(db.name);
             return (
                 result?.Users?.map((x) => ({
-                    id: _.uniqueId(),
+                    id: createId(),
                     username: x.Username,
                 })) ?? []
             );
@@ -55,7 +55,7 @@ export function useIntegrations() {
     const [users, setUsers] = useState<IntegrationsUser[]>([]);
 
     const addNewUser = () => {
-        setUsers((prev) => [{ id: _.uniqueId(), username: "" }, ...prev]);
+        setUsers((prev) => [{ id: createId(), username: "" }, ...prev]);
     };
 
     const removeUser = (index: number) => {
@@ -71,4 +71,8 @@ export function useIntegrations() {
         addNewUser,
         removeUser,
     };
+}
+
+function createId() {
+    return _.uniqueId("integrations-user-");
 }
