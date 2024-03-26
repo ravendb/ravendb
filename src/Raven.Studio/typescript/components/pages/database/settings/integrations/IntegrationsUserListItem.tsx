@@ -65,10 +65,14 @@ export default function IntegrationsUserList(props: IntegrationsUserListProps) {
         },
     });
 
-    const asyncDeleteUser = useAsyncCallback(() => {
-        databasesService.deleteIntegrationsPostgreSqlCredentials(databaseName, initialUsername);
-        removeUser();
-    });
+    const asyncDeleteUser = useAsyncCallback(
+        () => databasesService.deleteIntegrationsPostgreSqlCredentials(databaseName, initialUsername),
+        {
+            onSuccess() {
+                removeUser();
+            },
+        }
+    );
 
     const onDeleteUser = async () => {
         const isConfirmed = await confirm({

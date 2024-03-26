@@ -310,11 +310,10 @@ export default class DatabasesService {
     }
 
     async deleteIntegrationsPostgreSqlCredentials(databaseName: string, username: string) {
-        return new deleteIntegrationsPostgreSqlCredentialsCommand(databaseName, username);
+        return new deleteIntegrationsPostgreSqlCredentialsCommand(databaseName, username).execute();
     }
 
     async generateSecret() {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
         return new generateSecretCommand().execute();
     }
 }

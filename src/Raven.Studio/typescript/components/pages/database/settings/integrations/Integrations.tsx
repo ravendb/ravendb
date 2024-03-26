@@ -2,19 +2,17 @@
 import { Col, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
-import { useAppSelector } from "components/store";
 import { HrHeader } from "components/common/HrHeader";
 import { IntegrationsInfoHub } from "viewmodels/database/settings/IntegrationsInfoHub";
-import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import IntegrationsUserList from "components/pages/database/settings/integrations/IntegrationsUserList";
 import { useIntegrations } from "components/pages/database/settings/integrations/useIntegrations";
 import IntegrationsAlerts from "components/pages/database/settings/integrations/IntegrationsAlerts";
 import FeatureNotAvailable from "components/common/FeatureNotAvailable";
-import DatabaseUtils from "components/utils/DatabaseUtils";
 import IntegrationsAddNewButton from "components/pages/database/settings/integrations/IntegrationsAddNewButton";
 
 export default function Integrations() {
     const {
+        isSharded,
         isLicenseUpgradeRequired,
         isPostgreSqlSupportEnabled,
         asyncGetPostgreSqlUsers,
@@ -23,9 +21,7 @@ export default function Integrations() {
         removeUser,
     } = useIntegrations();
 
-    const db = useAppSelector(databaseSelectors.activeDatabase);
-
-    if (db.isSharded || DatabaseUtils.isSharded(db.name)) {
+    if (isSharded) {
         return (
             <FeatureNotAvailable>
                 <span>
