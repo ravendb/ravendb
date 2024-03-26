@@ -220,7 +220,8 @@ loadToOrders(partitionBy(key), o);
                 Assert.True(result.Success);
                 Assert.False(result.Disabled);
 
-                Assert.True(WaitForDatabaseToUnlock(store, timeout: TimeSpan.FromMilliseconds(1000), out var database));
+                var database = await WaitForDatabaseToUnlockAsync(store, timeout: TimeSpan.FromMilliseconds(1000));
+                Assert.NotNull(database);
 
                 etlDone = WaitForEtl(database, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -273,9 +274,8 @@ loadToOrders(partitionBy(key), o);
             return mre;
         }
 
-        private bool WaitForDatabaseToUnlock(IDocumentStore store, TimeSpan timeout, out DocumentDatabase database)
+        private async Task<DocumentDatabase> WaitForDatabaseToUnlockAsync(IDocumentStore store, TimeSpan timeout)
         {
-            database = null;
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
@@ -283,14 +283,13 @@ loadToOrders(partitionBy(key), o);
             {
                 try
                 {
-                    database = Databases.GetDocumentDatabaseInstanceFor(store).Result;
-                    return true;
+                    return await Databases.GetDocumentDatabaseInstanceFor(store);
                 }
                 catch (AggregateException e)
                 {
                     if (e.Message.Contains($"The database '{store.Database}' has been unloaded and locked"))
                     {
-                        Thread.Sleep(10);
+                        await Task.Delay(10);
                         continue;
                     }
 
@@ -298,7 +297,7 @@ loadToOrders(partitionBy(key), o);
                 }
             }
 
-            return false;
+            return null;
         }
 
         private void SetupLocalOlapEtl(DocumentStore store, string script, string path, string name = "olap-test", string frequency = null, string transformationName = null)

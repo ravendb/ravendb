@@ -1855,7 +1855,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var data = new StringContent(JsonConvert.SerializeObject(localSettings), Encoding.UTF8, "application/json");
                 var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=Local ", data);
-                string result = response.Content.ReadAsStringAsync().Result;
+                string result = await response.Content.ReadAsStringAsync();
                 var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
                 Assert.Equal(1, restorePoints.List.Count);
                 var point = restorePoints.List.First();
@@ -1881,8 +1881,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.Equal(100, val);
                     }
 
-                    var originalDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).Result;
-                    var restoredDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+                    var originalDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var restoredDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                     using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
@@ -2107,7 +2107,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 await Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
-                    var operationId = store.Maintenance.SendAsync(new BackupOperation(config)).Result.Id;
+                    var backupOperationId = await store.Maintenance.SendAsync(new BackupOperation(config));
+                    var operationId = backupOperationId.Id;
                     await store.Commands().ExecuteAsync(new KillOperationCommand(operationId));
                     tcs.TrySetResult(null);
 
@@ -2172,7 +2173,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var client = store.GetRequestExecutor().HttpClient;
                 // one time backup always save the status under task id 0
                 var response = await client.GetAsync(store.Urls.First() + $"/periodic-backup/status?name={store.Database}&taskId=0");
-                string result = response.Content.ReadAsStringAsync().Result;
+                string result = await response.Content.ReadAsStringAsync();
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {
                     using var bjro = ctx.Sync.ReadForMemory(result, "test");
@@ -2301,7 +2302,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var client = store.GetRequestExecutor().HttpClient;
                 var response = await client.GetAsync(store.Urls.First() + $"/databases?name={store.Database}");
-                string result = response.Content.ReadAsStringAsync().Result;
+                string result = await response.Content.ReadAsStringAsync();
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {
                     using var bjro = ctx.Sync.ReadForMemory(result, "test");
@@ -2409,7 +2410,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         }
                         continue;
                     }
-                    var dbRecord = dbTask.Result;
+                    var dbRecord = await dbTask;
                     if (dbRecord == null || dbRecord.DeletionInProgress == null || dbRecord.DeletionInProgress.Count == 0)
                     {
                         return true;
@@ -3013,7 +3014,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
-                    var taskId = store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config)).Result.TaskId;
+                    var updatePeriodicBackupOperation = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                    var taskId = updatePeriodicBackupOperation.TaskId;
 
                     OngoingTaskBackup taskBackupInfo = null;
                     using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(server.WebUrl, null, DocumentConventions.DefaultForServer))

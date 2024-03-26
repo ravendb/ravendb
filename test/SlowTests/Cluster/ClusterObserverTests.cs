@@ -69,8 +69,8 @@ namespace SlowTests.Cluster
                         tcs.TrySetCanceled();
                 }))
                 {
-                    var t = preferred.ServerStore.DatabasesLandlord.DatabasesCache.ForTestingPurposesOnly().Replace(databaseName, tcs.Task);
-                    t.Result.Dispose();
+                    var database = await preferred.ServerStore.DatabasesLandlord.DatabasesCache.ForTestingPurposesOnly().Replace(databaseName, tcs.Task);
+                    database.Dispose();
 
                     Assert.True(await WaitForValueAsync(async () =>
                     {

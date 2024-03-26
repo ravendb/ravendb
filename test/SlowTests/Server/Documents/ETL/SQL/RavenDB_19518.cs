@@ -57,7 +57,7 @@ public class RavenDB_19518 : SqlAwareTestBase
 
                 Assert.NotNull(result1.RaftCommandIndex);
 
-                var database = GetDatabase(store.Database).Result;
+                var database = await GetDatabase(store.Database);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {

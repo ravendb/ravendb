@@ -41,7 +41,7 @@ namespace SlowTests.Server.Replication
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
+                var storage1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
 
                 using (var session = store1.OpenSession())
                 {
@@ -486,9 +486,14 @@ namespace SlowTests.Server.Replication
             EtlProcess etlP = null;
             foreach (var server in cluster.Nodes)
             {
-                if ((server.Disposed) || (server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).Result.EtlLoader.Processes.Length == 0))
+                if (server.Disposed)
                     continue;
-                etlP = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).Result.EtlLoader.Processes[0];
+
+                var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                if (db.EtlLoader.Processes.Length == 0)
+                    continue;
+
+                etlP = db.EtlLoader.Processes[0];
             }
 
             var total = 0;
@@ -526,8 +531,8 @@ namespace SlowTests.Server.Replication
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
-                var storage2 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database).Result;
+                var storage1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
 
                 using (var session = store1.OpenSession())
                 {

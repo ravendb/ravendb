@@ -45,8 +45,8 @@ namespace SlowTests.Issues
 
                     async Task UpdateTopology()
                     {
-                        var node = executor.GetPreferredNode().Result.Node;
-                        var topologyUpdateCommand = new RequestExecutor.UpdateTopologyParameters(node);
+                        var node = await executor.GetPreferredNode();
+                        var topologyUpdateCommand = new RequestExecutor.UpdateTopologyParameters(node.Node);
                         await executor.UpdateTopologyAsync(topologyUpdateCommand);
                     }
                 }

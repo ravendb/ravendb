@@ -202,7 +202,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 await session.SaveChangesAsync();
             }
 
-            var database = GetDatabase(src.Database).Result;
+            var database = await GetDatabase(src.Database);
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var testRavenEtlScript = new TestRavenEtlScript
@@ -1517,7 +1517,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             var url = $"{src.Urls.First()}/databases/{src.Database}/etl/progress";
             var response = (await client.GetAsync(url));
             response.EnsureSuccessStatusCode();
-            var strResult = response.Content.ReadAsStringAsync().Result;
+            var strResult = await response.Content.ReadAsStringAsync();
             var etlProgressResult = JsonConvert.DeserializeObject<EtlProgressResult>(strResult);
             var processesProgress = etlProgressResult.Results.First().ProcessesProgress.First();
             return processesProgress;
@@ -1840,7 +1840,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
             var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
 
-            var database = GetDatabase(src.Database).Result;
+            var database = await GetDatabase(src.Database);
             using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
             using (var tr = context.OpenWriteTransaction())
             {
