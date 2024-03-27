@@ -2,9 +2,8 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-
 class delayBackupCommand extends commandBase {
-    private db: database | string;
+    private databaseName: string;
 
     private readonly taskId: number;
 
@@ -14,14 +13,14 @@ class delayBackupCommand extends commandBase {
         super();
         this.duration = duration;
         this.taskId = taskId;
-        this.db = db;
+        this.databaseName = (_.isString(db) ? db : db.name);
     }
  
     execute(): JQueryPromise<Raven.Client.Documents.Operations.Backups.StartBackupOperationResult> {
         const args = {
             taskId: this.taskId,
             duration: this.duration,
-            database: this.db
+            database: this.databaseName
         }
         const url = endpoints.global.adminDatabases.adminBackupTaskDelay + this.urlEncodeArgs(args);
         

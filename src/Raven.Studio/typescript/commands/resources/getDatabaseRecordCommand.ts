@@ -5,30 +5,26 @@ import endpoints = require("endpoints");
 
 class getDatabaseRecordCommand extends commandBase {
 
-    private readonly db: database | string;
+    private readonly databaseName: string;
     private readonly reportRefreshProgress: boolean;
 
     constructor(db: database | string, reportRefreshProgress = false) {
         super();
-        this.db = db;
+        this.databaseName = (_.isString(db) ? db : db.name);
         this.reportRefreshProgress = reportRefreshProgress;
-
-        if (!db) {
-            throw new Error("Must specify database");
-        }
     }
 
     execute(): JQueryPromise<document> {
         const resultsSelector = (queryResult: queryResultDto<documentDto>) => new document(queryResult);
         const args = {
-            name: this.db
+            name: this.databaseName
         };
         const url = endpoints.global.adminDatabases.adminDatabases + this.urlEncodeArgs(args);
 
         const getTask = this.query(url, null, null, resultsSelector);
 
         if (this.reportRefreshProgress) {
-            getTask.done(() => this.reportSuccess("Database Record of '" + this.db + "' was successfully refreshed!"));
+            getTask.done(() => this.reportSuccess("Database Record of '" + this.databaseName + "' was successfully refreshed!"));
             getTask.fail((response: JQueryXHR) => this.reportError("Failed to refresh Database Record!", response.responseText, response.statusText));
         }
         return getTask;
