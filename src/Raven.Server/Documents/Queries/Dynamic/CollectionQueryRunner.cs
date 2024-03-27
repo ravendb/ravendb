@@ -23,6 +23,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 {
     public class CollectionQueryRunner : AbstractQueryRunner
     {
+        public const int UnboundedQueryResultMarker = 0;
         public const string CollectionIndexPrefix = "collection/";
 
         public CollectionQueryRunner(DocumentDatabase database) : base(database)
@@ -260,7 +261,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     resultToFill.AddRevisionIncludes(includeRevisionsCommand);
 
                 resultToFill.RegisterTimeSeriesFields(query, fieldsToFetch);
-                resultToFill.LongTotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
+                resultToFill.LongTotalResults = (totalResults.Value == UnboundedQueryResultMarker && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
                 resultToFill.TotalResults = (int)resultToFill.LongTotalResults;
                 resultToFill.SkippedResults = Convert.ToInt32(skippedResults.Value);
                 resultToFill.ScannedResults = scannedResults.Value;

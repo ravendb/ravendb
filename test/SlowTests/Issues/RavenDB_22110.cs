@@ -235,7 +235,11 @@ public class RavenDB_22110 : RavenTestBase
             "test", "library", "database", "issues"
         };
 
-        List<Order> orders = Enumerable.Range(0, 1024).Select(x => new Order() { Company = stringTable[_random.Next(stringTable.Length)] }).ToList();
+        List<Order> orders = Enumerable.Range(0, 1024).Select(x => new Order()
+        {
+            Company = stringTable[_random.Next(stringTable.Length)],
+            Freight = _random.Next(0, 16)
+        }).ToList();
 
         using (var bulk = store.BulkInsert())
         {
@@ -253,8 +257,19 @@ public class RavenDB_22110 : RavenTestBase
         
         return store;
     }
-    
-   
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [InlineData(false)]
+    public void CollectionQueryCountWithFilter(bool useIndex)
+    {
+        var indexName = useIndex ? MyIndexName : null;
+        
+        using var store = GetDatabaseWithDocuments(useIndex);
+        using var session = store.OpenSession(new SessionOptions() { NoCaching = true, NoTracking = true });
+        var result = session.Query<Order>(indexName).Filter(x => x.Freight == 5).ToList();
+        var count = session.Query<Order>(indexName).Filter(x => x.Freight == 5).Count();
+        Assert.Equal(result.Count, count);
+    }
     
     private class Index : AbstractIndexCreationTask<Order>
     {
