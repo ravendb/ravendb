@@ -210,11 +210,17 @@ namespace RachisTests.DatabaseCluster
                 var update = await source.Maintenance.SendAsync(op);
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(update.RaftCommandIndex);
 
-                await WaitAndAssertForValueAsync(() =>
+                await WaitAndAssertForValueAsync(async () =>
                 {
-                    return Servers.SelectMany(s =>
+                    var databases = new List<DocumentDatabase>();
+                    foreach (var s in Servers)
                     {
-                        var db = s.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(source.Database).Result;
+                        var database = await s.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(source.Database);
+                        databases.Add(database);
+                    }
+
+                    return databases.SelectMany(db =>
+                    {
                         return db.ReplicationLoader.OutgoingHandlers.Where(h => h.Destination.Database == dest.Database);
                     }).Single().Server.NodeTag;
                 }, otherNodeTag);
@@ -669,9 +675,9 @@ namespace RachisTests.DatabaseCluster
                 var topology = databaseResult.Topology;
                 Assert.Equal(clusterSize, topology.AllNodes.Count());
 
-                await WaitForValueOnGroupAsync(topology, s =>
+                await WaitForValueOnGroupAsync(topology, async s =>
                {
-                   var db = s.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+                   var db = await s.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                    return db.ReplicationLoader?.OutgoingConnections.Count();
                }, clusterSize - 1, 60000);
 
@@ -692,9 +698,9 @@ namespace RachisTests.DatabaseCluster
                 await Task.Delay(200); // twice the heartbeat
                 await Assert.ThrowsAsync<Exception>(async () =>
                 {
-                    await WaitForValueOnGroupAsync(topology, (s) =>
+                    await WaitForValueOnGroupAsync(topology, async (s) =>
                     {
-                        var db = s.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+                        var db = await s.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                         return db.ReplicationLoader?.OutgoingHandlers.Any(o => o.GetReplicationPerformance().Any(p => p.Network.DocumentOutputCount > 0)) ?? false;
                     }, true);
                 });
@@ -772,9 +778,9 @@ namespace RachisTests.DatabaseCluster
                 // which means that we need to wait for replication to do a full mesh propagation
                 try
                 {
-                    await WaitForValueOnGroupAsync(topology, serverStore =>
+                    await WaitForValueOnGroupAsync(topology, async serverStore =>
                     {
-                        var database = serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+                        var database = await serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
 
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())

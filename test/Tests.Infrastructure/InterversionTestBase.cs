@@ -283,7 +283,7 @@ namespace Tests.Infrastructure
                 if (hasResult == false)
                     continue;
 
-                var line = readLineTask.Result;
+                var line = await readLineTask;
 
                 readLineTask = null;
 

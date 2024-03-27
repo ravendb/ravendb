@@ -254,7 +254,13 @@ namespace SlowTests.Issues
             }
             finally
             {
-                getAttachmentTask?.Result?.Dispose();
+                if (getAttachmentTask != null)
+                {
+                    using (await getAttachmentTask)
+                    {
+                        
+                    }
+                }
             }
 
             try

@@ -69,7 +69,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
                 await session.SaveChangesAsync();
             }
 
-            var etlDone = WaitForEtl(mentorNode, dbName, (n, statistics) => statistics.LoadSuccesses != 0);
+            var etlDone = await WaitForEtlAsync(mentorNode, dbName, (n, statistics) => statistics.LoadSuccesses != 0);
 
             var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -131,7 +131,7 @@ loadToOrders(partitionBy(key),
 
             var newResponsible = WaitForNewResponsibleNode(store2, task.TaskId, OngoingTaskType.OlapEtl, mentorTag);
             var newResponsibleNode = cluster.Nodes.Single(s => s.ServerStore.NodeTag == newResponsible);
-            etlDone = WaitForEtl(newResponsibleNode, dbName, (n, statistics) => statistics.LoadSuccesses != 0);
+            etlDone = await WaitForEtlAsync(newResponsibleNode, dbName, (n, statistics) => statistics.LoadSuccesses != 0);
 
             using (var session = store2.OpenAsyncSession())
             {
@@ -158,9 +158,9 @@ loadToOrders(partitionBy(key),
         }
 
 
-        private static ManualResetEventSlim WaitForEtl(RavenServer server, string databaseName, Func<string, EtlProcessStatistics, bool> predicate)
+        private static async Task<ManualResetEventSlim> WaitForEtlAsync(RavenServer server, string databaseName, Func<string, EtlProcessStatistics, bool> predicate)
         {
-            var database = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+            var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
 
             var mre = new ManualResetEventSlim();
 
