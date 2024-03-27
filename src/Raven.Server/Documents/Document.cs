@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Raven.Client;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -13,6 +14,7 @@ namespace Raven.Server.Documents
         public IEnumerable<DynamicJsonValue> TimeSeries;
         public string Key;
     }
+    
     public class Document : IDisposable
     {
         public static readonly Document ExplicitNull = new Document();
@@ -32,11 +34,9 @@ namespace Raven.Server.Documents
         public DocumentFlags Flags;
         public NonPersistentDocumentFlags NonPersistentFlags;
         public short TransactionMarker;
-        public bool IgnoreDispose;
-
         private bool _metadataEnsured;
         private bool _disposed;
-
+        
         public unsafe ulong DataHash
         {
             get
@@ -124,15 +124,25 @@ namespace Raven.Server.Documents
             var newData = Data.Clone(context);
             return CloneWith(context, newData);
         }
+        
+        public virtual TDocument Clone<TDocument>(JsonOperationContext context)
+            where TDocument : Document, new()
+        {
+            var newData = Data.Clone(context);
+            return CloneWith<TDocument>(context, newData);
+        }
 
-        public Document CloneWith(JsonOperationContext context, BlittableJsonReaderObject newData)
+        public Document CloneWith(JsonOperationContext context, BlittableJsonReaderObject newData) => CloneWith<Document>(context, newData);
+        
+        public virtual TDocument CloneWith<TDocument>(JsonOperationContext context, BlittableJsonReaderObject newData)
+            where TDocument : Document, new()
         {
             var newId = context.GetLazyString(Id);
             var newLowerId = context.GetLazyString(LowerId);
-            return new Document
+            return new TDocument()
             {
                 Etag = Etag,
-                StorageId = StorageId,
+                StorageId = Voron.Global.Constants.Compression.NonReturnableStorageId,
                 IndexScore = IndexScore,
                 Distance = Distance,
                 ChangeVector = ChangeVector,
@@ -143,12 +153,13 @@ namespace Raven.Server.Documents
                 Id = newId,
                 LowerId = newLowerId,
                 Data = newData,
+                TimeSeriesStream = TimeSeriesStream,
             };
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
-            if (_disposed || IgnoreDispose)
+            if (_disposed)
                 return;
 
             Id?.Dispose();
@@ -166,6 +177,12 @@ namespace Raven.Server.Documents
         public override string ToString()
         {
             return Id;
+        }
+        
+        [Conditional("DEBUG")]
+        internal void AssertNotDisposed()
+        {
+            Debug.Assert(_disposed == false, $"{nameof(Document)}.{nameof(AssertNotDisposed)}()");
         }
     }
 

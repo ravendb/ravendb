@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax;
@@ -12,16 +13,16 @@ using Sparrow.Server;
 
 namespace Raven.Server.Documents.Queries.Results
 {
-    public interface IQueryResultRetriever
+    public interface IQueryResultRetriever<TDocument> where TDocument : Document, new()
     {
-        (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token);
+        (TDocument Document, List<TDocument> List) Get(ref RetrieverInput retrieverInput, CancellationToken token);
 
         bool TryGetKeyLucene(ref RetrieverInput retrieverInput, out string key);
 
         bool TryGetKeyCorax(Corax.IndexSearcher searcher, long id, out UnmanagedSpan key);
 
-        Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
-
+        TDocument DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
+        void ClearCache();
     }
 
     public struct RetrieverInput

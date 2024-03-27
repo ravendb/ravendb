@@ -1,64 +1,88 @@
-﻿namespace Raven.Server.Utils;
-
+﻿using System;
+using Raven.Server.ServerWide.Context;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Queries;
 
-public sealed class LruDictionary<TKey, TValue> where TKey : notnull
+namespace Raven.Server.Utils;
+
+public class LruDictionary<TKey, TValue> 
+    where TKey : notnull, IComparable
 {
-    private readonly int _maxCapacity;
-    private readonly Dictionary<TKey, (LinkedListNode<TKey> Node, TValue Value)> _cache;
-    private readonly LinkedList<TKey> _list;
+    protected readonly int MaxCapacity;
+    protected readonly Dictionary<TKey, (LinkedListNode<TKey> Node, TValue Value)> Cache;
+    protected readonly LinkedList<TKey> List;
 
     public LruDictionary(int maxCapacity)
     {
-        _maxCapacity = maxCapacity;
-        _cache = new Dictionary<TKey, (LinkedListNode<TKey> Node, TValue Value)>(maxCapacity);
-        _list = new LinkedList<TKey>();
+        MaxCapacity = maxCapacity;  
+        Cache = new Dictionary<TKey, (LinkedListNode<TKey> Node, TValue Value)>(maxCapacity);
+        List = new LinkedList<TKey>();
     }
-
+    
     public bool TryGetValue(TKey key, out TValue value)
     {
-        if (_cache.TryGetValue(key, out var node) == false)
+        if (Cache.TryGetValue(key, out var node) == false)
         {
             value = default;
             return false;
         }
 
-        _list.Remove(node.Node);
-        _list.AddFirst(node.Node);
+        List.Remove(node.Node);
+        List.AddFirst(node.Node);
 
         value = node.Value;
         return true;
     }
+    
+    public virtual void Clear()
+    {
+    }
 
-    public TValue this[TKey key]
+    public virtual bool IsTrackingSupported => false;
+
+    public virtual void TrackReferences(TValue parent, TValue queriedDocument, bool shouldIncreaseReferences = true)
+    {
+        throw new NotSupportedException($"{nameof(LruDictionary<TKey, TValue>)} doesn't support {nameof(TrackReferences)} method.");
+    }
+    
+    public virtual void IncreaseReference(TValue value)
+    {
+        throw new NotSupportedException($"{nameof(LruDictionary<TKey, TValue>)} doesn't support {nameof(IncreaseReference)} method.");
+    }
+    
+    public virtual TValue this[TKey key]
     {
         get
         {
             TryGetValue(key, out var value);
             return value;
         }
-
         set
         {
-            if (_cache.TryGetValue(key, out var node))
+            
+            if (Cache.TryGetValue(key, out var node))
             {
-                _list.Remove(node.Node);
-                _list.AddFirst(node.Node);
+                List.Remove(node.Node);
+                List.AddFirst(node.Node);
 
-                _cache[key] = (node.Node, value);
+                Cache[key] = (node.Node, value);
             }
             else
             {
-                if (_cache.Count >= _maxCapacity)
+                if (Cache.Count >= MaxCapacity)
                 {
-                    var removeKey = _list.Last!.Value;
-                    _cache.Remove(removeKey);
-                    _list.RemoveLast();
+                    var removeKey = List.Last!.Value;
+                    Cache.Remove(removeKey);
+                    List.RemoveLast();
                 }
 
                 // add cache
-                _cache.Add(key, (_list.AddFirst(key), value));
+                Cache.Add(key, (List.AddFirst(key), value));
             }
         }
     }
 }
+

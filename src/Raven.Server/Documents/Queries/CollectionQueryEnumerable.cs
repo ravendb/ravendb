@@ -22,11 +22,10 @@ using Query = Raven.Server.Documents.Queries.AST.Query;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class CollectionQueryEnumerable : IEnumerable<Document>
+    public class CollectionQueryEnumerable : IEnumerable<QueriedDocument>
     {
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documents;
-        private readonly SearchEngineType _searchEngineType;
         private readonly FieldsToFetch _fieldsToFetch;
         private readonly DocumentsOperationContext _context;
         private readonly IncludeDocumentsCommand _includeDocumentsCommand;
@@ -41,14 +40,13 @@ namespace Raven.Server.Documents.Queries
         private readonly QueryTimingsScope _queryTimings;
         private readonly bool _isAllDocsCollection;
 
-        public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, string collection,
+        public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection,
             IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
             IncludeRevisionsCommand includeRevisionsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<long> totalResults,
             Reference<int> scannedResults, Reference<long> skippedResults, CancellationToken token)
         {
             _database = database;
             _documents = documents;
-            _searchEngineType = searchEngineType;
             _fieldsToFetch = fieldsToFetch;
             _collection = collection;
             _isAllDocsCollection = collection == Constants.Documents.Collections.AllDocumentsCollection;
@@ -70,7 +68,7 @@ namespace Raven.Server.Documents.Queries
 
         public DocumentFields Fields { get; set; } = DocumentFields.All;
 
-        public IEnumerator<Document> GetEnumerator()
+        public IEnumerator<QueriedDocument> GetEnumerator()
         {
             return new Enumerator(_database, _documents, SearchEngineType.None, _fieldsToFetch, _collection, _isAllDocsCollection, _query,
                 _queryTimings, _context, _includeDocumentsCommand, _includeRevisionsCommand, _includeCompareExchangeValuesCommand, _totalResults, _scannedResults, 
@@ -115,7 +113,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private class Enumerator : IEnumerator<Document>
+        private class Enumerator : IEnumerator<QueriedDocument>
         {
             private readonly DocumentsStorage _documents;
             private readonly FieldsToFetch _fieldsToFetch;
@@ -137,12 +135,12 @@ namespace Raven.Server.Documents.Queries
 
             private readonly HashSet<ulong> _alreadySeenProjections;
             private long _start;
-            private IEnumerator<Document> _inner;
+            private IEnumerator<QueriedDocument> _inner;
             private bool _hasProjections;
-            private List<Document>.Enumerator _projections;
+            private List<QueriedDocument>.Enumerator _projections;
             private int _innerCount;
             private readonly List<Slice> _ids;
-            private readonly MapQueryResultRetriever _resultsRetriever;
+            private readonly MapQueryResultRetriever<QueriedDocument> _resultsRetriever;
             private readonly string _startsWith;
             private readonly Reference<long> _skippedResults;
             private readonly CancellationToken _token;
@@ -174,7 +172,7 @@ namespace Raven.Server.Documents.Queries
                 if (_fieldsToFetch.IsDistinct)
                     _alreadySeenProjections = new HashSet<ulong>();
 
-                _resultsRetriever = new MapQueryResultRetriever(database, query, queryTimings, documents, context, searchEngineType, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
+                _resultsRetriever = new MapQueryResultRetriever<QueriedDocument>(database, query, queryTimings, documents, context, searchEngineType, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
 
                 (_ids, _startsWith) = ExtractIdsFromQuery(query, context);
                 
@@ -255,7 +253,7 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            private (bool HasNext, Document Doc) GetNextDocument()
+            private (bool HasNext, QueriedDocument Doc) GetNextDocument()
             {
                 if (_hasProjections)
                 {
@@ -305,7 +303,7 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
                 
-                RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase.ZeroScore, null);
+                RetrieverInput retrieverInput = new(null, QueryResultRetrieverCommon.ZeroScore, null);
 
                 if (_fieldsToFetch.IsProjection)
                 {
@@ -332,9 +330,9 @@ namespace Raven.Server.Documents.Queries
                 return (true, _inner.Current);
             }
 
-            private IEnumerable<Document> GetDocuments()
+            private IEnumerable<QueriedDocument> GetDocuments()
             {
-                IEnumerable<Document> documents;
+                IEnumerable<QueriedDocument> documents;
 
                 if (_startsWith != null)
                 {
@@ -347,8 +345,8 @@ namespace Raven.Server.Documents.Queries
                     }
 
                     documents = _isAllDocsCollection
-                        ? _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, _startAfterId, _start, _query.PageSize, null, fields: _fields, _token) 
-                        : _documents.GetDocumentsStartingWith(_context, _startsWith, _startAfterId, _start, _query.PageSize, _collection, _skippedResults,  _fields, _token);
+                        ? _documents.GetDocumentsStartingWith<QueriedDocument>(_context, _startsWith, null, null, _startAfterId, _start, _query.PageSize, null, fields: _fields, _token) 
+                        : _documents.GetDocumentsStartingWith<QueriedDocument>(_context, _startsWith, _startAfterId, _start, _query.PageSize, _collection, _skippedResults,  _fields, _token);
 
                     if (countQuery)
                     {
@@ -358,7 +356,7 @@ namespace Raven.Server.Documents.Queries
                                 _totalResults.Value++;
                         }
 
-                        documents = Enumerable.Empty<Document>();
+                        documents = Enumerable.Empty<QueriedDocument>();
 
                         _query.PageSize = 0;
                     }
@@ -367,14 +365,14 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (_ids.Count == 0)
                     {
-                        documents = Enumerable.Empty<Document>();
+                        documents = Enumerable.Empty<QueriedDocument>();
                     }
                     else if (_alreadySeenIdsCount != null)
                     {
                         var idsLeft = _ids.Count - _alreadySeenIdsCount.Value;
                         if (idsLeft == 0)
                         {
-                            documents = Enumerable.Empty<Document>();
+                            documents = Enumerable.Empty<QueriedDocument>();
                         }
                         else
                         {
@@ -383,25 +381,25 @@ namespace Raven.Server.Documents.Queries
                             _alreadySeenIdsCount.Value += count;
 
                             documents = _isAllDocsCollection
-                                ? _documents.GetDocuments(_context, ids, 0, _query.PageSize, _totalResults)
-                                : _documents.GetDocumentsForCollection(_context, ids, _collection, 0, _query.PageSize, _totalResults);
+                                ? _documents.GetDocuments<QueriedDocument>(_context, ids, 0, _query.PageSize, _totalResults)
+                                : _documents.GetDocumentsForCollection<QueriedDocument>(_context, ids, _collection, 0, _query.PageSize, _totalResults);
                         }
                     }
                     else
                     {
                         documents = _isAllDocsCollection
-                            ? _documents.GetDocuments(_context, _ids, _start, _query.PageSize, _totalResults)
-                            : _documents.GetDocumentsForCollection(_context, _ids, _collection, _start, _query.PageSize, _totalResults);
+                            ? _documents.GetDocuments<QueriedDocument>(_context, _ids, _start, _query.PageSize, _totalResults)
+                            : _documents.GetDocumentsForCollection<QueriedDocument>(_context, _ids, _collection, _start, _query.PageSize, _totalResults);
                     }
                 }
                 else if (_isAllDocsCollection)
                 {
-                    documents = _documents.GetDocumentsFrom(_context, 0, _start, _query.PageSize);
+                    documents = _documents.GetDocumentsFrom<QueriedDocument>(_context, 0, _start, _query.PageSize);
                     _totalResults.Value = (int)_documents.GetNumberOfDocuments(_context);
                 }
                 else
                 {
-                    documents = _documents.GetDocumentsFrom(_context, _collection, 0, _start, _query.PageSize);
+                    documents = _documents.GetDocumentsFrom<QueriedDocument>(_context, _collection, 0, _start, _query.PageSize);
                     _totalResults.Value = (int)_documents.GetCollection(_collection, _context).Count;
                 }
 
@@ -425,10 +423,10 @@ namespace Raven.Server.Documents.Queries
                 while (true)
                 {
                     var count = 0;
-                    foreach (var document in _documents.GetDocumentsFrom(_context, _collection, 0, start, _query.PageSize))
+                    foreach (var document in _documents.GetDocumentsFrom<QueriedDocument>(_context, _collection, 0, start, _query.PageSize))
                     {
                         count++;
-                        RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase.ZeroScore, null);
+                        RetrieverInput retrieverInput = new(null, QueryResultRetrieverCommon.ZeroScore, null);
                         if (_fieldsToFetch.IsProjection)
                         {
                             var result = _resultsRetriever.GetProjectionFromDocument(document, ref retrieverInput, _fieldsToFetch, _context, _token);
@@ -484,7 +482,7 @@ namespace Raven.Server.Documents.Queries
                 throw new NotSupportedException();
             }
 
-            public Document Current { get; private set; }
+            public QueriedDocument Current { get; private set; }
 
             object IEnumerator.Current => Current;
 
