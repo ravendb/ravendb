@@ -197,13 +197,18 @@ namespace RachisTests
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
                 await WaitAndAssertForValueAsync(() => GetMembersCount(store), 3);
 
-                await WaitAndAssertForValueAsync(() =>
+                await WaitAndAssertForValueAsync(async () =>
                 {
-                    var changeVectors = cluster.Nodes.Select(s =>
-                        s.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).Result.ReadLastEtagAndChangeVector().ChangeVector.ToChangeVector()
-                            .SerializeVector()).ToHashSet();
-
-                    return Task.FromResult(changeVectors.Count);
+                    var cvs = new List<string>();
+                    foreach (var node in cluster.Nodes)
+                    {
+                        var database = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                        var changeVector = database.ReadLastEtagAndChangeVector().ChangeVector.ToChangeVector()
+                            .SerializeVector();
+                        cvs.Add(changeVector);
+                    }
+                    
+                    return cvs.ToHashSet().Count;
                 }, 1);
             }
         }

@@ -518,9 +518,14 @@ namespace SlowTests.Server.Replication
             EtlProcess etlP = null;
             foreach (var server in cluster.Nodes)
             {
-                if ((server.Disposed) || (server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).Result.EtlLoader.Processes.Length == 0))
+                if (server.Disposed)
                     continue;
-                etlP = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).Result.EtlLoader.Processes[0];
+
+                var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                if (db.EtlLoader.Processes.Length == 0)
+                    continue;
+
+                etlP = db.EtlLoader.Processes[0];
             }
 
             var total = 0;

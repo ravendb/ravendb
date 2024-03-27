@@ -495,7 +495,9 @@ namespace InterversionTests
         {
             using var client = new HttpClient();
             var url = new Uri($"{to.Urls.First()}/admin/remote-server/build/version?serverUrl={@from.Urls.First()}");
-            var rawVersionRespond = (await client.GetAsync(url)).Content.ReadAsStringAsync().Result;
+            var response = await client.GetAsync(url);
+            var rawVersionRespond = await response.Content.ReadAsStringAsync();
+
             var versionRespond = JsonConvert.DeserializeObject<BuildInfo>(rawVersionRespond);
             if (operateOnTypes == DatabaseItemType.None)
                 operateOnTypes = DatabaseSmugglerOptions.DefaultOperateOnTypes;
@@ -515,7 +517,9 @@ namespace InterversionTests
             var serializeObject = JsonConvert.SerializeObject(configuration, new StringEnumConverter());
             var data = new StringContent(serializeObject, Encoding.UTF8, "application/json");
             var rawOperationIdResult = await client.PostAsync($"{to.Urls.First()}/databases/{to.Database}/admin/smuggler/migrate/ravendb", data);
-            var operationIdResult = JsonConvert.DeserializeObject<OperationIdResult>(rawOperationIdResult.Content.ReadAsStringAsync().Result);
+            var rawRespond = await rawOperationIdResult.Content.ReadAsStringAsync();
+
+            var operationIdResult = JsonConvert.DeserializeObject<OperationIdResult>(rawRespond);
 
             return new Operation(to.GetRequestExecutor(), () => to.Changes(), to.Conventions, operationIdResult.OperationId);
         }

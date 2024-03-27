@@ -260,7 +260,7 @@ namespace Tests.Infrastructure
                     }
                     continue;
                 }
-                var dbRecord = dbTask.Result;
+                var dbRecord = await dbTask;
                 if (dbRecord == null || dbRecord.DeletionInProgress == null || dbRecord.DeletionInProgress.Count == 0)
                 {
                     return true;
@@ -375,7 +375,7 @@ namespace Tests.Infrastructure
             return string.Join(Environment.NewLine, servers2);
         }
 
-        protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<ServerStore, T> func, T expected, int timeout = 15000)
+        protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<ServerStore, Task<T>> func, T expected, int timeout = 15000)
         {
             var nodes = topology.AllNodes;
             var servers = new List<ServerStore>();

@@ -201,7 +201,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                         Content = data
                     }.WithConventions(store.Conventions));
 
-                    string result = response.Content.ReadAsStringAsync().Result;
+                    string result = await response.Content.ReadAsStringAsync();
                     var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
                     Assert.Equal(1, restorePoints.List.Count);
                     var point = restorePoints.List.First();

@@ -2111,7 +2111,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 await Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
-                    var operationId = store.Maintenance.SendAsync(new BackupOperation(config)).Result.Id;
+                    var backupOperationId = await store.Maintenance.SendAsync(new BackupOperation(config));
+                    var operationId = backupOperationId.Id;
                     await store.Commands().ExecuteAsync(new KillOperationCommand(operationId));
                     tcs.TrySetResult(null);
 
@@ -3024,7 +3025,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
-                    var taskId = store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config)).Result.TaskId;
+                    var updatePeriodicBackupOperation = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                    var taskId = updatePeriodicBackupOperation.TaskId;
 
                     OngoingTaskBackup taskBackupInfo = null;
                     using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(server.WebUrl, null, DocumentConventions.DefaultForServer))
