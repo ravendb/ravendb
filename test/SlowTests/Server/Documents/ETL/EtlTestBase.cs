@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.ETL;
@@ -125,7 +126,7 @@ namespace SlowTests.Server.Documents.ETL
 
         protected ManualResetEventSlim WaitForEtl(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
         {
-            var database = GetDatabase(store.Database).Result;
+            var database = AsyncHelpers.RunSync(() => GetDatabase(store.Database));
 
             var mre = new ManualResetEventSlim();
 
@@ -141,7 +142,7 @@ namespace SlowTests.Server.Documents.ETL
 
         protected async Task<(string, string, EtlProcessStatistics)> WaitForEtlAsync(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate, TimeSpan timeout)
         {
-            var database = GetDatabase(store.Database).Result;
+            var database = await GetDatabase(store.Database);
 
             var taskCompletionSource = new TaskCompletionSource<(string, string, EtlProcessStatistics)>(TaskCreationOptions.RunContinuationsAsynchronously);
 
