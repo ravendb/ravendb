@@ -1077,11 +1077,7 @@ namespace Raven.Server.Documents.Handlers
                     else
                     {
                         var listOfIds = ids.Select(x => x.ToString());
-                        var _ = new Reference<long>
-                        {
-                            Value = 0
-                        };
-                        var docs = Database.DocumentsStorage.GetDocuments(context, listOfIds, 0, long.MaxValue, _);
+                        var docs = Database.DocumentsStorage.GetDocuments(context, listOfIds, 0, long.MaxValue);
                         foreach (var doc in docs)
                         {
                             if (doc.TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out string collectionStr))

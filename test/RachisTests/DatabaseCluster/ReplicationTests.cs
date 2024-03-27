@@ -259,8 +259,7 @@ namespace RachisTests.DatabaseCluster
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
-                            var _ = new Reference<long> { Value = 0 };
-                            var docs = database.DocumentsStorage.GetDocuments(context, new List<string>() { "foo/bar2" }, 0, long.MaxValue, _).ToList();
+                            var docs = database.DocumentsStorage.GetDocuments(context, new List<string>() { "foo/bar2" }, 0, long.MaxValue).ToList();
                             return docs.Exists(x => x.Id == "foo/bar2");
                         }
                     }
