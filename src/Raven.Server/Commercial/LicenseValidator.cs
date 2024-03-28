@@ -32,24 +32,52 @@ namespace Raven.Server.Commercial
             return new DateTime(year, month, day);
         }
 
-        private static byte[] GetBytesFromBase64String(string str)
-        {
-            return Convert.FromBase64String(str);
-        }
-
         public static Dictionary<LicenseAttribute, object> Validate(License licenseKey, RSAParameters rsaParameters)
         {
-            var keys = ExtractKeys(licenseKey.Keys);
+            var licenseBinary = Convert.FromBase64String(string.Join(string.Empty, licenseKey.Keys));
+            byte[] actualLicenseData = licenseBinary[128..];
+            byte[] licenseSignature = licenseBinary[..128];
+
+            using (var ms = new MemoryStream())
+            using (var rsa = RSA.Create())
+            using (var binaryWriter = new BinaryWriter(ms))
+            {
+                ms.Write(actualLicenseData);
+                binaryWriter.Write(licenseKey.Id.ToByteArray());
+                binaryWriter.Write(licenseKey.Name);
+
+                var licenseToCheck = ms.ToArray();
+
+                rsa.ImportParameters(rsaParameters);
+                bool verifyHash;
+
+                using (var sha256 = SHA256.Create()) // first try with SHA256 (newer licenses)
+                {
+                    var hash = sha256.ComputeHash(licenseToCheck);
+
+                    verifyHash = rsa.VerifyHash(hash, licenseSignature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+                }
+
+                if (verifyHash == false) // if this failed, let's use using SHA1, instead
+                {
+                    using (var sha1 = SHA1.Create())
+                    {
+                        var hash = sha1.ComputeHash(licenseToCheck);
+
+                        verifyHash = rsa.VerifyHash(hash, licenseSignature, HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
+                    }
+                }
+            
+
+                if (verifyHash == false)
+                    throw new InvalidDataException("Could not validate signature on license");
+            }
 
             var result = new Dictionary<LicenseAttribute, object>();
-            using (var ms = new MemoryStream())
+            using (var ms = new MemoryStream(actualLicenseData))
             using (var br = new BinaryReader(ms))
             {
-                var buffer = keys.Attributes;
-                ms.Write(buffer, 0, buffer.Length);
-                ms.Position = 0;
-
-                while (ms.Position < buffer.Length)
+                while (ms.Position < ms.Length)
                 {
                     var licensePropertyExists = TryGetTermIndexAndType(br, out var licenseProperty, out ValueType type);
 
@@ -71,27 +99,6 @@ namespace Raven.Server.Commercial
                     }
 
                     result[licenseProperty] = val;
-                }
-
-                var attributesLen = ms.Position;
-                ms.SetLength(attributesLen);
-
-                using (var binaryWriter = new BinaryWriter(ms))
-                using (var rsa = RSA.Create())
-                {
-                    binaryWriter.Write(licenseKey.Id.ToByteArray());
-                    binaryWriter.Write(licenseKey.Name);
-
-                    rsa.ImportParameters(rsaParameters);
-
-                    using (var sha1 = SHA1.Create())
-                    {
-                        ms.Position = 0;
-                        var hash = sha1.ComputeHash(ms);
-
-                        if (rsa.VerifyHash(hash, keys.Signature, HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1) == false)
-                            throw new InvalidDataException("Could not validate signature on license");
-                    }
                 }
 
                 return result;
@@ -123,28 +130,6 @@ namespace Raven.Server.Commercial
 
             licenseProperty = Terms[index];
             return true;
-        }
-
-        private sealed class Keys
-        {
-            public byte[] Attributes { get; set; }
-
-            public byte[] Signature { get; set; }
-        }
-
-        private static Keys ExtractKeys(IEnumerable<string> keys)
-        {
-            var keysArray = keys.ToArray();
-            var stringKey = string.Join(string.Empty, keysArray);
-            var keysByteArray = GetBytesFromBase64String(stringKey);
-            var attributes = keysByteArray.Skip(128).Take(keysByteArray.Length - 128).ToArray();
-            Array.Resize(ref keysByteArray, 128);
-
-            return new Keys
-            {
-                Signature = keysByteArray,
-                Attributes = attributes
-            };
         }
     }
 }
