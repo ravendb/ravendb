@@ -5,6 +5,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -60,7 +61,7 @@ namespace RachisTests
         public async Task RavenDB_13659()
         {
             var leader = await CreateNetworkAndGetLeader(1);
-            var mre = new ManualResetEvent(false);
+            var mre = new AsyncManualResetEvent();
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             leader.Timeout.Start(() =>
@@ -84,7 +85,7 @@ namespace RachisTests
             using (leader.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenWriteTransaction())
             {
-                mre.WaitOne();
+                await mre.WaitAsync();
                 leader.SetNewStateInTx(context, RachisState.Follower, null, leader.CurrentTerm, "deadlock");
                 context.Transaction.Commit();
             }

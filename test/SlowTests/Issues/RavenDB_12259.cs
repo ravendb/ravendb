@@ -5,6 +5,7 @@ using FastTests;
 using Orders;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -36,7 +37,7 @@ namespace SlowTests.Issues
                     Projection = company => new { Name = company.Name }
                 });
 
-                var mre = new ManualResetEventSlim();
+                var mre = new AsyncManualResetEvent();
 
                 using (var worker = store.Subscriptions.GetSubscriptionWorker(name))
                 {
@@ -60,7 +61,7 @@ namespace SlowTests.Issues
                         mre.Set();
                     });
 
-                    Assert.True(mre.Wait(TimeSpan.FromSeconds(10)));
+                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(10)));
                     await worker.DisposeAsync();
                     await r;// no error
                 }
@@ -91,7 +92,7 @@ namespace SlowTests.Issues
                         mre.Set();
                     });
 
-                    Assert.True(mre.Wait(TimeSpan.FromSeconds(10)));
+                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(10)));
                     await worker.DisposeAsync();
                     await r;// no error
                 }

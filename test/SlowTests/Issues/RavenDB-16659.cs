@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using SlowTests.Core.Utils.Entities;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,7 @@ namespace SlowTests.Issues
         public async Task DeleteDatabaseDuringRestore()
         {
             DoNotReuseServer();
-            var mre = new ManualResetEventSlim();
+            var mre = new AsyncManualResetEvent();
             var backupPath = NewDataPath();
             
             using (var store = GetDocumentStore())
@@ -54,7 +55,7 @@ namespace SlowTests.Issues
                     Server.ServerStore.ForTestingPurposesOnly().RestoreDatabaseAfterSavingDatabaseRecord += () => mre.Set();
                     
                     var op  = await store.Maintenance.Server.SendAsync(restoreOperation);
-                    var res = mre.Wait(TimeSpan.FromSeconds(30));
+                    var res = await mre.WaitAsync(TimeSpan.FromSeconds(30));
                     Assert.True(res);
                     var e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true)));
                     Assert.Contains($"Can't delete database '{databaseName}' while the restore process is in progress.", e.Message);

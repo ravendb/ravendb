@@ -15,6 +15,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -177,7 +178,7 @@ namespace SlowTests.Issues
 
                 Assert.Contains($"The field 'LastName' is not indexed for index '{oldIndexDef.Name}', cannot query/sort on fields that are not indexed", e.InnerException.Message);
 
-                var mre = new ManualResetEventSlim();
+                var mre = new AsyncManualResetEvent();
 
                 var changes = await store.Changes().EnsureConnectedNow();
                 var observable = changes.ForAllIndexes();
@@ -192,7 +193,7 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store);
 
-                Assert.True(mre.Wait(TimeSpan.FromSeconds(15)));
+                Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)));
 
                 using (var session = store.OpenSession())
                 {

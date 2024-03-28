@@ -9,6 +9,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -54,7 +55,7 @@ namespace SlowTests.Client.Subscriptions
                     }
                 });
 
-                var mre = new ManualResetEvent(false);
+                var mre = new AsyncManualResetEvent();
 
                 subscription.AfterAcknowledgment += batch =>
                 {
@@ -63,7 +64,7 @@ namespace SlowTests.Client.Subscriptions
                     return Task.CompletedTask;
                 };
               
-                Assert.True(mre.WaitOne(_reasonableWaitTime));
+                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
                 mre.Reset();
 
                 store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));
@@ -118,7 +119,7 @@ namespace SlowTests.Client.Subscriptions
                
                 try
                 {
-                    Assert.True(mre.WaitOne(_reasonableWaitTime));
+                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
                 }
                 catch (Exception e)
                 {
