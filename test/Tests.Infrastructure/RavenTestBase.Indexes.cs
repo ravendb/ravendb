@@ -14,6 +14,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
+using Sparrow.Server;
 
 namespace FastTests;
 
@@ -181,11 +182,11 @@ public partial class RavenTestBase
             return entriesCount;
         }
 
-        public ManualResetEventSlim WaitForIndexBatchCompleted(IDocumentStore store, Func<(string IndexName, bool DidWork), bool> predicate)
+        public AsyncManualResetEvent WaitForIndexBatchCompleted(IDocumentStore store, Func<(string IndexName, bool DidWork), bool> predicate)
         {
             var database = _parent.GetDatabase(store.Database).Result;
 
-            var mre = new ManualResetEventSlim();
+            var mre = new AsyncManualResetEvent();
 
             database.IndexStore.IndexBatchCompleted += x =>
             {

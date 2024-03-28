@@ -970,14 +970,14 @@ namespace Tests.Infrastructure
 
         public async Task WaitForLeader(TimeSpan timeout)
         {
+            using var cts = new CancellationTokenSource(timeout);
             var tasks = Servers
-                .Select(server => server.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None))
+                .Select(server => server.ServerStore.WaitForState(RachisState.Leader, cts.Token))
                 .ToList();
 
-            tasks.Add(Task.Delay(timeout));
-            await Task.WhenAny(tasks);
+            var t = await Task.WhenAny(tasks);
 
-            if (Task.Delay(timeout).IsCompleted)
+            if (t.Result == false)
                 throw new TimeoutException(Cluster.GetLastStatesFromAllServersOrderedByTime());
         }
 

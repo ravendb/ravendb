@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var mre = new ManualResetEventSlim();
+                var mre = new AsyncManualResetEvent();
 
                 var changes = await store.Changes().EnsureConnectedNow();
                 var observable = changes.ForAllDocuments();
@@ -36,7 +37,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Assert.True(mre.Wait(TimeSpan.FromSeconds(45)));
+                Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(45)));
             }
         }
     }

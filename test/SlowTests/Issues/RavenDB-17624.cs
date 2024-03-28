@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -53,7 +54,7 @@ namespace SlowTests.Issues
             using var worker = store.Subscriptions
                .GetSubscriptionWorker<Command>(workerOptions);
 
-            var mre = new ManualResetEvent(false);
+            var mre = new AsyncManualResetEvent();
             var cts = new CancellationTokenSource();
             var last = DateTime.UtcNow;
             InvalidOperationException exception = null;
@@ -72,7 +73,7 @@ namespace SlowTests.Issues
                 mre.Set();
             }, cts.Token);
 
-            Assert.True(mre.WaitOne(TimeSpan.FromSeconds(15)));
+            Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)));
             Assert.NotNull(exception);
             Assert.Equal("Session can only be opened once per each Subscription batch", exception.Message);
         }

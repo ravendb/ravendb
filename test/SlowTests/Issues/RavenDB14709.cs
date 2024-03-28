@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -54,7 +55,7 @@ namespace SlowTests.Issues
                 }
             });
 
-            var mre = new ManualResetEvent(false);
+            var mre = new AsyncManualResetEvent();
 
             subscription.AfterAcknowledgment += batch =>
             {
@@ -62,7 +63,7 @@ namespace SlowTests.Issues
                 return Task.CompletedTask;
             };
 
-            Assert.True(mre.WaitOne(_reasonableWaitTime));
+            Assert.True(await mre.WaitAsync(_reasonableWaitTime));
             await subscription.DisposeAsync();
             await subscriptionTask;
             Assert.NotEmpty(names);

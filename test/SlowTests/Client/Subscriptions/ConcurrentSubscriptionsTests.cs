@@ -173,7 +173,7 @@ namespace SlowTests.Client.Subscriptions
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                     await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
                     {
-                        var mre = new ManualResetEvent(false);
+                        var mre = new AsyncManualResetEvent();
 
                         var _ = Subscription2.Run(async x =>
                         {
@@ -186,7 +186,7 @@ namespace SlowTests.Client.Subscriptions
                             await tcs.Task;
                         });
 
-                        mre.WaitOne();
+                        await mre.WaitAsync();
 
                         var exception = string.Empty;
                         var t = subscription.Run(x =>
@@ -345,7 +345,7 @@ namespace SlowTests.Client.Subscriptions
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                     await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
                     {
-                        var mre = new ManualResetEvent(false);
+                        var mre = new AsyncManualResetEvent();
 
                         var _ = subscription2.Run(async x =>
                         {
@@ -358,7 +358,7 @@ namespace SlowTests.Client.Subscriptions
                             await tcs.Task;
                         });
 
-                        mre.WaitOne();
+                        await mre.WaitAsync();
 
                         using (var session = store.OpenAsyncSession())
                         {
@@ -444,7 +444,7 @@ namespace SlowTests.Client.Subscriptions
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                     await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
                     {
-                        var mre = new ManualResetEvent(false);
+                        var mre = new AsyncManualResetEvent();
 
                         var _ = Subscription2.Run(async x =>
                         {
@@ -457,7 +457,7 @@ namespace SlowTests.Client.Subscriptions
                             await tcs.Task;
                         });
 
-                        mre.WaitOne();
+                        await mre.WaitAsync();
 
                         using (var session = store.OpenAsyncSession())
                         {
@@ -543,7 +543,7 @@ namespace SlowTests.Client.Subscriptions
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                     await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
                     {
-                        var mre = new ManualResetEvent(false);
+                        var mre = new AsyncManualResetEvent();
 
                         var _ = Subscription2.Run(async x =>
                         {
@@ -556,7 +556,7 @@ namespace SlowTests.Client.Subscriptions
                             await tcs.Task;
                         });
 
-                        mre.WaitOne();
+                        await mre.WaitAsync();
 
                         using (var session = store.OpenAsyncSession())
                         {
@@ -810,7 +810,7 @@ namespace SlowTests.Client.Subscriptions
                     Strategy = strategy2,
                 });
 
-                var mre1 = new ManualResetEventSlim();
+                var mre1 = new AsyncManualResetEvent();
 
                 subscription1.OnEstablishedSubscriptionConnection += mre1.Set;
 
@@ -819,7 +819,7 @@ namespace SlowTests.Client.Subscriptions
 
                 });
 
-                Assert.True(mre1.Wait(TimeSpan.FromSeconds(15)));
+                Assert.True(await mre1.WaitAsync(TimeSpan.FromSeconds(15)));
                 mre1.Reset();
 
                 await Assert.ThrowsAsync<SubscriptionInUseException>(() => subscription2.Run((_) => { }));
@@ -845,8 +845,8 @@ namespace SlowTests.Client.Subscriptions
                     Strategy = strategy2,
                 });
 
-                var mre1 = new ManualResetEventSlim();
-                var mre2 = new ManualResetEventSlim();
+                var mre1 = new AsyncManualResetEvent();
+                var mre2 = new AsyncManualResetEvent();
 
                 subscription1.OnEstablishedSubscriptionConnection += mre1.Set;
                 subscription2.OnEstablishedSubscriptionConnection += mre2.Set;
@@ -856,14 +856,14 @@ namespace SlowTests.Client.Subscriptions
 
                 });
 
-                Assert.True(mre1.Wait(TimeSpan.FromSeconds(15)));
+                Assert.True(await mre1.WaitAsync(TimeSpan.FromSeconds(15)));
                 mre1.Reset();
 
                 await store.Subscriptions.DropSubscriptionWorkerAsync(subscription1);
                 await Assert.ThrowsAsync<SubscriptionClosedException>(() => t);
 
                 t = subscription2.Run((_) => { });
-                Assert.True(mre2.Wait(TimeSpan.FromSeconds(15)));
+                Assert.True(await mre2.WaitAsync(TimeSpan.FromSeconds(15)));
             }
         }
 

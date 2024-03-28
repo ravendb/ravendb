@@ -45,6 +45,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Backups;
 using Sparrow.Json;
+using Sparrow.Server;
 using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
@@ -3791,7 +3792,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
             }))
             {
-                var mre = new ManualResetEvent(false);
+                var mre = new AsyncManualResetEvent();
                 var task = subscription.Run(batch =>
                 {
                     foreach (var b in batch.Items)
@@ -3801,7 +3802,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     mre.Set();
                 });
 
-                mre.WaitOne(_reasonableWaitTime);
+                await mre.WaitAsync(_reasonableWaitTime);
                 mre.Reset();
                 List<SubscriptionState> subscriptionsConfig;
                 await WaitForValueAsync(async () =>
@@ -3829,7 +3830,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     session.SaveChanges();
                 }
-                mre.WaitOne(_reasonableWaitTime);
+                await mre.WaitAsync(_reasonableWaitTime);
 
                 subscriptionsConfig = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
                 Assert.Equal(1, subscriptionsConfig.Count);
@@ -3887,7 +3888,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
             }))
             {
-                var mre = new ManualResetEvent(false);
+                var mre = new AsyncManualResetEvent();
                 var task = subscription.Run(batch =>
                 {
                     foreach (var b in batch.Items)
@@ -3897,7 +3898,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     mre.Set();
                 });
 
-                mre.WaitOne(_reasonableWaitTime);
+                await mre.WaitAsync(_reasonableWaitTime);
 
                 var subscriptionsConfig = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
                 Assert.Equal(1, subscriptionsConfig.Count);
