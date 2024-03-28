@@ -3049,7 +3049,7 @@ namespace Raven.Server
                 if (licenseStatus.Version.Major >= 6)
                 {
                     serverStore.LicenseManager.OnBeforeInitialize += () =>
-                        serverStore.LicenseManager.ActivateAsync(licenseFromApi, RaftIdGenerator.NewId())
+                        serverStore.LicenseManager.ActivateAsync(licenseFromApi, RaftIdGenerator.NewId(), fromApi: true)
                             .Wait(serverStore.ServerShutdown);
                     return;
                 }

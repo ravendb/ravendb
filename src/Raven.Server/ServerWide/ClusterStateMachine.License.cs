@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
 using Raven.Server.Commercial;
@@ -17,6 +17,7 @@ using Raven.Server.ServerWide.Commands.QueueSink;
 using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
@@ -27,6 +28,7 @@ namespace Raven.Server.ServerWide;
 public sealed partial class ClusterStateMachine
 {
     private const int MinBuildVersion60000 = 60_000;
+    private const int MinBuildVersion60102 = 60_102;
 
     private static readonly List<string> _licenseLimitsCommandsForCreateDatabase = new()
     {
@@ -53,343 +55,450 @@ public sealed partial class ClusterStateMachine
         {
             case nameof(AddDatabaseCommand):
             case nameof(UpdateTopologyCommand):
-                if (databaseRecord.IsSharded == false)
-                    return;
-
-                var maxReplicationFactorForSharding = serverStore.LicenseManager.LicenseStatus.MaxReplicationFactorForSharding;
-                var multiNodeSharding = serverStore.LicenseManager.LicenseStatus.HasMultiNodeSharding;
-                if (maxReplicationFactorForSharding == null && multiNodeSharding)
-                    return;
-
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                    return;
-
-                var nodes = new HashSet<string>();
-                foreach (var shard in databaseRecord.Sharding.Shards)
-                {
-                    var topology = shard.Value;
-                    if (maxReplicationFactorForSharding != null && topology.ReplicationFactor > maxReplicationFactorForSharding)
-                    {
-                        throw new LicenseLimitException(LimitType.Sharding, $"Your license doesn't allow to use a replication factor of more than {maxReplicationFactorForSharding} for sharding");
-                    }
-
-                    foreach (var nodeTag in topology.AllNodes)
-                    {
-                        nodes.Add(nodeTag);
-                    }
-                }
-
-                if (multiNodeSharding == false && nodes.Count > 1)
-                {
-                    throw new LicenseLimitException(LimitType.Sharding, $"Your license allows to create a sharded database only on a single node while you tried to create it on nodes {string.Join(", ", nodes)}");
-                }
-
+                AssertMultiNodeSharding(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
                 break;
             case nameof(PutIndexCommand):
-                AssertStaticIndexesCount();
+                AssertStaticIndexesCount(databaseRecord, serverStore.LicenseManager.LicenseStatus, context, items, type);
                 break;
 
             case nameof(PutAutoIndexCommand):
-                AssertAutoIndexesCount();
+                AssertAutoIndexesCount(databaseRecord, serverStore.LicenseManager.LicenseStatus, context, items, type);
                 break;
 
             case nameof(PutIndexesCommand):
-                AssertStaticIndexesCount();
-                AssertAutoIndexesCount();
+                AssertStaticIndexesCount(databaseRecord, serverStore.LicenseManager.LicenseStatus, context, items, type);
+                AssertAutoIndexesCount(databaseRecord, serverStore.LicenseManager.LicenseStatus, context, items, type);
                 break;
 
             case nameof(EditRevisionsConfigurationCommand):
-                if (databaseRecord.Revisions == null)
-                    return;
-
-                if (databaseRecord.Revisions.Default == null &&
-                    (databaseRecord.Revisions.Collections == null || databaseRecord.Revisions.Collections.Count == 0))
-                    return;
-
-                var maxRevisionsToKeep = serverStore.LicenseManager.LicenseStatus.MaxNumberOfRevisionsToKeep;
-                var maxRevisionAgeToKeepInDays = serverStore.LicenseManager.LicenseStatus.MaxNumberOfRevisionAgeToKeepInDays;
-                if (serverStore.LicenseManager.LicenseStatus.CanSetupDefaultRevisionsConfiguration &&
-                    maxRevisionsToKeep == null && maxRevisionAgeToKeepInDays == null)
-                    return;
-
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                    return;
-
-                if (serverStore.LicenseManager.LicenseStatus.CanSetupDefaultRevisionsConfiguration == false &&
-                    databaseRecord.Revisions.Default != null)
-                {
-                    throw new LicenseLimitException(LimitType.RevisionsConfiguration, "Your license doesn't allow the creation of a default configuration for revisions.");
-                }
-
-                if (databaseRecord.Revisions.Collections != null)
-                {
-                    foreach (var revisionPerCollectionConfiguration in databaseRecord.Revisions.Collections)
-                    {
-                        if (revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep != null &&
-                            maxRevisionsToKeep != null &&
-                            revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep > maxRevisionsToKeep)
-                        {
-                            throw new LicenseLimitException(LimitType.RevisionsConfiguration,
-                                $"The defined minimum revisions to keep '{revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep}' " +
-                                $" exceeds the licensed one '{maxRevisionsToKeep}'");
-                        }
-
-                        if (revisionPerCollectionConfiguration.Value.MinimumRevisionAgeToKeep != null &&
-                            maxRevisionAgeToKeepInDays != null &&
-                            revisionPerCollectionConfiguration.Value.MinimumRevisionAgeToKeep.Value.TotalDays > maxRevisionAgeToKeepInDays)
-                        {
-                            throw new LicenseLimitException(LimitType.RevisionsConfiguration,
-                                $"The defined minimum revisions age to keep '{revisionPerCollectionConfiguration.Value.MinimumRevisionAgeToKeep}' " +
-                                $" exceeds the licensed one '{maxRevisionAgeToKeepInDays}'");
-                        }
-                    }
-                }
-
+                AssertRevisionConfiguration(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
                 break;
 
             case nameof(EditExpirationCommand):
-                var minPeriodForExpirationInHours = serverStore.LicenseManager.LicenseStatus.MinPeriodForExpirationInHours;
-                if (minPeriodForExpirationInHours != null && databaseRecord.Expiration is { Disabled: false })
-                {
-                    var deleteFrequencyInSec = databaseRecord.Expiration.DeleteFrequencyInSec ?? ExpiredDocumentsCleaner.DefaultDeleteFrequencyInSec;
-                    var deleteFrequency = new TimeSetting(deleteFrequencyInSec, TimeUnit.Seconds);
-                    var minPeriodForExpiration = new TimeSetting(minPeriodForExpirationInHours.Value, TimeUnit.Hours);
-                    if (deleteFrequency.AsTimeSpan < minPeriodForExpiration.AsTimeSpan)
-                    {
-                        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                            return;
-
-                        throw new LicenseLimitException(LimitType.Expiration, $"Your license doesn't allow modifying the expiration frequency below {minPeriodForExpirationInHours} hours.");
-                    }
-                }
-
+                AssertExpirationConfiguration(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
                 break;
 
             case nameof(EditRefreshCommand):
-                var minPeriodForRefreshInHours = serverStore.LicenseManager.LicenseStatus.MinPeriodForRefreshInHours;
-                if (minPeriodForRefreshInHours != null && databaseRecord.Refresh is { Disabled: false })
-                {
-                    var refreshFrequencyInSec = databaseRecord.Refresh.RefreshFrequencyInSec ?? ExpiredDocumentsCleaner.DefaultRefreshFrequencyInSec;
-                    var refreshFrequency = new TimeSetting(refreshFrequencyInSec, TimeUnit.Seconds);
-                    var minPeriodForRefresh = new TimeSetting(minPeriodForRefreshInHours.Value, TimeUnit.Hours);
-                    if (refreshFrequency.AsTimeSpan < minPeriodForRefresh.AsTimeSpan)
-                    {
-                        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                            return;
-
-                        throw new LicenseLimitException(LimitType.Refresh, $"Your license doesn't allow modifying the refresh frequency below {minPeriodForRefreshInHours} hours.");
-                    }
-                }
-
+                AssertRefreshFrequency(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
                 break;
 
             case nameof(PutSortersCommand):
-                var maxCustomSortersPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomSortersPerDatabase;
-                if (maxCustomSortersPerDatabase != null && maxCustomSortersPerDatabase >= 0 && databaseRecord.Sorters.Count > maxCustomSortersPerDatabase)
-                {
-                    if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                        return;
-
-                    throw new LicenseLimitException(LimitType.CustomSorters, $"The maximum number of custom sorters per database cannot exceed the limit of: {maxCustomSortersPerDatabase}");
-                }
-
-                var maxCustomSortersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomSortersPerCluster;
-                if (maxCustomSortersPerCluster != null && maxCustomSortersPerCluster >= 0)
-                {
-                    var totalSortersCount = GetTotal(DatabaseRecordElementType.CustomSorters, databaseRecord.DatabaseName) + databaseRecord.Sorters.Count;
-                    if (totalSortersCount <= maxCustomSortersPerCluster)
-                        return;
-
-                    if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                        return;
-
-                    throw new LicenseLimitException(LimitType.CustomSorters, $"The maximum number of custom sorters per cluster cannot exceed the limit of: {maxCustomSortersPerCluster}");
-                }
+                AssertSorters(databaseRecord, serverStore.LicenseManager.LicenseStatus, context, items, type);
                 break;
 
             case nameof(PutAnalyzersCommand):
-                var maxAnalyzersPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomAnalyzersPerDatabase;
-                if (maxAnalyzersPerDatabase != null && maxAnalyzersPerDatabase >= 0 && databaseRecord.Analyzers.Count > maxAnalyzersPerDatabase)
-                {
-                    if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                        return;
-
-                    throw new LicenseLimitException(LimitType.CustomAnalyzers, $"The maximum number of analyzers per database cannot exceed the limit of: {maxAnalyzersPerDatabase}");
-                }
-
-                var maxAnalyzersPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfCustomAnalyzersPerCluster;
-                if (maxAnalyzersPerCluster != null && maxAnalyzersPerCluster >= 0)
-                {
-                    var totalAnalyzersCount = GetTotal(DatabaseRecordElementType.Analyzers, databaseRecord.DatabaseName) + databaseRecord.Analyzers.Count;
-                    if (totalAnalyzersCount <= maxAnalyzersPerCluster)
-                        return;
-
-                    if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                        return;
-
-                    throw new LicenseLimitException(LimitType.CustomAnalyzers, $"The maximum number of analyzers per cluster cannot exceed the limit of: {maxAnalyzersPerCluster}");
-                }
+                AssertAnalyzers(databaseRecord, serverStore.LicenseManager.LicenseStatus, context, items, type);
                 break;
 
             case nameof(UpdatePeriodicBackupCommand):
-                if (serverStore.LicenseManager.LicenseStatus.HasPeriodicBackup)
-                    return;
-
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                    return;
-
-                throw new LicenseLimitException(LimitType.PeriodicBackup, "Your license doesn't support adding periodic backups.");
+                if (AssertPeriodicBackup(serverStore.LicenseManager.LicenseStatus, context) == false)
+                    throw new LicenseLimitException(LimitType.PeriodicBackup, "Your license doesn't support adding periodic backups.");
+                break;
 
             case nameof(PutDatabaseClientConfigurationCommand):
             case nameof(EditDatabaseClientConfigurationCommand):
-                if (serverStore.LicenseManager.LicenseStatus.HasClientConfiguration)
-                    return;
-
-                if (databaseRecord.Client == null || databaseRecord.Client.Disabled)
-                    return;
-
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                    return;
-
-                throw new LicenseLimitException(LimitType.ClientConfiguration, "Your license doesn't support adding the client configuration.");
+                AssertDatabaseClientConfiguration(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
+                break;
 
             case nameof(PutClientConfigurationCommand):
-                if (serverStore.LicenseManager.LicenseStatus.HasClientConfiguration)
-                    return;
-
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                    return;
-
-                throw new LicenseLimitException(LimitType.ClientConfiguration, "Your license doesn't support adding the client configuration.");
+                if (AssertClientConfiguration(serverStore.LicenseManager.LicenseStatus, context) == false)
+                    throw new LicenseLimitException(LimitType.ClientConfiguration, "Your license doesn't support adding the client configuration.");
+                break;
 
             case nameof(PutDatabaseStudioConfigurationCommand):
-                if (serverStore.LicenseManager.LicenseStatus.HasStudioConfiguration)
-                    return;
-
-                if (databaseRecord.Studio == null || databaseRecord.Studio.Disabled)
-                    return;
-
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                    return;
-
-                throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support adding the studio configuration.");
+                AssertDatabaseStudioConfiguration(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
+                break;
 
             case nameof(PutServerWideStudioConfigurationCommand):
-                if (serverStore.LicenseManager.LicenseStatus.HasStudioConfiguration)
-                    return;
-
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                    return;
-
-                throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support adding the studio configuration.");
+                if (AssertServerWideStudioConfiguration(serverStore.LicenseManager.LicenseStatus, context) == false)
+                    throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support adding the studio configuration.");
+                break;
 
             case nameof(AddQueueSinkCommand):
             case nameof(UpdateQueueSinkCommand):
-                if (serverStore.LicenseManager.LicenseStatus.HasQueueSink)
-                    return;
-
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                    return;
-
-                throw new LicenseLimitException(LimitType.QueueSink, "Your license doesn't support using the queue sink feature.");
+                if (AssertQueueSink(serverStore.LicenseManager.LicenseStatus, context) == false)
+                    throw new LicenseLimitException(LimitType.QueueSink, "Your license doesn't support using the queue sink feature.");
+                break;
 
             case nameof(EditDataArchivalCommand):
-                if (serverStore.LicenseManager.LicenseStatus.HasDataArchival)
-                    return;
+                if (AssertDataArchival(serverStore.LicenseManager.LicenseStatus, context) == false )
+                    throw new LicenseLimitException(LimitType.DataArchival, "Your license doesn't support using the data archival feature.");
+                break;
+        }
+    }
 
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                    return;
+    private void AssertLicense(ClusterOperationContext context, string type, BlittableJsonReaderObject bjro, ServerStore serverStore)
+    {
+        LicenseStatus newLicenseLimits;
 
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60102) == false)
+            return;
+
+        var command = (PutLicenseCommand)CommandBase.CreateFrom(bjro);
+        if (command.SkipLicenseAssertion)
+            return;
+        try
+        {
+            newLicenseLimits = LicenseManager.GetLicenseStatus(command.Value);
+        }
+        catch (Exception e)
+        {
+            throw new LicenseLimitException(LimitType.InvalidLicense, e.Message);
+        }
+
+        var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+        foreach (var database in serverStore.DatabasesLandlord.DatabasesCache.Values.GetEnumerator())
+        {
+            DatabaseRecord databaseRecord = serverStore.Cluster.ReadDatabase(context, ShardHelper.ToDatabaseName(database.Result.Name));
+
+            AssertMultiNodeSharding(databaseRecord, newLicenseLimits, context);
+            AssertStaticIndexesCount(databaseRecord, newLicenseLimits, context, items, type);
+            AssertAutoIndexesCount(databaseRecord, newLicenseLimits, context, items, type);
+            AssertRevisionConfiguration(databaseRecord, newLicenseLimits, context);
+            AssertExpirationConfiguration(databaseRecord, newLicenseLimits, context);
+            AssertRefreshFrequency(databaseRecord, newLicenseLimits, context);
+            AssertSorters(databaseRecord, newLicenseLimits, context, items, type);
+            AssertAnalyzers(databaseRecord, newLicenseLimits, context, items, type);
+            if (AssertPeriodicBackup(newLicenseLimits, context) == false && databaseRecord.PeriodicBackups.Count > 0)
+                throw new LicenseLimitException(LimitType.PeriodicBackup, $"Your license doesn't support periodic backup.");
+            AssertDatabaseClientConfiguration(databaseRecord, newLicenseLimits, context);
+            if (AssertClientConfiguration(newLicenseLimits, context) == false && databaseRecord.Client is { Disabled: false })
+                throw new LicenseLimitException(LimitType.ClientConfiguration, "Your license doesn't support adding the client configuration.");
+            AssertDatabaseStudioConfiguration(databaseRecord, newLicenseLimits, context);
+            if (AssertServerWideStudioConfiguration(newLicenseLimits, context) == false && databaseRecord.Studio is { Disabled: false })
+                throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support adding the studio configuration.");
+            if (AssertQueueSink(newLicenseLimits, context) == false && databaseRecord.QueueSinks.Count > 0)
+                throw new LicenseLimitException(LimitType.QueueSink, "Your license doesn't support using the queue sink feature.");
+            if (AssertDataArchival(newLicenseLimits, context) == false && databaseRecord.DataArchival is { Disabled: false})
                 throw new LicenseLimitException(LimitType.DataArchival, "Your license doesn't support using the data archival feature.");
         }
+    }
 
-        return;
+    private void AssertMultiNodeSharding(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
+    {
+        if (databaseRecord.IsSharded == false)
+            return;
 
-        long GetTotal(DatabaseRecordElementType resultType, string exceptDb)
+        if (licenseStatus.MaxReplicationFactorForSharding == null && licenseStatus.HasMultiNodeSharding)
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+            return;
+
+        var nodes = new HashSet<string>();
+        foreach (var shard in databaseRecord.Sharding.Shards)
         {
-            long total = 0;
-
-            using (Slice.From(context.Allocator, "db/", out var loweredPrefix))
+            DatabaseTopology topology = shard.Value;
+            if (licenseStatus.MaxReplicationFactorForSharding != null && topology.ReplicationFactor > licenseStatus.MaxReplicationFactorForSharding)
             {
-                foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
+                throw new LicenseLimitException(LimitType.Sharding,
+                    $"Your license doesn't allow to use a replication factor of more than {topology.ReplicationFactor} for sharding");
+            }
+
+            foreach (var nodeTag in topology.AllNodes)
+            {
+                nodes.Add(nodeTag);
+            }
+        }
+
+        if (licenseStatus.HasMultiNodeSharding == false && nodes.Count > 1)
+        {
+            throw new LicenseLimitException(LimitType.Sharding,
+                $"Your license allows to create a sharded database only on a single node while you tried to create it on nodes {string.Join(", ", nodes)}");
+        }
+    }
+
+    private void AssertStaticIndexesCount(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context, Table items, string type)
+    {
+        var maxStaticIndexesPerDatabase = licenseStatus.MaxNumberOfStaticIndexesPerDatabase;
+        if (maxStaticIndexesPerDatabase is >= 0 && databaseRecord.Indexes.Count > maxStaticIndexesPerDatabase)
+        {
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                return;
+
+            throw new LicenseLimitException(LimitType.Indexes,
+                $"The maximum number of static indexes per database cannot exceed the limit of: {maxStaticIndexesPerDatabase}");
+        }
+
+        var maxStaticIndexesPerCluster = licenseStatus.MaxNumberOfStaticIndexesPerCluster;
+        if (maxStaticIndexesPerCluster is null or < 0)
+            return;
+
+        var totalStaticIndexesCount = GetTotal(DatabaseRecordElementType.StaticIndex, databaseRecord.DatabaseName, context, items, type) + databaseRecord.Indexes.Count;
+        if (totalStaticIndexesCount <= maxStaticIndexesPerCluster)
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+            return;
+
+        throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of static indexes per cluster cannot exceed the limit of: {maxStaticIndexesPerCluster}");
+    }
+
+    private void AssertAutoIndexesCount(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context, Table items, string type)
+    {
+        var maxAutoIndexesPerDatabase = licenseStatus.MaxNumberOfAutoIndexesPerDatabase;
+        if (maxAutoIndexesPerDatabase is >= 0 && databaseRecord.AutoIndexes.Count > maxAutoIndexesPerDatabase)
+        {
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                return;
+
+            throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per database cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
+        }
+
+        var maxAutoIndexesPerCluster = licenseStatus.MaxNumberOfAutoIndexesPerCluster;
+        if (maxAutoIndexesPerCluster is >= 0)
+        {
+            var totalAutoIndexesCount = GetTotal(DatabaseRecordElementType.AutoIndex, databaseRecord.DatabaseName, context, items, type) + databaseRecord.AutoIndexes.Count;
+            if (totalAutoIndexesCount <= maxAutoIndexesPerCluster)
+                return;
+
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                return;
+
+            throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per cluster cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
+        }
+    }
+
+    private void AssertRevisionConfiguration(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
+    {
+        if (databaseRecord.Revisions == null)
+            return;
+
+        if (databaseRecord.Revisions.Default == null &&
+            (databaseRecord.Revisions.Collections == null || databaseRecord.Revisions.Collections.Count == 0))
+            return;
+
+        var maxRevisionsToKeep = licenseStatus.MaxNumberOfRevisionsToKeep;
+        var maxRevisionAgeToKeepInDays = licenseStatus.MaxNumberOfRevisionAgeToKeepInDays;
+        if (licenseStatus.CanSetupDefaultRevisionsConfiguration &&
+            maxRevisionsToKeep == null && maxRevisionAgeToKeepInDays == null)
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+            return;
+
+        if (licenseStatus.CanSetupDefaultRevisionsConfiguration == false &&
+            databaseRecord.Revisions.Default != null)
+        {
+            throw new LicenseLimitException(LimitType.RevisionsConfiguration, "Your license doesn't allow the creation of a default configuration for revisions.");
+        }
+
+        if (databaseRecord.Revisions.Collections == null)
+            return;
+
+        foreach (KeyValuePair<string, RevisionsCollectionConfiguration> revisionPerCollectionConfiguration in databaseRecord.Revisions.Collections)
+        {
+            if (revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep != null &&
+                maxRevisionsToKeep != null &&
+                revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep > maxRevisionsToKeep)
+            {
+                throw new LicenseLimitException(LimitType.RevisionsConfiguration,
+                    $"The defined minimum revisions to keep '{revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep}' " +
+                    $" exceeds the licensed one '{maxRevisionsToKeep}'");
+            }
+
+            if (revisionPerCollectionConfiguration.Value.MinimumRevisionAgeToKeep != null &&
+                maxRevisionAgeToKeepInDays != null &&
+                revisionPerCollectionConfiguration.Value.MinimumRevisionAgeToKeep.Value.TotalDays > maxRevisionAgeToKeepInDays)
+            {
+                throw new LicenseLimitException(LimitType.RevisionsConfiguration,
+                    $"The defined minimum revisions age to keep '{revisionPerCollectionConfiguration.Value.MinimumRevisionAgeToKeep}' " +
+                    $" exceeds the licensed one '{maxRevisionAgeToKeepInDays}'");
+            }
+        }
+    }
+
+    private void AssertExpirationConfiguration(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
+    {
+        var minPeriodForExpirationInHours = licenseStatus.MinPeriodForExpirationInHours;
+
+        if (minPeriodForExpirationInHours == null || databaseRecord.Expiration == null || databaseRecord.Expiration.Disabled)
+            return;
+
+        var deleteFrequencyInSec = databaseRecord.Expiration?.DeleteFrequencyInSec ?? ExpiredDocumentsCleaner.DefaultDeleteFrequencyInSec;
+        var deleteFrequency = new TimeSetting(deleteFrequencyInSec, TimeUnit.Seconds);
+        var minPeriodForExpiration = new TimeSetting(minPeriodForExpirationInHours.Value, TimeUnit.Hours);
+
+        if (deleteFrequency.AsTimeSpan >= minPeriodForExpiration.AsTimeSpan)
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+            return;
+
+        throw new LicenseLimitException(LimitType.Expiration, $"Your license doesn't allow modifying the expiration frequency below {minPeriodForExpirationInHours} hours.");
+    }
+
+    private void AssertRefreshFrequency(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
+    {
+        var minPeriodForRefreshInHours = licenseStatus.MinPeriodForRefreshInHours;
+        if (minPeriodForRefreshInHours == null || databaseRecord.Refresh is not { Disabled: false })
+            return;
+
+        var refreshFrequencyInSec = databaseRecord.Refresh.RefreshFrequencyInSec ?? ExpiredDocumentsCleaner.DefaultRefreshFrequencyInSec;
+        var refreshFrequency = new TimeSetting(refreshFrequencyInSec, TimeUnit.Seconds);
+        var minPeriodForRefresh = new TimeSetting(minPeriodForRefreshInHours.Value, TimeUnit.Hours);
+        if (refreshFrequency.AsTimeSpan >= minPeriodForRefresh.AsTimeSpan)
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+            return;
+
+        throw new LicenseLimitException(LimitType.Refresh, $"Your license doesn't allow modifying the refresh frequency below {minPeriodForRefreshInHours} hours.");
+    }
+
+    private void AssertSorters(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context, Table items, string type)
+    {
+        var maxCustomSortersPerDatabase = licenseStatus.MaxNumberOfCustomSortersPerDatabase;
+        if (maxCustomSortersPerDatabase is >= 0 && databaseRecord.Sorters.Count > maxCustomSortersPerDatabase)
+        {
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                return;
+
+            throw new LicenseLimitException(LimitType.CustomSorters, $"The maximum number of custom sorters per database cannot exceed the limit of: {maxCustomSortersPerDatabase}");
+        }
+
+        var maxCustomSortersPerCluster = licenseStatus.MaxNumberOfCustomSortersPerCluster;
+        if (maxCustomSortersPerCluster is not >= 0)
+            return;
+
+        var totalSortersCount = GetTotal(DatabaseRecordElementType.CustomSorters, databaseRecord.DatabaseName, context, items, type) + databaseRecord.Sorters.Count;
+        if (totalSortersCount <= maxCustomSortersPerCluster)
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+            return;
+
+        throw new LicenseLimitException(LimitType.CustomSorters, $"The maximum number of custom sorters per cluster cannot exceed the limit of: {maxCustomSortersPerCluster}");
+    }
+
+    private void AssertAnalyzers(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context, Table items, string type)
+    {
+        var maxAnalyzersPerDatabase = licenseStatus.MaxNumberOfCustomAnalyzersPerDatabase;
+        if (maxAnalyzersPerDatabase is >= 0 && databaseRecord.Analyzers.Count > maxAnalyzersPerDatabase)
+        {
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+                return;
+
+            throw new LicenseLimitException(LimitType.CustomAnalyzers, $"The maximum number of analyzers per database cannot exceed the limit of: {maxAnalyzersPerDatabase}");
+        }
+
+        var maxAnalyzersPerCluster = licenseStatus.MaxNumberOfCustomAnalyzersPerCluster;
+
+        if (maxAnalyzersPerCluster is not >= 0)
+            return;
+
+        var totalAnalyzersCount = GetTotal(DatabaseRecordElementType.Analyzers, databaseRecord.DatabaseName, context, items, type) + databaseRecord.Analyzers.Count;
+        if (totalAnalyzersCount <= maxAnalyzersPerCluster)
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+            return;
+
+        throw new LicenseLimitException(LimitType.CustomAnalyzers, $"The maximum number of analyzers per cluster cannot exceed the limit of: {maxAnalyzersPerCluster}");
+    }
+
+    private bool AssertPeriodicBackup(LicenseStatus licenseStatus, ClusterOperationContext context)
+    {
+        if (licenseStatus.HasPeriodicBackup)
+            return true;
+
+        return CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false;
+    }
+
+    private void AssertDatabaseClientConfiguration(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
+    {
+        if (licenseStatus.HasClientConfiguration)
+            return;
+
+        if (databaseRecord.Client == null || databaseRecord.Client.Disabled)
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+            return;
+
+        throw new LicenseLimitException(LimitType.ClientConfiguration, "Your license doesn't support adding the client configuration.");
+    }
+
+    private bool AssertClientConfiguration(LicenseStatus licenseStatus, ClusterOperationContext context)
+    {
+        if (licenseStatus.HasClientConfiguration)
+            return true;
+
+        return CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false;
+    }
+
+    private void AssertDatabaseStudioConfiguration(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
+    {
+        if (licenseStatus.HasStudioConfiguration)
+            return;
+
+        if (databaseRecord.Studio == null || databaseRecord.Studio.Disabled)
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+            return;
+
+        throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support adding the studio configuration.");
+    }
+
+    private bool AssertServerWideStudioConfiguration(LicenseStatus licenseStatus, ClusterOperationContext context)
+    {
+        if (licenseStatus.HasStudioConfiguration)
+            return true;
+
+        return CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false;
+    }
+
+    private bool AssertQueueSink(LicenseStatus licenseStatus, ClusterOperationContext context)
+    {
+        if (licenseStatus.HasQueueSink)
+            return true;
+
+        return CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false;
+    }
+
+    private bool AssertDataArchival(LicenseStatus licenseStatus, ClusterOperationContext context)
+    {
+        if (licenseStatus.HasDataArchival)
+            return true;
+
+        return CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false;
+    }
+
+    private static long GetTotal(DatabaseRecordElementType resultType, string exceptDb, ClusterOperationContext context, Table items, string type)
+    {
+        long total = 0;
+
+        using (Slice.From(context.Allocator, "db/", out var loweredPrefix))
+        {
+            foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
+            {
+                var (_, _, record) = GetCurrentItem(context, result.Value);
+                var rawRecord = new RawDatabaseRecord(context, record);
+                if (rawRecord.DatabaseName.Equals(exceptDb, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                switch (resultType)
                 {
-                    var (_, _, record) = GetCurrentItem(context, result.Value);
-                    var rawRecord = new RawDatabaseRecord(context, record);
-                    if (rawRecord.DatabaseName.Equals(exceptDb, StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    switch (resultType)
-                    {
-                        case DatabaseRecordElementType.StaticIndex:
-                            total += rawRecord.CountOfStaticIndexes;
-                            break;
-                        case DatabaseRecordElementType.AutoIndex:
-                            total += rawRecord.CountOfAutoIndexes;
-                            break;
-                        case DatabaseRecordElementType.CustomSorters:
-                            total += rawRecord.CountOfSorters;
-                            break;
-                        case DatabaseRecordElementType.Analyzers:
-                            total += rawRecord.CountOfAnalyzers;
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException(nameof(type), type, null);
-                    }
+                    case DatabaseRecordElementType.StaticIndex:
+                        total += rawRecord.CountOfStaticIndexes;
+                        break;
+                    case DatabaseRecordElementType.AutoIndex:
+                        total += rawRecord.CountOfAutoIndexes;
+                        break;
+                    case DatabaseRecordElementType.CustomSorters:
+                        total += rawRecord.CountOfSorters;
+                        break;
+                    case DatabaseRecordElementType.Analyzers:
+                        total += rawRecord.CountOfAnalyzers;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(type), type, null);
                 }
-
-                return total;
-            }
-        }
-
-        void AssertStaticIndexesCount()
-        {
-            var maxStaticIndexesPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerDatabase;
-            if (maxStaticIndexesPerDatabase != null && maxStaticIndexesPerDatabase >= 0 && databaseRecord.Indexes.Count > maxStaticIndexesPerDatabase)
-            {
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                    return;
-
-                throw new LicenseLimitException(LimitType.Indexes,
-                    $"The maximum number of static indexes per database cannot exceed the limit of: {maxStaticIndexesPerDatabase}");
             }
 
-            var maxStaticIndexesPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfStaticIndexesPerCluster;
-            if (maxStaticIndexesPerCluster != null && maxStaticIndexesPerCluster >= 0)
-            {
-                var totalStaticIndexesCount = GetTotal(DatabaseRecordElementType.StaticIndex, databaseRecord.DatabaseName) + databaseRecord.Indexes.Count;
-                if (totalStaticIndexesCount <= maxStaticIndexesPerCluster)
-                    return;
-
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                    return;
-
-                throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of static indexes per cluster cannot exceed the limit of: {maxStaticIndexesPerCluster}");
-            }
-        }
-
-        void AssertAutoIndexesCount()
-        {
-            var maxAutoIndexesPerDatabase = serverStore.LicenseManager.LicenseStatus.MaxNumberOfAutoIndexesPerDatabase;
-            if (maxAutoIndexesPerDatabase != null && maxAutoIndexesPerDatabase >= 0 && databaseRecord.AutoIndexes.Count > maxAutoIndexesPerDatabase)
-            {
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                    return;
-
-                throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per database cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
-            }
-
-            var maxAutoIndexesPerCluster = serverStore.LicenseManager.LicenseStatus.MaxNumberOfAutoIndexesPerCluster;
-            if (maxAutoIndexesPerCluster != null && maxAutoIndexesPerCluster >= 0)
-            {
-                var totalAutoIndexesCount = GetTotal(DatabaseRecordElementType.AutoIndex, databaseRecord.DatabaseName) + databaseRecord.AutoIndexes.Count;
-                if (totalAutoIndexesCount <= maxAutoIndexesPerCluster)
-                    return;
-
-                if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                    return;
-
-                throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per cluster cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
-            }
+            return total;
         }
     }
 
@@ -403,7 +512,7 @@ public sealed partial class ClusterStateMachine
         };
 
         var includeRevisions = putSubscriptionCommand.IncludesRevisions();
-        if(AssertSubscriptionRevisionFeatureLimits(serverStore, includeRevisions, context))
+        if (AssertSubscriptionRevisionFeatureLimits(serverStore, includeRevisions, context))
             return;
 
         if (AssertNumberOfSubscriptionsPerDatabaseLimits(serverStore, items, context, subscriptionsNamesPerDatabase))
