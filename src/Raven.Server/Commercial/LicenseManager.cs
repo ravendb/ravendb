@@ -478,7 +478,7 @@ namespace Raven.Server.Commercial
 
         public static LicenseStatus GetLicenseStatus(License license)
         {
-            Dictionary<string, object> licenseAttributes;
+            Dictionary<LicenseAttribute, object> licenseAttributes;
 
             try
             {
@@ -1241,7 +1241,7 @@ namespace Raven.Server.Commercial
             return configuration.Collections.Any(x => x.Value != null && x.Value.Disabled == false);
         }
 
-        private static bool HasAdditionalAssembliesFromNuGet(Dictionary<string, IndexDefinition> indexes)
+        internal static bool HasAdditionalAssembliesFromNuGet(Dictionary<string, IndexDefinition> indexes)
         {
             if (indexes == null || indexes.Count == 0)
                 return false;
@@ -1275,7 +1275,7 @@ namespace Raven.Server.Commercial
             return false;
         }
 
-        private static (bool HasSnapshotBackup, bool HasCloudBackup, bool HasEncryptedBackup) GetBackupTypes(
+        internal static (bool HasSnapshotBackup, bool HasCloudBackup, bool HasEncryptedBackup) GetBackupTypes(
             IEnumerable<PeriodicBackupConfiguration> periodicBackups)
         {
             var hasSnapshotBackup = false;

@@ -22,6 +22,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
@@ -71,7 +72,7 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.ServerWide
 {
-    public class ClusterStateMachine : RachisStateMachine
+    public sealed partial class ClusterStateMachine : RachisStateMachine
     {
         private readonly Logger _clusterAuditLog = LoggingSource.AuditLog.GetLogger("ClusterStateMachine", "Audit");
 
@@ -471,7 +472,7 @@ namespace Raven.Server.ServerWide
                     case nameof(EditPostgreSqlConfigurationCommand):
                     case nameof(PutIndexHistoryCommand):
                     case nameof(DeleteIndexHistoryCommand):
-                        UpdateDatabase(context, type, cmd, index, leader, serverStore);
+                        UpdateDatabase(context, type, cmd, index, serverStore);
                         break;
 
                     case nameof(AcknowledgeSubscriptionBatchCommand):
@@ -618,7 +619,7 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(AddDatabaseCommand):
-                        var addedNodes = AddDatabase(context, cmd, index, leader);
+                        var addedNodes = AddDatabase(context, type, cmd, index, serverStore);
                         if (addedNodes != null)
                         {
                             result = addedNodes;
@@ -893,7 +894,8 @@ namespace Raven.Server.ServerWide
                    e is SubscriptionException ||
                    e is DatabaseDoesNotExistException ||
                    e is AuthorizationException ||
-                   e is CompareExchangeKeyTooBigException;
+                   e is CompareExchangeKeyTooBigException ||
+                   e is LicenseLimitException;
         }
 
         private void ClusterStateCleanUp(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
@@ -1610,7 +1612,7 @@ namespace Raven.Server.ServerWide
 
         };
 
-        private unsafe List<string> AddDatabase(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private unsafe List<string> AddDatabase(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
             Exception exception = null;
@@ -1637,6 +1639,13 @@ namespace Raven.Server.ServerWide
                             throw new RachisConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " has etag " + actualEtag +
                                                                  " but was expecting " + addDatabaseCommand.RaftCommandIndex);
                         }
+                    }
+
+                    AssertLicenseLimits(type, serverStore, addDatabaseCommand.Record, items, context);
+
+                    foreach (var command in _licenseLimitsCommandsForCreateDatabase)
+                    {
+                        AssertLicenseLimits(command, serverStore, addDatabaseCommand.Record, items, context);
                     }
 
                     bool shouldSetClientConfigEtag;
@@ -2400,7 +2409,7 @@ namespace Raven.Server.ServerWide
             });
         }
 
-        private void UpdateDatabase(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
+        private void UpdateDatabase(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             if (cmd.TryGet(DatabaseName, out string databaseName) == false || string.IsNullOrEmpty(databaseName))
                 throw new RachisApplyException("Update database command must contain a DatabaseName property");
@@ -2451,6 +2460,7 @@ namespace Raven.Server.ServerWide
                         DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName, serverStore);
                         return;
                     }
+                    AssertLicenseLimits(type, serverStore, databaseRecord, items, context);
 
                     UpdateIndexForBackup(databaseRecord, type, index);
                     var updatedDatabaseBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);
