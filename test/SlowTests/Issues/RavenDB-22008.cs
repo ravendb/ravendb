@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Nito.AsyncEx;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
@@ -37,15 +38,17 @@ namespace SlowTests.Issues
                 var subName = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
                 var subscriptionState = await store.Subscriptions.GetSubscriptionStateAsync(subName);
 
-                var indexDisposeMre = new ManualResetEventSlim(false);
-                var mreBeforeSendingCommand = new ManualResetEventSlim(false);
+                var indexDisposeMre = new AsyncManualResetEvent(false);
+                var mreBeforeSendingCommand = new AsyncManualResetEvent(false);
 
                 var mreWasSet = false;
 
+                using (var cts = new CancellationTokenSource(Server.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan * 2))
                 using (index.ForTestingPurposesOnly().CallDuringFinallyOfExecuteIndexing(() =>
                 {
                     // simulating a long indexing batch completion
-                    mreWasSet = indexDisposeMre.Wait(Server.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan * 2);
+                    indexDisposeMre.Wait(cts.Token);
+                    mreWasSet = indexDisposeMre.IsSet;
                 }))
                 {
                     database.IndexStore.ForTestingPurposesOnly().BeforeHandleDatabaseRecordChange = () =>
@@ -55,7 +58,8 @@ namespace SlowTests.Issues
 
                     var deleteIndexTask = store.Maintenance.SendAsync(new DeleteIndexOperation(indexDefinition.IndexName));
 
-                    mreBeforeSendingCommand.Wait(Server.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan * 2);
+                    await mreBeforeSendingCommand.WaitAsync(cts.Token);
+                    Assert.True(mreBeforeSendingCommand.IsSet);
 
                     var command = new AcknowledgeSubscriptionBatchCommand(store.Database, RaftIdGenerator.NewId())
                     {

@@ -2562,7 +2562,7 @@ namespace Raven.Server.Documents.Indexes
             internal Action<Index> BeforeIndexThreadExit;
             internal Action<Index> BeforeIndexStart;
 
-            public Action BeforeHandleDatabaseRecordChange;
+            internal Action BeforeHandleDatabaseRecordChange;
 
             public TestingStuff(IndexStore parent)
             {
