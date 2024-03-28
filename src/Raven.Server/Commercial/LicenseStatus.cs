@@ -216,7 +216,9 @@ namespace Raven.Server.Commercial
 
         public bool HasElasticSearchEtl => Enabled(LicenseAttribute.ElasticSearchEtl);
 
-        public bool HasQueueEtl => Enabled(LicenseAttribute.QueueEtl);
+        //public bool HasQueueEtl => Enabled(LicenseAttribute.QueueEtl);
+        public bool HasQueueEtl => true;
+        
 
         public bool HasPowerBI => Enabled(LicenseAttribute.PowerBI);
 

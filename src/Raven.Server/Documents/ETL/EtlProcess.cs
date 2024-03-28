@@ -23,6 +23,7 @@ using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Queue;
+using Raven.Server.Documents.ETL.Providers.Queue.AzureQueueStorage;
 using Raven.Server.Documents.ETL.Providers.Queue.Kafka;
 using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
 using Raven.Server.Documents.ETL.Providers.Raven;
@@ -1326,6 +1327,21 @@ namespace Raven.Server.Documents.ETL
                                             new EtlProcessState());
 
                                         result = rabbitMqEtl.RunTest(results, context);
+                                        result.DebugOutput = debugOutput;
+
+                                        return tx;
+                                    }
+                                case AzureQueueStorageEtl azureQueueStorageEtl:
+                                    using (azureQueueStorageEtl.EnterTestMode(out debugOutput))
+                                    {
+                                        azureQueueStorageEtl.EnsureThreadAllocationStats();
+
+                                        var queueItem = new QueueItem(document, docCollection);
+
+                                        var results = azureQueueStorageEtl.Transform(new[] { queueItem }, context, new EtlStatsScope(new EtlRunStats()),
+                                            new EtlProcessState());
+
+                                        result = azureQueueStorageEtl.RunTest(results, context);
                                         result.DebugOutput = debugOutput;
 
                                         return tx;

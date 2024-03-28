@@ -47,7 +47,11 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
                     }
                     break;
                 case QueueBrokerType.RabbitMq:
-                    return Connection.RabbitMqConnectionSettings.ConnectionString.StartsWith("amqps", StringComparison.OrdinalIgnoreCase);
+                    return Connection.RabbitMqConnectionSettings.ConnectionString.StartsWith("amqps",
+                        StringComparison.OrdinalIgnoreCase);
+                case QueueBrokerType.AzureQueueStorage:
+                    return Connection.AzureQueueStorageConnectionSettings.GetStorageUrl()
+                        .StartsWith("https", StringComparison.OrdinalIgnoreCase);
                 default:
                     throw new NotSupportedException($"Unknown broker type: {BrokerType}");
             }
