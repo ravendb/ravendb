@@ -17,6 +17,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using SlowTests.Server.Documents.ETL;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -223,7 +224,7 @@ loadToOrders(partitionBy(key), o);
                 var database = await WaitForDatabaseToUnlockAsync(store, timeout: TimeSpan.FromMilliseconds(1000));
                 Assert.NotNull(database);
 
-                etlDone = WaitForEtl(database, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone2 = WaitForEtl(database, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 baseline = new DateTime(2021, 1, 1);
 
@@ -245,11 +246,11 @@ loadToOrders(partitionBy(key), o);
                     await session.SaveChangesAsync();
                 }
 
-                Assert.False(etlDone.Wait(TimeSpan.FromSeconds(50)));
+                Assert.False(await etlDone2.WaitAsync(TimeSpan.FromSeconds(50)));
                 files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(120)));
+                Assert.True(await etlDone2.WaitAsync(TimeSpan.FromSeconds(120)));
 
                 var timeWaited = sw.Elapsed.TotalMilliseconds;
                 sw.Stop();
@@ -261,9 +262,9 @@ loadToOrders(partitionBy(key), o);
             }
         }
 
-        private static ManualResetEventSlim WaitForEtl(DocumentDatabase database, Func<string, EtlProcessStatistics, bool> predicate)
+        private static AsyncManualResetEvent WaitForEtl(DocumentDatabase database, Func<string, EtlProcessStatistics, bool> predicate)
         {
-            var mre = new ManualResetEventSlim();
+            var mre = new AsyncManualResetEvent();
 
             database.EtlLoader.BatchCompleted += x =>
             {

@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -38,7 +39,7 @@ namespace SlowTests.Issues
                 }
 
                 var database = await GetDatabase(store.Database);
-                var mreAfterFirstIndexCreation = new ManualResetEvent(false);
+                var mreAfterFirstIndexCreation = new AsyncManualResetEvent();
                 var mreAfterSecondQuery = new ManualResetEvent(false);
 
                 database.IndexStore.ForTestingPurposesOnly().AfterIndexCreation += indexName =>
@@ -68,7 +69,7 @@ namespace SlowTests.Issues
                     }
                 }
 
-                mreAfterFirstIndexCreation.WaitOne();
+                await mreAfterFirstIndexCreation.WaitAsync();
 
                 using (var session = store.OpenAsyncSession())
                 {
