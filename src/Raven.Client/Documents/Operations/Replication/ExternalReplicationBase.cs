@@ -84,11 +84,6 @@ namespace Raven.Client.Documents.Operations.Replication
             return ToJson();
         }
 
-        public override string FromString()
-        {
-            return $"[{Database} @ {Url}]";
-        }
-
         public virtual ulong GetTaskKey()
         {
             var hashCode = CalculateStringHash(Database);
