@@ -2966,7 +2966,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.NotNull(taskBackupInfo.OnGoingBackup.StartTime);
 
                     var delayDuration = TimeSpan.FromMinutes(delayDurationInMinutes);
-                    var delayUntil = DateTime.Now + delayDuration;
+                    var delayUntil = DateTime.UtcNow + delayDuration;
                     await store.Maintenance.SendAsync(new DelayBackupOperation(taskBackupInfo.OnGoingBackup.RunningBackupTaskId, delayDuration));
 
                     // There should be no OnGoingBackup operation in the OngoingTaskBackup
@@ -2992,7 +2992,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(backupStatus.OriginalBackupTime,
                         delayUntil < nextFullBackup
                             ? taskBackupInfo.OnGoingBackup.StartTime    // until the next scheduled backup time.
-                            : nextFullBackup.Value.ToUniversalTime());  // after the next scheduled backup.
+                            : nextFullBackup.Value);  // after the next scheduled backup.
                 }, tcs: new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
             }
         }
@@ -3083,7 +3083,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.NotNull(taskBackupInfo);
                     Assert.NotNull(taskBackupInfo.OnGoingBackup);
 
-                    var expectedNextBackupDateTime = new DateTime(DateTime.Now.Year + 1, 1, 1, 0, 0, 0, DateTimeKind.Local).ToUniversalTime();
+                    var expectedNextBackupDateTime = new DateTime(DateTime.UtcNow.Year + 1, 1, 1, 0, 0, 0, DateTimeKind.Utc);
                     Assert.Equal(expectedNextBackupDateTime, taskBackupInfo.NextBackup.DateTime);
 
                     // Let's delay the backup task to next occurence + 1 hour
