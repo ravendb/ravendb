@@ -3304,7 +3304,7 @@ namespace Raven.Server.ServerWide
             return _engine.WaitForTopology(state, token: token);
         }
 
-        public Task WaitForState(RachisState rachisState, CancellationToken token)
+        public Task<bool> WaitForState(RachisState rachisState, CancellationToken token)
         {
             return _engine.WaitForState(rachisState, token);
         }

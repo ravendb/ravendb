@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide;
 using Raven.Server;
+using Sparrow.Server;
 using Sparrow.Server.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
@@ -32,7 +33,7 @@ namespace SlowTests.Issues
             var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);
 
             var cmdCount = 0;
-            var exceptionThrown = new ManualResetEventSlim();
+            var exceptionThrown = new AsyncManualResetEvent();
             leader.ServerStore.Engine.BeforeAppendToRaftLog += (context, cmd) =>
             {
                 if (++cmdCount > 10)
@@ -42,7 +43,7 @@ namespace SlowTests.Issues
                 }
             };
 
-            var stateChanged = new ManualResetEventSlim();
+            var stateChanged = new AsyncManualResetEvent();
             leader.ServerStore.Engine.StateChanged += (_, transition) =>
             {
                 if (transition.From == RachisState.Leader && transition.To == RachisState.Candidate)
@@ -50,8 +51,9 @@ namespace SlowTests.Issues
             };
 
             var followers = nodes.Where(s => s != leader).ToList();
-            var leaderSteppedDown = leader.ServerStore.Engine.WaitForLeaveState(RachisState.Leader, CancellationToken.None);
-            var newLeaderElected = Task.WhenAny(followers.Select(s => s.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None)));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            var leaderSteppedDown = leader.ServerStore.Engine.WaitForLeaveState(RachisState.Leader, cts.Token);
+            var newLeaderElected = Task.WhenAny(followers.Select(s => s.ServerStore.WaitForState(RachisState.Leader, cts.Token)));
             var putConnectionStrings = Task.Run(async () =>
             {
                 using (var store = new DocumentStore
@@ -75,16 +77,20 @@ namespace SlowTests.Issues
                 }
             });
 
-            Assert.True(exceptionThrown.Wait(TimeSpan.FromSeconds(10)), $"no exception thrown. commands count : {cmdCount}");
 
-            Assert.True(stateChanged.Wait(TimeSpan.FromSeconds(15)),
+            Assert.True(await exceptionThrown.WaitAsync(TimeSpan.FromSeconds(10)), $"no exception thrown. commands count : {cmdCount}");
+
+            Assert.True(await stateChanged.WaitAsync(TimeSpan.FromSeconds(15)),
                 await AddErrorMessageAndClusterDebugLogs(nodes, 
                     new StringBuilder().AppendLine($"leader {leaderTag} did not have a state transition from 'Leader' to 'Candidate' after 15 seconds.")));
 
-            Assert.True(leaderSteppedDown.Wait(TimeSpan.FromSeconds(15)), 
+            Assert.True(await leaderSteppedDown, 
                 await AddErrorMessageAndClusterDebugLogs(nodes, new StringBuilder().AppendLine($"leader {leaderTag} did not step down after 15 seconds")));
 
-            Assert.True(newLeaderElected.Wait(TimeSpan.FromSeconds(15)), 
+            var r = await newLeaderElected;
+            // this task is already completed
+            Assert.True(r.IsCompleted,$"newLeaderElected was not completed");
+            Assert.True(r.Result, 
                 await AddErrorMessageAndClusterDebugLogs(nodes, new StringBuilder().AppendLine($"old leader {leaderTag} stepped down, but no new leader was elected after 15 seconds")));
             
             await putConnectionStrings;
