@@ -1,10 +1,28 @@
 import React from "react";
-import { rtlRender } from "test/rtlTestUtils";
+import { rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import { composeStories } from "@storybook/testing-react";
 import * as stories from "components/pages/database/settings/unusedDatabaseIds/UnusedDatabaseIds.stories";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 const { UnusedDatabaseIdsStory } = composeStories(stories);
 
+const selectors = {
+    emptyList: /No Unused IDs have been added/,
+    databaseId: DatabasesStubs.detailedStats().DatabaseId,
+};
+
 describe("Unused Database IDs", () => {
-    // TODO
+    it("can render empty list", async () => {
+        const { screen } = await rtlRender_WithWaitForLoad(<UnusedDatabaseIdsStory isEmpty />);
+
+        expect(screen.queryByText(selectors.emptyList)).toBeInTheDocument();
+        expect(screen.queryByText(selectors.databaseId)).not.toBeInTheDocument();
+    });
+
+    it("can render list with items", async () => {
+        const { screen } = await rtlRender_WithWaitForLoad(<UnusedDatabaseIdsStory />);
+
+        expect(screen.queryByText(selectors.databaseId)).toBeInTheDocument();
+        expect(screen.queryByText(selectors.emptyList)).not.toBeInTheDocument();
+    });
 });
