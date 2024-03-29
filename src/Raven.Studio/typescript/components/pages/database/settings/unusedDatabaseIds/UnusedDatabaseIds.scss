@@ -1,0 +1,23 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+@use "Content/scss/variables";
+
+.unused-database-ids {
+    .used-ids-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+        gap: sizes.$gutter-xs;
+    }
+
+    .used-id-pill {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        flex: 1 0 calc(50% - sizes.$gutter-xs);
+        background-color: colors.$well-bg-var;
+        border-radius: sizes.$border-radius-pill;
+        padding: sizes.$gutter-xxs sizes.$gutter-sm sizes.$gutter-xxs sizes.$gutter-xxs;
+        gap: sizes.$gutter-xs;
+    }
+}

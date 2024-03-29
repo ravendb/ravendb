@@ -106,6 +106,7 @@ function initYup() {
             length: ({ length }) => `Please enter exactly ${length} character${length > 1 ? "s" : ""}`,
             min: ({ min }) => `Please provide at least ${min} characters`,
             max: ({ max }) => `The provided text should not exceed ${max} characters`,
+            trim: "Please remove whitespace",
         },
         number: {
             integer: "Please enter integer number",

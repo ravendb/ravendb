@@ -64,6 +64,8 @@ import getIntegrationsPostgreSqlCredentialsCommand = require("commands/database/
 import saveIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/saveIntegrationsPostgreSqlCredentialsCommand");
 import deleteIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/deleteIntegrationsPostgreSqlCredentialsCommand");
 import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import saveUnusedDatabaseIDsCommand = require("commands/database/settings/saveUnusedDatabaseIDsCommand");
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -315,5 +317,13 @@ export default class DatabasesService {
 
     async generateSecret() {
         return new generateSecretCommand().execute();
+    }
+
+    async getDatabaseStats(...args: ConstructorParameters<typeof getDatabaseStatsCommand>) {
+        return new getDatabaseStatsCommand(...args).execute();
+    }
+
+    async saveUnusedDatabaseIDs(databaseName: string, unusedIDs: string[]) {
+        return new saveUnusedDatabaseIDsCommand(unusedIDs, databaseName).execute();
     }
 }
