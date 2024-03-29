@@ -1,38 +1,37 @@
 import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
-import { withStorybookContexts, withBootstrap5, databaseAccessArgType } from "test/storybookTestUtils";
+import { withStorybookContexts, withBootstrap5, forceStoryRerender } from "test/storybookTestUtils";
 import UnusedDatabaseIds from "./UnusedDatabaseIds";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
+import { mockServices } from "test/mocks/services/MockServices";
 
 export default {
     title: "Pages/Database/Settings",
-    component: UnusedDatabaseIds,
-    argTypes: {
-        databaseAccess: databaseAccessArgType,
-    },
     decorators: [withStorybookContexts, withBootstrap5],
-} satisfies Meta<typeof UnusedDatabaseIds>;
+} satisfies Meta;
 
-const db = DatabasesStubs.nonShardedClusterDatabase();
-
-interface DefaultUnusedDatabaseIdsProps {
-    databaseAccess: databaseAccessLevel;
+interface UnusedDatabaseIdsStoryArgs {
+    isEmpty: boolean;
 }
-export const DefaultUnusedDatabaseIds: StoryObj<DefaultUnusedDatabaseIdsProps> = {
+
+export const UnusedDatabaseIdsStory: StoryObj<UnusedDatabaseIdsStoryArgs> = {
     name: "Unused Database IDs",
-    render: ({ databaseAccess }: DefaultUnusedDatabaseIdsProps) => {
-        const { accessManager } = mockStore;
+    render: (args) => {
+        const { databases } = mockStore;
+        const { databasesService } = mockServices;
 
-        accessManager.with_securityClearance("ValidUser");
+        databases.withActiveDatabase_NonSharded_Cluster();
 
-        accessManager.with_databaseAccess({
-            [db.name]: databaseAccess,
-        });
+        if (!args.isEmpty) {
+            databasesService.withDatabaseRecord((x) => {
+                (x as any).UnusedDatabaseIds = ["JLWI6JFUrvGgQAdujNyhBq", "LT7eFjLXwwPtsqRLSITbbp"];
+            });
+            databasesService.withDatabaseStats();
+        }
 
-        return <UnusedDatabaseIds db={db} />;
+        return <UnusedDatabaseIds {...forceStoryRerender()} />;
     },
     args: {
-        databaseAccess: "DatabaseAdmin",
+        isEmpty: false,
     },
 };

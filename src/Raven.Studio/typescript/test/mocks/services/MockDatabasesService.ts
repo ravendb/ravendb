@@ -125,7 +125,7 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         );
     }
 
-    withDatabaseRecord(dto?: document) {
+    withDatabaseRecord(dto?: MockedValue<document>) {
         return this.mockResolvedValue(this.mocks.getDatabaseRecord, dto, DatabasesStubs.databaseRecord());
     }
 
@@ -157,5 +157,9 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
             secret,
             "MXEv4ntxod7qM4mOeF9YZlKIuar1RKU8yQcQSESCzys="
         );
+    }
+
+    withDatabaseStats(dto?: MockedValue<Raven.Client.Documents.Operations.DatabaseStatistics>) {
+        return this.mockResolvedValue(this.mocks.getDatabaseStats, dto, DatabasesStubs.detailedStats());
     }
 }

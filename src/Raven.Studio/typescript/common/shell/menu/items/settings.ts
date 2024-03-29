@@ -18,6 +18,7 @@ import ConnectionStrings from "components/pages/database/settings/connectionStri
 import DatabaseRecord from "components/pages/database/settings/databaseRecord/DatabaseRecord";
 import ConflictResolution from "components/pages/database/settings/conflictResolution/ConflictResolution";
 import Integrations from "components/pages/database/settings/integrations/Integrations";
+import UnusedDatabaseIds from "components/pages/database/settings/unusedDatabaseIds/UnusedDatabaseIds";
 
 export = getSettingsMenuItem;
 
@@ -197,7 +198,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/advanced/databaseIDs',
-            moduleId: require('viewmodels/database/advanced/databaseIDs'),
+            moduleId: bridgeToReact(UnusedDatabaseIds, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Unused Database IDs',
             nav: true,
