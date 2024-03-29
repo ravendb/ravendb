@@ -428,12 +428,10 @@ namespace Raven.Server.Documents.Indexes.Workers
             foreach (var key in _referencesStorage.GetItemKeysFromCollectionThatReference(collection, referencedItem.Key, indexContext.Transaction, lastProcessedItemId))
             {
                 // we check if we already indexed the document BEFORE we fetch it from the disk.
-                var clonedKey = key.Clone(queryContext.Documents.Allocator);
-                if (indexed.Add(clonedKey) == false)
-                {
-                    clonedKey.Release(queryContext.Documents.Allocator);
+                if (indexed.Contains(key))
                     continue;
-                }
+
+                indexed.Add(key.Clone(queryContext.Documents.Allocator));
 
                 var item = GetItem(queryContext.Documents, key);
                 if (item == null)
