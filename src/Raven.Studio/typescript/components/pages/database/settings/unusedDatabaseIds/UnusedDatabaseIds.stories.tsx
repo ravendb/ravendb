@@ -1,13 +1,13 @@
 import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
-import { withStorybookContexts, withBootstrap5, forceStoryRerender } from "test/storybookTestUtils";
+import { withStorybookContexts, withBootstrap5, withForceRerender } from "test/storybookTestUtils";
 import UnusedDatabaseIds from "./UnusedDatabaseIds";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
 
 export default {
     title: "Pages/Database/Settings",
-    decorators: [withStorybookContexts, withBootstrap5],
+    decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 
 interface UnusedDatabaseIdsStoryArgs {
@@ -29,7 +29,7 @@ export const UnusedDatabaseIdsStory: StoryObj<UnusedDatabaseIdsStoryArgs> = {
             databasesService.withDatabaseStats();
         }
 
-        return <UnusedDatabaseIds {...forceStoryRerender()} />;
+        return <UnusedDatabaseIds />;
     },
     args: {
         isEmpty: false,
