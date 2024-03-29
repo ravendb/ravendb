@@ -7,6 +7,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Replication;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -553,7 +554,7 @@ namespace SlowTests.Core.Session
                 using (store.AggressivelyCacheFor(TimeSpan.FromHours(1)))
                 using (var changes = await store.Changes().EnsureConnectedNow())
                 {
-                    var mre = new ManualResetEventSlim();
+                    var mre = new AsyncManualResetEvent();
 
                     var observable = changes.ForAllDocuments();
                     var documentSubscription = observable.Subscribe(x => mre.Set());
@@ -569,7 +570,7 @@ namespace SlowTests.Core.Session
                         await session.SaveChangesAsync();
                     }
 
-                    Assert.True(mre.Wait(TimeSpan.FromSeconds(30)));
+                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(30)));
                     documentSubscription.Dispose();
 
                     var requestExecutor = store.GetRequestExecutor();

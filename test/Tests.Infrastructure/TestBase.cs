@@ -739,27 +739,7 @@ namespace FastTests
 
         protected static void DisposeServer(RavenServer server, int timeoutInMs = 60_000)
         {
-            if (server == null)
-                return;
-
-            if (server.Disposed)
-                return;
-
-            var url = server.WebUrl;
-            var debugTag = server.DebugTag;
-            var timeout = TimeSpan.FromMilliseconds(timeoutInMs);
-
-            using (DebugHelper.GatherVerboseDatabaseDisposeInformation(server, timeoutInMs))
-            using (var mre = new ManualResetEventSlim())
-            {
-                server.AfterDisposal += () => mre.Set();
-                var task = Task.Run(server.Dispose);
-
-                if (mre.Wait(timeout) == false)
-                    ThrowCouldNotDisposeServerExceptionAsync(url, debugTag, timeout).GetAwaiter().GetResult();
-
-                task.GetAwaiter().GetResult();
-            }
+            AsyncHelpers.RunSync(() => DisposeServerAsync(server, timeoutInMs));
         }
 
         protected static async Task DisposeServerAsync(RavenServer server, int timeoutInMs = 60_000)

@@ -14,7 +14,6 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -33,6 +32,7 @@ using Tests.Infrastructure;
 using xRetry;
 using Xunit;
 using Xunit.Abstractions;
+using Sparrow.Server;
 
 namespace SlowTests.Authentication
 {
@@ -162,7 +162,7 @@ namespace SlowTests.Authentication
 
                 Server.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(80);
 
-                var mre = new ManualResetEventSlim();
+                var mre = new AsyncManualResetEvent();
 
                 Server.ServerCertificateChanged += (sender, args) => mre.Set();
 
@@ -172,7 +172,7 @@ namespace SlowTests.Authentication
 
                 Assert.True(command.Result.Success, "ForceRenewCertCommand returned false");
 
-                var result = mre.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(4));
+                var result = await mre.WaitAsync(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(4));
 
                 if (result == false && Server.RefreshTask.IsCompleted)
                 {

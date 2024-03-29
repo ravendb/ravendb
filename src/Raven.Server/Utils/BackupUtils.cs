@@ -260,7 +260,6 @@ internal static class BackupUtils
 
         var isFullBackup = IsFullBackup(parameters.BackupStatus, parameters.Configuration, nextFullBackup, nextIncrementalBackup, parameters.ResponsibleNodeTag);
         var nextBackupTimeUtc = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup, parameters.BackupStatus.DelayUntil);
-
         var timeSpan = nextBackupTimeUtc - nowUtc;
 
         TimeSpan nextBackupTimeSpan;
@@ -284,7 +283,6 @@ internal static class BackupUtils
         {
             nextBackupTimeSpan = timeSpan;
         }
-
         nextBackupTimeUtc = DateTime.SpecifyKind(nextBackupTimeUtc, DateTimeKind.Utc);
         return new NextBackup
         {

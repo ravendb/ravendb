@@ -8,6 +8,7 @@ using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -235,7 +236,7 @@ namespace SlowTests.Client.Subscriptions
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
-                        var mre = new ManualResetEvent(false);
+                        var mre = new AsyncManualResetEvent();
                         subscription.AfterAcknowledgment += batch =>
                         {
                             mre.Set();
@@ -294,7 +295,7 @@ namespace SlowTests.Client.Subscriptions
                         Assert.True(ages.TryTake(out age, _waitForDocTimeout));
                         Assert.Equal(34, age);
 
-                        Assert.True(mre.WaitOne(250));
+                        Assert.True(await mre.WaitAsync(TimeSpan.FromMilliseconds(250)));
                     }
                 }
 

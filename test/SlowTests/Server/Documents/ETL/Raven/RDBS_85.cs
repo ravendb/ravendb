@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -32,7 +33,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 var process = (RavenEtl)srcDb.EtlLoader.Processes.First();
 
-                var afterStop = new ManualResetEvent(false);
+                var afterStop = new AsyncManualResetEvent();
 
                 process.BeforeActualLoad += p =>
                 {
@@ -50,7 +51,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                Assert.True(afterStop.WaitOne(TimeSpan.FromSeconds(30)));
+                Assert.True(await afterStop.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 using (var session = src.OpenSession())
                 {
@@ -98,7 +99,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 var process = (RavenEtl)srcDb.EtlLoader.Processes.First();
 
-                var afterLoadError = new ManualResetEvent(false);
+                var afterLoadError = new AsyncManualResetEvent();
 
                 process.BeforeActualLoad += p =>
                 {
@@ -116,7 +117,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                Assert.True(afterLoadError.WaitOne(TimeSpan.FromSeconds(30)));
+                Assert.True(await afterLoadError.WaitAsync(TimeSpan.FromSeconds(30)));
                 
                 process.BeforeActualLoad = null;
 
