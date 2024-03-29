@@ -362,7 +362,7 @@ namespace Tests.Infrastructure
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
 
-            throw new AggregateException("Failed to get leader after 5 retries. {Environment.NewLine}{GetNodesStatus(servers ?? Servers)}", exceptions);
+            throw new AggregateException($"Failed to get leader after 5 retries. {Environment.NewLine}{GetNodesStatus(servers ?? Servers)}", exceptions);
         }
 
         private string GetNodesStatus(List<RavenServer> servers)
