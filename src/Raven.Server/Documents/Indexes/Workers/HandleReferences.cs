@@ -144,48 +144,47 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                 try
                 {
-                var referenceState = _referencesState.For(actionType, collection);
-                foreach (var referencedCollection in referencedCollections)
-                {
-                    var inMemoryStats = _index.GetReferencesStats(referencedCollection.Name);
-
-                    using (var collectionStats = stats.For("Collection_" + referencedCollection.Name))
+                    var referenceState = _referencesState.For(actionType, collection);
+                    foreach (var referencedCollection in referencedCollections)
                     {
-                        long lastReferenceEtag;
+                        var inMemoryStats = _index.GetReferencesStats(referencedCollection.Name);
 
-                        switch (actionType)
+                        using (var collectionStats = stats.For("Collection_" + referencedCollection.Name))
                         {
-                            case ActionType.Document:
-                                lastReferenceEtag =
-                                    _referencesStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
-                                break;
-                            case ActionType.Tombstone:
-                                lastReferenceEtag = _referencesStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection,
-                                    referencedCollection);
-                                break;
-                            default:
-                                throw new NotSupportedException();
-                        }
+                            long lastReferenceEtag;
 
-                        var lastEtag = lastReferenceEtag;
-                        var resultsCount = 0;
-
-                        var sw = new Stopwatch();
-
-                        var keepRunning = true;
-                        var earlyExit = false;
-                        var lastCollectionEtag = -1L;
-
-                        while (keepRunning)
-                        {
-                            UpdateReferences(indexContext, collection);
-
-                            RenewTransactionIfNeeded(queryContext, batchContinuationResult, indexed, ref readTransaction);
-
-                            var hasChanges = false;
-                            earlyExit = false;
-
+                            switch (actionType)
                             {
+                                case ActionType.Document:
+                                    lastReferenceEtag =
+                                        _referencesStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
+                                    break;
+                                case ActionType.Tombstone:
+                                    lastReferenceEtag = _referencesStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection,
+                                        referencedCollection);
+                                    break;
+                                default:
+                                    throw new NotSupportedException();
+                            }
+
+                            var lastEtag = lastReferenceEtag;
+                            var resultsCount = 0;
+
+                            var sw = new Stopwatch();
+
+                            var keepRunning = true;
+                            var earlyExit = false;
+                            var lastCollectionEtag = -1L;
+
+                            while (keepRunning)
+                            {
+                                UpdateReferences(indexContext, collection);
+
+                                RenewTransactionIfNeeded(queryContext, batchContinuationResult, indexed, ref readTransaction);
+
+                                var hasChanges = false;
+                                earlyExit = false;
+
                                 sw.Restart();
 
                                 IEnumerable<Reference> references;
@@ -306,60 +305,59 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     break;
 
                                 _index._forTestingPurposes?.BeforeClosingDocumentsReadTransactionForHandleReferences?.Invoke();
+
+                                bool CanContinueReferenceBatch()
+                                {
+                                    var parameters = new CanContinueBatchParameters(stats, IndexingWorkType.References, queryContext, indexContext, writeOperation,
+                                        lastEtag, lastCollectionEtag, totalProcessedCount, sw);
+
+                                    batchContinuationResult = _index.CanContinueBatch(in parameters, ref maxTimeForDocumentTransactionToRemainOpen);
+                                    if (batchContinuationResult != Index.CanContinueBatchResult.True)
+                                    {
+                                        keepRunning = batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction;
+                                        return false;
+                                    }
+
+                                    if (totalProcessedCount >= pageSize)
+                                    {
+                                        keepRunning = false;
+                                        return false;
+                                    }
+
+                                    return true;
+                                }
                             }
 
-                            bool CanContinueReferenceBatch()
+                            if (lastReferenceEtag == lastEtag)
                             {
-                                var parameters = new CanContinueBatchParameters(stats, IndexingWorkType.References, queryContext, indexContext, writeOperation,
-                                    lastEtag, lastCollectionEtag, totalProcessedCount, sw);
+                                // the last referenced etag hasn't changed
+                                if (keepRunning == false && earlyExit)
+                                    return (true, batchContinuationResult);
 
-                                batchContinuationResult = _index.CanContinueBatch(in parameters, ref maxTimeForDocumentTransactionToRemainOpen);
-                                if (batchContinuationResult != Index.CanContinueBatchResult.True)
-                                {
-                                    keepRunning = batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction;
-                                    return false;
-                                }
-
-                                if (totalProcessedCount >= pageSize)
-                                {
-                                    keepRunning = false;
-                                    return false;
-                                }
-
-                                return true;
+                                continue;
                             }
+
+                            moreWorkFound = true;
+
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"Executed handle references for '{_index.Name}' index and '{referencedCollection.Name}' collection. " +
+                                             $"Got {resultsCount:#,#;;0} map results in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
+
+                            switch (actionType)
+                            {
+                                case ActionType.Document:
+                                    _referencesStorage.WriteLastReferenceEtag(indexContext.Transaction, collection, referencedCollection, lastEtag);
+                                    break;
+                                case ActionType.Tombstone:
+                                    _referencesStorage.WriteLastReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection, lastEtag);
+                                    break;
+                                default:
+                                    throw new NotSupportedException();
+                            }
+
+                            _referencesState.Clear(earlyExit, actionType, collection, indexContext);
                         }
-
-                        if (lastReferenceEtag == lastEtag)
-                        {
-                            // the last referenced etag hasn't changed
-                            if (keepRunning == false && earlyExit)
-                                return (true, batchContinuationResult);
-
-                            continue;
-                        }
-
-                        moreWorkFound = true;
-
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Executed handle references for '{_index.Name}' index and '{referencedCollection.Name}' collection. " +
-                                         $"Got {resultsCount:#,#;;0} map results in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
-
-                        switch (actionType)
-                        {
-                            case ActionType.Document:
-                                _referencesStorage.WriteLastReferenceEtag(indexContext.Transaction, collection, referencedCollection, lastEtag);
-                                break;
-                            case ActionType.Tombstone:
-                                _referencesStorage.WriteLastReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection, lastEtag);
-                                break;
-                            default:
-                                throw new NotSupportedException();
-                        }
-
-                        _referencesState.Clear(earlyExit, actionType, collection, indexContext);
                     }
-                }
                 }
                 finally
                 {
