@@ -1,42 +1,90 @@
 ﻿using System;
+using System.Runtime.Loader;
 using RabbitMQ.Client;
 
 namespace Tests.Infrastructure.ConnectionString;
 
-public class RabbitMqConnectionString
+public class RabbitMqConnectionString : IDisposable
 {
     private const string EnvironmentVariable = "RAVEN_RABBITMQ_CONNECTION_STRING";
 
     private static RabbitMqConnectionString _instance;
 
     public static RabbitMqConnectionString Instance => _instance ??= new RabbitMqConnectionString();
+    
+    private IConnection _connection;
+
+    private readonly Lazy<string> _initialized;
 
     private RabbitMqConnectionString()
     {
-        VerifiedConnectionString = new Lazy<string>(VerifiedNodesValueFactory);
-
-        ConnectionString = new Lazy<string>(() => Environment.GetEnvironmentVariable(EnvironmentVariable) ?? string.Empty);
-
-        _canConnect = new Lazy<bool>(CanConnectInternal);
+        _initialized = new Lazy<string>(EnsureInitialize);
     }
 
-    private Lazy<string> ConnectionString { get; }
+    private string EnsureInitialize()
+    {
+        var localConnectionString = "amqp://guest:guest@localhost:5672/";
 
-    public Lazy<string> VerifiedConnectionString { get; }
+        _connection = CreateConnection(localConnectionString, out _);
+        if (_connection != null)
+            return localConnectionString;
 
-    private readonly Lazy<bool> _canConnect;
+        var envConnectionString = Environment.GetEnvironmentVariable(EnvironmentVariable) ?? string.Empty;
+        if (envConnectionString.Length == 0)
+            throw new InvalidOperationException($"Environment variable {EnvironmentVariable} is empty");
 
-    public bool CanConnect => _canConnect.Value;
+        _connection = CreateConnection(envConnectionString, out var ex);
+        if (_connection != null)
+            return envConnectionString;
+
+        throw new InvalidOperationException($"Can't create connection for Kafka instance. Provided url: {envConnectionString}", ex);
+
+        IConnection CreateConnection(string connectionString, out Exception exception)
+        {
+            exception = null;
+            try
+            {
+                var connectionFactory = new ConnectionFactory() {Uri = new Uri(connectionString)};
+                var conn = connectionFactory.CreateConnection();
+                
+                // connection succeeded register for disposable
+                AssemblyLoadContext.Default.Unloading += _ =>
+                {
+                    try
+                    {
+                        Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
+                };
+                return conn;
+
+            }
+            catch (Exception e)
+            {
+                exception = e;
+                return null;
+            }
+        }
+    }
+
+    public IModel CreateModel()
+    {
+        _ = _initialized.Value;
+        return _connection.CreateModel();
+    }
+
+    public string VerifiedConnectionString => _initialized.Value;
+
+    public bool CanConnect => CanConnectInternal();
 
     private bool CanConnectInternal()
     {
         try
         {
-            var connectionString = ConnectionString.Value;
-            if (string.IsNullOrEmpty(connectionString))
-                return false;
-
-            VerifiedNodesValueFactory();
+            _ = _initialized.Value;
             return true;
         }
         catch (Exception)
@@ -45,43 +93,11 @@ public class RabbitMqConnectionString
         }
     }
 
-    protected virtual string VerifiedNodesValueFactory()
+    public void Dispose()
     {
-        var localConnectionString = "amqp://guest:guest@localhost:5672/";
-
-        if (TryConnect(localConnectionString, out _))
-            return localConnectionString;
-
-        if (ConnectionString.Value.Length == 0)
-            throw new InvalidOperationException($"Environment variable {EnvironmentVariable} is empty");
-
-
-        if (TryConnect(ConnectionString.Value, out var ex))
-            return ConnectionString.Value;
-
-        throw new InvalidOperationException($"Can't access Kafka instance. Provided url: {ConnectionString.Value}", ex);
-
-
-        bool TryConnect(string connectionString, out Exception exception)
+        using (_connection)
         {
-            try
-            {
-                var connectionFactory = new ConnectionFactory() {Uri = new Uri(connectionString)};
-
-                using (connectionFactory.CreateConnection())
-                {
-
-                }
-
-                exception = null;
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                exception = e;
-                return false;
-            }
+            _connection?.Close();
         }
     }
 }
