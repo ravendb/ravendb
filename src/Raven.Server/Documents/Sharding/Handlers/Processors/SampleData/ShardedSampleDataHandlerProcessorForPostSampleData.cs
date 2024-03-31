@@ -30,9 +30,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.SampleData
                 SkipRevisionCreation = true
 
             };
-            if (feature == null)
-                options.AuthorizationStatus = AuthorizationStatus.ValidUser;
-            else
+            options.AuthorizationStatus = AuthorizationStatus.ValidUser;
+            if (feature != null)
                 options.AuthorizationStatus = feature.CanAccess(RequestHandler.DatabaseName, requireAdmin: true, requireWrite: false)
                     ? AuthorizationStatus.DatabaseAdmin
                     : AuthorizationStatus.ValidUser;

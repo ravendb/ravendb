@@ -434,6 +434,7 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
             if (authenticationEnabled && CanAccess(authorizationStatus) == false)
             {
                 result.AddError("Import of Client Configuration was skipped due to insufficient permissions on your current certificate.");
+                result.DatabaseRecord.ErroredCount++;
             }
             else
             {
