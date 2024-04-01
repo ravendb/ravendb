@@ -18,6 +18,8 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public string HubName;
 
+        public ReplicationType Type = ReplicationType.PullAsSink;
+
         public PullReplicationAsSink()
         {
         }
@@ -64,6 +66,7 @@ namespace Raven.Client.Documents.Operations.Replication
             djv[nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths;
             djv[nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths;
             djv[nameof(AccessName)] = AccessName;
+            djv[nameof(Type)] = Type;
 
             return djv;
         }
@@ -77,6 +80,7 @@ namespace Raven.Client.Documents.Operations.Replication
             djv[nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths;
             djv[nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths;
             djv[nameof(AccessName)] = AccessName;
+            djv[nameof(Type)] = Type;
 
             return djv;
         }

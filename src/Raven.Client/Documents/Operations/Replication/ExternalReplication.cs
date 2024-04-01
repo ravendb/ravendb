@@ -6,6 +6,10 @@ namespace Raven.Client.Documents.Operations.Replication
 {
     public class ExternalReplication : ExternalReplicationBase, IExternalReplication
     {
+        public TimeSpan DelayReplicationFor { get; set; }
+
+        public ReplicationType Type = ReplicationType.External;
+
         public ExternalReplication()
         {
         }
@@ -14,12 +18,11 @@ namespace Raven.Client.Documents.Operations.Replication
         {
         }
 
-        public TimeSpan DelayReplicationFor { get; set; }
-
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(DelayReplicationFor)] = DelayReplicationFor;
+            json[nameof(Type)] = Type;
             return json;
         }
 
