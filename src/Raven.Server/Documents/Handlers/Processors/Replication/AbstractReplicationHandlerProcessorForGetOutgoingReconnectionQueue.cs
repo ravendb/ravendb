@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Replication;
+using Raven.Server.Documents.Replication;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         }
     }
 
-    public sealed class ReplicationOutgoingReconnectionQueuePreview
+    public sealed class ReplicationOutgoingReconnectionQueuePreview : IFillFromBlittableJson
     {
         public List<ReplicationNode> QueueInfo;
 
@@ -34,6 +35,19 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             {
                 ["Queue-Info"] = new DynamicJsonArray(QueueInfo.Select(o => o.ToJson()))
             };
+        }
+
+        public void FillFromBlittableJson(BlittableJsonReaderObject json)
+        {
+            QueueInfo = new List<ReplicationNode>();
+            if (json.TryGetMember("Queue-Info", out var result) && result is BlittableJsonReaderArray bjra)
+            {
+                foreach (BlittableJsonReaderObject bjro in bjra)
+                {
+                    var replicationNode = ReplicationHelper.GetReplicationNodeByType(bjro);
+                    QueueInfo.Add(replicationNode);
+                }
+            }
         }
     }
 }

@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Replication
     /// <summary>
     /// Data class for replication destination
     /// </summary>
-    public class ReplicationNode : IEquatable<ReplicationNode>, IDynamicJson
+    public abstract class ReplicationNode : IEquatable<ReplicationNode>, IDynamicJson
     {
         /// <summary>
         /// The name of the connection string specified in the 
@@ -49,6 +49,14 @@ namespace Raven.Client.Documents.Replication
         /// </summary>
         public bool Disabled { get; set; }
 
+        public enum ReplicationType
+        {
+            External,
+            PullAsSink,
+            Internal,
+            Migration
+        }
+
         public bool Equals(ReplicationNode other) => IsEqualTo(other);
 
         public virtual bool IsEqualTo(ReplicationNode other)
@@ -58,9 +66,12 @@ namespace Raven.Client.Documents.Replication
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
             return Equals((ReplicationNode)obj);
         }
 

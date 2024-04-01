@@ -1,8 +1,13 @@
-﻿using System.Net.Http;
+﻿using System.IO;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Json;
+using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Commands.Replication
 {
@@ -27,6 +32,37 @@ namespace Raven.Server.Documents.Commands.Replication
             };
 
             return request;
+        }
+
+        public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+        {
+            await using var stream = await response.Content.ReadAsStreamAsync();
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+
+            memoryStream.Position = 0;
+            var state = new JsonParserState();
+
+            using (var parser = new UnmanagedJsonParser(context, state, "outgoing-failures/response"))
+            using (context.GetMemoryBuffer(out var buffer))
+            using (var peepingTomStream = new PeepingTomStream(memoryStream, context))
+            {
+                var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "read/metadata", parser, state);
+
+                // read metadata
+                await UnmanagedJsonParserHelper.ReadAsync(peepingTomStream, parser, state, buffer);
+                await UnmanagedJsonParserHelper.ReadPropertyAsync(builder, peepingTomStream, parser, buffer);
+
+                // read Stats
+                builder.Renew("read/stats", BlittableJsonDocumentBuilder.UsageMode.None);
+                await UnmanagedJsonParserHelper.ReadPropertyAsync(builder, peepingTomStream, parser, buffer, CancellationToken.None);
+
+                var res = builder.CreateReader();
+
+                SetResponse(context, res, false);
+            }
+
+            return ResponseDisposeHandling.Automatic;
         }
 
         public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
