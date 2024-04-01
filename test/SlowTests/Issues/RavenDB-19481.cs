@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.DirectoryServices.ActiveDirectory;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -11,13 +12,11 @@ using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
-using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
-using Xunit;
 using Xunit.Abstractions;
-using static Raven.Server.Smuggler.Documents.CounterItem;
 using Assert = Xunit.Assert;
 
 namespace SlowTests.Issues
@@ -35,12 +34,18 @@ namespace SlowTests.Issues
         {
             DoNotReuseServer();
 
-            var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore(options))
             {
                 const string id = "users/1";
 
-                await RevisionsHelper.SetupRevisionsAsync(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisionsAsync(store, configuration: new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = false,
+                        MinimumRevisionsToKeep = 100
+                    }
+                });
 
                 using (var session = store.OpenAsyncSession(new SessionOptions
                 {
@@ -54,20 +59,45 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                await WaitAndAssertForValueAsync(async () =>
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var u = await session.LoadAsync<User>(id);
+                        return u == null ? $"\"{id}\" is null" : u.Name;
+                    }
+                }, "Grisha");
+
+                var stats = await store.Maintenance.SendAsync(new GetEssentialStatisticsOperation());
                 Assert.Equal(1, stats.CountOfRevisionDocuments);
 
-
+                var restoredDatabaseName = $"restored_database-{Guid.NewGuid()}";
+                var backupPath = NewDataPath(suffix: "BackupFolder");
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
-                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: 4);
-
-                var databaseName = $"restored_database-{Guid.NewGuid()}";
+                RestoreBackupConfiguration restoreConfig;
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store);
+                    await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config);
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+                    var dirs = Directory.GetDirectories(backupPath);
+                    Assert.Equal(3, dirs.Length);
+                    var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                    var settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
+                    restoreConfig = new RestoreBackupConfiguration { DatabaseName = restoredDatabaseName, ShardRestoreSettings = settings };
+                }
+                else
+                {
+                    var waitHandles = await Backup.WaitForBackupToComplete(store);
+                    await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                    restoreConfig = new RestoreBackupConfiguration { BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = restoredDatabaseName };
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+                }
 
                 var clusterTransactions = new Dictionary<string, long>();
                 Server.ServerStore.ForTestingPurposesOnly().BeforeExecuteClusterTransactionBatch = (dbName, batch) =>
                 {
-                    if (dbName == databaseName)
+                    if (dbName == restoredDatabaseName)
                     {
                         foreach (var clusterTx in batch)
                         {
@@ -80,12 +110,7 @@ namespace SlowTests.Issues
                     }
                 };
 
-                using (Backup.RestoreDatabase(store,
-                           new RestoreBackupConfiguration
-                           {
-                               BackupLocation = Directory.GetDirectories(backupPath).First(),
-                               DatabaseName = databaseName
-                           }))
+                using (Backup.RestoreDatabase(store, restoreConfig))
                 {
                 }
 
@@ -103,12 +128,18 @@ namespace SlowTests.Issues
         {
             DoNotReuseServer();
 
-            var backupPath = NewDataPath(suffix: "BackupFolder");
             using var store = GetDocumentStore(options);
 
             const string id = "users/1";
 
-            await RevisionsHelper.SetupRevisionsAsync(Server.ServerStore, store.Database);
+            await RevisionsHelper.SetupRevisionsAsync(store, configuration: new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionsToKeep = 100
+                }
+            });
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
@@ -116,27 +147,53 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
-            var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+            await WaitAndAssertForValueAsync(async () =>
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var u = await session.LoadAsync<User>(id);
+                    return u==null? $"\"{id}\" is null" : u.Name;
+                }
+            }, "Grisha");
+
+            var stats = await store.Maintenance.SendAsync(new GetEssentialStatisticsOperation());
             Assert.Equal(1, stats.CountOfRevisionDocuments);
 
+            var restoredDatabaseName = $"restored_database-{Guid.NewGuid()}";
+            var backupPath = NewDataPath(suffix: "BackupFolder");
             var config = Backup.CreateBackupConfiguration(backupPath);
-            var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+            RestoreBackupConfiguration restoreConfig;
+            if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+            {
+                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store);
+                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config);
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(3, dirs.Length);
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                var settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
+                restoreConfig = new RestoreBackupConfiguration { DatabaseName = restoredDatabaseName, ShardRestoreSettings = settings };
+            }
+            else
+            {
+                var waitHandles = await Backup.WaitForBackupToComplete(store);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                restoreConfig = new RestoreBackupConfiguration { BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = restoredDatabaseName };
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+            }
+            
 
-            await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: 2);
-
-            var databaseName = $"restored_database-{Guid.NewGuid()}";
-
-            using (Backup.RestoreDatabase(store,
-                       new RestoreBackupConfiguration { BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = databaseName }))
+            
+            using (Backup.RestoreDatabase(store, restoreConfig))
             {
                 using (var session = store.OpenAsyncSession(new SessionOptions()
                 {
-                    Database = databaseName
+                    Database = restoredDatabaseName
                 }))
                 {
                     var user = await session.LoadAsync<Company>(id);
                     Assert.NotNull(user);
-
+                
                     var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
                     foreach (var metadata in revisionsMetadata)
                     {
