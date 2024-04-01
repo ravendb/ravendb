@@ -330,9 +330,19 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
                     {
-                        if (rawRecord == null ||
-                            rawRecord.Topology.RelevantFor(ServerStore.NodeTag) == false)
+                        if (rawRecord == null)
                             continue;
+
+                        if (rawRecord.IsSharded)
+                        {
+                            if (rawRecord.Sharding.Orchestrator.Topology.RelevantFor(ServerStore.NodeTag) == false)
+                                continue;
+                        }
+                        else
+                        {
+                            if (rawRecord.Topology.RelevantFor(ServerStore.NodeTag) == false)
+                                continue;
+                        }
 
                         await WriteDatabaseRecord(archive, databaseName, jsonOperationContext, context);
 
@@ -352,7 +362,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     if (databases.Count > 0)
                     {
                         return allDatabases.Intersect(databases).ToHashSet();
-            }
+                    }
 
                     return allDatabases.ToHashSet();
         }
