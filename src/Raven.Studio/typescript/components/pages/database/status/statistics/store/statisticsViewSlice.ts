@@ -295,11 +295,10 @@ export const statisticsViewSlice = createSlice({
 const { initForDatabase, refreshStarted, refreshFinished } = statisticsViewSlice.actions;
 
 export const initView = (db: DatabaseSharedInfo) => async (dispatch: AppDispatch, getState: () => RootState) => {
-    dispatch(initForDatabase(db.name, DatabaseUtils.getLocations(db)));
-
     const firstTime = selectEssentialStats(getState()).status === "idle";
 
     if (firstTime) {
+        dispatch(initForDatabase(db.name, DatabaseUtils.getLocations(db)));
         dispatch(fetchEssentialStats());
     } else {
         dispatch(refresh());
