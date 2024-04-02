@@ -11,6 +11,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 using static Raven.Server.Documents.Schemas.TimeSeries;
@@ -219,6 +220,27 @@ namespace Raven.Server.Documents.TimeSeries
 
                 return last;
             }
+        }
+
+        internal IEnumerable<TimeSeriesValuesSegment> GetSegments()
+        {
+            if (Init() == false)
+                yield break;
+
+            InitializeSegment(out var baselineMilliseconds, out _currentSegment);
+            do
+            {
+                var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
+
+                if (_offset.HasValue)
+                    baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
+
+                if (baseline > _to)
+                    yield break;
+
+                yield return _currentSegment;
+
+            } while (NextSegment(out baselineMilliseconds));
         }
 
         internal IEnumerable<TimeSeriesStorage.SegmentSummary> GetSegmentsSummary()
@@ -611,14 +633,23 @@ namespace Raven.Server.Documents.TimeSeries
             return DocumentsStorage.TableValueToChangeVector(_context, (int)TimeSeriesTable.ChangeVector, ref _tvr);
         }
 
-        internal (long Etag, string ChangeVector, DateTime Baseline) GetSegmentInfo()
+        internal (long Etag, string ChangeVector, DateTime Baseline, short TransactionMarker) GetSegmentInfo()
         {
             var changeVector = GetCurrentSegmentChangeVector();
             var etag = DocumentsStorage.TableValueToEtag((int)TimeSeriesTable.Etag, ref _tvr);
             var baseline = new DateTime(ReadBaseline() * 10_000);
+            var transactionMarker = DocumentsStorage.TableValueToShort((int)TimeSeriesTable.TransactionMarker, nameof(TimeSeriesTable.TransactionMarker), ref _tvr);
 
-            return (etag, changeVector, baseline);
+            return (etag, changeVector, baseline, transactionMarker);
         }
+
+        public IDisposable ReadKey(out Slice key)
+        {
+            var keyPtr = _tvr.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
+            return Slice.From(_context.Allocator, keyPtr, keySize, ByteStringType.Immutable, out key);
+        }
+
+        public long SegmentStorageId => _tvr.Id;
 
         internal static (DateTime From, DateTime To) AddOffsetIfNeeded(TimeSpan? offset, DateTime from, DateTime to)
         {

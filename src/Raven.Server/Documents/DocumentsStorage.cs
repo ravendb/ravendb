@@ -2698,7 +2698,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private Dictionary<string, CollectionName> ReadCollections(Transaction tx)
+        public Dictionary<string, CollectionName> ReadCollections(Transaction tx)
         {
             var result = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
