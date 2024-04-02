@@ -11,13 +11,15 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
     {
         public Dictionary<string, string> Unmergables = new Dictionary<string, string>(); // index name, reason
         public List<MergeSuggestions> Suggestions = new List<MergeSuggestions>();
+        public Dictionary<string, string> Errors = new Dictionary<string, string>();
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(Unmergables)] = DynamicJsonValue.Convert(Unmergables),
-                [nameof(Suggestions)] = new DynamicJsonArray(Suggestions.Select(x=>x.ToJson()))
+                [nameof(Suggestions)] = new DynamicJsonArray(Suggestions.Select(x=>x.ToJson())),
+                [nameof(Errors)] = DynamicJsonValue.Convert(Errors)
             };
         }
     }
@@ -56,6 +58,12 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
         public List<IndexData> ProposedForMerge = new List<IndexData>();
         public IndexData MergedData { get; set; }
         public string IndexMergeSuggestion { get; set; }
+    }
+
+    public class MergeError
+    {
+        public string IndexName { get; set; }
+        public string Message { get; set; }
     }
 
 }
