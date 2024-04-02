@@ -11,6 +11,7 @@ import { LazyLoad } from "components/common/LazyLoad";
 import UnusedIdsForm from "components/pages/database/settings/unusedDatabaseIds/bits/UnusedIdsForm";
 import { useUnusedDatabaseIds } from "components/pages/database/settings/unusedDatabaseIds/useUnusedDatabaseIds";
 import PotentialUnusedIdList from "components/pages/database/settings/unusedDatabaseIds/bits/PotentialUnusedIdList";
+import "./UnusedDatabaseIds.scss";
 
 todo("Feature", "Damian", "Remove legacy code");
 
