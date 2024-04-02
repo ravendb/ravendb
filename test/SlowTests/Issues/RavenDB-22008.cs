@@ -19,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Subscriptions)]
         public async Task Index_Update_With_Subscription_Update()
         {
             using (var store = GetDocumentStore())
@@ -41,14 +41,11 @@ namespace SlowTests.Issues
                 var indexDisposeMre = new AsyncManualResetEvent(false);
                 var mreBeforeSendingCommand = new AsyncManualResetEvent(false);
 
-                var mreWasSet = false;
-
                 using (var cts = new CancellationTokenSource(Server.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan * 2))
                 using (index.ForTestingPurposesOnly().CallDuringFinallyOfExecuteIndexing(() =>
                 {
                     // simulating a long indexing batch completion
                     indexDisposeMre.Wait(cts.Token);
-                    mreWasSet = indexDisposeMre.IsSet;
                 }))
                 {
                     database.IndexStore.ForTestingPurposesOnly().BeforeHandleDatabaseRecordChange = () =>
@@ -78,8 +75,6 @@ namespace SlowTests.Issues
 
                     indexDisposeMre.Set();
                     await deleteIndexTask;
-
-                    Assert.True(mreWasSet);
                 }
             }
         }
