@@ -420,6 +420,7 @@ namespace Raven.Server.Documents.Handlers
                                         Status = x.Status,
                                         LockMode = x.Definition.LockMode,
                                         Priority = x.Definition.Priority,
+                                        ReferencedCollections = x.GetReferencedCollectionNames()
                                     };
                                 }
                                 catch (Exception e)
@@ -466,6 +467,7 @@ namespace Raven.Server.Documents.Handlers
                                         Status = x.Status,
                                         LockMode = x.Definition.LockMode,
                                         Priority = x.Definition.Priority,
+                                        ReferencedCollections = x.GetReferencedCollectionNames()
                                     };
                                 }
                             })
