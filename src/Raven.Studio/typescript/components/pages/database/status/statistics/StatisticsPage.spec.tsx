@@ -1,5 +1,5 @@
 ﻿import { DatabasesStubs } from "test/stubs/DatabasesStubs";
-import { rtlRender } from "test/rtlTestUtils";
+import { act, rtlRender } from "test/rtlTestUtils";
 import React from "react";
 import { mockServices } from "test/mocks/services/MockServices";
 import { composeStory } from "@storybook/testing-react";
@@ -137,5 +137,29 @@ describe("StatisticsPage", function () {
         await fireClick(detailsBtn);
 
         expect(await screen.findByText(selectors.noIndexes)).toBeInTheDocument();
+    });
+
+    it("can stay with open details after database state change", async () => {
+        const db = DatabasesStubs.nonShardedSingleNodeDatabase().toDto();
+        const View = boundCopy(stories.StatisticsTemplate, {
+            db,
+        });
+
+        const Story = composeStory(View, stories.default);
+        const { screen, fireClick } = rtlRender(<Story />);
+
+        await fireClick(screen.queryByText(selectors.showDetails));
+
+        // details are visible
+        expect(await screen.findByText(selectors.detailedIndexHeader)).toBeInTheDocument();
+
+        // changing state of active database
+        act(() => {
+            const { databases } = mockStore;
+            databases.withActiveDatabase({ ...db, indexesCount: db.indexesCount - 1 });
+        });
+
+        // details are still visible
+        expect(await screen.findByText(selectors.detailedIndexHeader)).toBeInTheDocument();
     });
 });
