@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Queries
             private readonly ScriptRunner.SingleRun _filterScriptRun;
             private ScriptRunner.ReturnRun _releaseFilterScriptRunner;
             private bool _totalResultsCalculated;
-            private bool _isCountQuery;
+            private readonly bool _isCountQuery;
 
             public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
                 IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
@@ -178,8 +178,8 @@ namespace Raven.Server.Documents.Queries
                 if (_query.Metadata.FilterScript != null)
                 {
                     var key = new FilterKey(_query.Metadata);
-                    _releaseFilterScriptRunner = database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out _filterScriptRun);
-            	}
+                    _releaseFilterScriptRunner = database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out _filterScriptRun); 
+                }
             }
 
             private (List<Slice>, string) ExtractIdsFromQuery(IndexQueryServerSide query, DocumentsOperationContext context)
@@ -387,14 +387,14 @@ namespace Raven.Server.Documents.Queries
             {
                 IEnumerable<Document> documents;
                 var skip = amountToSkip ?? 0;
-                const long take = long.MaxValue; // owner of enumerable decide when to stop, there is no reason to make paging at storage level.
+                const long takeAll = long.MaxValue; // owner of enumerable decide when to stop, there is no reason to make paging at storage level.
                 totalResultsCalculated = false;
                 
                 if (_startsWith != null)
                 {
                     documents = _isAllDocsCollection
-                        ? _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, _startAfterId, skip, take, null, fields: _fields, _token) 
-                        : _documents.GetDocumentsStartingWith(_context, _startsWith, _startAfterId, skip, take, _collection, _skippedResults,  _fields, _token);
+                        ? _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, _startAfterId, skip, takeAll, null, fields: _fields, _token) 
+                        : _documents.GetDocumentsStartingWith(_context, _startsWith, _startAfterId, skip, takeAll, _collection, _skippedResults,  _fields, _token);
                 }
                 else if (_ids != null)
                 {
@@ -416,21 +416,21 @@ namespace Raven.Server.Documents.Queries
                             _alreadySeenIdsCount.Value += count;
 
                             documents = _isAllDocsCollection
-                                ? _documents.GetDocuments(_context, ids, 0, take)
-                                : _documents.GetDocumentsForCollection(_context, ids, _collection, 0, take);
+                                ? _documents.GetDocuments(_context, ids, 0, takeAll)
+                                : _documents.GetDocumentsForCollection(_context, ids, _collection, 0, takeAll);
                         }
                     }
                     else
                     {
                         documents = _isAllDocsCollection
-                            ? _documents.GetDocuments(_context, _ids, skip, take)
-                            : _documents.GetDocumentsForCollection(_context, _ids, _collection, skip, take);
+                            ? _documents.GetDocuments(_context, _ids, skip, takeAll)
+                            : _documents.GetDocumentsForCollection(_context, _ids, _collection, skip, takeAll);
                         
                     }
                 }
                 else if (_isAllDocsCollection)
                 {
-                    documents = _documents.GetDocumentsFrom(_context, 0, skip, take);
+                    documents = _documents.GetDocumentsFrom(_context, 0, skip, takeAll);
                     if (_filterScriptRun == null)
                     {
                         totalResultsCalculated = true;
@@ -439,7 +439,7 @@ namespace Raven.Server.Documents.Queries
                 }
                 else
                 {
-                    documents = _documents.GetDocumentsFrom(_context, _collection, 0, skip, take);
+                    documents = _documents.GetDocumentsFrom(_context, _collection, 0, skip, takeAll);
                     if (_filterScriptRun == null)
                     {
                         totalResultsCalculated = true;
