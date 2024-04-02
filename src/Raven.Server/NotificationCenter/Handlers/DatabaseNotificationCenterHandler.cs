@@ -6,11 +6,42 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Sparrow.Json;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
     public class DatabaseNotificationCenterHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/notification-center/get", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
+        public async Task GetNotifications()
+        {
+            var postponed = GetBoolValueQueryString("postponed", required: false) ?? true;
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (Database.NotificationCenter.GetStored(out var storedNotifications, postponed))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Results");
+                writer.WriteStartArray();
+                var isFirst = true;
+                foreach (var notification in storedNotifications)
+                {
+                    if (isFirst == false)
+                    {
+                        writer.WriteComma();
+                    }
+                    
+                    writer.WriteObject(notification.Json);
+                    isFirst = false;
+                }
+                
+                writer.WriteEndArray();
+                writer.WriteEndObject();
+            }
+        }
+        
         [RavenAction("/databases/*/notification-center/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task Get()
         {
