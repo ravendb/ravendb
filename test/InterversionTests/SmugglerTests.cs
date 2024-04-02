@@ -16,6 +16,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Smuggler.Migration;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -558,7 +559,7 @@ namespace InterversionTests
             }
             finally
             {
-                File.Delete(file);
+                IOExtensions.DeleteFile(file);
             }
         }
 
