@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.TimeSeries
             tx.CreateTree(TimeSeriesStatsKey);
         }
 
-        private Table GetOrCreateTable(Transaction tx, CollectionName collection)
+        public Table GetOrCreateTable(Transaction tx, CollectionName collection)
         {
             var tableName = collection.GetTableName(CollectionTableType.TimeSeriesStats); // TODO: cache the collection and pass Slice
             
@@ -330,6 +330,21 @@ namespace Raven.Server.Documents.TimeSeries
             var end = DocumentsStorage.TableValueToDateTime((int)StatsColumns.End, ref tvr);
 
             return (count, start, end);
+        }
+
+        public (long Count, DateTime Start, DateTime End, Slice PolicyName, Slice OriginalName) GetFullStats(DocumentsOperationContext context, Slice statsKey)
+        {
+            var table = new Table(TimeSeriesStatsSchema, context.Transaction.InnerTransaction);
+            if (table.ReadByKey(statsKey, out var tvr) == false)
+                return default;
+
+            var count = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, ref tvr);
+            var start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref tvr)), DateTimeKind.Utc);
+            var end = DocumentsStorage.TableValueToDateTime((int)StatsColumns.End, ref tvr);
+            var policy = DocumentsStorage.TableValueToSlice(context,(int)StatsColumns.PolicyName, ref tvr, out var policyName);
+            var name = DocumentsStorage.TableValueToSlice(context, (int)StatsColumns.Name, ref tvr, out var originalName);
+
+            return (count, start, end, policyName, originalName);
         }
 
         public IEnumerable<string> GetTimeSeriesNamesForDocumentOriginalCasing(DocumentsOperationContext context, string docId)

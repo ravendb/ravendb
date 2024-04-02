@@ -2726,7 +2726,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private Table GetOrCreateTimeSeriesTable(Transaction tx, CollectionName collection)
+        public Table GetOrCreateTimeSeriesTable(Transaction tx, CollectionName collection)
         {
             return GetOrCreateTable(tx, TimeSeriesSchema, collection, CollectionTableType.TimeSeries);
         }
