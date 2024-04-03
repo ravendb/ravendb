@@ -149,6 +149,35 @@ public class RavenDB_22178 : RavenTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.Indexes)]
+    public async Task TestIndexesThatFailToBeMerged()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var firstFailingIndex = new FirstFailingIndex();
+            var secondFailingIndex = new SecondFailingIndex();
+            var workingIndex = new ThirdIndex();
+            
+            await firstFailingIndex.ExecuteAsync(store);
+            await secondFailingIndex.ExecuteAsync(store);
+            await workingIndex.ExecuteAsync(store);
+            
+            Indexes.WaitForIndexing(store);
+            
+            var database = await GetDatabase(store.Database);
+
+            var indexMergeResults = database.IndexStore.ProposeIndexMergeSuggestions();
+            
+            Assert.Equal(1, indexMergeResults.Suggestions.Count);
+            Assert.Equal(0, indexMergeResults.Unmergables.Count);
+            Assert.Equal(0, indexMergeResults.Errors.Count);
+            
+            Assert.True(indexMergeResults.Suggestions.First().CanMerge.Contains(firstFailingIndex.IndexName));
+            Assert.True(indexMergeResults.Suggestions.First().CanMerge.Contains(secondFailingIndex.IndexName));
+            Assert.True(indexMergeResults.Suggestions.First().CanMerge.Contains(workingIndex.IndexName));
+        }
+    }
+
     private static IndexMerger PrepareIndexMerger(DocumentDatabase database, List<string> indexNamesToThrowOn, string exceptionMessage)
     {
         var dic = new Dictionary<string, IndexDefinition>();
@@ -191,6 +220,22 @@ public class RavenDB_22178 : RavenTestBase
         public override IndexDefinition CreateIndexDefinition()
         {
             return new IndexDefinition() { Maps = new HashSet<string>() { "from u in docs.Users\nselect new\n{\n    Age = u.Details.Age\n}" } };
+        }
+    }
+
+    private class FirstFailingIndex : AbstractIndexCreationTask
+    {
+        public override IndexDefinition CreateIndexDefinition()
+        {
+            return new IndexDefinition() { Maps = new HashSet<string>() { "from u in docs.Users\nselect new\n{\n    FirstName = u.Details?.FirstName ?? \"\"\n}" } };
+        }
+    }
+
+    private class SecondFailingIndex : AbstractIndexCreationTask
+    {
+        public override IndexDefinition CreateIndexDefinition()
+        {
+            return new IndexDefinition() { Maps = new HashSet<string>() { "from u in docs.Users\nselect new\n{\n    LastName = u.Details != null ? u.Details.LastName : \"\"\n}" } };
         }
     }
 }

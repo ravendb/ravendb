@@ -482,6 +482,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 PrefixUnaryExpressionSyntax pues => pues,
                 CastExpressionSyntax ces => RewriteCastExpressionSyntax(indexData, ces, out message),
                 ElementAccessExpressionSyntax eaes => RewriteElementAccessExpressionSyntax(indexData, eaes, out message),
+                ConditionalAccessExpressionSyntax caes => caes,
                 _ => null
             };
             
