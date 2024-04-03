@@ -1,8 +1,5 @@
-import { todo } from "common/developmentHelper";
 import { AboutViewAnchored, AccordionItemWrapper } from "components/common/AboutView";
 import React from "react";
-
-todo("Other", "Danielle", "About view info");
 
 export default function UnusedDatabaseIdsAboutView() {
     return (
@@ -16,8 +13,8 @@ export default function UnusedDatabaseIdsAboutView() {
             >
                 <ul>
                     <li className="margin-top-xm">
-                        Each database instance in the cluster has its own database ID (listed under "
-                        <strong>Used IDs</strong>").
+                        Each database instance in the cluster has its own database ID (listed under &quot;
+                        <strong>Used IDs</strong>&quot;).
                         <br /> These IDs are used to construct the change-vector generated for each document that is
                         created or modified within the database.
                     </li>
@@ -28,8 +25,8 @@ export default function UnusedDatabaseIdsAboutView() {
                     </li>
                     <li className="margin-top-xs">
                         To avoid using these database IDs which are no longer relevant in the current database,
-                        <br /> add them to the list of "<strong>Unused IDs</strong>" so they will not be utilized when
-                        creating new change-vectors.
+                        <br /> add them to the list of &quot;<strong>Unused IDs</strong>&quot; so they will not be
+                        utilized when creating new change-vectors.
                     </li>
                     <li className="margin-top-xs">
                         Note:

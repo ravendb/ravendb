@@ -91,7 +91,7 @@ export function useUnusedDatabaseIds() {
 
     const asyncSaveUnusedDatabaseIDs = useAsyncCallback(
         async () => {
-            await databasesService.saveUnusedDatabaseIDs(db.name, unusedIds);
+            await databasesService.saveUnusedDatabaseIDs(unusedIds, db.name);
         },
         {
             onSuccess: () => {

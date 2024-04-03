@@ -5,15 +5,12 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { Icon } from "components/common/Icon";
 import { CounterBadge } from "components/common/CounterBadge";
 import UsedId from "components/pages/database/settings/unusedDatabaseIds/bits/UsedId";
-import { todo } from "common/developmentHelper";
 import UnusedDatabaseIdsAboutView from "components/pages/database/settings/unusedDatabaseIds/bits/UnusedDatabaseIdsAboutView";
 import { LazyLoad } from "components/common/LazyLoad";
 import UnusedIdsForm from "components/pages/database/settings/unusedDatabaseIds/bits/UnusedIdsForm";
 import { useUnusedDatabaseIds } from "components/pages/database/settings/unusedDatabaseIds/useUnusedDatabaseIds";
 import PotentialUnusedIdList from "components/pages/database/settings/unusedDatabaseIds/bits/PotentialUnusedIdList";
 import "./UnusedDatabaseIds.scss";
-
-todo("Feature", "Damian", "Remove legacy code");
 
 export default function UnusedDatabaseIds() {
     const { isDirty, usedIds, unusedIds, unusedIdsActions, potentialUnusedId, isLoading, asyncSaveUnusedDatabaseIDs } =

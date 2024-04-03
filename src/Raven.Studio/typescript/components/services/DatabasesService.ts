@@ -323,7 +323,7 @@ export default class DatabasesService {
         return new getDatabaseStatsCommand(...args).execute();
     }
 
-    async saveUnusedDatabaseIDs(databaseName: string, unusedIDs: string[]) {
-        return new saveUnusedDatabaseIDsCommand(unusedIDs, databaseName).execute();
+    async saveUnusedDatabaseIDs(...args: ConstructorParameters<typeof saveUnusedDatabaseIDsCommand>) {
+        return new saveUnusedDatabaseIDsCommand(...args).execute();
     }
 }
