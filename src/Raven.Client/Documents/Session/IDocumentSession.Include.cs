@@ -16,34 +16,19 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial interface IDocumentSession
     {
-        /// <summary>
-        ///     Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(string)"/>
         ILoaderWithInclude<object> Include(string path);
 
-        /// <summary>
-        ///     Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, string}})"/>
         ILoaderWithInclude<T> Include<T>(Expression<Func<T, string>> path);
 
-        /// <summary>
-        ///     Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, IEnumerable{string}}})"/>
         ILoaderWithInclude<T> Include<T>(Expression<Func<T, IEnumerable<string>>> path);
 
-        /// <summary>
-        ///     Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments{TInclude}(Expression{Func{T, string}})"/>
         ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, string>> path);
 
-        /// <summary>
-        ///     Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments{TInclude}(Expression{Func{T, IEnumerable{string}}})"/>
         ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, IEnumerable<string>>> path);
     }
 }

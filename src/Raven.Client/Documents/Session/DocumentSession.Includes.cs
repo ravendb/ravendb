@@ -16,51 +16,37 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
-        /// <summary>
-        /// Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments{TInclude}(Expression{System.Func{T,string}})"/>
+        /// <typeparam name="T">Type of main loaded document</typeparam>
         public ILoaderWithInclude<T> Include<T>(Expression<Func<T, string>> path)
         {
             return new MultiLoaderWithInclude<T>(this).Include(path);
         }
 
-        /// <summary>
-        /// Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments{TInclude}(Expression{System.Func{T,string}})"/>
+        /// <typeparam name="T">Type of main loaded document</typeparam>
+        /// <typeparam name="TInclude">Type of included document</typeparam>
         public ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, string>> path)
         {
             return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
         }
 
-        /// <summary>
-        /// Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments{TInclude}(Expression{Func{T,IEnumerable{string}}})"/>
+        /// <typeparam name="T">Type of main loaded document</typeparam>
         public ILoaderWithInclude<T> Include<T>(Expression<Func<T, IEnumerable<string>>> path)
         {
             return new MultiLoaderWithInclude<T>(this).Include(path);
         }
 
-        /// <summary>
-        /// Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments{TInclude}(Expression{Func{T,IEnumerable{string}}})"/>
+        /// <typeparam name="T">Type of main loaded document</typeparam>
+        /// <typeparam name="TInclude">Type of included document</typeparam>
         public ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
             return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
         }
 
-        /// <summary>
-        /// Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(string)"/>
         public ILoaderWithInclude<object> Include(string path)
         {
             return new MultiLoaderWithInclude<object>(this).Include(path);

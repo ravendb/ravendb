@@ -32,6 +32,7 @@ namespace Raven.Client.Documents.Conventions
     ///     The set of conventions used by the <see cref="DocumentStore" /> which allow the users to customize
     ///     the way the Raven client API behaves
     /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Session.Options.Conventions"/>
     public sealed class DocumentConventions : Client.Conventions
     {
         public delegate LinqPathProvider.Result CustomQueryTranslator(LinqPathProvider provider, Expression expression);

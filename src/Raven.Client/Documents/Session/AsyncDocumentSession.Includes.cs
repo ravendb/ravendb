@@ -16,46 +16,31 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class AsyncDocumentSession
     {
-        /// <summary>
-        /// Begin a load while including the specified path 
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc/>
         public IAsyncLoaderWithInclude<object> Include(string path)
         {
             return new AsyncMultiLoaderWithInclude<object>(this).Include(path);
         }
 
-        /// <summary>
-        /// Begin a load while including the specified path 
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc/>
         public IAsyncLoaderWithInclude<T> Include<T>(Expression<Func<T, string>> path)
         {
             return new AsyncMultiLoaderWithInclude<T>(this).Include(path);
         }
 
-        /// <summary>
-        /// Begin a load while including the specified path 
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc/>
         public IAsyncLoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, string>> path)
         {
             return new AsyncMultiLoaderWithInclude<T>(this).Include<TInclude>(path);
         }
 
-        /// <summary>
-        /// Begin a load while including the specified path 
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc/>
         public IAsyncLoaderWithInclude<T> Include<T>(Expression<Func<T, IEnumerable<string>>> path)
         {
             return new AsyncMultiLoaderWithInclude<T>(this).Include(path);
         }
 
-        /// <summary>
-        /// Begin a load while including the specified path 
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc/>
         public IAsyncLoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
             return new AsyncMultiLoaderWithInclude<T>(this).Include<TInclude>(path);

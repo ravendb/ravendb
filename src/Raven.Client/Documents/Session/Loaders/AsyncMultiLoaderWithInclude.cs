@@ -22,50 +22,32 @@ namespace Raven.Client.Documents.Session.Loaders
         private readonly IAsyncDocumentSessionImpl _session;
         private readonly List<string> _includes = new List<string>();
 
-        /// <summary>
-        /// Begin a load while including the specified path 
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+        /// <inheritdoc />
         public AsyncMultiLoaderWithInclude<T> Include(string path)
         {
             _includes.Add(path);
             return this;
         }
 
-        /// <summary>
-        /// Begin a load while including the specified path 
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+        /// <inheritdoc />
         public AsyncMultiLoaderWithInclude<T> Include(Expression<Func<T, string>> path)
         {
             return Include(path.ToPropertyPath(_session.Conventions));
         }
 
-        /// <summary>
-        /// Includes the specified path.
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc />
         public AsyncMultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, string>> path)
         {
             return Include(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(_session.Conventions), _session.Conventions));
         }
 
-        /// <summary>
-        /// Begin a load while including the specified path 
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+        /// <inheritdoc />
         public AsyncMultiLoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path)
         {
             return Include(path.ToPropertyPath(_session.Conventions));
         }
 
-        /// <summary>
-        /// Includes the specified path.
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc />
         public AsyncMultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
             return Include(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(_session.Conventions), _session.Conventions));

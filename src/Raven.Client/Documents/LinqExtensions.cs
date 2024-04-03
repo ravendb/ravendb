@@ -31,26 +31,16 @@ namespace Raven.Client.Documents
     ///</summary>
     public static class LinqExtensions
     {
-        /// <summary>
-        /// Includes the specified path in the query, loading the document specified in that path
-        /// </summary>
-        /// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
+
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, string}})"/>
         /// <param name="source">The source for querying</param>
-        /// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
-        /// <returns></returns>
         public static IRavenQueryable<TResult> Include<TResult>(this IQueryable<TResult> source, Expression<Func<TResult, object>> path)
         {
             return source.Include(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions));
         }
 
-        /// <summary>
-        /// Includes the specified path in the query, loading the document specified in that path
-        /// </summary>
-        /// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
-        /// <typeparam name="TInclude">The type of the object that you want to include.</typeparam>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments{TInclude}(Expression{Func{T, string}})"/>
         /// <param name="source">The source for querying</param>
-        /// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
-        /// <returns></returns>
         public static IRavenQueryable<TResult> Include<TResult, TInclude>(this IQueryable<TResult> source, Expression<Func<TResult, object>> path)
         {
             var queryInspector = (IRavenQueryInspector)source;
@@ -58,14 +48,9 @@ namespace Raven.Client.Documents
 
             return Include(source, IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), conventions));
         }
-        
-        /// <summary>
-        /// Includes the specified path in the query, loading the document specified in that path
-        /// </summary>
-        /// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
+
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(string)"/>
         /// <param name="source">The source for querying</param>
-        /// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
-        /// <returns></returns>
         public static IRavenQueryable<TResult> Include<TResult>(this IQueryable<TResult> source, string path)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -115,13 +100,9 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
-        /// <summary>
-        /// Includes the specified documents and/or counters in the query
-        /// </summary>
-        /// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}"/>
+        /// <param name="includes">Includes builder. Specifies the documents/counters/revisions/time series to load from the server. See more at: <see cref="IncludeBuilder"/></param>.
         /// <param name="source">The source for querying</param>
-        /// <param name="includes">Specifies the documents and/or counters to include </param>
-        /// <returns></returns>
         public static IRavenQueryable<TResult> Include<TResult>(this IQueryable<TResult> source, Action<IQueryIncludeBuilder<TResult>> includes)
         {
             var queryInspector = (IRavenQueryInspector)source;

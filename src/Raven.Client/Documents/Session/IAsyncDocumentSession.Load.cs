@@ -36,6 +36,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="includes">
         ///     An action that specifies which documents and\or counters 
         ///     to include, by using the IIncludeBuilder interface.
+        ///     See more at <see cref="IDocumentIncludeBuilder{T,TBuilder}">IncludeBuilder</see>.
         /// </param>
         /// <param name="token">The cancellation token.</param>
 
@@ -48,6 +49,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="includes">
         ///     An action that specifies which documents and\or counters 
         ///     to include, by using the IIncludeBuilder interface.
+        ///     See more at <see cref="IDocumentIncludeBuilder{T,TBuilder}">IncludeBuilder</see>.
         /// </param>
         /// <param name="token">The cancellation token.</param>
         Task<Dictionary<string, T>> LoadAsync<T>(IEnumerable<string> ids, Action<IIncludeBuilder<T>> includes, CancellationToken token = default(CancellationToken));

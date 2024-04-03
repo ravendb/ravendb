@@ -19,19 +19,13 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
-        /// <summary>
-        /// Begin a load while including the specified path 
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc/>
         ILazyLoaderWithInclude<T> ILazySessionOperations.Include<T>(Expression<Func<T, string>> path)
         {
             return new LazyMultiLoaderWithInclude<T>(this).Include(path);
         }
 
-        /// <summary>
-        /// Begin a load while including the specified path 
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc/>
         ILazyLoaderWithInclude<T> ILazySessionOperations.Include<T>(Expression<Func<T, IEnumerable<string>>> path)
         {
             return new LazyMultiLoaderWithInclude<T>(this).Include(path);

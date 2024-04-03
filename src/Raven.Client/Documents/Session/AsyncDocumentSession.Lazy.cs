@@ -166,28 +166,19 @@ namespace Raven.Client.Documents.Session
             return false;
         }
 
-        /// <summary>
-        /// Begin a load while including the specified path 
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc/>
         IAsyncLazyLoaderWithInclude<T> IAsyncLazySessionOperations.Include<T>(Expression<Func<T, string>> path)
         {
             return new AsyncLazyMultiLoaderWithInclude<T>(this).Include(path);
         }
 
-        /// <summary>
-        /// Begin a load while including the specified path 
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc/>
         IAsyncLazyLoaderWithInclude<T> IAsyncLazySessionOperations.Include<T>(Expression<Func<T, IEnumerable<string>>> path)
         {
             return new AsyncLazyMultiLoaderWithInclude<T>(this).Include(path);
         }
 
-        /// <summary>
-        /// Begin a load while including the specified path 
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc/>
         IAsyncLazyLoaderWithInclude<object> IAsyncLazySessionOperations.Include(string path)
         {
             return new AsyncLazyMultiLoaderWithInclude<object>(this).Include(path);
