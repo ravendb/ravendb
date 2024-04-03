@@ -17,6 +17,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
@@ -290,8 +291,8 @@ loadToOrders(partitionBy(key),
                     }
 
                     var database = await GetDatabase(store.Database);
-                    var etlDone = new ManualResetEventSlim();
-
+                    var etlDone = new AsyncManualResetEvent();
+                    
                     database.EtlLoader.BatchCompleted += x =>
                     {
                         if (x.Statistics.LoadSuccesses > 0)
@@ -335,7 +336,7 @@ loadToOrders(partitionBy(key), orderData);
                         ? TimeSpan.FromMinutes(2)
                         : TimeSpan.FromMinutes(1);
 
-                    Assert.True(etlDone.Wait(timeout), await Etl.GetEtlDebugInfo(store.Database, timeout));
+                    Assert.True(await etlDone.WaitAsync(timeout), await Etl.GetEtlDebugInfo(store.Database, timeout));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))

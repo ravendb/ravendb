@@ -58,11 +58,7 @@ namespace SlowTests.Issues
                         }
                         catch (OperationCanceledException)
                         {
-                            // index is being replaced, storage environment is being disposed
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            // index is being replaced, storage environment is being disposed
+                            throw new InvalidOperationException($"Index is already disposed: {index.IsDisposed}. This is not expected. Database disposed: {database.DatabaseShutdown.IsCancellationRequested}. Index Store disposed: {database.IndexStore.IsDisposed}");
                         }
 
                         Thread.Sleep(1000);

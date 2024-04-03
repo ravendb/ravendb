@@ -45,7 +45,7 @@ namespace RachisTests
                 });
 
                 HashSet<string> redirects = new HashSet<string>();
-                var mre = new ManualResetEvent(false);
+                var mre = new AsyncManualResetEvent();
                 var processedItems = new List<string>();
                 subsWorker.AfterAcknowledgment += batch =>
                 {
@@ -91,7 +91,7 @@ namespace RachisTests
                         session.SaveChanges();
                     }
 
-                    Assert.True(mre.WaitOne(TimeSpan.FromSeconds(15)), "no ack");
+                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)), "no ack");
 
                     var res = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
                     Assert.Equal(currentResponsibleNode, res.NodeTag);
