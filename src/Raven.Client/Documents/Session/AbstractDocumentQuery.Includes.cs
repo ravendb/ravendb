@@ -23,11 +23,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         protected HashSet<string> DocumentIncludes = new HashSet<string>();
 
-        /// <summary>
-        ///     Allows to fetch related documents without having to make multiple remote calls.
-        /// </summary>
-        /// <param name="path">Path to the property referencing related document.</param>
-        /// <inheritdoc cref="DocumentationUrls.Session.HowTo.HandleDocumentRelationships.Includes"/>
+        /// <inheritdoc/>
         public void Include(string path)
         {
             TheSession?.AssertNoIncludesInNonTrackingSession();
@@ -35,12 +31,13 @@ namespace Raven.Client.Documents.Session
             DocumentIncludes.Add(path);
         }
 
-        /// <inheritdoc cref="Include(string)"/>
+        /// <inheritdoc/>
         public void Include(Expression<Func<T, object>> path)
         {
             Include(path.ToPropertyPath(_conventions));
         }
 
+        /// <inheritdoc/>
         public void Include(IncludeBuilder includes)
         {
             if (includes == null)

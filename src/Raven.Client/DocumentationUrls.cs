@@ -98,13 +98,17 @@ internal static class DocumentationUrls
             public const string GroupByQuery = nameof(GroupByQuery);
 
             /// <remarks>
-            /// <seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-perform-group-by-query#group-by-array"/>
+            /// <seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-perform-group-by-query#group-by-array"/> <br/>
             /// <seealso href="https://ravendb.net/docs/article-page/6.0/Csharp/indexes/indexing-nested-data" />
             /// </remarks>
             public const string GroupByArrayQuery = nameof(GroupByArrayQuery);
 
             /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-perform-group-by-query#by-array-content"/></remarks>
             public const string GroupByArrayContent = nameof(GroupByArrayContent);
+
+            /// <remarks><see href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/how-to/handle-document-relationships#includes"/></remarks>
+            public const string Includes = nameof(Includes);
+
         }
 
         internal static class Counters
@@ -126,6 +130,9 @@ internal static class DocumentationUrls
 
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/configuration/how-to-disable-caching"/></remarks>
             public const string NoCaching = nameof(NoCaching);
+
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/configuration/conventions"/></remarks>
+            public const string Conventions = nameof(Conventions);
         }
 
         internal static class Sharding

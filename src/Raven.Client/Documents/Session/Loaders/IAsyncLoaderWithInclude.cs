@@ -12,39 +12,21 @@ namespace Raven.Client.Documents.Session.Loaders
     /// </summary>
     public interface IAsyncLoaderWithInclude<T>
     {
-        /// <summary>
-        /// Begin a load while including the specified path 
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(string)"/>
         AsyncMultiLoaderWithInclude<T> Include(string path);
 
-        /// <summary>
-        /// Begin a load while including the specified path 
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, string}})"/>
         AsyncMultiLoaderWithInclude<T> Include(Expression<Func<T, string>> path);
-        /// <summary>
-        /// Begin a load while including the specified path
-        /// </summary>
-        /// <typeparam name="TResult"></typeparam>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments{TResult}(Expression{Func{T, string}})"/>
+        /// <typeparam name="TResult">Type of included document.</typeparam>
         AsyncMultiLoaderWithInclude<T> Include<TResult>(Expression<Func<T, string>> path);
 
-        /// <summary>
-        /// Begin a load while including the specified path 
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, IEnumerable{string}}})"/>
         AsyncMultiLoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path);
-        /// <summary>
-        /// Begin a load while including the specified path
-        /// </summary>
-        /// <typeparam name="TResult"></typeparam>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, IEnumerable{string}}})"/>
+        /// <typeparam name="TResult">Type of included document.</typeparam>
         AsyncMultiLoaderWithInclude<T> Include<TResult>(Expression<Func<T, IEnumerable<string>>> path);
 
         /// <summary>

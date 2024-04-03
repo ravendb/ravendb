@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
+using Raven.Client.Documents.Session.Loaders;
 
 namespace Raven.Client.Documents.Session
 {
@@ -511,10 +512,10 @@ If you really want to do in memory filtering on the data returned from the query
         /// <inheritdoc cref="Linq.IRavenQueryable{T}.Highlight(Expression{Func{T, object}}, int, int, HighlightingOptions, out Highlightings)"/>
         TSelf Highlight(Expression<Func<T, object>> path, int fragmentLength, int fragmentCount, HighlightingOptions options, out Highlightings highlightings);
 
-        /// <inheritdoc cref="AbstractDocumentQuery{T, TSelf}.Include(string)"/>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(string)"/>
         TSelf Include(string path);
 
-        /// <inheritdoc cref="AbstractDocumentQuery{T, TSelf}.Include(Expression{Func{T, object}})"/>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, string}})"/>
         TSelf Include(Expression<Func<T, object>> path);
 
         /// <summary>

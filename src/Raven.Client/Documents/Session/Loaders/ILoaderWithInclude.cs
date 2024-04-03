@@ -16,39 +16,19 @@ namespace Raven.Client.Documents.Session.Loaders
     /// </summary>
     public interface ILoaderWithInclude<T>
     {
-        /// <summary>
-        /// Includes the specified path.
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(string)"/>
         ILoaderWithInclude<T> Include(string path);
 
-        /// <summary>
-        /// Includes the specified path.
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, string}})"/>
         ILoaderWithInclude<T> Include(Expression<Func<T, string>> path);
 
-        /// <summary>
-        /// Includes the specified path.
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments{TInclude}(Expression{Func{T, string}})"/>
         ILoaderWithInclude<T> Include<TInclude>(Expression<Func<T, string>> path);
 
-        /// <summary>
-        /// Includes the specified path.
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, IEnumerable{string}}})"/>
         ILoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path);
 
-        /// <summary>
-        /// Includes the specified path.
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments{TInclude}(Expression{Func{T, IEnumerable{string}}})"/>
         ILoaderWithInclude<T> Include<TInclude>(Expression<Func<T, IEnumerable<string>>> path);
 
         /// <summary>

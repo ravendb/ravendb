@@ -11,22 +11,13 @@ namespace Raven.Client.Documents.Session.Loaders
     /// </summary>
     public interface ILazyLoaderWithInclude<T>
     {
-        /// <summary>
-        ///     Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(string)"/>
         ILazyLoaderWithInclude<T> Include(string path);
 
-        /// <summary>
-        ///     Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, string}})"/>
         ILazyLoaderWithInclude<T> Include(Expression<Func<T, string>> path);
 
-        /// <summary>
-        ///     Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, IEnumerable{string}}})"/>
         ILazyLoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path);
 
         /// <summary>
@@ -68,22 +59,13 @@ namespace Raven.Client.Documents.Session.Loaders
 
     public interface IAsyncLazyLoaderWithInclude<T>
     {
-        /// <summary>
-        ///     Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(string)"/>
         IAsyncLazyLoaderWithInclude<T> Include(string path);
 
-        /// <summary>
-        ///     Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, string}})"/>
         IAsyncLazyLoaderWithInclude<T> Include(Expression<Func<T, string>> path);
 
-        /// <summary>
-        ///     Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, IEnumerable{string}}})"/>
         IAsyncLazyLoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path);
 
         /// <summary>
