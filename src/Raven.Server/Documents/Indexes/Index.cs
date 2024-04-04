@@ -3103,7 +3103,8 @@ namespace Raven.Server.Documents.Indexes
                         Priority = Definition?.Priority ?? IndexPriority.Normal,
                         State = State,
                         Status = Status,
-                        Collections = Collections.ToDictionary(x => x, _ => new IndexStats.CollectionStats())
+                        Collections = Collections.ToDictionary(x => x, _ => new IndexStats.CollectionStats()),
+                        ReferencedCollections = GetReferencedCollectionNames()
                     };
                 }
 
@@ -3132,6 +3133,9 @@ namespace Raven.Server.Documents.Indexes
                         stats.LastBatchStats = _lastStats?.ToIndexingPerformanceLiveStats();
 
                     stats.LastQueryingTime = _lastQueryingTime;
+
+                    stats.ReferencedCollections = GetReferencedCollectionNames();
+
 
                     if (Type == IndexType.MapReduce || Type == IndexType.JavaScriptMapReduce)
                     {
@@ -3174,6 +3178,14 @@ namespace Raven.Server.Documents.Indexes
                     return stats;
                 }
             }
+        }
+
+        internal HashSet<string> GetReferencedCollectionNames()
+        {
+            // multiple maps can reference the same collections, we wants to return distinct names only
+            return GetReferencedCollections()?
+                .SelectMany(p =>  p.Value?.Select(z => z.Name))
+                .ToHashSet();
         }
 
         private IndexStats.MemoryStats GetMemoryStats()
