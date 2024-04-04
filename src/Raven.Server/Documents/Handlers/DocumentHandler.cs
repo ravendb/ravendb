@@ -791,7 +791,8 @@ namespace Raven.Server.Documents.Handlers
                 [nameof(ActualSize)] = ActualSize,
                 [nameof(HumaneActualSize)] = HumaneActualSize,
                 [nameof(AllocatedSize)] = AllocatedSize,
-                [nameof(HumaneAllocatedSize)] = HumaneAllocatedSize
+                [nameof(HumaneAllocatedSize)] = HumaneAllocatedSize,
+                [nameof(IsCompressed)] = IsCompressed
             };
         }
     }
