@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Operations.Replication
             }
         }
 
-        public ReplicationType Type = ReplicationType.Internal;
+        public override ReplicationType GetReplicationType() => ReplicationType.Internal;
 
         public override string FromString()
         {
@@ -50,7 +50,6 @@ namespace Raven.Client.Documents.Operations.Replication
         {
             var json = base.ToJson();
             json[nameof(NodeTag)] = NodeTag;
-            json[nameof(Type)] = Type;
             return json;
         }
     }

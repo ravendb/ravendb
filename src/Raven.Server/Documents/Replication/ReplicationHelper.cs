@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Replication
     {
         public static ReplicationNode GetReplicationNodeByType(BlittableJsonReaderObject bjro)
         {
-            if (bjro == null || bjro.TryGet("Type", out ReplicationNode.ReplicationType type) == false)
+            if (bjro == null || bjro.TryGet(nameof(ReplicationNode.Type), out ReplicationNode.ReplicationType type) == false)
                 return null;
             
             return type switch
