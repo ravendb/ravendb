@@ -130,9 +130,12 @@ namespace SlowTests.Issues
                             StartDate = x.Start.ToString(CultureInfo.CurrentCulture)
                         });
 
+                    var cultureString = CultureInfo.CurrentCulture.Equals(CultureInfo.InvariantCulture) == false
+                                            ? $", \"{culture.Name}\""
+                                            : "";
+
                     Assert.Equal("from 'Bookings' as x where x.FirstName = $p0 " +
-                                 $"select {{ StartDate : toStringWithFormat(x.Start, \"{culture.Name}\") }}"
-                        , query.ToString());
+                                         $"select {{ StartDate : toStringWithFormat(x.Start{cultureString}) }}", query.ToString());
 
                     var result = query.Single();
 
@@ -170,8 +173,12 @@ namespace SlowTests.Issues
                             StartDate = x.Start.ToString("dd.MM.yyyy", CultureInfo.CurrentCulture)
                         });
 
+                    var cultureString = CultureInfo.CurrentCulture.Equals(CultureInfo.InvariantCulture) == false
+                        ? $", \"{CultureInfo.CurrentCulture.Name}\""
+                        : "";
+
                     Assert.Equal("from 'Bookings' as x where x.FirstName = $p0 " +
-                                 $"select {{ StartDate : toStringWithFormat(x.Start, \"dd.MM.yyyy\", \"{CultureInfo.CurrentCulture.Name}\") }}"
+                                 $"select {{ StartDate : toStringWithFormat(x.Start, \"dd.MM.yyyy\"{cultureString}) }}"
                         , query.ToString());
 
                     var result = query.Single();
@@ -330,8 +337,12 @@ namespace SlowTests.Issues
                             Number = x.Number.ToString(CultureInfo.CurrentCulture)
                         });
 
+                    var cultureString = CultureInfo.CurrentCulture.Equals(CultureInfo.InvariantCulture) == false
+                        ? $", \"{CultureInfo.CurrentCulture.Name}\""
+                        : "";
+
                     Assert.Equal("from 'Bookings' as x where x.FirstName = $p0 " +
-                                 $"select {{ Number : toStringWithFormat(x.Number, \"{CultureInfo.CurrentCulture.Name}\") }}"
+                                 $"select {{ Number : toStringWithFormat(x.Number{cultureString}) }}"
                         , query.ToString());
 
                     var result = query.Single();
@@ -370,8 +381,12 @@ namespace SlowTests.Issues
                             Number = x.Number.ToString("000", CultureInfo.CurrentCulture)
                         });
 
+                    var cultureString = CultureInfo.CurrentCulture.Equals(CultureInfo.InvariantCulture) == false
+                        ? $", \"{CultureInfo.CurrentCulture.Name}\""
+                        : "";
+
                     Assert.Equal("from 'Bookings' as x where x.FirstName = $p0 " +
-                                 $"select {{ Number : toStringWithFormat(x.Number, \"000\", \"{CultureInfo.CurrentCulture.Name}\") }}"
+                                 $"select {{ Number : toStringWithFormat(x.Number, \"000\"{cultureString}) }}"
                         , query.ToString());
 
                     var result = query.Single();
