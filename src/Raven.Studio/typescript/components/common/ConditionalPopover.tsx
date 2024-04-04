@@ -8,12 +8,12 @@ interface Condition {
     message?: ReactNode | ReactNode[];
 }
 
-interface ConditionalPopoverProps {
+interface ConditionalPopoverProps extends Required<PropsWithChildren> {
     conditions: Condition | Condition[];
     popoverPlacement?: Placement;
 }
 
-export function ConditionalPopover(props: PropsWithChildren<ConditionalPopoverProps>) {
+export function ConditionalPopover(props: ConditionalPopoverProps) {
     const { children, popoverPlacement } = props;
 
     const containerId = useId("conditional-popover-");
@@ -23,7 +23,7 @@ export function ConditionalPopover(props: PropsWithChildren<ConditionalPopoverPr
 
     return (
         <>
-            <div id={containerId} className="w-fit-content">
+            <div id={containerId} className="d-flex">
                 {children}
             </div>
 
