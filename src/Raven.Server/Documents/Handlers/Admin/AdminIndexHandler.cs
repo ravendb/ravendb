@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,13 +16,11 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Utils.Features;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -60,7 +57,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var isReplicatedQueryString = GetStringQueryString("is-replicated", required: false);
                 if (isReplicatedQueryString != null && bool.TryParse(isReplicatedQueryString, out var result) && result)
                 {
-                    await HandleLegacyIndexesAsync();
+                    await HandleIndexesFromLegacyReplicationAsync();
                     return;
                 }
 
@@ -144,8 +141,14 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        private async Task HandleLegacyIndexesAsync()
+        private async Task HandleIndexesFromLegacyReplicationAsync()
         {
+            if (HttpContext.Features.Get<IHttpAuthenticationFeature>() is RavenServer.AuthenticateConnection feature &&
+                feature.CanAccess(Database.Name, requireAdmin: true, requireWrite: true) == false)
+            {
+                throw new UnauthorizedAccessException("Deploying indexes from legacy replication requires admin privileges.");
+            }
+
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             await using (var stream = new ArrayStream(RequestBodyStream(), nameof(DatabaseItemType.Indexes)))
             using (var source = new StreamSource(stream, context, Database))
