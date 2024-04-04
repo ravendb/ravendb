@@ -955,10 +955,8 @@ namespace Voron.Data.Tables
                         {
                             var indexTree = GetTree(dynamicKeyIndexDef);
                             indexTree.Delete(oldVal);
-                            using (indexTree.DirectAdd(newVal, sizeof(long), TreeNodeFlags.Data, out var ptr))
-                            {
-                                *(long*)ptr = id;
-                            }
+
+                            AddValueToDynamicIndex(id, dynamicKeyIndexDef, indexTree, newVal, TreeNodeFlags.Data);
                         }
                     }
                 }
@@ -976,6 +974,22 @@ namespace Voron.Data.Tables
                             ThrowInvalidDuplicateFixedSizeTreeKey(newKey, indexDef);
                     }
                 }
+            }
+        }
+
+        private void AddValueToDynamicIndex(long id, DynamicKeyIndexDef dynamicKeyIndexDef, Tree indexTree, Slice newVal, TreeNodeFlags flags)
+        {
+            if (dynamicKeyIndexDef.SupportDuplicateKeys == false)
+            {
+                using (indexTree.DirectAdd(newVal, sizeof(long), flags, out var ptr))
+                {
+                    *(long*)ptr = id;
+                }
+            }
+            else
+            {
+                var index = GetFixedSizeTree(indexTree, newVal, 0, dynamicKeyIndexDef.IsGlobal);
+                index.Add(id);
             }
         }
 
@@ -1085,18 +1099,7 @@ namespace Voron.Data.Tables
                         dynamicKeyIndexDef.OnIndexEntryChanged(_tx, dynamicKey, oldValue: ref TableValueReaderUtils.EmptyReader, newValue: ref value);
                         
                         var dynamicIndex = GetTree(dynamicKeyIndexDef);
-                        if (dynamicKeyIndexDef.SupportDuplicateKeys == false)
-                        {
-                            using (dynamicIndex.DirectAdd(dynamicKey, sizeof(long), TreeNodeFlags.Data | TreeNodeFlags.NewOnly, out var ptr))
-                            {
-                                *(long*)ptr = id;
-                            }
-
-                            continue;
-                        }
-
-                        var index = GetFixedSizeTree(dynamicIndex, dynamicKey, 0, dynamicKeyIndexDef.IsGlobal);
-                        index.Add(id);
+                        AddValueToDynamicIndex(id, dynamicKeyIndexDef, dynamicIndex, dynamicKey, TreeNodeFlags.Data | TreeNodeFlags.NewOnly);
                     }
                 }
 
