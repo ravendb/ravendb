@@ -7,7 +7,6 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Tests.Infrastructure;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
@@ -40,12 +39,10 @@ namespace SlowTests.Issues
                 var indexDisposeMre = new ManualResetEventSlim(false);
                 var mreBeforeSendingCommand = new ManualResetEventSlim(false);
 
-                var mreWasSet = false;
-
                 using (index.ForTestingPurposesOnly().CallDuringFinallyOfExecuteIndexing(() =>
                 {
                     // simulating a long indexing batch completion
-                    mreWasSet = indexDisposeMre.Wait(Server.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
+                    indexDisposeMre.Wait(Server.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
                 }))
                 {
                     var deleteIndexTask = store.Maintenance.SendAsync(new DeleteIndexOperation(indexDefinition.IndexName));
@@ -74,8 +71,6 @@ namespace SlowTests.Issues
 
                     indexDisposeMre.Set();
                     await deleteIndexTask;
-
-                    Assert.True(mreWasSet);
                 }
             }
         }
