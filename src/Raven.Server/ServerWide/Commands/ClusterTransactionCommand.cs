@@ -858,7 +858,7 @@ namespace Raven.Server.ServerWide.Commands
         }
 
 
-        public static IEnumerable<SingleClusterDatabaseCommand> ReadCommandsBatch<TTransaction>(TransactionOperationContext<TTransaction> context, string database, long? fromCount, long take = 128, long? lastCompletedClusterTransactionIndex = null)
+        public static IEnumerable<SingleClusterDatabaseCommand> ReadCommandsBatch<TTransaction>(TransactionOperationContext<TTransaction> context, string database, long? fromCount, long? lastCompletedClusterTransactionIndex = null, long take = 128)
             where TTransaction : RavenTransaction
         {
             var lowerDb = database.ToLowerInvariant();

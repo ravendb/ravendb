@@ -97,7 +97,7 @@ namespace SlowTests.Issues
                 var clusterTransactions = new Dictionary<string, long>();
                 Server.ServerStore.ForTestingPurposesOnly().BeforeExecuteClusterTransactionBatch = (dbName, batch) =>
                 {
-                    if (dbName == restoredDatabaseName)
+                    if (dbName.StartsWith(restoredDatabaseName))
                     {
                         foreach (var clusterTx in batch)
                         {
@@ -117,7 +117,7 @@ namespace SlowTests.Issues
                 foreach (var kvp in clusterTransactions)
                 {
                     var timesWasApplied = kvp.Value;
-                    Assert.True(timesWasApplied <= 1, $"cluster transaction \"{kvp.Key}\" was reapplied more then once ({timesWasApplied} times)");
+                    Assert.True(timesWasApplied == 1, $"cluster transaction \"{kvp.Key}\" was reapplied more then once ({timesWasApplied} times)");
                 }
             }
         }
