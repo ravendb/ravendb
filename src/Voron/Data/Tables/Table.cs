@@ -612,7 +612,8 @@ namespace Voron.Data.Tables
         [DoesNotReturn]
         private void ThrowNotOwned(long id)
         {
-            Debug.Assert(false, $"Trying to delete a value (id:{id}) from the wrong table ('{Name}')");
+            if (_forTestingPurposes.DisableDebugAssertionForThrowNotOwned == false)
+                Debug.Assert(false, $"Trying to delete a value (id:{id}) from the wrong table ('{Name}')");
             throw new VoronErrorException($"Trying to delete a value (id:{id}) from the wrong table ('{Name}')");
         }
 
@@ -2501,6 +2502,8 @@ namespace Voron.Data.Tables
         internal class TestingStuff
         {
             private readonly Table _table;
+
+            internal bool DisableDebugAssertionForThrowNotOwned;
 
             public TestingStuff(Table table)
             {
