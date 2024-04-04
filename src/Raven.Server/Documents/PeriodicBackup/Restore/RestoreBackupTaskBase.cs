@@ -718,6 +718,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             var oldOperateOnTypes = Raven.Client.Documents.Smuggler.DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
             var destination = new DatabaseDestination(database);
+            long totalExecutedCommands = 0;
 
             for (var i = 0; i < filesToRestore.Count - 1; i++)
             {
@@ -736,6 +737,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         // need to enable revisions before import
                         database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
                     });
+                ExecuteClusterTransactions(database, onProgress, result, ref totalExecutedCommands);
             }
 
             options.OperateOnTypes = oldOperateOnTypes;
@@ -817,9 +819,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             result.Files.CurrentFileName = null;
 
-            long totalExecutedCommands = 0;
-
             //when restoring from a backup, the database doesn't exist yet and we cannot rely on the DocumentDatabase to execute the database cluster transaction commands
+            ExecuteClusterTransactions(database, onProgress, result, ref totalExecutedCommands);
+        }
+
+        private void ExecuteClusterTransactions(DocumentDatabase database, Action<IOperationProgress> onProgress, RestoreResult result, ref long totalExecutedCommands)
+        {
             while (true)
             {
                 _operationCancelToken.Token.ThrowIfCancellationRequested();
