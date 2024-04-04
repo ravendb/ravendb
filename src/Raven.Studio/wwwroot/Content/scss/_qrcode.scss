@@ -12,15 +12,19 @@
         -ms-transform: translateX(-50%) translateY(-50%);
         transform: translateX(-50%) translateY(-50%);
         content: "";
-        width: 90px;
-        height: 90px;
+        width: 25%;
+        height: 25%;
         background-image: url(../img/qr_logo.png);
         background-size: contain;
     }
 
+    img {
+        max-width: 100%;
+        height: auto;
+    }
     img,
     canvas {
-        padding: 30px;
+        padding: 10%;
         background-color: white;
     }
 }

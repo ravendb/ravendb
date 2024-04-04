@@ -391,14 +391,14 @@ select {
 //Override bootstrap 5.3 CSS custom properties theming errors
 .accordion-button {
     &::after {
-        content: "\f154" !important;
+        content: "\f166" !important;
         font-family: "icomoon" !important;
         text-align: center;
     }
 }
 .btn-close {
     &::after {
-        content: "\f162" !important;
+        content: "\f174" !important;
         font-family: "icomoon" !important;
         text-align: center;
     }
@@ -548,4 +548,18 @@ select {
 //Remove shadow from all btn-close on focus
 .btn-close:focus {
     box-shadow: none;
+}
+
+.validation-message {
+    order: 3;
+    white-space: normal;
+    z-index: 10;
+    .badge {
+        white-space: normal;
+    }
+}
+
+.nobr {
+    white-space: nowrap;
+    display: inline !important;
 }
