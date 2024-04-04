@@ -244,15 +244,14 @@ const printEncryptionKey = (keyText: string, fileName: string, qrCodeHtml: strin
 
 function ActionButton({ children, isEncryptionKeyValid }: PropsWithChildren<{ isEncryptionKeyValid: boolean }>) {
     return (
-        <>
+        <ConditionalPopover
+            conditions={{
+                isActive: !isEncryptionKeyValid,
+                message: "Encryption key is not valid",
+            }}
+            popoverPlacement="top"
+        >
             {children}
-            <ConditionalPopover
-                conditions={{
-                    isActive: !isEncryptionKeyValid,
-                    message: "Encryption key is not valid",
-                }}
-                popoverPlacement="top"
-            ></ConditionalPopover>
-        </>
+        </ConditionalPopover>
     );
 }
