@@ -31,7 +31,7 @@ export default function RestorePointsFields({ mapRestorePoint }: RestorePointsFi
                 <Col lg="3">
                     <Label className="col-form-label">Restore Point</Label>
                 </Col>
-                <Col lg={isSharded && "12"}>
+                <Col lg={isSharded ? 12 : 9}>
                     {fields.map(mapRestorePoint)}
                     {isSharded && (
                         <Button

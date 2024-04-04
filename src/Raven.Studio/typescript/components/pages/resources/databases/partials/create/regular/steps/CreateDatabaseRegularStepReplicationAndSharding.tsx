@@ -11,6 +11,7 @@ import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMes
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import classNames from "classnames";
 
 const shardingImg = require("Content/img/createDatabase/sharding.svg");
 
@@ -38,7 +39,8 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
         ? Math.min(maxReplicationFactorForSharding, availableNodesCount)
         : availableNodesCount;
 
-    const isReplicationFactorDisabled = isManualReplication && !isSharded;
+    const isReplicationFactorVisible = !isManualReplication || isSharded;
+    const isReplicationFactorWarning = isSharded && maxReplicationFactorForSharding < availableNodesCount;
 
     useEffect(() => {
         if (isSharded && replicationFactor > maxReplicationFactorForSharding) {
@@ -112,13 +114,9 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                 </PopoverBody>
                             </UncontrolledPopover>
                             <Icon icon="node" color="node" margin="ms-1" />{" "}
-                            <strong
-                                className={
-                                    isSharded && maxReplicationFactorForSharding < availableNodesCount && "text-warning"
-                                }
-                            >
+                            <strong className={classNames({ "text-warning": isReplicationFactorWarning })}>
                                 {maxReplicationFactor}{" "}
-                                {isSharded && maxReplicationFactorForSharding < availableNodesCount && (
+                                {isReplicationFactorWarning && (
                                     <>
                                         <Icon id="LicenseWarning" icon="warning" margin="m-0" />
                                         <UncontrolledPopover
@@ -155,7 +153,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                     </Row>
                     <Row className="pt-2">
                         <Col sm="6">
-                            <Collapse isOpen={!isReplicationFactorDisabled}>
+                            <Collapse isOpen={isReplicationFactorVisible}>
                                 <InputGroup>
                                     <InputGroupText>Replication Factor</InputGroupText>
                                     <FormInput
@@ -165,7 +163,6 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                         className="replication-input"
                                         min="1"
                                         max={maxReplicationFactor}
-                                        disabled={isReplicationFactorDisabled}
                                     />
                                 </InputGroup>
                                 <FormInput
@@ -175,7 +172,6 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                     min="1"
                                     max={maxReplicationFactor}
                                     className="mt-3"
-                                    disabled={isReplicationFactorDisabled}
                                 />
                             </Collapse>
                         </Col>
