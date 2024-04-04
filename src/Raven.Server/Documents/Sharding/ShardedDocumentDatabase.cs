@@ -164,7 +164,7 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
     protected override ClusterTransactionBatchCollector CollectCommandsBatch(ClusterOperationContext context, long lastCompletedClusterTransactionIndex, int take)
     {
         var batchCollector = new ShardedClusterTransactionBatchCollector(this, take);
-        var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, ShardedDatabaseName, fromCount: _nextClusterCommand, take: take, lastCompletedClusterTransactionIndex);
+        var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, ShardedDatabaseName, fromCount: _nextClusterCommand, lastCompletedClusterTransactionIndex, take);
 
         foreach (var command in readCommands)
         {
