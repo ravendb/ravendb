@@ -1646,7 +1646,7 @@ namespace Raven.Client.Util
                         break;
 
                     case "MaxValue":
-                        writer.Write("new Date(253402297199999)");
+                        writer.Write("new Date(253402300799999)");
                         break;
 
                     case "Now":

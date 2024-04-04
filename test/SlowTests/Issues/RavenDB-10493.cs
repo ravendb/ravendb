@@ -43,7 +43,7 @@ namespace SlowTests.Issues
                                 };
 
                     var expectedQuery =
-                        $"declare function output(x) {{{Environment.NewLine}\tvar test = 1;{Environment.NewLine}\treturn {{ DateTime : x.DateTime, DateTimeMinValue : new Date(-62135596800000), DateTimeMaxValue : new Date(253402297199999) }};{Environment.NewLine}}}{Environment.NewLine}from 'Articles' as x select output(x)";
+                        $"declare function output(x) {{{Environment.NewLine}\tvar test = 1;{Environment.NewLine}\treturn {{ DateTime : x.DateTime, DateTimeMinValue : new Date(-62135596800000), DateTimeMaxValue : new Date(253402300799999) }};{Environment.NewLine}}}{Environment.NewLine}from 'Articles' as x select output(x)";
 
                     Assert.Equal(expectedQuery, query.ToString());
 
@@ -51,8 +51,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal(DateTime.MinValue, result[0].DateTimeMinValue);
 
-                    // Only missing 0.9999 ms, but with additional timezone
-                    var epsilon = 1 + Math.Abs((DateTime.UtcNow - DateTime.Now).TotalSeconds); // Lower than 1 ms
+                    var epsilon = 0.001; // Only missing 0.0009999 ms due to the precision of JS Date implementation
                     var val = (DateTime.MaxValue - result[0].DateTimeMaxValue).TotalSeconds;
                     Assert.True(Math.Abs(val) < epsilon, $"Math.Abs({val}) < ({epsilon})");
                 }
