@@ -33,7 +33,7 @@ export default function CreateDatabaseFromBackupStepBasicInfo() {
                 </Col>
             </Row>
 
-            <Row className="mt-2">
+            <Row className="mt-2 gy-xs">
                 <Col sm="6" lg={{ offset: 2, size: 4 }}>
                     <Button
                         active={!isSharded}

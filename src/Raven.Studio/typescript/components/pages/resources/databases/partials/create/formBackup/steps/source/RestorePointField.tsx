@@ -15,6 +15,7 @@ import { CreateDatabaseFromBackupFormData as FormData, RestorePoint } from "../.
 import { FieldPath, useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useAppSelector } from "components/store";
+import { success } from "toastr";
 
 interface GroupedOption {
     label: string;
@@ -57,55 +58,57 @@ export default function CreateDatabaseFromBackupRestorePoint({
     }`;
 
     return (
-        <Row>
-            {isSharded && (
-                <>
-                    <div className="d-flex justify-content-between">
-                        <div className="text-shard">
-                            <Icon icon="shard" margin="m-0" />#{index}
-                        </div>
+        <div className={isSharded && "bg-faded-shard p-1 rounded-1 mb-2"}>
+            <Row className="gx-xs gy-xs">
+                {isSharded && (
+                    <>
+                        <Col xs="3" sm="3" lg="1" className="align-self-center order-1">
+                            <div className="d-flex justify-content-between">
+                                <div className="text-shard">
+                                    <Icon icon="shard" margin="m-0" /> <strong>#{index}</strong>
+                                </div>
+                            </div>
+                        </Col>
+                        <Col xs="7" sm="7" lg="2" className="order-2">
+                            <FormSelect
+                                control={control}
+                                name={`${fieldName}.${index}.nodeTag`}
+                                options={nodeTagOptions}
+                                placeholder={<Icon icon="node" color="node" />}
+                                isSearchable={false}
+                                components={{
+                                    Option: OptionWithIcon,
+                                    SingleValue: SingleValueWithIcon,
+                                }}
+                            />
+                        </Col>
+                    </>
+                )}
+                <Col className="order-3">
+                    <FormSelect
+                        control={control}
+                        name={`${fieldName}.${index}.restorePoint`}
+                        placeholder={restorePointPlaceholder}
+                        options={restorePointsOptions}
+                        components={{
+                            GroupHeading: RestorePointGroupHeading,
+                            Option: RestorePointOption,
+                        }}
+                        isLoading={isLoading}
+                        isDisabled={isLoading || flatOptionsCount === 0 || formState.isSubmitting}
+                    />
+                </Col>
+                {isSharded && (
+                    <Col sm="2" xs="2" lg="1" className="align-self-center order-2 order-lg-4 text-end">
                         {index > 0 && (
-                            <Button
-                                size="sm"
-                                outline
-                                color="danger"
-                                className="rounded-pill"
-                                onClick={() => remove(index)}
-                            >
+                            <Button outline color="danger" onClick={() => remove(index)}>
                                 <Icon icon="trash" margin="m-0" />
                             </Button>
                         )}
-                    </div>
-                    <Col lg="3">
-                        <FormSelect
-                            control={control}
-                            name={`${fieldName}.${index}.nodeTag`}
-                            options={nodeTagOptions}
-                            placeholder={<Icon icon="node" color="node" />}
-                            isSearchable={false}
-                            components={{
-                                Option: OptionWithIcon,
-                                SingleValue: SingleValueWithIcon,
-                            }}
-                        />
                     </Col>
-                </>
-            )}
-            <Col lg={isSharded ? 9 : 12}>
-                <FormSelect
-                    control={control}
-                    name={`${fieldName}.${index}.restorePoint`}
-                    placeholder={restorePointPlaceholder}
-                    options={restorePointsOptions}
-                    components={{
-                        GroupHeading: RestorePointGroupHeading,
-                        Option: RestorePointOption,
-                    }}
-                    isLoading={isLoading}
-                    isDisabled={isLoading || flatOptionsCount === 0 || formState.isSubmitting}
-                />
-            </Col>
-        </Row>
+                )}
+            </Row>
+        </div>
     );
 }
 
@@ -131,53 +134,58 @@ function getNodeTagOptions(allNodeTags: string[]): SelectOptionWithIcon[] {
 
 const RestorePointGroupHeading = (props: GroupHeadingProps<SelectOption<RestorePoint>>) => {
     return (
-        <div>
-            <small>
-                <strong className="text-success ms-2">{props.data.label}</strong>
-            </small>
-            <Row className="d-flex align-items-center text-center p-1">
-                <Col lg="4">
-                    <small>DATE</small>
-                </Col>
-                <Col lg="2">
-                    <small>BACKUP TYPE</small>
-                </Col>
-                <Col lg="2">
-                    <small>ENCRYPTED</small>
-                </Col>
-                <Col lg="2">
-                    <small>NODE TAG</small>
-                </Col>
-                <Col lg="2">
-                    <small>FILES TO RESTORE</small>
-                </Col>
-            </Row>
-        </div>
+        <>
+            <div className="bg-faded-secondary px-4 pt-2   pb-0">
+                <h4 className="m-0 text-muted">
+                    <Icon icon="database" /> {props.data.label}
+                </h4>
+            </div>
+            <div className="p-1 position-sticky top-0 bg-faded-secondary z-1">
+                <Row className="d-flex align-items-center text-center gx-xs">
+                    <Col lg="3" className="lh-1">
+                        <small className="small-label">BACKUP TYPE</small>
+                    </Col>
+                    <Col lg="3" className="lh-1">
+                        <small className="small-label">ENCRYPTED</small>
+                    </Col>
+                    <Col lg="3" className="lh-1">
+                        <small className="small-label">NODE TAG</small>
+                    </Col>
+                    <Col lg="3" className="lh-1">
+                        <small className="small-label">FILES TO RESTORE</small>
+                    </Col>
+                </Row>
+            </div>
+        </>
     );
 };
 
 function RestorePointOption(props: OptionProps<SelectOption<RestorePoint>>) {
     const { data } = props;
 
-    todo("Styling", "Kwiato", "backup type color");
     return (
         <components.Option {...props}>
-            <Row>
-                <Col lg="4" className="text-center">
-                    <small>{data.value.dateTime}</small>
+            <Row className="gx-xs">
+                <Col xs="12" sm="12" className="">
+                    <div className="px-3">
+                        <Icon icon="clock" />
+                        <strong>{data.value.dateTime}</strong>
+                    </div>
                 </Col>
-                <Col lg="2" className="text-center">
-                    <small>{data.value.backupType}</small>
+                <Col lg="3" className="text-center">
+                    <small className={data.value.backupType == "Full" ? "text-success" : "text-emphasis"}>
+                        {data.value.backupType}
+                    </small>
                 </Col>
-                <Col lg="2" className="text-center">
+                <Col lg="3" className="text-center">
                     <small>
                         {data.value.isEncrypted ? <Icon icon="lock" color="success" /> : <Icon icon="unsecure" />}
                     </small>
                 </Col>
-                <Col lg="2" className="text-center">
+                <Col lg="3" className="text-center">
                     <small>{data.value.nodeTag}</small>
                 </Col>
-                <Col lg="2" className="text-center">
+                <Col lg="3" className="text-center">
                     <small>{data.value.filesToRestore}</small>
                 </Col>
             </Row>

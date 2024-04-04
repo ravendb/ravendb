@@ -65,21 +65,19 @@ function Step({ step, onClick, isCurrent: isActive, isDone, isLast }: StepProps)
     );
 }
 
-todo("Styling", "Kwiato", "invalid and loading state");
-
 function StepState({ step }: { step: StepItem }) {
     if (step.isLoading) {
         return (
             <div className="step-bullet">
-                <Spinner size="sm" className="m-0" />
+                <Spinner size="sm" className="m-0" color="primary" />
             </div>
         );
     }
 
     if (step.isInvalid) {
         return (
-            <div>
-                <Icon icon="cancel" color="danger" margin="m-0" />
+            <div className="step-bullet">
+                <Icon icon="close" color="danger" className="step-invalid" margin="m-0" />
             </div>
         );
     }

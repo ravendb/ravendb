@@ -42,6 +42,12 @@ $active-color: colors.$primary;
 
                 transition: all 0.4s sizes.$easing-rubber;
             }
+
+            .step-invalid {
+                opacity: 1;
+                font-size: 14px;
+            }
+
             .bullet-icon-active {
                 color: colors.$text-emphasis-color;
                 transform: scale(0.3);

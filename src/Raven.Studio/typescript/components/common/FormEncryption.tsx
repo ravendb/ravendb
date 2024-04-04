@@ -95,13 +95,19 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
             </div>
             <h2 className="text-center">Encryption at Rest</h2>
             <Row className="mt-4">
-                <Col>
+                <Col xs="12" sm="8">
                     <div className="small-label mb-1">Key (Base64 Encoding)</div>
-                    <InputGroup>
-                        <FormInput type="text" control={control} name={encryptionKeyFieldName} />
-                        <Button type="button" title="Regenerate key" onClick={() => asyncGenerateSecret.execute(true)}>
-                            <Icon icon="reset" margin="m-0" />
-                        </Button>
+                    <div className="d-flex">
+                        <InputGroup>
+                            <FormInput type="text" control={control} name={encryptionKeyFieldName} />
+                            <Button
+                                type="button"
+                                title="Regenerate key"
+                                onClick={() => asyncGenerateSecret.execute(true)}
+                            >
+                                <Icon icon="reset" margin="m-0" />
+                            </Button>
+                        </InputGroup>
                         <ActionButton isEncryptionKeyValid={isEncryptionKeyValid}>
                             <Button
                                 type="button"
@@ -110,13 +116,15 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                                     copyToClipboard.copy(keyText, "Encryption key data was copied to clipboard")
                                 }
                                 disabled={!isEncryptionKeyValid}
+                                className="ms-1"
                             >
                                 <Icon icon="copy-to-clipboard" margin="m-0" />
                             </Button>
                         </ActionButton>
-                    </InputGroup>
+                    </div>
+
                     <Row className="mt-2">
-                        <Col>
+                        <Col lg="6">
                             <ActionButton isEncryptionKeyValid={isEncryptionKeyValid}>
                                 <Button
                                     type="button"
@@ -125,12 +133,13 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                                     size="sm"
                                     onClick={() => fileDownloader.downloadAsTxt(keyText, fileName)}
                                     disabled={!isEncryptionKeyValid}
+                                    className="mb-2"
                                 >
                                     <Icon icon="download" /> Download encryption key
                                 </Button>
                             </ActionButton>
                         </Col>
-                        <Col>
+                        <Col lg="6">
                             <ActionButton isEncryptionKeyValid={isEncryptionKeyValid}>
                                 <Button
                                     type="button"
@@ -140,13 +149,14 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                                         printEncryptionKey(keyText, fileName, qrContainerRef.current.innerHTML)
                                     }
                                     disabled={!isEncryptionKeyValid}
+                                    className="mb-2"
                                 >
                                     <Icon icon="print" /> Print encryption key
                                 </Button>
                             </ActionButton>
                         </Col>
                     </Row>
-                    <Alert color="warning" className="d-flex align-items-center mt-2">
+                    <Alert color="warning" className="d-flex align-items-center mb-4">
                         <Icon icon="warning" margin="me-2" className="fs-2" />
                         <div>
                             Save the key in a safe place. It will not be available again. If you lose this key you could
@@ -154,7 +164,7 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                         </div>
                     </Alert>
                 </Col>
-                <Col lg="auto" className="text-center">
+                <Col className="text-center">
                     <div ref={qrContainerRef} className="qrcode" />
                     <div className="text-center mt-1">
                         <small id="qrInfo" className="text-info">
@@ -162,7 +172,9 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                         </small>
                     </div>
                     <UncontrolledPopover target="qrInfo" placement="top" trigger="hover">
-                        <PopoverBody>TODO: write info about qr code</PopoverBody>
+                        <PopoverBody>
+                            This is the encryption key in QR Code format for easy copying to a mobile device.
+                        </PopoverBody>
                     </UncontrolledPopover>
                 </Col>
             </Row>
@@ -232,14 +244,15 @@ const printEncryptionKey = (keyText: string, fileName: string, qrCodeHtml: strin
 
 function ActionButton({ children, isEncryptionKeyValid }: PropsWithChildren<{ isEncryptionKeyValid: boolean }>) {
     return (
-        <ConditionalPopover
-            conditions={{
-                isActive: !isEncryptionKeyValid,
-                message: "Encryption key is not valid",
-            }}
-            popoverPlacement="top"
-        >
+        <>
             {children}
-        </ConditionalPopover>
+            <ConditionalPopover
+                conditions={{
+                    isActive: !isEncryptionKeyValid,
+                    message: "Encryption key is not valid",
+                }}
+                popoverPlacement="top"
+            ></ConditionalPopover>
+        </>
     );
 }

@@ -2,7 +2,7 @@ import { Icon } from "components/common/Icon";
 import { CreateDatabaseRegularFormData } from "../createDatabaseRegularValidation";
 import React, { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Table, Label } from "reactstrap";
+import { Table, Label, UncontrolledTooltip } from "reactstrap";
 import { FormSelect } from "components/common/Form";
 import { OptionWithIcon, SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import { Checkbox } from "components/common/Checkbox";
@@ -70,6 +70,7 @@ export default function CreateDatabaseRegularStepNodeSelection() {
                                     Replica <strong>{replicationNumber + 1}</strong>
                                 </th>
                             ))}
+                            <th></th>
                         </tr>
                     </thead>
 
@@ -97,12 +98,19 @@ export default function CreateDatabaseRegularStepNodeSelection() {
                                         ></FormSelect>
                                     </td>
                                 ))}
-
-                                {formState.errors.manualNodeSelectionStep?.shards?.[shardNumber] && (
-                                    <div className="position-absolute badge bg-danger rounded-pill">
-                                        {formState.errors.manualNodeSelectionStep.shards[shardNumber].message}
-                                    </div>
-                                )}
+                                <td className="px-0" id={"nodeSelectionWarning" + shardNumber}>
+                                    {formState.errors.manualNodeSelectionStep?.shards?.[shardNumber] && (
+                                        <>
+                                            <Icon icon="warning" color="danger" margin="m-0" />
+                                            <UncontrolledTooltip
+                                                target={"nodeSelectionWarning" + shardNumber}
+                                                placement="left"
+                                            >
+                                                {formState.errors.manualNodeSelectionStep.shards[shardNumber].message}.
+                                            </UncontrolledTooltip>
+                                        </>
+                                    )}
+                                </td>
                             </tr>
                         ))}
                     </tbody>

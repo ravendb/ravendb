@@ -138,7 +138,7 @@ function DiscoveryUrl({ idx, control, isDeleteButtonVisible, trigger, watch, onD
                     </Badge>
                 ) : null}
             </Label>
-            <div className="d-flex gap-1 mb-2">
+            <div className="input-group mb-2">
                 <FormInput
                     type="text"
                     control={control}

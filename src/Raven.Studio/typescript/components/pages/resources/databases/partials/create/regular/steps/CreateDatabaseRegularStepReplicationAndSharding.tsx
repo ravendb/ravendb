@@ -60,72 +60,10 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                         Database replication provides benefits such as improved data availability, increased
                         scalability, and enhanced disaster recovery capabilities.
                     </p>
-                </Col>
-            </Row>
-
-            <Row>
-                <Col lg={{ offset: 2, size: 8 }}>
-                    <Row className="pt-2">
-                        <span>
-                            <Icon id="ReplicationInfo" icon="info" color="info" margin="m-0" /> Available nodes:{" "}
-                            <UncontrolledPopover
-                                target="ReplicationInfo"
-                                placement="left"
-                                trigger="hover"
-                                className="bs5"
-                            >
-                                {isSharded && maxReplicationFactorForSharding < availableNodesCount ? (
-                                    <PopoverBody>
-                                        <LicenseRestrictedMessage>
-                                            Your license doesn&apos;t allow replication factor higher than{" "}
-                                            <strong>{maxReplicationFactorForSharding}</strong>
-                                            for sharded database.
-                                        </LicenseRestrictedMessage>
-                                    </PopoverBody>
-                                ) : (
-                                    <PopoverBody>
-                                        Add more{" "}
-                                        <strong className="text-node">
-                                            <Icon icon="node" margin="m-0" /> Instance nodes
-                                        </strong>{" "}
-                                        in <a href={appUrl.forCluster()}>Manage cluster</a> view
-                                    </PopoverBody>
-                                )}
-                            </UncontrolledPopover>
-                            <Icon icon="node" color="node" margin="ms-1" /> <strong>{maxReplicationFactor}</strong>
-                        </span>
-                    </Row>
-                    <Row className="pt-2">
-                        <Col sm="auto">
-                            <InputGroup>
-                                <InputGroupText>Replication Factor</InputGroupText>
-                                <FormInput
-                                    type="number"
-                                    control={control}
-                                    name="replicationAndShardingStep.replicationFactor"
-                                    className="replication-input"
-                                    min="1"
-                                    max={maxReplicationFactor}
-                                    disabled={isReplicationFactorDisabled}
-                                />
-                            </InputGroup>
-                        </Col>
-                        <Col>
-                            <FormInput
-                                type="range"
-                                control={control}
-                                name="replicationAndShardingStep.replicationFactor"
-                                min="1"
-                                max={maxReplicationFactor}
-                                className="mt-1"
-                                disabled={isReplicationFactorDisabled}
-                            />
-                        </Col>
-                    </Row>
-                    <Row className="pt-2">
+                    <p>
                         <span>
                             <Icon id="ShardingInfo" icon="info" color="info" margin="m-0" /> What is sharding?
-                            <UncontrolledPopover target="ShardingInfo" placement="left" trigger="hover" className="bs5">
+                            <UncontrolledPopover target="ShardingInfo" placement="top" trigger="hover" className="bs5">
                                 <PopoverBody>
                                     <p>
                                         <strong className="text-shard">
@@ -150,9 +88,58 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                 </PopoverBody>
                             </UncontrolledPopover>
                         </span>
-                    </Row>
+                    </p>
+                </Col>
+            </Row>
+
+            <Row>
+                <Col lg={{ offset: 2, size: 8 }}>
                     <Row className="pt-2">
-                        <Col>
+                        <Col sm="6" className="d-flex gap-1 align-items-center">
+                            <Icon id="ReplicationInfo" icon="info" color="info" margin="m-0" /> Available nodes:{" "}
+                            <UncontrolledPopover
+                                target="ReplicationInfo"
+                                placement="left"
+                                trigger="hover"
+                                className="bs5"
+                            >
+                                <PopoverBody>
+                                    Add more{" "}
+                                    <strong className="text-node">
+                                        <Icon icon="node" margin="m-0" /> Instance nodes
+                                    </strong>{" "}
+                                    in <a href={appUrl.forCluster()}>Manage cluster</a> view
+                                </PopoverBody>
+                            </UncontrolledPopover>
+                            <Icon icon="node" color="node" margin="ms-1" />{" "}
+                            <strong
+                                className={
+                                    isSharded && maxReplicationFactorForSharding < availableNodesCount && "text-warning"
+                                }
+                            >
+                                {maxReplicationFactor}{" "}
+                                {isSharded && maxReplicationFactorForSharding < availableNodesCount && (
+                                    <>
+                                        <Icon id="LicenseWarning" icon="warning" margin="m-0" />
+                                        <UncontrolledPopover
+                                            target="LicenseWarning"
+                                            placement="right"
+                                            trigger="hover"
+                                            className="bs5"
+                                        >
+                                            <PopoverBody>
+                                                <LicenseRestrictedMessage>
+                                                    Your license doesn&apos;t allow replication factor higher than{" "}
+                                                    <strong>{maxReplicationFactorForSharding}</strong> for sharded
+                                                    database.
+                                                </LicenseRestrictedMessage>
+                                            </PopoverBody>
+                                        </UncontrolledPopover>
+                                    </>
+                                )}
+                            </strong>
+                        </Col>
+                        <Col sm="6">
                             <FormSwitch
                                 control={control}
                                 name="replicationAndShardingStep.isSharded"
@@ -164,6 +151,33 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                     <Icon icon="sharding" margin="m-0" /> Sharding
                                 </strong>
                             </FormSwitch>
+                        </Col>
+                    </Row>
+                    <Row className="pt-2">
+                        <Col sm="6">
+                            <Collapse isOpen={!isReplicationFactorDisabled}>
+                                <InputGroup>
+                                    <InputGroupText>Replication Factor</InputGroupText>
+                                    <FormInput
+                                        type="number"
+                                        control={control}
+                                        name="replicationAndShardingStep.replicationFactor"
+                                        className="replication-input"
+                                        min="1"
+                                        max={maxReplicationFactor}
+                                        disabled={isReplicationFactorDisabled}
+                                    />
+                                </InputGroup>
+                                <FormInput
+                                    type="range"
+                                    control={control}
+                                    name="replicationAndShardingStep.replicationFactor"
+                                    min="1"
+                                    max={maxReplicationFactor}
+                                    className="mt-3"
+                                    disabled={isReplicationFactorDisabled}
+                                />
+                            </Collapse>
                         </Col>
                         <Col sm="auto">
                             <Collapse isOpen={isSharded}>
@@ -181,7 +195,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                             </Collapse>
                         </Col>
                     </Row>
-                    <Alert color="info" className="text-center mt-2">
+                    <Alert color="info" className="text-center mt-4">
                         <Collapse isOpen={isSharded}>
                             <>
                                 Data will be divided into{" "}
@@ -207,7 +221,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                 </Col>
             </Row>
 
-            <Row className="mt-2">
+            <Row className="mt-4">
                 <Col>
                     <ConditionalPopover
                         conditions={{

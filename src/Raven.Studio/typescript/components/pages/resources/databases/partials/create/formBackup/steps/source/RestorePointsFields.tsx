@@ -31,13 +31,13 @@ export default function RestorePointsFields({ mapRestorePoint }: RestorePointsFi
                 <Col lg="3">
                     <Label className="col-form-label">Restore Point</Label>
                 </Col>
-                <Col>
+                <Col lg={isSharded && "12"}>
                     {fields.map(mapRestorePoint)}
                     {isSharded && (
                         <Button
                             size="sm"
                             color="shard"
-                            className="rounded-pill mt-2"
+                            className="rounded-pill"
                             onClick={() => append({ restorePoint: null, nodeTag: "" })}
                         >
                             <Icon icon="restore-backup" margin="m-0" /> Add shard restore point

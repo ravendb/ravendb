@@ -101,9 +101,7 @@ export function FormCheckboxes<TFieldValues extends FieldValues, TName extends F
                         {option.label}
                     </Checkbox>
                 ))}
-                {invalid && (
-                    <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
-                )}
+                {invalid && <FormValidationMessage>{error.message}</FormValidationMessage>}
             </div>
         </div>
     );
@@ -172,23 +170,23 @@ export function FormSelect<
     const selectedOptions = getFormSelectedOptions<Option>(formValues, rest.options, valueAccessor);
 
     return (
-        <div className={classNames("position-relative flex-grow-1", className)}>
-            <div className="d-flex flex-grow-1">
-                <Select
-                    value={selectedOptions}
-                    onChange={(options: OnChangeValue<Option, IsMulti>) => {
-                        onChange(
-                            Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options)
-                        );
-                    }}
-                    isDisabled={formState.isSubmitting}
-                    {...rest}
-                />
+        <>
+            <div className={classNames("position-relative flex-grow-1", className)}>
+                <div className="d-flex flex-grow-1">
+                    <Select
+                        value={selectedOptions}
+                        onChange={(options: OnChangeValue<Option, IsMulti>) => {
+                            onChange(
+                                Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options)
+                            );
+                        }}
+                        isDisabled={formState.isSubmitting}
+                        {...rest}
+                    />
+                </div>
             </div>
-            {invalid && (
-                <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
-            )}
-        </div>
+            {invalid && <FormValidationMessage>{error.message}</FormValidationMessage>}
+        </>
     );
 }
 
@@ -250,9 +248,7 @@ export function FormSelectCreatable<
                     {...rest}
                 />
             </div>
-            {invalid && (
-                <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
-            )}
+            {invalid && <FormValidationMessage>{error.message}</FormValidationMessage>}
         </div>
     );
 }
@@ -323,9 +319,7 @@ export function FormRadioToggleWithIcon<TFieldValues extends FieldValues, TName 
                     {...rest}
                 />
             </div>
-            {invalid && (
-                <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
-            )}
+            {invalid && <FormValidationMessage>{error.message}</FormValidationMessage>}
         </div>
     );
 }
@@ -373,7 +367,7 @@ export function FormDurationPicker<
             <div className="d-flex flex-grow-1">
                 <DurationPicker totalSeconds={value} onChange={onChange} disabled={formState.isSubmitting} {...rest} />
             </div>
-            {error && <div className="position-absolute badge bg-danger rounded-pill">{error.message}</div>}
+            {error && <FormValidationMessage>{error.message}</FormValidationMessage>}
         </div>
     );
 }
@@ -410,9 +404,7 @@ export function FormDatePicker<
                     {addon && <InputGroupText>{addon}</InputGroupText>}
                 </InputGroup>
             </div>
-            {error && (
-                <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
-            )}
+            {error && <FormValidationMessage>{error.message}</FormValidationMessage>}
         </div>
     );
 }
@@ -449,46 +441,45 @@ function FormInputGeneral<
     const actualInputType = showPassword ? "text" : type;
 
     return (
-        <div className="position-relative flex-grow-1">
-            <div className="d-flex flex-grow-1">
-                <InputGroup>
-                    <Input
-                        name={name}
-                        type={actualInputType}
-                        onBlur={onBlur}
-                        onChange={(x) => handleValueChange(x.currentTarget.value)}
-                        value={value == null ? "" : value}
-                        invalid={invalid}
-                        className={classNames(
-                            "position-relative d-flex flex-grow-1",
-                            passwordPreview ? "preview-password" : null
-                        )}
-                        disabled={formState.isSubmitting}
-                        {...rest}
-                    >
-                        {children}
-                    </Input>
-                    {addon && <InputGroupText>{addon}</InputGroupText>}
-                    {passwordPreview && (
-                        <Button
-                            color="link-muted"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className={classNames("btn-preview position-absolute end-0 h-100", invalid && "me-3")}
-                        >
-                            {showPassword ? (
-                                <Icon icon="preview-off" title="Hide password" margin="m-0" />
-                            ) : (
-                                <Icon icon="preview" title="Show password" margin="m-0" />
+        <>
+            <div className="position-relative flex-grow-1">
+                <div className="d-flex flex-grow-1">
+                    <InputGroup>
+                        <Input
+                            name={name}
+                            type={actualInputType}
+                            onBlur={onBlur}
+                            onChange={(x) => handleValueChange(x.currentTarget.value)}
+                            value={value == null ? "" : value}
+                            invalid={invalid}
+                            className={classNames(
+                                "position-relative d-flex flex-grow-1",
+                                passwordPreview ? "preview-password" : null
                             )}
-                        </Button>
-                    )}
-                </InputGroup>
+                            disabled={formState.isSubmitting}
+                            {...rest}
+                        >
+                            {children}
+                        </Input>
+                        {addon && <InputGroupText>{addon}</InputGroupText>}
+                        {passwordPreview && (
+                            <Button
+                                color="link-muted"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className={classNames("btn-preview position-absolute end-0 h-100", invalid && "me-3")}
+                            >
+                                {showPassword ? (
+                                    <Icon icon="preview-off" title="Hide password" margin="m-0" />
+                                ) : (
+                                    <Icon icon="preview" title="Show password" margin="m-0" />
+                                )}
+                            </Button>
+                        )}
+                    </InputGroup>
+                </div>
             </div>
-
-            {error && (
-                <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
-            )}
-        </div>
+            {error && <FormValidationMessage>{error.message}</FormValidationMessage>}
+        </>
     );
 }
 
@@ -537,7 +528,15 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
                     {...rest}
                 />
             </div>
-            {invalid && <div className="position-absolute badge bg-danger rounded-pill">{error.message}</div>}
+        </div>
+    );
+}
+
+function FormValidationMessage(props: { children: string }) {
+    const { children } = props;
+    return (
+        <div className="validation-message text-start w-100 ">
+            <div className="badge bg-danger rounded-pill">{children}</div>
         </div>
     );
 }
