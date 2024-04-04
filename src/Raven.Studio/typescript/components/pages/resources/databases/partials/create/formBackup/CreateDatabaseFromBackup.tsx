@@ -37,6 +37,7 @@ import {
 } from "components/pages/resources/databases/partials/create/shared/createDatabaseUtils";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
+import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 
 interface CreateDatabaseFromBackupProps {
     closeModal: () => void;
@@ -69,6 +70,8 @@ export default function CreateDatabaseFromBackup({
     });
 
     const { control, setError, handleSubmit, formState, setValue, trigger } = form;
+    useDirtyFlag(formState.isDirty);
+
     const formValues = useWatch({
         control,
     });

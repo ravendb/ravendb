@@ -39,6 +39,7 @@ import {
     createDatabaseUtils,
 } from "components/pages/resources/databases/partials/create/shared/createDatabaseUtils";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
+import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 
 interface CreateDatabaseRegularProps {
     closeModal: () => void;
@@ -68,6 +69,8 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
     });
 
     const { control, handleSubmit, formState, setValue, setError, trigger } = form;
+    useDirtyFlag(formState.isDirty);
+
     const formValues = useWatch({
         control,
     });
