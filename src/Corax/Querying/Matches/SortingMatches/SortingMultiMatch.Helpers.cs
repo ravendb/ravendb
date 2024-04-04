@@ -47,6 +47,10 @@ public unsafe partial struct SortingMultiMatch<TInner>
             (MatchCompareFieldType.Spatial, false) => SortBy<TComparer1, Descending<EntryComparerBySpatial>>(orderMetadata),
             (MatchCompareFieldType.Alphanumeric, true) => SortBy<TComparer1, EntryComparerByTermAlphaNumeric>(orderMetadata),
             (MatchCompareFieldType.Alphanumeric, false) => SortBy<TComparer1, Descending<EntryComparerByTermAlphaNumeric>>(orderMetadata),
+            
+            (MatchCompareFieldType.Score, true) => SortBy<TComparer1, EntryComparerByScore>(orderMetadata),
+            (MatchCompareFieldType.Score, false) => SortBy<TComparer1, Descending<EntryComparerByScore>>(orderMetadata),
+            
             _ => &Fill<TComparer1, NullComparer, NullComparer>
         };
     }
@@ -70,6 +74,9 @@ public unsafe partial struct SortingMultiMatch<TInner>
             (MatchCompareFieldType.Spatial, false) => &Fill<TComparer1, TComparer2, Descending<EntryComparerBySpatial>>,
             (MatchCompareFieldType.Alphanumeric, true) => &Fill<TComparer1, TComparer2, EntryComparerByTermAlphaNumeric>,
             (MatchCompareFieldType.Alphanumeric, false) => &Fill<TComparer1, TComparer2, Descending<EntryComparerByTermAlphaNumeric>>,
+            (MatchCompareFieldType.Score, true) => &Fill<TComparer1, TComparer2, EntryComparerByScore>,
+            (MatchCompareFieldType.Score, false) => &Fill<TComparer1, TComparer2, Descending<EntryComparerByScore>>,
+            
             _ => &Fill<TComparer1, TComparer2, NullComparer>
         };
     }
@@ -89,7 +96,7 @@ public unsafe partial struct SortingMultiMatch<TInner>
             }
 
             IndirectSort(ref match, indexes, batchTerms, comparer1, comparer2, comparer3);
-
+            
             return indexes;
         }
 
@@ -106,6 +113,20 @@ public unsafe partial struct SortingMultiMatch<TInner>
             else
                 indexes.Sort(new IndirectComparer<Descending<TComparer1>, TComparer2, TComparer3>(ref match, batchTerms, new(comparer1), comparer2, comparer3, true));
 
+            if (typeof(TComparer1) != typeof(EntryComparerByScore) || typeof(TComparer1) != typeof(Descending<EntryComparerByScore>))
+            {
+                if (match._sortingDataTransfer.IncludeScores && match._scoreBufferHandler != null)
+                {
+                    match._scoresResults.EnsureCapacityFor(indexes.Length);
+                    foreach (var t in indexes)
+                        match._scoresResults.AddByRefUnsafe() = match._secondaryScoreBuffer[t];
+
+                    match._secondaryScoreBuffer = default;
+                    match._scoreBufferHandler.Dispose();
+                    match._scoreBufferHandler = null;
+                }
+                
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -81,7 +82,7 @@ public static class CoraxQueryBuilder
                 ? new Lazy<List<string>>(() => IndexSearcher.GetFields())
                 : null;
             HasBoost = index.HasBoostedFields || query.Metadata.HasBoost ||
-                       (index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved && query.Metadata.OrderBy is [{OrderingType: OrderByFieldType.Score} _, ..]); // in case when we've implicit boosting we've build primitives with scoring enabled
+                       (index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved && query.Metadata.OrderBy?.Count(x => x.OrderingType == OrderByFieldType.Score) > 0); // in case when we've implicit boosting we've build primitives with scoring enabled
             Allocator = allocator;
             IndexReadOperation = indexReadOperation;
         }
