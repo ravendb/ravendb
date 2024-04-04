@@ -49,6 +49,11 @@ namespace Raven.Client.Documents.Replication
         /// </summary>
         public bool Disabled { get; set; }
 
+        /// <summary>
+        /// Replication type
+        /// </summary>
+        public ReplicationType Type => GetReplicationType();
+       
         public enum ReplicationType
         {
             External,
@@ -56,6 +61,8 @@ namespace Raven.Client.Documents.Replication
             Internal,
             Migration
         }
+
+        public abstract ReplicationType GetReplicationType();
 
         public bool Equals(ReplicationNode other) => IsEqualTo(other);
 
@@ -92,7 +99,8 @@ namespace Raven.Client.Documents.Replication
             {
                 [nameof(Database)] = Database,
                 [nameof(Url)] = Url,
-                [nameof(Disabled)] = Disabled
+                [nameof(Disabled)] = Disabled,
+                [nameof(Type)] = Type
             };
         }
 

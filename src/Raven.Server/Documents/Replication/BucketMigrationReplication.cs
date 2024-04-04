@@ -13,7 +13,6 @@ namespace Raven.Server.Documents.Replication
         public readonly int Shard;
         public readonly string Node;
         public readonly long MigrationIndex;
-        public readonly ReplicationType Type = ReplicationType.Migration;
 
         public BucketMigrationReplication(ShardBucketMigration shardBucketMigration, string destResponsibleNode)
         {
@@ -24,6 +23,8 @@ namespace Raven.Server.Documents.Replication
             Shard = ShardBucketMigration.DestinationShard;
             MigrationIndex = ShardBucketMigration.MigrationIndex;
         }
+
+        public override ReplicationType GetReplicationType() => ReplicationType.Migration;
 
         public bool ForBucketMigration(ShardBucketMigration migration)
         {
@@ -50,8 +51,6 @@ namespace Raven.Server.Documents.Replication
             json[nameof(Shard)] = Shard;
             json[nameof(MigrationIndex)] = MigrationIndex;
             json[nameof(Node)] = Node;
-            json[nameof(Type)] = Type;
-
             return json;
         }
     }
