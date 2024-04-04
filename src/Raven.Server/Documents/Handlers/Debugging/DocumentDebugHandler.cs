@@ -71,6 +71,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
             if (string.IsNullOrEmpty(id) && string.IsNullOrEmpty(collection))
                 throw new ArgumentException($"Missing {nameof(id)} or {nameof(collection)} property");
 
+            var totalProcessed = 0L;
+            var totalFixed = 0L;
+
             if (string.IsNullOrEmpty(collection) == false)
             {
                 var startEtag = 0L;
@@ -88,14 +91,36 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                         var cmd = new FixCollectionDiscrepancyCommand(Database, ids);
                         await Database.TxMerger.Enqueue(cmd);
+
+                        totalProcessed += ids.Count;
+                        totalFixed += cmd.TotalFixed;
                     }
                 }
+            }
+            else
+            {
+                var command = new FixCollectionDiscrepancyCommand(Database, new HashSet<string> { id });
+                await Database.TxMerger.Enqueue(command);
 
-                return;
+                totalProcessed = 1;
+                totalFixed = command.TotalFixed;
             }
 
-            var command = new FixCollectionDiscrepancyCommand(Database, new HashSet<string> { id });
-            await Database.TxMerger.Enqueue(command);
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                
+                writer.WritePropertyName("TotalProcessed");
+                writer.WriteInteger(totalProcessed);
+
+                writer.WriteComma();
+
+                writer.WritePropertyName("TotalFixed");
+                writer.WriteInteger(totalFixed);
+
+                writer.WriteEndObject();
+            }
         }
 
         private (HashSet<string> Ids, long LastEtag) GetDocumentIdsToFix(string collection, long startEtag, OperationCancelToken token)
@@ -165,6 +190,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             private readonly DocumentDatabase _database;
             private readonly HashSet<string> _ids;
 
+            public long TotalFixed;
+
             public FixCollectionDiscrepancyCommand(DocumentDatabase database, HashSet<string> ids)
             {
                 _database = database;
@@ -173,14 +200,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                var count = 0;
                 foreach (var id in _ids)
                 {
                     if (UpdateDocument(context, id))
-                        count++;
+                        TotalFixed++;
                 }
 
-                return count;
+                return TotalFixed;
             }
 
             private bool UpdateDocument(DocumentsOperationContext context, string id)
