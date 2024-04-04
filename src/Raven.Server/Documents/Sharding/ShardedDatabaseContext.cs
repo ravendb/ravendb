@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Sharding
             }
         }
 
-        private void OnDatabaseRecordChange(DatabaseRecord record, long index)
+        private Task OnDatabaseRecordChange(DatabaseRecord record, long index)
         {
             UpdateConfiguration(record.Settings);
 
@@ -153,6 +153,8 @@ namespace Raven.Server.Documents.Sharding
             SubscriptionsStorage.Update();
 
             Interlocked.Exchange(ref _record, record);
+
+            return Task.CompletedTask;
         }
 
         private bool CheckForTopologyChangesAndRaiseNotification(DatabaseTopology topology, DatabaseTopology oldTopology)
@@ -172,7 +174,7 @@ namespace Raven.Server.Documents.Sharding
             return false;
         }
 
-        private void OnUrlChange(DatabaseRecord record, long index)
+        private Task OnUrlChange(DatabaseRecord record, long index)
         {
             // we explicitly do not dispose the old executors here to avoid possible memory invalidation and since this is expected to be rare.
             // So we rely on the GC to dispose them via the finalizer
@@ -182,6 +184,8 @@ namespace Raven.Server.Documents.Sharding
 
             AllOrchestratorNodesExecutor.ForgetAbout();
             AllOrchestratorNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, _record);
+
+            return Task.CompletedTask;
         }
 
         public async ValueTask UpdateUrlsAsync(long index) => await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(_record, index, _urlUpdateStateChange);

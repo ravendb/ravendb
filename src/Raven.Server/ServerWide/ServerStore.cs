@@ -1102,6 +1102,14 @@ namespace Raven.Server.ServerWide
                     var database = await completedTask.ConfigureAwait(false);
                     await database.RefreshFeaturesAsync().ConfigureAwait(false);
                 }
+                catch (OperationCanceledException)
+                {
+                    // database shutdown
+                }
+                catch (ObjectDisposedException)
+                {
+                    // database shutdown
+                }
                 catch (Exception e)
                 {
                     if (Logger.IsInfoEnabled)
