@@ -153,6 +153,13 @@ public sealed class ShardReplicationLoader : ReplicationLoader
                         Url = _clusterTopology.GetUrlFromTag(destNode)
                     };
 
+                    // check if the migration already exists in the ReconnectQueue.
+                    // this is a precautionary measure to handle scenarios where there might 
+                    // have been an error during a previous replication attempt, causing the 
+                    // migration destination to already be queued for reconnection 
+                    if (ReconnectQueue.Contains(migrationDestination))
+                        continue;
+
                     Task.Run(() =>
                     {
                         try

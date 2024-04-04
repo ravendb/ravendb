@@ -15,18 +15,24 @@ using Raven.Server.Documents.Sharding.Background;
 using Raven.Server.Documents.Sharding.Smuggler;
 using Raven.Server.Documents.Subscriptions.Sharding;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding;
 
 public sealed class ShardedDocumentDatabase : DocumentDatabase
 {
+    private readonly Logger _logger;
+    private readonly ShardedDatabaseContext _shardedDatabaseContext;
+
     public readonly int ShardNumber;
     
     public readonly string ShardedDatabaseName;
@@ -43,6 +49,9 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
         ShardNumber = ShardHelper.GetShardNumberFromDatabaseName(name);
         ShardedDatabaseName = ShardHelper.ToDatabaseName(name);
         Smuggler = new ShardedDatabaseSmugglerFactory(this);
+
+        _logger = LoggingSource.Instance.GetLogger<ShardedDocumentDatabase>(Name);
+        _shardedDatabaseContext = serverStore.DatabasesLandlord.TryGetOrCreateDatabase(ShardedDatabaseName).DatabaseContext;
     }
 
     protected override byte[] ReadSecretKey(TransactionOperationContext context) => ServerStore.GetSecretKey(context, ShardedDatabaseName);
@@ -150,17 +159,17 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
                 // cleanup values
                 t = DeleteBucketAsync(process.Bucket, process.MigrationIndex, process.ConfirmationIndex.Value, process.LastSourceChangeVector);
 
-                t.ContinueWith(__ => DocumentsMigrator.ExecuteMoveDocumentsAsync());
+                t.ContinueWith(__ => DocumentsMigrator.ExecuteMoveDocumentsAsync(), TaskContinuationOptions.NotOnFaulted);
             }
 
             if (t != null)
             {
                 _confirmations[index] = t;
-                t.ContinueWith(__ => _confirmations.TryRemove(index, out _));
+                t.ContinueWith(__ => _confirmations.TryRemove(index, out _), TaskContinuationOptions.NotOnFaulted);
             }
         }
     }
-    
+
     protected override ClusterTransactionBatchCollector CollectCommandsBatch(ClusterOperationContext context, long lastCompletedClusterTransactionIndex, int take)
     {
         var batchCollector = new ShardedClusterTransactionBatchCollector(this, take);
@@ -215,10 +224,32 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
         // to be applied in all orchestrator nodes
         await WaitForOrchestratorConfirmationAsync(confirmationIndex);
 
+        var delay = TimeSpan.FromSeconds(1);
         while (true)
         {
             var cmd = new DeleteBucketCommand(this, bucket, uptoChangeVector);
-            await TxMerger.Enqueue(cmd);
+            try
+            {
+                await TxMerger.Enqueue(cmd);
+            }
+            catch (Exception exception)
+            {
+                // if an error occurs during the execution of DeleteBucketCommand,
+                // we need to handle it gracefully to avoid rapid retry attempts
+
+                RaiseNotificationOnDeleteBucketFailure(bucket, exception);
+
+                if (delay >= TimeSpan.FromMinutes(5))
+                {
+                    // if the delay exceeds the maximum timeout, throw an exception and break the loop
+                    await Task.FromException(exception);
+                    return;
+                }
+
+                await Task.Delay(delay);
+                delay = delay.Add(TimeSpan.FromSeconds(1));
+                continue;
+            }
 
             switch (cmd.Result)
             {
@@ -237,6 +268,22 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
                     throw new ArgumentOutOfRangeException();
             }
         }
+    }
+
+    private void RaiseNotificationOnDeleteBucketFailure(int bucket, Exception exception)
+    {
+        var msg = $"An error occurred while attempting to clean up bucket '{bucket}' from source shard '{ShardNumber}' [{Name}].";
+
+        if (_logger.IsInfoEnabled)
+            _logger.Info(msg, exception);
+
+        _shardedDatabaseContext.NotificationCenter.Add(AlertRaised.Create(
+            ShardedDatabaseName,
+            "Resharding Delay Due to an Error",
+            msg,
+            AlertType.ClusterTransactionFailure,
+            NotificationSeverity.Error,
+            details: new ExceptionDetails(exception)));
     }
 
     private async Task WaitForOrchestratorConfirmationAsync(long confirmationIndex)

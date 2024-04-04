@@ -141,6 +141,7 @@
     <EmbeddedResource Include="Data\data.txt" />
     <EmbeddedResource Include="Data\data2.txt" />
     <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
+    <EmbeddedResource Include="Data\RavenDB_22200\OneDamagedBucket.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Document_Without_Attachment_Stream.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Identities_3.5.35288.ravendbdump" />
