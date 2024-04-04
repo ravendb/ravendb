@@ -316,6 +316,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             var oldOperateOnTypes = Client.Documents.Smuggler.DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
             var destination = database.Smuggler.CreateDestination();
+            long totalExecutedCommands = 0;
 
             for (var i = 0; i < FilesToRestore.Count - 1; i++)
             {
@@ -329,6 +330,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                 var filePath = RestoreSource.GetBackupPath(fileName);
                 await ImportSingleBackupFileAsync(database, Progress, Result, filePath, context, destination, options, isLastFile: false);
+                ExecuteClusterTransactions(database, ref totalExecutedCommands);
             }
 
             options.OperateOnTypes = oldOperateOnTypes;
@@ -345,7 +347,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var lastFilePath = RestoreSource.GetBackupPath(lastFileName);
 
             await ImportSingleBackupFileAsync(database, Progress, Result, lastFilePath, context, lastFileDestination, options, isLastFile: true);
-            ExecuteClusterTransactions(database);
+            ExecuteClusterTransactions(database, ref totalExecutedCommands);
         }
 
         protected Stream GetInputStream(Stream stream, byte[] databaseEncryptionKey)
@@ -555,10 +557,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
         }
 
-        private void ExecuteClusterTransactions(DocumentDatabase database)
+        private void ExecuteClusterTransactions(DocumentDatabase database, ref long totalExecutedCommands)
         {
-            long totalExecutedCommands = 0;
-
             //when restoring from a backup, the database doesn't exist yet and we cannot rely on the DocumentDatabase to execute the database cluster transaction commands
             while (true)
             {
