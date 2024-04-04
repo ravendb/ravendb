@@ -28,28 +28,22 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
     const selectedNodeTags = manualSelectedNodes ?? allNodeTags;
 
     const asyncGetFolderOptions = useAsyncDebounce(
-        async (path, isBackupFolder) => {
-            if (!path || !(await trigger("dataDirectoryStep.directory"))) {
+        async (directory, isBackupFolder) => {
+            if (!directory || !(await trigger("dataDirectoryStep.directory"))) {
                 return [];
             }
 
-            const dto = await resourcesService.getFolderPathOptions_ServerLocal(path, isBackupFolder);
+            const dto = await resourcesService.getFolderPathOptions_ServerLocal(directory, isBackupFolder);
             return dto?.List.map((x) => ({ value: x, label: x }));
         },
         [dataDirectoryStep.directory, isBackupFolder]
     );
 
     const asyncGetDatabaseLocation = useAsyncDebounce(
-        async (databaseName, directory) => {
-            if (!directory || !(await trigger("dataDirectoryStep.directory"))) {
-                return {
-                    List: [],
-                };
-            }
-
-            return await resourcesService.getDatabaseLocation(databaseName, directory);
+        (databaseName, directory, isDefault) => {
+            return resourcesService.getDatabaseLocation(databaseName, isDefault ? "" : directory);
         },
-        [databaseName, dataDirectoryStep.directory]
+        [databaseName, dataDirectoryStep.directory, dataDirectoryStep.isDefault]
     );
 
     return (
