@@ -14,6 +14,7 @@ import { CreateDatabaseFromBackupFormData as FormData, RestorePoint } from "../.
 import { FieldPath, useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useAppSelector } from "components/store";
+import classNames from "classnames";
 
 interface GroupedOption {
     label: string;
@@ -56,7 +57,7 @@ export default function CreateDatabaseFromBackupRestorePoint({
     }`;
 
     return (
-        <div className={isSharded && "bg-faded-shard p-1 rounded-1 mb-2"}>
+        <div className={classNames({"bg-faded-shard p-1 rounded-1 mb-2": isSharded})}>
             <Row className="gx-xs gy-xs">
                 {isSharded && (
                     <>
