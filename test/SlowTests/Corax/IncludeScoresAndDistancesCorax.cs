@@ -78,6 +78,8 @@ public class IncludeScoresAndDistancesCorax : RavenTestBase
     {
         // The tests in this file were designed for a pageSize of 4096. In case the default buffer has changed, please update the number of documents above that limit.
         // These tests need to call .Fill at least twice to ensure that distances/scores can be transferred from Corax to Raven in a streaming manner.
+        //Required also for:
+        //-RavenDB-21818
 
         Type type = typeof(Raven.Server.Documents.Indexes.Persistence.IndexOperationBase);
         FieldInfo field = type.GetField("DefaultBufferSizeForCorax",
