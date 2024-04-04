@@ -1522,16 +1522,15 @@ namespace Raven.Server.Documents
 
             while (taken == false)
             {
-                taken = await state.Locker.WaitAsync(TimeSpan.FromSeconds(5));
+                taken = await state.Locker.WaitAsync(TimeSpan.FromSeconds(5), state.Token);
 
                 try
                 {
                     if (CanSkipDatabaseRecordChange())
                         return;
 
-                    if (state.Token.IsCancellationRequested)
-                        return;
-
+                    state.Token.ThrowIfCancellationRequested();
+                    
                     if (taken == false)
                         continue;
 
@@ -1545,7 +1544,7 @@ namespace Raven.Server.Documents
 
                     try
                     {
-                        state.OnChange(record, index);
+                        await state.OnChange(record, index);
                         state.LastIndexChange = index;
 
                         if (state.Logger.IsInfoEnabled)
@@ -1616,11 +1615,11 @@ namespace Raven.Server.Documents
             public readonly string Name;
             public readonly CancellationToken Token;
             public readonly Logger Logger;
-            public readonly Action<DatabaseRecord, long> OnChange;
+            public readonly Func<DatabaseRecord, long, Task> OnChange;
 
             public long LastIndexChange;
 
-            public StateChange(ServerStore serverStore, string name, Logger logger, Action<DatabaseRecord, long> onChange, long lastIndexChange, CancellationToken token, SemaphoreSlim locker = null)
+            public StateChange(ServerStore serverStore, string name, Logger logger, Func<DatabaseRecord, long, Task> onChange, long lastIndexChange, CancellationToken token)
             {
                 ServerStore = serverStore;
                 Name = name;
@@ -1628,7 +1627,7 @@ namespace Raven.Server.Documents
                 OnChange = onChange;
                 LastIndexChange = lastIndexChange;
                 Token = token;
-                Locker = locker ?? new SemaphoreSlim(1, 1);
+                Locker = new SemaphoreSlim(1, 1);
             }
         }
     }

@@ -89,7 +89,7 @@ namespace Raven.Server.Documents
 
         private readonly object _idleLocker = new object();
 
-        private readonly SemaphoreSlim _clusterLocker = new(1, 1);
+        private readonly SemaphoreSlim _updateValuesLocker = new(1, 1);
 
         public Action<string> AddToInitLog => _addToInitLog;
 
@@ -138,7 +138,7 @@ namespace Raven.Server.Documents
             _databaseShutdown = CancellationTokenSource.CreateLinkedTokenSource(serverStore.ServerShutdown);
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
 
-            _databaseStateChange = new DatabasesLandlord.StateChange(ServerStore, name, _logger, UpdateOnStateChange, 0, _databaseShutdown.Token, _clusterLocker);
+            _databaseStateChange = new DatabasesLandlord.StateChange(ServerStore, name, _logger, UpdateOnStateChange, 0, _databaseShutdown.Token);
 
             try
             {
@@ -897,9 +897,9 @@ namespace Raven.Server.Documents
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
 
-            var lockTaken = _clusterLocker.Wait(TimeSpan.FromSeconds(5));
+            var lockTaken = _databaseStateChange.Locker.Wait(TimeSpan.FromSeconds(5));
             
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Acquired cluster lock. Taken: {lockTaken}");
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Acquired the update database record lock. Taken: {lockTaken}");
 
             if (lockTaken == false && _logger.IsOperationsEnabled)
                 _logger.Operations("Failed to acquire lock during database dispose for cluster notifications. Will dispose rudely...");
@@ -933,13 +933,25 @@ namespace Raven.Server.Documents
             // must acquire the lock in order to prevent concurrent access to index files
             if (lockTaken == false)
             {
-                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
-                _clusterLocker.Wait();
-                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquired cluster lock");
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring the update database record lock");
+                // ReSharper disable once MethodSupportsCancellation
+                _databaseStateChange.Locker.Wait();
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquired the update database record lock");
             }
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing the cluster locker");
-            exceptionAggregator.Execute(() => _clusterLocker.Dispose());
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing the update database record lock");
+            exceptionAggregator.Execute(() => _databaseStateChange.Locker.Dispose());
+
+            // To avoid potential deadlocks, it's vital to maintain a consistent lock acquisition order,
+            // especially considering the nested locks involved.
+            // Specifically, we need to acquire the 'update database record' lock
+            // BEFORE obtaining the 'update values' lock.
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring the update values lock");
+            // ReSharper disable once MethodSupportsCancellation
+            _updateValuesLocker.Wait();
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing the update values lock");
+            exceptionAggregator.Execute(() => _updateValuesLocker.Dispose());
 
             var indexStoreTask = _indexStoreTask;
             if (indexStoreTask != null)
@@ -1578,15 +1590,31 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void UpdateOnStateChange(DatabaseRecord record, long index)
+        public async Task UpdateOnStateChange(DatabaseRecord record, long index)
         {
             SetIds(record);
             SetUnusedDatabaseIds(record);
             InitializeFromDatabaseRecord(record);
             IndexStore.HandleDatabaseRecordChange(record, index);
             ReplicationLoader?.HandleDatabaseRecordChange(record, index);
-            EtlLoader?.HandleDatabaseRecordChange(record);
-            SubscriptionStorage?.HandleDatabaseRecordChange();
+
+
+            // We've already begun executing the operation and aim to see it through without interruption,
+            // hence we won't be passing the cancellation token.
+            // ReSharper disable once MethodSupportsCancellation
+            await _updateValuesLocker.WaitAsync();
+
+            try
+            {
+                PeriodicBackupRunner?.UpdateConfigurations(record.PeriodicBackups);
+                EtlLoader?.HandleDatabaseRecordChange(record);
+                SubscriptionStorage?.HandleDatabaseRecordChange();
+            }
+            finally
+            {
+                _updateValuesLocker.Release();
+            }
+
             QueueSinkLoader?.HandleDatabaseRecordChange(record);
 
             OnDatabaseRecordChanged(record);
@@ -1638,20 +1666,17 @@ namespace Raven.Server.Documents
             var taken = false;
             while (taken == false)
             {
-                taken = await _clusterLocker.WaitAsync(TimeSpan.FromSeconds(5));
+                taken = await _updateValuesLocker.WaitAsync(TimeSpan.FromSeconds(5), DatabaseShutdown);
 
                 try
                 {
                     if (CanSkipValueChange(index, type))
                         return;
 
-                    if (DatabaseShutdown.IsCancellationRequested)
-                        return;
+                    DatabaseShutdown.ThrowIfCancellationRequested();
 
                     if (taken == false)
                         continue;
-
-                    DatabaseShutdown.ThrowIfCancellationRequested();
 
                     SubscriptionStorage?.HandleDatabaseRecordChange();
                     EtlLoader?.HandleDatabaseValueChanged();
@@ -1662,7 +1687,7 @@ namespace Raven.Server.Documents
                 finally
                 {
                     if (taken)
-                        _clusterLocker.Release();
+                        _updateValuesLocker.Release();
                 }
             }
         }
@@ -1695,7 +1720,6 @@ namespace Raven.Server.Documents
             ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
             DataArchivist = DataArchivist.LoadConfiguration(this, record, DataArchivist);
             TimeSeriesPolicyRunner = TimeSeriesPolicyRunner.LoadConfigurations(this, record, TimeSeriesPolicyRunner);
-            PeriodicBackupRunner.UpdateConfigurations(record.PeriodicBackups);
             UpdateCompressionConfigurationFromDatabaseRecord(record);
         }
 
