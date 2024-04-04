@@ -1,4 +1,3 @@
-import app = require("durandal/app");
 import websocketBasedWidget = require("viewmodels/resources/widgets/websocketBasedWidget");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
@@ -6,7 +5,6 @@ import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import appUrl = require("common/appUrl");
 import generalUtils = require("common/generalUtils");
-// import createDatabase = require("viewmodels/resources/createDatabase");
 import databasesManager = require("common/shell/databasesManager");
 import CreateDatabase from "components/pages/resources/databases/partials/create/CreateDatabase";
 

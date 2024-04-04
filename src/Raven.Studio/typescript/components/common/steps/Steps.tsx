@@ -2,7 +2,6 @@
 import classNames from "classnames";
 import "./Steps.scss";
 import { Icon } from "../Icon";
-import { todo } from "common/developmentHelper";
 import { Spinner } from "reactstrap";
 
 export interface StepItem {
