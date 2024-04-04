@@ -20,8 +20,6 @@ import { databasesViewSelectors } from "components/pages/resources/databases/sto
 import { StickyHeader } from "components/common/StickyHeader";
 import { Icon } from "components/common/Icon";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
-import useBoolean from "components/hooks/useBoolean";
-import CreateDatabase from "./partials/create/CreateDatabase";
 import CreateDatabase, { CreateDatabaseMode } from "./partials/create/CreateDatabase";
 
 interface DatabasesPageProps {

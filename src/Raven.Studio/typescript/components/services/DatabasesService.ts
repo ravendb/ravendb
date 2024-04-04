@@ -60,10 +60,9 @@ import { ConnectionStringDto } from "components/pages/database/settings/connecti
 import saveCustomSorterCommand = require("commands/database/settings/saveCustomSorterCommand");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import saveUnusedDatabaseIDsCommand = require("commands/database/settings/saveUnusedDatabaseIDsCommand");
-import { CreateDatabaseDto, createDatabaseCommand } from "commands/resources/createDatabaseCommand";
+import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
 import { createDatabaseCommand } from "commands/resources/createDatabaseCommand";
 import { restoreDatabaseFromBackupCommand } from "commands/resources/restoreDatabaseFromBackupCommand";
-import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {

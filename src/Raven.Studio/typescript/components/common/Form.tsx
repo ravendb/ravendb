@@ -490,7 +490,7 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
 
     const {
         field: { onChange, onBlur, value },
-        fieldState: { error, invalid },
+        fieldState: { invalid },
         formState,
     } = useController({
         name,
