@@ -96,6 +96,7 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
         public bool CanDowngradeFollowingUpgrade { get; set; }
         public string ChangelogHtml { get; set; }
         public DateTime? ReleasedAt { get; set; }
+        public bool CanUpgrade { get; set; }
         
         public DynamicJsonValue ToJson()
         {
@@ -104,7 +105,8 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
                 [nameof(FullVersion)] = FullVersion,
                 [nameof(CanDowngradeFollowingUpgrade)] = CanDowngradeFollowingUpgrade,
                 [nameof(ChangelogHtml)] = ChangelogHtml,
-                [nameof(ReleasedAt)] = ReleasedAt
+                [nameof(ReleasedAt)] = ReleasedAt,
+                [nameof(CanUpgrade)] = CanUpgrade
             };
         }
     }
@@ -115,7 +117,6 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
         public List<BuildCompatibilityInfo> BuildCompatibilitiesForLatestMajorMinor { get; set; }
         public long TotalBuildsForUserMajorMinor { get; set; }
         public long TotalBuildsForLatestMajorMinor { get; set; }
-        public bool IsLicenseEligibleForUpgrade { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -124,8 +125,7 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
                 [nameof(BuildCompatibilitiesForUserMajorMinor)] = BuildCompatibilitiesForUserMajorMinor,
                 [nameof(BuildCompatibilitiesForLatestMajorMinor)] = BuildCompatibilitiesForLatestMajorMinor,
                 [nameof(TotalBuildsForUserMajorMinor)] = TotalBuildsForUserMajorMinor,
-                [nameof(TotalBuildsForLatestMajorMinor)] = TotalBuildsForLatestMajorMinor,
-                [nameof(IsLicenseEligibleForUpgrade)] = IsLicenseEligibleForUpgrade,
+                [nameof(TotalBuildsForLatestMajorMinor)] = TotalBuildsForLatestMajorMinor
             };
         }
     }
