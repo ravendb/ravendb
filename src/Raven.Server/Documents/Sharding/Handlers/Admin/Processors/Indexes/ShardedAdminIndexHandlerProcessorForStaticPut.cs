@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
@@ -14,9 +12,4 @@ internal sealed class ShardedAdminIndexHandlerProcessorForStaticPut : AbstractAd
     }
 
     protected override AbstractIndexCreateController GetIndexCreateProcessor() => RequestHandler.DatabaseContext.Indexes.Create;
-
-    protected override ValueTask HandleLegacyIndexesAsync()
-    {
-        throw new NotSupportedException("Legacy replication of indexes isn't supported in a sharded environment");
-    }
 }
