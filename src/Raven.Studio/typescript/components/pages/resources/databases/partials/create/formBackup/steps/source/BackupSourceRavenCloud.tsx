@@ -9,7 +9,9 @@ import { FormInput } from "components/common/Form";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
 import { restorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/restorePointUtils";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
-import RestorePointsFields from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointsFields";
+import RestorePointsFields, {
+    RestorePointElementProps,
+} from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointsFields";
 import moment from "moment";
 import generalUtils from "common/generalUtils";
 
@@ -56,9 +58,7 @@ export default function BackupSourceRavenCloud() {
                     </Col>
                 </Row>
             )}
-            <RestorePointsFields
-                mapRestorePoint={(field, index) => <RavenCloudSourceRestorePoint key={field.id} index={index} />}
-            />
+            <RestorePointsFields restorePointElement={SourceRestorePoint} />
             <EncryptionField sourceType="ravenCloud" />
         </>
     );
@@ -90,7 +90,7 @@ function LinkLabel() {
     );
 }
 
-function RavenCloudSourceRestorePoint({ index }: { index: number }) {
+function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
     const { resourcesService } = useServices();
     const { trigger, setValue, control } = useFormContext<FormData>();
 
@@ -147,6 +147,7 @@ function RavenCloudSourceRestorePoint({ index }: { index: number }) {
             index={index}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}
             isLoading={asyncGetRestorePointsOptions.loading}
+            remove={remove}
         />
     );
 }

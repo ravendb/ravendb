@@ -8,7 +8,9 @@ import { restorePointUtils } from "components/pages/resources/databases/partials
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
 import { FormInput } from "components/common/Form";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
-import RestorePointsFields from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointsFields";
+import RestorePointsFields, {
+    RestorePointElementProps,
+} from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointsFields";
 
 export default function BackupSourceAzure() {
     const { control } = useFormContext<FormData>();
@@ -70,15 +72,13 @@ export default function BackupSourceAzure() {
                     />
                 </Col>
             </Row>
-            <RestorePointsFields
-                mapRestorePoint={(field, index) => <SourceRestorePoint key={field.id} index={index} />}
-            />
+            <RestorePointsFields restorePointElement={SourceRestorePoint} />
             <EncryptionField sourceType="azure" />
         </div>
     );
 }
 
-function SourceRestorePoint({ index }: { index: number }) {
+function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
     const { resourcesService } = useServices();
 
     const { control } = useFormContext<FormData>();
@@ -121,6 +121,7 @@ function SourceRestorePoint({ index }: { index: number }) {
             index={index}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}
             isLoading={asyncGetRestorePointsOptions.loading}
+            remove={remove}
         />
     );
 }

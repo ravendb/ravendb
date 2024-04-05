@@ -1,14 +1,19 @@
-import React, { ReactNode } from "react";
-import { FieldArrayWithId, useFormContext, useFieldArray, useWatch } from "react-hook-form";
+import React from "react";
+import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
 import { Row, Col, Label, Button } from "reactstrap";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import { Icon } from "components/common/Icon";
 
-interface RestorePointsFieldsProps {
-    mapRestorePoint: (field: FieldArrayWithId<FormData>, index: number) => ReactNode;
+export interface RestorePointElementProps {
+    index: number;
+    remove: () => void;
 }
 
-export default function RestorePointsFields({ mapRestorePoint }: RestorePointsFieldsProps) {
+interface RestorePointsFieldsProps {
+    restorePointElement: React.ComponentType<RestorePointElementProps>;
+}
+
+export default function RestorePointsFields(props: RestorePointsFieldsProps) {
     const { control, formState } = useFormContext<FormData>();
 
     const {
@@ -18,7 +23,7 @@ export default function RestorePointsFields({ mapRestorePoint }: RestorePointsFi
         control,
     });
 
-    const { fields, append } = useFieldArray({
+    const { fields, append, remove } = useFieldArray({
         control,
         name: `sourceStep.sourceData.${sourceType}.pointsWithTags`,
     });
@@ -32,7 +37,9 @@ export default function RestorePointsFields({ mapRestorePoint }: RestorePointsFi
                     <Label className="col-form-label">Restore Point</Label>
                 </Col>
                 <Col lg={isSharded ? 12 : 9}>
-                    {fields.map(mapRestorePoint)}
+                    {fields.map((field, idx) => (
+                        <props.restorePointElement key={field.id} index={idx} remove={() => remove(idx)} />
+                    ))}
                     {isSharded && (
                         <Button
                             size="sm"

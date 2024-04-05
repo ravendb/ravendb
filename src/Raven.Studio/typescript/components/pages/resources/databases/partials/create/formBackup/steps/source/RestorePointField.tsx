@@ -11,7 +11,7 @@ import { Icon } from "components/common/Icon";
 import { GroupHeadingProps, OptionProps } from "react-select";
 import { Row, Button, Col } from "reactstrap";
 import { CreateDatabaseFromBackupFormData as FormData, RestorePoint } from "../../createDatabaseFromBackupValidation";
-import { FieldPath, useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import { FieldPath, useFormContext, useWatch } from "react-hook-form";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useAppSelector } from "components/store";
 import classNames from "classnames";
@@ -25,12 +25,14 @@ interface CreateDatabaseFromBackupRestorePointProps {
     index: number;
     restorePointsOptions: GroupedOption[];
     isLoading?: boolean;
+    remove: () => void;
 }
 
 export default function CreateDatabaseFromBackupRestorePoint({
     index,
     restorePointsOptions,
     isLoading,
+    remove,
 }: CreateDatabaseFromBackupRestorePointProps) {
     const { control, formState } = useFormContext<FormData>();
     const {
@@ -42,11 +44,6 @@ export default function CreateDatabaseFromBackupRestorePoint({
 
     const fieldName = `sourceStep.sourceData.${sourceType}.pointsWithTags` satisfies FieldPath<FormData>;
 
-    const { remove } = useFieldArray({
-        control,
-        name: fieldName,
-    });
-
     const allNodeTags = useAppSelector(clusterSelectors.allNodeTags);
     const nodeTagOptions = getNodeTagOptions(allNodeTags);
 
@@ -57,7 +54,7 @@ export default function CreateDatabaseFromBackupRestorePoint({
     }`;
 
     return (
-        <div className={classNames({"bg-faded-shard p-1 rounded-1 mb-2": isSharded})}>
+        <div className={classNames({ "bg-faded-shard p-1 rounded-1 mb-2": isSharded })}>
             <Row className="gx-xs gy-xs">
                 {isSharded && (
                     <>
@@ -100,7 +97,7 @@ export default function CreateDatabaseFromBackupRestorePoint({
                 {isSharded && (
                     <Col sm="2" xs="2" lg="1" className="align-self-center order-2 order-lg-4 text-end">
                         {index > 0 && (
-                            <Button outline color="danger" onClick={() => remove(index)}>
+                            <Button outline color="danger" onClick={remove}>
                                 <Icon icon="trash" margin="m-0" />
                             </Button>
                         )}

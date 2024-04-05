@@ -8,7 +8,9 @@ import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/dat
 import { restorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/restorePointUtils";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
-import RestorePointsFields from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointsFields";
+import RestorePointsFields, {
+    RestorePointElementProps,
+} from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointsFields";
 
 export default function BackupSourceGoogleCloud() {
     const { control } = useFormContext<FormData>();
@@ -57,15 +59,13 @@ export default function BackupSourceGoogleCloud() {
                     />
                 </Col>
             </Row>
-            <RestorePointsFields
-                mapRestorePoint={(field, index) => <SourceRestorePoint key={field.id} index={index} />}
-            />
+            <RestorePointsFields restorePointElement={SourceRestorePoint} />
             <EncryptionField sourceType="googleCloud" />
         </div>
     );
 }
 
-function SourceRestorePoint({ index }: { index: number }) {
+function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
     const { resourcesService } = useServices();
 
     const { control } = useFormContext<FormData>();
@@ -106,6 +106,7 @@ function SourceRestorePoint({ index }: { index: number }) {
             index={index}
             restorePointsOptions={asyncGetRestorePointsOptions.result ?? []}
             isLoading={asyncGetRestorePointsOptions.loading}
+            remove={remove}
         />
     );
 }
