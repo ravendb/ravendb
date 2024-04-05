@@ -304,6 +304,7 @@
                         <span data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true"
                              data-bind="tooltipText: $root.documentSizeHtml()">
                             <span data-bind="text: $root.computedDocumentSize()"></span>
+                            <i class="icon-documents-compression margin-left-xs" data-bind="visible: $root.isCompressed()"></i>
                             <i class="icon-warning text-warning margin-left-xs" data-bind="visible: $root.isHugeDocument"></i>
                         </span>
                     </dd>

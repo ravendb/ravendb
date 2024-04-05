@@ -32,7 +32,6 @@ using Tests.Infrastructure;
 using xRetry;
 using Xunit;
 using Xunit.Abstractions;
-using Sparrow.Server;
 
 namespace SlowTests.Authentication
 {

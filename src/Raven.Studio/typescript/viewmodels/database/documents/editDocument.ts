@@ -164,6 +164,7 @@ class editDocument extends shardViewModelBase {
     sizeOnDiskActual = ko.observable<string>();
     sizeOnDiskAllocated = ko.observable<string>();
     documentSizeHtml: KnockoutComputed<string>;
+    isCompressed = ko.observable<boolean>(false);
     
     editedDocId: KnockoutComputed<string>;
     displayLastModifiedDate: KnockoutComputed<boolean>;
@@ -588,7 +589,7 @@ class editDocument extends shardViewModelBase {
                 return `Computed Size: ${this.computedDocumentSize()} KB`;
             }
             
-            const text = `<div class="margin-top-sm margin-bottom-sm"><strong>Document Size on Disk</strong></div> Actual Size: ${this.sizeOnDiskActual()} <br/> Allocated Size: ${this.sizeOnDiskAllocated()}`;
+            const text = `<div class="margin-top-sm margin-bottom-sm"><strong>Document Size on Disk</strong></div> Actual Size: ${this.sizeOnDiskActual()} <br/> Allocated Size: ${this.sizeOnDiskAllocated()} <br/> Compressed: ${this.isCompressed() ? "Yes" : "No"}`;
             const hugeSizeText = this.isHugeDocument() ? `<br /><div class="text-warning bg-warning margin-top margin-bottom">Document is huge</div>` : "";
             
             return text + hugeSizeText;
@@ -1198,6 +1199,7 @@ class editDocument extends shardViewModelBase {
             .done((size) => {
                 this.sizeOnDiskActual(size.HumaneActualSize);
                 this.sizeOnDiskAllocated(size.HumaneAllocatedSize);
+                this.isCompressed(size.IsCompressed)
             })
             .fail(() => {
                 this.sizeOnDiskActual("Failed to get size");

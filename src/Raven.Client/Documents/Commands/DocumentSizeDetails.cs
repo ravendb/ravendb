@@ -9,6 +9,7 @@ internal sealed class DocumentSizeDetails : IDynamicJson
     public string HumaneActualSize { get; set; }
     public int AllocatedSize { get; set; }
     public string HumaneAllocatedSize { get; set; }
+    public bool IsCompressed { get; set; }
 
     public DynamicJsonValue ToJson()
     {
@@ -18,7 +19,8 @@ internal sealed class DocumentSizeDetails : IDynamicJson
             [nameof(ActualSize)] = ActualSize,
             [nameof(HumaneActualSize)] = HumaneActualSize,
             [nameof(AllocatedSize)] = AllocatedSize,
-            [nameof(HumaneAllocatedSize)] = HumaneAllocatedSize
+            [nameof(HumaneAllocatedSize)] = HumaneAllocatedSize,
+            [nameof(IsCompressed)] = IsCompressed
         };
     }
 }
