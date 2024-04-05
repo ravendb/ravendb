@@ -22,8 +22,10 @@ public sealed unsafe class CompactKey : IDisposable
 {
     public static readonly CompactKey NullInstance = new();
 
-    private static readonly PerCoreStatic<ArrayPool<byte>> StoragePool = new(ArrayPool<byte>.Create);
-    private static readonly PerCoreStatic<ArrayPool<long>> KeyMappingPool = new(ArrayPool<long>.Create);
+    [ThreadStatic]
+    private static ArrayPool<byte> StoragePool;
+    [ThreadStatic]
+    private static ArrayPool<long> KeyMappingPool;
 
     private LowLevelTransaction _owner;
 
@@ -31,13 +33,11 @@ public sealed unsafe class CompactKey : IDisposable
     private const int MappingTableMask = MappingTableSize - 1;
 
     private long[] _keyMappingCache;
-    private ArrayPool<long> _keyMappingPool;
-
     private ref long KeyMappingCache(int i) => ref _keyMappingCache[i];
     private ref long KeyMappingCacheIndex(int i) => ref _keyMappingCache[MappingTableSize + i];
 
+
     private byte[] _storage;
-    private ArrayPool<byte> _storagePool;
 
     // The storage data will be used in an arena fashion. If there is no enough, we just create a bigger one and
     // copy the content back. 
@@ -69,11 +69,11 @@ public sealed unsafe class CompactKey : IDisposable
         _currentIdx = 0;
         MaxLength = 0;
 
-        _storagePool = StoragePool.Get();
-        _keyMappingPool = KeyMappingPool.Get();
+        StoragePool ??= ArrayPool<byte>.Create();
+        KeyMappingPool ??= ArrayPool<long>.Create();
 
-        _storage = _storagePool.Rent(2 * Constants.CompactTree.MaximumKeySize);
-        _keyMappingCache = _keyMappingPool.Rent(2 * MappingTableMask);
+        _storage = StoragePool.Rent(2 * Constants.CompactTree.MaximumKeySize);
+        _keyMappingCache = KeyMappingPool.Rent(2 * MappingTableMask);
     }
 
     public void Reset()
@@ -83,10 +83,10 @@ public sealed unsafe class CompactKey : IDisposable
 
         _owner = null;
 
-        _storagePool.Return(_storage);
+        StoragePool.Return(_storage);
         _storage = null;
 
-        _keyMappingPool.Return(_keyMappingCache);
+        KeyMappingPool.Return(_keyMappingCache);
         _keyMappingCache = null;
     }
 
@@ -230,10 +230,10 @@ public sealed unsafe class CompactKey : IDisposable
         // Request more memory, copy the content and return it.
         maxSize = Math.Max(maxSize, oldStorage.Length) * 2;
 
-        var storage = _storagePool.Rent(maxSize);
+        var storage = StoragePool.Rent(maxSize);
         _storage.AsSpan(0, _currentIdx).CopyTo(storage.AsSpan());
-
-        _storagePool.Return(_storage); // Return old to pool.
+        
+        StoragePool.Return(_storage); // Return old to pool.
         _storage = storage; // Update the new references.
     }
 
