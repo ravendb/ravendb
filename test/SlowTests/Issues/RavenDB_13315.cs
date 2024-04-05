@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System;
+using FastTests;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
@@ -29,13 +30,22 @@ namespace SlowTests.Issues
 
                     var context = (session as InMemoryDocumentSessionOperations).Context;
 
-                    var allocatedMemoryBeforeOperationsThatShouldHaveNoMemoryFootpring = context.AllocatedMemory;
+                    var allocatedMemoryBeforeOperationsThatShouldHaveNoMemoryFootprint = context.AllocatedMemory;
+                    var usedMemoryBeforeOperationsThatShouldHaveNoMemoryFootprint = context.UsedMemory;
+
                     session.SaveChanges();
                     Assert.False((session as InMemoryDocumentSessionOperations).HasChanges);
                     Assert.False((session as InMemoryDocumentSessionOperations).HasChanged(user));
                     session.Delete("users/1", null);
                     session.SaveChanges();
-                    Assert.True(allocatedMemoryBeforeOperationsThatShouldHaveNoMemoryFootpring >= context.AllocatedMemory, $"{allocatedMemoryBeforeOperationsThatShouldHaveNoMemoryFootpring} >= {context.AllocatedMemory}");
+
+                    var allocatedEpsilon = 192; // some small allocations might happen during the conversion of entities to blittables on SaveChanges()
+
+                    Assert.True(Math.Abs(allocatedMemoryBeforeOperationsThatShouldHaveNoMemoryFootprint - context.AllocatedMemory) <= allocatedEpsilon,
+                        $"Math.Abs({allocatedMemoryBeforeOperationsThatShouldHaveNoMemoryFootprint} - {context.AllocatedMemory}) <= {allocatedEpsilon}");
+
+                    Assert.True(usedMemoryBeforeOperationsThatShouldHaveNoMemoryFootprint >= context.UsedMemory,
+                        $"{usedMemoryBeforeOperationsThatShouldHaveNoMemoryFootprint} >= {context.UsedMemory}");
                 }
             }
         }
