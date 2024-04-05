@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
@@ -73,6 +74,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             var totalProcessed = 0L;
             var totalFixed = 0L;
+            var executedTransactions = 0;
 
             if (string.IsNullOrEmpty(collection) == false)
             {
@@ -82,28 +84,35 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     while (token.Token.IsCancellationRequested == false)
                     {
-                        (HashSet<string> ids, long lastEtag) = GetDocumentIdsToFix(collection, startEtag, token);
+                        (Queue<string> ids, long lastEtag) = GetDocumentIdsToFix(collection, startEtag, token);
 
                         if (ids.Count == 0)
                             break;
 
                         startEtag = lastEtag;
-
-                        var cmd = new FixCollectionDiscrepancyCommand(Database, ids);
-                        await Database.TxMerger.Enqueue(cmd);
-
                         totalProcessed += ids.Count;
-                        totalFixed += cmd.TotalFixed;
+
+                        while (ids.Count > 0)
+                        {
+                            token.ThrowIfCancellationRequested();
+
+                            var cmd = new FixCollectionDiscrepancyCommand(Database, ids);
+                            await Database.TxMerger.Enqueue(cmd);
+
+                            totalFixed += cmd.TotalFixed;
+                            executedTransactions += 1;
+                        }
                     }
                 }
             }
             else
             {
-                var command = new FixCollectionDiscrepancyCommand(Database, new HashSet<string> { id });
+                var command = new FixCollectionDiscrepancyCommand(Database, new Queue<string>(new[] { id }));
                 await Database.TxMerger.Enqueue(command);
 
                 totalProcessed = 1;
                 totalFixed = command.TotalFixed;
+                executedTransactions = 1;
             }
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -119,13 +128,18 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 writer.WritePropertyName("TotalFixed");
                 writer.WriteInteger(totalFixed);
 
+                writer.WriteComma();
+
+                writer.WritePropertyName("ExecutedTransactions");
+                writer.WriteInteger(executedTransactions);
+
                 writer.WriteEndObject();
             }
         }
 
-        private (HashSet<string> Ids, long LastEtag) GetDocumentIdsToFix(string collection, long startEtag, OperationCancelToken token)
+        private (Queue<string> Ids, long LastEtag) GetDocumentIdsToFix(string collection, long startEtag, OperationCancelToken token)
         {
-            var ids = new HashSet<string>();
+            var ids = new Queue<string>();
             long lastEtag = 0;
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -133,6 +147,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 var docsForCollection = Database.DocumentsStorage.GetDocumentsFrom(context, collection, startEtag, 0, int.MaxValue, DocumentFields.Id);
                 var collectionName = Database.DocumentsStorage.ExtractCollectionName(context, collection);
+                var table = Database.DocumentsStorage.TimeSeriesStorage.GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
+                var statsTable = Database.DocumentsStorage.TimeSeriesStorage.Stats.GetOrCreateTable(context.Transaction.InnerTransaction, collectionName);
 
                 foreach (var document in docsForCollection)
                 {
@@ -150,23 +166,21 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, documentId, name, from: DateTime.MinValue, to: DateTime.MaxValue);
                             reader.Init();
 
-                            var table = Database.DocumentsStorage.TimeSeriesStorage.GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
                             foreach (var _ in reader.GetSegments())
                             {
                                 if (table.IsOwned(reader.SegmentStorageId) == false)
                                 {
-                                    ids.Add(documentId);
+                                    ids.Enqueue(documentId);
                                     break;
                                 }
                             }
 
-                            var statsTable = Database.DocumentsStorage.TimeSeriesStorage.Stats.GetOrCreateTable(context.Transaction.InnerTransaction, collectionName);
                             using (reader.ReadKey(out var key))
                             using (Slice.External(context.Allocator, key, key.Size - sizeof(long) - 1, out var statsKey))
                             {
                                 if (statsTable.ReadByKey(statsKey, out var tvr) && statsTable.IsOwned(tvr.Id) == false)
                                 {
-                                    ids.Add(documentId);
+                                    ids.Enqueue(documentId);
                                     break;
                                 }
                             }
@@ -188,11 +202,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
         private class FixCollectionDiscrepancyCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
-            private readonly HashSet<string> _ids;
+            private readonly Queue<string> _ids;
 
             public long TotalFixed;
 
-            public FixCollectionDiscrepancyCommand(DocumentDatabase database, HashSet<string> ids)
+            public FixCollectionDiscrepancyCommand(DocumentDatabase database, Queue<string> ids)
             {
                 _database = database;
                 _ids = ids;
@@ -200,10 +214,16 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                foreach (var id in _ids)
+                var sp = Stopwatch.StartNew();
+
+                while (_ids.Count > 0)
                 {
+                    var id = _ids.Dequeue();
                     if (UpdateDocument(context, id))
                         TotalFixed++;
+
+                    if (sp.ElapsedMilliseconds > 500)
+                        break;
                 }
 
                 return TotalFixed;
