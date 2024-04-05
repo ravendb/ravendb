@@ -24,6 +24,7 @@ import { databaseActions } from "components/common/shell/databaseSliceActions";
 import genUtils = require("common/generalUtils");
 import useConfirm from "components/common/ConfirmDialog";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 
 interface DatabasesSelectActionsProps {
     selectedDatabases: DatabaseSharedInfo[];
@@ -193,15 +194,16 @@ export function DatabasesSelectActions({
                             </UncontrolledDropdown>
                         )}
                         {isOperatorOrAbove && (
-                            <Button
+                            <ButtonWithSpinner
                                 color="danger"
                                 onClick={onDelete}
                                 disabled={!canDeleteSelection || deleteChanges}
                                 className="rounded-pill flex-grow-0"
+                                icon="trash"
+                                isSpinning={deleteChanges}
                             >
-                                {deleteChanges ? <Spinner size="sm" /> : <i className="icon-trash" />}
                                 Delete
-                            </Button>
+                            </ButtonWithSpinner>
                         )}
                     </ButtonGroup>
                     <Button onClick={() => setSelectedDatabaseNames([])} color="link">
