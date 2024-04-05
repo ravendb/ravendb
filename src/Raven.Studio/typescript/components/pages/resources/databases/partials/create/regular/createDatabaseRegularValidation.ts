@@ -43,8 +43,8 @@ const manualNodeSelectionStepSchema = yup.object({
                 .array()
                 .nullable()
                 .of(yup.string().nullable())
-                .test("at-least-one-replica", "Each shard needs at least one replica", (value) => {
-                    if (!value) {
+                .test("at-least-one-replica", "Each shard needs at least one replica", (value, ctx) => {
+                    if (!value || !ctx.options.context.isSharded) {
                         return true;
                     }
                     return value.some((x) => x);
@@ -52,8 +52,8 @@ const manualNodeSelectionStepSchema = yup.object({
                 .test(
                     "invalid-shard-topology",
                     "Invalid shard topology - replicas must reside on different nodes",
-                    (value) => {
-                        if (!value) {
+                    (value, ctx) => {
+                        if (!value || !ctx.options.context.isSharded) {
                             return true;
                         }
 
