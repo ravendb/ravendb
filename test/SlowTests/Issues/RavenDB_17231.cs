@@ -91,7 +91,9 @@ namespace SlowTests.Issues
             var r = await newLeaderElected;
             // this task is already completed
             Assert.True(r.IsCompleted,$"newLeaderElected was not completed");
+#pragma warning disable xUnit1031
             Assert.True(r.Result, 
+#pragma warning restore xUnit1031
                 await AddErrorMessageAndClusterDebugLogs(nodes, new StringBuilder().AppendLine($"old leader {leaderTag} stepped down, but no new leader was elected after 15 seconds")));
             
             await putConnectionStrings;
