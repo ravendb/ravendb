@@ -337,22 +337,23 @@ namespace Voron.Data.Tables
             return internalScope;
         }
 
-        public int GetAllocatedSize(long id)
+        public (int AllocatedSize, bool IsCompressed) GetInfoFor(long id)
         {
             var posInPage = id % Constants.Storage.PageSize;
-            if (posInPage == 0) // large
+            if (posInPage == 0) // large value
             {
                 var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
 
                 var allocated = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
 
-                return allocated * Constants.Storage.PageSize;
+                return (allocated * Constants.Storage.PageSize, page.Flags.HasFlag(PageFlags.Compressed));
             }
 
             // here we rely on the fact that RawDataSmallSection can
             // read any RawDataSmallSection piece of data, not just something that
             // it exists in its own section, but anything from other sections as well
-            return RawDataSection.GetRawDataEntrySizeFor(_tx.LowLevelTransaction, id)->AllocatedSize;
+            var sizes = RawDataSection.GetRawDataEntrySizeFor(_tx.LowLevelTransaction, id);
+            return (sizes->AllocatedSize, sizes->IsCompressed);
         }
 
         public long Update(long id, TableValueBuilder builder, bool forceUpdate = false)

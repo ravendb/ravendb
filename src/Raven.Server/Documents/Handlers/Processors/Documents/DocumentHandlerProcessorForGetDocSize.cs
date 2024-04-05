@@ -36,7 +36,8 @@ internal sealed class DocumentHandlerProcessorForGetDocSize : AbstractDocumentHa
                 ActualSize = document.Value.ActualSize,
                 HumaneActualSize = Sizes.Humane(document.Value.ActualSize),
                 AllocatedSize = document.Value.AllocatedSize,
-                HumaneAllocatedSize = Sizes.Humane(document.Value.AllocatedSize)
+                HumaneAllocatedSize = Sizes.Humane(document.Value.AllocatedSize),
+                IsCompressed = document.Value.IsCompressed
             };
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
