@@ -27,11 +27,13 @@ namespace SlowTests.Issues
                     newSession.SaveChanges();
 
                     var queryGood = newSession.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Id.StartsWith("users/"))
                         .OrderBy(x => x.Name).ThenBy(x => x.LastName);
 
                     // without select work as expected
                     var queryBad = newSession.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Id.StartsWith("users/"))
                         .OrderBy(x => x.Name).ThenBy(x => x.LastName)
                         .Select(x => new UserWithoutId
