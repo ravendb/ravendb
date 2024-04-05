@@ -1,7 +1,7 @@
 import { CreateDatabaseRegularFormData as FormData } from "./createDatabaseRegularValidation";
 import { CreateDatabaseDto } from "commands/resources/createDatabaseCommand";
 
-const getDefaultValues = (replicationFactor: number): FormData => {
+const getDefaultValues = (replicationFactor: number, allNodeTags: string[]): FormData => {
     return {
         basicInfoStep: {
             databaseName: "",
@@ -19,7 +19,7 @@ const getDefaultValues = (replicationFactor: number): FormData => {
             isManualReplication: false,
         },
         manualNodeSelectionStep: {
-            nodes: [],
+            nodes: allNodeTags,
             shards: [],
         },
         dataDirectoryStep: {

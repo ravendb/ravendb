@@ -54,7 +54,7 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
 
     const form = useForm<FormData>({
         mode: "onChange",
-        defaultValues: createDatabaseRegularDataUtils.getDefaultValues(initialReplicationFactor),
+        defaultValues: createDatabaseRegularDataUtils.getDefaultValues(initialReplicationFactor, allNodeTags),
         resolver: (data, _, options) =>
             yupResolver(createDatabaseRegularSchema)(
                 data,

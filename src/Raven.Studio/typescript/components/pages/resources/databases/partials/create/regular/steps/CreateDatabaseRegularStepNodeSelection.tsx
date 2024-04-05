@@ -51,10 +51,13 @@ export default function CreateDatabaseRegularStepNodeSelection() {
     };
 
     useEffect(() => {
-        if (!isSharded) {
+        if (!isSharded && manualNodes.length > 0) {
             setValue("replicationAndShardingStep.replicationFactor", manualNodes.length);
         }
     }, [isSharded, manualNodes.length, setValue]);
+
+    const getShardError = (shardNumber: number) =>
+        formState.errors.manualNodeSelectionStep?.shards?.[shardNumber]?.message;
 
     return (
         <div className="text-center">
@@ -99,14 +102,14 @@ export default function CreateDatabaseRegularStepNodeSelection() {
                                     </td>
                                 ))}
                                 <td className="px-0" id={"nodeSelectionWarning" + shardNumber}>
-                                    {formState.errors.manualNodeSelectionStep?.shards?.[shardNumber] && (
+                                    {getShardError(shardNumber) && (
                                         <>
                                             <Icon icon="warning" color="danger" margin="m-0" />
                                             <UncontrolledTooltip
                                                 target={"nodeSelectionWarning" + shardNumber}
                                                 placement="left"
                                             >
-                                                {formState.errors.manualNodeSelectionStep.shards[shardNumber].message}.
+                                                {getShardError(shardNumber)}
                                             </UncontrolledTooltip>
                                         </>
                                     )}
