@@ -231,6 +231,7 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
                     return;
                 // we have more docs, batch limit reached.
                 case DeleteBucketCommand.DeleteBucketResult.FullBatch:
+                case DeleteBucketCommand.DeleteBucketResult.ReachedTransactionLimit:
                     continue;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -304,7 +305,8 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
         {
             Empty,
             Skipped,
-            FullBatch
+            FullBatch,
+            ReachedTransactionLimit
         }
     }
 }
