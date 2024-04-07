@@ -223,7 +223,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     if (UpdateDocument(context, id))
                         TotalFixed++;
 
-                    if (sp.ElapsedMilliseconds > 500)
+                    if (sp.ElapsedMilliseconds > 100)
                         break;
                 }
 
