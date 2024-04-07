@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -16,8 +17,10 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task Can_fix_collection_discrepancy_time_series_by_id()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Can_fix_collection_discrepancy_time_series_by_id(bool withTimeSeriesChange)
         {
             using (var store = GetDocumentStore())
             {
@@ -45,6 +48,16 @@ namespace SlowTests.Issues
                         Assert.True(exists);
                     }
 
+                    if (withTimeSeriesChange)
+                    {
+                        using (var session = store.OpenAsyncSession(databaseName))
+                        {
+                            var timeSeries = session.TimeSeriesFor(docId, "new");
+                            timeSeries.Append(new DateTime(2024, 01, 01), 1);
+                            await session.SaveChangesAsync();
+                        }
+                    }
+
                     await store.GetRequestExecutor().HttpClient.PostAsync($"{store.Urls.First()}/databases/{databaseName}/debug/documents/fix-collection-discrepancy?id={docId}", new StringContent("{'item': NaN}"));
 
                     using (var session = store.OpenAsyncSession(databaseName))
@@ -62,8 +75,10 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task Can_fix_collection_discrepancy_time_series_by_collection()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Can_fix_collection_discrepancy_time_series_by_collection(bool withTimeSeriesChange)
         {
             using (var store = GetDocumentStore())
             {
@@ -89,6 +104,16 @@ namespace SlowTests.Issues
                     {
                         var exists = await session.Advanced.ExistsAsync(docId);
                         Assert.True(exists);
+                    }
+
+                    if (withTimeSeriesChange)
+                    {
+                        using (var session = store.OpenAsyncSession(databaseName))
+                        {
+                            var timeSeries = session.TimeSeriesFor(docId, "new");
+                            timeSeries.Append(new DateTime(2024, 01, 01), 1);
+                            await session.SaveChangesAsync();
+                        }
                     }
 
                     await store.GetRequestExecutor().HttpClient.PostAsync($"{store.Urls.First()}/databases/{databaseName}/debug/documents/fix-collection-discrepancy?collection=Users", new StringContent("{'item': NaN}"));
