@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.TimeSeries
         private static readonly Slice RawPolicySlice;
         private static readonly Slice TimeSeriesStatsKey;
         private static readonly Slice PolicyIndex;
-        private static readonly Slice StartTimeIndex;
+        internal static readonly Slice StartTimeIndex;
         private static readonly TableSchema TimeSeriesStatsSchema = new TableSchema();
 
         private enum StatsColumns
