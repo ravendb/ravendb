@@ -71,6 +71,7 @@ using Sparrow.Json;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Documents.QueueSink.Test;
+using Raven.Server.Documents.Sharding.Handlers.Processors;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 using DatabasesInfo = Raven.Client.ServerWide.Operations.DatabasesInfo;
 using MigrationConfiguration = Raven.Server.Smuggler.Migration.MigrationConfiguration;
@@ -329,6 +330,8 @@ namespace Raven.Server.Json
             public static readonly Func<BlittableJsonReaderObject, DeleteRevisionsOperation.Parameters> DeleteRevisionsParameters = GenerateJsonDeserializationRoutine<DeleteRevisionsOperation.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, UpdateUnusedDatabasesOperation.Parameters> UnusedDatabaseParameters = GenerateJsonDeserializationRoutine<UpdateUnusedDatabasesOperation.Parameters>();
+
+            public static readonly Func<BlittableJsonReaderObject, ShardedAdminForbiddenUnusedIdsHandlerProcessorForGetUnusedIds.ShardedGetForbiddenUnusedIdsOperation.Parameters> GetForbiddenUnusedIdsParameters = GenerateJsonDeserializationRoutine<ShardedAdminForbiddenUnusedIdsHandlerProcessorForGetUnusedIds.ShardedGetForbiddenUnusedIdsOperation.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, ConfigureTimeSeriesValueNamesOperation.Parameters> TimeSeriesValueNamesParameters = GenerateJsonDeserializationRoutine<ConfigureTimeSeriesValueNamesOperation.Parameters>();
 
