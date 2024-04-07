@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -290,7 +291,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                         hasUpdates = true;
 
-                        (long Count, DateTime Start, DateTime End, Slice PolicyName, Slice OriginalName) stats = default;
+                        (long Count, DateTime Start, DateTime End, Slice PolicyName, Slice OriginalName)? stats = default;
                         foreach (var collection in collections)
                         {
                             var oldTable = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetOrCreateTable(context.Transaction.InnerTransaction, collection);
@@ -298,19 +299,37 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             {
                                 // deleting old info
                                 stats = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetFullStats(context, statsKey);
-                                _database.DocumentsStorage.TimeSeriesStorage.Stats.DeleteStats(context, collection, statsKey);
+
+                                // handling the case when we merged the timeseries and then added a new entry with the lowest date,
+                                // this forces us to update the stats, but now we did it using the new collection which means it was already deleted from the StartTimeIndex.
+
+                                oldTable.ShouldThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt = indexDefName =>
+                                    indexDefName.Equals(TimeSeriesStats.StartTimeIndex) == false;
+
+                                try
+                                {
+                                    _database.DocumentsStorage.TimeSeriesStorage.Stats.DeleteStats(context, collection, statsKey);
+                                }
+                                finally
+                                {
+                                    oldTable.ShouldThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt = null;
+                                }
+
                                 break;
                             }
                         }
 
+                        if (stats == null)
+                            throw new InvalidOperationException($"Failed to get stats for key '{statsKey}'");
+
                         using (table.Allocate(out var tvb))
                         {
                             tvb.Add(statsKey);
-                            tvb.Add(stats.PolicyName);
-                            tvb.Add(Bits.SwapBytes(stats.Start.Ticks));
-                            tvb.Add(stats.End);
-                            tvb.Add(stats.Count);
-                            tvb.Add(stats.OriginalName);
+                            tvb.Add(stats.Value.PolicyName);
+                            tvb.Add(Bits.SwapBytes(stats.Value.Start.Ticks));
+                            tvb.Add(stats.Value.End);
+                            tvb.Add(stats.Value.Count);
+                            tvb.Add(stats.Value.OriginalName);
 
                             table.Insert(tvb);
                         }

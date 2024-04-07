@@ -592,8 +592,14 @@ namespace Voron.Data.Tables
             throw new VoronErrorException($"Trying to delete a value (id:{id}) from the wrong table ('{Name}')");
         }
 
+        public Func<Slice, bool> ShouldThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt;
+
         private void ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(long id, Slice indexDefName)
         {
+            if (ShouldThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt != null &&
+                ShouldThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt.Invoke(indexDefName) == false)
+                return;
+
             throw new VoronErrorException(
                 $"Invalid index {indexDefName} on {Name}, attempted to delete value but the value from {id} wasn\'t in the index");
         }
