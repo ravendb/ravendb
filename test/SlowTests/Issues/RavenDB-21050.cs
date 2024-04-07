@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -20,13 +21,14 @@ public class RavenDB_21050 : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.BackupExportImport)]
-    public async Task ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndDelete_ShouldDeleteInTheDestination()
+    [RavenTheory(RavenTestCategory.BackupExportImport)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndDelete_ShouldDeleteInTheDestination(Options options)
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");
         const string id = "TestObjs/0";
 
-        using (var source = GetDocumentStore())
+        using (var source = GetDocumentStore(options))
         using (var destination = new DocumentStore { Urls = new[] { Server.WebUrl }, Database = $"restored_{source.Database}" }.Initialize())
         {
             var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 */12 * *" };
