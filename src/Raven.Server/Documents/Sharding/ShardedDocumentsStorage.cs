@@ -368,8 +368,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
             RevisionsStorage.ForceDeleteAllRevisionsFor(context, document.Id);
             deleted++;
 
-            if (context.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages +
-                context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes) / Constants.Storage.PageSize > MaxTransactionSize)
+            if (context.Transaction.InnerTransaction.LowLevelTransaction.TransactionSizeInPages > MaxTransactionSize)
                 return ShardedDocumentDatabase.DeleteBucketCommand.DeleteBucketResult.ReachedTransactionLimit;
         }
 
