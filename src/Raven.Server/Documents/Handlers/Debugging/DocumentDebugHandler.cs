@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        [RavenAction("/databases/*/debug/documents/fix-collection-discrepancy", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/debug/documents/fix-collection-discrepancy", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task FixCollectionDiscrepancy()
         {
             var id = GetStringQueryString("id", required: false);
@@ -302,7 +302,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                                 // handling the case when we merged the timeseries and then added a new entry with the lowest date,
                                 // this forces us to update the stats, but now we did it using the new collection which means it was already deleted from the StartTimeIndex.
-
                                 oldTable.ShouldThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt = indexDefName =>
                                     indexDefName.Equals(TimeSeriesStats.StartTimeIndex) == false;
 
