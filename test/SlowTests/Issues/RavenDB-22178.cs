@@ -78,7 +78,8 @@ public class RavenDB_22178 : RavenTestBase
             Assert.Equal(1, indexMergeSuggestions.Suggestions.Count);
             Assert.Equal(0, indexMergeSuggestions.Unmergables.Count);
 
-            Assert.Equal(ExceptionMessage, indexMergeSuggestions.Errors[secondIndex.IndexName]);
+            Assert.Equal(ExceptionMessage, indexMergeSuggestions.Errors.First(x => x.IndexName == secondIndex.IndexName).Message);
+            Assert.NotNull(indexMergeSuggestions.Errors.First(x => x.IndexName == secondIndex.IndexName).StackTrace);
             Assert.Equal(2, indexMergeSuggestions.Suggestions.First().CanMerge.Count);
             
             Assert.True(indexMergeSuggestions.Suggestions.First().CanMerge.Contains(firstIndex.IndexName));
@@ -111,8 +112,11 @@ public class RavenDB_22178 : RavenTestBase
             Assert.Equal(0, indexMergeSuggestions.Suggestions.Count);
             Assert.Equal(1, indexMergeSuggestions.Unmergables.Count);
 
-            Assert.Equal(ExceptionMessage, indexMergeSuggestions.Errors[firstIndex.IndexName]);
-            Assert.Equal(ExceptionMessage, indexMergeSuggestions.Errors[thirdIndex.IndexName]);
+            Assert.Equal(ExceptionMessage, indexMergeSuggestions.Errors.First(x => x.IndexName == firstIndex.IndexName).Message);
+            Assert.NotNull(indexMergeSuggestions.Errors.First(x => x.IndexName == firstIndex.IndexName).StackTrace);
+            
+            Assert.Equal(ExceptionMessage, indexMergeSuggestions.Errors.First(x => x.IndexName == thirdIndex.IndexName).Message);
+            Assert.NotNull(indexMergeSuggestions.Errors.First(x => x.IndexName == thirdIndex.IndexName).StackTrace);
             
             Assert.True(indexMergeSuggestions.Unmergables.ContainsKey(secondIndex.IndexName));
         }
@@ -143,9 +147,14 @@ public class RavenDB_22178 : RavenTestBase
             Assert.Equal(0, indexMergeSuggestions.Suggestions.Count);
             Assert.Equal(0, indexMergeSuggestions.Unmergables.Count);
 
-            Assert.Equal(ExceptionMessage, indexMergeSuggestions.Errors[firstIndex.IndexName]);
-            Assert.Equal(ExceptionMessage, indexMergeSuggestions.Errors[secondIndex.IndexName]);
-            Assert.Equal(ExceptionMessage, indexMergeSuggestions.Errors[thirdIndex.IndexName]);
+            Assert.Equal(ExceptionMessage, indexMergeSuggestions.Errors.First(x => x.IndexName == firstIndex.IndexName).Message);
+            Assert.NotNull(indexMergeSuggestions.Errors.First(x => x.IndexName == firstIndex.IndexName).StackTrace);
+            
+            Assert.Equal(ExceptionMessage, indexMergeSuggestions.Errors.First(x => x.IndexName == secondIndex.IndexName).Message);
+            Assert.NotNull(indexMergeSuggestions.Errors.First(x => x.IndexName == secondIndex.IndexName).StackTrace);
+            
+            Assert.Equal(ExceptionMessage, indexMergeSuggestions.Errors.First(x => x.IndexName == thirdIndex.IndexName).Message);
+            Assert.NotNull(indexMergeSuggestions.Errors.First(x => x.IndexName == thirdIndex.IndexName).StackTrace);
         }
     }
 
