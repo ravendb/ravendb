@@ -14,6 +14,19 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         protected AbstractPullReplicationHandlerProcessorForUnregisterHubAccess([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
+        public override async ValueTask ExecuteAsync()
+        {
+            using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                await AssertCanExecuteAsync();
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                {
+                    await UpdateConfigurationAsync(context, writer);
+                }
+            }
+        }
+
 
         protected override async Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
