@@ -375,9 +375,12 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
         private static void AddMergeErrors(IndexMergeResults indexMergeResults, List<MergeError> errors)
         {
-            foreach (var error in errors)
+            var alreadyAddedIndexNames = indexMergeResults.Errors.Select(x => x.IndexName).ToList();
+            
+            foreach (var error in errors) 
             {
-                indexMergeResults.Errors[error.IndexName] = error.Message;
+                if (alreadyAddedIndexNames.Contains(error.IndexName) == false)
+                    indexMergeResults.Errors.Add(error);
             }
         }
 
@@ -424,7 +427,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 }
                 catch (Exception ex)
                 {
-                    var mergeError = new MergeError() { IndexName = curProposedData.IndexName, Message = ex.Message };
+                    var mergeError = new MergeError() { IndexName = curProposedData.IndexName, Message = ex.Message, StackTrace = ex.StackTrace };
                     mergeErrors.Add(mergeError);
                 }
             }
