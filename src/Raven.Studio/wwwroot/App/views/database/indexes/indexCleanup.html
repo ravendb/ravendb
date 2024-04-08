@@ -214,7 +214,59 @@
             </div>
         </div>
 
-        
+        <div class="panel index-group panel-danger" data-bind="visible: mergeSuggestionsErrors().length > 0">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a href="#collapseMergeSuggestionsErrors" data-toggle="collapse">
+                        <i class="icon-danger"></i>
+                        <span>
+                            Merge suggestions errors (<span data-bind="text: mergeSuggestionsErrors().length"></span>)
+                        </span>
+                    </a>
+                </h4>
+            </div>
+            <div class="panel-collapse collapse" id="collapseMergeSuggestionsErrors">
+                <div class="panel-default panel-body">    
+                    <div class="padding padding-sm flex-horizontal margin-left">
+                        <div>
+                            <i class="icon-info"></i>
+                        </div>
+                        <div class="small">
+                            The following errors have been encountered when trying to create index merge suggestions.
+                        </div>
+                    </div>
+
+                    <table class="table table-condensed">
+                        <thead>
+                            <tr>
+                                <th>Index name</th>
+                                <th>Error</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody data-bind="foreach: mergeSuggestionsErrors()">
+                            <tr class="well well-sm">
+                                <td>
+                                    <a href="#" target="_blank" data-bind="text: indexName, attr: { href: $root.indexUrl(indexName) }"></a>
+                                </td>
+                                <td class="w-100">
+                                    <pre><code data-bind="text: isStackTraceVisible() ? (message + stackTrace) : message"></code></pre>
+                                    <div class="text-right">
+                                        <a href="#" data-bind="click: toggleIsStackTraceVisible, text: isStackTraceVisible() ? 'hide details' : 'show details'"></a>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button class="btn btn-default" title="Copy error to clipboard" data-bind="click: copyErrorToClipboard">
+                                        <i class="icon-copy-to-clipboard"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
