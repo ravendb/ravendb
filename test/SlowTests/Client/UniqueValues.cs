@@ -106,6 +106,42 @@ namespace SlowTests.Client
         }
 
         [Fact]
+        public async Task CanGetMultipleCompareExchangeItemsByKeys()
+        {
+            DoNotReuseServer();
+            var store = GetDocumentStore();
+            var res1 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("users/1", new User
+            {
+                Name = "Name1"
+            }, 0));
+            
+            var res2 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("users/2", new User
+            {
+                Name = "Name2"
+            }, 0));
+            
+            var res3 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("users/3", new User
+            {
+                Name = "Name3"
+            }, 0));
+            
+            Assert.True(res1.Successful);
+            Assert.True(res2.Successful);
+            Assert.True(res3.Successful);
+            
+            Assert.Equal("Name1", res1.Value.Name);
+            Assert.Equal("Name2", res2.Value.Name);
+            Assert.Equal("Name3", res3.Value.Name);
+
+            var values = await store.Operations
+                .SendAsync(new GetCompareExchangeValuesOperation<User>(new string[] {"users/1", "users/3"}));
+            
+            Assert.Equal(2, values.Count);
+            Assert.Equal("Name1", values["users/1"].Value.Name);
+            Assert.Equal("Name3", values["users/3"].Value.Name);
+        }
+        
+        [Fact]
         public async Task CanListCompareExchange()
         {
             DoNotReuseServer();
