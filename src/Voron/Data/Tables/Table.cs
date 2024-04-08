@@ -655,19 +655,9 @@ namespace Voron.Data.Tables
                 using (dynamicKeyIndexDef.GetValue(_tx, ref value, out Slice val))
                 {
                     dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldValue: ref value, newValue: ref TableValueReaderUtils.EmptyReader);
+
                     var tree = GetTree(dynamicKeyIndexDef);
-
-                    if (dynamicKeyIndexDef.SupportDuplicateKeys == false)
-                    {
-                        tree.Delete(val);
-                        continue;
-                    }
-
-                    var fst = GetFixedSizeTree(tree, val.Clone(_tx.Allocator), 0, dynamicKeyIndexDef.IsGlobal);
-                    if (fst.Delete(id).NumberOfEntriesDeleted == 0)
-                    {
-                        ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, dynamicKeyIndexDef.Name);
-                    }
+                    RemoveValueFromDynamicIndex(id, dynamicKeyIndexDef, tree, val);
                 }
             }
 
@@ -955,7 +945,7 @@ namespace Voron.Data.Tables
                             forceUpdate)
                         {
                             var indexTree = GetTree(dynamicKeyIndexDef);
-                            indexTree.Delete(oldVal);
+                            RemoveValueFromDynamicIndex(id, dynamicKeyIndexDef, indexTree, oldVal);
 
                             AddValueToDynamicIndex(id, dynamicKeyIndexDef, indexTree, newVal, TreeNodeFlags.Data);
                         }
@@ -991,6 +981,22 @@ namespace Voron.Data.Tables
             {
                 var index = GetFixedSizeTree(indexTree, newVal, 0, dynamicKeyIndexDef.IsGlobal);
                 index.Add(id);
+            }
+        }
+
+        private void RemoveValueFromDynamicIndex(long id, DynamicKeyIndexDef dynamicKeyIndexDef, Tree tree, Slice val)
+        {
+            if (dynamicKeyIndexDef.SupportDuplicateKeys == false)
+            {
+                tree.Delete(val);
+            }
+            else
+            {
+                var fst = GetFixedSizeTree(tree, val.Clone(_tx.Allocator), 0, dynamicKeyIndexDef.IsGlobal);
+                if (fst.Delete(id).NumberOfEntriesDeleted == 0)
+                {
+                    ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, dynamicKeyIndexDef.Name);
+                }
             }
         }
 
