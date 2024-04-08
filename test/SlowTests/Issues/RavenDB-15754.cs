@@ -102,6 +102,8 @@ namespace SlowTests.Issues
                 const string oldManagerName = "Grisha";
                 const string newManagerName = "Grisha Kotler";
 
+                const int employeesCount = 128;
+
                 var company = new Company
                 {
                     Name = _companyName1
@@ -121,7 +123,7 @@ namespace SlowTests.Issues
 
                 using (var bulk = store.BulkInsert())
                 {
-                    for (var i = 0; i < _employeesCount; i++)
+                    for (var i = 0; i < employeesCount; i++)
                     {
                         await bulk.StoreAsync(new Employee
                         {
@@ -135,10 +137,10 @@ namespace SlowTests.Issues
                 await index.ExecuteAsync(store);
 
                 Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
-                await AssertCount(store, _companyName1, _employeesCount, managerName: oldManagerName);
+                await AssertCount(store, _companyName1, employeesCount, managerName: oldManagerName);
                 var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
-                Assert.Equal(_employeesCount, indexStats.MapAttempts);
-                Assert.Equal(_employeesCount, indexStats.MapSuccesses);
+                Assert.Equal(employeesCount, indexStats.MapAttempts);
+                Assert.Equal(employeesCount, indexStats.MapSuccesses);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -151,13 +153,13 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(10));
                 await AssertCount(store, _companyName1, 0);
-                await AssertCount(store, _companyName2, _employeesCount, managerName: newManagerName);
+                await AssertCount(store, _companyName2, employeesCount, managerName: newManagerName);
 
                 indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
 
                 // we expect the parent document to be indexed only once
-                Assert.Equal(_employeesCount, indexStats.MapReferenceAttempts);
-                Assert.Equal(_employeesCount, indexStats.MapReferenceSuccesses);
+                Assert.Equal(employeesCount, indexStats.MapReferenceAttempts); // was employeesCount * 2
+                Assert.Equal(employeesCount, indexStats.MapReferenceSuccesses); // was employeesCount * 2
             }
         }
 
