@@ -58,7 +58,7 @@ namespace SlowTests.Issues
                         }
                     }
 
-                    await store.GetRequestExecutor().HttpClient.PostAsync($"{store.Urls.First()}/databases/{databaseName}/debug/documents/fix-collection-discrepancy?id={docId}", new StringContent("{'item': NaN}"));
+                    await store.GetRequestExecutor().HttpClient.PostAsync($"{store.Urls.First()}/databases/{databaseName}/admin/debug/documents/fix-collection-discrepancy?id={docId}", new StringContent("{'item': NaN}"));
 
                     using (var session = store.OpenAsyncSession(databaseName))
                     {
@@ -116,7 +116,7 @@ namespace SlowTests.Issues
                         }
                     }
 
-                    await store.GetRequestExecutor().HttpClient.PostAsync($"{store.Urls.First()}/databases/{databaseName}/debug/documents/fix-collection-discrepancy?collection=Users", new StringContent("{'item': NaN}"));
+                    await store.GetRequestExecutor().HttpClient.PostAsync($"{store.Urls.First()}/databases/{databaseName}/admin/debug/documents/fix-collection-discrepancy?collection=Users", new StringContent("{'item': NaN}"));
 
                     using (var session = store.OpenAsyncSession(databaseName))
                     {
