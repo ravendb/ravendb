@@ -30,7 +30,7 @@ public sealed class DatabaseIndexActions : IIndexActions
             _batch = _controller.CreateIndexBatch();
     }
 
-    public async ValueTask WriteIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType, AuthorizationStatus authorizationStatus)
+    public async ValueTask WriteAutoIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType, AuthorizationStatus authorizationStatus)
     {
         if (_configuration.Security.AuthenticationEnabled &&
             authorizationStatus == AuthorizationStatus.ValidUser)
