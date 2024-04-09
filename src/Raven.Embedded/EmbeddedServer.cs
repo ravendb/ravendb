@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
 
-#if NETSTANDARD2_0
+#if !NET462
 
 using System.Runtime.Loader;
 
@@ -250,15 +250,14 @@ namespace Raven.Embedded
 
             bool domainBind;
 
-#if NETSTANDARD2_0
-            AssemblyLoadContext.Default.Unloading += c =>
+#if NET462
+            AppDomain.CurrentDomain.DomainUnload += (s, args) =>
             {
                 ShutdownServerProcess(process);
             };
             domainBind = true;
-#endif
-#if NET462
-            AppDomain.CurrentDomain.DomainUnload += (s, args) =>
+#else
+            AssemblyLoadContext.Default.Unloading += c =>
             {
                 ShutdownServerProcess(process);
             };

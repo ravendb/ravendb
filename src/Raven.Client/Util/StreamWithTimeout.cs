@@ -233,13 +233,13 @@ namespace Raven.Client.Util
             _writeCts?.Dispose();
         }
 
-#if NETSTANDARD2_0 || NETCOREAPP2_1
+#if NETSTANDARD2_0
         public ValueTask DisposeAsync()
 #else
         public override async ValueTask DisposeAsync()
 #endif
         {
-#if NETSTANDARD2_0 || NETCOREAPP2_1
+#if NETSTANDARD2_0
             Dispose();
             return new ValueTask();
 #else

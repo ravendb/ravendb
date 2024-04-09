@@ -35,7 +35,7 @@ namespace Raven.Client.Json
             switch (_conventions.HttpCompressionAlgorithm)
             {
                 case HttpCompressionAlgorithm.Gzip:
-#if NETSTANDARD2_0 || NETCOREAPP2_1
+#if NETSTANDARD2_0
                     using (var gzipStream = new GZipStream(stream, CompressionLevel.Fastest, leaveOpen: true))
 #else
                     await using (var gzipStream = new GZipStream(stream, CompressionLevel.Fastest, leaveOpen: true))

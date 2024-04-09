@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Conventions
 
         public delegate bool TryConvertValueToObjectForQueryDelegate<in T>(string fieldName, T value, bool forRange, out object objValue);
 
-#if NETCOREAPP
+#if NETCOREAPP3_1_OR_GREATER
         internal static HttpVersionPolicy? DefaultHttpVersionPolicy;
 
         internal static TimeSpan? DefaultHttpPooledConnectionIdleTimeout;
@@ -386,7 +386,7 @@ namespace Raven.Client.Documents.Conventions
         private bool _disableTopologyCache;
         private string _topologyCacheLocation;
         private Version _httpVersion;
-#if NETCOREAPP
+#if NETCOREAPP3_1_OR_GREATER
         private HttpVersionPolicy? _httpVersionPolicy;
 #endif
         private Type _httpClientType;
@@ -456,7 +456,7 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
-#if NETCOREAPP
+#if NETCOREAPP3_1_OR_GREATER
         public HttpVersionPolicy? HttpVersionPolicy
         {
             get => _httpVersionPolicy ?? DefaultHttpVersionPolicy;
