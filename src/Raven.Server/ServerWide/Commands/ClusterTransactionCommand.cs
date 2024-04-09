@@ -433,7 +433,7 @@ namespace Raven.Server.ServerWide.Commands
             return result;
         }
 
-        private static long GetPrevCount(ClusterOperationContext context, Tree commandsCountPerDatabase, string databaseName)
+        internal static long GetPrevCount(ClusterOperationContext context, Tree commandsCountPerDatabase, string databaseName)
         {
             using (GetPrefix(context, databaseName, out var databaseSlice))
             {
