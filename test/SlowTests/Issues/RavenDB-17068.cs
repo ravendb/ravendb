@@ -18,9 +18,9 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_17068: RavenTestBase
+public sealed class RavenDb17068: RavenDB_17068_Base
 {
-    public RavenDB_17068(ITestOutputHelper output) : base(output)
+    public RavenDb17068(ITestOutputHelper output) : base(output)
     {
         
     }
@@ -68,29 +68,7 @@ public class RavenDB_17068: RavenTestBase
             Assert_CheckIfMismatchesAreRemovedOnMatchingLoad(details);
         }
     }
-
-    protected void Assert_CheckIfMismatchesAreRemovedOnMatchingLoad(DynamicJsonValue details)
-    {
-        using (var ctx = JsonOperationContext.ShortTermSingleUse())
-        {
-            var json = ctx.ReadObject(details, "foo");
-
-            var detailsObject = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<MismatchedReferencesLoadWarning>(json, "Warnings");
-                
-            Assert.Equal("DummyIndex",detailsObject.IndexName);
-            Assert.Equal(1, detailsObject.Warnings.Count);
-
-            detailsObject.Warnings.TryGetValue("orders/2-A", out var warnings);
-                
-            Assert.NotNull(warnings);
-            Assert.Equal(1, warnings.Count);
-            Assert.Equal("animals/1-A", warnings.First().ReferenceId);
-            Assert.Equal("orders/2-A", warnings.First().SourceId);
-            Assert.Equal("Animals", warnings.First().ActualCollection);
-            Assert.Equal(2, warnings.First().MismatchedCollections.Count);
-        }
-    }
-
+    
     [RavenFact(RavenTestCategory.Indexes)]
     public async Task CheckIfNotificationIsNotSendWithAllLoadsEventuallyMatching()
     {
@@ -205,6 +183,35 @@ public class RavenDB_17068: RavenTestBase
             }
             mismatchedDocumentLoadsPerIndex--;
             Assert.Equal(mismatchedDocumentLoadsPerIndex, handler.GetLoadFailures().Count);
+        }
+    }
+}
+
+public abstract class RavenDB_17068_Base : RavenTestBase
+{
+    protected RavenDB_17068_Base(ITestOutputHelper output) : base(output)
+    {
+    }
+    
+    protected void Assert_CheckIfMismatchesAreRemovedOnMatchingLoad(DynamicJsonValue details)
+    {
+        using (var ctx = JsonOperationContext.ShortTermSingleUse())
+        {
+            var json = ctx.ReadObject(details, "foo");
+
+            var detailsObject = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<MismatchedReferencesLoadWarning>(json, "Warnings");
+                
+            Assert.Equal("DummyIndex",detailsObject.IndexName);
+            Assert.Equal(1, detailsObject.Warnings.Count);
+
+            detailsObject.Warnings.TryGetValue("orders/2-A", out var warnings);
+                
+            Assert.NotNull(warnings);
+            Assert.Equal(1, warnings.Count);
+            Assert.Equal("animals/1-A", warnings.First().ReferenceId);
+            Assert.Equal("orders/2-A", warnings.First().SourceId);
+            Assert.Equal("Animals", warnings.First().ActualCollection);
+            Assert.Equal(2, warnings.First().MismatchedCollections.Count);
         }
     }
     
