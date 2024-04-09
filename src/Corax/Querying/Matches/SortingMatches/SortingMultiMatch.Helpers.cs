@@ -113,6 +113,10 @@ public unsafe partial struct SortingMultiMatch<TInner>
             else
                 indexes.Sort(new IndirectComparer<Descending<TComparer1>, TComparer2, TComparer3>(ref match, batchTerms, new(comparer1), comparer2, comparer3, true));
 
+            
+            // Support for including scores in the projection in case the score comparer is not first. 
+            // We only have one chance to copy in the right order before pagination happens
+            // (because we'll lose reference to the buffer holder (the comparer)). 
             if (typeof(TComparer1) != typeof(EntryComparerByScore) || typeof(TComparer1) != typeof(Descending<EntryComparerByScore>))
             {
                 if (match._sortingDataTransfer.IncludeScores && match._scoreBufferHandler != null)

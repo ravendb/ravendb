@@ -251,5 +251,4 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     }
 
     string DebugView => Inspect().ToString();
-    private static string ScoreComparerAsInnerExceptionMessage => $"{nameof(SortingMultiMatch)} can compare score only as main property. Queries like 'order by Field, [..], score(), [..] ' etc are not supported.";
 }

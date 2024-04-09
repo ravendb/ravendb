@@ -186,8 +186,6 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         {
             Debug.Assert(_comparerId != 0, "_comparerId != 0");
             return _scores[y].CompareTo(_scores[x]);
-            
-            throw new NotSupportedException(ScoreComparerAsInnerExceptionMessage);
         }
     }
 
