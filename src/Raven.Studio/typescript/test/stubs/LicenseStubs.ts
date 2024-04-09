@@ -148,7 +148,6 @@ export class LicenseStubs {
 
     static changeLog(): Raven.Server.Web.Studio.UpgradeInfoHandler.UpgradeInfoResponse {
         return {
-            IsLicenseEligibleForUpgrade: true,
             BuildCompatibilitiesForLatestMajorMinor: [
                 LicenseStubs.buildCompatibilityInfo("6.0.100"),
                 LicenseStubs.buildCompatibilityInfo("6.0.8"),
@@ -166,6 +165,7 @@ export class LicenseStubs {
     private static buildCompatibilityInfo(fullVersion = "6.0.100"): BuildCompatibilityInfo {
         return {
             CanDowngradeFollowingUpgrade: true,
+            CanUpgrade: true,
             ChangelogHtml: `<h3>Breaking changes</h3>
 <ul>
     <li><code>[Backups]</code> compression algorithm was changes from gzip/deflate to zstd, which might introduce some backward compatibility concerns. </li>

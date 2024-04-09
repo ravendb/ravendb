@@ -159,7 +159,7 @@ export const conflictResolutionSlice = createSlice({
     },
 });
 
-const fetchConfig = createAsyncThunk<Raven.Client.ServerWide.ConflictSolver, database>(
+const fetchConfig = createAsyncThunk<Raven.Client.ServerWide.ConflictSolver, string>(
     "conflictResolution/fetchConfig",
     async (db) => {
         return await services.databasesService.getConflictSolverConfiguration(db);

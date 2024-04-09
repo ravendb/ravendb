@@ -12,11 +12,11 @@ import { LazyLoad } from "components/common/LazyLoad";
 import { LoadError } from "components/common/LoadError";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useServices } from "hooks/useServices";
-import { useAccessManager } from "hooks/useAccessManager";
 import forceLicenseUpdateCommand from "commands/licensing/forceLicenseUpdateCommand";
 import licenseModel from "models/auth/licenseModel";
 import useConfirm from "components/common/ConfirmDialog";
 import useId from "hooks/useId";
+import {accessManagerSelectors} from "components/common/shell/accessManagerSlice";
 
 interface LicenseSummaryProps {
     asyncCheckLicenseServerConnectivity: AsyncState<ConnectivityStatus>;
@@ -145,10 +145,10 @@ interface LicenseActionsProps {
 function LicenseActions(props: LicenseActionsProps) {
     const licenseStatus = useAppSelector(licenseSelectors.status);
     const licenseRegistered = useAppSelector(licenseSelectors.licenseRegistered);
+    const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
 
     const confirm = useConfirm();
     const { licenseService } = useServices();
-    const { isClusterAdminOrClusterNode } = useAccessManager();
     const [forcingUpdate, setForcingUpdate] = useState<boolean>(false);
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
 
@@ -164,9 +164,9 @@ function LicenseActions(props: LicenseActionsProps) {
     const licenseConfiguration = asyncGetConfigurationSettings.result;
 
     if (licenseRegistered) {
-        const isReplaceLicenseEnabled = licenseConfiguration.CanActivate && isClusterAdminOrClusterNode();
-        const isForceUpdateEnabled = licenseConfiguration.CanForceUpdate && isClusterAdminOrClusterNode();
-        const isRenewLicenseEnabled = licenseConfiguration.CanRenew && isClusterAdminOrClusterNode();
+        const isReplaceLicenseEnabled = licenseConfiguration.CanActivate && isClusterAdminOrClusterNode;
+        const isForceUpdateEnabled = licenseConfiguration.CanForceUpdate && isClusterAdminOrClusterNode;
+        const isRenewLicenseEnabled = licenseConfiguration.CanRenew && isClusterAdminOrClusterNode;
 
         const forceUpdate = async () => {
             const confirmed = await confirm({
@@ -213,7 +213,7 @@ function LicenseActions(props: LicenseActionsProps) {
                         <LicenseTooltip
                             target="renew-license-btn"
                             operationEnabledInConfiguration={licenseConfiguration.CanRenew}
-                            hasPrivileges={isClusterAdminOrClusterNode()}
+                            hasPrivileges={isClusterAdminOrClusterNode}
                             operationAction="Renew the current license (expiration date will be extended)"
                             operationTitle="Renew"
                         />
@@ -234,7 +234,7 @@ function LicenseActions(props: LicenseActionsProps) {
                         <LicenseTooltip
                             target="replace-license-btn"
                             operationEnabledInConfiguration={licenseConfiguration.CanActivate}
-                            hasPrivileges={isClusterAdminOrClusterNode()}
+                            hasPrivileges={isClusterAdminOrClusterNode}
                             operationAction="Replace the current license with another"
                             operationTitle="Replacing license"
                         />
@@ -255,7 +255,7 @@ function LicenseActions(props: LicenseActionsProps) {
                 <LicenseTooltip
                     target="force-update-license-btn"
                     operationEnabledInConfiguration={licenseConfiguration.CanForceUpdate}
-                    hasPrivileges={isClusterAdminOrClusterNode()}
+                    hasPrivileges={isClusterAdminOrClusterNode}
                     operationAction="Synchronize the current license with license server"
                     operationTitle="Force license update"
                 />
@@ -263,7 +263,7 @@ function LicenseActions(props: LicenseActionsProps) {
         );
     }
 
-    const isRegisterLicenseEnabled = licenseConfiguration.CanActivate && isClusterAdminOrClusterNode();
+    const isRegisterLicenseEnabled = licenseConfiguration.CanActivate && isClusterAdminOrClusterNode;
 
     return (
         <Col className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
@@ -279,7 +279,7 @@ function LicenseActions(props: LicenseActionsProps) {
             <LicenseTooltip
                 target="replace-license-btn"
                 operationEnabledInConfiguration={licenseConfiguration.CanActivate}
-                hasPrivileges={isClusterAdminOrClusterNode()}
+                hasPrivileges={isClusterAdminOrClusterNode}
                 operationAction="Register a new license"
                 operationTitle="Registering new license"
             />
