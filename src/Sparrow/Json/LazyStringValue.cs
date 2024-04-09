@@ -92,7 +92,7 @@ namespace Sparrow.Json
             return CompareToOrdinalIgnoreCase(this.Buffer, Size, other.Buffer, other.Size) == 0;
         }
 
-        
+
         public static int CompareToOrdinalIgnoreCase(byte* strA, int strALen, byte* strB, int strBLen)
         {
             int length = Math.Min(strALen, strBLen);
@@ -145,7 +145,7 @@ namespace Sparrow.Json
             return new ReadOnlySpan<byte>(_buffer, _size);
         }
 
-        
+
         public void CopyTo(byte* dest)
         {
             Memory.Copy(dest, _buffer, _size);
@@ -505,7 +505,7 @@ namespace Sparrow.Json
             return ToString().Contains(value);
         }
 
-#if NETCOREAPP
+#if NETCOREAPP3_1_OR_GREATER
 
         public bool Contains(char value, StringComparison comparisonType)
         {
@@ -531,7 +531,7 @@ namespace Sparrow.Json
             return ToString().Contains(value);
         }
 
-#if NETCOREAPP
+#if NETCOREAPP3_1_OR_GREATER
 
         public bool Contains(string value, StringComparison comparisonType)
         {
@@ -601,7 +601,7 @@ namespace Sparrow.Json
             return IndexOf(value, 0, Length);
         }
 
-#if NETCOREAPP
+#if NETCOREAPP3_1_OR_GREATER
 
         public int IndexOf(char value, StringComparison comparisonType)
         {
@@ -1294,7 +1294,7 @@ namespace Sparrow.Json
             if (prefix.Size > Size)
                 return false;
 
-            return CompareToOrdinalIgnoreCase(this.Buffer, prefix.Size, 
+            return CompareToOrdinalIgnoreCase(this.Buffer, prefix.Size,
                        prefix.Buffer, prefix.Size) == 0;
         }
 

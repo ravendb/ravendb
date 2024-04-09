@@ -18,15 +18,11 @@ namespace Sparrow.Utils
         private readonly Timer _timer;
         private WeakReference _cleanupTargetWeakRef;
 
-#if NETSTANDARD1_3
-        private bool _disposed;
-#endif
-
         public NativeMemoryCleaner(object cleanupTarget, Func<object, ICollection<TStack>> getContexts, SharedMultipleUseFlag lowMemoryFlag, TimeSpan period, TimeSpan idleTime)
         {
             _cleanupTargetWeakRef = new WeakReference(cleanupTarget);
             _getContextsFromCleanupTarget = getContexts;
-            
+
             _lowMemoryFlag = lowMemoryFlag;
             _idleTime = idleTime;
             _timer = new Timer(CleanNativeMemory, null, period, period);
@@ -47,11 +43,6 @@ namespace Sparrow.Utils
                 if (lockTaken == false)
                     return;
 
-#if NETSTANDARD1_3
-                if (_disposed)
-                    return;
-#endif
-
                 var now = DateTime.UtcNow;
                 ICollection<TStack> values;
                 try
@@ -60,7 +51,7 @@ namespace Sparrow.Utils
                 }
                 catch (OutOfMemoryException)
                 {
-                    return; // trying to allocate the list? 
+                    return; // trying to allocate the list?
                 }
                 catch (ObjectDisposedException)
                 {
