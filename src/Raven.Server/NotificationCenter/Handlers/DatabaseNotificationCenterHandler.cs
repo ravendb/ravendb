@@ -7,7 +7,6 @@ using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.NotificationCenter.Handlers
@@ -18,6 +17,11 @@ namespace Raven.Server.NotificationCenter.Handlers
         public async Task GetNotifications()
         {
             var postponed = GetBoolValueQueryString("postponed", required: false) ?? true;
+            var type = GetStringQueryString("type", false);
+            var shouldFilter = type != null;
+            if (shouldFilter && Enum.TryParse(typeof(NotificationType), type, out _) == false)
+                throw new ArgumentException($"The 'type' parameter must be a type of '{{nameof(NotificationType)}}'. Instead, got '{type}'.");
+            
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             using (Database.NotificationCenter.GetStored(out var storedNotifications, postponed))
@@ -28,6 +32,16 @@ namespace Raven.Server.NotificationCenter.Handlers
                 var isFirst = true;
                 foreach (var notification in storedNotifications)
                 {
+                    if (shouldFilter && notification.Json != null)
+                    {
+                        if (notification.Json.TryGet(nameof(Notification.Type), out string notificationType) == false)
+                            continue;
+                        
+                        if (notificationType != type)
+                            continue;
+                    }
+                    
+                    
                     if (isFirst == false)
                     {
                         writer.WriteComma();
