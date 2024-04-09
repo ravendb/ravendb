@@ -27,6 +27,7 @@ export const EmptyView: StoryFn = () => {
     indexesService.withGetIndexMergeSuggestions({
         Suggestions: [],
         Unmergables: {},
+        Errors: [],
     });
 
     return <IndexCleanup />;

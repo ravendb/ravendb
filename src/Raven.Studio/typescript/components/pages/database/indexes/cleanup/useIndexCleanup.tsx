@@ -50,6 +50,12 @@ interface UnmergableIndex {
     reason: string;
 }
 
+export interface MergeSuggestionsError {
+    indexName: string;
+    message: string;
+    stackTrace: string;
+}
+
 export default function useIndexCleanup() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
 
@@ -63,6 +69,7 @@ export default function useIndexCleanup() {
     const [surpassingIndexes, setSurpassingIndexes] = useState<SurpassingIndex[]>([]);
     const [unusedIndexes, setUnusedIndexes] = useState<UnusedIndex[]>([]);
     const [unmergableIndexes, setUnmergableIndexes] = useState<UnmergableIndex[]>([]);
+    const [mergeSuggestionsErrors, setMergeSuggestionsErrors] = useState<MergeSuggestionsError[]>([]);
 
     const [selectedSurpassingIndexes, setSelectedSurpassingIndexes] = useState<string[]>([]);
     const [selectedUnusedIndexes, setSelectedUnusedIndexes] = useState<string[]>([]);
@@ -140,6 +147,10 @@ export default function useIndexCleanup() {
                 name: key,
                 reason: results.Unmergables[key],
             }))
+        );
+
+        setMergeSuggestionsErrors(
+            results.Errors.map((x) => ({ indexName: x.IndexName, message: x.Message, stackTrace: x.StackTrace }))
         );
     };
 
@@ -312,6 +323,9 @@ export default function useIndexCleanup() {
         },
         unmergable: {
             data: unmergableIndexes,
+        },
+        errors: {
+            data: mergeSuggestionsErrors,
         },
     };
 }
