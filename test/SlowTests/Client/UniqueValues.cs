@@ -16,6 +16,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -105,7 +106,7 @@ namespace SlowTests.Client
             Assert.True(res.Successful);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange)]
         public async Task CanGetMultipleCompareExchangeItemsByKeys()
         {
             DoNotReuseServer();
