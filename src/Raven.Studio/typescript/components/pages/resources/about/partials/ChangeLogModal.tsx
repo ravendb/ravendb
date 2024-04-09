@@ -58,7 +58,6 @@ export function ChangeLogModal(props: ChangelogModalProps) {
         return null;
     }
 
-    const canUpgrade = asyncGetChangeLog.result.IsLicenseEligibleForUpgrade;
     const versionsList =
         mode === "whatsNew"
             ? asyncGetChangeLog.result.BuildCompatibilitiesForLatestMajorMinor
@@ -72,37 +71,6 @@ export function ChangeLogModal(props: ChangelogModalProps) {
     return (
         <ModalWrapper onClose={onClose} mode={mode}>
             <div className="changelog-modal">
-                {!isCloud && mode === "whatsNew" && (
-                    <>
-                        <div
-                            className="well px-3 mx-auto w-fit-content mb-4 py-1 small rounded-pill"
-                            id="updateLicenseInfo"
-                        >
-                            {canUpgrade ? (
-                                <>
-                                    <Icon icon="check" color="success" /> Your license is compatible{" "}
-                                </>
-                            ) : (
-                                <>
-                                    <Icon icon="license" color="warning" /> Your license needs to be upgraded in order
-                                    to update{" "}
-                                </>
-                            )}
-                        </div>
-                        <UncontrolledPopover trigger="hover" className="bs5" placement="top" target="updateLicenseInfo">
-                            <div className="px-2 py-1">
-                                {canUpgrade ? (
-                                    <>Your license can be used with the target version</>
-                                ) : (
-                                    <>
-                                        Your license can&apos;t be used with the target version. Prior updating, please
-                                        contact Sales and update your license beforehand.
-                                    </>
-                                )}
-                            </div>
-                        </UncontrolledPopover>
-                    </>
-                )}
 
                 {versionsList.map((build, index) => {
                     const downgradeTooltipId = `canDowngradeTooltip-${index}`;
