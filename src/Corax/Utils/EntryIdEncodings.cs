@@ -67,7 +67,7 @@ public static class EntryIdEncodings
     public static long DecodeAndDiscardFrequency(long entryId) => entryId >> EntryIdOffset;
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public static unsafe void DecodeAndDiscardFrequencyAvx2(Span<long> entries, int read)
+    public static void DecodeAndDiscardFrequencyVector256(Span<long> entries, int read)
     {
         int idX = read - (read % Vector256<long>.Count);
         if (read < Vector256<long>.Count)
@@ -79,7 +79,7 @@ public static class EntryIdEncodings
         {
             ref var currentPtr = ref Unsafe.Add(ref start, currentIdx);
             var innerBuffer = Vector256.LoadUnsafe(ref currentPtr);
-            var shiftRightLogical = Avx2.ShiftRightLogical(innerBuffer, EntryIdOffset);
+            var shiftRightLogical = Vector256.ShiftRightLogical(innerBuffer, EntryIdOffset);
             Vector256.StoreUnsafe(shiftRightLogical, ref currentPtr); 
 
             currentIdx += Vector256<long>.Count;
@@ -92,7 +92,7 @@ public static class EntryIdEncodings
     }
     
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public static unsafe void DecodeAndDiscardFrequencyNeon(Span<long> entries, int read)
+    public static void DecodeAndDiscardFrequencyNeon(Span<long> entries, int read)
     {
         int idX = read - (read % Vector128<long>.Count);
         if (read < Vector128<long>.Count)
@@ -128,8 +128,8 @@ public static class EntryIdEncodings
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static void DecodeAndDiscardFrequency(Span<long> entries, int read)
     {
-        if (Avx2.IsSupported)
-            DecodeAndDiscardFrequencyAvx2(entries, read);
+        if (Vector256.IsHardwareAccelerated)
+            DecodeAndDiscardFrequencyVector256(entries, read);
         else if (AdvSimd.IsSupported)
             DecodeAndDiscardFrequencyNeon(entries, read);
         else
@@ -180,7 +180,7 @@ public static class EntryIdEncodings
         if (frequency < 16)
             return frequency;
 
-        var leadingZeros = ArmBase.Arm64.LeadingZeroCount((long)frequency);
+        var leadingZeros = ArmBase.Arm64.LeadingZeroCount(frequency);
         var level = (60 - leadingZeros + (leadingZeros & 0b1)) >> 1;
         var mod = (frequency - Step[level - 1]) / LevelSizeInStep[level];
         Debug.Assert((long)mod < 16);

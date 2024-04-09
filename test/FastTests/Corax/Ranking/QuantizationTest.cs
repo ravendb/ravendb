@@ -33,7 +33,7 @@ public class QuantizationTest : RavenTestBase
         }
     }
 
-    [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Intrinsics, RavenIntrinsics.Avx2)]
+    [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Intrinsics)]
     [InlineData(7)]
     [InlineData(8)]
     [InlineData(16)]
@@ -41,7 +41,7 @@ public class QuantizationTest : RavenTestBase
     [InlineData(32)]
     [InlineData(33)]
     [InlineData(1)]
-    public void Avx2InstructionCorrectlyIgnoresFrequency(int size)
+    public void Vector256InstructionCorrectlyIgnoresFrequency(int size)
     {
         var random = new Random(2337);
         var ids = Enumerable.Range(0, size).Select(i => (long)random.Next(31_111, 59_999)).ToArray();
@@ -50,7 +50,7 @@ public class QuantizationTest : RavenTestBase
         var idsWithShiftedCopy = idsWithShifted.ToArray();
 
         EntryIdEncodings.DecodeAndDiscardFrequencyClassic(idsWithShiftedCopy.AsSpan(), size);
-        EntryIdEncodings.DecodeAndDiscardFrequencyAvx2(idsWithShifted.AsSpan(), size);
+        EntryIdEncodings.DecodeAndDiscardFrequencyVector256(idsWithShifted.AsSpan(), size);
 
         Assert.Equal(ids, idsWithShifted);
         Assert.Equal(idsWithShifted, idsWithShiftedCopy);
