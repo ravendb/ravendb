@@ -27,6 +27,7 @@ using Voron.Impl;
 using InvalidOperationException = System.InvalidOperationException;
 using static Voron.Data.CompactTrees.CompactTree;
 using Voron.Util;
+using System.Runtime.Intrinsics;
 
 namespace Corax.Querying;
 
@@ -47,7 +48,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     /// </summary>
     public bool ForceNonAccelerated { get; set; }
 
-    public bool IsAccelerated => Avx2.IsSupported && !ForceNonAccelerated;
+    public bool IsAccelerated => Vector256.IsHardwareAccelerated && !ForceNonAccelerated;
 
     public long NumberOfEntries => _numberOfEntries ??= _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
     
