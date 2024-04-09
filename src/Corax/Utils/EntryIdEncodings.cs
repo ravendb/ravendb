@@ -163,13 +163,13 @@ public static class EntryIdEncodings
     {
         return FrequencyReconstructionFromQuantization(FrequencyQuantization(frequency));
     }
-    
+
     internal static long FrequencyQuantization(short frequency)
     {
         if (Lzcnt.IsSupported)
             return LzcntFrequencyQuantization(frequency);
         if (ArmBase.Arm64.IsSupported)
-            ArmLzcntFrequencyQuantization(frequency);
+            return ArmLzcntFrequencyQuantization(frequency);
         
         return FrequencyQuantizationWithoutAcceleration(frequency);
     }
