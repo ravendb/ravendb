@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -18,11 +21,14 @@ internal class DatabaseCompareExchangeActions : AbstractDatabaseCompareExchangeA
 
     private readonly DocumentDatabase _database;
 
-    public DatabaseCompareExchangeActions([NotNull] string databaseName, [NotNull] DocumentDatabase database, JsonOperationContext context, BackupKind? backupKind, CancellationToken token)
+    private readonly SmugglerResult _result;
+
+    public DatabaseCompareExchangeActions([NotNull] string databaseName, [NotNull] DocumentDatabase database, JsonOperationContext context, BackupKind? backupKind, SmugglerResult result, CancellationToken token)
         : base(database.ServerStore, databaseName, database.IdentityPartsSeparator, context, backupKind, token)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
         _documentContextHolder = new DocumentContextHolder(database);
+        _result = result;
     }
 
     protected override bool TryHandleAtomicGuard(string key, string documentId, BlittableJsonReaderObject value, Document existingDocument)
@@ -84,6 +90,41 @@ internal class DatabaseCompareExchangeActions : AbstractDatabaseCompareExchangeA
             {
                 // waiting for the commands to be applied
                 await _database.RachisLogIndexNotifications.WaitForIndexNotification(_lastClusterTransactionIndex.Value, _token);
+            }
+            else
+            {
+                Debug.Assert(_backupKind == BackupKind.Full || _backupKind == BackupKind.Incremental);
+                ExecuteClusterTransactions();
+            }
+        }
+    }
+
+    private void ExecuteClusterTransactions()
+    {
+        long totalExecutedCommands;
+        using (_database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext serverContext))
+        using (serverContext.OpenReadTransaction())
+        {
+            var commandsCountPerDatabase = serverContext.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsCountPerDatabase);
+            var prevCount = ClusterTransactionCommand.GetPrevCount(serverContext, commandsCountPerDatabase, _database.Name);
+            totalExecutedCommands = prevCount;
+        }
+
+        //when restoring from a backup, the database doesn't exist yet and we cannot rely on the DocumentDatabase to execute the database cluster transaction commands
+        while (true)
+        {
+            _token.ThrowIfCancellationRequested();
+
+            using (_database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext serverContext))
+            using (serverContext.OpenReadTransaction())
+            {
+                // the commands are already batched (10k or 16MB), so we are executing only 1 at a time
+                var executed = _database.ExecuteClusterTransaction(serverContext, batchSize: 1);
+                if (executed.BatchSize == 0)
+                    break;
+
+                totalExecutedCommands += executed.CommandsCount;
+                _result.AddInfo($"Executed {totalExecutedCommands:#,#;;0} cluster transaction commands.");
             }
         }
     }

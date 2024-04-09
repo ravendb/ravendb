@@ -315,8 +315,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             options.OperateOnTypes |= DatabaseItemType.LegacyAttachmentDeletions;
 
             var oldOperateOnTypes = Client.Documents.Smuggler.DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
-            var destination = database.Smuggler.CreateDestination();
-            long totalExecutedCommands = 0;
+            var destination = database.Smuggler.CreateDestination(OperationCancelToken.Token);
 
             for (var i = 0; i < FilesToRestore.Count - 1; i++)
             {
@@ -330,7 +329,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                 var filePath = RestoreSource.GetBackupPath(fileName);
                 await ImportSingleBackupFileAsync(database, Progress, Result, filePath, context, destination, options, isLastFile: false);
-                ExecuteClusterTransactions(database, ref totalExecutedCommands);
             }
 
             options.OperateOnTypes = oldOperateOnTypes;
@@ -347,7 +345,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var lastFilePath = RestoreSource.GetBackupPath(lastFileName);
 
             await ImportSingleBackupFileAsync(database, Progress, Result, lastFilePath, context, lastFileDestination, options, isLastFile: true);
-            ExecuteClusterTransactions(database, ref totalExecutedCommands);
         }
 
         protected Stream GetInputStream(Stream stream, byte[] databaseEncryptionKey)
@@ -555,28 +552,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             smuggler.OnDatabaseRecordAction += smugglerDatabaseRecord =>
                 // need to enable revisions before import
                 database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
-        }
-
-        private void ExecuteClusterTransactions(DocumentDatabase database, ref long totalExecutedCommands)
-        {
-            //when restoring from a backup, the database doesn't exist yet and we cannot rely on the DocumentDatabase to execute the database cluster transaction commands
-            while (true)
-            {
-                OperationCancelToken.Token.ThrowIfCancellationRequested();
-
-                using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext serverContext))
-                using (serverContext.OpenReadTransaction())
-                {
-                    // the commands are already batched (10k or 16MB), so we are executing only 1 at a time
-                    var executed = database.ExecuteClusterTransaction(serverContext, batchSize: 1);
-                    if (executed.BatchSize == 0)
-                        break;
-
-                    totalExecutedCommands += executed.CommandsCount;
-                    Result.AddInfo($"Executed {totalExecutedCommands:#,#;;0} cluster transaction commands.");
-                    Progress.Invoke(Result.Progress);
-                }
-            }
         }
 
         private async Task OnErrorAsync(Action<IOperationProgress> onProgress, Exception e)
