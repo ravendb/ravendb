@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Handlers.Admin;
 
 public class AdminForbiddenUnusedIdsHandler : DatabaseRequestHandler
 {
-    [RavenAction("/admin/databases/*/get-forbidden-unused-ids", "GET", AuthorizationStatus.DatabaseAdmin)]
+    [RavenAction("/databases/*/get-forbidden-unused-ids", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
     public async Task GetForbiddenUnusedDatabaseIds()
     {
         using (var processor = new AdminForbiddenUnusedIdsHandlerProcessorForGetUnusedIds(this))

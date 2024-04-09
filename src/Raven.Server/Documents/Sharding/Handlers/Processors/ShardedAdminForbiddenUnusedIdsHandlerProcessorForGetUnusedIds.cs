@@ -85,7 +85,7 @@ internal class ShardedAdminForbiddenUnusedIdsHandlerProcessorForGetUnusedIds : A
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/databases/{node.Database}/get-forbidden-unused-ids";
+                url = $"{node.Url}/databases/{node.Database}/get-forbidden-unused-ids";
 
                 return new HttpRequestMessage
                 {

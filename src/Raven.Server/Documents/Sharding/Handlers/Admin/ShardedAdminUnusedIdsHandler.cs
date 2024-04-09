@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin;
 
 internal class ShardedAdminUnusedIdsHandler : ShardedDatabaseRequestHandler
 {
-    [RavenShardedAction("/admin/databases/*/get-forbidden-unused-ids", "GET")]
+    [RavenShardedAction("/databases/*/get-forbidden-unused-ids", "GET")]
     public async Task GetForbiddenUnusedDatabaseIds()
     {
         using (var processor = new ShardedAdminForbiddenUnusedIdsHandlerProcessorForGetUnusedIds(this))
