@@ -477,12 +477,12 @@ namespace Corax.Querying.Matches
 
                                 if (largerEndPtr - largerPtr < N)
                                     break; // boundary guardian for vector load.
-                                
+
                                 Vector256<ulong> value = Vector256.Create((ulong)*smallerPtr);
-                                Vector256<ulong> blockValues = Avx.LoadVector256((ulong*)largerPtr);
+                                Vector256<ulong> blockValues = Vector256.Load((ulong*)largerPtr);
 
                                 // We are going to select which direction we are going to be moving forward. 
-                                if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<ulong>.Zero))
+                                if (Vector256.EqualsAny(value, blockValues))
                                 {
                                     // We found the value, therefore we need to store this value in the destination.
                                     *dstPtr = *smallerPtr;
@@ -567,7 +567,7 @@ namespace Corax.Querying.Matches
                     term._bm25Relevance.Score(matches, scores, boostFactor);
             }
             
-            if (Avx2.IsSupported == false)
+            if (Vector256.IsHardwareAccelerated == false)
                 useAccelerated = false;
 
             var bm25Relevance = isBoosting
@@ -577,7 +577,7 @@ namespace Corax.Querying.Matches
 
             var isStored = isBoosting && bm25Relevance.IsStored;
             
-            // We will select the AVX version if supported.             
+            // We will select the Vector256 version if supported.             
             return new TermMatch(indexSearcher, ctx, postingList.State.NumberOfEntries, 
                     (isBoosting, isStored) switch
                     {

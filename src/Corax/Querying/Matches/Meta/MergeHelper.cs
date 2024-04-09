@@ -24,16 +24,17 @@ namespace Corax.Querying.Matches.Meta
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int And(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
-            if (Avx2.IsSupported)
+            if (Vector256.IsHardwareAccelerated)
                 return AndVectorized(dst, dstLength, left, leftLength, right, rightLength);
+
             return AndScalar(dst, dstLength, left, leftLength, right, rightLength);
         }
 
         /// <summary>
-        /// AVX2 implementation of vectorized AND.
+        /// Vector256 implementation of vectorized AND that works on both Intel/AMD and ARM.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static unsafe int AndVectorized(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        internal static int AndVectorized(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             // This is effectively a constant. 
             uint N = (uint)Vector256<ulong>.Count;
@@ -64,8 +65,8 @@ namespace Corax.Querying.Matches.Meta
             {
                 while (true)
                 {
-                    // TODO: In here we can do SIMD galloping with gather operations. Therefore we will be able to do
-                    //       multiple checks at once and find the right amount of skipping using a table. 
+                    // TODO: In here we can do SIMD galloping with gather operations. Therefore, we will be able to do
+                    // multiple checks at once and find the right amount of skipping using a table. 
 
                     // If the value to compare is bigger than the biggest element in the block, we advance the block. 
                     if ((ulong)*smallerPtr > (ulong)*(largerPtr + N - 1))
@@ -91,10 +92,10 @@ namespace Corax.Querying.Matches.Meta
                         break; //In case when block is smaller than N we've to use scalar version.
 
                     Vector256<ulong> value = Vector256.Create((ulong)*smallerPtr);
-                    Vector256<ulong> blockValues = Avx.LoadVector256((ulong*)largerPtr);
+                    Vector256<ulong> blockValues = Vector256.Load((ulong*)largerPtr);
 
                     // We are going to select which direction we are going to be moving forward. 
-                    if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<ulong>.Zero))
+                    if (Vector256.EqualsAny(value, blockValues))
                     {
                         // We found the value, therefore we need to store this value in the destination.
                         *dstPtr = *smallerPtr;
@@ -107,7 +108,7 @@ namespace Corax.Querying.Matches.Meta
                 }
             }
 
-            // The scalar version. This shouldnt cost much either way. 
+            // The scalar version. This shouldn't cost much either way. 
             while (smallerPtr < smallerEndPtr && largerPtr < largerEndPtr)
             {
                 ulong leftValue = (ulong)*smallerPtr;
@@ -160,7 +161,7 @@ namespace Corax.Querying.Matches.Meta
         /// is also used for testing purposes. 
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static unsafe int AndScalar(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        internal static int AndScalar(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             long* dstPtr = dst;
             long* leftPtr = left;
@@ -209,7 +210,7 @@ namespace Corax.Querying.Matches.Meta
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe int Or(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        public static int Or(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             if (Sse2.IsSupported)
                 return OrNonTemporal(dst, dstLength, left, leftLength, right, rightLength);
@@ -220,7 +221,7 @@ namespace Corax.Querying.Matches.Meta
         /// dst and left may *not* be the same buffer
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe int OrNonTemporal(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        public static int OrNonTemporal(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             long* dstPtr = dst;
             long* dstEndPtr = dst + dstLength;
@@ -280,7 +281,7 @@ namespace Corax.Querying.Matches.Meta
         /// dst and left may *not* be the same buffer
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe int OrScalar(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        public static int OrScalar(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             long* dstPtr = dst;
             long* dstEndPtr = dst + dstLength;
@@ -347,7 +348,7 @@ namespace Corax.Querying.Matches.Meta
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe int AndNot(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        public static int AndNot(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             // PERF: This can be improved implementing support Sse2 implementation. This type of algorithms
             //       are very suitable for instruction level parallelism.
@@ -359,7 +360,7 @@ namespace Corax.Querying.Matches.Meta
         /// is also used for testing purposes. 
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static unsafe int AndNotScalar(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        internal static int AndNotScalar(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             long* dstPtr = dst;
             long* leftPtr = left;
