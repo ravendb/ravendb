@@ -336,7 +336,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
 
     private const long MaxDocumentsToDeleteInBucket = 1024;
 
-    private const long MaxTransactionSize = 16 * Constants.Size.Megabyte;
+    private const long MaxTransactionSizeInPages = 16 * Constants.Size.Megabyte / Constants.Storage.PageSize;
 
     public ShardedDocumentDatabase.DeleteBucketCommand.DeleteBucketResult DeleteBucket(DocumentsOperationContext context, int bucket, ChangeVector upTo)
     {
@@ -368,7 +368,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
             RevisionsStorage.ForceDeleteAllRevisionsFor(context, document.Id);
             deleted++;
 
-            if (context.Transaction.InnerTransaction.LowLevelTransaction.TransactionSizeInPages > MaxTransactionSize)
+            if (context.Transaction.InnerTransaction.LowLevelTransaction.TransactionSizeInPages > MaxTransactionSizeInPages)
                 return ShardedDocumentDatabase.DeleteBucketCommand.DeleteBucketResult.ReachedTransactionLimit;
         }
 
