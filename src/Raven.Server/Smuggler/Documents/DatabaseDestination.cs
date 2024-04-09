@@ -45,6 +45,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly Logger _log;
         private BuildVersionType _buildType;
         private DatabaseSmugglerOptionsServerSide _options;
+        protected SmugglerResult _result;
 
         public DatabaseDestination(DocumentDatabase database, CancellationToken token = default)
         {
@@ -58,6 +59,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             _buildType = BuildVersion.Type(buildVersion);
             _options = options;
+            _result = result;
 
             var d = new AsyncDisposableAction(() =>
             {
@@ -118,12 +120,12 @@ namespace Raven.Server.Smuggler.Documents
 
         protected virtual ICompareExchangeActions CreateCompareExchangeActions(string databaseName, JsonOperationContext context, BackupKind? backupKind)
         {
-            return new DatabaseCompareExchangeActions(databaseName, _database, context, backupKind, _token);
+            return new DatabaseCompareExchangeActions(databaseName, _database, context, backupKind, _result, _token);
         }
 
         public ICompareExchangeActions CompareExchangeTombstones(string databaseName, JsonOperationContext context)
         {
-            return new DatabaseCompareExchangeActions(databaseName, _database, context, backupKind: null, _token);
+            return new DatabaseCompareExchangeActions(databaseName, _database, context, backupKind: null, _result, _token);
         }
 
         public ICounterActions Counters(SmugglerResult result)
