@@ -46,8 +46,7 @@ namespace Voron.Data.BTrees
             ref var state = ref State.Modify();
             state.Flags |= TreeFlags.MultiValueTrees;
 
-            TreeNodeHeader* node;
-            var page = FindPageFor(key, out node);
+            var page = FindPageFor(key, out _);
             if (page == null || page.LastMatch != 0)
             {
                 MultiAddOnNewValue(key, value, maxNodeSize);
@@ -57,7 +56,6 @@ namespace Voron.Data.BTrees
             page = ModifyPage(page);
 
             var item = page.GetNode(page.LastSearchPosition);
-            byte* _;
 
             // already was turned into a multi tree, not much to do here
             if (item->Flags == TreeNodeFlags.MultiValuePageRef)
@@ -126,13 +124,13 @@ namespace Voron.Data.BTrees
             {
                 using (nestedPage.GetNodeKey(_llt, i, out Slice existingValue))
                 {
-                    tree.DirectAdd(existingValue, 0,out _).Dispose();
+                    tree.DirectAdd(existingValue, 0,out byte* _).Dispose();
                 }
             }
-            tree.DirectAdd(value, 0,out _).Dispose();
+            tree.DirectAdd(value, 0,out byte* _).Dispose();
             _tx.AddMultiValueTree(this, key, tree);
             // we need to record that we switched to tree mode here, so the next call wouldn't also try to create the tree again
-            DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef,out _).Dispose();
+            DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef,out byte* _).Dispose();
         }
 
         private void ExpandMultiTreeNestedPageSize(Slice key, Slice value, byte* nestedPagePtr, ushort newSize, int currentSize)
@@ -194,8 +192,7 @@ namespace Voron.Data.BTrees
 
             var actualPageSize = (ushort)Math.Min(Bits.PowerOf2(requiredPageSize), maxNodeSize - Constants.Tree.NodeHeaderSize);
 
-            byte* ptr;
-            using (DirectAdd(key, actualPageSize, out ptr))
+            using (DirectAdd(key, actualPageSize, out byte* ptr))
             {
                 var nestedPage = new TreePage(ptr, actualPageSize)
                 {
@@ -212,9 +209,6 @@ namespace Voron.Data.BTrees
 
         public void MultiDelete(Slice key, Slice value)
         {
-            // TODO: Check if this is really necessary
-            State.Modify();
-
             var page = FindPageFor(key, out TreeNodeHeader* _);
             if (page == null || page.LastMatch != 0)
             {
@@ -309,15 +303,13 @@ namespace Voron.Data.BTrees
 
         public IIterator MultiRead(Slice key)
         {
-            TreeNodeHeader* node;
-            var page = FindPageFor(key, out node);
+            var page = FindPageFor(key, out TreeNodeHeader* node);
             if (page == null || page.LastMatch != 0)
                 return new EmptyIterator();
 
             Debug.Assert(node != null);
 
-            Slice fetchedNodeKey;
-            using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out fetchedNodeKey))
+            using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out Slice fetchedNodeKey))
             {
                 if (SliceComparer.Equals(fetchedNodeKey, key) == false)
                 {
@@ -340,8 +332,7 @@ namespace Voron.Data.BTrees
 
         private Tree OpenMultiValueTree(Slice key, TreeNodeHeader* item)
         {
-            Tree tree;
-            if (_tx.TryGetMultiValueTree(this, key, out tree))
+            if (_tx.TryGetMultiValueTree(this, key, out Tree tree))
                 return tree;
 
             var childTreeHeader = (TreeRootHeader*)((byte*)item + item->KeySize + Constants.Tree.NodeHeaderSize);
