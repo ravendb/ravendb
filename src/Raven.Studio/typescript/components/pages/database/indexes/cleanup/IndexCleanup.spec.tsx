@@ -3,8 +3,11 @@ import React from "react";
 import { composeStories } from "@storybook/testing-react";
 import * as stories from "./IndexCleanup.stories";
 import { fireEvent } from "@testing-library/react";
+import { todo } from "common/developmentHelper";
 
 const { EmptyView, CleanupSuggestions, LicenseRestricted } = composeStories(stories);
+
+todo("Other", "Damian", "Test error section");
 
 describe("IndexCleanup", function () {
     it("can render empty view", async () => {
