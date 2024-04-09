@@ -375,7 +375,7 @@ select new
             var results = GetMergeReportOfTwoIndexes(index1, index2);
 
             Assert.Equal(0, results.Suggestions.Count);
-            Assert.Equal("Cannot merge indexes that have a where clause", results.Unmergables[index1.Name]);
+            Assert.Equal("Cannot merge indexes that have a where clause.", results.Unmergables[index1.Name]);
         }
 
         [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Studio)]
