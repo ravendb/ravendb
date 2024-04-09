@@ -718,7 +718,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             var oldOperateOnTypes = Raven.Client.Documents.Smuggler.DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
             var destination = new DatabaseDestination(database);
-            long totalExecutedCommands = 0;
 
             for (var i = 0; i < filesToRestore.Count - 1; i++)
             {
@@ -737,7 +736,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         // need to enable revisions before import
                         database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
                     });
-                ExecuteClusterTransactions(database, onProgress, result, ref totalExecutedCommands);
             }
 
             options.OperateOnTypes = oldOperateOnTypes;
@@ -818,30 +816,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 });
 
             result.Files.CurrentFileName = null;
-
-            //when restoring from a backup, the database doesn't exist yet and we cannot rely on the DocumentDatabase to execute the database cluster transaction commands
-            ExecuteClusterTransactions(database, onProgress, result, ref totalExecutedCommands);
-        }
-
-        private void ExecuteClusterTransactions(DocumentDatabase database, Action<IOperationProgress> onProgress, RestoreResult result, ref long totalExecutedCommands)
-        {
-            while (true)
-            {
-                _operationCancelToken.Token.ThrowIfCancellationRequested();
-
-                using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
-                using (serverContext.OpenReadTransaction())
-                {
-                    // the commands are already batched (10k or 16MB), so we are executing only 1 at a time
-                    var executed = database.ExecuteClusterTransaction(serverContext, batchSize: 1);
-                    if (executed.Count == 0)
-                        break;
-
-                    totalExecutedCommands += executed.Sum(x => x.Commands.Count);
-                    result.AddInfo($"Executed {totalExecutedCommands:#,#;;0} cluster transaction commands.");
-                    onProgress.Invoke(result.Progress);
-                }
-            }
         }
 
         private bool IsDefaultDataDirectory(string dataDirectory, string databaseName)

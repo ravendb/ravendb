@@ -65,6 +65,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly Logger _log;
         private BuildVersionType _buildType;
         private DatabaseSmugglerOptionsServerSide _options;
+        protected SmugglerResult _result;
 
         public DatabaseDestination(DocumentDatabase database, CancellationToken token = default)
         {
@@ -78,6 +79,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             _buildType = BuildVersion.Type(buildVersion);
             _options = options;
+            _result = result;
 
             return new AsyncDisposableAction(() =>
             {
@@ -135,13 +137,13 @@ namespace Raven.Server.Smuggler.Documents
 
             DatabaseCompareExchangeActions CreateActions()
             {
-                return new DatabaseCompareExchangeActions(_database, context, backupKind, _token);
+                return new DatabaseCompareExchangeActions(_database, context, backupKind, _result, _token);
             }
         }
 
         public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context)
         {
-            return new DatabaseCompareExchangeActions(_database, context, backupKind: null, _token);
+            return new DatabaseCompareExchangeActions(_database, context, backupKind: null, _result, _token);
         }
 
         public ICounterActions Counters(SmugglerResult result)
@@ -601,7 +603,9 @@ namespace Raven.Server.Smuggler.Documents
             private long? _lastClusterTransactionIndex;
             private readonly BackupKind? _backupKind;
             private readonly CancellationToken _token;
-            public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, BackupKind? backupKind, CancellationToken token)
+            private readonly SmugglerResult _result;
+
+            public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, BackupKind? backupKind, SmugglerResult result, CancellationToken token)
             {
                 _database = database;
                 _context = context;
@@ -614,6 +618,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 _clusterTransactionCommandsBatchSize = new Size(database.Is32Bits ? 2 : 16, SizeUnit.Megabytes);
                 _clusterTransactionCommandsSize = new Size(0, SizeUnit.Megabytes);
+                _result = result;
             }
 
             public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
@@ -714,6 +719,40 @@ namespace Raven.Server.Smuggler.Documents
                             // waiting for the commands to be applied
                             await _database.RachisLogIndexNotifications.WaitForIndexNotification(_lastClusterTransactionIndex.Value, _token);
                         }
+                        else
+                        {
+                            Debug.Assert(_backupKind == BackupKind.Full || _backupKind == BackupKind.Incremental);
+                            ExecuteClusterTransactions();
+                        }
+                    }
+                }
+            }
+
+            private void ExecuteClusterTransactions()
+            {
+                long totalExecutedCommands;
+                using (_database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext serverContext))
+                using (serverContext.OpenReadTransaction())
+                {
+                    var commandsCountPerDatabase = serverContext.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsCountPerDatabase);
+                    var prevCount = ClusterTransactionCommand.GetPrevCount(serverContext, commandsCountPerDatabase, _database.Name);
+                    totalExecutedCommands = prevCount;
+                }
+
+                while (true)
+                {
+                    _token.ThrowIfCancellationRequested();
+                
+                    using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                    using (serverContext.OpenReadTransaction())
+                    {
+                        // the commands are already batched (10k or 16MB), so we are executing only 1 at a time
+                        var executed = _database.ExecuteClusterTransaction(serverContext, batchSize: 1);
+                        if (executed.Count == 0)
+                            break;
+                
+                        totalExecutedCommands += executed.Sum(x => x.Commands.Count);
+                        _result.AddInfo($"Executed {totalExecutedCommands:#,#;;0} cluster transaction commands.");
                     }
                 }
             }
