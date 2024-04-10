@@ -58,9 +58,14 @@ import getConnectionStringsCommand = require("commands/database/settings/getConn
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import saveCustomSorterCommand = require("commands/database/settings/saveCustomSorterCommand");
+import queryCommand = require("commands/database/query/queryCommand");
+import getIntegrationsPostgreSqlSupportCommand = require("commands/database/settings/getIntegrationsPostgreSqlSupportCommand");
+import getIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/getIntegrationsPostgreSqlCredentialsCommand");
+import saveIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/saveIntegrationsPostgreSqlCredentialsCommand");
+import deleteIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/deleteIntegrationsPostgreSqlCredentialsCommand");
+import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import saveUnusedDatabaseIDsCommand = require("commands/database/settings/saveUnusedDatabaseIDsCommand");
-import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
 import { createDatabaseCommand } from "commands/resources/createDatabaseCommand";
 import { restoreDatabaseFromBackupCommand } from "commands/resources/restoreDatabaseFromBackupCommand";
 
@@ -292,16 +297,28 @@ export default class DatabasesService {
         return new saveDatabaseRecordCommand(databaseName, databaseRecord, etag).execute();
     }
 
-    async createDatabase(...args: ConstructorParameters<typeof createDatabaseCommand>) {
-        return new createDatabaseCommand(...args).execute();
+    async query(...args: ConstructorParameters<typeof queryCommand>) {
+        return new queryCommand(...args).execute();
     }
 
-    async restoreDatabaseFromBackup(...args: ConstructorParameters<typeof restoreDatabaseFromBackupCommand>) {
-        return new restoreDatabaseFromBackupCommand(...args).execute();
+    async getIntegrationsPostgreSqlSupport(databaseName: string) {
+        return new getIntegrationsPostgreSqlSupportCommand(databaseName).execute();
     }
 
-    async generateSecret(...args: ConstructorParameters<typeof generateSecretCommand>) {
-        return new generateSecretCommand(...args).execute();
+    async getIntegrationsPostgreSqlCredentials(databaseName: string) {
+        return new getIntegrationsPostgreSqlCredentialsCommand(databaseName).execute();
+    }
+
+    async saveIntegrationsPostgreSqlCredentials(databaseName: string, username: string, password: string) {
+        return new saveIntegrationsPostgreSqlCredentialsCommand(databaseName, username, password).execute();
+    }
+
+    async deleteIntegrationsPostgreSqlCredentials(databaseName: string, username: string) {
+        return new deleteIntegrationsPostgreSqlCredentialsCommand(databaseName, username).execute();
+    }
+
+    async generateSecret() {
+        return new generateSecretCommand().execute();
     }
 
     async getDatabaseStats(...args: ConstructorParameters<typeof getDatabaseStatsCommand>) {
@@ -310,5 +327,13 @@ export default class DatabasesService {
 
     async saveUnusedDatabaseIDs(...args: ConstructorParameters<typeof saveUnusedDatabaseIDsCommand>) {
         return new saveUnusedDatabaseIDsCommand(...args).execute();
+    }
+
+    async createDatabase(...args: ConstructorParameters<typeof createDatabaseCommand>) {
+        return new createDatabaseCommand(...args).execute();
+    }
+
+    async restoreDatabaseFromBackup(...args: ConstructorParameters<typeof restoreDatabaseFromBackupCommand>) {
+        return new restoreDatabaseFromBackupCommand(...args).execute();
     }
 }
