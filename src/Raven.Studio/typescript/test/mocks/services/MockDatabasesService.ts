@@ -162,8 +162,4 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
     withDatabaseStats(dto?: MockedValue<Raven.Client.Documents.Operations.DatabaseStatistics>) {
         return this.mockResolvedValue(this.mocks.getDatabaseStats, dto, DatabasesStubs.detailedStats());
     }
-
-    withGenerateSecret(dto?: string) {
-        return this.mockResolvedValue(this.mocks.generateSecret, dto, DatabasesStubs.generateSecret());
-    }
 }
