@@ -13,11 +13,14 @@ namespace Raven.Server.NotificationCenter.Handlers
 {
     public class DatabaseNotificationCenterHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/notification-center/get", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
+        [RavenAction("/databases/*/notifications", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task GetNotifications()
         {
             var postponed = GetBoolValueQueryString("postponed", required: false) ?? true;
-            var type = GetStringQueryString("type", false);
+            var type = GetStringQueryString("type", required: false);
+            var start = GetIntValueQueryString("pageStart", required: false) ?? 0;
+            var pageSize = GetIntValueQueryString("pageSize", required: false) ?? int.MaxValue;
+            
             var shouldFilter = type != null;
             if (shouldFilter && Enum.TryParse(typeof(NotificationType), type, out _) == false)
                 throw new ArgumentException($"The 'type' parameter must be a type of '{{nameof(NotificationType)}}'. Instead, got '{type}'.");
@@ -27,9 +30,13 @@ namespace Raven.Server.NotificationCenter.Handlers
             using (Database.NotificationCenter.GetStored(out var storedNotifications, postponed))
             {
                 writer.WriteStartObject();
+                
+                var countQuery = pageSize == 0;
+                var totalResults = 0;
+                var isFirst = true;
+                
                 writer.WritePropertyName("Results");
                 writer.WriteStartArray();
-                var isFirst = true;
                 foreach (var notification in storedNotifications)
                 {
                     if (shouldFilter && notification.Json != null)
@@ -41,6 +48,20 @@ namespace Raven.Server.NotificationCenter.Handlers
                             continue;
                     }
                     
+                    if (start > 0)
+                    {
+                        start--;
+                        continue;
+                    }
+
+                    totalResults++;
+                    
+                    if (pageSize == 0 && countQuery == false)
+                        break;
+                    pageSize--;
+                    
+                    if (countQuery)
+                        continue;
                     
                     if (isFirst == false)
                     {
@@ -50,8 +71,12 @@ namespace Raven.Server.NotificationCenter.Handlers
                     writer.WriteObject(notification.Json);
                     isFirst = false;
                 }
-                
                 writer.WriteEndArray();
+                
+                writer.WriteComma();
+                writer.WritePropertyName("TotalResults");
+                writer.WriteInteger(totalResults);
+                
                 writer.WriteEndObject();
             }
         }
