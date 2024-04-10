@@ -29,11 +29,7 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
 
     const asyncGetFolderOptions = useAsyncDebounce(
         async (directory, isBackupFolder) => {
-            if (!directory || !(await trigger("dataDirectoryStep.directory"))) {
-                return [];
-            }
-
-            const dto = await resourcesService.getFolderPathOptions_ServerLocal(directory, isBackupFolder);
+            const dto = await resourcesService.getFolderPathOptions_ServerLocal(directory || "", isBackupFolder);
             return dto?.List.map((x) => ({ value: x, label: x }));
         },
         [dataDirectoryStep.directory, isBackupFolder]
