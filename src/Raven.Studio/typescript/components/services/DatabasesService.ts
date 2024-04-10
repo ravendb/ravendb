@@ -61,6 +61,7 @@ import { createDatabaseCommand } from "commands/resources/createDatabaseCommand"
 import { restoreDatabaseFromBackupCommand } from "commands/resources/restoreDatabaseFromBackupCommand";
 import distributeSecretCommand = require("commands/database/secrets/distributeSecretCommand");
 import saveCustomAnalyzerCommand from "commands/database/settings/saveCustomAnalyzerCommand";
+import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -284,5 +285,9 @@ export default class DatabasesService {
 
     async distributeSecret(...args: ConstructorParameters<typeof distributeSecretCommand>) {
         return new distributeSecretCommand(...args).execute();
+    }
+
+    async getDocumentsMetadataByIDPrefix(...args: ConstructorParameters<typeof getDocumentsMetadataByIDPrefixCommand>) {
+        return new getDocumentsMetadataByIDPrefixCommand(...args).execute();
     }
 }

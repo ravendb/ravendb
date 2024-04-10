@@ -15,7 +15,7 @@ import rootItems = require("common/shell/menu/items/rootItems");
 
 export = generateMenuItems;
 
-function generateMenuItems(db: database) {
+function generateMenuItems(db: database | string) {
     if (!db) {
         return generateNoActiveDatabaseMenuItems();
     } 

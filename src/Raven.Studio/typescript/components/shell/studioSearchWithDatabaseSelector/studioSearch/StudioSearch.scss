@@ -1,0 +1,17 @@
+@use "Content/scss/sizes";
+@use "Content/scss/colors";
+
+.studio-search-menu {
+    width: 100%;
+
+    .database-column {
+        .database-group:not(:last-child) {
+            padding-bottom: sizes.$gutter-xs;
+            border-bottom: 1px solid colors.$border-color-light;
+        }
+    }
+
+    .server-column {
+        border-left: 1px solid colors.$border-color-light;
+    }
+}

@@ -94,7 +94,7 @@ interface documentMetadataDto {
     '@counters'?: Array<string>;
     '@counters-snapshot'?: dictionary<number>;
     '@timeseries-snapshot'?: dictionary<revisionTimeSeriesDto>;
-    '@timeseries': Array<string>;
+    '@timeseries'?: Array<string>;
     '@expires'?: string;
     '@refresh'?: string;
     '@archive-at'?: string;

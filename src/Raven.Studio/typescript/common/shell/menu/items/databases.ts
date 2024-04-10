@@ -13,6 +13,19 @@ function getDatabasesMenuItem(appUrls: computedAppUrls) {
     return new leafMenuItem({
         route: "databases",
         title: "Databases",
+        search: {
+            alternativeTitles: ["or1", "or2", "or3"],
+            innerActions: [
+                {
+                    name: "New Database",
+                    alternativeNames: ["or", "second", "third"] //TODO:
+                },
+                {
+                    name: "fruits",
+                    alternativeNames: ["or", "or2"] //TODO:
+                }
+            ],
+        },
         moduleId: databasesView,
         nav: true,
         css: 'icon-resources',
