@@ -204,6 +204,16 @@ interface menuItem {
     parent: KnockoutObservable<menuItem>;
 }
 
+interface menuSearchConfig {
+    alternativeTitles?: string[];
+    innerActions?: innerMenuAction[];
+}
+
+interface innerMenuAction {
+    name: string;
+    alternativeNames?: string[];
+}
+
 type dynamicHashType = KnockoutObservable<string> | (() => string);
 
 type shardingMode = "allShards" | "singleShard";

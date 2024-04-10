@@ -110,8 +110,8 @@ class shell extends viewModelBase {
     certificateExpirationState = clientCertificateModel.certificateExpirationState;
     
 
-    mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
-    searchBox = new searchBox();
+    mainMenu: menu;
+    searchBox: searchBox;
     databaseSwitcher = new databaseSwitcher();
     favNodeBadge = new favNodeBadge();
 
@@ -134,7 +134,15 @@ class shell extends viewModelBase {
     
     constructor() {
         super();
+        
+        shell.instance = this;
 
+        const menuItems = generateMenuItems(activeDatabaseTracker.default.database());
+        this.mainMenu = new menu(menuItems);
+        this.searchBox = new searchBox();
+        this.searchBox.onMenuUpdated(menuItems);
+        collectionsTracker.default.collections.subscribe(collections => this.searchBox.onCollectionsUpdated(collections));
+        
         this.studioLoadingFakeRequest = protractedCommandsDetector.instance.requestStarted(0);
 
         extensions.install();
@@ -420,11 +428,11 @@ class shell extends viewModelBase {
 
     private initializeShellComponents() {
         this.mainMenu.initialize();
-        const updateMenu = (db: database) => {
+        const onDatabaseChanged = (db: database) => {
             const items = generateMenuItems(db);
             this.mainMenu.update(items);
+            this.searchBox.onMenuUpdated(items);
         };
-
         
         const checkScreenSize = () => {
             if ($(window).width() < 992) {
@@ -438,8 +446,8 @@ class shell extends viewModelBase {
 
         $(window).resize(checkScreenSize);
 
-        updateMenu(activeDatabaseTracker.default.database());
-        activeDatabaseTracker.default.database.subscribe(updateMenu);
+        onDatabaseChanged(activeDatabaseTracker.default.database());
+        activeDatabaseTracker.default.database.subscribe(onDatabaseChanged);
 
         this.databaseSwitcher.initialize();
         this.searchBox.initialize();
