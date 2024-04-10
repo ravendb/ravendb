@@ -25,7 +25,7 @@ export function NoDatabases() {
                         </Button>
                         <div>or</div>
                         <Button outline color="primary" onClick={() => setCreateDatabaseMode("fromBackup")}>
-                            Create one from backup
+                            Restore one from backup
                         </Button>
                         <FlexGrow />
 

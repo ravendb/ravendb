@@ -210,7 +210,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                         </Collapse>
                         {replicationFactor > 1 ? (
                             <>
-                                {isSharded ? <>Each shard</> : <>Data</>} will be replicated to{" "}
+                                {isSharded ? <>Each shard</> : <>Data</>} will be replicated across{" "}
                                 <strong>
                                     {replicationFactor} <Icon icon="node" margin="m-0" /> Nodes
                                 </strong>

@@ -195,7 +195,7 @@ function getActiveStepsList(
     const allSteps: Step[] = [
         {
             id: "basicInfoStep",
-            label: "Select backup",
+            label: "Database type",
             active: true,
             isInvalid: !!errors.basicInfoStep,
             isLoading: isValidatingDatabaseName,
