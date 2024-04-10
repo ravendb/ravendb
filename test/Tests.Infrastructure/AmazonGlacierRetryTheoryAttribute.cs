@@ -37,35 +37,23 @@ namespace Tests.Infrastructure
             }
         }
 
+        public AmazonGlacierRetryTheoryAttribute()
+        {
+        }
+
         public AmazonGlacierRetryTheoryAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
             : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
         {
-            if (RavenTestHelper.SkipIntegrationTests)
-            {
-                Skip = RavenTestHelper.SkipIntegrationMessage;
-                return;
-            }
-            
-            //if (RavenTestHelper.IsRunningOnCI)
-            //    return;
+        }
 
-            if (EnvVariableMissing)
+        public override string Skip
+        {
+            get
             {
-                Skip = $"Test is missing '{GlacierCredentialEnvironmentVariable}' environment variable.";
-                return;
+                return AzureRetryTheoryAttribute.TestIsMissingCloudCredentialEnvironmentVariable(EnvVariableMissing, GlacierCredentialEnvironmentVariable, ParsingError, _glacierSettings, skipIsRunningOnCICheck: true);
             }
 
-            if (string.IsNullOrEmpty(ParsingError) == false)
-            {
-                Skip = $"Failed to parse the Amazon Glacier settings, error: {ParsingError}";
-                return;
-            }
-
-            if (_glacierSettings == null)
-            {
-                Skip = $"Glacier {memberName} tests missing Amazon S3 settings.";
-                return;
-            }
+            set => base.Skip = value;
         }
     }
 }

@@ -38,7 +38,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [NightlyBuildTheory(Skip = "Requires Amazon AWS Credentials")]
+        [MultiTheory(typeof(NightlyBuildTheoryAttribute), typeof(AmazonS3RetryTheoryAttribute))]
         [InlineData(20, 5, false)]
         [InlineData(20, 20, false)]
         [InlineData(25, 10, false)]

@@ -36,36 +36,46 @@ namespace Tests.Infrastructure
                 ParsingError = e.ToString();
             }
         }
-        
+
+        public AzureRetryTheoryAttribute()
+        {
+        }
+
         public AzureRetryTheoryAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
             : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
         {
+        }
+
+
+        public override string Skip
+        {
+            get
+            {
+                return TestIsMissingCloudCredentialEnvironmentVariable(EnvVariableMissing, AzureCredentialEnvironmentVariable, ParsingError, _azureSettings);
+            }
+
+            set => base.Skip = value;
+        }
+
+        // ReSharper disable once InconsistentNaming
+        public static string TestIsMissingCloudCredentialEnvironmentVariable(bool envVariableMissing, string environmentVariable, string parsingError, BackupSettings settings, bool skipIsRunningOnCICheck = false)
+        {
             if (RavenTestHelper.SkipIntegrationTests)
-            {
-                Skip = RavenTestHelper.SkipIntegrationMessage;
-                return;
-            }
+                return RavenTestHelper.SkipIntegrationMessage;
 
-            if (RavenTestHelper.IsRunningOnCI)
-                return;
+            if (skipIsRunningOnCICheck == false && RavenTestHelper.IsRunningOnCI)
+                return null;
 
-            if (EnvVariableMissing)
-            {
-                Skip = $"Test is missing '{AzureCredentialEnvironmentVariable}' environment variable.";
-                return;
-            }
+            if (envVariableMissing)
+                return $"Test is missing '{environmentVariable}' environment variable.";
 
-            if (string.IsNullOrEmpty(ParsingError) == false)
-            {
-                Skip = $"Failed to parse the Azure settings, error: {ParsingError}";
-                return;
-            }
+            if (string.IsNullOrEmpty(parsingError) == false)
+                return $"Failed to parse the {nameof(BackupSettings)}, error: {parsingError}";
 
-            if (_azureSettings == null)
-            {
-                Skip = $"Azure {memberName} tests missing {nameof(AzureSettings)}.";
-                return;
-            }
+            if (settings == null)
+                return $"Cloud backup tests missing {nameof(BackupSettings)}.";
+
+            return null;
         }
     }
 }
