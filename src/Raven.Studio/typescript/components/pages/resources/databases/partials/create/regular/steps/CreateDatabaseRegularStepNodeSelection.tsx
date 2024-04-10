@@ -31,6 +31,9 @@ export default function CreateDatabaseRegularStepNodeSelection() {
     const isSelectAllNodesIndeterminate = manualNodes.length > 0 && manualNodes.length < availableNodeTags.length;
     const isSelectedAllNodes = manualNodes.length === availableNodeTags.length;
 
+    const nodesError = formState.errors.manualNodeSelectionStep?.nodes?.message;
+    const shardsError = formState.errors.manualNodeSelectionStep?.shards?.message;
+
     const toggleNodeTag = (nodeTag: string) => {
         if (manualNodes.includes(nodeTag)) {
             setValue(
@@ -116,6 +119,9 @@ export default function CreateDatabaseRegularStepNodeSelection() {
                                 </td>
                             </tr>
                         ))}
+                        {shardsError && (
+                            <div className="badge bg-danger rounded-pill margin-top-xxs">{shardsError}</div>
+                        )}
                     </tbody>
                 </Table>
             )}
@@ -152,11 +158,7 @@ export default function CreateDatabaseRegularStepNodeSelection() {
                     </NodeSetList>
                 </NodeSet>
             </div>
-            {formState.errors.manualNodeSelectionStep?.nodes && (
-                <div className="badge bg-danger rounded-pill margin-top-xxs">
-                    {formState.errors.manualNodeSelectionStep.nodes.message}
-                </div>
-            )}
+            {nodesError && <div className="badge bg-danger rounded-pill margin-top-xxs">{nodesError}</div>}
         </div>
     );
 }
