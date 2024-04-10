@@ -68,7 +68,7 @@ describe("CreateDatabase", () => {
         it("can disable encryption when the license does not allow it", async () => {
             const { screen, fillInput, fireClick } = rtlRender(<DefaultCreateDatabase hasEncryption={false} />);
 
-            await fireClick(screen.getByRole("button", { name: /Create from backup/ }));
+            await fireClick(screen.getByRole("button", { name: /Restore from backup/ }));
             await goNextFromBasicInfoStep(screen, fillInput, fireClick);
 
             const encryptionSwitch = screen.getByLabelText(/Encrypt at Rest/);
@@ -81,7 +81,7 @@ describe("CreateDatabase", () => {
         it("can disable encryption when server is not secure", async () => {
             const { screen, fillInput, fireClick } = rtlRender(<DefaultCreateDatabase isSecureServer={false} />);
 
-            await fireClick(screen.getByRole("button", { name: /Create from backup/ }));
+            await fireClick(screen.getByRole("button", { name: /Restore from backup/ }));
             await goNextFromBasicInfoStep(screen, fillInput, fireClick);
 
             const encryptionSwitch = screen.getByLabelText(/Encrypt at Rest/);

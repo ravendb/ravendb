@@ -149,7 +149,7 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
                             className="rounded-pill"
                             disabled={formState.isSubmitting}
                         >
-                            <Icon icon="database" addon="arrow-up" /> Create from backup
+                            <Icon icon="database" addon="arrow-up" /> Restore from backup
                         </Button>
                     ) : (
                         <Button type="button" onClick={prevStep} className="rounded-pill">
@@ -195,7 +195,7 @@ function getActiveStepsList(
     const steps: Step[] = [
         {
             id: "basicInfoStep",
-            label: "Name",
+            label: "Database Name",
             active: true,
             isInvalid: !!errors.basicInfoStep,
             isLoading: isValidatingDatabaseName,

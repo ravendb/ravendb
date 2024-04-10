@@ -11,11 +11,11 @@ export default function AuthenticationOffMessage() {
                 <Icon icon="unsecure" margin="m-0" /> Authentication is off
             </p>
             <p>
-                <strong>Encription at Rest</strong> is only possible when authentication is enabled and a server
+                <strong>Encryption at Rest</strong> is only possible when authentication is enabled and a server
                 certificate has been defined.
             </p>
             <p>
-                For more information go to the <a href={appUrl.forCertificates()}>certificates page</a>
+                For more information go to the <a href={appUrl.forCertificates()}>certificates page.</a>
             </p>
         </>
     );
