@@ -134,7 +134,7 @@ namespace Raven.Debug
                 var typeOption = cmd.Option("--type", "Type of dump (Heap or Mini). ", CommandOptionType.SingleValue);
                 var outputOwnerOption = cmd.Option("--output-owner", "The owner of the output file (applicable only to Posix based OS)", CommandOptionType.SingleValue);
 
-                cmd.OnExecuteAsync(async (_) =>
+                cmd.OnExecute(() =>
                 {
                     if (pidOption.HasValue() == false)
                         return cmd.ExitWithError("Missing --pid option.");
@@ -159,7 +159,7 @@ namespace Raven.Debug
                     try
                     {
                         var dumper = new Dumper();
-                        await dumper.Collect(cmd, pid, output, outputOwner, diag: false, type).ConfigureAwait(false);
+                        dumper.Collect(cmd, pid, output, outputOwner, diag: false, crashreport: false, type);
                         return 0;
                     }
                     catch (Exception e)
