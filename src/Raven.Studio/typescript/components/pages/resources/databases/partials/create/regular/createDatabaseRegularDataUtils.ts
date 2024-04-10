@@ -1,7 +1,7 @@
 import { CreateDatabaseRegularFormData as FormData } from "./createDatabaseRegularValidation";
 import { CreateDatabaseDto } from "commands/resources/createDatabaseCommand";
 
-const getDefaultValues = (replicationFactor: number, allNodeTags: string[]): FormData => {
+const getDefaultValues = (allNodeTags: string[]): FormData => {
     return {
         basicInfoStep: {
             databaseName: "",
@@ -12,14 +12,15 @@ const getDefaultValues = (replicationFactor: number, allNodeTags: string[]): For
             isKeySaved: false,
         },
         replicationAndShardingStep: {
-            replicationFactor,
+            replicationFactor: allNodeTags.length || 1,
             isSharded: false,
             shardsCount: 1,
             isDynamicDistribution: false,
             isManualReplication: false,
         },
         manualNodeSelectionStep: {
-            nodes: allNodeTags,
+            // if there is only one node, it should be selected by default
+            nodes: allNodeTags.length === 1 ? allNodeTags : [],
             shards: [],
         },
         dataDirectoryStep: {
@@ -83,7 +84,12 @@ function mapToDto(formValues: FormData, allNodeTags: string[]): CreateDatabaseDt
     };
 }
 
+function getIsManualReplicationRequiredForEncryption(nodeTagsCount: number, isEncrypted: boolean): boolean {
+    return nodeTagsCount > 1 && isEncrypted;
+}
+
 export const createDatabaseRegularDataUtils = {
     getDefaultValues,
     mapToDto,
+    getIsManualReplicationRequiredForEncryption,
 };

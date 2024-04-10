@@ -68,6 +68,7 @@ import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCom
 import saveUnusedDatabaseIDsCommand = require("commands/database/settings/saveUnusedDatabaseIDsCommand");
 import { createDatabaseCommand } from "commands/resources/createDatabaseCommand";
 import { restoreDatabaseFromBackupCommand } from "commands/resources/restoreDatabaseFromBackupCommand";
+import distributeSecretCommand = require("commands/database/secrets/distributeSecretCommand");
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -335,5 +336,9 @@ export default class DatabasesService {
 
     async restoreDatabaseFromBackup(...args: ConstructorParameters<typeof restoreDatabaseFromBackupCommand>) {
         return new restoreDatabaseFromBackupCommand(...args).execute();
+    }
+
+    async distributeSecret(...args: ConstructorParameters<typeof distributeSecretCommand>) {
+        return new distributeSecretCommand(...args).execute();
     }
 }
