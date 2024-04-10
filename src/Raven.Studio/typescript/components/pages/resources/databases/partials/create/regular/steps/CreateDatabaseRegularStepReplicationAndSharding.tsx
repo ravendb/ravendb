@@ -12,6 +12,7 @@ import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import classNames from "classnames";
+import { createDatabaseRegularDataUtils } from "components/pages/resources/databases/partials/create/regular/createDatabaseRegularDataUtils";
 
 const shardingImg = require("Content/img/createDatabase/sharding.svg");
 
@@ -27,6 +28,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
 
     const { control, setValue } = useFormContext<CreateDatabaseRegularFormData>();
     const {
+        basicInfoStep: { isEncrypted },
         replicationAndShardingStep: { isSharded, shardsCount, replicationFactor, isManualReplication },
     } = useWatch({
         control,
@@ -41,6 +43,10 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
 
     const isReplicationFactorVisible = !isManualReplication || isSharded;
     const isReplicationFactorWarning = isSharded && maxReplicationFactorForSharding < availableNodesCount;
+
+    const isNotBootstrapped = nodeTagsCount === 0;
+    const isManualReplicationRequiredForEncryption =
+        createDatabaseRegularDataUtils.getIsManualReplicationRequiredForEncryption(nodeTagsCount, isEncrypted);
 
     useEffect(() => {
         if (isSharded && replicationFactor > maxReplicationFactorForSharding) {
@@ -245,21 +251,28 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                 </Col>
                 <Col>
                     <ConditionalPopover
-                        conditions={{
-                            isActive: nodeTagsCount === 0,
-                            message: (
-                                <span>
-                                    Please, first <a href={appUrl.forCluster()}>Bootstrap a Cluster</a>.
-                                </span>
-                            ),
-                        }}
+                        conditions={[
+                            {
+                                isActive: isNotBootstrapped,
+                                message: (
+                                    <span>
+                                        Please, first <a href={appUrl.forCluster()}>Bootstrap a Cluster</a>.
+                                    </span>
+                                ),
+                            },
+                            {
+                                isActive: isManualReplicationRequiredForEncryption,
+                                message:
+                                    "You need to select nodes manually because the encryption is enabled and there are more than 1 nodes in cluster.",
+                            },
+                        ]}
                         popoverPlacement="left"
                     >
                         <FormSwitch
                             control={control}
                             name="replicationAndShardingStep.isManualReplication"
                             color="primary"
-                            disabled={nodeTagsCount === 0}
+                            disabled={isNotBootstrapped || isManualReplicationRequiredForEncryption}
                         >
                             Set replication nodes manually
                             <br />

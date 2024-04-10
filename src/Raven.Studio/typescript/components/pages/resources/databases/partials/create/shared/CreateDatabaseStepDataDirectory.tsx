@@ -17,7 +17,7 @@ interface CreateDatabaseStepPathProps {
 }
 
 export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFolder }: CreateDatabaseStepPathProps) {
-    const { control, trigger } = useFormContext<CreateDatabaseRegularFormData | CreateDatabaseFromBackupFormData>();
+    const { control } = useFormContext<CreateDatabaseRegularFormData | CreateDatabaseFromBackupFormData>();
     const {
         basicInfoStep: { databaseName },
         dataDirectoryStep,

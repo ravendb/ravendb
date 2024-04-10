@@ -49,11 +49,10 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
     const { databasesService } = useServices();
     const usedDatabaseNames = useAppSelector(databaseSelectors.allDatabases).map((db) => db.name);
     const allNodeTags = useAppSelector(clusterSelectors.allNodeTags);
-    const initialReplicationFactor = allNodeTags.length || 1;
 
     const form = useForm<FormData>({
         mode: "onChange",
-        defaultValues: createDatabaseRegularDataUtils.getDefaultValues(initialReplicationFactor, allNodeTags),
+        defaultValues: createDatabaseRegularDataUtils.getDefaultValues(allNodeTags),
         resolver: (data, _, options) =>
             yupResolver(createDatabaseRegularSchema)(
                 data,
@@ -102,6 +101,18 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
             asyncDatabaseNameValidation.execute(formValues.basicInfoStep.databaseName);
             if (!asyncDatabaseNameValidation.result) {
                 return;
+            }
+
+            if (formValues.basicInfoStep.isEncrypted) {
+                const nodes = formValues.replicationAndShardingStep.isSharded
+                    ? Array.from(new Set(formValues.manualNodeSelectionStep.shards.flat()))
+                    : formValues.manualNodeSelectionStep.nodes;
+
+                await databasesService.distributeSecret(
+                    formValues.basicInfoStep.databaseName,
+                    formValues.encryptionStep.key,
+                    nodes
+                );
             }
 
             databasesManager.default.activateAfterCreation(formValues.basicInfoStep.databaseName);

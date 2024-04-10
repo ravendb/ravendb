@@ -4,18 +4,34 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { CreateDatabaseRegularFormData as FormData } from "../createDatabaseRegularValidation";
 import { useAppSelector } from "components/store";
-import React from "react";
-import { useFormContext } from "react-hook-form";
+import React, { useEffect } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import { Col, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import AuthenticationOffMessage from "components/pages/resources/databases/partials/create/shared/AuthenticationOffMessage";
 import EncryptionUnavailableMessage from "components/pages/resources/databases/partials/create/shared/EncryptionUnavailableMessage";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
+import { clusterSelectors } from "components/common/shell/clusterSlice";
+import { createDatabaseRegularDataUtils } from "components/pages/resources/databases/partials/create/regular/createDatabaseRegularDataUtils";
 
 const newDatabaseImg = require("Content/img/createDatabase/new-database.svg");
 
 export default function CreateDatabaseRegularStepBasicInfo() {
-    const { control } = useFormContext<FormData>();
+    const { control, setValue } = useFormContext<FormData>();
+    const nodeTagsCount = useAppSelector(clusterSelectors.allNodeTags).length;
+
+    const {
+        basicInfoStep: { isEncrypted },
+    } = useWatch({ control });
+
+    const isManualReplicationRequiredForEncryption =
+        createDatabaseRegularDataUtils.getIsManualReplicationRequiredForEncryption(nodeTagsCount, isEncrypted);
+
+    useEffect(() => {
+        if (isManualReplicationRequiredForEncryption) {
+            setValue("replicationAndShardingStep.isManualReplication", true, { shouldValidate: true });
+        }
+    }, [isManualReplicationRequiredForEncryption, setValue]);
 
     return (
         <div>
