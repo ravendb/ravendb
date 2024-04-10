@@ -65,9 +65,16 @@ export class OmniSearch<TItem extends OmniSearchItem<TType>, TType> {
         const items: OmniSearchResultItem<TItem>[] = [];
 
         const addItem = (item: TItem, additionalFields?: Partial<OmniSearchResultItem<TItem>>) => {
+            if (items.some((x) => x.item.type === item.type && x.item.text === item.text)) {
+                return;
+            }
+
             items.push({ item, ...additionalFields });
         };
 
+        const getInnerActionText = (result: FuseResult<TItem>, matchedValue: string) => {
+            return result.item.innerActions?.find((x) => x.alternativeTexts?.includes(matchedValue))?.text;
+        };
 
         for (const result of rawResults) {
             for (const match of result.matches) {
@@ -78,27 +85,15 @@ export class OmniSearch<TItem extends OmniSearchItem<TType>, TType> {
                         addItem(result.item, { indices: match.indices });
                         break;
                     }
-                    case "alternativeTexts": {
-                        if (items.some((x) => x.item.type === result.item.type && x.item.text === result.item.text)) {
-                            continue;
-                        }
+                    case "alternativeTexts":{
                         addItem(result.item);
-                        break;
-                    }
-                    case "innerActions.text": {
+                        break;}
+                    case "innerActions.text":{
                         addItem(result.item, { innerActionText: match.value, innerActionIndices: match.indices });
-                        break;
-                    }
+                        break;}
                     case "innerActions.alternativeTexts": {
-                        const innerActionText = this.getInnerActionText(result, match.value);
-                        if (
-                            items.some(
-                                (x) =>
-                                    x.item.type === result.item.type &&
-                                    x.item.text === result.item.text &&
-                                    x.innerActionText === innerActionText
-                            )
-                        ) {
+                        const innerActionText = getInnerActionText(result, match.value);
+                        if (items.some((x) => x.innerActionText === innerActionText)) {
                             continue;
                         }
 
@@ -113,8 +108,4 @@ export class OmniSearch<TItem extends OmniSearchItem<TType>, TType> {
 
         return { items };
     }
-
-    private getInnerActionText = (result: FuseResult<TItem>, matchedValue: string) => {
-        return result.item.innerActions?.find((x) => x.alternativeTexts?.includes(matchedValue))?.text;
-    };
 }

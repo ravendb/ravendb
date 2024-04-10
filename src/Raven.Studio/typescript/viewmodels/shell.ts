@@ -6,11 +6,9 @@ import sys = require("durandal/system");
 import menu = require("common/shell/menu");
 import generateMenuItems = require("common/shell/menu/generateMenuItems");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
-import databaseSwitcher = require("common/shell/databaseSwitcher");
 import accessManager = require("common/shell/accessManager");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import favNodeBadge = require("common/shell/favNodeBadge");
-import searchBox = require("common/shell/searchBox");
 import database = require("models/resources/database");
 import license = require("models/auth/licenseModel");
 import buildInfo = require("models/resources/buildInfo");
@@ -62,6 +60,7 @@ import { accessManagerActions } from "components/common/shell/accessManagerSlice
 import UpgradeModal from "./shell/UpgradeModal";
 import getStudioBootstrapCommand from "commands/resources/getStudioBootstrapCommand";
 import serverSettings from "common/settings/serverSettings";
+import StudioSearchWithDatabaseSwitcher from "components/shell/studioSearchWithDatabaseSelector/StudioSearchWithDatabaseSwitcher";
 
 class shell extends viewModelBase {
 
@@ -109,10 +108,7 @@ class shell extends viewModelBase {
     clientCertificate = clientCertificateModel.certificateInfo;
     certificateExpirationState = clientCertificateModel.certificateExpirationState;
     
-
-    mainMenu: menu;
-    searchBox: searchBox;
-    databaseSwitcher = new databaseSwitcher();
+    mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
     favNodeBadge = new favNodeBadge();
 
     smallScreen = ko.observable<boolean>(false);
@@ -131,18 +127,14 @@ class shell extends viewModelBase {
 
     upgradeModalView: ReactInKnockout<typeof UpgradeModal>;
     isUpgradeModalVisible = ko.observable<boolean>(false);
+
+    studioSearchWithDatabaseSwitcherView: ReactInKnockout<typeof StudioSearchWithDatabaseSwitcher>;
     
     constructor() {
         super();
         
         shell.instance = this;
 
-        const menuItems = generateMenuItems(activeDatabaseTracker.default.database());
-        this.mainMenu = new menu(menuItems);
-        this.searchBox = new searchBox();
-        this.searchBox.onMenuUpdated(menuItems);
-        collectionsTracker.default.collections.subscribe(collections => this.searchBox.onCollectionsUpdated(collections));
-        
         this.studioLoadingFakeRequest = protractedCommandsDetector.instance.requestStarted(0);
 
         extensions.install();
@@ -223,6 +215,7 @@ class shell extends viewModelBase {
         this.bindToCurrentInstance("toggleMenu");
 
         this.upgradeModalView = ko.pureComputed(() => ({ component: UpgradeModal }))
+        this.studioSearchWithDatabaseSwitcherView = ko.pureComputed(() => ({ component: StudioSearchWithDatabaseSwitcher }));
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -428,10 +421,9 @@ class shell extends viewModelBase {
 
     private initializeShellComponents() {
         this.mainMenu.initialize();
-        const onDatabaseChanged = (db: database) => {
+        const updateMenu = (db: database) => {
             const items = generateMenuItems(db);
             this.mainMenu.update(items);
-            this.searchBox.onMenuUpdated(items);
         };
         
         const checkScreenSize = () => {
@@ -446,11 +438,9 @@ class shell extends viewModelBase {
 
         $(window).resize(checkScreenSize);
 
-        onDatabaseChanged(activeDatabaseTracker.default.database());
-        activeDatabaseTracker.default.database.subscribe(onDatabaseChanged);
+        updateMenu(activeDatabaseTracker.default.database());
+        activeDatabaseTracker.default.database.subscribe(updateMenu);
 
-        this.databaseSwitcher.initialize();
-        this.searchBox.initialize();
         this.favNodeBadge.initialize(); 
         
         notificationCenter.instance.initialize();

@@ -790,4 +790,165 @@ return docs[0];`,
             ],
         };
     }
+
+    static documentsMetadataByIDPrefix(): metadataAwareDto[] {
+        return [
+            {
+                "@metadata": {
+                    "@attachments": [
+                        {
+                            Name: "image.jpg",
+                            Hash: "S5Opbm22FH1LW5SAC3wRb3HA64QM7odd26djlt5cAkM=",
+                            ContentType: "image/jpeg",
+                            Size: 16958,
+                        },
+                    ],
+                    "@collection": "Categories",
+                    "@change-vector": "A:1750-LBq7Ndw2DU+ycZolQrvCxQ",
+                    "@flags": "HasAttachments",
+                    "@id": "categories/1-A",
+                    "@last-modified": "2018-07-27T12:15:47.7253469Z",
+                },
+            },
+            {
+                "@metadata": {
+                    "@attachments": [
+                        {
+                            Name: "image.jpg",
+                            Hash: "YNLL8N+arOV1ZBP5q0wkeWc8RugEQ7wx3wRhB+xQWaI=",
+                            ContentType: "image/jpeg",
+                            Size: 36514,
+                        },
+                    ],
+                    "@collection": "Categories",
+                    "@change-vector": "A:1753-LBq7Ndw2DU+ycZolQrvCxQ",
+                    "@flags": "HasAttachments",
+                    "@id": "categories/2-A",
+                    "@last-modified": "2018-07-27T12:16:24.1438586Z",
+                },
+            },
+            {
+                "@metadata": {
+                    "@attachments": [
+                        {
+                            Name: "image.jpg",
+                            Hash: "1QxSMa3tBr+y8wQYNre7E9UJFFVTNWGjVoC+IC+gSSs=",
+                            ContentType: "image/jpeg",
+                            Size: 47955,
+                        },
+                    ],
+                    "@collection": "Categories",
+                    "@change-vector": "A:1756-LBq7Ndw2DU+ycZolQrvCxQ",
+                    "@flags": "HasAttachments",
+                    "@id": "categories/3-A",
+                    "@last-modified": "2018-07-27T12:16:44.1738714Z",
+                },
+            },
+            {
+                "@metadata": {
+                    "@attachments": [
+                        {
+                            Name: "image.jpg",
+                            Hash: "zBO1hw5HSdn8UYmWJKIXZdn2fdH0QNfzmPU2gSMc5yg=",
+                            ContentType: "image/jpeg",
+                            Size: 43504,
+                        },
+                    ],
+                    "@collection": "Categories",
+                    "@change-vector": "A:1759-LBq7Ndw2DU+ycZolQrvCxQ",
+                    "@flags": "HasAttachments",
+                    "@id": "categories/4-A",
+                    "@last-modified": "2018-07-27T12:17:33.8212726Z",
+                },
+            },
+            {
+                "@metadata": {
+                    "@attachments": [
+                        {
+                            Name: "image.jpg",
+                            Hash: "EMviKh017Gl7KUZWRecVbuCcXNQcrQ/7EdtnLKt/fgc=",
+                            ContentType: "image/jpeg",
+                            Size: 55376,
+                        },
+                    ],
+                    "@collection": "Categories",
+                    "@change-vector": "A:1762-LBq7Ndw2DU+ycZolQrvCxQ",
+                    "@flags": "HasAttachments",
+                    "@id": "categories/5-A",
+                    "@last-modified": "2018-07-27T12:20:31.8237074Z",
+                },
+            },
+            {
+                "@metadata": {
+                    "@attachments": [
+                        {
+                            Name: "image.jpg",
+                            Hash: "K37huqcfGCjDC0up0zVte7DAut5YS5K1z1kC+iUmeCI=",
+                            ContentType: "image/jpeg",
+                            Size: 31219,
+                        },
+                    ],
+                    "@collection": "Categories",
+                    "@change-vector": "A:1765-LBq7Ndw2DU+ycZolQrvCxQ",
+                    "@flags": "HasAttachments",
+                    "@id": "categories/6-A",
+                    "@last-modified": "2018-07-27T12:20:49.7774078Z",
+                },
+            },
+            {
+                "@metadata": {
+                    "@attachments": [
+                        {
+                            Name: "image.jpg",
+                            Hash: "asY7yUHhdgaVoKhivgua0OUSJKXqNDa3Z1uLP9XAocM=",
+                            ContentType: "image/jpeg",
+                            Size: 61749,
+                        },
+                    ],
+                    "@collection": "Categories",
+                    "@change-vector": "A:1768-LBq7Ndw2DU+ycZolQrvCxQ",
+                    "@flags": "HasAttachments",
+                    "@id": "categories/7-A",
+                    "@last-modified": "2018-07-27T12:21:11.2283909Z",
+                },
+            },
+            {
+                "@metadata": {
+                    "@attachments": [
+                        {
+                            Name: "image.jpg",
+                            Hash: "GWdpGVCWyLsrtNdA5AOee0QOZFG6rKIqCosZZN5WnCA=",
+                            ContentType: "image/jpeg",
+                            Size: 33396,
+                        },
+                    ],
+                    "@collection": "Categories",
+                    "@change-vector": "A:1771-LBq7Ndw2DU+ycZolQrvCxQ",
+                    "@flags": "HasAttachments",
+                    "@id": "categories/8-A",
+                    "@last-modified": "2018-07-27T12:21:39.1315788Z",
+                },
+            },
+            {
+                "@metadata": {
+                    "@collection": "Companies",
+                    "@timeseries": ["StockPrices"],
+                    "@change-vector": "A:2368-LBq7Ndw2DU+ycZolQrvCxQ",
+                    "@flags": "HasTimeSeries",
+                    "@id": "companies/1-A",
+                    "@last-modified": "2024-06-18T18:58:53.7547407Z",
+                },
+            },
+            {
+                "@metadata": {
+                    "@collection": "Companies",
+                    "@timeseries": ["StockPrices"],
+                    "@change-vector": "A:2431-LBq7Ndw2DU+ycZolQrvCxQ",
+                    "@flags": "HasTimeSeries",
+                    "@id": "companies/10-A",
+                    "@last-modified": "2024-06-18T18:58:53.7577639Z",
+                },
+            },
+        ];
+    }
 }

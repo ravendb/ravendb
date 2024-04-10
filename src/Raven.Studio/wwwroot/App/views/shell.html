@@ -1,4 +1,4 @@
-<div class="layout-container" data-bind="css: { 'cloud-cluster-admin': applyColorCustomization, 'collapse-menu': collapseMenu() || smallScreen(), 'pin-notifications': notificationCenter.pinNotifications(), 'show-notifications': notificationCenter.showNotifications(), 'show-search': searchBox.showSearchSmallScreen() }">
+<div class="layout-container" data-bind="css: { 'cloud-cluster-admin': applyColorCustomization, 'collapse-menu': collapseMenu() || smallScreen(), 'pin-notifications': notificationCenter.pinNotifications(), 'show-notifications': notificationCenter.showNotifications()}">
     <div data-bind="compose: { model: browserAlert }" class="bs3"></div>
     <aside class="top-alert" data-bind="visible: developerLicense">
         Developer License - Not for Production Use
@@ -21,104 +21,10 @@
                 <small class="on-base-background">Server environment</small>
                 <div><strong data-bind="text: serverEnvironment, attr: { class: 'text-uppercase ' + serverEnvironmentClass() }"></strong></div>
             </div>
-            <div class="inputs-container">
-                <div class="database-switcher-container" data-bind="with: databaseSwitcher">
-                    <div class="form-control btn-toggle database-switcher">
-                        <span class="database on-base-background" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().root.name : ''"></span>
-                        <span data-bind="visible: $root.activeDatabase() ? $root.activeDatabase().environment() : false, 
-                                         text: $root.activeDatabase() ? $root.activeDatabase().environment(): '',
-                                         attr: { class: 'margin-right-xs label text-uppercase ' + ($root.activeDatabase() ? $root.activeDatabase().environmentClass() : '') }"></span>
-                        <strong data-bind="text: $root.activeDatabase() ? $root.activeDatabase().databaseAccessText() : '',
-                                           attr: { class: 'margin-right-xs on-base-background ' + ($root.activeDatabase() ? $root.activeDatabase().databaseAccessColor() : '') } "></strong>
-                        <div data-bind="visible: $root.activeDatabase()?.isSharded(), if: $root.activeDatabase()?.isSharded()" class="label label-info">
-                            <span data-bind="text: $root.activeDatabase().shards().length"></span> shards
-                        </div>
-                    </div>
-                    <a data-bind="attr: { href: $root.appUrls.databases }" title="View all databases" class="resources-link"><i class="icon-resources"></i></a>
-                    <div class="box-container">
-                        <div class="database-filter-container">
-                            <input type="search" class="database-filter form-control" data-bind="textInput: filter" placeholder="filter" />
-                        </div>
-                        <div class="scroller">
-                            <section>
-                                <ul class="database-list">
-                                    <!-- ko foreach: filteredDatabases-->
-                                    <li data-bind="visible: !disabled() && relevant()">
-                                        <a href="#" data-bind="click: $parent.selectDatabase.bind($parent), attr: {title: name}, css: { active: name === $parent.highlightedItem() , database: true }">
-                                            <div class="name" data-bind="text: name"></div>
-                                            <div data-bind="text: environment, visible: environment, attr: { class: 'margin-left label text-uppercase ' + environmentClass() }"></div>
-                                            <div data-bind="visible: errored" class="label label-danger">Errored</div>
-                                            <div class="flex-separator"></div>
-                                            <div data-bind="visible: isSharded(), if: isSharded()" class="label label-info"><span data-bind="text: shards().length"></span> shards</div>
-                                            <small data-bind="text: databaseAccessText, visible: databaseAccessText, attr: { class: ' margin-left-xs ' + databaseAccessColor() }"></small>
-                                        </a>
-                                    </li>
-                                    <!-- /ko -->
-                                    <!-- ko foreach: filteredDatabases-->
-                                    <li data-bind="visible: !relevant()">
-                                        <a class="database non-relevant" data-bind="attr: {title: name}">
-                                            <div class="name" data-bind="text: name"></div>
-                                            <div data-bind="text: environment, visible: environment, attr: { class: 'margin-left label text-uppercase ' + environmentClass() }"></div>
-                                            <div class="label label-default">Non-relevant (Remote)</div>
-                                            <div data-bind="visible: errored" class="label label-danger">Errored</div>
-                                            <div class="flex-separator"></div>
-                                            <div data-bind="visible: isSharded(), if: isSharded()" class="label label-info"><span data-bind="text: shards().length"></span> shards</div>
-                                            <small data-bind="text: databaseAccessText, visible: databaseAccessText, attr: { class: databaseAccessColor() }"></small>
-                                        </a>
-                                    </li>
-                                    <!-- /ko -->
-                                    <!-- ko foreach: filteredDatabases-->
-                                    <li data-bind="visible: disabled() && relevant()">
-                                        <a class="database disabled" data-bind="attr: {title: name}">
-                                            <div class="name" data-bind="text: name"></div>
-                                            <div data-bind="text: environment, visible: environment, attr: { class: 'margin-left label text-uppercase ' + environmentClass() }"></div>
-                                            <div class="label label-default">Disabled</div>
-                                            <div data-bind="visible: errored" class="label label-danger">Errored</div>
-                                            <div class="flex-separator"></div>
-                                            <div data-bind="visible: isSharded(), if: isSharded()" class="label label-info"><span data-bind="text: shards().length"></span> shards</div>
-                                            <small data-bind="text: databaseAccessText, visible: databaseAccessText, attr: { class: databaseAccessColor() }"></small>
-                                        </a>
-                                    </li>
-                                    <!-- /ko -->
-                                </ul>
-                            </section>
-                        </div>
-                    </div>
-                </div>
-                <div class="search-container">
-                    <input type="search" class="form-control omnisearch on-base-background" autocomplete="off" placeholder="Search..." id="search-box-input" data-bind="textInput: $root.searchBox.searchQuery, hasFocus: $root.searchBox.searchQueryHasFocus" />
-                    <label for="search-box-input" class="icon-search"></label>
-                    <div class="autocomplete-list box-container" data-bind="with: $root.searchBox, visible: $root.searchBox.dropdownVisible">
-                        <div class="scroller">
-                            <!-- ko foreach: allSearchTypes -->
-                            <section data-bind="visible: $parent.results.get($data)().length > 0">
-                                <h4 data-bind="text: $parent.formatGroup($data)"></h4>
-                                <ul data-bind="foreach: $parent.results.get($data)">
-                                    <li>
-                                        <a href="#" data-bind="click: onSelected">
-                                            <span data-bind="attr: { class: icon }"></span>
-                                            <span data-bind="text: text"></span>
-                                            <span data-bind="visible: subText">&gt;</span>
-                                            <span data-bind="text: subText"></span>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </section>
-                            <!-- /ko -->
-                           
-                            <div class="text-right">
-                                <small><code>ctrl</code> + <code>enter</code> to open in new tab</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            
+            <div class="bs5" style="flex-grow: 1;" data-bind="react: $root.studioSearchWithDatabaseSwitcherView"></div>
+
             <ul class="nav navbar-nav navbar-right">
-                <li data-bind="visible: $root.activeDatabase">
-                    <a href="#" class="visible-xs-inline-block visible-sm-inline-block" data-bind="{ click: $root.searchBox.showSearchSmallScreen.toggle.bind($root.searchBox.showSearchSmallScreen), css: { 'active': $root.searchBox.showSearchSmallScreen() } }">
-                        <span class="icon-search "></span>
-                    </a>
-                </li>
                 <li>
                     <a href="#" title="Change theme" class="theme-change" data-bind="click: $data.constructor.chooseTheme">
                         <i class="icon-theme"></i>
