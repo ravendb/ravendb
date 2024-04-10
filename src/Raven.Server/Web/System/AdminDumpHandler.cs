@@ -191,7 +191,9 @@ namespace Raven.Server.Web.System
         private enum DumpType
         {
             Mini,
-            Heap
+            Heap,
+            Full,
+            Triage
         }
     }
 }
