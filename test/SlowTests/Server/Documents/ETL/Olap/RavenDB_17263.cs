@@ -84,40 +84,38 @@ namespace SlowTests.Server.Documents.ETL.Olap
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    using (OlapEtl.TestScript(new TestOlapEtlScript
+                    var testResult = OlapEtl.TestScript(new TestOlapEtlScript
                     {
                         DocumentId = "orders/1",
                         Configuration = configuration
-                    }, database, database.ServerStore, context, out var testResult))
-                    {
-                        var result = (OlapEtlTestScriptResult)testResult;
+                    }, database, database.ServerStore, context);
+                    
+                    var result = (OlapEtlTestScriptResult)testResult;
 
-                        Assert.Equal(1, result.ItemsByPartition.Count);
+                    Assert.Equal(1, result.ItemsByPartition.Count);
 
-                        Assert.Equal(4, result.ItemsByPartition[0].Columns.Count);
+                    Assert.Equal(4, result.ItemsByPartition[0].Columns.Count);
 
-                        Assert.Equal("Orders/order_date=2020-01-01-00-00/location=USA", result.ItemsByPartition[0].Key);
-                    }
+                    Assert.Equal("Orders/order_date=2020-01-01-00-00/location=USA", result.ItemsByPartition[0].Key);
                 }
 
                 configuration.CustomPartitionValue = null;
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    using (OlapEtl.TestScript(new TestOlapEtlScript
+                    var testResult = OlapEtl.TestScript(new TestOlapEtlScript
                     {
                         DocumentId = "orders/1",
                         Configuration = configuration
-                    }, database, database.ServerStore, context, out var testResult))
-                    {
-                        var result = (OlapEtlTestScriptResult)testResult;
+                    }, database, database.ServerStore, context);
+                    
+                    var result = (OlapEtlTestScriptResult)testResult;
 
-                        Assert.Equal(1, result.ItemsByPartition.Count);
+                    Assert.Equal(1, result.ItemsByPartition.Count);
 
-                        Assert.Equal(4, result.ItemsByPartition[0].Columns.Count);
+                    Assert.Equal(4, result.ItemsByPartition[0].Columns.Count);
 
-                        Assert.Equal("Orders/order_date=2020-01-01-00-00/location=undefined", result.ItemsByPartition[0].Key);
-                    }
+                    Assert.Equal("Orders/order_date=2020-01-01-00-00/location=undefined", result.ItemsByPartition[0].Key);
                 }
 
             }

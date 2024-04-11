@@ -313,23 +313,23 @@ public class KafkaEtlTests : KafkaEtlTestBase
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                using (QueueEtl<QueueItem>.TestScript(
-                           new TestQueueEtlScript
-                           {
-                               DocumentId = "orders/1-A",
-                               Configuration = new QueueEtlConfiguration
-                               {
-                                   Name = "simulate",
-                                   ConnectionStringName = "simulate",
-                                   Queues = { new EtlQueue() { Name = "Orders" } },
-                                   BrokerType = QueueBrokerType.Kafka,
-                                   Transforms =
-                                   {
-                                       new Transformation
-                                       {
-                                           Collections = { "Orders" },
-                                           Name = "Orders",
-                                           Script = @"
+                var testResult = QueueEtl<QueueItem>.TestScript(
+                    new TestQueueEtlScript
+                    {
+                        DocumentId = "orders/1-A",
+                        Configuration = new QueueEtlConfiguration
+                        {
+                            Name = "simulate",
+                            ConnectionStringName = "simulate",
+                            Queues = { new EtlQueue() { Name = "Orders" } },
+                            BrokerType = QueueBrokerType.Kafka,
+                            Transforms =
+                            {
+                                new Transformation
+                                {
+                                    Collections = { "Orders" },
+                                    Name = "Orders",
+                                    Script = @"
 var orderData = {
     Id: id(this),
     OrderLinesCount: this.OrderLines.length,
@@ -345,19 +345,18 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 loadToOrders(orderData);
 
 output('test output')"
-                                       }
-                                   }
-                               }
-                           }, database, database.ServerStore, context, out var testResult))
-                {
-                    var result = (QueueEtlTestScriptResult)testResult;
+                                }
+                            }
+                        }
+                    }, database, database.ServerStore, context);
+                
+                var result = (QueueEtlTestScriptResult)testResult;
 
-                    Assert.Equal(0, result.TransformationErrors.Count);
+                Assert.Equal(0, result.TransformationErrors.Count);
 
-                    Assert.Equal(1, result.Summary.Count);
+                Assert.Equal(1, result.Summary.Count);
 
-                    Assert.Equal("test output", result.DebugOutput[0]);
-                }
+                Assert.Equal("test output", result.DebugOutput[0]);
             }
         }
     }

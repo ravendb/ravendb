@@ -56,6 +56,8 @@ namespace Sparrow.Utils
             public readonly int ManagedThreadId;
             private string _lastName = "Unknown";
 
+            internal string CapturedStackTrace;
+
             public string Name
             {
                 get

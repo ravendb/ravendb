@@ -415,10 +415,10 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
         if (string.IsNullOrEmpty(testScript.Message))
             throw new InvalidOperationException("Sample message in JSON format must be provided");
 
+        using var messageDoc = context.Sync.ReadForMemory(new MemoryStream(Encoding.UTF8.GetBytes(testScript.Message)), "queue-sink-test-message");
+
         using (context.OpenWriteTransaction())
         {
-            using var messageDoc = context.Sync.ReadForMemory(new MemoryStream(Encoding.UTF8.GetBytes(testScript.Message)), "queue-sink-test-message");
-
             var script = new PatchRequest(testScript.Configuration.Scripts[0].Script, PatchRequestType.QueueSink);
 
             var command = new TestQueueMessageCommand(context, script, messageDoc);

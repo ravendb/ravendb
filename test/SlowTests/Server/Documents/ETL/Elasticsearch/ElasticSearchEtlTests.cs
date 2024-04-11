@@ -772,7 +772,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    using (ElasticSearchEtl.TestScript(
+                    var testResult = ElasticSearchEtl.TestScript(
                         new TestElasticSearchEtlScript
                         {
                             DocumentId = "orders/1-A",
@@ -790,7 +790,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                                 {
                                     new Transformation
                                     {
-                                        Collections = { "Orders" }, Name = "OrdersAndLines", Script = @"
+                                        Collections = { "Orders" },
+                                        Name = "OrdersAndLines",
+                                        Script = @"
 var orderData = {
     Id: id(this),
     OrderLinesCount: this.OrderLines.length,
@@ -815,30 +817,29 @@ output('test output')"
                                     }
                                 }
                             }
-                        }, database, database.ServerStore, context, out var testResult))
-                    {
-                        var result = (ElasticSearchEtlTestScriptResult)testResult;
+                        }, database, database.ServerStore, context);
+                    
+                    var result = (ElasticSearchEtlTestScriptResult)testResult;
 
-                        Assert.Equal(0, result.TransformationErrors.Count);
+                    Assert.Equal(0, result.TransformationErrors.Count);
 
-                        Assert.Equal(2, result.Summary.Count);
+                    Assert.Equal(2, result.Summary.Count);
 
-                        var orderLines = result.Summary.First(x => x.IndexName == "orderlines");
+                    var orderLines = result.Summary.First(x => x.IndexName == "orderlines");
 
-                        Assert.Equal(2, orderLines.Commands.Length); // delete by query and bulk
+                    Assert.Equal(2, orderLines.Commands.Length); // delete by query and bulk
 
-                        Assert.StartsWith("POST orderlines/_delete_by_query?refresh=true", orderLines.Commands[0]);
-                        Assert.StartsWith("POST orderlines/_bulk?refresh=wait_for", orderLines.Commands[1]);
+                    Assert.StartsWith("POST orderlines/_delete_by_query?refresh=true", orderLines.Commands[0]);
+                    Assert.StartsWith("POST orderlines/_bulk?refresh=wait_for", orderLines.Commands[1]);
 
-                        var orders = result.Summary.First(x => x.IndexName == "orders");
+                    var orders = result.Summary.First(x => x.IndexName == "orders");
 
-                        Assert.Equal(2, orders.Commands.Length); // refresh, delete by query and bulk
+                    Assert.Equal(2, orders.Commands.Length); // refresh, delete by query and bulk
 
-                        Assert.StartsWith("POST orders/_delete_by_query?refresh=true", orders.Commands[0]);
-                        Assert.StartsWith("POST orders/_bulk?refresh=wait_for", orders.Commands[1]);
+                    Assert.StartsWith("POST orders/_delete_by_query?refresh=true", orders.Commands[0]);
+                    Assert.StartsWith("POST orders/_bulk?refresh=wait_for", orders.Commands[1]);
 
-                        Assert.Equal("test output", result.DebugOutput[0]);
-                    }
+                    Assert.Equal("test output", result.DebugOutput[0]);
                 }
             }
         }
@@ -872,7 +873,7 @@ output('test output')"
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    using (ElasticSearchEtl.TestScript(
+                    var testResult = ElasticSearchEtl.TestScript(
                         new TestElasticSearchEtlScript
                         {
                             DocumentId = "orders/1-A",
@@ -895,22 +896,21 @@ output('test output')"
                                     }
                                 }
                             }
-                        }, database, database.ServerStore, context, out var testResult))
-                    {
-                        var result = (ElasticSearchEtlTestScriptResult)testResult;
+                        }, database, database.ServerStore, context);
+                    
+                    var result = (ElasticSearchEtlTestScriptResult)testResult;
 
-                        Assert.Equal(0, result.TransformationErrors.Count);
+                    Assert.Equal(0, result.TransformationErrors.Count);
 
-                        Assert.Equal(2, result.Summary.Count);
+                    Assert.Equal(2, result.Summary.Count);
 
-                        var orderLines = result.Summary.First(x => x.IndexName == OrderLinesIndexName);
+                    var orderLines = result.Summary.First(x => x.IndexName == OrderLinesIndexName);
 
-                        Assert.Equal(1, orderLines.Commands.Length); // delete
+                    Assert.Equal(1, orderLines.Commands.Length); // delete
 
-                        var orders = result.Summary.First(x => x.IndexName == OrdersIndexName);
+                    var orders = result.Summary.First(x => x.IndexName == OrdersIndexName);
 
-                        Assert.Equal(1, orders.Commands.Length); // delete by query
-                    }
+                    Assert.Equal(1, orders.Commands.Length); // delete by query
                 }
 
                 using (var session = store.OpenAsyncSession())

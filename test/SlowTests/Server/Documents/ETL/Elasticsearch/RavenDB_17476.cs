@@ -127,45 +127,41 @@ loadTo" + OrdersIndexName + @"(orderData);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    using (ElasticSearchEtl.TestScript(
-                               new TestElasticSearchEtlScript
-                               {
-                                   DocumentId = "orders/1-A",
-                                   Configuration = new ElasticSearchEtlConfiguration
-                                   {
-                                       Name = "simulate",
-                                       ConnectionStringName = "simulate",
-                                       ElasticIndexes =
-                                       {
-                                           new ElasticSearchIndex { IndexName = OrdersIndexName, DocumentIdProperty = "Id" },
-                                           new ElasticSearchIndex { IndexName = OrderLinesIndexName, DocumentIdProperty = "OrderId" },
-                                           new ElasticSearchIndex { IndexName = "NotUsedInScript", DocumentIdProperty = "OrderId" },
-                                       },
-                                       Transforms =
-                                       {
-                                           new Transformation { Collections = { "Orders" }, Name = "OrdersAndLines", Script = ScriptWithNoIdMethodUsage }
-                                       }
-                                   }
-                               }, database, database.ServerStore, context, out var testResult))
-                    {
-                        var result = (ElasticSearchEtlTestScriptResult)testResult;
+                    var testResult = ElasticSearchEtl.TestScript(
+                        new TestElasticSearchEtlScript
+                        {
+                            DocumentId = "orders/1-A",
+                            Configuration = new ElasticSearchEtlConfiguration
+                            {
+                                Name = "simulate",
+                                ConnectionStringName = "simulate",
+                                ElasticIndexes =
+                                {
+                                    new ElasticSearchIndex { IndexName = OrdersIndexName, DocumentIdProperty = "Id" },
+                                    new ElasticSearchIndex { IndexName = OrderLinesIndexName, DocumentIdProperty = "OrderId" },
+                                    new ElasticSearchIndex { IndexName = "NotUsedInScript", DocumentIdProperty = "OrderId" },
+                                },
+                                Transforms = { new Transformation { Collections = { "Orders" }, Name = "OrdersAndLines", Script = ScriptWithNoIdMethodUsage } }
+                            }
+                        }, database, database.ServerStore, context);
+                    
+                    var result = (ElasticSearchEtlTestScriptResult)testResult;
 
-                        Assert.Equal(0, result.TransformationErrors.Count);
+                    Assert.Equal(0, result.TransformationErrors.Count);
 
-                        Assert.Equal(2, result.Summary.Count);
+                    Assert.Equal(2, result.Summary.Count);
 
-                        var orderLines = result.Summary.First(x => x.IndexName == OrderLinesIndexName);
+                    var orderLines = result.Summary.First(x => x.IndexName == OrderLinesIndexName);
 
-                        Assert.Equal(2, orderLines.Commands.Length); // delete by query and bulk
+                    Assert.Equal(2, orderLines.Commands.Length); // delete by query and bulk
 
-                        Assert.Contains(@"""OrderId"":""orders/1-a""", orderLines.Commands[1]);
+                    Assert.Contains(@"""OrderId"":""orders/1-a""", orderLines.Commands[1]);
 
-                        var orders = result.Summary.First(x => x.IndexName == OrdersIndexName);
+                    var orders = result.Summary.First(x => x.IndexName == OrdersIndexName);
 
-                        Assert.Equal(2, orders.Commands.Length); // delete by query and bulk
+                    Assert.Equal(2, orders.Commands.Length); // delete by query and bulk
 
-                        Assert.Contains(@"""Id"":""orders/1-a""", orders.Commands[1]);
-                    }
+                    Assert.Contains(@"""Id"":""orders/1-a""", orders.Commands[1]);
                 }
             }
         }
