@@ -131,7 +131,7 @@ namespace Raven.Debug
 
                 var pidOption = cmd.Option("--pid", "Process ID to which the tool will attach to", CommandOptionType.SingleValue);
                 var outputOption = cmd.Option("--output", "Output file path", CommandOptionType.SingleValue);
-                var typeOption = cmd.Option("--type", "Type of dump (Heap or Mini). ", CommandOptionType.SingleValue);
+                var typeOption = cmd.Option("--type", "Type of dump (Full, Heap, Mini or Triage). ", CommandOptionType.SingleValue);
                 var outputOwnerOption = cmd.Option("--output-owner", "The owner of the output file (applicable only to Posix based OS)", CommandOptionType.SingleValue);
 
                 cmd.OnExecute(() =>
