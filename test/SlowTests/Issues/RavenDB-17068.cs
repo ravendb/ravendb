@@ -18,7 +18,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_17068: RavenTestBase
+public sealed class RavenDB_17068: RavenDB_17068_Base
 {
     public RavenDB_17068(ITestOutputHelper output) : base(output)
     {
@@ -65,28 +65,10 @@ public class RavenDB_17068: RavenTestBase
             } while (alertRaised.Item2["Type"].ToString() != NotificationType.AlertRaised.ToString());
             
             var details = alertRaised.Item2[nameof(AlertRaised.Details)] as DynamicJsonValue;
-
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
-            {
-                var json = ctx.ReadObject(details, "foo");
-
-                var detailsObject = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<MismatchedReferencesLoadWarning>(json, "Warnings");
-                
-                Assert.Equal("DummyIndex",detailsObject.IndexName);
-                Assert.Equal(1, detailsObject.Warnings.Count);
-
-                detailsObject.Warnings.TryGetValue("orders/2-A", out var warnings);
-                
-                Assert.NotNull(warnings);
-                Assert.Equal(1, warnings.Count);
-                Assert.Equal("animals/1-A", warnings.First().ReferenceId);
-                Assert.Equal("orders/2-A", warnings.First().SourceId);
-                Assert.Equal("Animals", warnings.First().ActualCollection);
-                Assert.Equal(2, warnings.First().MismatchedCollections.Count);
-            }
+            Assert_CheckIfMismatchesAreRemovedOnMatchingLoad(details);
         }
     }
-
+    
     [RavenFact(RavenTestCategory.Indexes)]
     public async Task CheckIfNotificationIsNotSendWithAllLoadsEventuallyMatching()
     {
@@ -203,8 +185,37 @@ public class RavenDB_17068: RavenTestBase
             Assert.Equal(mismatchedDocumentLoadsPerIndex, handler.GetLoadFailures().Count);
         }
     }
+}
+
+public abstract class RavenDB_17068_Base : RavenTestBase
+{
+    protected RavenDB_17068_Base(ITestOutputHelper output) : base(output)
+    {
+    }
     
-    private class DummyIndex : AbstractIndexCreationTask<Order>
+    protected void Assert_CheckIfMismatchesAreRemovedOnMatchingLoad(DynamicJsonValue details)
+    {
+        using (var ctx = JsonOperationContext.ShortTermSingleUse())
+        {
+            var json = ctx.ReadObject(details, "foo");
+
+            var detailsObject = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<MismatchedReferencesLoadWarning>(json, "Warnings");
+                
+            Assert.Equal("DummyIndex",detailsObject.IndexName);
+            Assert.Equal(1, detailsObject.Warnings.Count);
+
+            detailsObject.Warnings.TryGetValue("orders/2-A", out var warnings);
+                
+            Assert.NotNull(warnings);
+            Assert.Equal(1, warnings.Count);
+            Assert.Equal("animals/1-A", warnings.First().ReferenceId);
+            Assert.Equal("orders/2-A", warnings.First().SourceId);
+            Assert.Equal("Animals", warnings.First().ActualCollection);
+            Assert.Equal(2, warnings.First().MismatchedCollections.Count);
+        }
+    }
+    
+    protected class DummyIndex : AbstractIndexCreationTask<Order>
     {
         public DummyIndex()
         {
@@ -216,7 +227,7 @@ public class RavenDB_17068: RavenTestBase
         }
     }
 
-    private class Order
+    protected class Order
     {
         public string Id { get; set; }
         public string AnimalId { get; set; }
@@ -224,19 +235,19 @@ public class RavenDB_17068: RavenTestBase
         public int Price { get; set; }
     }
     
-    private class Animal
+    protected class Animal
     {
         public string Id { get; set; }
         public string Name { get; set; }
     }
 
-    private class Cat
+    protected class Cat
     {
         public string Id { get; set; }
         public string Name { get; set; }
     }
 
-    private class Dog
+    protected class Dog
     {
         public string Id { get; set; }
         public string Name { get; set; }
