@@ -3,7 +3,7 @@
     <Description>Voron Recovery Tool</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>net7.0</TargetFramework>
-    <RuntimeFrameworkVersion>7.0.17</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>7.0.18</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Voron.Recovery</AssemblyName>
     <OutputType>Exe</OutputType>
