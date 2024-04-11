@@ -14,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact(Skip = "Waiting for RavenDB-13830 to be resolved")]
+        [Fact]
         public void ShouldNotErrorIndexOnInvalidProgramException()
         {
-            // if this test fails it's very likely the following issue got fixed: https://github.com/dotnet/coreclr/issues/14672
+            // this test has been added initially to workaround the following issue: https://github.com/dotnet/coreclr/issues/14672
+            // initially it was ShouldErrorIndexOnInvalidProgramException but after some time it got changed to ShouldNotErrorIndexOnInvalidProgramException
 
             using (var store = GetDocumentStore())
             {
