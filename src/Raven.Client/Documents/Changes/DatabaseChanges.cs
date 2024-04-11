@@ -32,6 +32,7 @@ namespace Raven.Client.Documents.Changes
         private readonly string _database;
 
         private readonly Action _onDispose;
+        private readonly string _nodeTag;
         private ClientWebSocket _client;
 
         private readonly Task _task;
@@ -73,6 +74,7 @@ namespace Raven.Client.Documents.Changes
             });
 
             _onDispose = onDispose;
+            _nodeTag = nodeTag;
             ConnectionStatusChanged += OnConnectionStatusChanged;
 
             _task = DoWork(nodeTag);
@@ -195,6 +197,9 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<OperationStatusChange> ForOperationId(long operationId)
         {
+            if (string.IsNullOrEmpty(_nodeTag))
+                ThrowOperationsNodeTagNeeded();
+
             var counter = GetOrAddConnectionState("operations/" + operationId, "watch-operation", "unwatch-operation", operationId.ToString());
 
             var taskedObservable = new ChangesObservable<OperationStatusChange, DatabaseConnectionState>(
@@ -206,6 +211,9 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<OperationStatusChange> ForAllOperations()
         {
+            if (string.IsNullOrEmpty(_nodeTag))
+                ThrowOperationsNodeTagNeeded();
+
             var counter = GetOrAddConnectionState("all-operations", "watch-operations", "unwatch-operations", null);
 
             var taskedObservable = new ChangesObservable<OperationStatusChange, DatabaseConnectionState>(
@@ -213,6 +221,11 @@ namespace Raven.Client.Documents.Changes
                 notification => true);
 
             return taskedObservable;
+        }
+
+        private void ThrowOperationsNodeTagNeeded()
+        {
+            throw new InvalidOperationException("Changes API must be provided a node tag in order to track node-specific operations.");
         }
 
         public IChangesObservable<IndexChange> ForAllIndexes()
@@ -535,6 +548,7 @@ namespace Raven.Client.Documents.Changes
                 return;
             }
 
+            var timerInSec = 1;
             var wasConnected = false;
             while (_cts.IsCancellationRequested == false)
             {
@@ -586,7 +600,12 @@ namespace Raven.Client.Documents.Changes
                         wasConnected = false;
                         try
                         {
-                            _serverNode = await _requestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
+                            // If node tag is provided we should not failover to a different node
+                            // Failing over will create a mismatch if the operation is created and monitored on the provided node tag
+                            if (string.IsNullOrEmpty(nodeTag))
+                                _serverNode = await _requestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
+                            else
+                                await _requestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(_serverNode) { TimeoutInMs = 0, ForceUpdate = true, DebugTag = "handle-server-not-responsive" }).ConfigureAwait(false);
                         }
                         catch (DatabaseDoesNotExistException databaseDoesNotExistException)
                         {
@@ -620,7 +639,8 @@ namespace Raven.Client.Documents.Changes
 
                 try
                 {
-                    await TimeoutManager.WaitFor(TimeSpan.FromSeconds(1), _cts.Token).ConfigureAwait(false);
+                    timerInSec = Math.Min(timerInSec * 2, 60);
+                    await TimeoutManager.WaitFor(TimeSpan.FromSeconds(timerInSec), _cts.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {

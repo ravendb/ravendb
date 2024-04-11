@@ -1989,6 +1989,8 @@ namespace Raven.Server.Documents
 
             internal Action<PathSetting> ActionToCallOnGetTempPath;
 
+            internal AsyncManualResetEvent DelayQueryByPatch;
+
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {
                 ActionToCallDuringDocumentDatabaseInternalDispose = action;
