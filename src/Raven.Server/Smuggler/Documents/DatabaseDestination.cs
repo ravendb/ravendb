@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
@@ -46,6 +47,7 @@ namespace Raven.Server.Smuggler.Documents
         private BuildVersionType _buildType;
         private DatabaseSmugglerOptionsServerSide _options;
         protected SmugglerResult _result;
+        protected Action<IOperationProgress> _onProgress;
 
         public DatabaseDestination(DocumentDatabase database, CancellationToken token = default)
         {
@@ -55,11 +57,12 @@ namespace Raven.Server.Smuggler.Documents
             _duplicateDocsHandler = new DuplicateDocsHandler(_database);
         }
 
-        public ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
+        public ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, long buildVersion)
         {
             _buildType = BuildVersion.Type(buildVersion);
             _options = options;
             _result = result;
+            _onProgress = onProgress;
 
             var d = new AsyncDisposableAction(() =>
             {
@@ -120,12 +123,12 @@ namespace Raven.Server.Smuggler.Documents
 
         protected virtual ICompareExchangeActions CreateCompareExchangeActions(string databaseName, JsonOperationContext context, BackupKind? backupKind)
         {
-            return new DatabaseCompareExchangeActions(databaseName, _database, context, backupKind, _result, _token);
+            return new DatabaseCompareExchangeActions(databaseName, _database, context, backupKind, _result, _onProgress, _token);
         }
 
         public ICompareExchangeActions CompareExchangeTombstones(string databaseName, JsonOperationContext context)
         {
-            return new DatabaseCompareExchangeActions(databaseName, _database, context, backupKind: null, _result, _token);
+            return new DatabaseCompareExchangeActions(databaseName, _database, context, backupKind: null, _result, _onProgress, _token);
         }
 
         public ICounterActions Counters(SmugglerResult result)

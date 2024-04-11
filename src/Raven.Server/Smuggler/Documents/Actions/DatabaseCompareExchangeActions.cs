@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
@@ -22,13 +23,15 @@ internal class DatabaseCompareExchangeActions : AbstractDatabaseCompareExchangeA
     private readonly DocumentDatabase _database;
 
     private readonly SmugglerResult _result;
+    private readonly Action<IOperationProgress> _onProgress;
 
-    public DatabaseCompareExchangeActions([NotNull] string databaseName, [NotNull] DocumentDatabase database, JsonOperationContext context, BackupKind? backupKind, SmugglerResult result, CancellationToken token)
+    public DatabaseCompareExchangeActions([NotNull] string databaseName, [NotNull] DocumentDatabase database, JsonOperationContext context, BackupKind? backupKind, SmugglerResult result, Action<IOperationProgress> onProgress, CancellationToken token)
         : base(database.ServerStore, databaseName, database.IdentityPartsSeparator, context, backupKind, token)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
         _documentContextHolder = new DocumentContextHolder(database);
         _result = result;
+        _onProgress = onProgress;
     }
 
     protected override bool TryHandleAtomicGuard(string key, string documentId, BlittableJsonReaderObject value, Document existingDocument)
@@ -124,7 +127,11 @@ internal class DatabaseCompareExchangeActions : AbstractDatabaseCompareExchangeA
                     break;
 
                 totalExecutedCommands += executed.CommandsCount;
-                _result.AddInfo($"Executed {totalExecutedCommands:#,#;;0} cluster transaction commands.");
+                if (_result != null)
+                {
+                    _result.AddInfo($"Executed {totalExecutedCommands:#,#;;0} cluster transaction commands.");
+                    _onProgress?.Invoke(_result.Progress);
+                }
             }
         }
     }

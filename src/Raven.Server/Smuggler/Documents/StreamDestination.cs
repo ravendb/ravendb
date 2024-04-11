@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
@@ -66,7 +67,7 @@ namespace Raven.Server.Smuggler.Documents
             _compressionLevel = compressionLevel;
         }
 
-        public ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
+        public ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, long buildVersion)
         {
             _outputStream = BackupUtils.GetCompressionStream(_stream, _compressionAlgorithm, _compressionLevel);
             _writer = new AsyncBlittableJsonTextWriter(_context, _outputStream);
