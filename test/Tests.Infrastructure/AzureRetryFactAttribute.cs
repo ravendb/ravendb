@@ -40,32 +40,22 @@ namespace Tests.Infrastructure
         public AzureRetryFactAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
             : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
         {
-            if (RavenTestHelper.SkipIntegrationTests)
+        }
+
+        public override string Skip
+        {
+            get
             {
-                Skip = RavenTestHelper.SkipIntegrationMessage;
-                return;
+                return CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(EnvVariableMissing, AzureCredentialEnvironmentVariable, ParsingError, _azureSettings);
             }
 
-            if (RavenTestHelper.IsRunningOnCI)
-                return;
+            set => base.Skip = value;
+        }
 
-            if (EnvVariableMissing)
-            {
-                Skip = $"Test is missing '{AzureCredentialEnvironmentVariable}' environment variable.";
-                return;
-            }
-
-            if (string.IsNullOrEmpty(ParsingError) == false)
-            {
-                Skip = $"Failed to parse the Azure settings, error: {ParsingError}";
-                return;
-            }
-
-            if (_azureSettings == null)
-            {
-                Skip = $"Azure {memberName} tests missing {nameof(AzureSettings)}.";
-                return;
-            }
+        public static bool ShouldSkip(out string skipMessage)
+        {
+            skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(EnvVariableMissing, AzureCredentialEnvironmentVariable, ParsingError, _azureSettings);
+            return string.IsNullOrEmpty(skipMessage) == false;
         }
     }
 }

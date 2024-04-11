@@ -49,6 +49,7 @@ namespace Tests.Infrastructure
 
                 return SkipMessage;
             }
+            set => base.Skip = value;
         }
     }
 }
