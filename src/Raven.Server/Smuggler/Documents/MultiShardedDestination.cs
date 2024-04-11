@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
@@ -44,7 +45,7 @@ namespace Raven.Server.Smuggler.Documents
             _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         }
 
-        public async ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
+        public async ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, long buildVersion)
         {
             _options = options;
 
@@ -64,7 +65,7 @@ namespace Raven.Server.Smuggler.Documents
 
             foreach (int shardNumber in holders.Keys)
             {
-                await PrepareShardStreamDestination(holders, shardNumber, result, buildVersion);
+                await PrepareShardStreamDestination(holders, shardNumber, result, onProgress, buildVersion);
             }
 
             return new AsyncDisposableAction(async () =>
@@ -78,13 +79,13 @@ namespace Raven.Server.Smuggler.Documents
             });
         }
 
-        private async Task PrepareShardStreamDestination(Dictionary<int, StreamDestinationHolder> holders, int shardNumber, SmugglerResult result, long buildVersion)
+        private async Task PrepareShardStreamDestination(Dictionary<int, StreamDestinationHolder> holders, int shardNumber, SmugglerResult result, Action<IOperationProgress> onProgress, long buildVersion)
         {
             var stream = ShardedSmugglerHandlerProcessorForImport.GetOutputStream(holders[shardNumber].OutStream.OutputStream.Result, _options);
             holders[shardNumber].InputStream = stream;
             holders[shardNumber].ContextReturn = _handler.ContextPool.AllocateOperationContext(out JsonOperationContext context);
             var destination = new StreamDestination(stream, context, _source, _options.CompressionAlgorithm ?? _databaseContext.Configuration.ExportImport.CompressionAlgorithm, compressionLevel: _databaseContext.Configuration.Sharding.CompressionLevel);
-            holders[shardNumber].DestinationAsyncDisposable = await destination.InitializeAsync(_options, result, buildVersion);
+            holders[shardNumber].DestinationAsyncDisposable = await destination.InitializeAsync(_options, result, onProgress, buildVersion);
             _destinations[shardNumber] = destination;
         }
 
