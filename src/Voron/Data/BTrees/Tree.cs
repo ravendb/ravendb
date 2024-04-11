@@ -1498,7 +1498,10 @@ namespace Voron.Data.BTrees
                 _fixedSizeTrees[fixedTree.Name] = fixedTree;
             }
 
-            Debug.Assert(State.Header.Flags.HasFlag(TreeFlags.FixedSizeTrees));
+            // RavenDB-22261: It may happen that the FixedSizeTree requested does not exist, and if it does not
+            // it would still return an instance. This is a workaround because the check in debug is correct.
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-22261/Inconsistency-in-Tree-external-API
+            Debug.Assert(fixedTree.NumberOfEntries == 0 || State.Header.Flags.HasFlag(TreeFlags.FixedSizeTrees));
 
             return fixedTree;
         }
@@ -1513,7 +1516,11 @@ namespace Voron.Data.BTrees
                 _fixedSizeTreesForDouble[fixedTree.Name] = fixedTree;
             }
 
-            Debug.Assert(State.Header.Flags.HasFlag(TreeFlags.FixedSizeTrees));
+            // RavenDB-22261: It may happen that the FixedSizeTree requested does not exist, and if it does not
+            // it would still return an instance. This is a workaround because the check in debug is correct.
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-22261/Inconsistency-in-Tree-external-API
+            Debug.Assert(fixedTree.NumberOfEntries == 0 || State.Header.Flags.HasFlag(TreeFlags.FixedSizeTrees));
+
 
             return fixedTree;
         }
