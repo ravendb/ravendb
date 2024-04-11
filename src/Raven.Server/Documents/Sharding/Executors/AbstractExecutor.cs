@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -44,10 +45,13 @@ public abstract class AbstractExecutor : IDisposable
     protected abstract void OnCertificateChange(object sender, EventArgs e);
 
     public Task<TCombinedResult> ExecuteParallelForAllAsync<TResult, TCombinedResult>(IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token = default)
-        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult, TCombinedResult>(GetAllPositions(), operation, token);
+        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFirstFailure, TResult, TCombinedResult>(GetAllPositions(), operation, token);
+
+    public Task<TCombinedResult> ExecuteParallelForAllThrowAggregateFailure<TResult, TCombinedResult>(IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token = default)
+        => ExecuteForShardsAsync<ParallelExecution, ThrowAggregateFailure, TResult, TCombinedResult>(GetAllPositions(), operation, token);
 
     public Task<TResult> ExecuteParallelForAllAsync<TResult>(IShardedOperation<TResult> operation, CancellationToken token = default)
-        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult>(GetAllPositions(), operation, token);
+        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFirstFailure, TResult>(GetAllPositions(), operation, token);
 
     protected Task<TResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(Memory<int> shards, IShardedOperation<TResult, TResult> operation, CancellationToken token = default)
         where TExecutionMode : struct, IExecutionMode
@@ -56,15 +60,15 @@ public abstract class AbstractExecutor : IDisposable
 
     public Task ExecuteParallelForShardsAsync(Memory<int> shards,
         IShardedOperation operation, CancellationToken token = default)
-        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, object, object>(shards, operation, token);
+        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFirstFailure, object, object>(shards, operation, token);
 
     public Task<TResult> ExecuteParallelForShardsAsync<TResult>(Memory<int> shards,
         IShardedOperation<TResult> operation, CancellationToken token = default)
-        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult, TResult>(shards, operation, token);
+        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFirstFailure, TResult, TResult>(shards, operation, token);
 
     public Task<TCombinedResult> ExecuteParallelForShardsAsync<TResult, TCombinedResult>(Memory<int> shards,
         IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token = default)
-        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult, TCombinedResult>(shards, operation, token);
+        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFirstFailure, TResult, TCombinedResult>(shards, operation, token);
 
     public Task<TCombinedResult> ExecuteParallelAndIgnoreErrorsForShardsAsync<TResult, TCombinedResult>(Memory<int> shards,
         IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token = default)
@@ -178,7 +182,7 @@ public abstract class AbstractExecutor : IDisposable
                 }
                 catch
                 {
-                    if (typeof(TFailureMode) == typeof(ThrowOnFailure))
+                    if (typeof(TFailureMode) == typeof(ThrowOnFirstFailure))
                         throw;
                 }
             }
@@ -192,13 +196,22 @@ public abstract class AbstractExecutor : IDisposable
             }
             catch (Exception e)
             {
-                if (typeof(TFailureMode) == typeof(ThrowOnFailure))
+                if (typeof(TFailureMode) == typeof(ThrowOnFirstFailure))
                     throw;
 
                 _exceptions ??= new Dictionary<int, Exception>();
                 _exceptions[shardNumber] = e;
             }
         }
+
+        if (typeof(TFailureMode) == typeof(ThrowAggregateFailure) && _exceptions?.Count > 0)
+        {
+            if (_exceptions.Count == 1)
+                throw _exceptions.First().Value;
+
+            throw new AggregateException($"Some shards ({string.Join(',', _exceptions.Keys)}) threw an exception", _exceptions.Values);
+        }
+
     }
 
     protected static void SafelyDisposeExecutors(IEnumerable<RequestExecutor> executors)
@@ -277,12 +290,17 @@ public struct OneByOneExecution : IExecutionMode
 
 }
 
-public struct ThrowOnFailure : IFailureMode
+public struct ThrowOnFirstFailure : IFailureMode
 {
 
 }
 
 public struct IgnoreFailure : IFailureMode
+{
+
+}
+
+public struct ThrowAggregateFailure : IFailureMode
 {
 
 }
