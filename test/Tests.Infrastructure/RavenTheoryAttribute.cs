@@ -18,6 +18,12 @@ public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
 
     public bool LicenseRequired { get; set; }
 
+    public bool NightlyBuildRequired { get; set; }
+
+    public bool S3Required { get; set; }
+
+    public bool AzureRequired { get; set; }
+
     public override string Skip
     {
         get
@@ -33,6 +39,15 @@ public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
 
             if (LicenseRequiredFactAttribute.ShouldSkip(LicenseRequired))
                 return LicenseRequiredFactAttribute.SkipMessage;
+
+            if (NightlyBuildRequired && NightlyBuildFactAttribute.ShouldSkip(out skip))
+                return skip;
+
+            if (S3Required && AmazonS3RetryTheoryAttribute.ShouldSkip(out skip))
+                return skip;
+
+            if (AzureRequired && AzureRetryTheoryAttribute.ShouldSkip(out skip))
+                return skip;
 
             return null;
         }

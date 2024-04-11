@@ -14,5 +14,17 @@ namespace Tests.Infrastructure
                 return NightlyBuildTheoryAttribute.SkipMessage;
             }
         }
+
+        public static bool ShouldSkip(out string skipMessage)
+        {
+            if (NightlyBuildTheoryAttribute.IsNightlyBuild)
+            {
+                skipMessage = null;
+                return false;
+            }
+
+            skipMessage = NightlyBuildTheoryAttribute.SkipMessage;
+            return true;
+        }
     }
 }

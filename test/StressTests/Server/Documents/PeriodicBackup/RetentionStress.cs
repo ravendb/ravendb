@@ -11,7 +11,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
         {
         }
 
-        [NightlyBuildTheory]
+        [RavenTheory(RavenTestCategory.BackupExportImport, NightlyBuildRequired = true)]
         [InlineData(20, 5, false)]
         [InlineData(20, 20, false)]
         [InlineData(25, 10, false)]
@@ -38,7 +38,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [NightlyBuildTheory(Skip = "Requires Amazon AWS Credentials")]
+        [RavenTheory(RavenTestCategory.BackupExportImport, NightlyBuildRequired = true, S3Required = true)]
         [InlineData(20, 5, false)]
         [InlineData(20, 20, false)]
         [InlineData(25, 10, false)]
@@ -63,7 +63,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [MultiTheory(typeof(NightlyBuildTheoryAttribute), typeof(AzureRetryTheoryAttribute))]
+        [RavenTheory(RavenTestCategory.BackupExportImport, NightlyBuildRequired = true, AzureRequired = true)]
         [InlineData(20, 5, false)]
         [InlineData(20, 20, false)]
         [InlineData(25, 10, false)]
