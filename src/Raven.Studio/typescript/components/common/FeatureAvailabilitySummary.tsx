@@ -12,7 +12,7 @@ import { AccordionItemWrapper } from "./AboutView";
 
 export type AvailabilityValue = boolean | number | string;
 
-interface ValueData {
+export interface FeatureAvailabilityValueData {
     value: AvailabilityValue;
     overwrittenValue?: AvailabilityValue;
 }
@@ -20,9 +20,9 @@ interface ValueData {
 export interface FeatureAvailabilityData {
     featureName?: string;
     featureIcon?: IconName;
-    community: ValueData;
-    professional?: ValueData;
-    enterprise: ValueData;
+    community: FeatureAvailabilityValueData;
+    professional?: FeatureAvailabilityValueData;
+    enterprise: FeatureAvailabilityValueData;
 }
 
 interface FeatureAvailabilitySummaryProps {
@@ -218,25 +218,12 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                     </a>
                 </div>
             )}
-            {currentLicense !== "Enterprise" && currentLicense !== "None" && (
-                <div className="hstack gap-4 justify-content-center mt-4 flex-wrap">
-                    Upgrade License
-                    <a
-                        href={buyLink}
-                        target="_blank"
-                        color="primary"
-                        className="btn btn-primary btn-lg rounded-pill px-4"
-                    >
-                        <Icon icon="license" margin="me-3" />
-                        Pricing plans
-                    </a>
-                </div>
-            )}
+            {currentLicense !== "Enterprise" && currentLicense !== "None" && <UpgradeLinkSection />}
         </>
     );
 }
 
-function formatAvailabilityValue(data: ValueData, canBeEnabledInCloud?: boolean): ReactNode {
+function formatAvailabilityValue(data: FeatureAvailabilityValueData, canBeEnabledInCloud?: boolean): ReactNode {
     const value = data.overwrittenValue ?? data.value;
 
     let formattedValue: ReactNode = value;
@@ -279,6 +266,45 @@ function formatAvailabilityValue(data: ValueData, canBeEnabledInCloud?: boolean)
                 </UncontrolledTooltip>
             </div>
         </>
+    );
+}
+
+function UpgradeLinkSection() {
+    const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
+
+    const ravenBuyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
+    const cloudPricingLink = "https://cloud.ravendb.net/pricing";
+
+    return (
+        <div className="hstack gap-4 justify-content-center mt-4 flex-wrap">
+            {isCloud ? (
+                <>
+                    Upgrade Instance
+                    <a
+                        href={cloudPricingLink}
+                        target="_blank"
+                        color="primary"
+                        className="btn btn-primary btn-lg rounded-pill px-4"
+                    >
+                        <Icon icon="license" margin="me-3" />
+                        Cloud pricing
+                    </a>
+                </>
+            ) : (
+                <>
+                    Upgrade License
+                    <a
+                        href={ravenBuyLink}
+                        target="_blank"
+                        color="primary"
+                        className="btn btn-primary btn-lg rounded-pill px-4"
+                    >
+                        <Icon icon="license" margin="me-3" />
+                        Pricing plans
+                    </a>
+                </>
+            )}
+        </div>
     );
 }
 
