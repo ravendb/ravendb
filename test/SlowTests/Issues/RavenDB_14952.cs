@@ -7,6 +7,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,10 +19,19 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanDoFacetQueryWithAliasOnFullRange_WhenAliasIsTheSameAsOneOfTheIndexFields()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanDoFacetQueryWithAliasOnFullRange_WhenAliasIsTheSameAsOneOfTheIndexFields(Options options) =>
+            FacetAggregationOnFullRange(options, true);
+
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+        public void AggregationFacetOnAllResults(Options options) =>
+            FacetAggregationOnFullRange(options, false);
+
+        private void FacetAggregationOnFullRange(Options options, bool useAlias)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Orders_Totals().Execute(store);
 
@@ -97,20 +107,27 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
+                    var aliasForQuery = useAlias ? $" as Total" : string.Empty;
+                    
                     var result = commands.Query(new Raven.Client.Documents.Queries.IndexQuery
                     {
-                        Query = @"
+                        Query = @$"
 from index 'Orders/Totals'
 where Total < 1000
-select facet(sum(Total)) as Total"
+select facet(sum(Total)) {aliasForQuery}"
                     });
 
                     var facetResult = (FacetResult)DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable(typeof(FacetResult), (BlittableJsonReaderObject)result.Results[0], "facet/result");
 
-                    Assert.Equal("Total", facetResult.Name);
+                    var alias = useAlias ? "Total" : Constants.Documents.Querying.Facet.AllResults;
+                    Assert.Equal(alias, facetResult.Name);
+                    
+                    
                     Assert.Equal(1, facetResult.Values.Count);
                     Assert.Equal(Constants.Documents.Querying.Facet.AllResults, facetResult.Values[0].Range);
                     Assert.Equal(3, facetResult.Values[0].Count);
+                    
+                    Assert.Equal(640, facetResult.Values[0].Sum);
                 }
             }
         }
