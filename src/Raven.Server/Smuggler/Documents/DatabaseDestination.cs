@@ -12,6 +12,7 @@ using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -66,6 +67,7 @@ namespace Raven.Server.Smuggler.Documents
         private BuildVersionType _buildType;
         private DatabaseSmugglerOptionsServerSide _options;
         protected SmugglerResult _result;
+        protected Action<IOperationProgress> _onProgress;
 
         public DatabaseDestination(DocumentDatabase database, CancellationToken token = default)
         {
@@ -75,11 +77,12 @@ namespace Raven.Server.Smuggler.Documents
             _duplicateDocsHandler = new DuplicateDocsHandler(_database);
         }
 
-        public IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
+        public IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, long buildVersion)
         {
             _buildType = BuildVersion.Type(buildVersion);
             _options = options;
             _result = result;
+            _onProgress = onProgress;
 
             return new AsyncDisposableAction(() =>
             {
@@ -137,13 +140,13 @@ namespace Raven.Server.Smuggler.Documents
 
             DatabaseCompareExchangeActions CreateActions()
             {
-                return new DatabaseCompareExchangeActions(_database, context, backupKind, _result, _token);
+                return new DatabaseCompareExchangeActions(_database, context, backupKind, _result, _onProgress, _token);
             }
         }
 
         public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context)
         {
-            return new DatabaseCompareExchangeActions(_database, context, backupKind: null, _result, _token);
+            return new DatabaseCompareExchangeActions(_database, context, backupKind: null, _result, _onProgress, _token);
         }
 
         public ICounterActions Counters(SmugglerResult result)
@@ -604,8 +607,9 @@ namespace Raven.Server.Smuggler.Documents
             private readonly BackupKind? _backupKind;
             private readonly CancellationToken _token;
             private readonly SmugglerResult _result;
+            private readonly Action<IOperationProgress> _onProgress;
 
-            public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, BackupKind? backupKind, SmugglerResult result, CancellationToken token)
+            public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, BackupKind? backupKind, SmugglerResult result, Action<IOperationProgress> onProgress, CancellationToken token)
             {
                 _database = database;
                 _context = context;
@@ -619,6 +623,7 @@ namespace Raven.Server.Smuggler.Documents
                 _clusterTransactionCommandsBatchSize = new Size(database.Is32Bits ? 2 : 16, SizeUnit.Megabytes);
                 _clusterTransactionCommandsSize = new Size(0, SizeUnit.Megabytes);
                 _result = result;
+                _onProgress = onProgress;
             }
 
             public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
@@ -752,7 +757,11 @@ namespace Raven.Server.Smuggler.Documents
                             break;
                 
                         totalExecutedCommands += executed.Sum(x => x.Commands.Count);
-                        _result.AddInfo($"Executed {totalExecutedCommands:#,#;;0} cluster transaction commands.");
+                        if (_result != null)
+                        {
+                            _result.AddInfo($"Executed {totalExecutedCommands:#,#;;0} cluster transaction commands.");
+                            _onProgress?.Invoke(_result.Progress);
+                        }
                     }
                 }
             }

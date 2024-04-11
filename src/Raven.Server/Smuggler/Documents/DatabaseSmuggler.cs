@@ -88,7 +88,7 @@ namespace Raven.Server.Smuggler.Documents
 
             using (_patcher?.Initialize())
             using (var initializeResult = await _source.InitializeAsync(_options, result))
-            await using (_destination.InitializeAsync(_options, result, initializeResult.BuildNumber))
+            await using (_destination.InitializeAsync(_options, result, _onProgress, initializeResult.BuildNumber))
             {
                 ModifyV41OperateOnTypes(initializeResult.BuildNumber, isLastFile);
 
