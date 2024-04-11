@@ -4,7 +4,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Corax;
-using Corax.Querying;
 using Corax.Mappings;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes;
@@ -219,6 +218,12 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         if (facetsByName.TryGetValue(result.Key, out var facetValues) == false)
             facetsByName[result.Key] = facetValues = new Dictionary<string, FacetValues>();
 
+        if (result.Key == Client.Constants.Documents.Querying.Facet.AllResults || result.Value.AggregateBy == Client.Constants.Documents.Querying.Facet.AllResults)
+        {
+            InsertTerm(Encodings.Utf8.GetBytes(result.Value.AggregateBy), ref reader);
+            return;
+        }
+        
         long fieldRootPage = GetFieldRootPage(result.Value.AggregateBy);
 
         var cloned = reader;
@@ -230,7 +235,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                 : reader.Current.Decoded();
             
             InsertTerm(key, ref cloned);
-        } 
+        }
 
         void InsertTerm(ReadOnlySpan<byte> term, ref EntryTermsReader reader)
         {
