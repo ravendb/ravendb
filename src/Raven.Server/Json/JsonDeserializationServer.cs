@@ -76,6 +76,7 @@ using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConf
 using DatabasesInfo = Raven.Client.ServerWide.Operations.DatabasesInfo;
 using MigrationConfiguration = Raven.Server.Smuggler.Migration.MigrationConfiguration;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
+using Raven.Server.Documents.Handlers.Processors;
 
 namespace Raven.Server.Json
 {
@@ -331,7 +332,7 @@ namespace Raven.Server.Json
 
             public static readonly Func<BlittableJsonReaderObject, UpdateUnusedDatabasesOperation.Parameters> UnusedDatabaseParameters = GenerateJsonDeserializationRoutine<UpdateUnusedDatabasesOperation.Parameters>();
 
-            public static readonly Func<BlittableJsonReaderObject, ShardedAdminForbiddenUnusedIdsHandlerProcessorForGetUnusedIds.ShardedGetForbiddenUnusedIdsOperation.Parameters> GetForbiddenUnusedIdsParameters = GenerateJsonDeserializationRoutine<ShardedAdminForbiddenUnusedIdsHandlerProcessorForGetUnusedIds.ShardedGetForbiddenUnusedIdsOperation.Parameters>();
+            public static readonly Func<BlittableJsonReaderObject, ValidateUnusedIdsCommand.Parameters> ValidateUnusedIdsParameters = GenerateJsonDeserializationRoutine<ValidateUnusedIdsCommand.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, ConfigureTimeSeriesValueNamesOperation.Parameters> TimeSeriesValueNamesParameters = GenerateJsonDeserializationRoutine<ConfigureTimeSeriesValueNamesOperation.Parameters>();
 

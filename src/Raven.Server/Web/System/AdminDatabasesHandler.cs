@@ -32,6 +32,7 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
@@ -60,7 +61,6 @@ using Voron.Util.Settings;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
 using Index = Raven.Server.Documents.Indexes.Index;
 using Size = Sparrow.Size;
-using ShardedGetForbiddenUnusedIdsOperation = Raven.Server.Documents.Sharding.Handlers.Processors.ShardedAdminForbiddenUnusedIdsHandlerProcessorForGetUnusedIds.ShardedGetForbiddenUnusedIdsOperation;
 
 namespace Raven.Server.Web.System
 {
@@ -1126,7 +1126,6 @@ namespace Raven.Server.Web.System
 
             await ServerStore.EnsureNotPassiveAsync();
 
-            AggregateException ae = null;
             HashSet<string> unusedIds;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1139,20 +1138,44 @@ namespace Raven.Server.Web.System
 
             if (validate)
             {
+                foreach (var id in unusedIds)
+                    ValidateDatabaseIdContent(id);
+                
                 using (var token = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan))
-                    ae = await ValidateUnusedIdsAsync(unusedIds, database, token.Token);
+                    await ValidateUnusedIdsAsync(unusedIds, database, token.Token);
             }
 
             var command = new UpdateUnusedDatabaseIdsCommand(database, unusedIds, GetRaftRequestIdFromQuery());
             await ServerStore.SendToLeaderAsync(command);
 
-            if (ae is not null)
-                throw ae;
-
             NoContentStatus();
         }
 
-        private async Task<AggregateException> ValidateUnusedIdsAsync(HashSet<string> unusedIds, string database, CancellationToken token = default)
+        private static unsafe void ValidateDatabaseIdContent(string id)
+        {
+            const int fixedLength = StorageEnvironment.Base64IdLength + StorageEnvironment.Base64IdLength % 4;
+
+            if (id is not { Length: StorageEnvironment.Base64IdLength })
+            {
+                throw new InvalidOperationException($"Database ID '{id}' isn't valid because its length ({id.Length}) isn't {StorageEnvironment.Base64IdLength}.");
+            }
+
+            Span<byte> bytes = stackalloc byte[fixedLength / 3 * 4];
+            char* buffer = stackalloc char[fixedLength];
+            fixed (char* str = id)
+            {
+                Buffer.MemoryCopy(str, buffer, 24 * sizeof(char), StorageEnvironment.Base64IdLength * sizeof(char));
+                for (int i = StorageEnvironment.Base64IdLength; i < fixedLength; i++)
+                    buffer[i] = '=';
+
+                if (Convert.TryFromBase64Chars(new ReadOnlySpan<char>(buffer, fixedLength), bytes, out _) == false)
+                {
+                    throw new InvalidOperationException($"Database ID '{id}' isn't valid because it isn't Base64Id (it contains chars which cannot be in Base64String).");
+                }
+            }
+        }
+
+        private async Task ValidateUnusedIdsAsync(HashSet<string> unusedIds, string database, CancellationToken token = default)
         {
             Dictionary<string, string> forbiddenIds;
 
@@ -1160,7 +1183,6 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, database))
             {
                 nodesUrls = ServerStore.GetClusterTopology(context).AllNodes.Values.ToArray();
             }
@@ -1168,32 +1190,14 @@ namespace Raven.Server.Web.System
             using (var requestExecutor = RequestExecutor.Create(nodesUrls, database, Server.Certificate.Certificate, DocumentConventions.Default))
             using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
-                var cmd = new ShardedGetForbiddenUnusedIdsOperation.GetForbiddenUnusedIdsCommand(
-                    new ShardedGetForbiddenUnusedIdsOperation.Parameters
+                var cmd = new ValidateUnusedIdsCommand(
+                    new ValidateUnusedIdsCommand.Parameters
                     {
-                        ValidateContent = true, DatabaseIds = unusedIds
+                        DatabaseIds = unusedIds
                     });
 
                 await requestExecutor.ExecuteAsync(cmd, context, token: token);
-                forbiddenIds = cmd.Result;
             }
-
-            if (forbiddenIds != null && forbiddenIds.Count > 0)
-            {
-                var exceptions = new List<InvalidOperationException>();
-                foreach (var (id, reason) in forbiddenIds)
-                {
-                    unusedIds.Remove(id);
-                    exceptions.Add(new InvalidOperationException(reason));
-                }
-
-                if(unusedIds.Count > 0)
-                    return new AggregateException($"Some IDs ({forbiddenIds.Count} out of {forbiddenIds.Count + unusedIds.Count}) were not added to the unused IDs list.", exceptions);
-                
-                return new AggregateException($"No IDs were added to the unused IDs list.", exceptions);
-            }
-
-            return null;
         }
 
 
