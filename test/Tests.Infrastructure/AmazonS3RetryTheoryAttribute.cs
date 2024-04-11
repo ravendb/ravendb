@@ -40,32 +40,23 @@ namespace Tests.Infrastructure
         public AmazonS3RetryTheoryAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
             : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
         {
-            if (RavenTestHelper.SkipIntegrationTests)
+        }
+
+        public override string Skip
+        {
+            get
             {
-                Skip = RavenTestHelper.SkipIntegrationMessage;
-                return;
+                ShouldSkip(out var skipMessage);
+                return skipMessage;
             }
 
-            if (RavenTestHelper.IsRunningOnCI)
-                return;
+            set => base.Skip = value;
+        }
 
-            if (EnvVariableMissing)
-            {
-                Skip = $"Test is missing '{S3CredentialEnvironmentVariable}' environment variable.";
-                return;
-            }
-
-            if (string.IsNullOrEmpty(ParsingError) == false)
-            {
-                Skip = $"Failed to parse the Amazon S3 settings, error: {ParsingError}";
-                return;
-            }
-
-            if (_s3Settings == null)
-            {
-                Skip = $"S3 {memberName} tests missing Amazon S3 settings.";
-                return;
-            }
+        public static bool ShouldSkip(out string skipMessage)
+        {
+            skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(EnvVariableMissing, S3CredentialEnvironmentVariable, ParsingError, _s3Settings);
+            return string.IsNullOrEmpty(skipMessage) == false;
         }
     }
 }
