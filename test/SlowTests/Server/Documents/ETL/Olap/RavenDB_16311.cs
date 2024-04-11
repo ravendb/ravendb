@@ -59,7 +59,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    using (OlapEtl.TestScript(new TestOlapEtlScript
+                    var testResult = OlapEtl.TestScript(new TestOlapEtlScript
                     {
                         DocumentId = "orders/1",
                         Configuration = new OlapEtlConfiguration
@@ -69,7 +69,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
                             {
                                 new Transformation
                                 {
-                                    Collections = {"Orders"},
+                                    Collections = { "Orders" },
                                     Name = "MonthlyOrders",
                                     Script =
                                         @"
@@ -89,33 +89,31 @@ namespace SlowTests.Server.Documents.ETL.Olap
                                 }
                             }
                         }
-                    }, database, database.ServerStore, context, out var testResult))
-                    {
+                    }, database, database.ServerStore, context);
+                    
+                    var result = (OlapEtlTestScriptResult)testResult;
 
-                        var result = (OlapEtlTestScriptResult)testResult;
+                    Assert.Equal(0, result.TransformationErrors.Count);
 
-                        Assert.Equal(0, result.TransformationErrors.Count);
+                    Assert.Equal(1, result.ItemsByPartition.Count);
 
-                        Assert.Equal(1, result.ItemsByPartition.Count);
+                    Assert.Equal(4, result.ItemsByPartition[0].Columns.Count);
 
-                        Assert.Equal(4, result.ItemsByPartition[0].Columns.Count);
+                    var companyColumn = result.ItemsByPartition[0].Columns.First(x => x.Name == "Company");
+                    Assert.Equal("companies/1", companyColumn.Values[0]);
 
-                        var companyColumn = result.ItemsByPartition[0].Columns.First(x => x.Name == "Company");
-                        Assert.Equal("companies/1", companyColumn.Values[0]);
+                    var shipViaColumn = result.ItemsByPartition[0].Columns.First(x => x.Name == "ShipVia");
+                    Assert.Equal("shippers/1", shipViaColumn.Values[0]);
 
-                        var shipViaColumn = result.ItemsByPartition[0].Columns.First(x => x.Name == "ShipVia");
-                        Assert.Equal("shippers/1", shipViaColumn.Values[0]);
+                    var idColumn = result.ItemsByPartition[0].Columns.First(x => x.Name == ParquetTransformedItems.DefaultIdColumn);
+                    Assert.Equal("orders/1", idColumn.Values[0]);
 
-                        var idColumn = result.ItemsByPartition[0].Columns.First(x => x.Name == ParquetTransformedItems.DefaultIdColumn);
-                        Assert.Equal("orders/1", idColumn.Values[0]);
+                    var lastModifiedColumn = result.ItemsByPartition[0].Columns.First(x => x.Name == ParquetTransformedItems.LastModifiedColumn);
+                    Assert.NotNull(lastModifiedColumn.Values[0]);
 
-                        var lastModifiedColumn = result.ItemsByPartition[0].Columns.First(x => x.Name == ParquetTransformedItems.LastModifiedColumn);
-                        Assert.NotNull(lastModifiedColumn.Values[0]);
+                    Assert.Equal("Orders/order_date=2020-01-01-00-00", result.ItemsByPartition[0].Key);
 
-                        Assert.Equal("Orders/order_date=2020-01-01-00-00", result.ItemsByPartition[0].Key);
-
-                        Assert.Equal("test output", result.DebugOutput[0]);
-                    }
+                    Assert.Equal("test output", result.DebugOutput[0]);
                 }
             }
         }

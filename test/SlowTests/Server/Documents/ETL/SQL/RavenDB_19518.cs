@@ -61,24 +61,23 @@ public class RavenDB_19518 : SqlAwareTestBase
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                using (SqlEtl.TestScript(
-                           new TestSqlEtlScript
-                           {
-                               PerformRolledBackTransaction = false,
-                               DocumentId = docId,
-                               Configuration = new SqlEtlConfiguration()
-                               {
-                                   Name = "simulate",
-                                   ConnectionStringName = "simulate",
-                                   SqlTables =
-                                   {
-                                       new SqlEtlTable { TableName = "Items", DocumentIdColumn = "Id" }
-                                   },
-                                   Transforms =
-                                   {
-                                       new Transformation()
-                                       {
-                                           Collections = { "Items" }, Name = "Items", Script = @"
+                var testResult = SqlEtl.TestScript(
+                    new TestSqlEtlScript
+                    {
+                        PerformRolledBackTransaction = false,
+                        DocumentId = docId,
+                        Configuration = new SqlEtlConfiguration()
+                        {
+                            Name = "simulate",
+                            ConnectionStringName = "simulate",
+                            SqlTables = { new SqlEtlTable { TableName = "Items", DocumentIdColumn = "Id" } },
+                            Transforms =
+                            {
+                                new Transformation()
+                                {
+                                    Collections = { "Items" },
+                                    Name = "Items",
+                                    Script = @"
 var data = {
     Companies:  {
         Type : 'Array | Text',
@@ -86,22 +85,21 @@ var data = {
     }
 };
 loadToItems(data);"
-                                       }
-                                   }
-                               }
-                           }, database, database.ServerStore, context, out var testResult))
-                {
-                    var result = (SqlEtlTestScriptResult)testResult;
-                    Assert.Equal(0, result.TransformationErrors.Count);
-                    Assert.Equal(0, result.LoadErrors.Count);
-                    Assert.Equal(0, result.SlowSqlWarnings.Count);
+                                }
+                            }
+                        }
+                    }, database, database.ServerStore, context);
+                
+                var result = (SqlEtlTestScriptResult)testResult;
+                Assert.Equal(0, result.TransformationErrors.Count);
+                Assert.Equal(0, result.LoadErrors.Count);
+                Assert.Equal(0, result.SlowSqlWarnings.Count);
 
-                    Assert.Equal(1, result.Summary.Count);
+                Assert.Equal(1, result.Summary.Count);
 
-                    var orderLines = result.Summary.First(x => x.TableName == "Items");
+                var orderLines = result.Summary.First(x => x.TableName == "Items");
 
-                    Assert.Equal(2, orderLines.Commands.Length); // delete and insert
-                }
+                Assert.Equal(2, orderLines.Commands.Length); // delete and insert
             }
         }
     }

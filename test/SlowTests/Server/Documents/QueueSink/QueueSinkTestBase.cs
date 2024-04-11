@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.QueueSink;
+using Raven.Client.Util;
 using Raven.Server.Documents.QueueSink;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
@@ -60,9 +61,9 @@ namespace SlowTests.Server.Documents.QueueSink
             }
         }
         
-        public bool TryErrorFromAlert(string databaseName, QueueSinkConfiguration config, out QueueSinkErrorInfo error)
+        public async Task<QueueSinkErrorInfo> TryErrorFromAlertAsync(string databaseName, QueueSinkConfiguration config)
         {
-            var database = GetDatabase(databaseName).Result;
+            var database = await GetDatabase(databaseName);
 
             string tag = config.BrokerType == QueueBrokerType.Kafka ? QueueSinkProcess.KafkaTag : QueueSinkProcess.RabbitMqTag;
 
@@ -72,31 +73,24 @@ namespace SlowTests.Server.Documents.QueueSink
 
             if (errorAlert.Errors.Count != 0)
             {
-                error = errorAlert.Errors.First();
-
-                return true;
+                return errorAlert.Errors.First();
             }
             if (consumeErrorAlert.Errors.Count != 0)
             {
-                error = consumeErrorAlert.Errors.First();
-
-                return true;
+                return consumeErrorAlert.Errors.First();
             }
             if (scriptErrorAlert.Errors.Count != 0)
             {
-                error = scriptErrorAlert.Errors.First();
-
-                return true;
+                return scriptErrorAlert.Errors.First();
             }
 
-            error = null;
-            return false;
+            return null;
         }
         
         protected ManualResetEventSlim WaitForQueueSinkBatch(DocumentStore store,
             Func<string, QueueSinkProcessStatistics, bool> predicate)
         {
-            var database = GetDatabase(store.Database).Result;
+            var database = AsyncHelpers.RunSync(() => GetDatabase(store.Database));
 
             var mre = new ManualResetEventSlim();
 
@@ -113,7 +107,7 @@ namespace SlowTests.Server.Documents.QueueSink
         {
             if (etlDone.Wait(timeout) == false)
             {
-                TryErrorFromAlert(databaseName, config, out var error);
+                var error = AsyncHelpers.RunSync(() => TryErrorFromAlertAsync(databaseName, config));
 
                 Assert.Fail($"Queue Sink wasn't done. Error: {error?.Error}");
             }

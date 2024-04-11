@@ -24,17 +24,15 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Handlers.Processors
 
         protected abstract TTestEtlScript GetTestEtlScript(BlittableJsonReaderObject json);
 
-        protected abstract IDisposable TestScript(TOperationContext context, TTestEtlScript testScript, out TestEtlScriptResult testResult);
+        protected abstract TestEtlScriptResult TestScript(TOperationContext context, TTestEtlScript testScript);
 
         private async ValueTask HandleCurrentNodeAsync(TOperationContext context, TTestEtlScript testScript)
         {
-            using (TestScript(context, testScript, out var testResult))
+            var testResult = TestScript(context, testScript);
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-                {
-                    var djv = testResult.ToJson(context);
-                    writer.WriteObject(context.ReadObject(djv, "et/sql/test"));
-                }
+                var djv = testResult.ToJson(context);
+                writer.WriteObject(context.ReadObject(djv, "et/sql/test"));
             }
         }
 

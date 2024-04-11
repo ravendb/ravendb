@@ -787,8 +787,12 @@ namespace Voron
                 currentWriteTransactionHolder == NativeMemory.CurrentThreadStats)
             {
                 throw new InvalidOperationException($"A write transaction is already opened by thread name: " +
-                                                    $"{currentWriteTransactionHolder.Name}, Id: {currentWriteTransactionHolder.ManagedThreadId}");
+                                                    $"{currentWriteTransactionHolder.Name}, Id: {currentWriteTransactionHolder.ManagedThreadId}{Environment.NewLine}" +
+                                                    $"{currentWriteTransactionHolder.CapturedStackTrace}");
             }
+
+            if (currentWriteTransactionHolder != null)
+                currentWriteTransactionHolder.CapturedStackTrace = Environment.StackTrace;
         }
 
         internal void IncrementUsageOnNewTransaction()
