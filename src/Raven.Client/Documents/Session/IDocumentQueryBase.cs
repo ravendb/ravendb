@@ -94,7 +94,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Matches documents with value of chosen field matching searched terms.
         /// </summary>
-        /// <param name="fieldName">Property selector for the field that searched terms will be checked against.</param>
+        /// <param name="propertySelector">Property selector for the field that searched terms will be checked against.</param>
         /// <param name="searchTerms">Space separated terms to search. If there is more than a single term, each of them will be checked independently.</param>
         /// <param name="operator">Operator to be used for relationship between terms. Default: Or.</param>
         TSelf Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, SearchOperator @operator = SearchOperator.Or);
@@ -176,7 +176,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Matches documents with value of the chosen field equal to the specified value.
         /// </summary>
-        /// <param name="fieldName">Name of the field to get value from.</param>
+        /// <param name="propertySelector">Name of the field to get value from.</param>
         /// <param name="value"></param>
         /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
@@ -369,6 +369,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="latitude">Latitude of a circle center.</param>
         /// <param name="longitude">Longitude of a circle center.</param>
         /// <param name="radiusUnits">Units that the radius was measured in (kilometers or miles).</param>
+        /// <param name="distanceErrorPct">Allowed error percentage. Default: 0.025.</param>
         TSelf WithinRadiusOf<TValue>(Expression<Func<T, TValue>> propertySelector, double radius, double latitude, double longitude, SpatialUnits? radiusUnits = null, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
@@ -379,9 +380,10 @@ namespace Raven.Client.Documents.Session
         /// <param name="latitude">Latitude of a circle center.</param>
         /// <param name="longitude">Longitude of a circle center.</param>
         /// <param name="radiusUnits">Units that the radius was measured in (kilometers or miles).</param>
+        /// /// <param name="distanceErrorPct">Allowed error percentage. Default: 0.025.</param>
         TSelf WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits? radiusUnits = null, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
-        /// <inheritdoc cref="RelatesToShape{TValue}(Expression{Func{T, TValue}}, string, Raven.Client.Documents.Indexes.Spatial.SpatialRelation, Raven.Client.Documents.Indexes.SpatialUnits, double)"/>
+        /// <inheritdoc cref="RelatesToShape{TValue}(Expression{Func{T, TValue}}, string, SpatialRelation, SpatialUnits, double)"/>
         TSelf RelatesToShape<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWkt, SpatialRelation relation, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
@@ -394,7 +396,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="distanceErrorPct">Allowed error percentage. Default: 0.025.</param>
         TSelf RelatesToShape<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWkt, SpatialRelation relation, SpatialUnits units, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
-        /// <inheritdoc cref="RelatesToShape(string, string, Raven.Client.Documents.Indexes.Spatial.SpatialRelation, Raven.Client.Documents.Indexes.Spatial.SpatialUnits, double)"/>
+        /// <inheritdoc cref="RelatesToShape(string, string, SpatialRelation, SpatialUnits, double)"/>
         TSelf RelatesToShape(string fieldName, string shapeWkt, SpatialRelation relation, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
