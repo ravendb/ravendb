@@ -1123,6 +1123,8 @@ namespace Voron.Impl
                 _env.ActiveTransactions.Add(nextTx);
                 _env.WriteTransactionStarted();
 
+                nextTx.AfterCommitWhenNewTransactionsPrevented += _env.InvokeAfterCommitWhenNewTransactionsPrevented;
+                _env.InvokeNewTransactionCreated(nextTx);
 
                 return nextTx;
             }
