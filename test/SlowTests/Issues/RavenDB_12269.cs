@@ -80,6 +80,8 @@ namespace SlowTests.Issues
 
                     await session.SaveChangesAsync();
 
+                    Indexes.WaitForIndexing(store);
+
                     // this will ensure that index isn't in error state
                     try
                     {
