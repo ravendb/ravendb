@@ -12,11 +12,11 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors;
 
-internal class ValidateUnusedIdsHandlerProcessorForGet : AbstractValidateUnusedIdsHandlerProcessorForGet<DatabaseRequestHandler,
+internal class StatsHandlerProcessorForGetValidateUnusedIds : AbstractStatsHandlerProcessorForGetValidateUnusedIds<DatabaseRequestHandler,
     DocumentsOperationContext>
 {
 
-    public ValidateUnusedIdsHandlerProcessorForGet([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+    public StatsHandlerProcessorForGetValidateUnusedIds([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
@@ -24,8 +24,6 @@ internal class ValidateUnusedIdsHandlerProcessorForGet : AbstractValidateUnusedI
         string databaseName, CancellationToken token)
     {
         DatabaseTopology topology;
-
-        var exSb = new StringBuilder();
 
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())
@@ -37,10 +35,10 @@ internal class ValidateUnusedIdsHandlerProcessorForGet : AbstractValidateUnusedI
         foreach (var id in unusedIds)
         {
             if (id == topology.DatabaseTopologyIdBase64)
-                exSb.Append($"{GetPrefix()} {id} (because its the DatabaseTopologyIdBase64 of {databaseName})");
+                throw new InvalidOperationException($"{id} cannot be added to the 'unused ids' list, because its the DatabaseTopologyIdBase64 of {databaseName}");
 
             if (id == topology.ClusterTransactionIdBase64)
-                exSb.Append($"{GetPrefix()} {id} (because its the 'ClusterTransactionIdBase64' of {databaseName})");
+                throw new InvalidOperationException($"{id} cannot be added to the 'unused ids' list, because its the 'ClusterTransactionIdBase64' of {databaseName}");
         }
 
         foreach (var nodeTag in topology.AllNodes)
@@ -50,15 +48,7 @@ internal class ValidateUnusedIdsHandlerProcessorForGet : AbstractValidateUnusedI
             var stats = cmd.Result;
 
             if (unusedIds.Contains(stats.DatabaseId))
-                exSb.AppendLine($"{GetPrefix()} {stats.DatabaseId} (because it's the database id of '{databaseName}' on node {nodeTag})");
-        }
-
-        if (exSb.Length > 0)
-            throw new InvalidOperationException("Some ids cannot be added to the 'unused ids' list" + exSb.ToString());
-
-        string GetPrefix()
-        {
-            return exSb.Length == 0 ? ":" : ",";
+                throw new InvalidOperationException($"{stats.DatabaseId} cannot be added to the 'unused ids' list, because it's the database id of '{databaseName}' on node {nodeTag}");
         }
     }
 }

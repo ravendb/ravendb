@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/validate-unused-ids", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task ValidateUnusedIds()
         {
-            using (var processor = new ValidateUnusedIdsHandlerProcessorForGet(this))
+            using (var processor = new StatsHandlerProcessorForGetValidateUnusedIds(this))
                 await processor.ExecuteAsync();
         }
     }

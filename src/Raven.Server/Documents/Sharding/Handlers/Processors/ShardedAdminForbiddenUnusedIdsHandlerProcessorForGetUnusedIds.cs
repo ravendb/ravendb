@@ -7,26 +7,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
-using NuGet.Packaging;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
-using Raven.Client.Json;
-using Raven.Server.Documents.Commands.Revisions;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.Documents.Handlers.Processors.Revisions;
-using Raven.Server.Documents.Sharding.Executors;
-using Raven.Server.Documents.Sharding.Handlers.Processors.Revisions;
 using Raven.Server.Documents.Sharding.Operations;
-using Raven.Server.Json;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors;
 
-internal class ShardedValidateUnusedIdsHandlerProcessorForGet : AbstractValidateUnusedIdsHandlerProcessorForGet<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal class ShardedStatsHandlerProcessorForGetValidateUnusedIds : AbstractStatsHandlerProcessorForGetValidateUnusedIds<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedValidateUnusedIdsHandlerProcessorForGet([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
+    public ShardedStatsHandlerProcessorForGetValidateUnusedIds([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
@@ -38,7 +28,7 @@ internal class ShardedValidateUnusedIdsHandlerProcessorForGet : AbstractValidate
             {
                 DatabaseIds = unusedIds
             });
-        await RequestHandler.ShardExecutor.ExecuteParallelForAllThrowAggregateFailure(op, token);
+        await RequestHandler.ShardExecutor.ExecuteParallelForAllThrowAggregatedFailure(op, token);
     }
 
     internal readonly struct ShardedValidateUnusedIdsOperation : IShardedOperation

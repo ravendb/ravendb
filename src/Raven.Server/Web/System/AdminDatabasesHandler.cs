@@ -1139,7 +1139,7 @@ namespace Raven.Server.Web.System
             if (validate)
             {
                 foreach (var id in unusedIds)
-                    ValidateDatabaseIdContent(id);
+                    ValidateDatabaseIdFormat(id);
                 
                 using (var token = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan))
                     await ValidateUnusedIdsAsync(unusedIds, database, token.Token);
@@ -1151,7 +1151,7 @@ namespace Raven.Server.Web.System
             NoContentStatus();
         }
 
-        private static unsafe void ValidateDatabaseIdContent(string id)
+        private static unsafe void ValidateDatabaseIdFormat(string id)
         {
             const int fixedLength = StorageEnvironment.Base64IdLength + StorageEnvironment.Base64IdLength % 4;
 
@@ -1177,8 +1177,6 @@ namespace Raven.Server.Web.System
 
         private async Task ValidateUnusedIdsAsync(HashSet<string> unusedIds, string database, CancellationToken token = default)
         {
-            Dictionary<string, string> forbiddenIds;
-
             string[] nodesUrls;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
