@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -15,6 +16,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Config;
 using Raven.Server.Documents.PeriodicBackup.Aws;
@@ -27,6 +29,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Platform;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
@@ -1684,6 +1687,102 @@ namespace SlowTests.Sharding.Backup
                 await DeleteObjects(googleCloudSettings);
             }
         }
+        
+        [AmazonS3RetryFact]
+        public async Task CanRestoreShardedDatabase_FromServerWideBackup()
+        {
+            var s3Settings = GetS3Settings();
+
+            try
+            {
+                DoNotReuseServer();
+
+                using (var store = Sharding.GetDocumentStore())
+                {
+                    await Sharding.Backup.InsertData(store);
+
+                    // use backup configuration script for S3 settings
+                    var scriptPath = GenerateConfigurationScriptForS3(s3Settings, out var command);
+                    var serverWideConfig = new ServerWideBackupConfiguration
+                    {
+                        FullBackupFrequency = "0 0 1 1 *",
+                        Disabled = false,
+                        S3Settings = new S3Settings
+                        {
+                            GetBackupConfigurationScript = new GetBackupConfigurationScript
+                            {
+                                Exec = command,
+                                Arguments = scriptPath
+                            }
+                        }
+                    };
+
+                    // define server wide backup
+                    await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideConfig));
+
+                    // wait for backup to complete
+                    var backupsDone = await Sharding.Backup.WaitForBackupToComplete(store);
+
+                    var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    Assert.Equal(1, databaseRecord.PeriodicBackups.Count);
+
+                    var taskId = databaseRecord.PeriodicBackups[0].TaskId;
+                    await Sharding.Backup.RunBackupAsync(store.Database, taskId, isFullBackup: true);
+
+                    Assert.True(WaitHandle.WaitAll(backupsDone, TimeSpan.FromMinutes(1)));
+
+                    var sharding = await Sharding.GetShardingConfigurationAsync(store);
+
+                    ShardedRestoreSettings settings;
+                    using (var s3Client = new RavenAwsS3Client(s3Settings, ShardedRestoreBackupTests.DefaultBackupConfiguration))
+                    {
+                        var prefix = $"{s3Settings.RemoteFolderName}/";
+                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, "/", listFolders: true);
+
+                        // should have one root folder for all shards 
+                        Assert.Equal(1, cloudObjects.FileInfoDetails.Count);
+
+                        var rootFolderName = cloudObjects.FileInfoDetails[0].FullPath;
+
+                        Assert.EndsWith($"{store.Database}/", rootFolderName);
+                        Assert.DoesNotContain('$', rootFolderName);
+
+                        var shardsBackupFolders = await s3Client.ListObjectsAsync(rootFolderName, "/", listFolders: true);
+
+                        // one backup folder per shard
+                        Assert.Equal(3, shardsBackupFolders.FileInfoDetails.Count);
+
+                        var backupPaths = shardsBackupFolders.FileInfoDetails.Select(x => x.FullPath).ToList();
+
+                        Assert.Contains(ShardHelper.ToShardName(store.Database, 0), backupPaths[0]);
+                        Assert.Contains(ShardHelper.ToShardName(store.Database, 1), backupPaths[1]);
+                        Assert.Contains(ShardHelper.ToShardName(store.Database, 2), backupPaths[2]);
+
+                        settings = Sharding.Backup.GenerateShardRestoreSettings(backupPaths, sharding);
+                    }
+
+                    var restoredDatabaseName = $"restored_database-{Guid.NewGuid()}";
+                    using (Backup.RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
+                    {
+                        DatabaseName = restoredDatabaseName,
+                        ShardRestoreSettings = settings,
+                        Settings = s3Settings
+                    }, timeout: TimeSpan.FromSeconds(60)))
+                    {
+                        var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(restoredDatabaseName));
+                        Assert.Equal(3, dbRec.Sharding.Shards.Count);
+
+                        await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 16, database: restoredDatabaseName);
+
+                    }
+                }
+            }
+            finally
+            {
+                await DeleteObjects(s3Settings);
+            }
+
+        }
 
         private static string GetDirectoryName(string path)
         {
@@ -1829,6 +1928,29 @@ namespace SlowTests.Sharding.Backup
             {
                 // ignored
             }
+        }
+
+        private static string GenerateConfigurationScriptForS3(S3Settings settings, out string command)
+        {
+            var scriptPath = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+            var s3SettingsString = JsonConvert.SerializeObject(settings);
+
+            string script;
+            if (PlatformDetails.RunningOnPosix)
+            {
+                command = "bash";
+                script = $"#!/bin/bash\r\necho '{s3SettingsString}'";
+                File.WriteAllText(scriptPath, script);
+                Process.Start("chmod", $"700 {scriptPath}");
+            }
+            else
+            {
+                command = "powershell";
+                script = $"echo '{s3SettingsString}'";
+                File.WriteAllText(scriptPath, script);
+            }
+
+            return scriptPath;
         }
 
     }
