@@ -164,6 +164,9 @@ internal static class DocumentationUrls
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/session/get/get-entries#include-parent-and-tagged-documents"/></remarks>
             public const string Include = nameof(Include);
 
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/session/include/with-session-query"/></remarks>
+            public const string IncludeWithQuery = nameof(IncludeWithQuery);
+
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/overview"/></remarks>
             public const string ClientApi = nameof(ClientApi);
 

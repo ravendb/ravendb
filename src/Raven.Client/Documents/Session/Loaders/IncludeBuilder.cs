@@ -76,18 +76,42 @@ namespace Raven.Client.Documents.Session.Loaders
         ITimeSeriesIncludeBuilder IncludeDocument();
     }
 
+    /// <summary>
+    /// The server is instructed to pre-load referenced documents concurrently with retrieving the time series data.<br/>
+    /// The time series results are added to the session unit of work, and subsequent requests to load them are served directly from the session cache,
+    /// without requiring any additional requests to the server.
+    /// </summary>
+    /// <remarks><inheritdoc cref="DocumentationUrls.Session.TimeSeries.IncludeWithQuery"/></remarks>
     public interface IAbstractTimeSeriesIncludeBuilder<T, out TBuilder>
     {
+        /// <inheritdoc cref="IAbstractTimeSeriesIncludeBuilder{T, TBuilder}"/>
+        /// <param name="name">The name of the time series to include.</param>
+        /// <param name="type">Indicates how to retrieve the time series entries.
+        /// When set to 'Last', retrieves entries from the end of the time series within the specified time range. <br/>
+        /// <remarks>Note that <typeparamref name="TimeSeriesRangeType"></typeparamref> cannot be 'None' when time is specified.</remarks></param>
+        /// <param name="time">The time range to consider when retrieving time series entries.</param>
         TBuilder IncludeTimeSeries(string name, TimeSeriesRangeType type, TimeValue time);
 
+        /// <inheritdoc cref="IAbstractTimeSeriesIncludeBuilder{T, TBuilder}"/>
+        /// <param name="name">The name of the time series to include.</param>
+        /// <param name="type">Indicates how to retrieve the time series entries.
+        /// When set to 'Last', retrieves the last X entries, where X is determined by the 'count' parameter. <br/>
+        /// <remarks>Note that <typeparamref name="TimeSeriesRangeType"></typeparamref> cannot be 'None' when count is specified.</remarks></param>
+        /// <param name="count">The maximum number of entries to take when retrieving time series entries.</param>
         TBuilder IncludeTimeSeries(string name, TimeSeriesRangeType type, int count);
 
+        /// <inheritdoc cref="IncludeTimeSeries(string, TimeSeriesRangeType, TimeValue)"/>
+        /// <param name="names">The names of the time series to include.</param>
         TBuilder IncludeTimeSeries(string[] names, TimeSeriesRangeType type, TimeValue time);
 
+        /// <inheritdoc cref="IncludeTimeSeries(string, TimeSeriesRangeType, int)"/>
+        /// <param name="names">The names of the time series to include.</param>
         TBuilder IncludeTimeSeries(string[] names, TimeSeriesRangeType type, int count);
 
+        /// <inheritdoc cref="IncludeTimeSeries(string, TimeSeriesRangeType, TimeValue)"/> 
         TBuilder IncludeAllTimeSeries(TimeSeriesRangeType type, TimeValue time);
 
+        /// <inheritdoc cref="IncludeTimeSeries(string, TimeSeriesRangeType, int)"/> 
         TBuilder IncludeAllTimeSeries(TimeSeriesRangeType type, int count);
     }
 
@@ -101,9 +125,14 @@ namespace Raven.Client.Documents.Session.Loaders
     
     public interface ITimeSeriesIncludeBuilder<T, out TBuilder> : IAbstractTimeSeriesIncludeBuilder<T, TBuilder>
     {
+        /// <inheritdoc cref="IAbstractTimeSeriesIncludeBuilder{T, TBuilder}"/>
+        /// <param name="name">The name of the time series to include.</param>
+        /// <param name="from">The date and time from which to start including time series entries (inclusive). If not specified, the collection will start from the earliest possible date and time (DateTime.MinValue).</param>
+        /// <param name="to">The date and time at which to stop including time series entries (inclusive). If not specified, the collection will continue until the latest possible date and time (DateTime.MaxValue).</param>
         TBuilder IncludeTimeSeries(string name, DateTime? from = null, DateTime? to = null);
     }
 
+    /// <inheritdoc cref="IAbstractTimeSeriesIncludeBuilder{T, TBuilder}"/>
     public interface ISubscriptionTimeSeriesIncludeBuilder<T, out TBuilder> : IAbstractTimeSeriesIncludeBuilder<T, TBuilder>
     {
     }
