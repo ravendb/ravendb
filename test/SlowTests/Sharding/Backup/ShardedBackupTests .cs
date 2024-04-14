@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Backups;
@@ -17,13 +19,16 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Sparrow.Platform;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 using BackupTask = Raven.Server.Documents.PeriodicBackup.BackupTask;
+using Directory = System.IO.Directory;
 
 namespace SlowTests.Sharding.Backup
 {
@@ -260,6 +265,108 @@ namespace SlowTests.Sharding.Backup
 
                 Assert.Equal(3, store1Backups.Length); // one per shard
                 Assert.Single(store2Backup);
+
+                // import data to new stores and assert
+                using (var store3 = GetDocumentStore(options))
+                using (var store4 = GetDocumentStore(options))
+                {
+                    foreach (var dir in store1Backups)
+                    {
+                        await store3.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                    }
+
+                    await store4.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), store2Backup[0]);
+
+                    await AssertDocs(store3, idPrefix: usersPrefix, dbMode: options.DatabaseMode);
+                    await AssertDocs(store4, idPrefix: ordersPrefix, dbMode: options.DatabaseMode);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanBackupShardedServerWide_UsingScript(Options options)
+        {
+            DoNotReuseServer();
+
+            const string usersPrefix = "Users";
+            const string ordersPrefix = "Orders";
+
+            var backupPath = NewDataPath(suffix: "_BackupFolder");
+
+            using (var store1 = Sharding.GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                // generate data on store1 and store2
+                using (var session1 = store1.OpenAsyncSession())
+                using (var session2 = store2.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 100; i++)
+                    {
+                        await session1.StoreAsync(new User(), $"{usersPrefix}/{i}");
+                        await session2.StoreAsync(new Order(), $"{ordersPrefix}/{i}");
+                    }
+
+                    await session1.SaveChangesAsync();
+                    await session2.SaveChangesAsync();
+                }
+
+                // use backup configuration script for local settings
+                var scriptPath = GenerateConfigurationScript(backupPath, out var command);
+                var config = new ServerWideBackupConfiguration
+                {
+                    FullBackupFrequency = "0 0 1 1 *",
+                    Disabled = false,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath,
+                        GetBackupConfigurationScript = new GetBackupConfigurationScript
+                        {
+                            Exec = command,
+                            Arguments = scriptPath
+                        }
+                    }
+                };
+
+                // define server wide backup
+                await store1.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(config));
+
+                // wait for backups to complete
+                var backupsDone = await Sharding.Backup.WaitForBackupToComplete(store1);
+                var backupsDone2 = await Backup.WaitForBackupToComplete(store2);
+
+                foreach (var store in new[] { store1, store2 })
+                {
+                    var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    Assert.Equal(1, databaseRecord.PeriodicBackups.Count);
+
+                    var taskId = databaseRecord.PeriodicBackups[0].TaskId;
+                    if (databaseRecord.IsSharded)
+                        await Sharding.Backup.RunBackupAsync(store.Database, taskId, isFullBackup: true);
+                    else
+                        await Backup.RunBackupAsync(Server, taskId, store, isFullBackup: true);
+                }
+
+                Assert.True(WaitHandle.WaitAll(backupsDone, TimeSpan.FromMinutes(1)));
+                Assert.True(WaitHandle.WaitAll(backupsDone2, TimeSpan.FromMinutes(1)));
+
+                // one backup folder per database
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(2, dirs.Length);
+
+                // should have one root folder for all shards 
+                Assert.Contains(store1.Database, dirs[0]);
+                Assert.DoesNotContain('$', dirs[0]);
+
+                var store1Backups = Directory.GetDirectories(Path.Combine(backupPath, store1.Database));
+                var store2Backup = Directory.GetDirectories(Path.Combine(backupPath, store2.Database));
+
+                Assert.Equal(3, store1Backups.Length); // one per shard
+                Assert.Single(store2Backup);
+
+                Assert.Contains(ShardHelper.ToShardName(store1.Database, 0), store1Backups[0]);
+                Assert.Contains(ShardHelper.ToShardName(store1.Database, 1), store1Backups[1]);
+                Assert.Contains(ShardHelper.ToShardName(store1.Database, 2), store1Backups[2]);
 
                 // import data to new stores and assert
                 using (var store3 = GetDocumentStore(options))
@@ -718,6 +825,30 @@ namespace SlowTests.Sharding.Backup
                 var shard = await GetDocumentDatabaseInstanceFor(store, $"{store.Database}${shardNumber}");
                 AssertDocs(shard, ids);
             }
+        }
+
+        private static string GenerateConfigurationScript(string path, out string command)
+        {
+            var scriptPath = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+            var localSetting = new LocalSettings { FolderPath = path };
+            var localSettingsString = JsonConvert.SerializeObject(localSetting);
+
+            string script;
+            if (PlatformDetails.RunningOnPosix)
+            {
+                command = "bash";
+                script = $"#!/bin/bash\r\necho '{localSettingsString}'";
+                File.WriteAllText(scriptPath, script);
+                Process.Start("chmod", $"700 {scriptPath}");
+            }
+            else
+            {
+                command = "powershell";
+                script = $"echo '{localSettingsString}'";
+                File.WriteAllText(scriptPath, script);
+            }
+
+            return scriptPath;
         }
 
     }
