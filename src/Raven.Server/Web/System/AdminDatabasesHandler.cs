@@ -1193,8 +1193,15 @@ namespace Raven.Server.Web.System
                     {
                         DatabaseIds = unusedIds
                     });
-
-                await requestExecutor.ExecuteAsync(cmd, context, token: token);
+                try
+                {
+                    await requestExecutor.ExecuteAsync(cmd, context, token: token);
+                }
+                catch (RavenException ex) when (ex.InnerException != null)
+                {
+                    throw ex.InnerException;
+                }
+                
             }
         }
 

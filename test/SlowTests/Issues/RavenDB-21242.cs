@@ -1,13 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static Raven.Server.Monitoring.Snmp.SnmpOids;
 
 namespace SlowTests.Issues
 {
@@ -44,8 +52,7 @@ namespace SlowTests.Issues
                     new HashSet<string> { dbId }, validate: true);
 
                 var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.Server.SendAsync(cmd));
-                Assert.True(e.InnerException is InvalidOperationException);
-                Assert.Contains($"'{dbId}' cannot be added to the 'unused ids' list (of '{database}'), because it's the database id of '{database}' on node {node.ServerStore.NodeTag}.", e.InnerException.Message);
+                Assert.Contains($"{dbId} cannot be added to the 'unused ids' list, because it's the database id of '{database}' on node {node.ServerStore.NodeTag}", e.Message);
             }
 
             // delete database from leader node
@@ -62,15 +69,13 @@ namespace SlowTests.Issues
                     new HashSet<string> { topology.DatabaseTopologyIdBase64 }, validate: true);
 
                 var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.Server.SendAsync(cmd));
-                Assert.True(e.InnerException is InvalidOperationException);
-                Assert.Contains($"'DatabaseTopologyIdBase64' ({topology.DatabaseTopologyIdBase64}) cannot be added to the 'unused ids' list (of '{database}')", e.InnerException.Message);
+                Assert.Contains($"{topology.DatabaseTopologyIdBase64} cannot be added to the 'unused ids' list, because its the DatabaseTopologyIdBase64 of {database}", e.Message);
 
                 cmd = new UpdateUnusedDatabasesOperation(store.Database,
                     new HashSet<string> { topology.ClusterTransactionIdBase64 }, validate: true);
 
                 e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.Server.SendAsync(cmd));
-                Assert.True(e.InnerException is InvalidOperationException);
-                Assert.Contains($"'ClusterTransactionIdBase64' ({topology.ClusterTransactionIdBase64}) cannot be added to the 'unused ids' list (of '{database}')", e.InnerException.Message);
+                Assert.Contains($"{topology.ClusterTransactionIdBase64} cannot be added to the 'unused ids' list, because its the 'ClusterTransactionIdBase64' of {database}", e.Message);
             }
 
             Assert.True(await WaitForValueAsync(async () =>
@@ -86,15 +91,13 @@ namespace SlowTests.Issues
                 new HashSet<string> { "6ZY2cIMkCEOzFD3CtbdH1@" }, validate: true); // @ is forbidden char
 
             var ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.Server.SendAsync(cmd1));
-            Assert.True(ex.InnerException is InvalidOperationException);
-            Assert.Contains("Database ID '6ZY2cIMkCEOzFD3CtbdH1@' isn't valid because it isn't Base64Id (it contains chars which cannot be in Base64String)", ex.InnerException.Message);
+            Assert.Contains("Database ID '6ZY2cIMkCEOzFD3CtbdH1@' isn't valid because it isn't Base64Id (it contains chars which cannot be in Base64String)", ex.Message);
 
             cmd1 = new UpdateUnusedDatabasesOperation(store.Database,
                 new HashSet<string> { "6ZY2cIMkCEOzFD3CtbdH1AAA" }, validate: true);
 
             ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.Server.SendAsync(cmd1));
-            Assert.True(ex.InnerException is InvalidOperationException);
-            Assert.Contains("Database ID '6ZY2cIMkCEOzFD3CtbdH1AAA' isn't valid because its length (24) isn't 22", ex.InnerException.Message);
+            Assert.Contains("Database ID '6ZY2cIMkCEOzFD3CtbdH1AAA' isn't valid because its length (24) isn't 22", ex.Message);
 
             cmd1 = new UpdateUnusedDatabasesOperation(store.Database,
                 new HashSet<string> { "6ZY2cIMkCEOzFD3CtbdH1+" }, validate: true);
@@ -107,5 +110,58 @@ namespace SlowTests.Issues
             var db = await ravenServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
             return db.DocumentsStorage.Environment.Base64Id;
         }
+
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+        public async Task ShouldValidateUnusedIdsOnShardedDB()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3);
+            var options = Sharding.GetOptionsForCluster(leader, shards: 3, shardReplicationFactor: 3, orchestratorReplicationFactor: 3, dynamicNodeDistribution: false);
+            using var store = GetDocumentStore(options);
+            var database = store.Database;
+
+            var requestExecutor = store.GetRequestExecutor();
+            for (int shardNumber = 0; shardNumber < 3; shardNumber++)
+            {
+                foreach (var node in nodes)
+                {
+                    var nodeTag = node.ServerStore.NodeTag;
+                    using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+                    {
+                        var op = new GetStatisticsOperation("", nodeTag);
+                        var shardDbId = (await store.Maintenance.ForShard(shardNumber).SendAsync(op)).DatabaseId;
+
+                        var cmdForCheck = new UpdateUnusedDatabasesOperation(store.Database,
+                            new HashSet<string> { shardDbId }, validate: true);
+
+                        var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.Server.SendAsync(cmdForCheck));
+                        Assert.Contains($"{shardDbId} cannot be added to the 'unused ids' list, because it's the database id of '{database}${shardNumber}' on node {node.ServerStore.NodeTag}", e.Message);
+                    }
+                }
+            }
+
+            var shards = await ShardingCluster.GetShards(store);
+            foreach (var (shardNumber, shardTopology) in shards)
+            {
+                var topology = shardTopology;
+
+                var cmd = new UpdateUnusedDatabasesOperation(store.Database,
+                    new HashSet<string> { topology.DatabaseTopologyIdBase64 }, validate: true);
+
+                var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.Server.SendAsync(cmd));
+                Assert.Contains(
+                    $"{topology.DatabaseTopologyIdBase64} cannot be added to the 'unused ids' list, because its the DatabaseTopologyIdBase64 of {database}",
+                    e.Message);
+
+                cmd = new UpdateUnusedDatabasesOperation(store.Database,
+                    new HashSet<string> { topology.ClusterTransactionIdBase64 }, validate: true);
+
+                e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.Server.SendAsync(cmd));
+                Assert.Contains(
+                    $"{topology.ClusterTransactionIdBase64} cannot be added to the 'unused ids' list, because its the 'ClusterTransactionIdBase64' of {database}",
+                    e.Message);
+            }
+        }
+
     }
 }
