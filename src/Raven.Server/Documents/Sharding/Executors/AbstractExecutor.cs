@@ -4,9 +4,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Maintenance.Sharding;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Executors;
@@ -24,7 +26,7 @@ public abstract class AbstractExecutor : IDisposable
 {
     protected readonly ServerStore ServerStore;
 
-    private Dictionary<int, Exception> _exceptions;
+    private List<ExecutionForShardException> _exceptions;
 
     protected AbstractExecutor([NotNull] ServerStore store)
     {
@@ -47,8 +49,8 @@ public abstract class AbstractExecutor : IDisposable
     public Task<TCombinedResult> ExecuteParallelForAllAsync<TResult, TCombinedResult>(IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token = default)
         => ExecuteForShardsAsync<ParallelExecution, ThrowOnFirstFailure, TResult, TCombinedResult>(GetAllPositions(), operation, token);
 
-    public Task<TCombinedResult> ExecuteParallelForAllThrowAggregateFailure<TResult, TCombinedResult>(IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token = default)
-        => ExecuteForShardsAsync<ParallelExecution, ThrowAggregateFailure, TResult, TCombinedResult>(GetAllPositions(), operation, token);
+    public Task<TCombinedResult> ExecuteParallelForAllThrowAggregatedFailure<TResult, TCombinedResult>(IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token = default)
+        => ExecuteForShardsAsync<ParallelExecution, ThrowAggregatedFailure, TResult, TCombinedResult>(GetAllPositions(), operation, token);
 
     public Task<TResult> ExecuteParallelForAllAsync<TResult>(IShardedOperation<TResult> operation, CancellationToken token = default)
         => ExecuteForShardsAsync<ParallelExecution, ThrowOnFirstFailure, TResult>(GetAllPositions(), operation, token);
@@ -199,17 +201,17 @@ public abstract class AbstractExecutor : IDisposable
                 if (typeof(TFailureMode) == typeof(ThrowOnFirstFailure))
                     throw;
 
-                _exceptions ??= new Dictionary<int, Exception>();
-                _exceptions[shardNumber] = e;
+                _exceptions ??= new List<ExecutionForShardException>();
+                _exceptions.Add(new ExecutionForShardException(shardNumber, e));
             }
         }
 
-        if (typeof(TFailureMode) == typeof(ThrowAggregateFailure) && _exceptions?.Count > 0)
+        if (typeof(TFailureMode) == typeof(ThrowAggregatedFailure) && _exceptions?.Count > 0)
         {
             if (_exceptions.Count == 1)
-                throw _exceptions.First().Value;
+                throw _exceptions.First();
 
-            throw new AggregateException($"Some shards ({string.Join(',', _exceptions.Keys)}) threw an exception", _exceptions.Values);
+            throw new AggregateException($"Some shards threw an exception", _exceptions);
         }
 
     }
@@ -300,7 +302,7 @@ public struct IgnoreFailure : IFailureMode
 
 }
 
-public struct ThrowAggregateFailure : IFailureMode
+public struct ThrowAggregatedFailure : IFailureMode
 {
 
 }

@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/validate-unused-ids", "GET")]
         public async Task ValidateUnusedIds()
         {
-            using (var processor = new ShardedValidateUnusedIdsHandlerProcessorForGet(this))
+            using (var processor = new ShardedStatsHandlerProcessorForGetValidateUnusedIds(this))
                 await processor.ExecuteAsync();
         }
     }
