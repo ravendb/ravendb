@@ -13,6 +13,7 @@ using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Sparrow.Server.Utils.VxSort;
 using Voron;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
@@ -374,9 +375,14 @@ namespace Corax.Querying.Matches
             actualMatches.CopyTo(incomingMatches);
             var currentMatchCount = 0;
             _totalResults = 0;
+            
+            //The results returned by the Fill method are sorted within one call. If we make multiple calls, we have no
+            //guarantee that concatenated results are sorted, which can lead to invalid results since the AND operation guarantees a sorted result.
+            int fillCounter = 0;
             //ensure we're not out of range
-            while (results.Length > 0 && Fill(localMatches.Slice(0, results.Length)) is var read and > 0)
+            while (results.Length > 0 && Fill(localMatches) is var read and > 0)
             {
+                fillCounter++;
                 _token.ThrowIfCancellationRequested();
                 _totalResults += read;
                 var common = MergeHelper.And(results, localMatches.Slice(0, read), incomingMatches.Slice(0, matches));
@@ -385,6 +391,10 @@ namespace Corax.Querying.Matches
             }
 
             longBuffer.Slice(0, currentMatchCount).CopyTo(buffer);
+            
+            if (fillCounter > 1)
+                Sort.Run(buffer.Slice(0, currentMatchCount));
+            
             return currentMatchCount;
         }
 
