@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using static Raven.Server.Documents.DatabasesLandlord;
 using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents
@@ -24,13 +25,23 @@ namespace Raven.Server.Documents
 
         public void TrySetException(string id, long index, Exception e)
         {
-            Database.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+            Database.RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
+            {
+                Index = index,
+                Exception = e,
+                Type = DatabaseUpdateType.ClusterTransactionCompleted
+            });
             TrySetException(id, e);
         }
 
         public void TrySetResult(string id, long index, HashSet<string> result)
         {
-            Database.RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+            Database.RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
+            {
+                Index = index,
+                Exception = null,
+                Type = DatabaseUpdateType.ClusterTransactionCompleted
+            });
             TrySetResult(id, result);
         }
     }
