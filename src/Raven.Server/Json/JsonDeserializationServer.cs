@@ -76,7 +76,7 @@ using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConf
 using DatabasesInfo = Raven.Client.ServerWide.Operations.DatabasesInfo;
 using MigrationConfiguration = Raven.Server.Smuggler.Migration.MigrationConfiguration;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
-using Raven.Server.Documents.Handlers.Processors;
+using Raven.Server.Documents.Handlers.Processors.Stats;
 
 namespace Raven.Server.Json
 {

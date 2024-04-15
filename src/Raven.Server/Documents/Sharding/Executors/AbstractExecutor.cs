@@ -26,8 +26,6 @@ public abstract class AbstractExecutor : IDisposable
 {
     protected readonly ServerStore ServerStore;
 
-    private List<ExecutionForShardException> _exceptions;
-
     protected AbstractExecutor([NotNull] ServerStore store)
     {
         ServerStore = store ?? throw new ArgumentNullException(nameof(store));
@@ -189,7 +187,9 @@ public abstract class AbstractExecutor : IDisposable
                 }
             }
         }
-        
+
+        List<ExecutionForShardException> exceptions = null;
+
         foreach (var (shardNumber, command) in commands)
         {
             try
@@ -201,17 +201,17 @@ public abstract class AbstractExecutor : IDisposable
                 if (typeof(TFailureMode) == typeof(ThrowOnFirstFailure))
                     throw;
 
-                _exceptions ??= new List<ExecutionForShardException>();
-                _exceptions.Add(new ExecutionForShardException(shardNumber, e));
+                exceptions ??= new List<ExecutionForShardException>();
+                exceptions.Add(new ExecutionForShardException(shardNumber, e));
             }
         }
 
-        if (typeof(TFailureMode) == typeof(ThrowAggregatedFailure) && _exceptions?.Count > 0)
+        if (typeof(TFailureMode) == typeof(ThrowAggregatedFailure) && exceptions?.Count > 0)
         {
-            if (_exceptions.Count == 1)
-                throw _exceptions.First();
+            if (exceptions.Count == 1)
+                throw exceptions.First();
 
-            throw new AggregateException($"Some shards threw an exception", _exceptions);
+            throw new AggregateException($"Some shards threw an exception", exceptions);
         }
 
     }
