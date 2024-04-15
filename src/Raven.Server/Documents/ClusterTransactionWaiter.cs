@@ -29,7 +29,7 @@ namespace Raven.Server.Documents
             {
                 Index = index,
                 Exception = e,
-                Type = DatabaseUpdateType.ClusterTransactionCompleted
+                Type = DatabaseNotificationChangeType.ClusterTransactionCompleted
             });
             TrySetException(id, e);
         }
@@ -40,7 +40,7 @@ namespace Raven.Server.Documents
             {
                 Index = index,
                 Exception = null,
-                Type = DatabaseUpdateType.ClusterTransactionCompleted
+                Type = DatabaseNotificationChangeType.ClusterTransactionCompleted
             });
             TrySetResult(id, result);
         }

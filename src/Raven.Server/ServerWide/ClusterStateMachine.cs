@@ -4553,183 +4553,34 @@ namespace Raven.Server.ServerWide
         }
     }
 
-    public class RachisLogIndexNotifications : IDisposable
+    public class RachisLogIndexNotifications : AbstractRaftIndexNotifications
     {
-        public long LastModifiedIndex;
-        private readonly AsyncManualResetEvent _notifiedListeners;
-        private readonly ConcurrentQueue<ErrorHolder> _errors = new ConcurrentQueue<ErrorHolder>();
-        private int _numberOfErrors;
-        private readonly ConcurrentDictionary<long, TaskCompletionSource<object>> _tasksDictionary = new ConcurrentDictionary<long, TaskCompletionSource<object>>();
+        public Logger Log;
 
-        public readonly Queue<RecentLogIndexNotification> RecentNotifications = new Queue<RecentLogIndexNotification>();
-        internal Logger Log;
+        private readonly ConcurrentDictionary<long, TaskCompletionSource<object>> _tasksDictionary = 
+            new ConcurrentDictionary<long, TaskCompletionSource<object>>();
+
+        private readonly Queue<RecentLogIndexNotification> _recentNotifications = new Queue<RecentLogIndexNotification>();
+        
         private SingleUseFlag _isDisposed = new SingleUseFlag();
-        private class ErrorHolder
+
+        public RachisLogIndexNotifications(CancellationToken token) : base(token)
         {
-            public long Index;
-            public ExceptionDispatchInfo Exception;
         }
 
-        public RachisLogIndexNotifications(CancellationToken token)
-        {
-            _notifiedListeners = new AsyncManualResetEvent(token);
-        }
-
-        public void Dispose()
+        public override void Dispose()
         {
             _isDisposed.Raise();
-            _notifiedListeners.Dispose();
+            base.Dispose();
             foreach (var task in _tasksDictionary.Values)
             {
                 task.TrySetCanceled();
             }
         }
 
-        public async Task WaitForIndexNotification(long index, CancellationToken token)
+        protected override string PrintLastNotifications()
         {
-            Task<bool> waitAsync;
-            while (true)
-            {
-                // first get the task, then wait on it
-                waitAsync = _notifiedListeners.WaitAsync(token);
-
-                if (index <= Interlocked.Read(ref LastModifiedIndex))
-                    break;
-
-                if (token.IsCancellationRequested)
-                    ThrowCanceledException(index, LastModifiedIndex, isExecution: false);
-
-                if (await waitAsync == false)
-                {
-                    var copy = Interlocked.Read(ref LastModifiedIndex);
-                    if (index <= copy)
-                        break;
-                }
-            }
-
-            if (await WaitForTaskCompletion(index, new Lazy<Task>(waitAsync)))
-                return;
-
-            ThrowCanceledException(index, LastModifiedIndex, isExecution: true);
-        }
-
-        public async Task WaitForIndexNotification(long index, TimeSpan timeout)
-        {
-            while (true)
-            {
-                // first get the task, then wait on it
-                var waitAsync = _notifiedListeners.WaitAsync(timeout);
-
-                if (index <= Interlocked.Read(ref LastModifiedIndex))
-                    break;
-
-                if (await waitAsync == false)
-                {
-                    var copy = Interlocked.Read(ref LastModifiedIndex);
-                    if (index <= copy)
-                        break;
-
-                    ThrowTimeoutException(timeout, index, copy);
-                }
-            }
-
-            if (await WaitForTaskCompletion(index, new Lazy<Task>(TimeoutManager.WaitFor(timeout))))
-                return;
-
-            ThrowTimeoutException(timeout, index, LastModifiedIndex, isExecution: true);
-        }
-
-        private async Task<bool> WaitForTaskCompletion(long index, Lazy<Task> waitingTask)
-        {
-            if (_tasksDictionary.TryGetValue(index, out var tcs) == false)
-            {
-                // the task has already completed
-                // let's check if we had errors in it
-                foreach (var error in _errors)
-                {
-                    if (error.Index == index)
-                        error.Exception.Throw(); // rethrow
-                }
-
-                return true;
-            }
-
-            var task = tcs.Task;
-
-            if (task.IsCompleted)
-            {
-                if (task.IsFaulted)
-                {
-                    try
-                    {
-                        await task; // will throw on error
-                    }
-                    catch (Exception e)
-                    {
-                        ThrowApplyException(index, e);
-                    }
-                }
-
-                if (task.IsCanceled)
-                    ThrowCanceledException(index, LastModifiedIndex);
-
-                return true;
-            }
-
-            var result = await Task.WhenAny(task, waitingTask.Value);
-
-            if (result.IsFaulted)
-                await result; // will throw
-
-            if (task.IsCanceled)
-                ThrowCanceledException(index, LastModifiedIndex);
-
-            if (result == task)
-                return true;
-
-            return false;
-        }
-
-        private void ThrowCanceledException(long index, long lastModifiedIndex, bool isExecution = false)
-        {
-            var openingString = isExecution
-                ? $"Cancelled while waiting for task with index {index} to complete. "
-                : $"Cancelled while waiting to get an index notification for {index}. ";
-
-            var closingString = isExecution
-                ? string.Empty
-                : Environment.NewLine +
-                  PrintLastNotifications();
-
-            throw new OperationCanceledException(openingString +
-                                       $"Last commit index is: {lastModifiedIndex}. " +
-                                       $"Number of errors is: {_numberOfErrors}." + closingString);
-        }
-
-        private void ThrowTimeoutException(TimeSpan value, long index, long lastModifiedIndex, bool isExecution = false)
-        {
-            var openingString = isExecution
-                ? $"Waited for {value} for task with index {index} to complete. "
-                : $"Waited for {value} but didn't get an index notification for {index}. ";
-
-            var closingString = isExecution
-                ? string.Empty
-                : Environment.NewLine +
-                  PrintLastNotifications();
-
-            throw new TimeoutException(openingString +
-                                       $"Last commit index is: {lastModifiedIndex}. " +
-                                       $"Number of errors is: {_numberOfErrors}." + closingString);
-        }
-
-        private void ThrowApplyException(long index, Exception e)
-        {
-            throw new InvalidOperationException($"Index {index} was successfully committed, but the apply failed.", e);
-        }
-
-        private string PrintLastNotifications()
-        {
-            var notifications = RecentNotifications.ToArray();
+            var notifications = _recentNotifications.ToArray();
             var builder = new StringBuilder(notifications.Length);
             foreach (var notification in notifications)
             {
@@ -4755,30 +4606,14 @@ namespace Raven.Server.ServerWide
 
         public void RecordNotification(RecentLogIndexNotification notification)
         {
-            RecentNotifications.Enqueue(notification);
-            while (RecentNotifications.Count > 25)
-                RecentNotifications.TryDequeue(out _);
+            _recentNotifications.Enqueue(notification);
+            while (_recentNotifications.Count > 25)
+                _recentNotifications.TryDequeue(out _);
         }
 
         public void NotifyListenersAbout(long index, Exception e)
         {
-            if (e != null)
-            {
-                _errors.Enqueue(new ErrorHolder
-                {
-                    Index = index,
-                    Exception = ExceptionDispatchInfo.Capture(e)
-                });
-        
-                if (Interlocked.Increment(ref _numberOfErrors) > 25)
-                {
-                    _errors.TryDequeue(out _);
-                    Interlocked.Decrement(ref _numberOfErrors);
-                }
-            }
-        
-            ThreadingHelper.InterlockedExchangeMax(ref LastModifiedIndex, index);
-            _notifiedListeners.SetAndResetAtomically();
+            NotifyListenersInternal(index, e);
         }
 
         public void SetTaskCompleted(long index, Exception e)
@@ -4816,7 +4651,7 @@ namespace Raven.Server.ServerWide
             _tasksDictionary.TryAdd(index, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
         }
 
-        public ConcurrentDictionary<long, TaskCompletionSource<object>> GetTasksDictionary()
+        internal override ConcurrentDictionary<long, TaskCompletionSource<object>> GetTasksDictionary()
         {
             return _tasksDictionary;
         }

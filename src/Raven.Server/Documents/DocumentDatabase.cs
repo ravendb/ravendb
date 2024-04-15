@@ -384,7 +384,7 @@ namespace Raven.Server.Documents
                         {
                             Index = index, 
                             Exception = null, 
-                            Type = DatabaseUpdateType.StateChanged
+                            Type = DatabaseNotificationChangeType.StateChanged
                         });
                     }
                     catch (Exception e)
@@ -393,7 +393,7 @@ namespace Raven.Server.Documents
                         {
                             Index = index, 
                             Exception = e,
-                            Type = DatabaseUpdateType.StateChanged
+                            Type = DatabaseNotificationChangeType.StateChanged
                         });
                     }
                 });
@@ -470,7 +470,7 @@ namespace Raven.Server.Documents
                 {
                     Index = index,
                     Exception = null,
-                    Type = DatabaseUpdateType.PendingClusterTransactions
+                    Type = DatabaseNotificationChangeType.PendingClusterTransactions
                 });
                 return;
             }
@@ -569,7 +569,7 @@ namespace Raven.Server.Documents
                     {
                         Index = index, 
                         Exception = null, 
-                        Type = DatabaseUpdateType.ClusterTransactionCompleted
+                        Type = DatabaseNotificationChangeType.ClusterTransactionCompleted
                     });
 
                 return batch;
@@ -1387,7 +1387,7 @@ namespace Raven.Server.Documents
                 {
                     Index = index, 
                     Exception = null, 
-                    Type = DatabaseUpdateType.ValueChanged
+                    Type = DatabaseNotificationChangeType.ValueChanged
                 });
             }
             catch (Exception e)
@@ -1396,7 +1396,7 @@ namespace Raven.Server.Documents
                 {
                     Index = index, 
                     Exception = e, 
-                    Type = DatabaseUpdateType.ValueChanged
+                    Type = DatabaseNotificationChangeType.ValueChanged
                 });
 
                 if (_databaseShutdown.IsCancellationRequested)
@@ -1435,7 +1435,7 @@ namespace Raven.Server.Documents
                 {
                     Index = index,
                     Exception = null,
-                    Type = DatabaseUpdateType.StateChanged
+                    Type = DatabaseNotificationChangeType.StateChanged
                 });
             }
             catch (Exception e)
@@ -1449,7 +1449,7 @@ namespace Raven.Server.Documents
                 {
                     Index = index,
                     Exception = e,
-                    Type = DatabaseUpdateType.StateChanged  
+                    Type = DatabaseNotificationChangeType.StateChanged  
                 });
 
                 if (_logger.IsInfoEnabled)

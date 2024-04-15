@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     Index = raftIndex,
                                     Exception = e,
-                                    Type = DatabaseUpdateType.IndexStart
+                                    Type = DatabaseNotificationChangeType.IndexStart
                                 });
                                 return;
                             }
@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     Index = raftIndex,
                                     Exception = e,
-                                    Type = DatabaseUpdateType.IndexStart
+                                    Type = DatabaseNotificationChangeType.IndexStart
                                 });
                                 if (Logger.IsInfoEnabled)
                                     Logger.Info($"Could not start index '{index.Name}'", e);
@@ -255,7 +255,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     Index = index,
                     Exception = e,
-                    Type = DatabaseUpdateType.IndexUpdateSorters
+                    Type = DatabaseNotificationChangeType.IndexUpdateSorters
                 });
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Could not update sorters", e);
@@ -274,7 +274,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     Index = index,
                     Exception = e,
-                    Type = DatabaseUpdateType.IndexUpdateAnalyzers
+                    Type = DatabaseNotificationChangeType.IndexUpdateAnalyzers
                 });
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Could not update analyzers", e);
@@ -306,7 +306,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         Index = index,
                         Exception = e,
-                        Type = DatabaseUpdateType.AutoIndexStart
+                        Type = DatabaseNotificationChangeType.AutoIndexStart
                     });
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Could not create auto index {name}", e);
@@ -457,7 +457,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         Index = index,
                         Exception = exception,
-                        Type = DatabaseUpdateType.UpdateStaticIndex
+                        Type = DatabaseNotificationChangeType.UpdateStaticIndex
                     });
 
                     var indexName = name;
@@ -830,7 +830,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         Index = raftLogIndex,
                         Exception = e,
-                        Type = DatabaseUpdateType.DeleteIndex
+                        Type = DatabaseNotificationChangeType.DeleteIndex
                     });
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Could not delete index {index.Name}", e);
