@@ -310,7 +310,7 @@ namespace Raven.Server.ServerWide
 
         public long LastNotifiedIndex => Interlocked.Read(ref _rachisLogIndexNotifications.LastModifiedIndex);
 
-        private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
+        public readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
 
         public override void Dispose()
         {
@@ -4769,14 +4769,14 @@ namespace Raven.Server.ServerWide
                     Index = index,
                     Exception = ExceptionDispatchInfo.Capture(e)
                 });
-
+        
                 if (Interlocked.Increment(ref _numberOfErrors) > 25)
                 {
                     _errors.TryDequeue(out _);
                     Interlocked.Decrement(ref _numberOfErrors);
                 }
             }
-
+        
             ThreadingHelper.InterlockedExchangeMax(ref LastModifiedIndex, index);
             _notifiedListeners.SetAndResetAtomically();
         }
@@ -4815,6 +4815,11 @@ namespace Raven.Server.ServerWide
 
             _tasksDictionary.TryAdd(index, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
         }
+
+        public ConcurrentDictionary<long, TaskCompletionSource<object>> GetTasksDictionary()
+        {
+            return _tasksDictionary;
+        }
     }
 
     public class RecentLogIndexNotification
@@ -4827,4 +4832,5 @@ namespace Raven.Server.ServerWide
         public long? LeaderShipDuration;
         public Exception Exception;
     }
+
 }
