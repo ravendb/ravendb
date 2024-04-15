@@ -2,7 +2,7 @@ import React, { LegacyRef, useEffect, useState } from "react";
 import { AceEditorMode, LanguageService } from "components/models/aceEditor";
 import { Ace } from "ace-builds";
 import { setCompleters } from "ace-builds/src-noconflict/ext-language_tools";
-import ReactAce, { IAceEditorProps, IAceOptions, ICommand } from "react-ace";
+import ReactAce, { IAceEditorProps, IAceOptions, ICommand as CommandFromReactAce } from "react-ace";
 import "./AceEditor.scss";
 import classNames from "classnames";
 
@@ -75,7 +75,7 @@ export default function AceEditor(props: AceEditorProps) {
 
     const errorMessage = validationErrorMessage ?? aceErrorMessage;
 
-    const commands = execute
+    const commands: Command[] = execute
         ? [
               ...defaultCommands,
               {
@@ -120,7 +120,12 @@ export default function AceEditor(props: AceEditorProps) {
     );
 }
 
-const defaultCommands: ICommand[] = [
+// Can be removed after https://github.com/securingsincity/react-ace/pull/1881 is merged
+interface Command extends CommandFromReactAce {
+    readOnly?: boolean;
+}
+
+const defaultCommands: Command[] = [
     {
         name: "Open Fullscreen",
         bindKey: {
@@ -130,5 +135,6 @@ const defaultCommands: ICommand[] = [
         exec: function (editor: Ace.Editor) {
             editor.container.requestFullscreen();
         },
+        readOnly: true,
     },
 ];
