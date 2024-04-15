@@ -776,6 +776,16 @@ namespace Voron
             }
         }
 
+        internal void InvokeNewTransactionCreated(LowLevelTransaction tx)
+        {
+            NewTransactionCreated?.Invoke(tx);
+        }
+
+        internal void InvokeAfterCommitWhenNewTransactionsPrevented(LowLevelTransaction tx)
+        {
+            AfterCommitWhenNewTransactionsPrevented?.Invoke(tx);
+        }
+
         [Conditional("DEBUG")]
         private void ThrowOnWriteTransactionOpenedByTheSameThread()
         {
