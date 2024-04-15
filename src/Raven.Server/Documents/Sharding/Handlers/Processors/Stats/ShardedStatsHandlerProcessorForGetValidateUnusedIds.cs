@@ -8,13 +8,14 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Http;
-using Raven.Server.Documents.Handlers.Processors;
+using Raven.Server.Documents.Handlers.Processors.Stats;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.Sharding.Handlers.Processors;
+namespace Raven.Server.Documents.Sharding.Handlers.Processors.Stats;
 
-internal class ShardedStatsHandlerProcessorForGetValidateUnusedIds : AbstractStatsHandlerProcessorForGetValidateUnusedIds<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal class ShardedStatsHandlerProcessorForGetValidateUnusedIds : AbstractStatsHandlerProcessorForGetValidateUnusedIds<ShardedDatabaseRequestHandler,
+    TransactionOperationContext>
 {
     public ShardedStatsHandlerProcessorForGetValidateUnusedIds([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

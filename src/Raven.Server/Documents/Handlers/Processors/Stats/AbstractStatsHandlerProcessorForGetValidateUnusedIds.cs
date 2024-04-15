@@ -18,7 +18,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 
-namespace Raven.Server.Documents.Handlers.Processors;
+namespace Raven.Server.Documents.Handlers.Processors.Stats;
 
 internal abstract class
     AbstractStatsHandlerProcessorForGetValidateUnusedIds<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler,
@@ -44,7 +44,7 @@ internal abstract class
         }
     }
 
-    protected abstract Task ValidateUnusedIdsOnAllNodesAsync(HashSet<string> unusedIds, 
+    protected abstract Task ValidateUnusedIdsOnAllNodesAsync(HashSet<string> unusedIds,
         string databaseName, CancellationToken token);
 }
 

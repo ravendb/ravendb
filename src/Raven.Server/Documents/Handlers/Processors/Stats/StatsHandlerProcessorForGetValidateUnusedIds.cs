@@ -10,7 +10,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.Handlers.Processors;
+namespace Raven.Server.Documents.Handlers.Processors.Stats;
 
 internal class StatsHandlerProcessorForGetValidateUnusedIds : AbstractStatsHandlerProcessorForGetValidateUnusedIds<DatabaseRequestHandler,
     DocumentsOperationContext>
