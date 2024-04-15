@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
@@ -117,7 +116,7 @@ public sealed class RavenDB_22176 : RavenDB_17068_Base
             result = store.Maintenance.Send(new GetNotifications(pageSize: 0, alertType: notificationTypeParameter, testAsNumber: flagAsInt));
             Assert.Equal(5, result.TotalResults);
             Assert.Empty(result.Results);
-            
+
             //paging
             {
                 result = store.Maintenance.Send(new GetNotifications(pageStart: 0, pageSize: 2, alertType: notificationTypeParameter, testAsNumber: flagAsInt));
@@ -177,8 +176,12 @@ public sealed class RavenDB_22176 : RavenDB_17068_Base
 
         public override string Id { get; }
     }
-    private record NotificationEndpointDto(int TotalResults, List<SerializableNotification> Results);
-    
+    private class NotificationEndpointDto
+    {
+        public int TotalResults { get; set; }
+        public List<SerializableNotification> Results { get; set; } 
+    }
+
     [Flags]
     private enum NotificationTypeParameter : short
     {
@@ -254,7 +257,7 @@ public sealed class RavenDB_22176 : RavenDB_17068_Base
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonConvert.DeserializeObject<NotificationEndpointDto>(response!.ToString());
+                Result = DocumentConventions.DefaultForServer.Serialization.DeserializeEntityFromBlittable<NotificationEndpointDto>(response);
             }
 
             public override bool IsReadRequest => true;
