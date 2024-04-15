@@ -23,6 +23,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 {
     public class CollectionQueryRunner : AbstractQueryRunner
     {
+        public const int UnboundedQueryResultMarker = 0;
         public const string CollectionIndexPrefix = "collection/";
 
         public CollectionQueryRunner(DocumentDatabase database) : base(database)
@@ -153,7 +154,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var lastRaftId = Database.RachisLogIndexNotifications.LastModifiedIndex;
                 if (pulseReadingTransaction == false)
                 {
-                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, SearchEngineType.None, fieldsToFetch, collection, query, queryScope, context.Documents,
+                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents,
                         includeDocumentsCommand, includeRevisionsCommand: includeRevisionsCommand,
                         includeCompareExchangeValuesCommand: includeCompareExchangeValuesCommand, totalResults: totalResults, scannedResults, skippedResults, token);
 
@@ -166,7 +167,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         {
                             query.Start = state.Start;
                             query.PageSize = state.Take;
-                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, SearchEngineType.None, fieldsToFetch, collection, query, queryScope,
+                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope,
                                 context.Documents, includeDocumentsCommand, includeRevisionsCommand, includeCompareExchangeValuesCommand, totalResults, scannedResults,
                                 skippedResults, token);
 
@@ -260,7 +261,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     resultToFill.AddRevisionIncludes(includeRevisionsCommand);
 
                 resultToFill.RegisterTimeSeriesFields(query, fieldsToFetch);
-                resultToFill.LongTotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
+                resultToFill.LongTotalResults = (totalResults.Value == UnboundedQueryResultMarker && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
                 resultToFill.TotalResults = (int)resultToFill.LongTotalResults;
                 resultToFill.SkippedResults = Convert.ToInt32(skippedResults.Value);
                 resultToFill.ScannedResults = scannedResults.Value;

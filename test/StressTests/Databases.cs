@@ -58,12 +58,12 @@ namespace StressTests
                 var minTimeBetweenIntervals = 500;
                 StartAsyncQueryTask(store, numberOfDatabases, timeToSpin, minTimeBetweenIntervals);
                 CreateLoadOnAllDatabases(numberOfDatabases, store, timeToSpin, minTimeBetweenIntervals, sampleProduct);
-                Console.WriteLine("Done with laod on the system");
-                Console.WriteLine("Query statistics during the laod:");
+                Console.WriteLine("Done with load on the system");
+                Console.WriteLine("Query statistics during the load:");
                 Console.WriteLine("Reported query times");
-                Console.WriteLine($"Avarage={_reportedAvarageQueryTime}ms Max={_reportedMaxQueryTime}");
+                Console.WriteLine($"Average={_reportedAvarageQueryTime}ms Max={_reportedMaxQueryTime}");
                 Console.WriteLine("real query times (time on the client)");
-                Console.WriteLine($"Avarage={_avarageQueryTime}ms Max={_maxQueryTime}");
+                Console.WriteLine($"Average={_avarageQueryTime}ms Max={_maxQueryTime}");
                 Console.WriteLine($"Results came from cache {_totalQueryUsedCachedResults} times out of {_totalQueryCount} total queries.");
             }
         }
@@ -72,13 +72,13 @@ namespace StressTests
 
         private void StartAsyncQueryTask(IDocumentStore store, int numberOfDatabases, TimeSpan timeToSpin, int minTimeBetweenIntervals)
         {
-            var cts = new CancellationTokenSource();
             var rand = new Random(numberOfDatabases);
 
-            Task.Run(() =>
+            Task.Run(async () =>
             {
+                using var cts = new CancellationTokenSource(timeToSpin);
                 var sw = new Stopwatch();
-                while (true)
+                while (cts.IsCancellationRequested == false)
                 {
                     var dbNum = rand.Next(numberOfDatabases);
 
@@ -99,11 +99,13 @@ namespace StressTests
                             {
                                 _maxQueryTime = realQueryTime;
                             }
+
                             //Not sure if reported result is worth anything...
                             onePart = (double)1 / (_totalQueryCount - _totalQueryUsedCachedResults + 1);
                             if (queryStat.DurationInMs > 0)
                             {
-                                _reportedAvarageQueryTime = onePart * (_totalQueryCount - _totalQueryUsedCachedResults) * _reportedAvarageQueryTime + queryStat.DurationInMs * onePart;
+                                _reportedAvarageQueryTime = onePart * (_totalQueryCount - _totalQueryUsedCachedResults) * _reportedAvarageQueryTime +
+                                                            queryStat.DurationInMs * onePart;
                                 if (_reportedMaxQueryTime < queryStat.DurationInMs)
                                 {
                                     _reportedMaxQueryTime = queryStat.DurationInMs;
@@ -121,8 +123,12 @@ namespace StressTests
                     catch (ObjectDisposedException)
                     {
                     }
+                    finally
+                    {
+                        await Task.Delay(minTimeBetweenIntervals);
+                    }
                 }
-            }, cts.Token);
+            });
         }
 
         private static double _avarageQueryTime;
@@ -177,7 +183,7 @@ namespace StressTests
                     Thread.Sleep(500);
                 else
                 {
-                    Console.WriteLine("Last databse is not stale assuming all database are ready.");
+                    Console.WriteLine("Last database is not stale assuming all database are ready.");
                     return;
                 }
             }

@@ -196,7 +196,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     var client = store.GetRequestExecutor().HttpClient;
                     var data = new StringContent(JsonConvert.SerializeObject(holder.Settings), Encoding.UTF8, "application/json");
                     var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=Azure ", data);
-                    string result = response.Content.ReadAsStringAsync().Result;
+                    string result = await response.Content.ReadAsStringAsync();
                     var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
                     Assert.Equal(1, restorePoints.List.Count);
                     var point = restorePoints.List.First();
@@ -223,8 +223,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                             Assert.Equal(100, val);
                         }
 
-                        var originalDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).Result;
-                        var restoredDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+                        var originalDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                        var restoredDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                         using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {

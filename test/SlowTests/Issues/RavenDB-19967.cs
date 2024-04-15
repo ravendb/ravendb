@@ -190,8 +190,8 @@ namespace SlowTests.Issues
             using (var hub = GetDocumentStore())
             using (var sink = GetDocumentStore())
             {
-                var hubCreationTaskId = hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(taskName)).Result.TaskId;
-                var sinkCreationTaskId = PullReplicationTests.SetupPullReplicationAsync(taskName, sink, hub).Result.First().TaskId;
+                var hubCreationTaskId = await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(taskName));
+                var sinkCreationTaskId = await PullReplicationTests.SetupPullReplicationAsync(taskName, sink, hub);
 
                 // Documents creation
                 var documentCreationTasks = new Task[DocumentsCount];
@@ -217,8 +217,8 @@ namespace SlowTests.Issues
                 });
 
                 // Disable replication tasks
-                await sink.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(sinkCreationTaskId, OngoingTaskType.PullReplicationAsSink, disable: true));
-                await hub.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(hubCreationTaskId, OngoingTaskType.PullReplicationAsHub, disable: true));
+                await sink.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(sinkCreationTaskId.First().TaskId, OngoingTaskType.PullReplicationAsSink, disable: true));
+                await hub.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(hubCreationTaskId.TaskId, OngoingTaskType.PullReplicationAsHub, disable: true));
 
                 // When deleting documents, we expect the creation of Tombstones, since replication tasks are disabled.
                 using (var session = sink.OpenSession())
@@ -251,7 +251,7 @@ namespace SlowTests.Issues
                 Assert.Equal("users", sinkNotificationDetails.First().Collection);
                 Assert.Equal($"Replication Sink for {taskName}", sinkNotificationDetails.First().Source);
                 Assert.Equal(sinkTombstonesCount, sinkNotificationDetails.First().NumberOfTombstones);
-                Assert.Equal(sinkCreationTaskId, sinkNotificationDetails.First().BlockerTaskId);
+                Assert.Equal(sinkCreationTaskId.First().TaskId, sinkNotificationDetails.First().BlockerTaskId);
                 Assert.Equal(ITombstoneAware.TombstoneDeletionBlockerType.PullReplicationAsSink, sinkNotificationDetails.First().BlockerType);
                 Assert.True(sinkNotificationDetails.First().SizeOfTombstonesInBytes > 0,
                     $"Expected the size of tombstones to be greater than 0, but it was {sinkNotificationDetails.First().SizeOfTombstonesInBytes}");
@@ -266,7 +266,7 @@ namespace SlowTests.Issues
                 Assert.Equal("users", hubNotificationDetails.First().Collection);
                 Assert.Equal($"{taskName}", hubNotificationDetails.First().Source);
                 Assert.Equal(hubTombstonesCount, hubNotificationDetails.First().NumberOfTombstones);
-                Assert.Equal(hubCreationTaskId, hubNotificationDetails.First().BlockerTaskId);
+                Assert.Equal(hubCreationTaskId.TaskId, hubNotificationDetails.First().BlockerTaskId);
                 Assert.Equal(ITombstoneAware.TombstoneDeletionBlockerType.PullReplicationAsHub, hubNotificationDetails.First().BlockerType);
                 Assert.True(hubNotificationDetails.First().SizeOfTombstonesInBytes > 0,
                     $"Expected the size of tombstones to be greater than 0, but it was {hubNotificationDetails.First().SizeOfTombstonesInBytes}");

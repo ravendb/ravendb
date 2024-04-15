@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Parquet.Data.Rows;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
@@ -49,10 +50,17 @@ namespace SlowTests.Issues
 
                     for (int i = 0; i < 10; i++)
                     {
-                        persistedDef = MapIndexDefinition.Load(index._indexStorage.Environment(), out var version);
+                        try
+                        {
+                            persistedDef = MapIndexDefinition.Load(index._indexStorage.Environment(), out var version);
 
-                        if (persistedDef.Priority == IndexPriority.High)
-                            break;
+                            if (persistedDef.Priority == IndexPriority.High)
+                                break;
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            throw new InvalidOperationException($"Index is already disposed: {index.IsDisposed}. This is not expected. Database disposed: {database.DatabaseShutdown.IsCancellationRequested}. Index Store disposed: {database.IndexStore.IsDisposed}");
+                        }
 
                         Thread.Sleep(1000);
                     }

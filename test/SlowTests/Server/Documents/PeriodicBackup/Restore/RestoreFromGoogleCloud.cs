@@ -74,7 +74,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var googleCloudSettings = GetGoogleCloudSettings();
                 var config = Backup.CreateBackupConfiguration(googleCloudSettings: googleCloudSettings);
                 var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
-                var backupResult = (BackupResult)store.Maintenance.Send(new GetOperationStateOperation(await Backup.GetBackupOperationIdAsync(store, backupTaskId))).Result;
+                var id = await Backup.GetBackupOperationIdAsync(store, backupTaskId);
+                var backupResult = (await store.Maintenance.SendAsync(new GetOperationStateOperation(id))).Result as BackupResult;
                 Assert.NotNull(backupResult);
                 Assert.True(backupResult.Counters.Processed);
                 Assert.Equal(1, backupResult.Counters.ReadCount);

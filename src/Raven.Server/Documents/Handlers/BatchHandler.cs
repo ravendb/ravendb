@@ -250,14 +250,19 @@ namespace Raven.Server.Documents.Handlers
                 };
 
 
-            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology, command.ParsedCommands, options, raftRequestId);
+            var clusterTransactionCommand =
+                new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology, command.ParsedCommands, options, raftRequestId)
+                {
+                    Timeout = Timeout.InfiniteTimeSpan // we rely on the http token to cancel the command
+                };
+
             DynamicJsonArray array;
             long index;
 
             using (Database.ClusterTransactionWaiter.CreateTask(id: options.TaskId, out var tcs))
             await using (token.Register(() => tcs.TrySetCanceled()))
             {
-                (index, object result) = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
+                (index, object result) = await ServerStore.SendToLeaderAsync(clusterTransactionCommand, token);
                 array = await GetClusterTransactionDatabaseCommandsResults(result, clusterTransactionCommand.DatabaseCommandsCount, index, options, onDatabaseCompletionTask: tcs.Task, token);
             }
 
@@ -302,7 +307,7 @@ namespace Raven.Server.Documents.Handlers
 
             // leader isn't updated (thats why the result is empty),
             // so we'll try to take the result from the local history log.
-            await ServerStore.Engine.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, token);
+            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, Timeout.InfiniteTimeSpan, token);
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
@@ -311,7 +316,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             throw new InvalidOperationException(
-                "Cluster-transaction was succeeded, but Leader is outdated and its results are inaccessible (the command has been already deleted from the history log).  We recommend you to update all nodes in the cluster to the last stable version.");
+                "We are not able to verify that the cluster-wide transaction was succeeded. please consider to upgrade your leader to the latest stable version.");
         }
 
         private void ThrowClusterTransactionConcurrencyException(List<ClusterTransactionErrorInfo> errors)
@@ -689,11 +694,10 @@ namespace Raven.Server.Documents.Handlers
 
                     if (commands != null)
                     {
-                        foreach (BlittableJsonReaderObject blittableCommand in commands)
+                        foreach (var cmd in commands)
                         {
                             count++;
                             var changeVector = ChangeVectorUtils.GetClusterWideChangeVector(Database.DatabaseGroupId, count, options.DisableAtomicDocumentWrites == false, command.Index, Database.ClusterTransactionId);
-                            var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
 
                             switch (cmd.Type)
                             {
@@ -712,10 +716,9 @@ namespace Raven.Server.Documents.Handlers
                                             }
                                         }
 
-                                        var document = cmd.Document.Clone(context);
-                                        var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, document, changeVector: changeVector,
+                                        var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document, changeVector: changeVector,
                                             flags: DocumentFlags.FromClusterTransaction);
-                                        context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, document.Size);
+                                        context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
                                         AddPutResult(putResult);
                                     }
                                     else

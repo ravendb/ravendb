@@ -131,6 +131,7 @@ class patch extends viewModelBase {
     defineMaxOperationsPerSecond = ko.observable<boolean>(false);
     
     disableAutoIndexCreation = ko.observable<boolean>(false);
+    ignoreMaxStepsForScript = ko.observable<boolean>(false);
     
     static readonly recentKeyword = 'Recent Patch';
 
@@ -441,7 +442,8 @@ class patch extends viewModelBase {
                         allowStale: this.staleIndexBehavior() === "patchStale",
                         staleTimeout: this.staleIndexBehavior() === "timeoutDefined" ? generalUtils.formatAsTimeSpan(this.staleTimeout() * 1000) : undefined,
                         maxOpsPerSecond: this.maxOperationsPerSecond(),
-                        disableAutoIndexCreation: this.disableAutoIndexCreation()
+                        disableAutoIndexCreation: this.disableAutoIndexCreation(),
+                        ignoreMaxStepsForScript: this.ignoreMaxStepsForScript(),
                     })
                         .execute()
                         .done((operation: operationIdDto) => {

@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,16 +33,23 @@ namespace Raven.Client.Util
         public static void RunSync(Func<Task> task)
         {
             var oldContext = SynchronizationContext.Current;
+            var sw = Stopwatch.StartNew();
 
             // Do we have an active synchronization context?
             if (UseTaskAwaiterWhenNoSynchronizationContextIsAvailable && oldContext == null)
             {
                 // We can run synchronously without any issue.
-                task().GetAwaiter().GetResult();
+                try
+                {
+                    task().GetAwaiter().GetResult();
+                }
+                catch (AggregateException ex)
+                {
+                    HandleException(ex, sw);
+                }
                 return;
             }
 
-            var sw = Stopwatch.StartNew();
             var synch = _pool.Allocate();
 
             SynchronizationContext.SetSynchronizationContext(synch);
@@ -67,10 +75,7 @@ namespace Raven.Client.Util
             }
             catch (AggregateException ex)
             {
-                var exception = ex.ExtractSingleInnerException();
-                if (exception is OperationCanceledException)
-                    throw new TimeoutException("Operation timed out after: " + sw.Elapsed, ex);
-                ExceptionDispatchInfo.Capture(exception).Throw();
+                HandleException(ex, sw);
             }
             finally
             {
@@ -83,17 +88,23 @@ namespace Raven.Client.Util
         public static T RunSync<T>(Func<Task<T>> task)
         {
             var oldContext = SynchronizationContext.Current;
+            var sw = Stopwatch.StartNew();
 
             // Do we have an active synchronization context?
             if (UseTaskAwaiterWhenNoSynchronizationContextIsAvailable && oldContext == null)
             {
                 // We can run synchronously without any issue.
-                return task().GetAwaiter().GetResult();
+                try
+                {
+                    return task().GetAwaiter().GetResult();
+                }
+                catch (AggregateException ex)
+                {
+                    HandleException(ex, sw);
+                }
             }
 
             var result = default(T);
-
-            var sw = Stopwatch.StartNew();
             var synch = _pool.Allocate();
 
             SynchronizationContext.SetSynchronizationContext(synch);
@@ -120,10 +131,7 @@ namespace Raven.Client.Util
             }
             catch (AggregateException ex)
             {
-                var exception = ex.ExtractSingleInnerException();
-                if (exception is OperationCanceledException)
-                    throw new TimeoutException("Operation timed out after: " + sw.Elapsed, ex);
-                ExceptionDispatchInfo.Capture(exception).Throw();
+                HandleException(ex, sw);
             }
             finally
             {
@@ -138,6 +146,7 @@ namespace Raven.Client.Util
         internal static T RunSync<T>(Func<ValueTask<T>> taskFactory)
         {
             var oldContext = SynchronizationContext.Current;
+            var sw = Stopwatch.StartNew();
 
             var task = taskFactory();
 
@@ -145,12 +154,17 @@ namespace Raven.Client.Util
             if (UseTaskAwaiterWhenNoSynchronizationContextIsAvailable && oldContext == null && task.IsCompleted)
             {
                 // We can run synchronously without any issue.
-                return task.GetAwaiter().GetResult();
+                try
+                {
+                    return task.GetAwaiter().GetResult();
+                }
+                catch (AggregateException ex)
+                {
+                    HandleException(ex, sw);
+                }
             }
 
             var result = default(T);
-
-            var sw = Stopwatch.StartNew();
             var synch = _pool.Allocate();
 
             SynchronizationContext.SetSynchronizationContext(synch);
@@ -177,10 +191,7 @@ namespace Raven.Client.Util
             }
             catch (AggregateException ex)
             {
-                var exception = ex.ExtractSingleInnerException();
-                if (exception is OperationCanceledException)
-                    throw new TimeoutException("Operation timed out after: " + sw.Elapsed, ex);
-                ExceptionDispatchInfo.Capture(exception).Throw();
+                HandleException(ex, sw);
             }
             finally
             {
@@ -190,6 +201,18 @@ namespace Raven.Client.Util
             _pool.Free(synch);
 
             return result;
+        }
+
+#if !NETSTANDARD2_0
+        [DoesNotReturn]
+#endif
+        private static void HandleException(AggregateException ex, Stopwatch sw)
+        {
+            var exception = ex.ExtractSingleInnerException();
+            if (exception is OperationCanceledException)
+                throw new TimeoutException("Operation timed out after: " + sw.Elapsed, ex);
+
+            ExceptionDispatchInfo.Capture(exception).Throw();
         }
 
         private sealed class ExclusiveSynchronizationContext : SynchronizationContext

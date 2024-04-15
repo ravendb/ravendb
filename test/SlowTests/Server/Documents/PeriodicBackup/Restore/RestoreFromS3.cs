@@ -51,8 +51,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var config = Backup.CreateBackupConfiguration(s3Settings: s3Settings, backupUploadMode: backupUploadMode);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
-                var backupResult = (BackupResult)store.Maintenance.Send(new GetOperationStateOperation(Backup.GetBackupOperationId(store, backupTaskId))).Result;
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var id = await Backup.GetBackupOperationIdAsync(store, backupTaskId);
+                var backupResult = (await store.Maintenance.SendAsync(new GetOperationStateOperation(id))).Result as BackupResult;
                 Assert.NotNull(backupResult);
                 Assert.True(backupResult.Counters.Processed, "backupResult.Counters.Processed");
                 Assert.Equal(1, backupResult.Counters.ReadCount);

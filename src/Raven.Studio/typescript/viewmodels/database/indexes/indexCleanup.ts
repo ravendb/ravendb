@@ -11,6 +11,7 @@ import indexDefinition from "models/database/index/indexDefinition";
 import eventsCollector = require("common/eventsCollector");
 import router = require("plugins/router");
 import mergedIndexesStorage = require("common/storage/mergedIndexesStorage");
+import copyToClipboard = require("common/copyToClipboard");
 
 interface notQueriedIndexInfo {
     name: string;
@@ -53,6 +54,8 @@ class indexCleanup extends viewModelBase {
     surpassingSuggestions = ko.observableArray<surpassingIndexInfo>();
     unmergables = ko.observableArray<{ indexName: string; reason: string; }>();
     notQueriedForLastWeek = ko.observableArray<notQueriedIndexInfo>([]);
+
+    mergeSuggestionsErrors = ko.observableArray<mergeSuggestionsError>([]);
 
     notQueriedSelectionState: KnockoutComputed<checkbox>;
     surpassingSelectionState: KnockoutComputed<checkbox>;
@@ -208,6 +211,8 @@ class indexCleanup extends viewModelBase {
                     indexName: key,
                     reason: results.Unmergables[key]
                 })));
+
+                this.mergeSuggestionsErrors(results.Errors.map(x => new mergeSuggestionsError(x)));
             });
     }
 
@@ -275,6 +280,28 @@ class indexCleanup extends viewModelBase {
         const targetUrl = this.appUrls.editIndex(mergedIndexName)();
         
         router.navigate(targetUrl);
+    }
+}
+
+class mergeSuggestionsError {
+    readonly indexName: string;
+    readonly message: string;
+    readonly stackTrace: string;
+
+    readonly isStackTraceVisible = ko.observable<boolean>(false);
+
+    constructor(dto: Raven.Server.Documents.Indexes.IndexMerging.MergeError) {
+        this.indexName = dto.IndexName;
+        this.message = dto.Message;
+        this.stackTrace = dto.StackTrace;
+    }
+
+    toggleIsStackTraceVisible() {
+        this.isStackTraceVisible(!this.isStackTraceVisible());
+    }
+
+    copyErrorToClipboard() {
+        copyToClipboard.copy(this.message + this.stackTrace, "Error has been copied to clipboard");
     }
 }
 

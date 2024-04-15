@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net7.0</TargetFramework>
-    <RuntimeFrameworkVersion>7.0.17</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>7.0.18</RuntimeFrameworkVersion>
     <RuntimeIdentifiers>win7-x64;win8-x64;win81-x64;win10-x64;win7-x86;win8-x86;win81-x86;win10-x86;ubuntu.14.04-x64;ubuntu.16.04-x64;ubuntu.18.04-x64</RuntimeIdentifiers>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
@@ -13,9 +13,9 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Core" Version="3.7.302.16" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.303.13" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
-    <PackageReference Include="Microsoft.Azure.DocumentDB.Core" Version="2.21.0" />
+    <PackageReference Include="Microsoft.Azure.DocumentDB.Core" Version="2.22.0" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageReference Include="MongoDB.Driver" Version="2.24.0" />
     <PackageReference Include="MongoDB.Driver.GridFS" Version="2.24.0" />
@@ -25,6 +25,6 @@
     <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="7.0.2" />
     <PackageReference Include="System.Reflection.Metadata" Version="7.0.2" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="7.0.0" />
-    <PackageReference Include="ZstdSharp.Port" Version="0.7.5" />
+    <PackageReference Include="ZstdSharp.Port" Version="0.7.6" />
   </ItemGroup>
 </Project>

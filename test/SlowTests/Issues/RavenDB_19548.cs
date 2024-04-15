@@ -125,9 +125,9 @@ from 'Users' as result select output(result)", asyncDocumentQuery.ToString());
 }
 from 'Users' as result select output(result)", asyncDocumentQuery.ToString());
 
-                    var exception = Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () => await asyncDocumentQuery.ToListAsync());
+                    var exception = await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () => await asyncDocumentQuery.ToListAsync());
                     Assert.StartsWith("System.InvalidOperationException: Query returning a single function call result must return an object",
-                        exception.Result.Message);
+                        exception.Message);
                 }
 
                 /* should work:
@@ -158,9 +158,9 @@ from 'Users' as result select output(result)", asyncDocumentQuery.ToString());
 }
 from 'Users' as result select output(result)", asyncDocumentQuery.ToString());
 
-                    var exception = Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () => await asyncDocumentQuery.ToListAsync());
+                    var exception = await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () => await asyncDocumentQuery.ToListAsync());
                     Assert.StartsWith("System.InvalidOperationException: Query returning a single function call result must return an object",
-                        exception.Result.Message);
+                        exception.Message);
                 }
 
                 /* shouldn't work:

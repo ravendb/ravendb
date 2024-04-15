@@ -16,6 +16,7 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Sparrow.Json;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -86,7 +87,7 @@ namespace InterversionTests
             var leaderServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
             await leaderServer.ServerStore.EnsureNotPassiveAsync(leaderServer.WebUrl);
 
-            var nodeAdded = new ManualResetEvent(false);
+            var nodeAdded = new AsyncManualResetEvent();
             var expectedMembers = 2;
             leaderServer.ServerStore.Engine.TopologyChanged += (sender, clusterTopology) =>
             {
@@ -111,7 +112,7 @@ namespace InterversionTests
                     var peer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
                     var addCommand = new AddClusterNodeCommand(peer.WebUrl, watcher: watcherCluster);
                     await requestExecutor.ExecuteAsync(addCommand, context);
-                    Assert.True(nodeAdded.WaitOne(TimeSpan.FromSeconds(30)));
+                    Assert.True(await nodeAdded.WaitAsync(TimeSpan.FromSeconds(30)));
                     nodeAdded.Reset();
                     local.Add(peer);
                 }
@@ -126,7 +127,7 @@ namespace InterversionTests
                 {
                     var addCommand = new AddClusterNodeCommand(processNode.Url);
                     await requestExecutor.ExecuteAsync(addCommand, context);
-                    Assert.True(nodeAdded.WaitOne(TimeSpan.FromSeconds(30)));
+                    Assert.True(await nodeAdded.WaitAsync(TimeSpan.FromSeconds(30)));
                     nodeAdded.Reset();
                 }
 

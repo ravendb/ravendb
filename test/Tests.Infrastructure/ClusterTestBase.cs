@@ -239,7 +239,7 @@ namespace Tests.Infrastructure
                     }
                     continue;
                 }
-                var dbRecord = dbTask.Result;
+                var dbRecord = await dbTask;
                 if (dbRecord == null || dbRecord.DeletionInProgress == null || dbRecord.DeletionInProgress.Count == 0)
                 {
                     return true;
@@ -370,7 +370,7 @@ namespace Tests.Infrastructure
             return string.Join(Environment.NewLine, servers);
         }
 
-        protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<ServerStore, T> func, T expected, int timeout = 15000)
+        protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<ServerStore, Task<T>> func, T expected, int timeout = 15000)
         {
             var nodes = topology.AllNodes;
             var servers = new List<ServerStore>();
@@ -970,14 +970,14 @@ namespace Tests.Infrastructure
 
         public async Task WaitForLeader(TimeSpan timeout)
         {
+            using var cts = new CancellationTokenSource(timeout);
             var tasks = Servers
-                .Select(server => server.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None))
+                .Select(server => server.ServerStore.WaitForState(RachisState.Leader, cts.Token))
                 .ToList();
 
-            tasks.Add(Task.Delay(timeout));
-            await Task.WhenAny(tasks);
+            var t = await Task.WhenAny(tasks);
 
-            if (Task.Delay(timeout).IsCompleted)
+            if (t.Result == false)
                 throw new TimeoutException(Cluster.GetLastStatesFromAllServersOrderedByTime());
         }
 

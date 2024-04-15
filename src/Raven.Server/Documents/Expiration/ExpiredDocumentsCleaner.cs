@@ -14,7 +14,6 @@ using Raven.Client.ServerWide;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Voron;
@@ -26,6 +25,8 @@ namespace Raven.Server.Documents.Expiration
         internal static int BatchSize = PlatformDetails.Is32Bits == false
             ? 4096
             : 1024;
+
+        internal static int DefaultMaxItemsToProcessInSingleRun = int.MaxValue;
 
         private readonly DocumentDatabase _database;
         private readonly TimeSpan _refreshPeriod;
@@ -119,15 +120,15 @@ namespace Raven.Server.Documents.Expiration
 
         internal Task CleanupExpiredDocs(int? batchSize = null)
         {
-            return CleanupDocs(batchSize ?? BatchSize, forExpiration: true);
+            return CleanupDocs(batchSize ?? BatchSize, ExpirationConfiguration.MaxItemsToProcess ?? DefaultMaxItemsToProcessInSingleRun, forExpiration: true);
         }
 
         internal Task RefreshDocs(int? batchSize = null)
         {
-            return CleanupDocs(batchSize ?? BatchSize, forExpiration: false);
+            return CleanupDocs(batchSize ?? BatchSize, RefreshConfiguration.MaxItemsToProcess ?? DefaultMaxItemsToProcessInSingleRun, forExpiration: false);
         }
         
-        private async Task CleanupDocs(int batchSize, bool forExpiration)
+        private async Task CleanupDocs(int batchSize, long maxItemsToProcess, bool forExpiration)
         {
             var currentTime = _database.Time.GetUtcNow();
             
@@ -141,22 +142,22 @@ namespace Raven.Server.Documents.Expiration
                 }
 
                 var isFirstInTopology = string.Equals(topology.AllNodes.FirstOrDefault(), _database.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
-
+                var totalCount = 0;
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    while (true)
+                    while (totalCount < maxItemsToProcess)
                     {
                         context.Reset();
                         context.Renew();
 
                         using (context.OpenReadTransaction())
                         {
-                            var options = new ExpirationStorage.ExpiredDocumentsOptions(context, currentTime, isFirstInTopology, batchSize);
+                            var options = new ExpirationStorage.ExpiredDocumentsOptions(context, currentTime, isFirstInTopology, batchSize, maxItemsToProcess);
 
                             var expired =
                                 forExpiration ?
-                                    _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, out var duration, CancellationToken) :
-                                    _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, out duration, CancellationToken);
+                                    _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, ref totalCount, out var duration, CancellationToken) :
+                                    _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, ref totalCount, out duration, CancellationToken);
 
                             if (expired == null || expired.Count == 0)
                                 return;

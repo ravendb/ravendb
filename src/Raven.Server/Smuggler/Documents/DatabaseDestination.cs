@@ -12,6 +12,7 @@ using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -26,6 +27,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Commands;
@@ -64,6 +66,8 @@ namespace Raven.Server.Smuggler.Documents
         private readonly Logger _log;
         private BuildVersionType _buildType;
         private DatabaseSmugglerOptionsServerSide _options;
+        protected SmugglerResult _result;
+        protected Action<IOperationProgress> _onProgress;
 
         public DatabaseDestination(DocumentDatabase database, CancellationToken token = default)
         {
@@ -73,10 +77,12 @@ namespace Raven.Server.Smuggler.Documents
             _duplicateDocsHandler = new DuplicateDocsHandler(_database);
         }
 
-        public IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
+        public IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, long buildVersion)
         {
             _buildType = BuildVersion.Type(buildVersion);
             _options = options;
+            _result = result;
+            _onProgress = onProgress;
 
             return new AsyncDisposableAction(() =>
             {
@@ -134,13 +140,13 @@ namespace Raven.Server.Smuggler.Documents
 
             DatabaseCompareExchangeActions CreateActions()
             {
-                return new DatabaseCompareExchangeActions(_database, context, backupKind, _token);
+                return new DatabaseCompareExchangeActions(_database, context, backupKind, _result, _onProgress, _token);
             }
         }
 
         public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context)
         {
-            return new DatabaseCompareExchangeActions(_database, context, backupKind: null, _token);
+            return new DatabaseCompareExchangeActions(_database, context, backupKind: null, _result, _onProgress, _token);
         }
 
         public ICounterActions Counters(SmugglerResult result)
@@ -600,7 +606,10 @@ namespace Raven.Server.Smuggler.Documents
             private long? _lastClusterTransactionIndex;
             private readonly BackupKind? _backupKind;
             private readonly CancellationToken _token;
-            public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, BackupKind? backupKind, CancellationToken token)
+            private readonly SmugglerResult _result;
+            private readonly Action<IOperationProgress> _onProgress;
+
+            public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, BackupKind? backupKind, SmugglerResult result, Action<IOperationProgress> onProgress, CancellationToken token)
             {
                 _database = database;
                 _context = context;
@@ -613,6 +622,8 @@ namespace Raven.Server.Smuggler.Documents
 
                 _clusterTransactionCommandsBatchSize = new Size(database.Is32Bits ? 2 : 16, SizeUnit.Megabytes);
                 _clusterTransactionCommandsSize = new Size(0, SizeUnit.Megabytes);
+                _result = result;
+                _onProgress = onProgress;
             }
 
             public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
@@ -712,6 +723,44 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             // waiting for the commands to be applied
                             await _database.RachisLogIndexNotifications.WaitForIndexNotification(_lastClusterTransactionIndex.Value, _token);
+                        }
+                        else
+                        {
+                            Debug.Assert(_backupKind == BackupKind.Full || _backupKind == BackupKind.Incremental);
+                            ExecuteClusterTransactions();
+                        }
+                    }
+                }
+            }
+
+            private void ExecuteClusterTransactions()
+            {
+                long totalExecutedCommands;
+                using (_database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext serverContext))
+                using (serverContext.OpenReadTransaction())
+                {
+                    var commandsCountPerDatabase = serverContext.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsCountPerDatabase);
+                    var prevCount = ClusterTransactionCommand.GetPrevCount(serverContext, commandsCountPerDatabase, _database.Name);
+                    totalExecutedCommands = prevCount;
+                }
+
+                while (true)
+                {
+                    _token.ThrowIfCancellationRequested();
+                
+                    using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                    using (serverContext.OpenReadTransaction())
+                    {
+                        // the commands are already batched (10k or 16MB), so we are executing only 1 at a time
+                        var executed = _database.ExecuteClusterTransaction(serverContext, batchSize: 1);
+                        if (executed.Count == 0)
+                            break;
+                
+                        totalExecutedCommands += executed.Sum(x => x.Commands.Count);
+                        if (_result != null)
+                        {
+                            _result.AddInfo($"Executed {totalExecutedCommands:#,#;;0} cluster transaction commands.");
+                            _onProgress?.Invoke(_result.Progress);
                         }
                     }
                 }
@@ -1564,7 +1613,8 @@ namespace Raven.Server.Smuggler.Documents
                         if ((document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler)) &&
                             (_missingDocumentsForRevisions != null))
                         {
-                            if (_database.DocumentsStorage.Get(context, document.Id) == null)
+                            if (_database.DocumentsStorage.Get(context, document.Id) == null && 
+                                document.ChangeVector.Contains(ChangeVectorParser.TrxnTag) == false)
                             {
                                 var collection = _database.DocumentsStorage.ExtractCollectionName(context, document.Data);
                                 _missingDocumentsForRevisions.TryAdd(document.Id.ToString(), collection);

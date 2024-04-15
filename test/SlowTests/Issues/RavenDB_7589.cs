@@ -9,6 +9,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,7 +28,7 @@ namespace SlowTests.Issues
         {
             DoNotReuseServer();
 
-            var mre = new ManualResetEventSlim();
+            var mre = new AsyncManualResetEvent();
 
             Server.ServerStore.Cluster.Changes.DatabaseChanged += (arg1,arg2,arg3,arg4, _) =>
             {
@@ -139,7 +140,7 @@ namespace SlowTests.Issues
                 Assert.Equal(2, identities["addresses|"]);
             }
 
-            Assert.True(mre.Wait(TimeSpan.FromSeconds(10)));
+            Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(10)));
 
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())

@@ -144,9 +144,9 @@ namespace RachisTests.DatabaseCluster
                 cluster.Leader.ServerStore.Engine.HardResetToNewCluster(tag);
                 await AssertWaitForTrueAsync(() => Task.FromResult(node.ServerStore.Engine.CurrentState == RachisState.Passive));
 
-                var outgoingConnections = WaitForValue(() =>
+                var outgoingConnections = await WaitForValueAsync(async () =>
                 {
-                    var dbInstance = cluster.Leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName).Result;
+                    var dbInstance = await cluster.Leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
                     return dbInstance.ReplicationLoader.OutgoingHandlers.Count();
                 }, 0);
 
@@ -228,9 +228,9 @@ namespace RachisTests.DatabaseCluster
                 cluster.Leader.ServerStore.Engine.HardResetToPassive(Guid.NewGuid().ToString());
                 await cluster.Leader.ServerStore.EnsureNotPassiveAsync(nodeTag: tag);
 
-                var outgoingConnections = WaitForValue(() =>
+                var outgoingConnections = await WaitForValueAsync(async () =>
                 {
-                    var dbInstance = cluster.Leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName).Result;
+                    var dbInstance = await cluster.Leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
                     return dbInstance.ReplicationLoader.OutgoingHandlers.Count();
                 }, 0);
 

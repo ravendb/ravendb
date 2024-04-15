@@ -185,7 +185,7 @@ namespace SlowTests.Issues
                 }, Server.ServerStore);
 
             await migrate.UpdateBuildInfoIfNeeded();
-
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store2);
             var operationId =
                 migrate.StartMigratingSingleDatabase(
                     new DatabaseMigrationSettings
@@ -193,7 +193,7 @@ namespace SlowTests.Issues
                         DatabaseName = store1.Database,
                         OperateOnTypes = operateOnTypes,
                     },
-                    Databases.GetDocumentDatabaseInstanceFor(store2).Result);
+                    database);
 
             WaitForValue(() =>
             {

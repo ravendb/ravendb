@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide;
 using Raven.Server;
 using Raven.Server.Documents.ETL;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -70,7 +71,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
                 await session.SaveChangesAsync();
             }
 
-            var etlDone = WaitForEtl(mentorNode, dbName, (n, statistics) => statistics.LoadSuccesses != 0);
+            var etlDone = await WaitForEtlAsync(mentorNode, dbName, (n, statistics) => statistics.LoadSuccesses != 0);
 
             var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -119,7 +120,7 @@ loadToOrders(partitionBy(key),
                 });
 
             var timeout = TimeSpan.FromSeconds(65);
-            Assert.True(etlDone.Wait(timeout), await GetPerformanceStats(mentorNode, dbName, timeout));
+            Assert.True(await etlDone.WaitAsync(timeout), await GetPerformanceStats(mentorNode, dbName, timeout));
 
             var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
             Assert.Equal(1, files.Length);
@@ -132,7 +133,7 @@ loadToOrders(partitionBy(key),
 
             var newResponsible = WaitForNewResponsibleNode(store2, task.TaskId, OngoingTaskType.OlapEtl, mentorTag);
             var newResponsibleNode = cluster.Nodes.Single(s => s.ServerStore.NodeTag == newResponsible);
-            etlDone = WaitForEtl(newResponsibleNode, dbName, (n, statistics) => statistics.LoadSuccesses != 0);
+            etlDone = await WaitForEtlAsync(newResponsibleNode, dbName, (n, statistics) => statistics.LoadSuccesses != 0);
 
             using (var session = store2.OpenAsyncSession())
             {
@@ -150,7 +151,7 @@ loadToOrders(partitionBy(key),
                 await session.SaveChangesAsync();
             }
 
-            Assert.True(etlDone.Wait(timeout), await GetPerformanceStats(newResponsibleNode, dbName, timeout));
+            Assert.True(await etlDone.WaitAsync(timeout), await GetPerformanceStats(newResponsibleNode, dbName, timeout));
 
             files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
             Assert.True(files.Length == 2, $"Expected 2 output files but got {files.Length}. " +
@@ -159,11 +160,11 @@ loadToOrders(partitionBy(key),
         }
 
 
-        private static ManualResetEventSlim WaitForEtl(RavenServer server, string databaseName, Func<string, EtlProcessStatistics, bool> predicate)
+        private static async Task<AsyncManualResetEvent> WaitForEtlAsync(RavenServer server, string databaseName, Func<string, EtlProcessStatistics, bool> predicate)
         {
-            var database = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+            var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
 
-            var mre = new ManualResetEventSlim();
+            var mre = new AsyncManualResetEvent();
 
             database.EtlLoader.BatchCompleted += x =>
             {

@@ -1536,7 +1536,7 @@ namespace Raven.Server.ServerWide
 
         private static void CleanupDatabaseReplicationCertificate(ClusterOperationContext context, string databaseName)
         {
-            using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+            var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
 
             string prefixString = (databaseName + "/").ToLowerInvariant();
             using var _ = Slice.From(context.Allocator, prefixString, out var prefix);
@@ -1921,7 +1921,7 @@ namespace Raven.Server.ServerWide
             DeleteValueCommand delCmd = null;
             try
             {
-                delCmd = (DeleteValueCommand)CommandBase.CreateFrom(cmd);
+                delCmd = (DeleteValueCommand)JsonDeserializationCluster.Commands[type](cmd);
                 if (delCmd.Name.StartsWith("db/"))
                     throw new RachisApplyException("Cannot delete " + delCmd.Name + " using DeleteValueCommand, only via dedicated database calls");
 
@@ -1945,7 +1945,7 @@ namespace Raven.Server.ServerWide
         {
             try
             {
-                var command = (DeleteCertificateFromClusterCommand)CommandBase.CreateFrom(cmd);
+                var command = (DeleteCertificateFromClusterCommand)JsonDeserializationCluster.Commands[type](cmd);
 
                 DeleteCertificate(context, command.Name);
             }
@@ -1959,7 +1959,7 @@ namespace Raven.Server.ServerWide
         {
             try
             {
-                var command = (DeleteCertificateCollectionFromClusterCommand)CommandBase.CreateFrom(cmd);
+                var command = (DeleteCertificateCollectionFromClusterCommand)JsonDeserializationCluster.Commands[type](cmd);
 
                 foreach (var thumbprint in command.Names)
                 {
@@ -2066,7 +2066,7 @@ namespace Raven.Server.ServerWide
             try
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-                command = (UpdateValueCommand<T>)CommandBase.CreateFrom(cmd);
+                command = (UpdateValueCommand<T>)JsonDeserializationCluster.Commands[type](cmd);
                 if (command.Name.StartsWith(Constants.Documents.Prefix))
                     throw new RachisApplyException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated database calls");
 
@@ -2151,7 +2151,7 @@ namespace Raven.Server.ServerWide
             try
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-                command = (PutValueCommand<T>)CommandBase.CreateFrom(cmd);
+                command = (PutValueCommand<T>)JsonDeserializationCluster.Commands[type](cmd);
                 if (command.Name.StartsWith(Constants.Documents.Prefix))
                     throw new RachisApplyException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated database calls");
 
@@ -2192,7 +2192,7 @@ namespace Raven.Server.ServerWide
             try
             {
                 var certs = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
-                var command = (PutCertificateCommand)CommandBase.CreateFrom(cmd);
+                var command = (PutCertificateCommand)JsonDeserializationCluster.Commands[type](cmd);
 
                 using (Slice.From(context.Allocator, command.PublicKeyPinningHash, out var hashSlice))
                 using (Slice.From(context.Allocator, command.Name.ToLowerInvariant(), out var thumbprintSlice))
@@ -2214,7 +2214,7 @@ namespace Raven.Server.ServerWide
 
         private void BulkPutReplicationCertificate(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
-            var command = (BulkRegisterReplicationHubAccessCommand)CommandBase.CreateFrom(cmd);
+            var command = (BulkRegisterReplicationHubAccessCommand)JsonDeserializationCluster.Commands[type](cmd);
             try
             {
                 var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
@@ -2232,7 +2232,7 @@ namespace Raven.Server.ServerWide
 
         private void PutReplicationCertificate(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
-            var command = (RegisterReplicationHubAccessCommand)CommandBase.CreateFrom(cmd);
+            var command = (RegisterReplicationHubAccessCommand)JsonDeserializationCluster.Commands[type](cmd);
             try
             {
                 var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
@@ -2295,7 +2295,7 @@ namespace Raven.Server.ServerWide
 
         private void RemoveReplicationCertificate(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
-            var command = (UnregisterReplicationHubAccessCommand)CommandBase.CreateFrom(cmd);
+            var command = (UnregisterReplicationHubAccessCommand)JsonDeserializationCluster.Commands[type](cmd);
             try
             {
                 var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
@@ -4424,7 +4424,7 @@ namespace Raven.Server.ServerWide
 
         public IEnumerable<BlittableJsonReaderObject> GetReplicationHubCertificateByHub(TransactionOperationContext context, string database, string hub, string filter, int start, int pageSize)
         {
-            using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+            var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
 
             string prefixString = (database + "/" + hub + "/").ToLowerInvariant();
             using var _ = Slice.From(context.Allocator, prefixString, out var prefix);
@@ -4463,7 +4463,7 @@ namespace Raven.Server.ServerWide
 
         public IEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificateForDatabase(TransactionOperationContext context, string database)
         {
-            using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+            var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
 
             string prefixString = (database + "/").ToLowerInvariant();
             using var _ = Slice.From(context.Allocator, prefixString, out var prefix);
@@ -4501,7 +4501,7 @@ namespace Raven.Server.ServerWide
 
         public bool IsReplicationCertificate(TransactionOperationContext context, string database, string hub, X509Certificate2 userCert, out DetailedReplicationHubAccess access)
         {
-            using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+            var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
 
             using var __ = Slice.From(context.Allocator, (database + "/" + hub + "/" + userCert.Thumbprint).ToLowerInvariant(), out var key);
 
@@ -4519,7 +4519,7 @@ namespace Raven.Server.ServerWide
 
         public unsafe bool IsReplicationCertificateByPublicKeyPinningHash(TransactionOperationContext context, string database, string hub, X509Certificate2 userCert, SecurityConfiguration securityConfiguration, out DetailedReplicationHubAccess access)
         {
-            using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+            var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
             // maybe we need to check by public key hash?
             string publicKeyPinningHash = userCert.GetPublicKeyPinningHash();
 

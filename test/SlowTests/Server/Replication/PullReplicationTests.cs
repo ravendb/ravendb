@@ -14,6 +14,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -346,14 +347,14 @@ namespace SlowTests.Server.Replication
                 Assert.True(WaitForDocument(sink, "users/1", timeout), sink.Identifier);
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(sink);
-                var removedOnSink = new ManualResetEventSlim();
+                var removedOnSink = new AsyncManualResetEvent();
                 db.ReplicationLoader.IncomingReplicationRemoved += _ => removedOnSink.Set();
 
                 pullDefinition.Disabled = true;
                 pullDefinition.TaskId = saveResult.TaskId;
                 await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(pullDefinition));
 
-                Assert.True(removedOnSink.Wait(timeout));
+                Assert.True(await removedOnSink.WaitAsync(TimeSpan.FromMilliseconds(timeout)));
 
                 using (var main = hub.OpenSession())
                 {

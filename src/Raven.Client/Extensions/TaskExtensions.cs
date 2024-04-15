@@ -38,7 +38,7 @@ namespace Raven.Client.Extensions
 
         public static async Task<bool> WaitWithTimeout(this Task task, TimeSpan? timeout)
         {
-            if (timeout == null)
+            if (timeout == null || timeout == Timeout.InfiniteTimeSpan)
             {
                 await task.ConfigureAwait(false);
                 return true;

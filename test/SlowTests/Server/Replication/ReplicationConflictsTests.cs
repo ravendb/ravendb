@@ -1008,12 +1008,13 @@ namespace SlowTests.Server.Replication
 
                 await SetScriptResolutionAsync(store2, "return {Name:docs[0].Name + '123'};", "Users");
                 await SetupReplicationAsync(store1, store2);
-                var db2 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database).Result.NotificationCenter;
+                var db2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+                var notificationCenter2 = db2.NotificationCenter;
 
-                Assert.Equal(1, WaitForValue(() => db2.GetAlertCount(), 1));
+                Assert.Equal(1, WaitForValue(() => notificationCenter2.GetAlertCount(), 1));
 
                 IEnumerable<NotificationTableValue> alerts;
-                using (db2.GetStored(out alerts))
+                using (notificationCenter2.GetStored(out alerts))
                 {
                     var alertsList = alerts.ToList();
                     string msg;
@@ -1065,9 +1066,8 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
                 await SetupReplicationAsync(store2, store1);
-                var db1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result.DocumentsStorage.ConflictsStorage;
-
-                Assert.Equal(2, WaitForValue(() => db1.ConflictsCount, 2));
+                var db1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                Assert.Equal(2, WaitForValue(() => db1.DocumentsStorage.ConflictsStorage.ConflictsCount, 2));
             }
         }
 
@@ -1108,9 +1108,8 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
                 await SetupReplicationAsync(store2, store1);
-                var db1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result.DocumentsStorage.ConflictsStorage;
-                Assert.Equal(2, WaitForValue(() => db1.ConflictsCount, 2));
-
+                var db1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                Assert.Equal(2, WaitForValue(() => db1.DocumentsStorage.ConflictsStorage.ConflictsCount, 2));
 
                 using (var session = store1.OpenSession())
                 {

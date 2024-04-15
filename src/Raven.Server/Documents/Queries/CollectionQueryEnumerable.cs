@@ -9,6 +9,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
@@ -26,7 +27,6 @@ namespace Raven.Server.Documents.Queries
     {
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documents;
-        private readonly SearchEngineType _searchEngineType;
         private readonly FieldsToFetch _fieldsToFetch;
         private readonly DocumentsOperationContext _context;
         private readonly IncludeDocumentsCommand _includeDocumentsCommand;
@@ -41,14 +41,13 @@ namespace Raven.Server.Documents.Queries
         private readonly QueryTimingsScope _queryTimings;
         private readonly bool _isAllDocsCollection;
 
-        public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, string collection,
+        public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection,
             IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
             IncludeRevisionsCommand includeRevisionsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<long> totalResults,
             Reference<int> scannedResults, Reference<long> skippedResults, CancellationToken token)
         {
             _database = database;
             _documents = documents;
-            _searchEngineType = searchEngineType;
             _fieldsToFetch = fieldsToFetch;
             _collection = collection;
             _isAllDocsCollection = collection == Constants.Documents.Collections.AllDocumentsCollection;
@@ -72,7 +71,7 @@ namespace Raven.Server.Documents.Queries
 
         public IEnumerator<Document> GetEnumerator()
         {
-            return new Enumerator(_database, _documents, SearchEngineType.None, _fieldsToFetch, _collection, _isAllDocsCollection, _query,
+            return new Enumerator(_database, _documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query,
                 _queryTimings, _context, _includeDocumentsCommand, _includeRevisionsCommand, _includeCompareExchangeValuesCommand, _totalResults, _scannedResults, 
                 StartAfterId, AlreadySeenIdsCount, Fields, _skippedResults, _token);
         }
@@ -129,18 +128,15 @@ namespace Raven.Server.Documents.Queries
             private readonly string _startAfterId;
             private readonly Reference<long> _alreadySeenIdsCount;
             private readonly DocumentFields _fields;
-            private readonly SearchEngineType _searchEngineType;
 
             private bool _initialized;
 
             private int _returnedResults;
 
             private readonly HashSet<ulong> _alreadySeenProjections;
-            private long _start;
             private IEnumerator<Document> _inner;
             private bool _hasProjections;
             private List<Document>.Enumerator _projections;
-            private int _innerCount;
             private readonly List<Slice> _ids;
             private readonly MapQueryResultRetriever _resultsRetriever;
             private readonly string _startsWith;
@@ -148,14 +144,15 @@ namespace Raven.Server.Documents.Queries
             private readonly CancellationToken _token;
             private readonly ScriptRunner.SingleRun _filterScriptRun;
             private ScriptRunner.ReturnRun _releaseFilterScriptRunner;
+            private bool _totalResultsCalculated;
+            private readonly bool _isCountQuery;
 
-            public Enumerator(DocumentDatabase database, DocumentsStorage documents, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
+            public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
                 IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
                 IncludeRevisionsCommand includeRevisionsCommand,IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<long> totalResults, 
                 Reference<int> scannedResults, string startAfterId, Reference<long> alreadySeenIdsCount, DocumentFields fields, Reference<long> skippedResults, CancellationToken token)
             {
                 _documents = documents;
-                _searchEngineType = searchEngineType;
                 _fieldsToFetch = fieldsToFetch;
                 _collection = collection;
                 _isAllDocsCollection = isAllDocsCollection;
@@ -170,19 +167,19 @@ namespace Raven.Server.Documents.Queries
                 _fields = fields;
                 _skippedResults = skippedResults;
                 _token = token;
-
+                _isCountQuery = _query.PageSize == 0;
                 if (_fieldsToFetch.IsDistinct)
                     _alreadySeenProjections = new HashSet<ulong>();
 
-                _resultsRetriever = new MapQueryResultRetriever(database, query, queryTimings, documents, context, searchEngineType, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
+                _resultsRetriever = new MapQueryResultRetriever(database, query, queryTimings, documents, context, SearchEngineType.None, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
 
                 (_ids, _startsWith) = ExtractIdsFromQuery(query, context);
                 
                 if (_query.Metadata.FilterScript != null)
                 {
                     var key = new FilterKey(_query.Metadata);
-                    _releaseFilterScriptRunner = database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out _filterScriptRun);
-            	}
+                    _releaseFilterScriptRunner = database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out _filterScriptRun); 
+                }
             }
 
             private (List<Slice>, string) ExtractIdsFromQuery(IndexQueryServerSide query, DocumentsOperationContext context)
@@ -223,15 +220,30 @@ namespace Raven.Server.Documents.Queries
             public bool MoveNext()
             {
                 if (_initialized == false)
-                    _start = Initialize();
+                {
+                    Initialize(out var processedAllDocuments);
+                    
+                    // When our query skipped all documents from underlying stream
+                    if (processedAllDocuments)
+                        return false;
+                    
+                    ConfigureStreamForUnboundedQueries();
+                }
 
-                while (true)
+                if (_isCountQuery)
+                {
+                    CountDocumentsInEnumerator(countQuery: true);
+                    return false;
+                }
+                
+                while (_returnedResults < _query.PageSize)
                 {
                     var (hasNext, doc) = GetNextDocument();
                     if (doc == null)
                     {
                         if (hasNext == false)
                             return false;
+                     
                         _skippedResults.Value++;
                         continue;
                     }
@@ -250,8 +262,60 @@ namespace Raven.Server.Documents.Queries
                         return true;
                     }
 
-                    if (_returnedResults >= _query.PageSize)
-                        return false;
+                    _skippedResults.Value++;
+                }
+
+                //In' (or 'equal') is an unbounded query like `startsWith'. However, there are not as many documents to check (since it requires sending list of ids) compared to startsWith
+                // where the query can match the whole collection (and more). For this scenario, we'll count the rest of the documents in the underlying enumerator
+                // in order to return exact totalResults count.
+                if (_ids != null)
+                    CountDocumentsInEnumerator(countQuery: false);
+                
+                return false;
+            }
+
+            private void CountDocumentsInEnumerator(bool countQuery)
+            {
+                // If we know how many documents we have, and we do not have a DISTINCT clause, we can simply return the current value from memory.
+                if (_totalResultsCalculated && _query.Metadata.IsDistinct == false && _filterScriptRun == null)
+                    return;
+                
+                // For count(): We need to disable calculating totalResults in the enumerator, so let's set _totalResultsCalculated to true.
+                _totalResultsCalculated = true;
+                
+                if (countQuery)
+                    _totalResults.Value = 0;
+
+                while (true)
+                {
+                    var (hasNext, doc) = GetNextDocument();
+                    using (doc)
+                    {
+                        if (doc == null)
+                        {
+                            if (hasNext == false)
+                                return;
+                            _skippedResults.Value++;
+                            continue;
+                        }
+
+                        if (_query.SkipDuplicateChecking || _fieldsToFetch.IsDistinct == false)
+                        {
+                            _totalResults.Value++;
+                            continue;
+                        }
+
+                        if (_alreadySeenProjections.Add(doc.DataHash))
+                        {
+                            _totalResults.Value++;
+                        }
+                        else
+                        {
+                            _skippedResults.Value++; 
+                        }
+                    }
+                    
+                    _context.Transaction.ForgetAbout(doc);
                 }
             }
 
@@ -266,29 +330,14 @@ namespace Raven.Server.Documents.Queries
                     _projections = default;
                 }
 
-                if (_inner == null)
-                {
-                    _inner = GetDocuments().GetEnumerator();
-                    _innerCount = 0;
-                }
-
+                Debug.Assert(_inner != null, "_inner != null"); 
+                
                 if (_inner.MoveNext() == false)
                 {
                     Current = null;
-
-                    if (_returnedResults >= _query.PageSize)
-                        return (false, null);
-
-                    if (_innerCount < _query.PageSize)
-                        return (false, null);
-
-                    _start += _query.PageSize;
-                    _inner = null;
-                    return (true, null);
+                    return (false, null);
                 }
-
-                _innerCount++;
-
+                
                 if (_filterScriptRun != null)
                 {
                     if ( _scannedResults.Value == _query.FilterLimit)
@@ -304,11 +353,13 @@ namespace Raven.Server.Documents.Queries
                             return (true, null);
                     }
                 }
-                
-                RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase.ZeroScore, null);
 
+                if (_totalResultsCalculated == false)
+                    _totalResults.Value++;
+                
                 if (_fieldsToFetch.IsProjection)
                 {
+                    RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase.ZeroScore, null);
                     var result = _resultsRetriever.GetProjectionFromDocument(_inner.Current, ref retrieverInput, _fieldsToFetch, _context, _token);
                     if (result.List != null)
                     {
@@ -332,36 +383,18 @@ namespace Raven.Server.Documents.Queries
                 return (true, _inner.Current);
             }
 
-            private IEnumerable<Document> GetDocuments()
+            private IEnumerable<Document> GetDocuments(out bool totalResultsCalculated, int? amountToSkip = null)
             {
                 IEnumerable<Document> documents;
-
+                var skip = amountToSkip ?? 0;
+                const long takeAll = long.MaxValue; // owner of enumerable decide when to stop, there is no reason to make paging at storage level.
+                totalResultsCalculated = false;
+                
                 if (_startsWith != null)
                 {
-                    var countQuery = false;
-
-                    if (_query.PageSize == 0)
-                    {
-                        countQuery = true;
-                        _query.PageSize = int.MaxValue;
-                    }
-
                     documents = _isAllDocsCollection
-                        ? _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, _startAfterId, _start, _query.PageSize, null, fields: _fields, _token) 
-                        : _documents.GetDocumentsStartingWith(_context, _startsWith, _startAfterId, _start, _query.PageSize, _collection, _skippedResults,  _fields, _token);
-
-                    if (countQuery)
-                    {
-                        foreach (var document in documents)
-                        {
-                            using (document.Data)
-                                _totalResults.Value++;
-                        }
-
-                        documents = Enumerable.Empty<Document>();
-
-                        _query.PageSize = 0;
-                    }
+                        ? _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, _startAfterId, skip, takeAll, null, fields: _fields, _token) 
+                        : _documents.GetDocumentsStartingWith(_context, _startsWith, _startAfterId, skip, takeAll, _collection, _skippedResults,  _fields, _token);
                 }
                 else if (_ids != null)
                 {
@@ -383,100 +416,119 @@ namespace Raven.Server.Documents.Queries
                             _alreadySeenIdsCount.Value += count;
 
                             documents = _isAllDocsCollection
-                                ? _documents.GetDocuments(_context, ids, 0, _query.PageSize, _totalResults)
-                                : _documents.GetDocumentsForCollection(_context, ids, _collection, 0, _query.PageSize, _totalResults);
+                                ? _documents.GetDocuments(_context, ids, 0, takeAll)
+                                : _documents.GetDocumentsForCollection(_context, ids, _collection, 0, takeAll);
                         }
                     }
                     else
                     {
                         documents = _isAllDocsCollection
-                            ? _documents.GetDocuments(_context, _ids, _start, _query.PageSize, _totalResults)
-                            : _documents.GetDocumentsForCollection(_context, _ids, _collection, _start, _query.PageSize, _totalResults);
+                            ? _documents.GetDocuments(_context, _ids, skip, takeAll)
+                            : _documents.GetDocumentsForCollection(_context, _ids, _collection, skip, takeAll);
+                        
                     }
                 }
                 else if (_isAllDocsCollection)
                 {
-                    documents = _documents.GetDocumentsFrom(_context, 0, _start, _query.PageSize);
-                    _totalResults.Value = (int)_documents.GetNumberOfDocuments(_context);
+                    documents = _documents.GetDocumentsFrom(_context, 0, skip, takeAll);
+                    if (_filterScriptRun == null)
+                    {
+                        totalResultsCalculated = true;
+                        _totalResults.Value = (int)_documents.GetNumberOfDocuments(_context);
+                    }
                 }
                 else
                 {
-                    documents = _documents.GetDocumentsFrom(_context, _collection, 0, _start, _query.PageSize);
-                    _totalResults.Value = (int)_documents.GetCollection(_collection, _context).Count;
+                    documents = _documents.GetDocumentsFrom(_context, _collection, 0, skip, takeAll);
+                    if (_filterScriptRun == null)
+                    {
+                        totalResultsCalculated = true;
+                        _totalResults.Value = (int)_documents.GetCollection(_collection, _context).Count;
+                    }
                 }
 
                 return documents;
             }
+            
+            private void ConfigureStreamForUnboundedQueries()
+            {
+                // This is the scenario when we have an unbounded query (which basically means we don't know how many elements are in the underlying enumerable). 
+                // We want to avoid materializing just for the correct value of TotalResults and tell Studio that it is unbounded and count it on the front end.
+                // To do this, we'll need to disable totalResults incrementation and set totalResults to 'CollectionQueryRunner.UnboundedQueryResultMarker' (0). See more in `CollectionQueryRunner`.
+                //However, for count queries we will evaluate it to the end.
+                if (_startsWith != null && _isCountQuery == false)
+                {
+                    _totalResults.Value = CollectionQueryRunner.UnboundedQueryResultMarker;
+                    _totalResultsCalculated = true;
+                }
+            }
 
-            private long Initialize()
+            private void Initialize(out bool processedAllDocuments)
             {
                 _initialized = true;
-
-                if (_query.Start == 0)
-                    return _query.Offset ?? 0;
-
-                if (_query.SkipDuplicateChecking)
-                    return _query.Start;
-
-                if (_fieldsToFetch.IsDistinct == false)
-                    return _query.Start;
-
-                var start = 0;
-                while (true)
+                var start = _query.Start;
+                var isInSkip = _ids != null && start > 0;
+                processedAllDocuments = false;
+                
+                if (start == 0)
                 {
-                    var count = 0;
-                    foreach (var document in _documents.GetDocumentsFrom(_context, _collection, 0, start, _query.PageSize))
-                    {
-                        count++;
-                        RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase.ZeroScore, null);
-                        if (_fieldsToFetch.IsProjection)
-                        {
-                            var result = _resultsRetriever.GetProjectionFromDocument(document, ref retrieverInput, _fieldsToFetch, _context, _token);
-                            if (result.Document != null)
-                            {
-                                if (IsStartingPoint(result.Document))
-                                    break;
-                            }
-                            else if (result.List != null)
-                            {
-                                bool match = false;
-                                foreach (Document item in result.List)
-                                {
-                                    if (IsStartingPoint(item))
-                                    {
-                                        match = true;
-                                        break;
-                                    }
-                                }
-
-                                if (match)
-                                    break;
-                            }
-                        }
-                        else
-                        {
-                            if (IsStartingPoint(_inner.Current))
-                            {
-                                break;
-                            }
-                        }
-
-                        bool IsStartingPoint(Document d)
-                        {
-                            return d.Data.Count > 0 && _alreadySeenProjections.Add(d.DataHash) && _alreadySeenProjections.Count == _query.Start;
-                        }
-                    }
-
-                    if (_alreadySeenProjections.Count == _query.Start)
-                        break;
-
-                    if (count < _query.PageSize)
-                        break;
-
-                    start += count;
+                    _inner = GetDocuments(out _totalResultsCalculated, start).GetEnumerator();
+                    return;
                 }
 
-                return start;
+                if (_query.SkipDuplicateChecking)
+                {
+                    _inner = GetDocuments(out _totalResultsCalculated, start).GetEnumerator();
+                    return;
+                }
+
+                if (isInSkip == false && _fieldsToFetch.IsDistinct == false)
+                {
+                    _inner = GetDocuments(out _totalResultsCalculated, start).GetEnumerator();
+                    return;
+                }
+                
+                _inner = GetDocuments(out _totalResultsCalculated, amountToSkip: 0).GetEnumerator();
+                var count = 0;
+                while (true)
+                {
+                    var (hasNextDocument, document) = GetNextDocument();
+                    
+                    if (document == null && hasNextDocument == false)
+                        break;
+                    
+                    if (IsStartingPoint(document) || hasNextDocument == false)
+                    {
+                        ReleaseDocument();
+                        break;
+                    }
+
+                    ReleaseDocument();
+                    
+                    
+                    void ReleaseDocument()
+                    {
+                        if (document != null)
+                        {
+                            document.Dispose();
+                            _context.Transaction.ForgetAbout(document);
+                        }
+                    }
+                }
+                
+                bool IsStartingPoint(Document d)
+                {
+                    count++;
+                    
+                    if (_fieldsToFetch.IsDistinct && d.Data.Count > 0)
+                        _alreadySeenProjections.Add(d.DataHash);
+                            
+                    // We have to seek to the point where we previously ended.
+                    return count == _query.Start;
+                }
+
+                if (count < _query.Start)
+                    processedAllDocuments = true;
             }
 
             public void Reset()

@@ -99,7 +99,8 @@ namespace Raven.Server.Documents.Handlers
                     ActualSize = document.Value.ActualSize,
                     HumaneActualSize = Sizes.Humane(document.Value.ActualSize),
                     AllocatedSize = document.Value.AllocatedSize,
-                    HumaneAllocatedSize = Sizes.Humane(document.Value.AllocatedSize)
+                    HumaneAllocatedSize = Sizes.Humane(document.Value.AllocatedSize),
+                    IsCompressed = document.Value.IsCompressed
                 };
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -780,6 +781,7 @@ namespace Raven.Server.Documents.Handlers
         public string HumaneActualSize { get; set; }
         public int AllocatedSize { get; set; }
         public string HumaneAllocatedSize { get; set; }
+        public bool IsCompressed { get; set; }
 
         public virtual DynamicJsonValue ToJson()
         {
@@ -789,7 +791,8 @@ namespace Raven.Server.Documents.Handlers
                 [nameof(ActualSize)] = ActualSize,
                 [nameof(HumaneActualSize)] = HumaneActualSize,
                 [nameof(AllocatedSize)] = AllocatedSize,
-                [nameof(HumaneAllocatedSize)] = HumaneAllocatedSize
+                [nameof(HumaneAllocatedSize)] = HumaneAllocatedSize,
+                [nameof(IsCompressed)] = IsCompressed
             };
         }
     }

@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 
 namespace Raven.Server.Documents.Indexes.IndexMerging
@@ -16,6 +17,23 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
     {
         private readonly Dictionary<string, IndexDefinition> _indexDefinitions;
         private static readonly IdentifierNameSyntax DefaultDocumentIdentifier = SyntaxFactory.IdentifierName("doc");
+        
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+        
+        public class TestingStuff
+        {
+            internal List<string> IndexNamesToThrowOn { get; set; }
+            internal Action<List<string>, string> OnTryMergeSelectExpressionsAndFields { get; set; }
+        }
+        
+        private TestingStuff _forTestingPurposes;
+        
         public IndexMerger(Dictionary<string, IndexDefinition> indexDefinitions)
         {
             _indexDefinitions = indexDefinitions
@@ -36,7 +54,6 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 if (failComments.Count != 0)
                 {
                     indexData.Comment = string.Join(Environment.NewLine, failComments);
-                    indexData.IsSuitedForMerge = false;
                     mergeData.MergedData = indexData;
                     mergedIndexesData.Add(mergeData);
                     continue;
@@ -54,7 +71,6 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                     if (AreSelectClausesCompatible(current, indexData) == false)
                         continue;
 
-                    current.IsSuitedForMerge = true;
                     mergeData.ProposedForMerge.Add(current);
                 }
 
@@ -69,42 +85,42 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             var failComments = new List<string>();
             if (indexData.Index.Type == IndexType.MapReduce)
             {
-                failComments.Add("Cannot merge map/reduce indexes");
+                failComments.Add("Cannot merge map/reduce indexes.");
             }
 
             if (indexData.Index.Maps.Count > 1)
             {
-                failComments.Add("Cannot merge multi map indexes");
+                failComments.Add("Cannot merge multi map indexes.");
             }
 
             if (indexData.NumberOfFromClauses > 1)
             {
-                failComments.Add("Cannot merge indexes that have more than a single from clause");
+                failComments.Add("Cannot merge indexes that have more than a single from clause.");
             }
 
             if (indexData.NumberOfSelectClauses > 1)
             {
-                failComments.Add("Cannot merge indexes that have more than a single select clause");
+                failComments.Add("Cannot merge indexes that have more than a single select clause.");
             }
 
             if (indexData.HasWhere)
             {
-                failComments.Add("Cannot merge indexes that have a where clause");
+                failComments.Add("Cannot merge indexes that have a where clause.");
             }
 
             if (indexData.HasGroup)
             {
-                failComments.Add("Cannot merge indexes that have a group by clause");
+                failComments.Add("Cannot merge indexes that have a group by clause.");
             }
 
             if (indexData.HasLet)
             {
-                failComments.Add("Cannot merge indexes that are using a let clause");
+                failComments.Add("Cannot merge indexes that are using a let clause.");
             }
 
             if (indexData.HasOrder)
             {
-                failComments.Add("Cannot merge indexes that have an order by clause");
+                failComments.Add("Cannot merge indexes that have an order by clause.");
             }
 
             if (indexData.IsFanout)
@@ -299,40 +315,42 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 var mergeSuggestion = new MergeSuggestions();
                 var selectExpressionDict = new Dictionary<string, ExpressionSyntax>();
 
-                if (TryMergeSelectExpressionsAndFields(mergeProposal, selectExpressionDict, mergeSuggestion, out var mergingComment) == false)
-                {
-                    indexMergeResults.Unmergables.Add(mergeProposal.MergedData.IndexName, mergingComment); 
+                var isMergeSuccessful = TryMergeSelectExpressionsAndFields(mergeProposal, selectExpressionDict, mergeSuggestion, out var errors);
+
+                AddMergeErrors(indexMergeResults, errors);
+                
+                if (isMergeSuccessful == false)
                     continue;
-                }
 
-                TrySetCollectionName(mergeProposal, mergeSuggestion);
+                var firstMergeableIndexData = mergeProposal.ProposedForMerge.First(x => x.IndexName.In(mergeSuggestion.CanMerge));
 
-                var map = mergeProposal.ProposedForMerge[0].BuildExpression(selectExpressionDict);
+                TrySetCollectionName(firstMergeableIndexData, mergeSuggestion);
+                
+                const string comment = "Can't find any other index to merge this index with.";
+
+                var map = firstMergeableIndexData.BuildExpression(selectExpressionDict);
                 if (map is null)
                 {
-                    indexMergeResults.Unmergables.Add(mergeProposal.ProposedForMerge[0].IndexName, "No other index to merge.");
+                    indexMergeResults.Unmergables.Add(firstMergeableIndexData.IndexName, comment);
                     continue;
                 } 
 
                 mergeSuggestion.MergedIndex.Maps.Add(SourceCodeBeautifier.FormatIndex(map).Expression);
-                RemoveMatchingIndexes(mergeProposal, selectExpressionDict, mergeSuggestion, indexMergeResults);
+                SuggestIndexesToDelete(mergeProposal, selectExpressionDict, mergeSuggestion, indexMergeResults);
 
-                if (mergeProposal.ProposedForMerge.Count == 1 && mergeProposal.ProposedForMerge[0].IsSuitedForMerge == false)
-                {
-                    const string comment = "Can't find any other index to merge this with";
-                    indexMergeResults.Unmergables.Add(mergeProposal.ProposedForMerge[0].IndexName, comment);
-                }
+                if (mergeSuggestion.CanMerge.Count == 1)
+                    indexMergeResults.Unmergables[firstMergeableIndexData.IndexName] = comment;
             }
 
             indexMergeResults = ExcludePartialResults(indexMergeResults);
             return indexMergeResults;
         }
 
-        private static void RemoveMatchingIndexes(MergeProposal mergeProposal, Dictionary<string, ExpressionSyntax> selectExpressionDict,
+        private static void SuggestIndexesToDelete(MergeProposal mergeProposal, Dictionary<string, ExpressionSyntax> selectExpressionDict,
             MergeSuggestions mergeSuggestion,
             IndexMergeResults indexMergeResults)
         {
-            if (mergeProposal.ProposedForMerge.Count > 1)
+            if (mergeProposal.ProposedForMerge.Count > 1 && mergeSuggestion.CanMerge.Count > 1)
             {
                 var matchingExistingIndexes = mergeProposal.ProposedForMerge.Where(x =>
                         AreSelectClausesTheSame(x, selectExpressionDict) &&
@@ -355,19 +373,30 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             }
         }
 
-        private static void TrySetCollectionName(MergeProposal mergeProposal, MergeSuggestions mergeSuggestion)
+        private static void AddMergeErrors(IndexMergeResults indexMergeResults, List<MergeError> errors)
         {
-            if (mergeProposal.ProposedForMerge[0].Collections != null)
+            var alreadyAddedIndexNames = indexMergeResults.Errors.Select(x => x.IndexName).ToList();
+            
+            foreach (var error in errors) 
             {
-                mergeSuggestion.Collection = mergeProposal.ProposedForMerge[0].Collections[0];
+                if (alreadyAddedIndexNames.Contains(error.IndexName) == false)
+                    indexMergeResults.Errors.Add(error);
+            }
+        }
+
+        private static void TrySetCollectionName(IndexData indexData, MergeSuggestions mergeSuggestion)
+        {
+            if (indexData.Collections != null)
+            {
+                mergeSuggestion.Collection = indexData.Collections[0];
             }
 
-            else if (mergeProposal.ProposedForMerge[0].FromExpression is SimpleNameSyntax name)
+            else if (indexData.FromExpression is SimpleNameSyntax name)
             {
                 mergeSuggestion.Collection = name.Identifier.ValueText;
             }
 
-            else if (mergeProposal.ProposedForMerge[0].FromExpression is MemberAccessExpressionSyntax member)
+            else if (indexData.FromExpression is MemberAccessExpressionSyntax member)
             {
                 var identifier = ExtractIdentifierFromExpression(member);
                 if (identifier == "docs")
@@ -375,24 +404,35 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             }
         }
 
-        private static bool TryMergeSelectExpressionsAndFields(MergeProposal mergeProposal, Dictionary<string, ExpressionSyntax> selectExpressionDict,
-            MergeSuggestions mergeSuggestion, out string message)
+        private bool TryMergeSelectExpressionsAndFields(MergeProposal mergeProposal, Dictionary<string, ExpressionSyntax> selectExpressionDict,
+            MergeSuggestions mergeSuggestion, out List<MergeError> mergeErrors)
         {
-            message = null;
+            mergeErrors = new List<MergeError>();
+            
             foreach (var curProposedData in mergeProposal.ProposedForMerge)
             {
-                foreach (var curExpr in curProposedData.SelectExpressions)
+                try
                 {
-                    var expr =  curExpr.Value;
-                    var rewritten = RewriteExpressionSyntax(curProposedData, expr, out message);
-                    selectExpressionDict[curExpr.Key] = rewritten ?? expr;
-                }
+                    _forTestingPurposes?.OnTryMergeSelectExpressionsAndFields?.Invoke(_forTestingPurposes.IndexNamesToThrowOn, curProposedData.IndexName);
+                    
+                    foreach (var curExpr in curProposedData.SelectExpressions)
+                    {
+                        var expr = curExpr.Value;
+                        var rewritten = RewriteExpressionSyntax(curProposedData, expr, out var message);
+                        selectExpressionDict[curExpr.Key] = rewritten ?? expr;
+                    }
 
-                mergeSuggestion.CanMerge.Add(curProposedData.IndexName);
-                DataDictionaryMerge(mergeSuggestion.MergedIndex.Fields, curProposedData.Index.Fields);
+                    mergeSuggestion.CanMerge.Add(curProposedData.IndexName);
+                    DataDictionaryMerge(mergeSuggestion.MergedIndex.Fields, curProposedData.Index.Fields);
+                }
+                catch (Exception ex)
+                {
+                    var mergeError = new MergeError() { IndexName = curProposedData.IndexName, Message = ex.Message, StackTrace = ex.StackTrace };
+                    mergeErrors.Add(mergeError);
+                }
             }
 
-            return true;
+            return mergeSuggestion.CanMerge.Count > 0;
         }
 
         private static InvocationExpressionSyntax RecursivelyTransformInvocationExpressionSyntax(IndexData curProposedData, InvocationExpressionSyntax ies, out string message)
@@ -445,6 +485,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 PrefixUnaryExpressionSyntax pues => pues,
                 CastExpressionSyntax ces => RewriteCastExpressionSyntax(indexData, ces, out message),
                 ElementAccessExpressionSyntax eaes => RewriteElementAccessExpressionSyntax(indexData, eaes, out message),
+                ConditionalAccessExpressionSyntax caes => caes,
                 _ => null
             };
             
@@ -592,6 +633,8 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             }
 
             resultingIndexMerge.Unmergables = originalIndexes.Unmergables;
+            resultingIndexMerge.Errors = originalIndexes.Errors;
+            
             return resultingIndexMerge;
         }
 

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.Versioning;
 using Sparrow.Logging;
 
@@ -14,21 +12,21 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
     private static readonly Logger Logger = LoggingSource.Instance.GetLogger<WindowsDiskStatsGetter>("Server");
 
     private const string DiskCategory = "LogicalDisk";
-    
+
     private readonly CountersPerDisk _countersPerDisk = new CountersPerDisk();
-        
+
     public WindowsDiskStatsGetter(TimeSpan minInterval) : base(minInterval)
     {
     }
-        
+
     protected override DiskStatsResult CalculateStats(WindowsDiskStatsRawResult currentInfo, State state)
     {
         return new DiskStatsResult
         {
-            IoReadOperations = ComputeCounterValue(state.Prev.Raw.IoReadOperations, currentInfo.IoReadOperations), 
-            IoWriteOperations = ComputeCounterValue(state.Prev.Raw.IoWriteOperations, currentInfo.IoWriteOperations), 
-            ReadThroughput = new Size((long)ComputeCounterValue(state.Prev.Raw.ReadThroughput, currentInfo.ReadThroughput), SizeUnit.Bytes), 
-            WriteThroughput = new Size((long)ComputeCounterValue(state.Prev.Raw.WriteThroughput, currentInfo.WriteThroughput), SizeUnit.Bytes), 
+            IoReadOperations = ComputeCounterValue(state.Result.RawSampling.IoReadOperations, currentInfo.IoReadOperations),
+            IoWriteOperations = ComputeCounterValue(state.Result.RawSampling.IoWriteOperations, currentInfo.IoWriteOperations),
+            ReadThroughput = new Size((long)ComputeCounterValue(state.Result.RawSampling.ReadThroughput, currentInfo.ReadThroughput), SizeUnit.Bytes),
+            WriteThroughput = new Size((long)ComputeCounterValue(state.Result.RawSampling.WriteThroughput, currentInfo.WriteThroughput), SizeUnit.Bytes),
             QueueLength = currentInfo.QueueLength.RawValue
         };
     }
@@ -38,9 +36,11 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
     {
         var diffTime = newSample.TimeStamp - oldSample.TimeStamp;
         var diffValue = newSample.RawValue - oldSample.RawValue;
-        return diffTime != 0 
-            ? diffValue / (diffTime / 10000000.0) 
-            : diffValue > 0 ? double.PositiveInfinity : double.NegativeInfinity;
+        return diffTime != 0
+            ? diffValue / (diffTime / 10000000.0)
+            : diffValue > 0
+                ? double.PositiveInfinity
+                : double.NegativeInfinity;
     }
 
     protected override WindowsDiskStatsRawResult GetDiskInfo(string path)
@@ -63,13 +63,15 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
         }
         catch (Exception e)
         {
-            if(Logger.IsInfoEnabled)
+            if (Logger.IsInfoEnabled)
                 Logger.Info($"Could not get GetDiskInfo for {path}", e);
             return null;
         }
     }
-        
-    private class DiskCounters
+
+    public override void Dispose() => _countersPerDisk.Dispose();
+
+    private class DiskCounters : IDisposable
     {
         public DiskCounters(string drive)
         {
@@ -85,12 +87,22 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
         public PerformanceCounter ReadThroughput { get; }
         public PerformanceCounter WriteThroughput { get; }
         public PerformanceCounter DiskQueue { get; }
+
+        public void Dispose()
+        {
+            ReadIOCounter?.Dispose();
+            WriteIOCounter?.Dispose();
+            ReadThroughput?.Dispose();
+            WriteThroughput?.Dispose();
+            DiskQueue?.Dispose();
+        }
     }
-        
-    private class CountersPerDisk
+
+    private class CountersPerDisk : IDisposable
     {
         private readonly PerformanceCounterCategory _category = new PerformanceCounterCategory(DiskCategory);
         private readonly ConcurrentDictionary<string, DiskCounters> _countersPerDisk = new ConcurrentDictionary<string, DiskCounters>();
+
         public DiskCounters Get(string path)
         {
             var drive = DiskUtils.WindowsGetDriveName(path, out _);
@@ -103,9 +115,8 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
                         continue;
 
                     if (Logger.IsOperationsEnabled)
-                    {
                         Logger.Operations($"{nameof(DiskCounters)} was created for \"{drive}\" (requested for path \"{path}\").");
-                    }
+
                     counter = _countersPerDisk[path] = new DiskCounters(name);
                     break;
                 }
@@ -113,14 +124,21 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
                 if (counter == null)
                 {
                     if (Logger.IsOperationsEnabled)
-                    {
                         Logger.Operations($"Couldn't find instance in {DiskCategory} for \"{drive}\" (requested for path \"{path}\").");
-                    }
+
                     _countersPerDisk[path] = null;
                 }
             }
-            
+
             return counter;
+        }
+
+        public void Dispose()
+        {
+            foreach (var (_, value) in _countersPerDisk)
+            {
+                value.Dispose();
+            }
         }
     }
 }

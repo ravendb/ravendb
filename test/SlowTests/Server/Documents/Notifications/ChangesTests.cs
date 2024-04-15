@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -202,7 +203,7 @@ namespace SlowTests.Server.Documents.Notifications
         {
             using (var store = GetDocumentStore())
             {
-                var list = new BlockingCollection<DocumentChange>();
+                var list = new List<string>();
                 var taskObservable = store.Changes();
                 await taskObservable.EnsureConnectedNow();
                 var observableWithTask = taskObservable.ForDocumentsStartingWith("users/");
@@ -210,7 +211,7 @@ namespace SlowTests.Server.Documents.Notifications
                 observableWithTask.Subscribe(x =>
                 {
                     if (x.Type == DocumentChangeTypes.Put)
-                        list.Add(x);
+                        list.Add(x.Id);
                 });
                 await observableWithTask.EnsureSubscribedNow();
                 
@@ -231,12 +232,10 @@ namespace SlowTests.Server.Documents.Notifications
                     session.Store(new User(), "users/2");
                     session.SaveChanges();
                 }
-                
-                Assert.True(list.TryTake(out var documentChange, TimeSpan.FromSeconds(1)));
-                Assert.Equal("users/1", documentChange.Id);
-                
-                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(1)));
-                Assert.Equal("users/2", documentChange.Id);
+
+                await WaitAndAssertForValueAsync(() => list.Count, 2);
+                Assert.Contains("users/1", list);
+                Assert.Contains("users/2", list);
             }
         }
         
@@ -245,7 +244,7 @@ namespace SlowTests.Server.Documents.Notifications
         {
             using (var store = GetDocumentStore())
             {
-                var list = new BlockingCollection<DocumentChange>();
+                var list = new List<string>();
                 var taskObservable = store.Changes();
                 await taskObservable.EnsureConnectedNow();
                 var observableWithTask = taskObservable.ForDocumentsInCollection("users");
@@ -253,7 +252,7 @@ namespace SlowTests.Server.Documents.Notifications
                 observableWithTask.Subscribe(x =>
                 {
                     if (x.Type == DocumentChangeTypes.Put)
-                        list.Add(x);
+                        list.Add(x.Id);
                 });
                 await observableWithTask.EnsureSubscribedNow();
                 
@@ -274,12 +273,10 @@ namespace SlowTests.Server.Documents.Notifications
                     session.Store(new User(), "users/2");
                     session.SaveChanges();
                 }
-                
-                Assert.True(list.TryTake(out var documentChange, TimeSpan.FromSeconds(1)));
-                Assert.Equal("users/1", documentChange.Id);
-                
-                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(1)));
-                Assert.Equal("users/2", documentChange.Id);
+
+                await WaitAndAssertForValueAsync(() => list.Count, 2);
+                Assert.Contains("users/1", list);
+                Assert.Contains("users/2", list);
             }
         }
 

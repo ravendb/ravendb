@@ -185,7 +185,8 @@ public class RavenDB_19529 : ReplicationTestBase
                 sessionSrc.SaveChanges();
             }
 
-            var taskId = SetupReplicationAsync(storeSrc, storeDst).Result.First().TaskId;
+            var replicationTasks = await SetupReplicationAsync(storeSrc, storeDst);
+            var taskId = replicationTasks.First().TaskId;
             Assert.NotNull(WaitForDocumentToReplicate<User>(storeDst, specificSizeAndContentDocumentId, 15000));
 
             await storeSrc.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, disable: true));
@@ -311,7 +312,8 @@ public class RavenDB_19529 : ReplicationTestBase
                 session.SaveChanges();
             }
 
-            var taskId = SetupReplicationAsync(storeSrc, storeDst).Result.First().TaskId;
+            var replicationTasks = await SetupReplicationAsync(storeSrc, storeDst);
+            var taskId = replicationTasks.First().TaskId;
             Assert.NotNull(WaitForDocumentToReplicate<User>(storeDst, specificSizeAndContentDocumentId, 15000));
 
             await storeSrc.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, disable: true));

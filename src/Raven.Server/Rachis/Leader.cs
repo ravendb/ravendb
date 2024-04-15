@@ -17,6 +17,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
@@ -674,12 +675,49 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private class RachisMergedCommand
+        public class RachisMergedCommand : IDisposable
         {
+            private readonly ClusterContextPool _pool;
+            private IDisposable _ctxReturn;
+
             public CommandBase Command;
-            public TaskCompletionSource<Task<(long Index, object Result)>> Tcs;
+            public TaskCompletionSource<Task<(long Index, object Result)>> Tcs = new TaskCompletionSource<Task<(long Index, object Result)>>(TaskCreationOptions.RunContinuationsAsynchronously);
             public readonly MultipleUseFlag Consumed = new MultipleUseFlag();
-            public BlittableResultWriter BlittableResultWriter { get; init; }
+            public BlittableResultWriter BlittableResultWriter { get; private set; }
+
+            public RachisMergedCommand(ClusterContextPool pool, CommandBase command)
+            {
+                _pool = pool;
+                Command = command;
+            }
+
+            public void Initialize()
+            {
+                BlittableResultWriter = Command is IBlittableResultCommand crCommand ? new BlittableResultWriter(crCommand.WriteResult) : null;
+
+                // we prepare the command _not_ under the write lock
+                if (Command.Raw == null)
+                {
+                    _ctxReturn = _pool.AllocateOperationContext(out JsonOperationContext context);
+                    var djv = Command.ToJson(context);
+                    Command.Raw = context.ReadObject(djv, "prepare-raw-command");
+                }
+            }
+
+            public async Task<(long Index, object Result)> Result()
+            {
+                var inner = await Tcs.Task;
+                var r = await inner;
+                return BlittableResultWriter == null ? r : (r.Index, BlittableResultWriter.Result);
+            } 
+
+            public void Dispose()
+            {
+                Command.Raw?.Dispose();
+                Command.Raw = null;
+                BlittableResultWriter?.Dispose();
+                _ctxReturn?.Dispose();
+            }
         }
 
         private readonly ConcurrentQueue<RachisMergedCommand> _commandsQueue = new ConcurrentQueue<RachisMergedCommand>();
@@ -688,13 +726,10 @@ namespace Raven.Server.Rachis
 
         public async Task<(long Index, object Result)> PutAsync(CommandBase command, TimeSpan timeout)
         {
-            using var blittableResultWriter = command is IBlittableResultCommand crCommand ? new BlittableResultWriter(crCommand.WriteResult) : null; 
-            var rachisMergedCommand = new RachisMergedCommand
-            {
-                Command = command,
-                Tcs = new TaskCompletionSource<Task<(long, object)>>(TaskCreationOptions.RunContinuationsAsynchronously),
-                BlittableResultWriter = blittableResultWriter
-            };
+            using var rachisMergedCommand = new RachisMergedCommand(_engine.ContextPool, command);
+
+            rachisMergedCommand.Initialize();
+
             _commandsQueue.Enqueue(rachisMergedCommand);
 
             while (rachisMergedCommand.Tcs.Task.IsCompleted == false)
@@ -734,8 +769,7 @@ namespace Raven.Server.Rachis
             if (await inner.WaitWithTimeout(timeout) == false)
                 throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
 
-            var result = await inner;
-            return blittableResultWriter == null ? result : (result.Index, blittableResultWriter.Result);
+            return await rachisMergedCommand.Result();
         }
 
         private void EmptyQueue()
@@ -744,7 +778,6 @@ namespace Raven.Server.Rachis
             var tasks = new List<Task<(long, object)>>();
             const string leaderDisposedMessage = "We are no longer the leader, this leader is disposed";
             var lostLeadershipException = new NotLeadingException(leaderDisposedMessage);
-
             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 try
@@ -769,7 +802,7 @@ namespace Raven.Server.Rachis
                             }
 
                             list.Add(cmd.Tcs);
-                            _engine.InvokeBeforeAppendToRaftLog(context, cmd.Command);
+                            _engine.InvokeBeforeAppendToRaftLog(context, cmd);
 
                             if (_engine.LogHistory.HasHistoryLog(context, cmd.Command.UniqueRequestId, out var index, out var result, out var exception))
                             {
@@ -805,9 +838,7 @@ namespace Raven.Server.Rachis
                             }
                             else
                             {
-                                var djv = cmd.Command.ToJson(context);
-                                var cmdJson = context.ReadObject(djv, "raft/command");
-                                index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
+                                index = _engine.InsertToLeaderLog(context, Term, cmd.Command.Raw, RachisEntryFlags.StateMachineCommand);
                             }
 
                             if (_entries.TryGetValue(index, out var state) == false)

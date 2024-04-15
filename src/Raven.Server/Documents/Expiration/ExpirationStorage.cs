@@ -82,23 +82,24 @@ namespace Raven.Server.Documents.Expiration
             public DateTime CurrentTime;
             public bool IsFirstInTopology; 
             public long AmountToTake;
+            public long MaxItemsToProcess { get; set; }
 
-            public ExpiredDocumentsOptions(DocumentsOperationContext context, DateTime currentTime, bool isFirstInTopology, long amountToTake) =>
-                (Context, CurrentTime, IsFirstInTopology, AmountToTake)
-                = (context, currentTime, isFirstInTopology, amountToTake);
+            public ExpiredDocumentsOptions(DocumentsOperationContext context, DateTime currentTime, bool isFirstInTopology, long amountToTake, long maxItemsToProcess) =>
+                (Context, CurrentTime, IsFirstInTopology, AmountToTake, MaxItemsToProcess)
+                = (context, currentTime, isFirstInTopology, amountToTake, maxItemsToProcess);
         }
 
-        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetExpiredDocuments(ExpiredDocumentsOptions options, out Stopwatch duration, CancellationToken cancellationToken)
+        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetExpiredDocuments(ExpiredDocumentsOptions options, ref int totalCount, out Stopwatch duration,  CancellationToken cancellationToken)
         {
-            return GetDocuments(options, DocumentsByExpiration, Constants.Documents.Metadata.Expires, out duration, cancellationToken);
+            return GetDocuments(options, DocumentsByExpiration, Constants.Documents.Metadata.Expires, ref totalCount, out duration, cancellationToken);
         }
 
-        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocumentsToRefresh(ExpiredDocumentsOptions options, out Stopwatch duration, CancellationToken cancellationToken)
+        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocumentsToRefresh(ExpiredDocumentsOptions options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
         {
-            return GetDocuments(options, DocumentsByRefresh, Constants.Documents.Metadata.Refresh, out duration, cancellationToken);
+            return GetDocuments(options, DocumentsByRefresh, Constants.Documents.Metadata.Refresh, ref totalCount, out duration, cancellationToken);
         }
 
-        private Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(ExpiredDocumentsOptions options, string treeName, string metadataPropertyToCheck, out Stopwatch duration, CancellationToken cancellationToken)
+        private Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(ExpiredDocumentsOptions options, string treeName, string metadataPropertyToCheck, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
         {
             var count = 0;
             var currentTicks = options.CurrentTime.Ticks;
@@ -145,6 +146,7 @@ namespace Raven.Server.Documents.Expiration
                                             HasPassed(metadata, metadataPropertyToCheck, options.CurrentTime) == false)
                                         {
                                             expiredDocs.Add((clonedId, null));
+                                            totalCount++;
                                             continue;
                                         }
 
@@ -161,6 +163,7 @@ namespace Raven.Server.Documents.Expiration
                                         }
 
                                         expiredDocs.Add((clonedId, document.Id));
+                                        totalCount++;
                                     }
                                 }
                                 catch (DocumentConflictException)
@@ -173,9 +176,12 @@ namespace Raven.Server.Documents.Expiration
                                     if (allExpired)
                                     {
                                         expiredDocs.Add((clonedId, id));
+                                        totalCount++;
                                     }
                                 }
-                            } while (multiIt.MoveNext() && expiredDocs.Count + count < options.AmountToTake);
+                            } while (multiIt.MoveNext() 
+                                     && expiredDocs.Count + count < options.AmountToTake 
+                                     && totalCount < options.MaxItemsToProcess);
                         }
                     }
 
@@ -183,7 +189,9 @@ namespace Raven.Server.Documents.Expiration
                     if (expiredDocs.Count > 0)
                         expired.Add(ticksAsSlice, expiredDocs);
 
-                } while (it.MoveNext() && count < options.AmountToTake);
+                } while (it.MoveNext() 
+                         && count < options.AmountToTake
+                         && totalCount < options.MaxItemsToProcess);
 
                 return expired;
             }

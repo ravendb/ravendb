@@ -11,6 +11,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -101,7 +102,7 @@ namespace SlowTests.Issues
                 }
 
                 Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "John Doe", 30_000));
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(10)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(10)));
 
                 var addResult = await src.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(src.Database, node: mentorTag));
                 Assert.Equal(2, addResult.Topology.Members.Count);
@@ -143,9 +144,9 @@ namespace SlowTests.Issues
             }
         }
 
-        private static ManualResetEventSlim WaitForEtl(DocumentDatabase database, Func<string, EtlProcessStatistics, bool> predicate)
+        private static AsyncManualResetEvent WaitForEtl(DocumentDatabase database, Func<string, EtlProcessStatistics, bool> predicate)
         {
-            var mre = new ManualResetEventSlim();
+            var mre = new AsyncManualResetEvent();
 
             database.EtlLoader.BatchCompleted += x =>
             {

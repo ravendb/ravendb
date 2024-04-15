@@ -100,7 +100,7 @@ namespace Raven.Server.Smuggler.Migration
                 SkipRevisionCreation = true
             };
 
-            destination.InitializeAsync(options, parametersResult, buildVersion: default);
+            destination.InitializeAsync(options, parametersResult, onProgress: null, buildVersion: default);
 
             using (Parameters.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             await using (var documentActions = destination.Documents())

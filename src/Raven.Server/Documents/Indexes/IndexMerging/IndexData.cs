@@ -29,7 +29,6 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
         public string IndexName { get; set; }
         public bool IsAlreadyMerged { get; set; }
-        public bool IsSuitedForMerge { get; set; }
         public string Comment { get; set; }
 
         public bool IsFanout { get; set; }
