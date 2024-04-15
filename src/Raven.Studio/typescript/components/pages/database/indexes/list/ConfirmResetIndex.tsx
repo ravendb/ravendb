@@ -42,7 +42,12 @@ export function ConfirmResetIndex(props: ConfirmResetIndexProps) {
                 </span>
                 <Alert color="warning">
                     <small>
-                        Clicking <strong>Reset</strong> will remove all existing indexed data.
+                        <strong>Reset</strong> will remove all existing indexed data
+                        {ActionContextUtils.showContextSelector(allActionContexts) ? (
+                            <span> from the selected context.</span>
+                        ) : (
+                            <span> from node {allActionContexts[0].nodeTag}.</span>
+                        )}
                     </small>
                     <br />
                     <small>All items matched by the index definition will be re-indexed.</small>
@@ -62,7 +67,12 @@ export function ConfirmResetIndex(props: ConfirmResetIndexProps) {
                 <Button color="link" onClick={toggle} className="link-muted">
                     Cancel
                 </Button>
-                <Button color="warning" onClick={onSubmit} className="rounded-pill">
+                <Button
+                    color="warning"
+                    onClick={onSubmit}
+                    className="rounded-pill"
+                    disabled={selectedActionContexts.length === 0}
+                >
                     <Icon icon="reset-index" />
                     Reset
                 </Button>
