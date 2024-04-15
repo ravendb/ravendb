@@ -21,7 +21,7 @@ using Sparrow.Json;
 
 namespace Voron.Data.BTrees
 {
-    public unsafe partial class Tree : IDisposable
+    public unsafe partial class Tree
     {
         private int _directAddUsage;
 
@@ -33,7 +33,7 @@ namespace Voron.Data.BTrees
 
         private static readonly ObjectPool<RecentlyFoundTreePages> FoundPagesPool = new(() => new RecentlyFoundTreePages(), 128);
 
-        private readonly RecentlyFoundTreePages _recentlyFoundPages;
+        private RecentlyFoundTreePages _recentlyFoundPages;
 
         private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
         private Dictionary<Slice, FixedSizeTree<double>> _fixedSizeTreesForDouble;
@@ -71,7 +71,7 @@ namespace Voron.Data.BTrees
 
             _state = new TreeMutableState(llt, in header);
 
-            llt.RegisterDisposable(this);
+            llt.RegisterDisposable(new TreeDisposable(this));
         }
 
         private Tree(LowLevelTransaction llt, Transaction tx, Slice name, bool isIndexTree, NewPageAllocator newPageAllocator)
@@ -90,7 +90,7 @@ namespace Voron.Data.BTrees
             _recentlyFoundPages = FoundPagesPool.Allocate();
             _state = new TreeMutableState(llt);
 
-            llt.RegisterDisposable(this);
+            llt.RegisterDisposable(new TreeDisposable(this));
         }
 
         public Tree(LowLevelTransaction llt, Transaction tx, Slice name, TreeMutableState state)
@@ -105,13 +105,17 @@ namespace Voron.Data.BTrees
             _state = new TreeMutableState(llt, state);
             _state = state;
 
-            llt.RegisterDisposable(this);
+            llt.RegisterDisposable(new TreeDisposable(this));
         }
 
-        void IDisposable.Dispose()
+        private class TreeDisposable(Tree tree) : IDisposable
         {
-            _recentlyFoundPages.Clear();
-            FoundPagesPool.Free(_recentlyFoundPages);
+            void IDisposable.Dispose()
+            {
+                tree._recentlyFoundPages.Clear();
+                FoundPagesPool.Free(tree._recentlyFoundPages);
+                tree._recentlyFoundPages = null;
+            }
         }
 
         public bool IsLeafCompressionSupported
