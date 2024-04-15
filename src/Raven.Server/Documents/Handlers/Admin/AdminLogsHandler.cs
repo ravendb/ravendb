@@ -130,13 +130,13 @@ namespace Raven.Server.Documents.Handlers.Admin
                     foreach (var filePath in Directory.GetFiles(ServerStore.Configuration.Logs.Path.FullPath))
                     {
                         var fileName = Path.GetFileName(filePath);
-                        if (fileName.EndsWith(LoggingSource.LogInfo.LogExtension, StringComparison.OrdinalIgnoreCase) == false &&
-                            fileName.EndsWith(LoggingSource.LogInfo.FullCompressExtension, StringComparison.OrdinalIgnoreCase) == false)
+                        if (fileName.EndsWith(LoggingSource.LogExtension, StringComparison.OrdinalIgnoreCase) == false &&
+                            fileName.EndsWith(LoggingSource.FullCompressExtension, StringComparison.OrdinalIgnoreCase) == false)
                             continue;
 
                         // Skip this file if either the last write time or the creation time could not be determined
-                        if (LoggingSource.LogInfo.TryGetLastWriteTimeUtc(filePath, out var logLastWriteTimeUtc) == false ||
-                            LoggingSource.LogInfo.TryGetCreationTimeUtc(filePath, out var logCreationTimeUtc) == false)
+                        if (LoggingSource.TryGetLastWriteTimeUtc(filePath, out var logLastWriteTimeUtc) == false ||
+                            LoggingSource.TryGetCreationTimeUtc(filePath, out var logCreationTimeUtc) == false)
                             continue;
 
                         bool isWithinDateRange =
