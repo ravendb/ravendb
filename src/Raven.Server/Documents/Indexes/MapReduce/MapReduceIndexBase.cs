@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -64,7 +64,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             using (Slice.External(indexContext.Allocator, tombstone.LowerId, out Slice docKeyAsSlice))
             {
-                MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
+                if (FixedSizeTree.TryRepurposeInstance(MapReduceWorkContext.DocumentMapEntries, docKeyAsSlice, clone: false) == false)
+                    return;
 
                 if (MapReduceWorkContext.DocumentMapEntries.NumberOfEntries == 0)
                     return;
@@ -113,10 +114,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 Queue<MapEntry> existingEntries = null;
 
+                bool treeDoesExist;
                 using (_stats.GetMapEntriesTree.Start())
-                    MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(docIdAsSlice, clone: false);
+                {
+                    treeDoesExist = FixedSizeTree.TryRepurposeInstance(MapReduceWorkContext.DocumentMapEntries, docIdAsSlice, clone: false);
+                }
 
-                if (MapReduceWorkContext.DocumentMapEntries.NumberOfEntries > 0)
+                if (treeDoesExist && MapReduceWorkContext.DocumentMapEntries.NumberOfEntries > 0)
                 {
                     using (_stats.GetMapEntries.Start())
                         existingEntries = GetMapEntries(MapReduceWorkContext.DocumentMapEntries);
@@ -306,9 +310,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     numberOfReduceTrees++;
 
-                    if (aggregatedTree == null)
-                        aggregatedTree = new TreeReport();
-
+                    aggregatedTree ??= new TreeReport();
                     aggregatedTree.AllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
                     aggregatedTree.BranchPages += treeReport.BranchPages;
                     aggregatedTree.Density = calculateExactSizes ? aggregatedTree.Density + treeReport.Density : -1;
