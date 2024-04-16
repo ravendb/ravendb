@@ -15,8 +15,8 @@ namespace Raven.Server.ServerWide;
 public abstract class AbstractRaftIndexNotifications : IDisposable
 {
     public long LastModifiedIndex;
+    protected readonly ConcurrentQueue<ErrorHolder> _errors = new ConcurrentQueue<ErrorHolder>();
     private readonly AsyncManualResetEvent _notifiedListeners;
-    private readonly ConcurrentQueue<ErrorHolder> _errors = new ConcurrentQueue<ErrorHolder>();
     private int _numberOfErrors;
 
     protected AbstractRaftIndexNotifications(CancellationToken token)
@@ -78,58 +78,9 @@ public abstract class AbstractRaftIndexNotifications : IDisposable
         ThrowTimeoutException(timeout, index, LastModifiedIndex, isExecution: true);
     }
 
-    private async Task<bool> WaitForTaskCompletion(long index, Lazy<Task> waitingTask)
-    {
-        if (GetTasksDictionary().TryGetValue(index, out var tcs) == false)
-        {
-            // the task has already completed
-            // let's check if we had errors in it
-            foreach (var error in _errors)
-            {
-                if (error.Index == index)
-                    error.Exception.Throw(); // rethrow
-            }
+    public abstract Task<bool> WaitForTaskCompletion(long index, Lazy<Task> waitingTask);
 
-            return true;
-        }
-
-        var task = tcs.Task;
-
-        if (task.IsCompleted)
-        {
-            if (task.IsFaulted)
-            {
-                try
-                {
-                    await task; // will throw on error
-                }
-                catch (Exception e)
-                {
-                    ThrowApplyException(index, e);
-                }
-            }
-
-            if (task.IsCanceled)
-                ThrowCanceledException(index, LastModifiedIndex);
-
-            return true;
-        }
-
-        var result = await Task.WhenAny(task, waitingTask.Value);
-
-        if (result.IsFaulted)
-            await result; // will throw
-
-        if (task.IsCanceled)
-            ThrowCanceledException(index, LastModifiedIndex);
-
-        if (result == task)
-            return true;
-
-        return false;
-    }
-
-    private void ThrowCanceledException(long index, long lastModifiedIndex, bool isExecution = false)
+    protected void ThrowCanceledException(long index, long lastModifiedIndex, bool isExecution = false)
     {
         var openingString = isExecution
             ? $"Cancelled while waiting for task with index {index} to complete. "
@@ -161,12 +112,12 @@ public abstract class AbstractRaftIndexNotifications : IDisposable
                                    $"Number of errors is: {_numberOfErrors}." + closingString);
     }
 
-    private void ThrowApplyException(long index, Exception e)
+    protected void ThrowApplyException(long index, Exception e)
     {
         throw new InvalidOperationException($"Index {index} was successfully committed, but the apply failed.", e);
     }
 
-    protected void NotifyListenersInternal(long index, Exception e)
+    public virtual void NotifyListenersAbout(long index, Exception e)
     {
         if (e != null)
         {
@@ -188,8 +139,6 @@ public abstract class AbstractRaftIndexNotifications : IDisposable
     }
 
     protected abstract string PrintLastNotifications();
-
-    internal abstract ConcurrentDictionary<long, TaskCompletionSource<object>> GetTasksDictionary();
 
     public virtual void Dispose()
     {

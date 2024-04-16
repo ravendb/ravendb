@@ -25,6 +25,11 @@ public class DatabaseRaftIndexNotifications : AbstractRaftIndexNotifications
         _clusterStateMachineLogIndexNotifications = clusterStateMachineLogIndexNotifications;
     }
 
+    public override Task<bool> WaitForTaskCompletion(long index, Lazy<Task> waitingTask)
+    {
+        return _clusterStateMachineLogIndexNotifications.WaitForTaskCompletion(index, waitingTask);
+    }
+
     protected override string PrintLastNotifications()
     {
         var notifications = _recentNotifications.ToArray();
@@ -34,8 +39,6 @@ public class DatabaseRaftIndexNotifications : AbstractRaftIndexNotifications
             builder
                 .Append("Index: ")
                 .Append(notification.Index)
-                .Append(". Type: ")
-                .Append(notification.Type)
                 .Append(". Exception: ")
                 .Append(notification.Exception)
                 .AppendLine();
@@ -50,40 +53,20 @@ public class DatabaseRaftIndexNotifications : AbstractRaftIndexNotifications
             _recentNotifications.TryDequeue(out _);
     }
 
-    public void NotifyListenersAbout(DatabaseNotification notification)
+    public override void NotifyListenersAbout(long index, Exception e)
     {
-        RecordNotification(notification);
+        RecordNotification(new DatabaseNotification
+        {
+            Index = index,
+            Exception = e
+        });
 
-        long index = notification.Index;
-        Exception e = notification.Exception;
-
-        NotifyListenersInternal(index, e);
+        base.NotifyListenersAbout(index, e);
     }
 
-    internal override ConcurrentDictionary<long, TaskCompletionSource<object>> GetTasksDictionary()
+    private class DatabaseNotification
     {
-        return _clusterStateMachineLogIndexNotifications.GetTasksDictionary();
+        public long Index;
+        public Exception Exception;
     }
-}
-
-public class DatabaseNotification
-{
-    public long Index;
-    public Exception Exception;
-    public DatabaseNotificationChangeType Type;
-}
-
-public enum DatabaseNotificationChangeType
-{
-    StateChanged,
-    ValueChanged,
-    PendingClusterTransactions,
-    ClusterTransactionCompleted,
-
-    IndexStart,
-    IndexUpdateSorters,
-    IndexUpdateAnalyzers,
-    AutoIndexStart,
-    UpdateStaticIndex,
-    DeleteIndex
 }
