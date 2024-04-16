@@ -23,7 +23,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
     public sealed class CollectionQueryRunner : AbstractDatabaseQueryRunner
     {
         public const int UnboundedQueryResultMarker = 0;
-        public const string CollectionIndexPrefix = "collection/";
 
         public CollectionQueryRunner(DocumentDatabase database) : base(database)
         {
