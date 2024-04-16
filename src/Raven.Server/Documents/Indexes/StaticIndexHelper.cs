@@ -14,6 +14,7 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
+using Voron.Data.Fixed;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -377,8 +378,9 @@ namespace Raven.Server.Documents.Indexes
 
                 foreach (var key in toDelete)
                 {
-                    index.MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(key, clone: false);
-
+                    if (FixedSizeTree.TryRepurposeInstance(index.MapReduceWorkContext.DocumentMapEntries, key, clone: false) == false)
+                        continue;
+                    
                     if (index.MapReduceWorkContext.DocumentMapEntries.NumberOfEntries == 0)
                         continue;
 

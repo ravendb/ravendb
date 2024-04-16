@@ -108,52 +108,60 @@ namespace Voron.Data.Fixed
 
         }
 
-        public void RepurposeInstance(Slice treeName, bool clone)
+        public static bool TryRepurposeInstance(FixedSizeTree<TVal> tree, Slice treeName, bool clone)
         {
-            new DirectAddScope(this).Dispose();// verifying that we aren't holding a ptr out
+            new DirectAddScope(tree).Dispose();// verifying that we aren't holding a ptr out
 
+            // Setting the name of the tree has to happen before returning even if the return is null
+            // TODO: Make sure that is no longer the case by prohibiting the direct creation of trees.
             if (clone)
             {
-                if (_treeName.HasValue)
-                    _tx.Allocator.Release(ref _treeName.Content);
+                if (tree._treeName.HasValue)
+                    tree._tx.Allocator.Release(ref tree._treeName.Content);
 
-                _treeName = treeName.Clone(_tx.Allocator);
+                tree._treeName = treeName.Clone(tree._tx.Allocator);
             }
             else
             {
-                _treeName = treeName;
+                tree._treeName = treeName;
             }
 
-            var header = (FixedSizeTreeHeader.Embedded*)_parent.DirectRead(_treeName);
+            var header = (FixedSizeTreeHeader.Embedded*)tree._parent.DirectRead(treeName);
             if (header == null)
-                return;
+                return false;
 
             switch (header->RootObjectType)
             {
                 case RootObjectType.EmbeddedFixedSizeTree:
                 case RootObjectType.FixedSizeTree:
-                    break;
+                    if (header->ValueSize != tree._valSize)
+                        ThrowInvalidFixedSizeTreeSize(tree, header);
+
+                    if (tree._tx.Flags == TransactionFlags.ReadWrite && (tree._parent.State.Header.Flags & TreeFlags.FixedSizeTrees) != TreeFlags.FixedSizeTrees)
+                    {
+                        ref var state = ref tree._parent.State.Modify();
+                        state.Flags |= TreeFlags.FixedSizeTrees;
+                    }
+
+                    return true;
                 default:
                     ThrowInvalidFixedSizeTree(treeName, header);
                     break; // will never get here
             }
 
-            if (header->ValueSize != _valSize)
-                ThrowInvalidFixedSizeTreeSize(header);
+            return false;
         }
 
         [DoesNotReturn]
-        private void ThrowInvalidFixedSizeTreeSize(FixedSizeTreeHeader.Embedded* header)
+        private static void ThrowInvalidFixedSizeTreeSize(FixedSizeTree<TVal> tree, FixedSizeTreeHeader.Embedded* header)
         {
-            throw new InvalidFixedSizeTree("The expected value len " + _valSize + " does not match actual value len " +
-                                                header->ValueSize + " for " + _treeName);
+            throw new InvalidFixedSizeTree($"The expected value len {tree._valSize} does not match actual value len {header->ValueSize} for {tree._treeName}");
         }
 
         [DoesNotReturn]
         private static void ThrowInvalidFixedSizeTree(Slice treeName, FixedSizeTreeHeader.Embedded* header)
         {
-            throw new InvalidFixedSizeTree("Tried to open '" + treeName + "' as FixedSizeTree, but is actually " +
-                                                  header->RootObjectType);
+            throw new InvalidFixedSizeTree($"Tried to open '{treeName}' as FixedSizeTree, but is actually {header->RootObjectType}");
         }
 
         static FixedSizeTree()
@@ -177,13 +185,13 @@ namespace Voron.Data.Fixed
             if (_maxEmbeddedEntries == 0)
                 ThrowInvalidFixedTreeValueSize();
 
-            RepurposeInstance(treeName, clone);
+            TryRepurposeInstance(this, treeName, clone);
         }
 
         [DoesNotReturn]
         private static void ThrowInvalidFixedTreeValueSize()
         {
-            throw new InvalidFixedSizeTree("The value size must be small than " + (Constants.Storage.PageSize / 8));
+            throw new InvalidFixedSizeTree($"The value size must be small than {Constants.Storage.PageSize / 8}");
         }
 
         public long[] Debug(FixedSizeTreePage<TVal> p)
@@ -258,26 +266,25 @@ namespace Voron.Data.Fixed
                 throw new InvalidOperationException("Cannot add a value in a read only transaction");
 
             _changes++;
-            byte* pos;
+
+            isNew = false;
             switch (Type)
             {
                 case null:
-                    pos = AddNewEntry(key);
+                    ptr = AddNewEntry(key);
                     isNew = true;
                     break;
                 case RootObjectType.EmbeddedFixedSizeTree:
-                    pos = AddEmbeddedEntry(key, out isNew);
+                    ptr = AddEmbeddedEntry(key, out isNew);
                     break;
                 case RootObjectType.FixedSizeTree:
-                    pos = AddLargeEntry(key, out isNew);
+                    ptr = AddLargeEntry(key, out isNew);
                     break;
                 default:
                     ThrowInvalidFixedSizeTreeType();
-                    pos = null; // never happens
-                    isNew = false;
+                    ptr = null; // Never happens
                     break;
             }
-            ptr = pos;
             return new DirectAddScope(this);
         }
 
@@ -554,8 +561,7 @@ namespace Voron.Data.Fixed
                 newPage.ValueSize = _valSize;
                 newPage.NumberOfEntries = 0;
 
-                FixedSizeTreeHeader.Large* largePtr;
-                using (ModifyLargeHeader(out largePtr))
+                using (ModifyLargeHeader(out FixedSizeTreeHeader.Large* largePtr))
                 {
                     largePtr->PageCount++;
                 }
@@ -1205,12 +1211,12 @@ namespace Voron.Data.Fixed
             var parentPage = _cursor.Pop();
             parentPage = ModifyPage(parentPage);
 
-            if (page.NumberOfEntries == 0)// empty page, delete it and fixup the parent
+            if (page.NumberOfEntries == 0)// empty page, delete it and fix the parent
             {
-                // fixup the implicit less than ref
+                // fix the implicit less than ref
                 if (parentPage.LastSearchPosition == 0
-                    // if we are 2 or less, we'll remove our entry and the parent page 
-                    // page will rebalance in turn, so we shouldn't modify the relevant
+                    // if we are 2 or less, we'll remove our entry and the parent page
+                    // will be rebalanced in turn, so we shouldn't modify the relevant
                     // entry
                     && parentPage.NumberOfEntries > 2) 
                 {
@@ -1313,7 +1319,7 @@ namespace Voron.Data.Fixed
 
                 // we need to set the leftmost key in the entries we
                 // moved to the key of the page we are going to remove
-                // to avoid smallest being injected into the sibling
+                // to avoid the smallest being injected into the sibling
                 // page, see RavenDB-9916
                 if (page.IsBranch)
                 {
@@ -1348,7 +1354,7 @@ namespace Voron.Data.Fixed
                     siblingPage.NumberOfEntries += page.NumberOfEntries;
                     // we need to set the leftmost key in the entries we
                     // moved to the key of the page we are going to remove
-                    // to avoid smallest being injected into the sibling
+                    // to avoid the smallest being injected into the sibling
                     // page, see RavenDB-9916
                     if (siblingPage.IsBranch)
                     {
@@ -1369,9 +1375,9 @@ namespace Voron.Data.Fixed
 
                 if (page.IsBranch)
                 {
-                    // if we are a branch page and we copy items from our left we need to make
+                    // if we are a branch page, we copy items from our left we need to make
                     // sure that the implicit left entry is fixed. We do that by copying the
-                    // entry our parent has for us as the leftmost entry for our current state
+                    // entry our parent has for us as the leftmost entry for our current state,
                     // and then we copy the entries to our left
                     page.SetKey(parentPage.GetKey(parentPage.LastSearchPosition),0);
                 }
@@ -1386,7 +1392,7 @@ namespace Voron.Data.Fixed
                     entriesToTake * sizeOfEntryInPage
                     );
 
-                // we don't need to do any fixup of the values themselves, because we take only the rightmost half
+                // we don't need to do any fix of the values themselves, because we take only the rightmost half
                 // of the values from the left sibling and that doesn't include the [smallest] value by definition
                 // RavenDB-9916
 
@@ -1450,9 +1456,9 @@ namespace Voron.Data.Fixed
                         (_entrySize * page.NumberOfEntries));
                 }
 
-                // side affect, this updates the number of pages in the 
+                // side effect, this updates the number of pages in the 
                 // large fixed size tree header, so we disable this to avoid 
-                // reverting to an large (and empty) fixed size tree
+                // reverting to a large (and empty) fixed size tree
                 FreePage(page.PageNumber, modifyPageCount: false);
             }
             return null;
@@ -1485,8 +1491,7 @@ namespace Voron.Data.Fixed
 
                 var newDataSize = sizeof(FixedSizeTreeHeader.Embedded) + ((startingEntryCount - 1) * _entrySize);
 
-                byte* addPtr;
-                using (_parent.DirectAdd(_treeName, newDataSize, out addPtr))
+                using (_parent.DirectAdd(_treeName, newDataSize, out byte* addPtr))
                 {
                     Memory.Copy(addPtr, tmpPtr, newDataSize);
 

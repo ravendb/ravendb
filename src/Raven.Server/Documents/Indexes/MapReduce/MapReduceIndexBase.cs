@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -42,13 +42,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             MapReduceWorkContext.MapPhaseTree = GetMapPhaseTree(indexContext.Transaction.InnerTransaction);
             MapReduceWorkContext.ReducePhaseTree = GetReducePhaseTree(indexContext.Transaction.InnerTransaction);
             MapReduceWorkContext.ResultsStoreTypes = MapReduceWorkContext.ReducePhaseTree.FixedTreeFor(ResultsStoreTypesTreeName, sizeof(byte));
-
-            if ((MapReduceWorkContext.MapPhaseTree.State.Header.Flags & TreeFlags.FixedSizeTrees) != TreeFlags.FixedSizeTrees)
-            {
-                ref var state = ref MapReduceWorkContext.MapPhaseTree.State.Modify();
-                state.Flags |= TreeFlags.FixedSizeTrees;
-            }
-
+            
             MapReduceWorkContext.DocumentMapEntries = new FixedSizeTree(
                    indexContext.Transaction.InnerTransaction.LowLevelTransaction,
                    MapReduceWorkContext.MapPhaseTree,
@@ -64,7 +58,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             using (Slice.External(indexContext.Allocator, tombstone.LowerId, out Slice docKeyAsSlice))
             {
-                MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
+                if (FixedSizeTree.TryRepurposeInstance(MapReduceWorkContext.DocumentMapEntries, docKeyAsSlice, clone: false) == false)
+                    return;
 
                 if (MapReduceWorkContext.DocumentMapEntries.NumberOfEntries == 0)
                     return;
@@ -113,10 +108,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 Queue<MapEntry> existingEntries = null;
 
+                bool treeDoesExist;
                 using (_stats.GetMapEntriesTree.Start())
-                    MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(docIdAsSlice, clone: false);
+                {
+                    treeDoesExist = FixedSizeTree.TryRepurposeInstance(MapReduceWorkContext.DocumentMapEntries, docIdAsSlice, clone: false);
+                }
 
-                if (MapReduceWorkContext.DocumentMapEntries.NumberOfEntries > 0)
+                if (treeDoesExist && MapReduceWorkContext.DocumentMapEntries.NumberOfEntries > 0)
                 {
                     using (_stats.GetMapEntries.Start())
                         existingEntries = GetMapEntries(MapReduceWorkContext.DocumentMapEntries);

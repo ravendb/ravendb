@@ -64,7 +64,6 @@ namespace Voron.Data.BTrees
             }
 
             _recentlyFoundPages = FoundPagesPool.Allocate();
-
             _state = new TreeMutableState(llt, in header);
 
             llt.RegisterDisposable(new TreeDisposable(this));
@@ -96,9 +95,6 @@ namespace Voron.Data.BTrees
             Name = name;
 
             _recentlyFoundPages = FoundPagesPool.Allocate();
-
-
-            _state = new TreeMutableState(llt, state);
             _state = state;
 
             llt.RegisterDisposable(new TreeDisposable(this));
