@@ -140,6 +140,8 @@ namespace Raven.Client.Http
 
         private bool _includePromotables;
 
+        private bool _wrapException = true;
+
         public TimeSpan? DefaultTimeout
         {
             get => _defaultTimeout;
@@ -383,6 +385,7 @@ namespace Raven.Client.Http
         {
             var executor = Create(initialUrls, databaseName, certificate, conventions, usePrivateUrls: usePrivateUrls, includePromotables);
             executor._disableClientConfigurationUpdates = true;
+            executor._wrapException = false;
             return executor;
         }
 
@@ -1622,7 +1625,7 @@ namespace Raven.Client.Http
                     return true;
 
                 default:
-                    return await command.ResponseBehavior.TryHandleUnsuccessfulResponseAsync(context, command, response).ConfigureAwait(false);
+                    return await command.ResponseBehavior.TryHandleUnsuccessfulResponseAsync(context, command, response, _wrapException).ConfigureAwait(false);
             }
         }
 

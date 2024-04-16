@@ -1185,23 +1185,13 @@ namespace Raven.Server.Web.System
                 nodesUrls = ServerStore.GetClusterTopology(context).AllNodes.Values.ToArray();
             }
 
-            using (var requestExecutor = RequestExecutor.Create(nodesUrls, database, Server.Certificate.Certificate, DocumentConventions.Default))
+            using (var requestExecutor = RequestExecutor.CreateForServer(nodesUrls, database, Server.Certificate.Certificate, DocumentConventions.Default))
             using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
                 var cmd = new ValidateUnusedIdsCommand(
-                    new ValidateUnusedIdsCommand.Parameters
-                    {
-                        DatabaseIds = unusedIds
-                    });
-                try
-                {
-                    await requestExecutor.ExecuteAsync(cmd, context, token: token);
-                }
-                catch (RavenException ex) when (ex.InnerException != null)
-                {
-                    throw ex.InnerException;
-                }
-                
+                    new ValidateUnusedIdsCommand.Parameters { DatabaseIds = unusedIds });
+
+                await requestExecutor.ExecuteAsync(cmd, context, token: token);
             }
         }
 

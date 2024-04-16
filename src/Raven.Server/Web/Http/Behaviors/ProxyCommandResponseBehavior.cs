@@ -44,7 +44,7 @@ internal sealed class ProxyCommandResponseBehavior : AbstractCommandResponseBeha
         return true;
     }
 
-    public override async ValueTask<bool> TryHandleUnsuccessfulResponseAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpResponseMessage response)
+    public override async ValueTask<bool> TryHandleUnsuccessfulResponseAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpResponseMessage response, bool wrapException)
     {
         HttpResponseHelper.CopyStatusCode(response, _response);
         HttpResponseHelper.CopyHeaders(response, _response);
