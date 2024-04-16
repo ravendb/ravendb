@@ -208,14 +208,10 @@ namespace Raven.Server.Documents.Indexes.Debugging
             {
                 MapReduceResultsStore store;
 
-                var mapReduceIndex = self as MapReduceIndex;
-
-                if (mapReduceIndex != null)
-                    store = mapReduceIndex.CreateResultsStore(typePerHash,
-                        reduceKeyHash, indexContext, false);
+                if (self is MapReduceIndex mapReduceIndex)
+                    store = mapReduceIndex.CreateResultsStore(typePerHash, reduceKeyHash, indexContext, false);
                 else
-                    store = ((AutoMapReduceIndex)self).CreateResultsStore(typePerHash,
-                        reduceKeyHash, indexContext, false);
+                    store = ((AutoMapReduceIndex)self).CreateResultsStore(typePerHash, reduceKeyHash, indexContext, false);
 
                 using (store)
                 {
