@@ -80,7 +80,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public override bool IsShutdownRequested() => base.IsShutdownRequested() || Database.DatabaseShutdown.IsCancellationRequested;
+        public override bool IsShutdownRequested() => base.IsShutdownRequested() || Database.IsShutdownRequested();
 
         [DoesNotReturn]
         public override void ThrowShutdownException(Exception inner = null) => throw new DatabaseDisabledException("The database " + DatabaseName + " is shutting down", inner);
