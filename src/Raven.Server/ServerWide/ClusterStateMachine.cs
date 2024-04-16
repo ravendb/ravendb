@@ -820,10 +820,19 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static void SetIndexForBackup(ClusterOperationContext context, string databaseName, long index, string type)
+        private void SetIndexForBackup(ClusterOperationContext context, string databaseName, long index, string type)
         {
             if (index < 0)
                 return;
+
+            var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
+            llt.OnDispose += tx =>
+            {
+                if (llt.Committed)
+                {
+                    ExecuteAsyncTask(index, () => Changes.OnDatabaseChanges(databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, null));
+                }
+            };
 
             if (string.IsNullOrEmpty(databaseName))
                 throw new RachisApplyException($"Command '{type}' must contain a DatabaseName property. Index {index}");
