@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Replication;
@@ -25,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         }
     }
 
-    public sealed class ReplicationOutgoingsFailurePreview
+    public sealed class ReplicationOutgoingsFailurePreview : IFillFromBlittableJson
     {
         public IDictionary<ReplicationNode, ConnectionShutdownInfo> Stats;
 
@@ -41,16 +42,28 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
             return new DynamicJsonValue
             {
-                ["Key"] = ReplicationNodeToJson(kvp.Key),
-                ["Value"] = kvp.Value
+                ["Key"] = kvp.Key.ToJson(),
+                ["Value"] = kvp.Value.ToJson()
             };
         }
-    
-        private DynamicJsonValue ReplicationNodeToJson(ReplicationNode replicationNode)
+
+        public void FillFromBlittableJson(BlittableJsonReaderObject json)
         {
-            var json = replicationNode.ToJson();
-            json["Type"] = replicationNode.GetType().ToString();
-            return json;
+            Stats = new Dictionary<ReplicationNode, ConnectionShutdownInfo>();
+            if (json.TryGetMember(nameof(Stats), out var result) && result is BlittableJsonReaderArray bjra)
+            {
+                foreach (BlittableJsonReaderObject bjro in bjra)
+                {
+                    if (bjro.TryGet("Key", out BlittableJsonReaderObject keyBjro) &&
+                        bjro.TryGet("Value", out BlittableJsonReaderObject valueBjro))
+                    {
+                        var key = ReplicationHelper.GetReplicationNodeByType(keyBjro);
+                        var value = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<ConnectionShutdownInfo>(valueBjro, "ConnectionShutdownInfo");
+
+                        Stats.Add(key, value);
+                    }
+                }
+            }
         }
     }
 }

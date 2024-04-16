@@ -3,9 +3,9 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class createSampleDataClassCommand extends commandBase {
-    private db: database
+    private db: database | string;
 
-    constructor(db: database) {
+    constructor(db: database | string) {
         super();
         this.db = db;
     }

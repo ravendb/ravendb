@@ -111,25 +111,11 @@ namespace SlowTests.Issues
                         }
                         
                         var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize);
-                        
-                        var expired = database.DocumentsStorage.ExpirationStorage.GetDocuments(options, out _, CancellationToken.None);
                         var totalCount = 0;
-                        if (expired != null)
-                        {
-                            foreach (var singleExpired in expired)
-                            {
-                                totalCount += singleExpired.Value.Count;
-                            }
-                        }
-
+                        var expired = database.DocumentsStorage.ExpirationStorage.GetDocuments(options, ref totalCount, out _, CancellationToken.None);
                         Assert.Equal(expected, totalCount);
                     }
-
-
-                    
                 }
-
-                
             }
         }
 

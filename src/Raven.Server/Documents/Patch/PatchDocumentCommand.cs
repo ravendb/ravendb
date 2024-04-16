@@ -346,7 +346,7 @@ namespace Raven.Server.Documents.Patch
                 patchReply[nameof(PatchResult.ModifiedDocument)] = patchResult.ModifiedDocument;
             }
 
-            reply.Add(patchReply);
+            reply?.Add(patchReply);
 
             return patchResult.ChangeVector;
         }

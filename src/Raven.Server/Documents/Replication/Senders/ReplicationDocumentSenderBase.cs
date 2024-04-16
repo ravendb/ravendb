@@ -617,7 +617,7 @@ namespace Raven.Server.Documents.Replication.Senders
             };
 
             stats.RecordLastEtag(_lastEtag);
-
+            stats.RecordLastAcceptedChangeVector(_parent.LastAcceptedChangeVector);
             _parent.WriteToServer(headerJson);
 
             foreach (var item in _orderedReplicaItems)
@@ -633,9 +633,8 @@ namespace Raven.Server.Documents.Replication.Senders
             {
                 using (item.Value)
                 {
-                item.Value.WriteStream(_stream, _tempBuffer);
-                stats.RecordAttachmentOutput(item.Value.Stream.Length);
-            }
+                    item.Value.WriteStream(_stream, _tempBuffer, stats);
+                }
             }
 
             // close the transaction as early as possible, and before we wait for reply

@@ -137,49 +137,54 @@ namespace Raven.Server.Documents.Indexes.Workers
                 if (lastIndexedEtag == 0) // we haven't indexed yet, so we are skipping references for now
                     continue;
 
-                var referenceState = _referencesState.For(actionType, collection);
-                foreach (var referencedCollection in referencedCollections)
+                // When opening the read transaction for a single map covering all of its referenced collections,
+                // we can efficiently skip indexing documents that have already been indexed.
+                var readTransaction = queryContext.OpenReadTransaction();
+                var indexed = new HashSet<Slice>(SliceComparer.Instance);
+
+                try
                 {
-                    var inMemoryStats = _index.GetReferencesStats(referencedCollection.Name);
-
-                    using (var collectionStats = stats.For("Collection_" + referencedCollection.Name))
+                    var referenceState = _referencesState.For(actionType, collection);
+                    foreach (var referencedCollection in referencedCollections)
                     {
-                        long lastReferenceEtag;
+                        var inMemoryStats = _index.GetReferencesStats(referencedCollection.Name);
 
-                        switch (actionType)
+                        using (var collectionStats = stats.For("Collection_" + referencedCollection.Name))
                         {
-                            case ActionType.Document:
-                                lastReferenceEtag =
-                                    _referencesStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
-                                break;
-                            case ActionType.Tombstone:
-                                lastReferenceEtag = _referencesStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection,
-                                    referencedCollection);
-                                break;
-                            default:
-                                throw new NotSupportedException();
-                        }
+                            long lastReferenceEtag;
 
-                        var lastEtag = lastReferenceEtag;
-                        var resultsCount = 0;
-
-                        var sw = new Stopwatch();
-
-                        var keepRunning = true;
-                        var earlyExit = false;
-                        var lastCollectionEtag = -1L;
-
-                        while (keepRunning)
-                        {
-                            UpdateReferences(indexContext, collection);
-
-                            var hasChanges = false;
-                            earlyExit = false;
-
-                            var indexed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                            using (queryContext.OpenReadTransaction())
+                            switch (actionType)
                             {
+                                case ActionType.Document:
+                                    lastReferenceEtag =
+                                        _referencesStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
+                                    break;
+                                case ActionType.Tombstone:
+                                    lastReferenceEtag = _referencesStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection,
+                                        referencedCollection);
+                                    break;
+                                default:
+                                    throw new NotSupportedException();
+                            }
+
+                            var lastEtag = lastReferenceEtag;
+                            var resultsCount = 0;
+
+                            var sw = new Stopwatch();
+
+                            var keepRunning = true;
+                            var earlyExit = false;
+                            var lastCollectionEtag = -1L;
+
+                            while (keepRunning)
+                            {
+                                UpdateReferences(indexContext, collection);
+
+                                RenewTransactionIfNeeded(queryContext, batchContinuationResult, indexed, ref readTransaction);
+
+                                var hasChanges = false;
+                                earlyExit = false;
+
                                 sw.Restart();
 
                                 IEnumerable<Reference> references;
@@ -300,59 +305,68 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     break;
 
                                 _index._forTestingPurposes?.BeforeClosingDocumentsReadTransactionForHandleReferences?.Invoke();
+
+                                bool CanContinueReferenceBatch()
+                                {
+                                    var parameters = new CanContinueBatchParameters(stats, IndexingWorkType.References, queryContext, indexContext, writeOperation,
+                                        lastEtag, lastCollectionEtag, totalProcessedCount, sw);
+
+                                    batchContinuationResult = _index.CanContinueBatch(in parameters, ref maxTimeForDocumentTransactionToRemainOpen);
+                                    if (batchContinuationResult != Index.CanContinueBatchResult.True)
+                                    {
+                                        keepRunning = batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction;
+                                        return false;
+                                    }
+
+                                    if (totalProcessedCount >= pageSize)
+                                    {
+                                        keepRunning = false;
+                                        return false;
+                                    }
+
+                                    return true;
+                                }
                             }
 
-                            bool CanContinueReferenceBatch()
+                            if (lastReferenceEtag == lastEtag)
                             {
-                                var parameters = new CanContinueBatchParameters(stats, IndexingWorkType.References, queryContext, indexContext, writeOperation,
-                                    lastEtag, lastCollectionEtag, totalProcessedCount, sw);
+                                // the last referenced etag hasn't changed
+                                if (keepRunning == false && earlyExit)
+                                    return (true, batchContinuationResult);
 
-                                batchContinuationResult = _index.CanContinueBatch(in parameters, ref maxTimeForDocumentTransactionToRemainOpen);
-                                if (batchContinuationResult != Index.CanContinueBatchResult.True)
-                                {
-                                    keepRunning = batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction;
-                                    return false;
-                                }
-
-                                if (totalProcessedCount >= pageSize)
-                                {
-                                    keepRunning = false;
-                                    return false;
-                                }
-
-                                return true;
+                                continue;
                             }
+
+                            moreWorkFound = true;
+
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"Executed handle references for '{_index.Name}' index and '{referencedCollection.Name}' collection. " +
+                                             $"Got {resultsCount:#,#;;0} map results in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
+
+                            switch (actionType)
+                            {
+                                case ActionType.Document:
+                                    _referencesStorage.WriteLastReferenceEtag(indexContext.Transaction, collection, referencedCollection, lastEtag);
+                                    break;
+                                case ActionType.Tombstone:
+                                    _referencesStorage.WriteLastReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection, lastEtag);
+                                    break;
+                                default:
+                                    throw new NotSupportedException();
+                            }
+
+                            _referencesState.Clear(earlyExit, actionType, collection, indexContext);
                         }
-
-                        if (lastReferenceEtag == lastEtag)
-                        {
-                            // the last referenced etag hasn't changed
-                            if (keepRunning == false && earlyExit)
-                                return (true, batchContinuationResult);
-
-                            continue;
-                        }
-
-                        moreWorkFound = true;
-
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Executed handle references for '{_index.Name}' index and '{referencedCollection.Name}' collection. " +
-                                         $"Got {resultsCount:#,#;;0} map results in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
-
-                        switch (actionType)
-                        {
-                            case ActionType.Document:
-                                _referencesStorage.WriteLastReferenceEtag(indexContext.Transaction, collection, referencedCollection, lastEtag);
-                                break;
-                            case ActionType.Tombstone:
-                                _referencesStorage.WriteLastReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection, lastEtag);
-                                break;
-                            default:
-                                throw new NotSupportedException();
-                        }
-
-                        _referencesState.Clear(earlyExit, actionType, collection, indexContext);
                     }
+                }
+                finally
+                {
+                    foreach (var slice in indexed)
+                    {
+                        slice.Release(queryContext.Documents.Allocator);
+                    }
+
+                    readTransaction?.Dispose();
                 }
             }
 
@@ -385,21 +399,41 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
         }
 
+        private static void RenewTransactionIfNeeded(QueryOperationContext queryContext, Index.CanContinueBatchResult batchContinuationResult, HashSet<Slice> indexed, ref IDisposable readTransaction)
+        {
+            if (batchContinuationResult != Index.CanContinueBatchResult.RenewTransaction)
+                return;
+
+            var toDispose = readTransaction;
+            readTransaction = null; // prevent double dispose in case of an error
+            toDispose.Dispose();
+
+            foreach (var slice in indexed)
+            {
+                slice.Release(queryContext.Documents.Allocator);
+            }
+
+            // the documents that have already been indexed become irrelevant once the new transaction is opened.
+            indexed.Clear();
+
+            readTransaction = queryContext.OpenReadTransaction();
+        }
+
         private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(QueryOperationContext queryContext, TransactionOperationContext indexContext,
-            string collection, Reference referencedItem, long lastIndexedEtag, HashSet<string> indexed, ReferencesState.ReferenceState referenceState)
+            string collection, Reference referencedItem, long lastIndexedEtag, HashSet<Slice> indexed, ReferencesState.ReferenceState referenceState)
         {
             var lastProcessedItemId = referenceState?.GetLastProcessedItemId(referencedItem);
             foreach (var key in _referencesStorage.GetItemKeysFromCollectionThatReference(collection, referencedItem.Key, indexContext.Transaction, lastProcessedItemId))
             {
+                // we check if we already indexed the document BEFORE we fetch it from the disk.
+                if (indexed.Contains(key))
+                    continue;
+
+                indexed.Add(key.Clone(queryContext.Documents.Allocator));
+
                 var item = GetItem(queryContext.Documents, key);
                 if (item == null)
                     continue;
-
-                if (indexed.Add(item.Id) == false)
-                {
-                    item.Dispose();
-                    continue;
-                }
 
                 if (item.Etag > lastIndexedEtag)
                 {
@@ -409,7 +443,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                 if (ItemsAndReferencesAreUsingSameEtagPool && item.Etag > referencedItem.Etag)
                 {
-                    //if the map worker already mapped this "doc" version it must be with this version of "referencedItem" and if the map worker didn't mapped the "doc" so it will process it later
+                    // if the map worker already mapped this "doc" version it must be with this version of "referencedItem" and if the map worker didn't mapped the "doc" so it will process it later
                     item.Dispose();
                     continue;
                 }

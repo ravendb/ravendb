@@ -9,16 +9,42 @@ using Sparrow;
 
 namespace Raven.Client.Documents.Session.Loaders
 {
+    /// <summary>
+    /// The server is instructed to pre-load referenced documents concurrently with retrieving the documents.<br/>
+    /// The documents are added to the session unit of work, and subsequent requests to load them are served directly from the session cache,
+    /// without requiring any additional queries to the server. <br />
+    /// The server can then be instructed to pre-load the referenced object at the same time that the root object is retrieved, for example using:
+    /// <example>
+    /// <code>
+    /// Order order = session.Include&lt;Order&gt;(x => x.CustomerId).Load("orders/1-A");
+    /// // this will not require querying the server:
+    /// Customer customer = session.Load&lt;Customer&gt;(order.CustomerId);
+    /// </code></example>
+    /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Session.Querying.Includes"/>
     public interface IDocumentIncludeBuilder<T, out TBuilder>
     {
+
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}"/>
+        /// <param name="path">Name of property which contains id(s) of document(s) to include from queried document.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.Includes"/>
         TBuilder IncludeDocuments(string path);
 
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}"/>
+        /// <param name="path">Path to the property which contains id of document to include.</param>
         TBuilder IncludeDocuments(Expression<Func<T, string>> path);
 
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}"/>
+        /// <param name="path">Path to the property which contains ids of documents to include.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.Includes"/>
         TBuilder IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path);
 
+        /// <inheritdoc cref="IncludeDocuments(Expression{Func{T, string}})"/>
+        /// <typeparam name="TInclude">Type of included document</typeparam>
         TBuilder IncludeDocuments<TInclude>(Expression<Func<T, string>> path);
 
+        /// <inheritdoc cref="IncludeDocuments(Expression{Func{T, IEnumerable{string}}})"/>
+        /// <typeparam name="TInclude">Type of included document</typeparam>
         TBuilder IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path);
     }
 
@@ -96,6 +122,7 @@ namespace Raven.Client.Documents.Session.Loaders
     {
     }
 
+    /// <inheritdoc/>
     public interface IIncludeBuilder<T> : IIncludeBuilder<T, IIncludeBuilder<T>>
     {
     }
@@ -106,12 +133,16 @@ namespace Raven.Client.Documents.Session.Loaders
 
     public interface IQueryIncludeBuilder<T> : IIncludeBuilder<T, IQueryIncludeBuilder<T>>
     {
+        /// <inheritdoc cref="IIncludeBuilder{T,TBuilder}"/>
         IQueryIncludeBuilder<T> IncludeCounter(Expression<Func<T, string>> path, string name);
-
+        
+        /// <inheritdoc cref="IIncludeBuilder{T,TBuilder}"/>
         IQueryIncludeBuilder<T> IncludeCounters(Expression<Func<T, string>> path, string[] names);
 
+        /// <inheritdoc cref="IIncludeBuilder{T,TBuilder}"/>
         IQueryIncludeBuilder<T> IncludeAllCounters(Expression<Func<T, string>> path);
-        
+
+        /// <inheritdoc cref="IIncludeBuilder{T,TBuilder}"/>
         IQueryIncludeBuilder<T> IncludeTimeSeries(Expression<Func<T, string>> path, string name, DateTime from, DateTime to);
         
     }
@@ -178,228 +209,267 @@ namespace Raven.Client.Documents.Session.Loaders
             _conventions = conventions;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> IQueryIncludeBuilder<T>.IncludeCounter(Expression<Func<T, string>> path, string name)
         {
             IncludeCounterWithAlias(path, name);
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> IQueryIncludeBuilder<T>.IncludeCounters(Expression<Func<T, string>> path, string[] names)
         {
             IncludeCountersWithAlias(path, names);
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> IQueryIncludeBuilder<T>.IncludeAllCounters(Expression<Func<T, string>> path)
         {
             IncludeAllCountersWithAlias(path);
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> ICounterIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCounter(string name)
         {
             IncludeCounter(string.Empty, name);
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> ICounterIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCounters(string[] names)
         {
             IncludeCounters(string.Empty, names);
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> ICounterIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeAllCounters()
         {
             IncludeAllCounters(string.Empty);
             return this;
         }
 
+        /// <inheritdoc />
         ISubscriptionIncludeBuilder<T> ICounterIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeCounter(string name)
         {
             IncludeCounter(string.Empty, name);
             return this;
         }
 
+        /// <inheritdoc />
         ISubscriptionIncludeBuilder<T> ICounterIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeCounters(string[] names)
         {
             IncludeCounters(string.Empty, names);
             return this;
         }
 
+        /// <inheritdoc />
         ISubscriptionIncludeBuilder<T> ICounterIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeAllCounters()
         {
             IncludeAllCounters(string.Empty);
             return this;
         }
 
+        /// <inheritdoc />
         ISubscriptionIncludeBuilder<T> IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, string>> path)
         {
             IncludeDocuments(path.ToPropertyPath(_conventions));
             return this;
         }
 
+        /// <inheritdoc />
         ISubscriptionIncludeBuilder<T> IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
         {
             IncludeDocuments(path.ToPropertyPath(_conventions));
             return this;
         }
 
+        /// <inheritdoc />
         ISubscriptionIncludeBuilder<T> IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
         {
             IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(_conventions), _conventions));
             return this;
         }
 
+        /// <inheritdoc />
         ISubscriptionIncludeBuilder<T> IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
             IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(_conventions), _conventions));
             return this;
         }
 
+        /// <inheritdoc />
         ISubscriptionIncludeBuilder<T> IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeDocuments(string path)
         {
             IncludeDocuments(path);
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> IDocumentIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, string>> path)
         {
             IncludeDocuments(path.ToPropertyPath(_conventions));
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> IDocumentIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
         {
             IncludeDocuments(path.ToPropertyPath(_conventions));
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> IDocumentIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
         {
             IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(_conventions), _conventions));
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> IDocumentIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
             IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(_conventions), _conventions));
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> IDocumentIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments(string path)
         {
             IncludeDocuments(path);
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> ICounterIncludeBuilder<T, IIncludeBuilder<T>>.IncludeCounter(string name)
         {
             IncludeCounter(string.Empty, name);
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> ICounterIncludeBuilder<T, IIncludeBuilder<T>>.IncludeCounters(string[] names)
         {
             IncludeCounters(string.Empty, names);
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> ICounterIncludeBuilder<T, IIncludeBuilder<T>>.IncludeAllCounters()
         {
             IncludeAllCounters(string.Empty);
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> IDocumentIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments(string path)
         {
             IncludeDocuments(path);
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> IDocumentIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, string>> path)
         {
             IncludeDocuments(path.ToPropertyPath(_conventions));
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> IDocumentIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
         {
             IncludeDocuments(path.ToPropertyPath(_conventions));
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> IDocumentIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, string>> path)
         {
             IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(_conventions), _conventions));
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> IDocumentIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
             IncludeDocuments(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(_conventions), _conventions));
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime? from, DateTime? to)
         {
             IncludeTimeSeriesFromTo(string.Empty, name, from, to);
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime? from, DateTime? to)
         {
             IncludeTimeSeriesFromTo(string.Empty, name, from, to);
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> IQueryIncludeBuilder<T>.IncludeTimeSeries(Expression<Func<T, string>> path, string name, DateTime from, DateTime to)
         {
             WithAlias(path);
             IncludeTimeSeriesFromTo(path.ToPropertyPath(_conventions), name, from, to);
             return this;
         }
+
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCompareExchangeValue(string path)
         {
             IncludeCompareExchangeValue(path);
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCompareExchangeValue(Expression<Func<T, string>> path)
         {
             IncludeCompareExchangeValue(path.ToPropertyPath(_conventions));
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCompareExchangeValue(Expression<Func<T, IEnumerable<string>>> path)
         {
             IncludeCompareExchangeValue(path.ToPropertyPath(_conventions));
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IIncludeBuilder<T>>.IncludeCompareExchangeValue(string path)
         {
             IncludeCompareExchangeValue(path);
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IIncludeBuilder<T>>.IncludeCompareExchangeValue(Expression<Func<T, string>> path)
         {
             IncludeCompareExchangeValue(path.ToPropertyPath(_conventions));
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IIncludeBuilder<T>>.IncludeCompareExchangeValue(Expression<Func<T, IEnumerable<string>>> path)
         {
             IncludeCompareExchangeValue(path.ToPropertyPath(_conventions));
             return this;
         }
-        
+
+        /// <inheritdoc />
         ITimeSeriesIncludeBuilder ITimeSeriesIncludeBuilder.IncludeTags()
         {
             IncludeTimeSeriesTags = true;
             return this;
         }
 
+        /// <inheritdoc />
         ITimeSeriesIncludeBuilder ITimeSeriesIncludeBuilder.IncludeDocument()
         {
             IncludeTimeSeriesDocument = true;
@@ -412,108 +482,126 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeTimeSeries(string name, TimeSeriesRangeType type, TimeValue time)
         {
             IncludeTimeSeriesByRangeTypeAndTime(string.Empty, name, type, time);
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeTimeSeries(string name, TimeSeriesRangeType type, int count)
         {
             IncludeTimeSeriesByRangeTypeAndCount(string.Empty, name, type, count);
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeTimeSeries(string[] names, TimeSeriesRangeType type, TimeValue time)
         {
             IncludeArrayOfTimeSeriesByRangeTypeAndTime(names, type, time);
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeTimeSeries(string[] names, TimeSeriesRangeType type, int count)
         {
             IncludeArrayOfTimeSeriesByRangeTypeAndCount(names, type, count);
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeAllTimeSeries(TimeSeriesRangeType type, TimeValue time)
         {
             IncludeTimeSeriesByRangeTypeAndTime(string.Empty, Constants.TimeSeries.All, type, time);
             return this;
         }
 
+        /// <inheritdoc />
         IIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeAllTimeSeries(TimeSeriesRangeType type, int count)
         {
             IncludeTimeSeriesByRangeTypeAndCount(string.Empty, Constants.TimeSeries.All, type, count);
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string name, TimeSeriesRangeType type, TimeValue time)
         {
             IncludeTimeSeriesByRangeTypeAndTime(string.Empty, name, type, time);
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string name, TimeSeriesRangeType type, int count)
         {
             IncludeTimeSeriesByRangeTypeAndCount(string.Empty, name, type, count);
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string[] names, TimeSeriesRangeType type, TimeValue time)
         {
             IncludeArrayOfTimeSeriesByRangeTypeAndTime(names, type, time);
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string[] names, TimeSeriesRangeType type, int count)
         {
             IncludeArrayOfTimeSeriesByRangeTypeAndCount(names, type, count);
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeAllTimeSeries(TimeSeriesRangeType type, TimeValue time)
         {
             IncludeTimeSeriesByRangeTypeAndTime(string.Empty, Constants.TimeSeries.All, type, time);
             return this;
         }
 
+        /// <inheritdoc />
         IQueryIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeAllTimeSeries(TimeSeriesRangeType type, int count)
         {
             IncludeTimeSeriesByRangeTypeAndCount(string.Empty, Constants.TimeSeries.All, type, count);
             return this;
         }
 
+        /// <inheritdoc />
         ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeTimeSeries(string name, TimeSeriesRangeType type, TimeValue time)
         {
             IncludeTimeSeriesByRangeTypeAndTime(string.Empty, name, type, time);
             return this;
         }
 
+        /// <inheritdoc />
         ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeTimeSeries(string name, TimeSeriesRangeType type, int count)
         {
             IncludeTimeSeriesByRangeTypeAndCount(string.Empty, name, type, count);
             return this;
         }
 
+        /// <inheritdoc />
         ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeTimeSeries(string[] names, TimeSeriesRangeType type, TimeValue time)
         {
             IncludeArrayOfTimeSeriesByRangeTypeAndTime(names, type, time);
             return this;
         }
 
+        /// <inheritdoc />
         ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeTimeSeries(string[] names, TimeSeriesRangeType type, int count)
         {
             IncludeArrayOfTimeSeriesByRangeTypeAndCount(names, type, count);
             return this;
         }
 
+        /// <inheritdoc />
         ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeAllTimeSeries(TimeSeriesRangeType type, TimeValue time)
         {
             IncludeTimeSeriesByRangeTypeAndTime(string.Empty, Constants.TimeSeries.All, type, time);
             return this;
         }
 
+        /// <inheritdoc />
         ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeAllTimeSeries(TimeSeriesRangeType type, int count)
         {
             IncludeTimeSeriesByRangeTypeAndCount(string.Empty, Constants.TimeSeries.All, type, count);

@@ -25,17 +25,15 @@ import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import * as yup from "yup";
 import { FormAceEditor, FormSelectCreatable } from "components/common/Form";
 import { yupResolver } from "@hookform/resolvers/yup";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 interface ConflictResolutionConfigPanelProps {
-    isDatabaseAdmin: boolean;
     initialConfig: ConflictResolutionCollectionConfig;
 }
 
-export default function ConflictResolutionConfigPanel({
-    isDatabaseAdmin,
-    initialConfig,
-}: ConflictResolutionConfigPanelProps) {
+export default function ConflictResolutionConfigPanel({ initialConfig }: ConflictResolutionConfigPanelProps) {
     const dispatch = useAppDispatch();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames).filter(
         (x) => x !== "@empty" && x !== "@hilo"
     );
@@ -95,7 +93,6 @@ export default function ConflictResolutionConfigPanel({
                         <RichPanelActions>
                             <PanelActions
                                 reset={reset}
-                                isDatabaseAdmin={isDatabaseAdmin}
                                 isInEditMode={initialConfig.isInEditMode}
                                 isNewUnsaved={initialConfig.isNewUnsaved}
                                 configId={configId}
@@ -131,7 +128,7 @@ export default function ConflictResolutionConfigPanel({
                                     options={collectionOptions}
                                     isClearable={false}
                                     maxMenuHeight={300}
-                                    isDisabled={!isDatabaseAdmin}
+                                    isDisabled={!hasDatabaseAdminAccess}
                                 />
                             </InputGroup>
                         )}
@@ -156,7 +153,7 @@ export default function ConflictResolutionConfigPanel({
                                 name="script"
                                 mode="javascript"
                                 height="400px"
-                                readOnly={!isDatabaseAdmin}
+                                readOnly={!hasDatabaseAdminAccess}
                             />
                         </InputGroup>
                     </RichPanelDetails>
@@ -167,26 +164,25 @@ export default function ConflictResolutionConfigPanel({
 }
 
 function PanelActions({
-    isDatabaseAdmin,
     isInEditMode,
     isNewUnsaved,
     configId,
     reset,
 }: {
-    isDatabaseAdmin: boolean;
     isInEditMode: boolean;
     isNewUnsaved: boolean;
     configId: string;
     reset: () => void;
 }) {
     const dispatch = useAppDispatch();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
 
     const discard = () => {
         dispatch(conflictResolutionActions.discardEdit(configId));
         reset();
     };
 
-    if (isDatabaseAdmin) {
+    if (hasDatabaseAdminAccess) {
         if (isInEditMode) {
             return (
                 <React.Fragment key="actions-in-edit">

@@ -476,7 +476,7 @@ namespace FastTests.Client.Subscriptions
 
         [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void ShouldKeepPullingDocsAfterServerRestart(Options options)
+        public async Task ShouldKeepPullingDocsAfterServerRestart(Options options)
         {
             var dataPath = NewDataPath();
 
@@ -518,8 +518,8 @@ namespace FastTests.Client.Subscriptions
                 });
 
 
-                var gotBatch = new ManualResetEventSlim();
-                var gotArek = new ManualResetEventSlim();
+                var gotBatch = new AsyncManualResetEvent();
+                var gotArek = new AsyncManualResetEvent();
                 var t = subscriptionWorker.Run(x =>
                 {
                     gotBatch.Set();
@@ -531,7 +531,7 @@ namespace FastTests.Client.Subscriptions
                     }
                 });
 
-                Assert.True(gotBatch.Wait(_reasonableWaitTime));
+                Assert.True(await gotBatch.WaitAsync(_reasonableWaitTime));
 
                 server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
@@ -554,7 +554,7 @@ namespace FastTests.Client.Subscriptions
                     }
                 }
 
-                Assert.True(gotArek.Wait(_reasonableWaitTime));
+                Assert.True(await gotArek.WaitAsync(_reasonableWaitTime));
             }
             finally
             {

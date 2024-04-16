@@ -446,6 +446,7 @@ namespace Raven.Client.Documents.Session
             return GetTypedFromCache<TValues>(from, to, includes: null, start, pageSize, token);
         }
 
+        /// <inheritdoc cref="IAsyncSessionDocumentTypedTimeSeries{TValue}.GetAsync"/>
         Task<TimeSeriesEntry<TValues>[]> IAsyncSessionDocumentTypedTimeSeries<TValues>.GetAsync(DateTime? from, DateTime? to, int start, int pageSize, CancellationToken token)
         {
             return GetAsyncInternal(from, to, start, pageSize, token);
@@ -457,11 +458,13 @@ namespace Raven.Client.Documents.Session
             return GetAsyncInternal(from, to, start, pageSize, token);
         }
 
+        /// <inheritdoc cref="ISessionDocumentTypedAppendTimeSeriesBase{TValue}.Append"/>
         void ISessionDocumentTypedAppendTimeSeriesBase<TValues>.Append(DateTime timestamp, TValues entry, string tag)
         {
             Append(timestamp, entry, tag);
         }
 
+        /// <inheritdoc cref="ISessionDocumentTypedAppendTimeSeriesBase{TValue}.Append(TimeSeriesEntry{TValue})"/>
         public void Append(TimeSeriesEntry<TValues> entry)
         {
             Append(entry.Timestamp, entry.Value, entry.Tag);
@@ -500,16 +503,19 @@ namespace Raven.Client.Documents.Session
             return await GetTimeSeriesStreamResult<TTValues>(from, to, offset).ConfigureAwait(false);
         }
 
+        /// <inheritdoc/>
         Task<IAsyncEnumerator<TimeSeriesEntry>> IAsyncTimeSeriesStreamingBase<TimeSeriesEntry>.StreamAsync(DateTime? from, DateTime? to, TimeSpan? offset, CancellationToken token)
         {
             return GetAsyncStream<TimeSeriesEntry>(from, to, offset, token);
         }
 
+        /// <inheritdoc/>
         Task<IAsyncEnumerator<TimeSeriesRollupEntry<TValues>>> IAsyncTimeSeriesStreamingBase<TimeSeriesRollupEntry<TValues>>.StreamAsync(DateTime? from, DateTime? to, TimeSpan? offset, CancellationToken token)
         {
             return GetAsyncStream<TimeSeriesRollupEntry<TValues>>(from, to, offset, token);
         }
 
+        /// <inheritdoc/>
         Task<IAsyncEnumerator<TimeSeriesEntry<TValues>>> IAsyncTimeSeriesStreamingBase<TimeSeriesEntry<TValues>>.StreamAsync(DateTime? from, DateTime? to, TimeSpan? offset, CancellationToken token)
         {
             return GetAsyncStream<TimeSeriesEntry<TValues>>(from, to, offset, token);

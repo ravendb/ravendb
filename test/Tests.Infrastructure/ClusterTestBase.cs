@@ -260,7 +260,7 @@ namespace Tests.Infrastructure
                     }
                     continue;
                 }
-                var dbRecord = dbTask.Result;
+                var dbRecord = await dbTask;
                 if (dbRecord == null || dbRecord.DeletionInProgress == null || dbRecord.DeletionInProgress.Count == 0)
                 {
                     return true;
@@ -362,7 +362,7 @@ namespace Tests.Infrastructure
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
 
-            throw new AggregateException("Failed to get leader after 5 retries. {Environment.NewLine}{GetNodesStatus(servers ?? Servers)}", exceptions);
+            throw new AggregateException($"Failed to get leader after 5 retries. {Environment.NewLine}{GetNodesStatus(servers ?? Servers)}", exceptions);
         }
 
         private string GetNodesStatus(List<RavenServer> servers)
@@ -375,7 +375,7 @@ namespace Tests.Infrastructure
             return string.Join(Environment.NewLine, servers2);
         }
 
-        protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<ServerStore, T> func, T expected, int timeout = 15000)
+        protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<ServerStore, Task<T>> func, T expected, int timeout = 15000)
         {
             var nodes = topology.AllNodes;
             var servers = new List<ServerStore>();
@@ -866,7 +866,7 @@ namespace Tests.Infrastructure
                     }
 
                     leader.ServerStore.Engine.GetLastCommitIndex(out var index, out _);
-                    await follower.ServerStore.Engine.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, cts.Token);
+                    await follower.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, cts.Token);
                 }
             }
 
@@ -976,14 +976,14 @@ namespace Tests.Infrastructure
 
         public async Task WaitForLeader(TimeSpan timeout)
         {
+            using var cts = new CancellationTokenSource(timeout);
             var tasks = Servers
-                .Select(server => server.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None))
+                .Select(server => server.ServerStore.WaitForState(RachisState.Leader, cts.Token))
                 .ToList();
 
-            tasks.Add(Task.Delay(timeout));
-            await Task.WhenAny(tasks);
+            var t = await Task.WhenAny(tasks);
 
-            if (Task.Delay(timeout).IsCompleted)
+            if (t.Result == false)
                 throw new TimeoutException(Cluster.GetLastStatesFromAllServersOrderedByTime());
         }
 

@@ -1,17 +1,16 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
-import { DatabaseSharedInfo } from "components/models/databases";
 
 class getDatabaseDetailedStatsCommand extends commandBase {
 
-    private db: database | DatabaseSharedInfo;
+    private db: database | string;
 
     private location: databaseLocationSpecifier;
 
     private longWait = false;
 
-    constructor(db: database | DatabaseSharedInfo, location: databaseLocationSpecifier, longWait = false) {
+    constructor(db: database | string, location: databaseLocationSpecifier, longWait = false) {
         super();
         this.longWait = longWait;
         this.location = location;

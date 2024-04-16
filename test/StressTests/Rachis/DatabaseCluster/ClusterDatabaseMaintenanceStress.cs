@@ -66,8 +66,8 @@ namespace StressTests.Rachis.DatabaseCluster
                         tcs.TrySetCanceled();
                 }))
                 {
-                    var database = await preferred.ServerStore.DatabasesLandlord.DatabasesCache.ForTestingPurposesOnly().Replace(databaseName, tcs.Task);
-                    database.Dispose();
+                    var t = await preferred.ServerStore.DatabasesLandlord.DatabasesCache.ForTestingPurposesOnly().Replace(databaseName, tcs.Task);
+                    t.Dispose();
 
                     Assert.True(await WaitForValueAsync(async () =>
                     {
@@ -132,8 +132,8 @@ namespace StressTests.Rachis.DatabaseCluster
                         tcs.TrySetCanceled();
                 }))
                 {
-                    var database = await preferred.ServerStore.DatabasesLandlord.DatabasesCache.ForTestingPurposesOnly().Replace(databaseName, tcs.Task);
-                    database.Dispose();
+                    var t = await preferred.ServerStore.DatabasesLandlord.DatabasesCache.ForTestingPurposesOnly().Replace(databaseName, tcs.Task);
+                    t.Dispose();
 
                     Assert.True(await WaitForValueAsync(async () =>
                     {

@@ -24,6 +24,7 @@ using Raven.Server.Documents.DataArchival;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -75,8 +76,9 @@ namespace SlowTests.Server.Documents.DataArchival
                     }
 
                     var options = new BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, 10);
+                    var totalCount = 0;
 
-                    var toArchive = database.DocumentsStorage.DataArchivalStorage.GetDocuments(options, out _, CancellationToken.None);
+                    var toArchive = database.DocumentsStorage.DataArchivalStorage.GetDocuments(options, ref totalCount, out _, CancellationToken.None);
                     Assert.Equal(1, toArchive.Count);
                 }
             }
@@ -145,8 +147,6 @@ namespace SlowTests.Server.Documents.DataArchival
             }
         }
 
-
-
         [Fact]
         public async Task ShouldImportTask()
         {
@@ -167,7 +167,6 @@ namespace SlowTests.Server.Documents.DataArchival
             }
         }
 
-
         [Fact]
         public async Task ThrowsIfUsingWrongArchiveAtDateTimeFormat()
         {
@@ -186,6 +185,70 @@ namespace SlowTests.Server.Documents.DataArchival
             }
         }
 
+        [RavenTheory(RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ArchiveDocsWithMaxItemsToProcessConfiguredShouldWork(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                // Insert documents with ArchiveAt before activating the archival
+                var archiveDateTime = SystemTime.UtcNow.AddMinutes(5);
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var company = new Company { Name = "Company Name", Id = $"companies/{i}$companies/1" };
+                        await session.StoreAsync(company);
+                        var metadata = session.Advanced.GetMetadataFor(company);
+                        metadata[Constants.Documents.Metadata.ArchiveAt] = archiveDateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                        await session.SaveChangesAsync();
+                    }
+                }
 
+                var config = new DataArchivalConfiguration
+                {
+                    Disabled = false,
+                    ArchiveFrequencyInSec = (long)TimeSpan.FromMinutes(10).TotalSeconds,
+                    MaxItemsToProcess = 9
+                };
+
+                var database = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "companies/1");
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+
+                await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config, database.Name);
+
+                DatabaseTopology topology;
+                string nodeTag;
+
+                using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                using (serverContext.OpenReadTransaction())
+                {
+                    topology = database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, database.Name);
+                    nodeTag = database.ServerStore.NodeTag;
+                }
+
+                DateTime time = SystemTime.UtcNow.AddMinutes(10);
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenWriteTransaction())
+                {
+                    var archiveOptions = new BackgroundWorkParameters(context, time, topology, nodeTag, AmountToTake: 10, MaxItemsToProcess: 10);
+                    var totalCount = 0;
+                    var toArchive = database.DocumentsStorage.DataArchivalStorage.GetDocuments(archiveOptions, ref totalCount, out _, CancellationToken.None);
+                    Assert.Equal(10, totalCount);
+                }
+
+                var dataArchivist = database.DataArchivist;
+                await dataArchivist.ArchiveDocs();
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenWriteTransaction())
+                {
+                    var archiveOptions = new BackgroundWorkParameters(context, time, topology, nodeTag, AmountToTake: 10, MaxItemsToProcess: 10);
+                    var totalCount = 0;
+                    var toArchive = database.DocumentsStorage.DataArchivalStorage.GetDocuments(archiveOptions, ref totalCount, out _, CancellationToken.None);
+                    Assert.Equal(1, totalCount);
+                }
+            }
+        }
     }
 }

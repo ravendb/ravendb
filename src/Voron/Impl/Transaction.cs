@@ -324,8 +324,8 @@ namespace Voron.Impl
 
         internal void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
         {
-            if (_multiValueTrees == null)
-                _multiValueTrees = new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer());
+            _multiValueTrees ??= new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer());
+
             mvTree.IsMultiValueTree = true;
             _multiValueTrees.Add(Tuple.Create(tree, key.Clone(_lowLevelTransaction.Allocator, ByteStringType.Immutable)), mvTree);
         }
@@ -333,9 +333,7 @@ namespace Voron.Impl
         internal bool TryGetMultiValueTree(Tree tree, Slice key, out Tree mvTree)
         {
             mvTree = null;
-            if (_multiValueTrees == null)
-                return false;
-            return _multiValueTrees.TryGetValue(Tuple.Create(tree, key), out mvTree);
+            return _multiValueTrees != null && _multiValueTrees.TryGetValue(Tuple.Create(tree, key), out mvTree);
         }
 
         internal bool TryRemoveMultiValueTree(Tree parentTree, Slice key)
@@ -350,8 +348,7 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.NoInlining)]
         internal void AddTree(string name, Tree tree)
         {
-            Slice treeName;
-            Slice.From(Allocator, name, ByteStringType.Immutable, out treeName);
+            Slice.From(Allocator, name, ByteStringType.Immutable, out Slice treeName);
             AddTree(treeName, tree);
         }
 
@@ -371,8 +368,7 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void DeleteTree(string name)
         {
-            Slice nameSlice;
-            Slice.From(Allocator, name, ByteStringType.Immutable, out nameSlice);
+            Slice.From(Allocator, name, ByteStringType.Immutable, out Slice nameSlice);
             DeleteTree(nameSlice);
         }
 
@@ -471,14 +467,13 @@ namespace Voron.Impl
 
             _lowLevelTransaction.RootObjects.Delete(fromName);
 
-            byte* ptr;
-            using (_lowLevelTransaction.RootObjects.DirectAdd(toName, sizeof(TreeRootHeader), out ptr))
+            using (_lowLevelTransaction.RootObjects.DirectAdd(toName, sizeof(TreeRootHeader), out byte* ptr))
                 fromTree.State.CopyTo((TreeRootHeader*)ptr);
 
             fromTree.Rename(toName);
             fromTree.State.IsModified = true;
 
-            // _trees already ensrued already created in ReadTree
+            // _trees already ensured created in ReadTree
             _trees.Remove(fromName);
             _trees.Remove(toName);
 
@@ -516,41 +511,7 @@ namespace Voron.Impl
         
         public void Dispose()
         {
-            if (_trees != null)
-            {
-                foreach (var tree in _trees)
-                {
-                    tree.Value?.Dispose();
-                }
-            }
-
-            if (_multiValueTrees != null)
-            {
-                foreach (var item in _multiValueTrees)
-                {
-                    item.Value?.Dispose();
-                    item.Key.Item1?.Dispose();
-                }
-            }
-
-            if (_tables != null)
-            {
-                foreach (var table in _tables)
-                {
-                    table.Value?.Dispose();
-                }
-            }
-
-            if (_globalFixedSizeTree != null)
-            {
-                foreach (var tree in _globalFixedSizeTree)
-                {
-                    tree.Value?.Dispose();
-                }
-            }
-
             _lowLevelTransaction?.Dispose();
-
             _lowLevelTransaction = null;
         }
 
@@ -592,10 +553,7 @@ namespace Voron.Impl
         public RootObjectType GetRootObjectType(Slice name)
         {
             var val = (RootHeader*)_lowLevelTransaction.RootObjects.DirectRead(name);
-            if (val == null)
-                return RootObjectType.None;
-
-            return val->RootObjectType;
+            return val == null ? RootObjectType.None : val->RootObjectType;
         }
 
         public FixedSizeTree GetGlobalFixedSizeTree(Slice name, ushort valSize, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)

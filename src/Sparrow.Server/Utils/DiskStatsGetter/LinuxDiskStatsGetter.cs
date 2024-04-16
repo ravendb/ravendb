@@ -19,13 +19,13 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
 
     protected override DiskStatsResult CalculateStats(LinuxDiskStatsRawResult currentInfo, State state)
     {
-        var diff = (currentInfo.Time - state.Prev.Raw.Time).TotalSeconds;
+        var diff = (currentInfo.Time - state.Result.RawSampling.Time).TotalSeconds;
         var diskSpaceResult = new DiskStatsResult
         {
-            IoReadOperations = (currentInfo.IoReadOperations - state.Prev.Raw.IoReadOperations) / diff, 
-            IoWriteOperations = (currentInfo.IoWriteOperations - state.Prev.Raw.IoWriteOperations) / diff, 
-            ReadThroughput = new Size((long)((currentInfo.ReadSectors - state.Prev.Raw.ReadSectors) * 512 / diff), SizeUnit.Bytes), 
-            WriteThroughput = new Size((long)((currentInfo.WriteSectors - state.Prev.Raw.WriteSectors) * 512 / diff), SizeUnit.Bytes), 
+            IoReadOperations = (currentInfo.IoReadOperations - state.Result.RawSampling.IoReadOperations) / diff,
+            IoWriteOperations = (currentInfo.IoWriteOperations - state.Result.RawSampling.IoWriteOperations) / diff,
+            ReadThroughput = new Size((long)((currentInfo.ReadSectors - state.Result.RawSampling.ReadSectors) * 512 / diff), SizeUnit.Bytes),
+            WriteThroughput = new Size((long)((currentInfo.WriteSectors - state.Result.RawSampling.WriteSectors) * 512 / diff), SizeUnit.Bytes),
             QueueLength = currentInfo.QueueLength
         };
         return diskSpaceResult;
@@ -41,12 +41,12 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
         }
         catch (Exception e)
         {
-            if(Logger.IsInfoEnabled)
+            if (Logger.IsInfoEnabled)
                 Logger.Info($"Could not get GetDiskInfo of {path}", e);
             return null;
         }
     }
-        
+
     private static (ulong Major, ulong Minor) GetDiskMajorMinor(string path)
     {
         if (Syscall.stat(path, out var stats) != 0)
@@ -54,19 +54,19 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
             const int bufferCapacity = 1024;
             var errno = Stdlib.GetLastError();
             var errorBuilder = new StringBuilder(bufferCapacity);
-            Syscall.strerror_r(errno, errorBuilder,bufferCapacity);
+            Syscall.strerror_r(errno, errorBuilder, bufferCapacity);
             errorBuilder.Insert(0, $"Failed to get stat for \"{path}\" : ");
             throw new InvalidOperationException(errorBuilder.ToString());
         }
-            
+
         var deviceId = (stats.st_mode & FilePermissions.S_IFBLK) == FilePermissions.S_IFBLK
             ? stats.st_rdev
             : stats.st_dev;
-                
+
         //https://sites.uclouvain.be/SystInfo/usr/include/sys/sysmacros.h.html
         var major = (deviceId & 0x00000000000fff00u) >> 8;
         major |= (deviceId & 0xfffff00000000000u) >> 32;
-                
+
         var minor = (deviceId & 0x00000000000000ffu);
         minor |= (deviceId & 0x00000ffffff00000u) >> 12;
         return (major, minor);
@@ -77,7 +77,7 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
         const int maxNumberOfValues = 11;
         Span<long> values = stackalloc long[maxNumberOfValues];
         Span<byte> buffer = stackalloc byte[1024];
-        
+
         var readTime = DateTime.UtcNow;
         var read = ReadAllInto(statPath, buffer);
         var contents = buffer[..read];
@@ -109,7 +109,7 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
         }
         else
         {
-            if(Logger.IsInfoEnabled)
+            if (Logger.IsInfoEnabled)
                 Logger.Info($"The stats file {statPath} should contain at least 4 values. File content '{Encoding.UTF8.GetString(contents)}'");
             return null;
         }
@@ -124,7 +124,7 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
             Time = readTime
         };
     }
-    
+
     private static int ReadAllInto(string path, Span<byte> remainedToRead)
     {
         using var stream = File.OpenRead(path);
@@ -138,7 +138,7 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
             totalRead += read;
         }
     }
-    
+
     private static int Parse(Span<byte> content, Span<long> values)
     {
         int valuesIndex = 0;
@@ -151,19 +151,24 @@ internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
                 if (position >= content.Length)
                     return valuesIndex;
             }
+
             content = content[position..];
             if (Utf8Parser.TryParse(content, out long v, out var consumed) == false)
             {
-                if(content[0] == '\n')
+                if (content[0] == '\n')
                     break;
                 throw new InvalidOperationException($"Failed to parse {Encoding.UTF8.GetString(content)} to number");
             }
-            
+
             content = content[consumed..];
             values[valuesIndex++] = v;
         }
 
         return valuesIndex;
     }
-    
+
+    public override void Dispose()
+    {
+
+    }
 }

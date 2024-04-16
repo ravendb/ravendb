@@ -1,15 +1,14 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
-import { DatabaseSharedInfo } from "components/models/databases";
 
 class getIndexesStatsCommand extends commandBase {
 
-    private readonly db: database | DatabaseSharedInfo;
+    private readonly db: database | string;
 
     private readonly location?: databaseLocationSpecifier;
 
-    constructor(db: database | DatabaseSharedInfo, location?: databaseLocationSpecifier) {
+    constructor(db: database | string, location?: databaseLocationSpecifier) {
         super();
         this.location = location;
         this.db = db;

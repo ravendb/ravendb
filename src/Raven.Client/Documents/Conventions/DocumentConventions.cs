@@ -32,6 +32,7 @@ namespace Raven.Client.Documents.Conventions
     ///     The set of conventions used by the <see cref="DocumentStore" /> which allow the users to customize
     ///     the way the Raven client API behaves
     /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Session.Options.Conventions"/>
     public sealed class DocumentConventions : Client.Conventions
     {
         public delegate LinqPathProvider.Result CustomQueryTranslator(LinqPathProvider provider, Expression expression);
@@ -40,7 +41,7 @@ namespace Raven.Client.Documents.Conventions
 
         public delegate bool TryConvertValueToObjectForQueryDelegate<in T>(string fieldName, T value, bool forRange, out object objValue);
 
-#if NETCOREAPP
+#if NETCOREAPP3_1_OR_GREATER
         internal static HttpVersionPolicy? DefaultHttpVersionPolicy;
 
         internal static TimeSpan? DefaultHttpPooledConnectionIdleTimeout;
@@ -386,7 +387,7 @@ namespace Raven.Client.Documents.Conventions
         private bool _disableTopologyCache;
         private string _topologyCacheLocation;
         private Version _httpVersion;
-#if NETCOREAPP
+#if NETCOREAPP3_1_OR_GREATER
         private HttpVersionPolicy? _httpVersionPolicy;
 #endif
         private Type _httpClientType;
@@ -456,7 +457,7 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
-#if NETCOREAPP
+#if NETCOREAPP3_1_OR_GREATER
         public HttpVersionPolicy? HttpVersionPolicy
         {
             get => _httpVersionPolicy ?? DefaultHttpVersionPolicy;

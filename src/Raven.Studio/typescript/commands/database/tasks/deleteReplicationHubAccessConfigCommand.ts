@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class deleteReplicationHubAccessConfigCommand extends commandBase {
     
-    constructor(private db: database, private hubTaskName: string, private thumbprint: string) {
+    constructor(private db: database | string, private hubTaskName: string, private thumbprint: string) {
         super();
     }
 

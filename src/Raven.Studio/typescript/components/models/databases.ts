@@ -49,21 +49,21 @@ export interface NonShardedDatabaseInfo {
     name: string;
     lockMode: DatabaseLockMode;
     deletionInProgress: string[];
-    encrypted: boolean;
-    disabled: boolean;
+    isEncrypted: boolean;
+    isDisabled: boolean;
     indexesCount: number;
     nodes: NodeInfo[];
-    dynamicNodesDistribution: boolean;
-    fixOrder: boolean;
+    isDynamicNodesDistribution: boolean;
+    isFixOrder: boolean;
     currentNode: {
-        relevant: boolean;
+        isRelevant: boolean;
         isBeingDeleted: boolean;
     };
-    sharded: false;
+    isSharded: false;
 }
 
-export interface ShardedDatabaseInfo extends Omit<NonShardedDatabaseInfo, "sharded"> {
-    sharded: true;
+export interface ShardedDatabaseInfo extends Omit<NonShardedDatabaseInfo, "isSharded"> {
+    isSharded: true;
     shards: NonShardedDatabaseInfo[];
 }
 

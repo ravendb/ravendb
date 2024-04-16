@@ -47,6 +47,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Backups;
 using Sparrow.Json;
+using Sparrow.Server;
 using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
@@ -2111,7 +2112,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 await Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
-                    var operationId = store.Maintenance.SendAsync(new BackupOperation(config)).Result.Id;
+                    var backupOperationId = await store.Maintenance.SendAsync(new BackupOperation(config));
+                    var operationId = backupOperationId.Id;
                     await store.Commands().ExecuteAsync(new KillOperationCommand(operationId));
                     tcs.TrySetResult(null);
 
@@ -2975,7 +2977,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.NotNull(taskBackupInfo.OnGoingBackup.StartTime);
 
                     var delayDuration = TimeSpan.FromMinutes(delayDurationInMinutes);
-                    var delayUntil = DateTime.Now + delayDuration;
+                    var delayUntil = DateTime.UtcNow + delayDuration;
                     await store.Maintenance.SendAsync(new DelayBackupOperation(taskBackupInfo.OnGoingBackup.RunningBackupTaskId, delayDuration));
 
                     // There should be no OnGoingBackup operation in the OngoingTaskBackup
@@ -3001,7 +3003,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(backupStatus.OriginalBackupTime,
                         delayUntil < nextFullBackup
                             ? taskBackupInfo.OnGoingBackup.StartTime    // until the next scheduled backup time.
-                            : nextFullBackup.Value.ToUniversalTime());  // after the next scheduled backup.
+                            : nextFullBackup.Value);  // after the next scheduled backup.
                 }, tcs: new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
             }
         }
@@ -3024,7 +3026,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
-                    var taskId = store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config)).Result.TaskId;
+                    var updatePeriodicBackupOperation = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                    var taskId = updatePeriodicBackupOperation.TaskId;
 
                     OngoingTaskBackup taskBackupInfo = null;
                     using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(server.WebUrl, null, DocumentConventions.DefaultForServer))
@@ -3091,7 +3094,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.NotNull(taskBackupInfo);
                     Assert.NotNull(taskBackupInfo.OnGoingBackup);
 
-                    var expectedNextBackupDateTime = new DateTime(DateTime.Now.Year + 1, 1, 1, 0, 0, 0, DateTimeKind.Local).ToUniversalTime();
+                    var expectedNextBackupDateTime = new DateTime(DateTime.UtcNow.Year + 1, 1, 1, 0, 0, 0, DateTimeKind.Utc);
                     Assert.Equal(expectedNextBackupDateTime, taskBackupInfo.NextBackup.DateTime);
 
                     // Let's delay the backup task to next occurence + 1 hour
@@ -3548,15 +3551,20 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
+                    var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                    Assert.NotNull(responsibleDatabase);
+                    
                     var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
+                    var pb = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault();
+                    Assert.NotNull(pb);
+                    Assert.True(pb.HasScheduledBackup(), "Backup is not scheduled");
+                    
                     var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                     var backups1 = record1.PeriodicBackups;
                     Assert.Equal(1, backups1.Count);
+                    Assert.Equal(backupTaskId, backups1.First().TaskId);
 
-                    var taskId = backups1.First().TaskId;
-                    var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                    Assert.NotNull(responsibleDatabase);
-                    var tag = responsibleDatabase.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                    var tag = responsibleDatabase.PeriodicBackupRunner.WhoseTaskIsIt(backupTaskId);
                     Assert.Equal(server.ServerStore.NodeTag, tag);
 
                     responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus_UpdateConfigurations = true;
@@ -3567,7 +3575,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     tcs.TrySetResult(null);
 
                     responsibleDatabase.PeriodicBackupRunner._forTestingPurposes = null;
-                    var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(taskId);
+                    var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(backupTaskId);
                     PeriodicBackupStatus status = null;
                     var val = WaitForValue(() =>
                     {
@@ -3578,9 +3586,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Null(status.Error);
                     Assert.True(val, "Failed to complete the backup in time");
 
-                    var pb2 = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault();
-                    Assert.NotNull(pb2);
-                    Assert.True(pb2.HasScheduledBackup(), "Completed backup didn't schedule next one.");
+                    pb = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault();
+                    Assert.NotNull(pb);
+                    Assert.True(pb.HasScheduledBackup(), "Completed backup didn't schedule next one.");
                 }, tcs);
             }
         }
@@ -3745,7 +3753,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
             }))
             {
-                var mre = new ManualResetEvent(false);
+                var mre = new AsyncManualResetEvent();
                 var task = subscription.Run(batch =>
                 {
                     foreach (var b in batch.Items)
@@ -3755,7 +3763,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     mre.Set();
                 });
 
-                mre.WaitOne(_reasonableWaitTime);
+                await mre.WaitAsync(_reasonableWaitTime);
                 mre.Reset();
                 List<SubscriptionState> subscriptionsConfig;
                 await WaitForValueAsync(async () =>
@@ -3783,7 +3791,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     session.SaveChanges();
                 }
-                mre.WaitOne(_reasonableWaitTime);
+                await mre.WaitAsync(_reasonableWaitTime);
 
                 subscriptionsConfig = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
                 Assert.Equal(1, subscriptionsConfig.Count);
@@ -3841,7 +3849,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
             }))
             {
-                var mre = new ManualResetEvent(false);
+                var mre = new AsyncManualResetEvent();
                 var task = subscription.Run(batch =>
                 {
                     foreach (var b in batch.Items)
@@ -3851,7 +3859,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     mre.Set();
                 });
 
-                mre.WaitOne(_reasonableWaitTime);
+                await mre.WaitAsync(_reasonableWaitTime);
 
                 var subscriptionsConfig = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
                 Assert.Equal(1, subscriptionsConfig.Count);

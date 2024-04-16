@@ -4,10 +4,10 @@ import endpoints = require("endpoints");
 
 class saveQueueSinkCommand extends commandBase {
     
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly payload: Raven.Client.Documents.Operations.QueueSink.QueueSinkConfiguration;
 
-    constructor(db: database, payload: Raven.Client.Documents.Operations.QueueSink.QueueSinkConfiguration) {
+    constructor(db: database | string, payload: Raven.Client.Documents.Operations.QueueSink.QueueSinkConfiguration) {
         super();
         this.payload = payload;
         this.db = db;

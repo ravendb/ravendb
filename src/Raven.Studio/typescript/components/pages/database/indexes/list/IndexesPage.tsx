@@ -1,9 +1,7 @@
 ﻿import React from "react";
-import database from "models/resources/database";
 import IndexFilter from "./IndexFilter";
 import IndexSelectActions from "./IndexSelectActions";
 import IndexUtils from "../../../../utils/IndexUtils";
-import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import "./IndexesPage.scss";
 import { Button, Col, Row, UncontrolledPopover } from "reactstrap";
@@ -24,17 +22,20 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import IndexesPageList, { IndexesPageListProps } from "./IndexesPageList";
 import IndexesPageLicenseLimits from "./IndexesPageLicenseLimits";
 import IndexesPageAboutView from "./IndexesPageAboutView";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 interface IndexesPageProps {
-    db: database;
     stale?: boolean;
     indexName?: string;
 }
 
 export function IndexesPage(props: IndexesPageProps) {
-    const { db, stale, indexName: indexToHighlight } = props;
+    const { stale, indexName: indexToHighlight } = props;
 
-    const { canReadWriteDatabase } = useAccessManager();
+    const db = useAppSelector(databaseSelectors.activeDatabase);
+    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.hasDatabaseWriteAccess());
     const { reportEvent } = useEventsCollector();
 
     const { forCurrentDatabase: urls } = useAppUrls();
@@ -70,11 +71,11 @@ export function IndexesPage(props: IndexesPageProps) {
         getSelectedIndexes,
         confirmDeleteIndexes,
         globalIndexingStatus,
-    } = useIndexesPage(db, stale);
+    } = useIndexesPage(stale);
 
     const deleteSelectedIndexes = () => {
         reportEvent("indexes", "delete-selected");
-        return confirmDeleteIndexes(db, getSelectedIndexes());
+        return confirmDeleteIndexes(getSelectedIndexes());
     };
 
     const startSelectedIndexes = () => startIndexes(getSelectedIndexes());
@@ -83,7 +84,7 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const indexNames = getAllIndexes(groups, replacements).map((x) => x.name);
 
-    const allActionContexts = ActionContextUtils.getContexts(db.getLocations());
+    const allActionContexts = ActionContextUtils.getContexts(DatabaseUtils.getLocations(db));
 
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
 
@@ -112,11 +113,10 @@ export function IndexesPage(props: IndexesPageProps) {
     }
 
     if (stats.indexes.length === 0) {
-        return <NoIndexes database={db} />;
+        return <NoIndexes />;
     }
 
     const indexesPageListCommonProps: Omit<IndexesPageListProps, "indexes"> = {
-        db,
         replacements,
         selectedIndexes,
         indexToHighlight,
@@ -213,7 +213,7 @@ export function IndexesPage(props: IndexesPageProps) {
 
                     {/*  TODO  <IndexGlobalIndexing /> */}
 
-                    {canReadWriteDatabase(db) && (
+                    {hasDatabaseWriteAccess && (
                         <IndexSelectActions
                             indexNames={indexNames}
                             selectedIndexes={selectedIndexes}

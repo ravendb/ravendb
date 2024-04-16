@@ -81,13 +81,36 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
     private struct EntryComparerByScore : IEntryComparer, IComparer<UnmanagedSpan>, IComparer<int>
     {
+        private UnmanagedSpan<float> _scores;
+        private int _comparerId;
         public Slice GetSortFieldName(ref SortingMultiMatch<TInner> match)
         {
             throw new NotImplementedException("Scoring has no field name");
         }
         
+        
         public void Init(ref SortingMultiMatch<TInner> match, UnmanagedSpan<long> batchResults, int comparerId)
         {
+            if (comparerId == 0)
+                return;
+
+            _comparerId = comparerId;
+            
+            match._scoreBufferHandler = match._searcher.Allocator.Allocate(batchResults.Length * sizeof(float), out var scoreBuffer);
+            _scores = new UnmanagedSpan<float>(scoreBuffer.Ptr, scoreBuffer.Length);
+            match._secondaryScoreBuffer = _scores;
+            
+            var readScores = scoreBuffer.ToSpan<float>();
+            
+            readScores.Fill(Bm25Relevance.InitialScoreValue);
+            match._inner.Score(batchResults, readScores, 1f);
+            
+            // If we need to do documents boosting then we need to modify the based on documents stored score. 
+            if (match._searcher.DocumentsAreBoosted)
+            {
+                // We get the boosting tree and go to check every document. 
+                BoostDocuments(match, batchResults, readScores);
+            }
         }
 
         public void SortBatch<TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match,
@@ -96,6 +119,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             where TComparer2 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
             where TComparer3 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
         {
+            Debug.Assert(_comparerId == 0, "_comparerId == 0");
+            
             var readScores = MemoryMarshal.Cast<long, float>(batchTermIds)[..batchResults.Length];
 
             // We have to initialize the score buffer with a positive number to ensure that multiplication (document-boosting) is taken into account when BM25 relevance returns 0 (for example, with AllEntriesMatch).
@@ -159,7 +184,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
         public int Compare(int x, int y)
         {
-            throw new NotSupportedException(ScoreComparerAsInnerExceptionMessage);
+            Debug.Assert(_comparerId != 0, "_comparerId != 0");
+            return _scores[y].CompareTo(_scores[x]);
         }
     }
 
@@ -717,7 +743,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
              Debug.Assert(yIdx < SortingMatch.SortBatchSize && xIdx < SortingMatch.SortBatchSize);
 
-             var cmp = 0;
+            var cmp = 0;
             for (int comparerId = 0; cmp == 0 && comparerId < _maxDegreeOfInnerComparer; ++comparerId)
             {
                 cmp = comparerId switch
@@ -729,7 +755,9 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 };
             }
             
-            return cmp;
+            return _descending 
+                ? -cmp
+                : cmp;
         }
 
 

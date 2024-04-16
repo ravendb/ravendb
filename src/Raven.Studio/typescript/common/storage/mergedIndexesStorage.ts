@@ -31,7 +31,7 @@ class mergedIndexesStorage {
         localStorage.removeItem(localStorageKey);
     }
 
-    static saveMergedIndex(db: database, definition: Raven.Client.Documents.Indexes.IndexDefinition, indexesToDelete: string[]): string {
+    static saveMergedIndex(db: database | string, definition: Raven.Client.Documents.Indexes.IndexDefinition, indexesToDelete: string[]): string {
         const indexName = "merge-suggestion-" + new Date().getTime();
         const localStorageKey = mergedIndexesStorage.getLocalStorageKey(db, indexName);
         
@@ -49,8 +49,8 @@ class mergedIndexesStorage {
         return storageKeyProvider.storageKeyFor("mergedIndex." + dbName);
     }
 
-    static getLocalStorageKey(db: database, id: string) {
-        return mergedIndexesStorage.getStoragePrefixForDatabase(db.name) + "." + id;
+    static getLocalStorageKey(db: database | string, id: string) {
+        return mergedIndexesStorage.getStoragePrefixForDatabase((_.isString(db) ? db : db.name)) + "." + id;
     }
 
     static onDatabaseDeleted(qualifier: string, name: string) {

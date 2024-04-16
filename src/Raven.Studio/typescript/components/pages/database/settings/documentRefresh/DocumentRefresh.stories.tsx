@@ -2,7 +2,6 @@ import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import DocumentRefresh from "./DocumentRefresh";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 
@@ -14,7 +13,9 @@ export default {
 
 function commonInit() {
     const { databasesService } = mockServices;
+    const { databases } = mockStore;
     databasesService.withRefreshConfiguration();
+    databases.withActiveDatabase_NonSharded_SingleNode();
 }
 
 export const DefaultDocumentRefresh: StoryObj<typeof DocumentRefresh> = {
@@ -25,7 +26,7 @@ export const DefaultDocumentRefresh: StoryObj<typeof DocumentRefresh> = {
         const { license } = mockStore;
         license.with_License();
 
-        return <DocumentRefresh db={DatabasesStubs.nonShardedClusterDatabase()} />;
+        return <DocumentRefresh />;
     },
 };
 
@@ -36,6 +37,6 @@ export const LicenseRestricted: StoryObj<typeof DocumentRefresh> = {
         const { license } = mockStore;
         license.with_LicenseLimited();
 
-        return <DocumentRefresh db={DatabasesStubs.nonShardedClusterDatabase()} />;
+        return <DocumentRefresh />;
     },
 };

@@ -125,7 +125,41 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         );
     }
 
-    withDatabaseRecord(dto?: document) {
+    withDatabaseRecord(dto?: MockedValue<document>) {
         return this.mockResolvedValue(this.mocks.getDatabaseRecord, dto, DatabasesStubs.databaseRecord());
+    }
+
+    withQueryResult(dto?: MockedValue<pagedResultExtended<document>>) {
+        return this.mockResolvedValue(this.mocks.query, dto, DatabasesStubs.queryResult());
+    }
+
+    withIntegrationsPostgreSqlSupport(isActive?: boolean) {
+        return this.mockResolvedValue(
+            this.mocks.getIntegrationsPostgreSqlSupport,
+            { Active: isActive },
+            { Active: true }
+        );
+    }
+
+    withIntegrationsPostgreSqlCredentials(
+        dto?: MockedValue<Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlUsernames>
+    ) {
+        return this.mockResolvedValue(
+            this.mocks.getIntegrationsPostgreSqlCredentials,
+            dto,
+            DatabasesStubs.integrationsPostgreSqlCredentials()
+        );
+    }
+
+    withGenerateSecret(secret?: MockedValue<string>) {
+        return this.mockResolvedValue(
+            this.mocks.generateSecret,
+            secret,
+            "MXEv4ntxod7qM4mOeF9YZlKIuar1RKU8yQcQSESCzys="
+        );
+    }
+
+    withDatabaseStats(dto?: MockedValue<Raven.Client.Documents.Operations.DatabaseStatistics>) {
+        return this.mockResolvedValue(this.mocks.getDatabaseStats, dto, DatabasesStubs.detailedStats());
     }
 }

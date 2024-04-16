@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -212,7 +213,7 @@ namespace Raven.Server.ServerWide.Commands
             if (str.EndsWith(separator) == false)
                 str += separator;
 
-            return str + databaseName;
+            return str + ShardHelper.ToDatabaseName(databaseName);
         }
     }
 }

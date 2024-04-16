@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Smuggler;
@@ -18,7 +19,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 {
     public interface ISmugglerDestination
     {
-        ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion);
+        ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, long buildVersion);
 
         IDatabaseRecordActions DatabaseRecord();
 
@@ -79,9 +80,9 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface IIndexActions : IAsyncDisposable
     {
-        ValueTask WriteIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType);
+        ValueTask WriteAutoIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType, AuthorizationStatus authorizationStatus);
 
-        ValueTask WriteIndexAsync(IndexDefinition indexDefinition);
+        ValueTask WriteIndexAsync(IndexDefinition indexDefinition, AuthorizationStatus authorizationStatus);
     }
 
     public interface ICounterActions : INewDocumentActions

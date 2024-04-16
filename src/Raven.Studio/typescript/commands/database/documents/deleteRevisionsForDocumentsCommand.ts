@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class deleteRevisionsForDocumentsCommand extends commandBase {
 
-    constructor(private ids: Array<string>, private db: database) {
+    constructor(private ids: Array<string>, private db: database | string) {
         super();
     }
 

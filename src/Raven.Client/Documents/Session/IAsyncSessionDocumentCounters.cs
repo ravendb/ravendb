@@ -10,25 +10,16 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Documents.Session
 {
-    /// <summary>
-    ///     Advanced async counters session operations
-    /// </summary>
+    /// <inheritdoc cref="ISessionDocumentCounters"/>
     public interface IAsyncSessionDocumentCounters : ISessionDocumentCountersBase
     {
-        /// <summary>
-        /// Returns all the counters for a specific document.
-        /// </summary>
+        /// <inheritdoc cref="ISessionDocumentCounters.GetAll"/>
         Task<Dictionary<string, long?>> GetAllAsync(CancellationToken token = default);
 
-        /// <summary>
-        /// Returns the counter value by counter name.
-        /// </summary>
+        /// <inheritdoc cref="ISessionDocumentCounters.Get(string)"/>
         Task<long?> GetAsync(string counter, CancellationToken token = default);
 
-        /// <summary>
-        /// Returns the a dictionary of counter values by counter names
-        /// <param name="counters">counters names</param>
-        /// </summary>
+        /// <inheritdoc cref="ISessionDocumentCounters.Get(IEnumerable{string})"/> 
         Task<Dictionary<string, long?>> GetAsync(IEnumerable<string> counters, CancellationToken token = default);
 
     }

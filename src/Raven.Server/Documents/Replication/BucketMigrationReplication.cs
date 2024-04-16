@@ -24,6 +24,8 @@ namespace Raven.Server.Documents.Replication
             MigrationIndex = ShardBucketMigration.MigrationIndex;
         }
 
+        public override ReplicationType GetReplicationType() => ReplicationType.Migration;
+
         public bool ForBucketMigration(ShardBucketMigration migration)
         {
             if (migration.MigrationIndex != MigrationIndex)

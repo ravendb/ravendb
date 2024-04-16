@@ -8,7 +8,7 @@ namespace Tests.Infrastructure
         {
             get
             {
-                if (LicenseRequiredFactAttribute.ShouldSkip(licenseRequired: true))
+                if (LicenseRequiredFactAttribute.ShouldSkip())
                     return LicenseRequiredFactAttribute.SkipMessage;
 
                 return null;

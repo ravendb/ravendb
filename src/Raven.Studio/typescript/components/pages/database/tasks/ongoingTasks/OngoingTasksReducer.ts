@@ -43,7 +43,8 @@ import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTa
 import OngoingTaskQueueSinkListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
 import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
 import SubscriptionConnectionsDetails = Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails;
-import database from "models/resources/database";
+import DatabaseUtils from "components/utils/DatabaseUtils";
+import { DatabaseSharedInfo } from "components/models/databases";
 
 interface ActionTasksLoaded {
     location: databaseLocationSpecifier;
@@ -541,9 +542,9 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
     return state;
 };
 
-export const ongoingTasksReducerInitializer = (database: database): OngoingTasksState => {
-    const locations = database.getLocations();
-    const orchestrators = database.isSharded() ? database.nodes().map((x) => x.tag) : [];
+export const ongoingTasksReducerInitializer = (db: DatabaseSharedInfo): OngoingTasksState => {
+    const locations = DatabaseUtils.getLocations(db);
+    const orchestrators = db.isSharded ? db.nodes.map((x) => x.tag) : [];
 
     return {
         tasks: [],

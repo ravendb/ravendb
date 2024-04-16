@@ -24,18 +24,19 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { Checkbox } from "components/common/Checkbox";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import generalUtils from "common/generalUtils";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 interface DocumentRevisionsConfigPanelProps {
     config: DocumentRevisionsConfig;
-    isDatabaseAdmin: boolean;
     onToggle: () => void;
     onEdit: () => void;
     onDelete?: () => void;
 }
 
 export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsConfigPanelProps) {
-    const { config, isDatabaseAdmin, onDelete, onToggle, onEdit } = props;
+    const { config, onDelete, onToggle, onEdit } = props;
 
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
     const dispatch = useAppDispatch();
     const { reportEvent } = useEventsCollector();
 
@@ -64,7 +65,7 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
             <div className="flex-grow-1">
                 <RichPanelHeader className={classNames({ "h-100": !isDetailsVisible })}>
                     <RichPanelInfo>
-                        {isDatabaseAdmin && (
+                        {hasDatabaseAdminAccess && (
                             <RichPanelSelect>
                                 <Checkbox
                                     selected={isSelected}
@@ -81,7 +82,7 @@ export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsCon
                     </RichPanelInfo>
                     <RichPanelActions>
                         <DefaultConfigInfoIcon name={config.Name} />
-                        {isDatabaseAdmin && (
+                        {hasDatabaseAdminAccess && (
                             <>
                                 <Button
                                     color={config.Disabled ? "success" : "secondary"}

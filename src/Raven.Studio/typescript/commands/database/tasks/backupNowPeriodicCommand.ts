@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class backupNowPeriodicCommand extends commandBase {
-    private db: database;
+    private db: database | string;
 
     private taskId: number;
 
@@ -11,7 +11,7 @@ class backupNowPeriodicCommand extends commandBase {
 
     private taskName: string;
 
-    constructor(db: database, taskId: number, isFullBackup: boolean, taskName: string) {
+    constructor(db: database | string, taskId: number, isFullBackup: boolean, taskName: string) {
         super();
         this.taskName = taskName;
         this.isFullBackup = isFullBackup;

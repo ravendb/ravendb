@@ -9,9 +9,7 @@ import { useAppUrls } from "hooks/useAppUrls";
 import IndexUtils from "../../../../utils/IndexUtils";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import indexStalenessReasons from "viewmodels/database/indexes/indexStalenessReasons";
-import database = require("models/resources/database");
 import app from "durandal/app";
-import { useAccessManager } from "hooks/useAccessManager";
 import { IndexDistribution, JoinedIndexProgress } from "./IndexDistribution";
 import {
     RichPanel,
@@ -40,9 +38,11 @@ import assertUnreachable from "../../../../utils/assertUnreachable";
 import useId from "hooks/useId";
 import useBoolean from "hooks/useBoolean";
 import { Icon } from "components/common/Icon";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 export interface IndexPanelProps {
-    database: database;
     index: IndexSharedInfo;
     globalIndexingStatus: IndexRunningStatus;
     setPriority: (priority: IndexPriority) => Promise<void>;
@@ -88,9 +88,10 @@ function getLockColor(index: IndexSharedInfo) {
 }
 
 export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTMLDivElement>) {
-    const { index, selected, toggleSelection, database, hasReplacement, globalIndexingStatus } = props;
+    const { index, selected, toggleSelection, hasReplacement, globalIndexingStatus } = props;
 
-    const { canReadWriteDatabase, canReadOnlyDatabase } = useAccessManager();
+    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.hasDatabaseWriteAccess());
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     const { value: panelCollapsed, toggle: togglePanelCollapsed } = useBoolean(true);
 
@@ -166,7 +167,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
     };
 
     const showStaleReasons = (index: IndexSharedInfo, location: databaseLocationSpecifier) => {
-        const view = new indexStalenessReasons(database, index.name, location);
+        const view = new indexStalenessReasons(databaseName, index.name, location);
         eventsCollector.reportEvent("indexes", "show-stale-reasons");
         app.showBootstrapDialog(view);
     };
@@ -193,7 +194,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                 <RichPanelHeader id={indexUniqueId(index)}>
                     <RichPanelInfo>
                         <RichPanelSelect>
-                            {canReadWriteDatabase(database) && (
+                            {hasDatabaseWriteAccess && (
                                 <Input type="checkbox" onChange={toggleSelection} checked={selected} />
                             )}
                         </RichPanelSelect>
@@ -213,7 +214,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                         <DropdownToggle
                                             outline
                                             color={priorityButtonColor}
-                                            disabled={!canReadWriteDatabase(database)}
+                                            disabled={!hasDatabaseWriteAccess}
                                         >
                                             {updatingLocalPriority && <Spinner size="sm" className="me-2" />}
                                             {!updatingLocalPriority && index.priority === "Normal" && (
@@ -257,7 +258,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                             <DropdownToggle
                                                 outline
                                                 color={lockButtonColor}
-                                                disabled={!canReadWriteDatabase(database)}
+                                                disabled={!hasDatabaseWriteAccess}
                                             >
                                                 {updatingLockMode && <Spinner size="sm" className="me-2" />}
                                                 {index.lockMode === "Unlock" && (
@@ -349,12 +350,12 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         )}
 
                         <ButtonGroup>
-                            {!IndexUtils.isAutoIndex(index) && !canReadOnlyDatabase(database) && (
+                            {!IndexUtils.isAutoIndex(index) && hasDatabaseWriteAccess && (
                                 <Button href={editUrl} title="Edit index">
                                     <Icon icon="edit" margin="m-0" />
                                 </Button>
                             )}
-                            {(IndexUtils.isAutoIndex(index) || canReadOnlyDatabase(database)) && (
+                            {(IndexUtils.isAutoIndex(index) || !hasDatabaseWriteAccess) && (
                                 <Button href={editUrl} title="View index">
                                     <Icon icon="preview" margin="m-0" />
                                 </Button>
@@ -365,7 +366,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             <Button onClick={() => openFaulty(index.nodesInfo[0].location)}>Open faulty index</Button>
                         )}
 
-                        {canReadWriteDatabase(database) && (
+                        {hasDatabaseWriteAccess && (
                             <ButtonGroup>
                                 <Button color="warning" onClick={resetIndex} title="Reset index (rebuild)">
                                     <Icon icon="reset-index" margin="m-0" />

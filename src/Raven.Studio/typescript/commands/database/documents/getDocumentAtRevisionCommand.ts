@@ -5,7 +5,7 @@ import endpoints = require("endpoints");
 
 class getDocumentAtRevisionCommand extends commandBase {
 
-    constructor(private changeVector: string, private db: database) {
+    constructor(private changeVector: string, private db: database | string) {
         super();
     }
 

@@ -1,5 +1,4 @@
-﻿import database from "models/resources/database";
-import { ReactNode } from "react";
+﻿import { ReactNode } from "react";
 
 export type loadStatus = "idle" | "loading" | "success" | "failure";
 
@@ -49,12 +48,8 @@ export interface InputItem<T extends string | number = string> {
     verticalSeparatorLine?: boolean;
 }
 
-export interface NonShardedViewProps {
-    db: database;
-}
-
-export interface ShardedViewProps extends NonShardedViewProps {
-    location?: databaseLocationSpecifier;
-}
-
 export type SortDirection = "asc" | "desc";
+
+export interface ClassNameProps {
+    className?: string;
+}

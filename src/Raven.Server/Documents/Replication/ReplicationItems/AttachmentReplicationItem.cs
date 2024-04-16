@@ -20,6 +20,28 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public Slice Base64Hash;
         public Stream Stream;
 
+        public override long Size => base.Size + // common
+
+                                     sizeof(int) + // size of ID
+                                     Key.Size +
+
+                                     sizeof(int) + // size of name
+                                     Name.Size +
+
+                                     sizeof(int) + // size of ContentType
+                                     ContentType.Size +
+
+                                     sizeof(byte) + // size of Base64Hash
+                                     Base64Hash.Size;
+
+        public long StreamSize => sizeof(byte) + // type
+
+                                  sizeof(byte) + // size of Base64Hash
+                                  Base64Hash.Size +
+
+                                  sizeof(long) + // size of stream
+                                  Stream?.Length ?? 0;
+
         public override DynamicJsonValue ToDebugJson()
         {
             var djv = base.ToDebugJson();
@@ -49,27 +71,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return item;
         }
 
-        public override long AssertChangeVectorSize()
-        {
-            return sizeof(byte) + // type
-
-                   sizeof(int) + // # of change vectors
-                   Encodings.Utf8.GetByteCount(ChangeVector) +
-
-                   sizeof(short) + // transaction marker
-                   sizeof(int) + // size of ID
-
-                   Key.Size +
-                   sizeof(int) + // size of name
-
-                   Name.Size +
-                   sizeof(int) + // size of ContentType
-                   ContentType.Size +
-                   sizeof(byte) + // size of Base64Hash
-                   Base64Hash.Size;
-        }
-
-        public override long Size => Stream?.Length ?? 0;
+        public override long AssertChangeVectorSize() => Size;
 
         public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats)
         {
@@ -100,16 +102,14 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 tempBufferPos += Base64Hash.Size;
 
                 stream.Write(tempBuffer, 0, tempBufferPos);
+                stats.RecordAttachmentOutput(Size);
             }
         }
-
 
         public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats)
         {
             using (stats.For(ReplicationOperation.Incoming.AttachmentRead))
             {
-                stats.RecordAttachmentRead();
-
                 var size = *(int*)Reader.ReadExactly(sizeof(int));
                 ToDispose(Slice.From(allocator, Reader.ReadExactly(size), size, ByteStringType.Immutable, out Key));
 
@@ -118,6 +118,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                 var base64HashSize = *Reader.ReadExactly(sizeof(byte));
                 ToDispose(Slice.From(allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
+
+                stats.RecordAttachmentRead(Size);
             }
         }
 
@@ -136,13 +138,12 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             var item = new AttachmentReplicationItem
             {
                 ContentType = ContentType.Clone(context),
-                Name = Name.Clone(context), 
+                Name = Name.Clone(context),
                 Stream = stream
             };
 
             item.Base64Hash = Base64Hash.Clone(allocator);
             item.Key = Key.Clone(allocator);
-            
 
             item.ToDispose(new DisposableAction(() =>
             {
@@ -153,7 +154,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return item;
         }
 
-        public unsafe void ReadStream(ByteStringContext allocator, StreamsTempFile attachmentStreamsTempFile)
+        public unsafe void ReadStream(ByteStringContext allocator, StreamsTempFile attachmentStreamsTempFile, IncomingReplicationStatsScope stats)
         {
             try
             {
@@ -164,13 +165,16 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Stream = attachmentStreamsTempFile.StartNewStream();
                 Reader.ReadExactly(streamLength, Stream);
                 Stream.Flush();
+
+                stats.RecordAttachmentStreamRead(StreamSize);
             }
             catch (Exception e)
             {
                 throw new InvalidOperationException($"Failed to read the stream for attachment with hash: {Base64Hash}", e);
             }
         }
-        public unsafe void WriteStream(Stream stream, byte[] tempBuffer)
+
+        public unsafe void WriteStream(Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats)
         {
             fixed (byte* pTemp = tempBuffer)
             {
@@ -201,6 +205,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 }
 
                 stream.Write(tempBuffer, 0, tempBufferPos);
+                stats.RecordAttachmentStreamOutput(StreamSize);
             }
         }
 

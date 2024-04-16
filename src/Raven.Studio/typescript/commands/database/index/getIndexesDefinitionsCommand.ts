@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class getIndexesDefinitionsCommand extends commandBase {
-    constructor(private db: database, private skip = 0, private take = 256) {
+    constructor(private db: database | string, private skip = 0, private take = 256) {
         super();
     }
 

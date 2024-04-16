@@ -3,9 +3,9 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 class getConnectionStringsCommand extends commandBase {
 
-    private readonly db: database;
+    private readonly db: database | string;
     
-    constructor(db: database) {
+    constructor(db: database | string) {
         super();
         this.db = db;
     }

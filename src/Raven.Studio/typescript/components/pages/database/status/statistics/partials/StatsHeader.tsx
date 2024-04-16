@@ -1,4 +1,4 @@
-﻿import { Button, Col, Row, Spinner } from "reactstrap";
+﻿import { Button, Col, Row } from "reactstrap";
 import {
     refresh,
     statisticsViewSelectors,
@@ -8,12 +8,13 @@ import { StickyHeader } from "components/common/StickyHeader";
 import React from "react";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 
 export function StatsHeader() {
     const dispatch = useAppDispatch();
 
     const detailsVisible = useAppSelector(statisticsViewSelectors.detailsVisible);
-    const spinnerRefresh = useAppSelector(statisticsViewSelectors.refreshing);
+    const isRefreshing = useAppSelector(statisticsViewSelectors.refreshing);
 
     return (
         <StickyHeader>
@@ -30,15 +31,14 @@ export function StatsHeader() {
                 </Col>
                 <Col />
                 <Col sm="auto">
-                    <Button
+                    <ButtonWithSpinner
                         color="primary"
                         onClick={() => dispatch(refresh())}
-                        disabled={spinnerRefresh}
                         title="Click to refresh stats"
+                        isSpinning={isRefreshing}
                     >
-                        {spinnerRefresh ? <Spinner size="sm" /> : <Icon icon="refresh" margin="m-0" />}
-                        <span>Refresh</span>
-                    </Button>
+                        Refresh
+                    </ButtonWithSpinner>
                 </Col>
             </Row>
         </StickyHeader>

@@ -1,7 +1,6 @@
 ﻿import React, { useCallback, useEffect, useReducer, useState } from "react";
 import { useServices } from "hooks/useServices";
 import { OngoingTasksState, ongoingTasksReducer, ongoingTasksReducerInitializer } from "./OngoingTasksReducer";
-import { useAccessManager } from "hooks/useAccessManager";
 import appUrl from "common/appUrl";
 import { ExternalReplicationPanel } from "./panels/ExternalReplicationPanel";
 import {
@@ -44,7 +43,7 @@ import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
 import OngoingTasksFilter, { OngoingTaskFilterType, OngoingTasksFilterCriteria } from "./OngoingTasksFilter";
 import { exhaustiveStringTuple } from "components/utils/common";
-import { InputItem, NonShardedViewProps } from "components/models/common";
+import { InputItem } from "components/models/common";
 import assertUnreachable from "components/utils/assertUnreachable";
 import OngoingTaskSelectActions from "./OngoingTaskSelectActions";
 import OngoingTaskOperationConfirm from "../shared/OngoingTaskOperationConfirm";
@@ -60,17 +59,21 @@ import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
-export function OngoingTasksPage(props: NonShardedViewProps) {
-    const { db } = props;
+export function OngoingTasksPage() {
+    const db = useAppSelector(databaseSelectors.activeDatabase);
+    const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.hasDatabaseWriteAccess());
 
-    const { canReadWriteDatabase, isClusterAdminOrClusterNode, isAdminAccessOrAbove } = useAccessManager();
     const { tasksService } = useServices();
     const [tasks, dispatch] = useReducer(ongoingTasksReducer, db, ongoingTasksReducerInitializer);
 
     const { value: isNewTaskModalOpen, toggle: toggleIsNewTaskModalOpen } = useBoolean(false);
     const { value: progressEnabled, setTrue: startTrackingProgress } = useBoolean(false);
-    const [definitionCache] = useState(() => new etlScriptDefinitionCache(db));
+    const [definitionCache] = useState(() => new etlScriptDefinitionCache(db.name));
     const [filter, setFilter] = useState<OngoingTasksFilterCriteria>({
         searchText: "",
         types: [],
@@ -82,7 +85,7 @@ export function OngoingTasksPage(props: NonShardedViewProps) {
     const fetchTasks = useCallback(
         async (location: databaseLocationSpecifier) => {
             try {
-                const tasks = await tasksService.getOngoingTasks(db, location);
+                const tasks = await tasksService.getOngoingTasks(db.name, location);
                 dispatch({
                     type: "TasksLoaded",
                     location,
@@ -103,8 +106,8 @@ export function OngoingTasksPage(props: NonShardedViewProps) {
         // if database is sharded we need to load from both orchestrator and target node point of view
         // in case of non-sharded - we have single level: node
 
-        if (db.isSharded()) {
-            const orchestratorTasks = db.nodes().map((node) => fetchTasks({ nodeTag: node.tag }));
+        if (db.isSharded) {
+            const orchestratorTasks = db.nodes.map((node) => fetchTasks({ nodeTag: node.tag }));
             await Promise.all(orchestratorTasks);
         }
 
@@ -139,7 +142,6 @@ export function OngoingTasksPage(props: NonShardedViewProps) {
         [definitionCache]
     );
 
-    const canNavigateToServerWideTasks = isClusterAdminOrClusterNode();
     const serverWideTasksUrl = appUrl.forServerWideTasks();
 
     const filteredTasks = getFilteredTasks(tasks, filter);
@@ -191,9 +193,9 @@ export function OngoingTasksPage(props: NonShardedViewProps) {
         tasks.subscriptions.length;
 
     const refreshSubscriptionInfo = async (taskId: number, taskName: string) => {
-        const loadTasks = db.nodes().map(async (nodeInfo) => {
+        const loadTasks = db.nodes.map(async (nodeInfo) => {
             const nodeTag = nodeInfo.tag;
-            const task = await tasksService.getSubscriptionTaskInfo(db, taskId, taskName, nodeTag);
+            const task = await tasksService.getSubscriptionTaskInfo(db.name, taskId, taskName, nodeTag);
 
             dispatch({
                 type: "SubscriptionInfoLoaded",
@@ -212,7 +214,7 @@ export function OngoingTasksPage(props: NonShardedViewProps) {
             // ask only responsible node for connection details
             // if case of sharded database it points to responsible orchestrator
             const details = await tasksService.getSubscriptionConnectionDetails(
-                db,
+                db.name,
                 taskId,
                 taskName,
                 targetNode.ResponsibleNode.NodeTag
@@ -233,7 +235,7 @@ export function OngoingTasksPage(props: NonShardedViewProps) {
     };
 
     const dropSubscription = async (taskId: number, taskName: string, nodeTag: string, workerId: string) => {
-        await tasksService.dropSubscription(db, taskId, taskName, nodeTag, workerId);
+        await tasksService.dropSubscription(db.name, taskId, taskName, nodeTag, workerId);
     };
 
     const {
@@ -244,10 +246,9 @@ export function OngoingTasksPage(props: NonShardedViewProps) {
         isDeleting,
         isTogglingStateAny,
         isDeletingAny,
-    } = useOngoingTasksOperations(db, reload);
+    } = useOngoingTasksOperations(reload);
 
     const sharedPanelProps: Omit<BaseOngoingTaskPanelProps<OngoingTaskInfo>, "data"> = {
-        db: db,
         onTaskOperation,
         isSelected: (id: number) => selectedTaskIds.includes(id),
         toggleSelection: (checked: boolean, taskShardedInfo: OngoingTaskSharedInfo) => {
@@ -325,15 +326,14 @@ export function OngoingTasksPage(props: NonShardedViewProps) {
                 </Alert>
             )}
 
-            {progressEnabled && <OngoingTaskProgressProvider db={db} onEtlProgress={onEtlProgress} />}
+            {progressEnabled && <OngoingTaskProgressProvider onEtlProgress={onEtlProgress} />}
             {operationConfirm && <OngoingTaskOperationConfirm {...operationConfirm} toggle={cancelOperationConfirm} />}
             <StickyHeader>
                 <div className="hstack gap-3 flex-wrap">
-                    {canReadWriteDatabase(db) && (
+                    {hasDatabaseWriteAccess && (
                         <>
                             {isNewTaskModalOpen && (
                                 <OngoingTaskAddModal
-                                    db={db}
                                     toggle={toggleIsNewTaskModalOpen}
                                     subscriptionsDatabaseCount={subscriptionsDatabaseCount}
                                 />
@@ -349,7 +349,7 @@ export function OngoingTasksPage(props: NonShardedViewProps) {
 
                     <FlexGrow />
 
-                    {canNavigateToServerWideTasks && (
+                    {isClusterAdminOrClusterNode && (
                         <Button
                             color="link"
                             size="sm"
@@ -418,7 +418,7 @@ export function OngoingTasksPage(props: NonShardedViewProps) {
                     </div>
                 )}
 
-                {allTasksCount > 0 && isAdminAccessOrAbove(db) && (
+                {allTasksCount > 0 && hasDatabaseAdminAccess && (
                     <OngoingTaskSelectActions
                         allTasks={filteredDatabaseTaskIds}
                         selectedTasks={selectedTaskIds}

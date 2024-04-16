@@ -1,17 +1,16 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
-import { DatabaseSharedInfo } from "components/models/databases";
 
 class toggleDatabaseCommand extends commandBase {
 
-    private readonly dbs: DatabaseSharedInfo[];
+    private readonly databaseNames: string[];
 
     private readonly enable: boolean;
 
-    constructor(dbs: DatabaseSharedInfo[], enable: boolean) {
+    constructor(databaseNames: string[], enable: boolean) {
         super();
         this.enable = enable;
-        this.dbs = dbs;
+        this.databaseNames = databaseNames;
     }
 
     get action() {
@@ -20,7 +19,7 @@ class toggleDatabaseCommand extends commandBase {
 
     execute(): JQueryPromise<statusDto<disableDatabaseResult>> {
         const payload: Raven.Client.ServerWide.Operations.ToggleDatabasesStateOperation.Parameters = {
-            DatabaseNames: this.dbs.map(x => x.name)
+            DatabaseNames: this.databaseNames
         };
 
         const url = this.enable ?

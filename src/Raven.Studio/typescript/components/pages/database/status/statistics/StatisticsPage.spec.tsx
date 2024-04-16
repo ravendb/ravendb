@@ -1,23 +1,12 @@
-﻿import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
-import { rtlRender } from "test/rtlTestUtils";
+﻿import { DatabasesStubs } from "test/stubs/DatabasesStubs";
+import { act, rtlRender } from "test/rtlTestUtils";
 import React from "react";
-import { StatisticsPage } from "./StatisticsPage";
 import { mockServices } from "test/mocks/services/MockServices";
 import { composeStory } from "@storybook/testing-react";
 import { boundCopy } from "components/utils/common";
 import * as stories from "../../status/statistics/StatisticsPage.stories";
 import { IndexesStubs } from "test/stubs/IndexesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
-
-function render() {
-    const db = DatabasesStubs.shardedDatabase();
-    return rtlRender(
-        <div>
-            <StatisticsPage db={db} />
-        </div>
-    );
-}
 
 const selectors = {
     detailedStatsHeader: /Detailed Database Stats/i,
@@ -29,32 +18,36 @@ const selectors = {
 
 describe("StatisticsPage", function () {
     beforeEach(() => {
-        const { accessManager } = mockStore;
+        jest.resetAllMocks();
+        const { accessManager, cluster } = mockStore;
         accessManager.with_securityClearance("ClusterAdmin");
-
-        clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+        cluster.with_Single();
     });
 
     it("can render stats w/o details", async () => {
         const { databasesService } = mockServices;
 
         const stats = databasesService.withEssentialStats();
+        const View = boundCopy(stories.StatisticsTemplate, {
+            db: DatabasesStubs.shardedDatabase().toDto(),
+        });
 
-        const { screen } = render();
+        const Story = composeStory(View, stories.default);
+
+        const { screen } = rtlRender(<Story />);
 
         expect(await screen.findByText(selectors.documentsCount)).toBeInTheDocument();
         expect(await screen.findByText(stats.CountOfIndexes)).toBeInTheDocument();
     });
 
     it("can render stats w/ details", async () => {
-        const { databasesService, indexesService } = mockServices;
+        const View = boundCopy(stories.StatisticsTemplate, {
+            db: DatabasesStubs.shardedDatabase().toDto(),
+        });
 
-        databasesService.withEssentialStats();
-        databasesService.withDetailedStats();
+        const Story = composeStory(View, stories.default);
 
-        indexesService.withGetSampleStats();
-
-        const { screen, fireClick } = render();
+        const { screen, fireClick } = rtlRender(<Story />);
 
         expect(await screen.findByText(selectors.documentsCount)).toBeInTheDocument();
 
@@ -65,7 +58,7 @@ describe("StatisticsPage", function () {
     });
 
     it("can render index map stats", async () => {
-        const db = DatabasesStubs.shardedDatabase();
+        const db = DatabasesStubs.shardedDatabase().toDto();
         const ordersStats = IndexesStubs.getSampleStats().find((x) => x.Name === "Orders/ByShipment/Location");
         ordersStats.MapErrors = 5;
 
@@ -97,7 +90,7 @@ describe("StatisticsPage", function () {
     });
 
     it("can render index map stats", async () => {
-        const db = DatabasesStubs.shardedDatabase();
+        const db = DatabasesStubs.shardedDatabase().toDto();
         const productRating = IndexesStubs.getSampleStats().find((x) => x.Name === "Product/Rating");
         productRating.MapErrors = 5;
         productRating.ReduceErrors = 2;
@@ -130,7 +123,7 @@ describe("StatisticsPage", function () {
     });
 
     it("can handle no indexes case", async () => {
-        const db = DatabasesStubs.shardedDatabase();
+        const db = DatabasesStubs.shardedDatabase().toDto();
 
         const View = boundCopy(stories.StatisticsTemplate, {
             db,
@@ -144,5 +137,29 @@ describe("StatisticsPage", function () {
         await fireClick(detailsBtn);
 
         expect(await screen.findByText(selectors.noIndexes)).toBeInTheDocument();
+    });
+
+    it("can stay with open details after database state change", async () => {
+        const db = DatabasesStubs.nonShardedSingleNodeDatabase().toDto();
+        const View = boundCopy(stories.StatisticsTemplate, {
+            db,
+        });
+
+        const Story = composeStory(View, stories.default);
+        const { screen, fireClick } = rtlRender(<Story />);
+
+        await fireClick(screen.queryByText(selectors.showDetails));
+
+        // details are visible
+        expect(await screen.findByText(selectors.detailedIndexHeader)).toBeInTheDocument();
+
+        // changing state of active database
+        act(() => {
+            const { databases } = mockStore;
+            databases.withActiveDatabase({ ...db, indexesCount: db.indexesCount - 1 });
+        });
+
+        // details are still visible
+        expect(await screen.findByText(selectors.detailedIndexHeader)).toBeInTheDocument();
     });
 });

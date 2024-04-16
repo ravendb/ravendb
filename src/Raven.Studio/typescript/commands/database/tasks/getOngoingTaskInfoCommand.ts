@@ -13,7 +13,7 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl |
     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink> extends commandBase {
 
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly nodeTag: string;
 
     private readonly taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
@@ -24,7 +24,7 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
 
     private readonly reportFailure: boolean = true;
 
-    public constructor(db: database, taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType,
+    public constructor(db: database | string, taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType,
                         nodeTag: string | undefined, taskId: number, taskName?: string, reportFailure = true) {
           super();
         this.reportFailure = reportFailure;
@@ -55,35 +55,35 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
         return this.query<T>(url, args, this.db);
     }
 
-    static forExternalReplication(db: database, taskId: number) {
+    static forExternalReplication(db: database | string, taskId: number) {
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication>(db, "Replication", null, taskId);
     }
     
-    static forPullReplicationSink(db: database, taskId: number) {
+    static forPullReplicationSink(db: database | string, taskId: number) {
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink>(db, "PullReplicationAsSink", null, taskId);
     }
 
-    static forSubscription(db: database, taskId: number, taskName: string, nodeTag?: string) {
+    static forSubscription(db: database | string, taskId: number, taskName: string, nodeTag?: string) {
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription>(db, "Subscription", nodeTag, taskId, taskName);
     }
 
-    static forBackup(db: database, taskId: number, reportFailure = true) { 
+    static forBackup(db: database | string, taskId: number, reportFailure = true) { 
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup>(db, "Backup", null, taskId, undefined, reportFailure);
     }
 
-    static forRavenEtl(db: database, taskId: number) {
+    static forRavenEtl(db: database | string, taskId: number) {
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl>(db, "RavenEtl", null, taskId);
     }
     
-    static forSqlEtl(db: database, taskId: number) {
+    static forSqlEtl(db: database | string, taskId: number) {
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl>(db, "SqlEtl", null, taskId);
     }
 
-    static forOlapEtl(db: database, taskId: number) {
+    static forOlapEtl(db: database | string, taskId: number) {
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl>(db, "OlapEtl", null, taskId);
     }
 
-    static forElasticSearchEtl(db: database, taskId: number) {
+    static forElasticSearchEtl(db: database | string, taskId: number) {
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl>(db, "ElasticSearchEtl", null, taskId);
     }
 
@@ -102,11 +102,11 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
         }
     }
 
-    static forQueueEtl(db: database, taskId: number) {
+    static forQueueEtl(db: database | string, taskId: number) {
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl>(db, "QueueEtl", null, taskId);
     }
 
-    static forQueueSink(db: database, taskId: number) {
+    static forQueueSink(db: database | string, taskId: number) {
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink>(db, "QueueSink", null, taskId);
     }
 }

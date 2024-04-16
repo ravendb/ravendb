@@ -3,9 +3,9 @@ import endpoints = require("endpoints");
 import database = require("models/resources/database");
 
 class getClientConfigurationCommand extends commandBase {
-    private db: database;
+    private db: database | string;
 
-    constructor(db: database) {
+    constructor(db: database | string) {
         super();
         this.db = db;
     }

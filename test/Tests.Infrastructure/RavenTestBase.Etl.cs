@@ -156,7 +156,7 @@ namespace FastTests
 
             private ManualResetEventSlim WaitForEtl(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
             {
-                var database = _parent.GetDatabase(store.Database).Result;
+                var database = AsyncHelpers.RunSync(() => _parent.GetDatabase(store.Database));
 
                 var mre = new ManualResetEventSlim();
 

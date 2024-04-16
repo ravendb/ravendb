@@ -2006,8 +2006,8 @@ namespace Raven.Server.Documents.Indexes
 
         private void PauseIfCpuCreditsBalanceIsTooLow()
         {
-            AlertRaised alert = null;
             int numberOfTimesSlept = 0;
+            bool indexAlreadyAddedToWarning = false;
 
             while (DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised() && _indexDisabled == false)
             {
@@ -2016,23 +2016,16 @@ namespace Raven.Server.Documents.Indexes
                 // give us a bit more than a measuring cycle to gain more CPU credits
                 Thread.Sleep(1250);
 
-                if (alert == null && numberOfTimesSlept++ > 5)
+                if (indexAlreadyAddedToWarning == false && numberOfTimesSlept++ > 5)
                 {
-                    alert = AlertRaised.Create(
-                       DocumentDatabase.Name,
-                       Name,
-                       "Indexing has been paused because the CPU credits balance is almost completely used, will be resumed when there are enough CPU credits to use.",
-                       AlertType.Throttling_CpuCreditsBalance,
-                       NotificationSeverity.Warning,
-                       key: Name);
-                    DocumentDatabase.NotificationCenter.Add(alert);
+                    DocumentDatabase.NotificationCenter.Indexing.AddIndexNameToCpuCreditsExhaustionWarning(Name);
+                    DocumentDatabase.NotificationCenter.Indexing.ProcessCpuCreditsExhaustion();
+
+                    indexAlreadyAddedToWarning = true;
                 }
             }
-
-            if (alert != null)
-            {
-                DocumentDatabase.NotificationCenter.Dismiss(alert.Id);
-            }
+            
+            DocumentDatabase.NotificationCenter.Indexing.RemoveIndexNameFromCpuCreditsExhaustionWarning(Name);
         }
 
         private void NotifyAboutCompletedBatch(bool didWork)
@@ -3110,7 +3103,8 @@ namespace Raven.Server.Documents.Indexes
                         Priority = Definition?.Priority ?? IndexPriority.Normal,
                         State = State,
                         Status = Status,
-                        Collections = Collections.ToDictionary(x => x, _ => new IndexStats.CollectionStats())
+                        Collections = Collections.ToDictionary(x => x, _ => new IndexStats.CollectionStats()),
+                        ReferencedCollections = GetReferencedCollectionNames()
                     };
                 }
 
@@ -3139,6 +3133,9 @@ namespace Raven.Server.Documents.Indexes
                         stats.LastBatchStats = _lastStats?.ToIndexingPerformanceLiveStats();
 
                     stats.LastQueryingTime = _lastQueryingTime;
+
+                    stats.ReferencedCollections = GetReferencedCollectionNames();
+
 
                     if (Type == IndexType.MapReduce || Type == IndexType.JavaScriptMapReduce)
                     {
@@ -3181,6 +3178,14 @@ namespace Raven.Server.Documents.Indexes
                     return stats;
                 }
             }
+        }
+
+        internal HashSet<string> GetReferencedCollectionNames()
+        {
+            // multiple maps can reference the same collections, we wants to return distinct names only
+            return GetReferencedCollections()?
+                .SelectMany(p =>  p.Value?.Select(z => z.Name))
+                .ToHashSet();
         }
 
         private IndexStats.MemoryStats GetMemoryStats()

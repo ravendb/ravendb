@@ -5,7 +5,7 @@ import endpoints = require("endpoints");
 
 class formatIndexCommand extends commandBase {
 
-    constructor(private db: database, private expression: string) {
+    constructor(private db: database | string, private expression: string) {
         super();
     }
 

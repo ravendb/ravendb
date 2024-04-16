@@ -24,7 +24,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Tables
 {
-    public sealed unsafe class Table : IDisposable
+    public sealed unsafe class Table
     {
         private readonly bool _forGlobalReadsOnly;
         private readonly TableSchema _schema;
@@ -337,22 +337,23 @@ namespace Voron.Data.Tables
             return internalScope;
         }
 
-        public int GetAllocatedSize(long id)
+        public (int AllocatedSize, bool IsCompressed) GetInfoFor(long id)
         {
             var posInPage = id % Constants.Storage.PageSize;
-            if (posInPage == 0) // large
+            if (posInPage == 0) // large value
             {
                 var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
 
                 var allocated = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
 
-                return allocated * Constants.Storage.PageSize;
+                return (allocated * Constants.Storage.PageSize, page.Flags.HasFlag(PageFlags.Compressed));
             }
 
             // here we rely on the fact that RawDataSmallSection can
             // read any RawDataSmallSection piece of data, not just something that
             // it exists in its own section, but anything from other sections as well
-            return RawDataSection.GetRawDataEntrySizeFor(_tx.LowLevelTransaction, id)->AllocatedSize;
+            var sizes = RawDataSection.GetRawDataEntrySizeFor(_tx.LowLevelTransaction, id);
+            return (sizes->AllocatedSize, sizes->IsCompressed);
         }
 
         public long Update(long id, TableValueBuilder builder, bool forceUpdate = false)
@@ -654,19 +655,9 @@ namespace Voron.Data.Tables
                 using (dynamicKeyIndexDef.GetValue(_tx, ref value, out Slice val))
                 {
                     dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldValue: ref value, newValue: ref TableValueReaderUtils.EmptyReader);
+
                     var tree = GetTree(dynamicKeyIndexDef);
-
-                    if (dynamicKeyIndexDef.SupportDuplicateKeys == false)
-                    {
-                        tree.Delete(val);
-                        continue;
-                    }
-
-                    var fst = GetFixedSizeTree(tree, val.Clone(_tx.Allocator), 0, dynamicKeyIndexDef.IsGlobal);
-                    if (fst.Delete(id).NumberOfEntriesDeleted == 0)
-                    {
-                        ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, dynamicKeyIndexDef.Name);
-                    }
+                    RemoveValueFromDynamicIndex(id, dynamicKeyIndexDef, tree, val);
                 }
             }
 
@@ -954,11 +945,9 @@ namespace Voron.Data.Tables
                             forceUpdate)
                         {
                             var indexTree = GetTree(dynamicKeyIndexDef);
-                            indexTree.Delete(oldVal);
-                            using (indexTree.DirectAdd(newVal, sizeof(long), TreeNodeFlags.Data, out var ptr))
-                            {
-                                *(long*)ptr = id;
-                            }
+                            RemoveValueFromDynamicIndex(id, dynamicKeyIndexDef, indexTree, oldVal);
+
+                            AddValueToDynamicIndex(id, dynamicKeyIndexDef, indexTree, newVal, TreeNodeFlags.Data);
                         }
                     }
                 }
@@ -975,6 +964,38 @@ namespace Voron.Data.Tables
                         if (index.Add(newKey, idAsSlice) == false)
                             ThrowInvalidDuplicateFixedSizeTreeKey(newKey, indexDef);
                     }
+                }
+            }
+        }
+
+        private void AddValueToDynamicIndex(long id, DynamicKeyIndexDef dynamicKeyIndexDef, Tree indexTree, Slice newVal, TreeNodeFlags flags)
+        {
+            if (dynamicKeyIndexDef.SupportDuplicateKeys == false)
+            {
+                using (indexTree.DirectAdd(newVal, sizeof(long), flags, out var ptr))
+                {
+                    *(long*)ptr = id;
+                }
+            }
+            else
+            {
+                var index = GetFixedSizeTree(indexTree, newVal, 0, dynamicKeyIndexDef.IsGlobal);
+                index.Add(id);
+            }
+        }
+
+        private void RemoveValueFromDynamicIndex(long id, DynamicKeyIndexDef dynamicKeyIndexDef, Tree tree, Slice val)
+        {
+            if (dynamicKeyIndexDef.SupportDuplicateKeys == false)
+            {
+                tree.Delete(val);
+            }
+            else
+            {
+                var fst = GetFixedSizeTree(tree, val.Clone(_tx.Allocator), 0, dynamicKeyIndexDef.IsGlobal);
+                if (fst.Delete(id).NumberOfEntriesDeleted == 0)
+                {
+                    ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, dynamicKeyIndexDef.Name);
                 }
             }
         }
@@ -1085,18 +1106,7 @@ namespace Voron.Data.Tables
                         dynamicKeyIndexDef.OnIndexEntryChanged(_tx, dynamicKey, oldValue: ref TableValueReaderUtils.EmptyReader, newValue: ref value);
                         
                         var dynamicIndex = GetTree(dynamicKeyIndexDef);
-                        if (dynamicKeyIndexDef.SupportDuplicateKeys == false)
-                        {
-                            using (dynamicIndex.DirectAdd(dynamicKey, sizeof(long), TreeNodeFlags.Data | TreeNodeFlags.NewOnly, out var ptr))
-                            {
-                                *(long*)ptr = id;
-                            }
-
-                            continue;
-                        }
-
-                        var index = GetFixedSizeTree(dynamicIndex, dynamicKey, 0, dynamicKeyIndexDef.IsGlobal);
-                        index.Add(id);
+                        AddValueToDynamicIndex(id, dynamicKeyIndexDef, dynamicIndex, dynamicKey, TreeNodeFlags.Data | TreeNodeFlags.NewOnly);
                     }
                 }
 
@@ -1207,18 +1217,27 @@ namespace Voron.Data.Tables
                 throw new VoronErrorException($"Cannot find tree {name} in table {Name}");
 
             tree = Tree.Open(_tx.LowLevelTransaction, _tx, name, (TreeRootHeader*)treeHeader, isIndexTree: isIndexTree, newPageAllocator: TablePageAllocator);
-
+            
             _treesBySliceCache ??= new Dictionary<Slice, Tree>(SliceStructComparer.Instance);
             _treesBySliceCache[name] = tree;
 
             return tree;
         }
 
-        internal Tree GetTree(TableSchema.AbstractTreeIndexDef idx)
+        internal Tree GetTree(AbstractTreeIndexDef idx)
         {
+            Tree tree;
             if (idx.IsGlobal)
-                return _tx.ReadTree(idx.Name, isIndexTree: true, newPageAllocator: GlobalPageAllocator);
-            return GetTree(idx.Name, true);
+            {
+                tree = _tx.ReadTree(idx.Name, isIndexTree: true, newPageAllocator: GlobalPageAllocator);
+            }
+            else
+            {
+                tree = GetTree(idx.Name, true);
+            }
+                
+            tree?.AssertNotDisposed();
+            return tree;
         }
 
         public bool DeleteByKey(Slice key)
@@ -1653,8 +1672,8 @@ namespace Voron.Data.Tables
                         {
                             var id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
                             var ptr = DirectRead(id, out int size);
-                            if (tableValueHolder == null)
-                                tableValueHolder = new TableValueHolder();
+
+                            tableValueHolder ??= new TableValueHolder();
                             tableValueHolder.Reader = new TableValueReader(id, ptr, size);
                             if (deletePredicate(tableValueHolder))
                             {
@@ -1807,7 +1826,7 @@ namespace Voron.Data.Tables
 
             int ReadChunked(FixedSizeTree<long>.IFixedSizeIterator it, ByteString chunk, out bool hasMore)
             {
-                // We will fill the buffer of the chunk expecting to have many documents in the chunk that end up 
+                // We will fill the buffer with the chunk expecting to have many documents in the chunk that end up 
                 // being stored in segments that are close to each other.
                 var chunkSpan = new Span<long>(chunk.Ptr, ChunkSize);
                 var keySpan = new Span<long>(chunk.Ptr + ChunkSize * sizeof(long), ChunkSize);
@@ -2083,7 +2102,6 @@ namespace Voron.Data.Tables
 
         public bool FindByIndex(TableSchema.FixedSizeKeyIndexDef index, long value, out TableValueReader reader)
         {
-            AssertWritableTable();
             reader = default;
             var fst = GetFixedSizeTree(index);
 
@@ -2139,10 +2157,8 @@ namespace Voron.Data.Tables
 
                     if (beforeDelete != null || shouldAbort != null)
                     {
-                        int size;
-                        var ptr = DirectRead(id, out size);
-                        if (tableValueHolder == null)
-                            tableValueHolder = new TableValueHolder();
+                        var ptr = DirectRead(id, out int size);
+                        tableValueHolder ??= new TableValueHolder();
                         tableValueHolder.Reader = new TableValueReader(id, ptr, size);
                         if (shouldAbort?.Invoke(tableValueHolder) == true)
                         {
@@ -2268,8 +2284,7 @@ namespace Voron.Data.Tables
 
                 var treeName = item.Key;
 
-                byte* ptr;
-                using (_tableTree.DirectAdd(treeName, sizeof(TreeRootHeader), out ptr))
+                using (_tableTree.DirectAdd(treeName, sizeof(TreeRootHeader), out byte* ptr))
                 {
                     var header = (TreeRootHeader*)ptr;
                     tree.State.CopyTo(header);
@@ -2348,31 +2363,6 @@ namespace Voron.Data.Tables
                 else if (globalDocsCount != pkIndexNumberOfEntries)
                     ThrowInconsistentItemsCountInIndexes(_schema.Key.Name.ToString(), NumberOfEntries, pkIndexNumberOfEntries);
             }
-        }
-
-        public void Dispose()
-        {
-            if (_treesBySliceCache != null)
-            {
-                foreach (var item in _treesBySliceCache)
-                    item.Value.Dispose();
-            }
-
-            if (_fixedSizeTreeCache != null)
-            {
-                foreach (var item in _fixedSizeTreeCache)
-                {
-                    foreach (var item2 in item.Value)
-                    {
-                        item2.Value.Dispose();
-                    }
-                }
-            }
-
-            _activeCandidateSection?.Dispose();
-            _activeDataSmallSection?.Dispose();
-            _inactiveSections?.Dispose();
-            _tableTree?.Dispose();
         }
 
         public TableReport GetReport(bool includeDetails, StorageReportGenerator generatorInstance = null)

@@ -6,7 +6,7 @@ import database from "models/resources/database";
 
 class getDocumentsFromCollectionCommand extends commandBase {
 
-    constructor(private collection: collection, private db: database, private skip: number, private take: number) {
+    constructor(private collection: collection, private db: database | string, private skip: number, private take: number) {
         super();
     }
 

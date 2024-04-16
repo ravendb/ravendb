@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class saveExternalReplicationTaskCommand extends commandBase {
    
-    constructor(private db: database, private replicationSettings: Raven.Client.Documents.Operations.Replication.ExternalReplication) {
+    constructor(private db: database | string, private replicationSettings: Raven.Client.Documents.Operations.Replication.ExternalReplication) {
         super();
     }
  

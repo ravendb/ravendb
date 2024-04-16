@@ -1,5 +1,4 @@
 ﻿import React, { useCallback } from "react";
-import { useAccessManager } from "hooks/useAccessManager";
 import {
     RichPanel,
     RichPanelActions,
@@ -23,14 +22,18 @@ import { OngoingTaskRavenEtlInfo } from "components/models/tasks";
 import { BaseOngoingTaskPanelProps, useTasksOperations } from "../../shared/shared";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 import { Collapse, Input } from "reactstrap";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 type RavenEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskRavenEtlInfo>;
 
 function Details(props: RavenEtlPanelProps & { canEdit: boolean }) {
-    const { data, canEdit, db } = props;
+    const { data, canEdit } = props;
     const connectionStringDefined = !!data.shared.destinationDatabase;
     const { appUrl } = useAppUrls();
-    const connectionStringsUrl = appUrl.forConnectionStrings(db, "Raven", data.shared.connectionStringName);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Raven", data.shared.connectionStringName);
 
     return (
         <RichPanelDetails>
@@ -65,13 +68,12 @@ function Details(props: RavenEtlPanelProps & { canEdit: boolean }) {
 }
 
 export function RavenEtlPanel(props: RavenEtlPanelProps & ICanShowTransformationScriptPreview) {
-    const { db, data, showItemPreview, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } =
-        props;
+    const { data, showItemPreview, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
-    const { isAdminAccessOrAbove } = useAccessManager();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
     const { forCurrentDatabase } = useAppUrls();
 
-    const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
+    const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
     const editUrl = forCurrentDatabase.editRavenEtl(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);

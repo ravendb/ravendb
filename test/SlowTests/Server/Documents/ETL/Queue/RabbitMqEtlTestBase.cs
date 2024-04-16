@@ -106,23 +106,16 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
             {
                 Name = connectionStringName,
                 BrokerType = QueueBrokerType.RabbitMq,
-                RabbitMqConnectionSettings = new RabbitMqConnectionSettings(){ConnectionString = connectionString ?? RabbitMqConnectionString.Instance.VerifiedConnectionString.Value}
+                RabbitMqConnectionSettings = new RabbitMqConnectionSettings(){ConnectionString = connectionString ?? RabbitMqConnectionString.Instance.VerifiedConnectionString}
             });
         return config;
     }
 
-    protected IModel CreateRabbitMqChannel()
-    {
-        var connectionFactory = new ConnectionFactory() { Uri = new Uri(RabbitMqConnectionString.Instance.VerifiedConnectionString.Value) };
-        var connection = connectionFactory.CreateConnection();
-        var channel = connection.CreateModel();
+    protected IModel CreateRabbitMqChannel() => RabbitMqConnectionString.Instance.CreateModel();
 
-        return channel;
-    }
-    
     private void CleanupExchangesAndQueues()
     {
-        if (_definedExchangesAndQueues.Count == 0 || RequiresRabbitMqRetryFactAttribute.CanConnect == false)
+        if (_definedExchangesAndQueues.Count == 0 || RabbitMqConnectionString.Instance.CanConnect == false)
             return;
 
         using var channel = CreateRabbitMqChannel();

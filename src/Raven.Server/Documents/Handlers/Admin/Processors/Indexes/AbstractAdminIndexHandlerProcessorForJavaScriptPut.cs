@@ -18,8 +18,17 @@ internal abstract class AbstractAdminIndexHandlerProcessorForJavaScriptPut<TRequ
 
     protected abstract RavenConfiguration GetDatabaseConfiguration();
 
+    protected abstract ValueTask HandleIndexesFromLegacyReplicationAsync();
+
     public override async ValueTask ExecuteAsync()
     {
+        var isReplicated = RequestHandler.GetBoolValueQueryString("is-replicated", required: false) ?? false;
+        if (isReplicated)
+        {
+            await HandleIndexesFromLegacyReplicationAsync();
+            return;
+        }
+
         if (HttpContext.Features.Get<IHttpAuthenticationFeature>() is RavenServer.AuthenticateConnection feature && GetDatabaseConfiguration().Indexing.RequireAdminToDeployJavaScriptIndexes)
         {
             if (feature.CanAccess(RequestHandler.DatabaseName, requireAdmin: true, requireWrite: true) == false)

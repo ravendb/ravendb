@@ -44,7 +44,7 @@ using static Raven.Server.Documents.Schemas.Tombstones;
 
 namespace Raven.Server.Documents
 {
-    public unsafe class DocumentsStorage : IDisposable
+    public unsafe partial class DocumentsStorage : IDisposable
     {
         public TableSchema DocsSchema;
         public TableSchema CompressedDocsSchema;
@@ -570,19 +570,11 @@ namespace Raven.Server.Documents
 
         private static long ReadLastEtagFrom(Transaction tx, Slice name)
         {
-            using (var fst = new FixedSizeTree(tx.LowLevelTransaction,
-                tx.LowLevelTransaction.RootObjects,
-                name, sizeof(long),
-                clone: false))
-            {
-                using (var it = fst.Iterate())
-                {
-                    if (it.SeekToLast())
-                        return it.CurrentKey;
-                }
-            }
+            var fst = new FixedSizeTree(tx.LowLevelTransaction, tx.LowLevelTransaction.RootObjects, 
+                                        name, sizeof(long), clone: false);
 
-            return 0;
+            using var it = fst.Iterate();
+            return it.SeekToLast() ? it.CurrentKey : 0;
         }
 
         public long ReadLastEtag(Transaction tx)
@@ -888,7 +880,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, long start, long take, Reference<long> totalCount)
+        public IEnumerable<Document>  GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, long start, long take)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -897,9 +889,7 @@ namespace Raven.Server.Documents
                 // id must be lowercased
                 if (table.ReadByKey(id, out TableValueReader reader) == false)
                     continue;
-
-                totalCount.Value++;
-
+                
                 if (start > 0)
                 {
                     start--;
@@ -913,7 +903,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<string> ids, long start, long take, Reference<long> totalCount)
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<string> ids, long start, long take)
         {
             var listOfIds = new List<Slice>();
             foreach (var id in ids)
@@ -922,13 +912,13 @@ namespace Raven.Server.Documents
                 listOfIds.Add(slice);
             }
 
-            return GetDocuments(context, listOfIds, start, take, totalCount);
+            return GetDocuments(context, listOfIds, start, take);
         }
 
-        public IEnumerable<Document> GetDocumentsForCollection(DocumentsOperationContext context, IEnumerable<Slice> ids, string collection, long start, long take, Reference<long> totalCount)
+        public IEnumerable<Document> GetDocumentsForCollection(DocumentsOperationContext context, IEnumerable<Slice> ids, string collection, long start, long take)
         {
             // we'll fetch all documents and do the filtering here since we must check the collection name
-            foreach (var doc in GetDocuments(context, ids, start, int.MaxValue, totalCount))
+            foreach (var doc in GetDocuments(context, ids, start, int.MaxValue))
             {
                 if (collection == Constants.Documents.Collections.AllDocumentsCollection)
                 {
@@ -938,17 +928,14 @@ namespace Raven.Server.Documents
 
                 if (doc.TryGetMetadata(out var metadata) == false)
                 {
-                    totalCount.Value--;
                     continue;
                 }
                 if (metadata.TryGet(Constants.Documents.Metadata.Collection, out string c) == false)
                 {
-                    totalCount.Value--;
                     continue;
                 }
                 if (string.Equals(c, collection, StringComparison.OrdinalIgnoreCase) == false)
                 {
-                    totalCount.Value--;
                     continue;
                 }
 
@@ -1131,7 +1118,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public (int ActualSize, int AllocatedSize)? GetDocumentMetrics(DocumentsOperationContext context, string id)
+        public (int ActualSize, int AllocatedSize, bool IsCompressed)? GetDocumentMetrics(DocumentsOperationContext context, string id)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             {
@@ -1141,9 +1128,10 @@ namespace Raven.Server.Documents
                 {
                     return null;
                 }
-                var allocated = table.GetAllocatedSize(tvr.Id);
 
-                return (tvr.Size, allocated);
+                var info = table.GetInfoFor(tvr.Id);
+
+                return (tvr.Size, info.AllocatedSize, info.IsCompressed);
             }
         }
 
@@ -2069,7 +2057,7 @@ namespace Raven.Server.Documents
                     {
                         if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)
                         {
-                            Debug.Assert(false, $"flags must set FromClusterTransaction for the change vector: {changeVector}");
+                            Debug.Assert(false, $"flags: '{flags}' must set FromClusterTransaction for the change vector: {changeVector}");
                         }
                     }
                     break;

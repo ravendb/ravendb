@@ -5,9 +5,13 @@ import endpoints = require("endpoints");
 import genUtils from "common/generalUtils";
 
 class getDatabaseStatsCommand extends commandBase {
+    private readonly db: database | string;
+    private readonly location: databaseLocationSpecifier;
 
-    constructor(private db: database, private location: databaseLocationSpecifier) {
+    constructor(db: database | string, location: databaseLocationSpecifier) {
         super();
+        this.db = db;
+        this.location = location;
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {

@@ -386,36 +386,7 @@ namespace Raven.Server.Web.System
 
         private async Task<(long Index, DatabaseTopology Topology, List<string> Urls)> CreateDatabase(string name, DatabaseRecord databaseRecord, ClusterOperationContext context, int replicationFactor, long? index, string raftRequestId)
         {
-            var dbRecordExist = ServerStore.Cluster.DatabaseExists(context, name);
-            if (index.HasValue && dbRecordExist == false)
-                throw new BadRequestException($"Attempted to modify non-existing database: '{name}'");
-
-            if (dbRecordExist && index.HasValue == false)
-                throw new ConcurrencyException($"Database '{name}' already exists!");
-
-            if (replicationFactor <= 0)
-                throw new ArgumentException("Replication factor must be greater than 0.");
-
-            try
-            {
-                DatabaseHelper.Validate(name, databaseRecord, Server.Configuration);
-            }
-            catch (Exception e)
-            {
-                throw new BadRequestException("Database document validation failed.", e);
-            }
-            var clusterTopology = ServerStore.GetClusterTopology(context);
-            ValidateClusterMembers(clusterTopology, databaseRecord);
-            UpdateDatabaseTopology(databaseRecord, clusterTopology, replicationFactor);
-
-            if (dbRecordExist && databaseRecord.IsSharded)
-            {
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
-                    "remove this and introduce a dedicated command for updating Sharding.Prefixed");
-                await ServerStore.Sharding.UpdatePrefixedShardingIfNeeded(context, databaseRecord, clusterTopology);
-            }
-
-            var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
+            var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId, replicationFactor: replicationFactor);
             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
 
             var members = (List<string>)result;
@@ -429,6 +400,7 @@ namespace Raven.Server.Web.System
                     $"The database '{name}' was created but is not accessible, because one or more of the nodes on which this database was supposed to reside on, threw an exception.", e);
             }
 
+            var clusterTopology = ServerStore.GetClusterTopology(context);
             var nodeUrlsAddedTo = new List<string>();
             foreach (var member in members)
             {
@@ -453,52 +425,6 @@ namespace Raven.Server.Web.System
                 return (newIndex, topology, nodeUrlsAddedTo);
             }
         }
-
-        private static void UpdateDatabaseTopology(DatabaseRecord databaseRecord, ClusterTopology clusterTopology, int replicationFactor)
-        {
-            var clusterTransactionId = Guid.NewGuid().ToBase64Unpadded();
-
-            if (databaseRecord.IsSharded)
-            {
-                databaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
-                databaseRecord.Sharding.Orchestrator.Topology ??= new OrchestratorTopology();
-                UpdateDatabaseTopology(databaseRecord.Sharding.Orchestrator.Topology, clusterTopology, replicationFactor, clusterTransactionId);
-
-                foreach (var (shardNumber, databaseTopology) in databaseRecord.Sharding.Shards)
-                    UpdateDatabaseTopology(databaseTopology, clusterTopology, replicationFactor, clusterTransactionId);
-            }
-            else
-            {
-                databaseRecord.Topology ??= new DatabaseTopology();
-                UpdateDatabaseTopology(databaseRecord.Topology, clusterTopology, replicationFactor, clusterTransactionId);
-            }
-        }
-
-        private static void SetReplicationFactor(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, int replicationFactor)
-        {
-            databaseTopology.ReplicationFactor = Math.Max(databaseTopology.ReplicationFactor, replicationFactor);
-            databaseTopology.ReplicationFactor = Math.Min(databaseTopology.ReplicationFactor, clusterTopology.AllNodes.Count);
-        }
-
-        private static void UpdateDatabaseTopology(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, int replicationFactor, string clusterTransactionId)
-        {
-            if (databaseTopology.Members?.Count > 0)
-            {
-                foreach (var member in databaseTopology.Members)
-                {
-                    if (clusterTopology.Contains(member) == false)
-                        throw new ArgumentException($"Failed to add node {member}, because we don't have it in the cluster.");
-                }
-
-                replicationFactor = databaseTopology.Count;
-            }
-
-            SetReplicationFactor(databaseTopology, clusterTopology, replicationFactor);
-
-            databaseTopology.ClusterTransactionIdBase64 ??= clusterTransactionId;
-            databaseTopology.DatabaseTopologyIdBase64 ??= Guid.NewGuid().ToBase64Unpadded();
-        }
-
 
         [RavenAction("/admin/databases/reorder", "POST", AuthorizationStatus.Operator)]
         public async Task Reorder()
@@ -534,31 +460,6 @@ namespace Raven.Server.Web.System
                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
                 NoContentStatus();
-            }
-        }
-
-        private void ValidateClusterMembers(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
-        {
-            var topology = databaseRecord.Topology;
-
-            if (topology == null)
-                return;
-
-            if (topology.Members?.Count == 1 && topology.Members[0] == "?")
-            {
-                // this is a special case where we pass '?' as member.
-                topology.Members.Clear();
-            }
-
-            var unique = new HashSet<string>();
-            foreach (var node in topology.AllNodes)
-            {
-                if (unique.Add(node) == false)
-                    throw new InvalidOperationException($"node '{node}' already exists. This is not allowed. Database Topology : {topology}");
-
-                var url = clusterTopology.GetUrlFromTag(node);
-                if (databaseRecord.Encrypted && NotUsingHttps(url) && Server.AllowEncryptedDatabasesOverHttp == false)
-                    throw new InvalidOperationException($"{databaseRecord.DatabaseName} is encrypted but node {node} with url {url} doesn't use HTTPS. This is not allowed.");
             }
         }
 

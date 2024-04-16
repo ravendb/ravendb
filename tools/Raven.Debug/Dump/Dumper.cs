@@ -6,10 +6,8 @@ using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Diagnostics.NETCore.Client;
 using Raven.Debug.Utils;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -20,20 +18,30 @@ namespace Microsoft.Diagnostics.Tools.Dump
         /// </summary>
         public enum DumpTypeOption
         {
-            Heap,       // A large and relatively comprehensive dump containing module lists, thread lists, all 
+            Full,       // The largest dump containing all memory including the module images.
+
+            Heap,       // A large and relatively comprehensive dump containing module lists, thread lists, all
                         // stacks, exception information, handle information, and all memory except for mapped images.
-            Mini        // A small dump containing module lists, thread lists, exception information and all stacks.
+
+            Mini,       // A small dump containing module lists, thread lists, exception information and all stacks.
+
+            Triage      // A small dump containing module lists, thread lists, exception information, all stacks and PII removed.
         }
 
         public Dumper()
         {
         }
 
-        public async Task<int> Collect(CommandLineApplication cmd, int processId, string output, string outputOwner, bool diag, DumpTypeOption type)
+        public int Collect(CommandLineApplication cmd, int processId, string output, string outputOwner, bool diag, bool crashreport, DumpTypeOption type)
         {
             if (processId == 0)
             {
                 return cmd.ExitWithError("ProcessId is required.");
+            }
+
+            if (processId < 0)
+            {
+                return cmd.ExitWithError($"The PID cannot be negative: {processId}");
             }
 
             try
@@ -49,23 +57,66 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 output = Path.GetFullPath(output);
 
                 // Display the type of dump and dump path
-                string dumpTypeMessage = type == DumpTypeOption.Mini ? "minidump" : "minidump with heap";
+                string dumpTypeMessage = null;
+                switch (type)
+                {
+                    case DumpTypeOption.Full:
+                        dumpTypeMessage = "full";
+                        break;
+                    case DumpTypeOption.Heap:
+                        dumpTypeMessage = "dump with heap";
+                        break;
+                    case DumpTypeOption.Mini:
+                        dumpTypeMessage = "dump";
+                        break;
+                    case DumpTypeOption.Triage:
+                        dumpTypeMessage = "triage dump";
+                        break;
+                }
                 cmd.Out.WriteLine($"Writing {dumpTypeMessage} to {output}");
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    // Get the process
-                    Process process = Process.GetProcessById(processId);
+                    if (crashreport)
+                    {
+                        Console.WriteLine("Crash reports not supported on Windows.");
+                        return -1;
+                    }
 
-                    await Windows.CollectDumpAsync(process, output, type);
+                    Windows.CollectDump(processId, output, type);
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    var client = new DiagnosticsClient(processId);
-                    DumpType dumpType = type == DumpTypeOption.Heap ? DumpType.WithHeap : DumpType.Normal;
+                    DiagnosticsClient client = new(processId);
 
+                    DumpType dumpType = DumpType.Normal;
+                    switch (type)
+                    {
+                        case DumpTypeOption.Full:
+                            dumpType = DumpType.Full;
+                            break;
+                        case DumpTypeOption.Heap:
+                            dumpType = DumpType.WithHeap;
+                            break;
+                        case DumpTypeOption.Mini:
+                            dumpType = DumpType.Normal;
+                            break;
+                        case DumpTypeOption.Triage:
+                            dumpType = DumpType.Triage;
+                            break;
+                    }
+
+                    WriteDumpFlags flags = WriteDumpFlags.None;
+                    if (diag)
+                    {
+                        flags |= WriteDumpFlags.LoggingEnabled;
+                    }
+                    if (crashreport)
+                    {
+                        flags |= WriteDumpFlags.CrashReportEnabled;
+                    }
                     // Send the command to the runtime to initiate the core dump
-                    client.WriteDump(dumpType, output, diag);
+                    client.WriteDump(dumpType, output, flags);
 
                     if (string.IsNullOrEmpty(outputOwner) == false)
                         PosixFileExtensions.ChangeFileOwner(output, outputOwner);
@@ -76,14 +127,16 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
             }
             catch (Exception ex) when
-                (ex is FileNotFoundException ||
-                 ex is DirectoryNotFoundException ||
-                 ex is UnauthorizedAccessException ||
-                 ex is PlatformNotSupportedException ||
-                 ex is InvalidDataException ||
-                 ex is InvalidOperationException ||
-                 ex is NotSupportedException ||
-                 ex is DiagnosticsClientException)
+                (ex is FileNotFoundException or
+                    ArgumentException or
+                    DirectoryNotFoundException or
+                    UnauthorizedAccessException or
+                    PlatformNotSupportedException or
+                    UnsupportedCommandException or
+                    InvalidDataException or
+                    InvalidOperationException or
+                    NotSupportedException or
+                    DiagnosticsClientException)
             {
                 return cmd.ExitWithError($"{ex.Message}");
             }

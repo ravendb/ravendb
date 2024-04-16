@@ -27,6 +27,8 @@ namespace Raven.Client.Documents.Operations.Replication
             HubName = hubName;
         }
 
+        public override ReplicationType GetReplicationType() => ReplicationType.PullAsSink;
+
         public override bool IsEqualTo(ReplicationNode other)
         {
             if (other is PullReplicationAsSink sink)
@@ -64,7 +66,6 @@ namespace Raven.Client.Documents.Operations.Replication
             djv[nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths;
             djv[nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths;
             djv[nameof(AccessName)] = AccessName;
-
             return djv;
         }
 
@@ -77,7 +78,6 @@ namespace Raven.Client.Documents.Operations.Replication
             djv[nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths;
             djv[nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths;
             djv[nameof(AccessName)] = AccessName;
-
             return djv;
         }
 

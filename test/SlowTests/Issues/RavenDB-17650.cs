@@ -8,6 +8,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using SlowTests.MailingList;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -54,7 +55,7 @@ namespace SlowTests.Issues
             Assert.True(disableSucceeded.Disabled);
 
             var cts = new CancellationTokenSource();
-            var failMre = new ManualResetEvent(false);
+            var failMre = new AsyncManualResetEvent();
             worker.OnSubscriptionConnectionRetry += e =>
             {
                 if (e is DatabaseDisabledException)
@@ -62,18 +63,18 @@ namespace SlowTests.Issues
                     failMre.Set();
                 }
             };
-            var successMre = new ManualResetEvent(false);
-            var _ = worker.Run(batch =>
+            var successMre = new AsyncManualResetEvent();
+            var _ = worker.Run( batch =>
             {
                 successMre.Set();
             }, cts.Token);
 
             //enable database
-            Assert.True(failMre.WaitOne(TimeSpan.FromSeconds(15)), "Subscription didn't fail as expected.");
+            Assert.True(await failMre.WaitAsync(TimeSpan.FromSeconds(15)), "Subscription didn't fail as expected.");
             var enableSucceeded = store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, false));
             Assert.False(enableSucceeded.Disabled);
             Assert.True(enableSucceeded.Success);
-            Assert.True(successMre.WaitOne(TimeSpan.FromSeconds(15)), "Subscription didn't success as expected.");
+            Assert.True(await successMre.WaitAsync(TimeSpan.FromSeconds(15)), "Subscription didn't success as expected.");
         }
 
         [RavenMultiplatformTheory(RavenTestCategory.Subscriptions, RavenArchitecture.X64)]
@@ -108,7 +109,7 @@ namespace SlowTests.Issues
             var result1 = await DisposeServerAndWaitForFinishOfDisposalAsync(nodes[1]);
 
             var cts = new CancellationTokenSource();
-            var failMre = new ManualResetEvent(false);
+            var failMre = new AsyncManualResetEvent();
             worker.OnSubscriptionConnectionRetry += e =>
             {
                 if (e is AllTopologyNodesDownException)
@@ -116,17 +117,17 @@ namespace SlowTests.Issues
                     failMre.Set();
                 }
             };
-            var successMre = new ManualResetEvent(false);
-            var _ = worker.Run(batch =>
+            var successMre = new AsyncManualResetEvent();
+            var _ = worker.Run( batch =>
             {
                 successMre.Set();
             }, cts.Token);
 
             //revive node
-            Assert.True(failMre.WaitOne(TimeSpan.FromSeconds(15)), "Subscription didn't fail as expected.");
+            Assert.True(await failMre.WaitAsync(TimeSpan.FromSeconds(15)), "Subscription didn't fail as expected.");
             ReviveNode(result0.DataDirectory, result0.Url);
             ReviveNode(result1.DataDirectory, result1.Url);
-            Assert.True(successMre.WaitOne(TimeSpan.FromSeconds(15)), "Subscription didn't success as expected.");
+            Assert.True(await successMre.WaitAsync(TimeSpan.FromSeconds(15)), "Subscription didn't success as expected.");
         }
 
         private void ReviveNode(string nodeDataDirectory, string nodeUrl)

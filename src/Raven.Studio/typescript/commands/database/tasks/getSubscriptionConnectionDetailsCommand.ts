@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getSubscriptionConnectionDetailsCommand extends commandBase {
 
-    private readonly db: database;
+    private readonly db: database | string;
 
     private readonly taskId: number;
 
@@ -12,7 +12,7 @@ class getSubscriptionConnectionDetailsCommand extends commandBase {
 
     private readonly nodeTag?: string;
 
-    constructor(db: database, taskId: number, taskName: string, nodeTag?: string) {
+    constructor(db: database | string, taskId: number, taskName: string, nodeTag?: string) {
         super();
         this.nodeTag = nodeTag;
         this.taskName = taskName;

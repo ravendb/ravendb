@@ -13,11 +13,15 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof DatabaseCustomAnalyzers>;
 
-const db = DatabasesStubs.nonShardedClusterDatabase();
+const databaseName = "databaseName";
 
 function commonInit() {
-    const { accessManager } = mockStore;
+    const { accessManager, databases } = mockStore;
     const { manageServerService, licenseService } = mockServices;
+
+    databases.withActiveDatabase_NonSharded_SingleNode((x) => {
+        x.name = databaseName;
+    });
 
     accessManager.with_securityClearance("ValidUser");
 
@@ -32,7 +36,7 @@ export function NoLimits() {
     const { databasesService } = mockServices;
 
     accessManager.with_databaseAccess({
-        [db.name]: "DatabaseAdmin",
+        [databaseName]: "DatabaseAdmin",
     });
 
     databasesService.withCustomAnalyzers([
@@ -42,7 +46,7 @@ export function NoLimits() {
 
     license.with_License();
 
-    return <DatabaseCustomAnalyzers db={db} />;
+    return <DatabaseCustomAnalyzers />;
 }
 
 export function BelowDatabaseAdmin() {
@@ -52,14 +56,14 @@ export function BelowDatabaseAdmin() {
     const { databasesService } = mockServices;
 
     accessManager.with_databaseAccess({
-        [db.name]: "DatabaseRead",
+        [databaseName]: "DatabaseRead",
     });
 
     databasesService.withCustomAnalyzers();
 
     license.with_License();
 
-    return <DatabaseCustomAnalyzers db={db} />;
+    return <DatabaseCustomAnalyzers />;
 }
 
 export function LicenseLimits() {
@@ -69,7 +73,7 @@ export function LicenseLimits() {
     const { databasesService } = mockServices;
 
     accessManager.with_databaseAccess({
-        [db.name]: "DatabaseAdmin",
+        [databaseName]: "DatabaseAdmin",
     });
 
     databasesService.withCustomAnalyzers();
@@ -77,5 +81,5 @@ export function LicenseLimits() {
     license.with_LicenseLimited();
     license.with_LimitsUsage();
 
-    return <DatabaseCustomAnalyzers db={db} />;
+    return <DatabaseCustomAnalyzers />;
 }

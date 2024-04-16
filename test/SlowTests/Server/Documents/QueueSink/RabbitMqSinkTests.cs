@@ -221,7 +221,7 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
             BrokerType = QueueBrokerType.RabbitMq,
             RabbitMqConnectionSettings = new RabbitMqConnectionSettings
             {
-                ConnectionString = RabbitMqConnectionString.Instance.VerifiedConnectionString.Value
+                ConnectionString = RabbitMqConnectionString.Instance.VerifiedConnectionString
             }
         });
 

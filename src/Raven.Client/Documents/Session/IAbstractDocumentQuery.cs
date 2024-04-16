@@ -30,6 +30,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Get the document conventions used for this query.
         /// </summary>
+        /// <inheritdoc cref="DocumentationUrls.Session.Options.Conventions"/>
         DocumentConventions Conventions { get; }
 
         /// <summary>
@@ -50,15 +51,10 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         IEnumerable<string> GetProjectionFields();
 
-        /// <summary>
-        ///     Order the query results randomly.
-        /// </summary>
+        /// <inheritdoc cref="IDocumentQueryCustomization.RandomOrdering()"/>
         void RandomOrdering();
 
-        /// <summary>
-        ///     Orders the query results randomly using the specified seed.
-        ///     Allows to repeat random query results.
-        /// </summary>
+        /// <inheritdoc cref="IDocumentQueryCustomization.RandomOrdering(string)"/>
         void RandomOrdering(string seed);
 
 #if FEATURE_CUSTOM_SORTING
@@ -71,19 +67,13 @@ namespace Raven.Client.Documents.Session
         void CustomSortUsing(string typeName, bool descending = false);
 #endif
 
-        /// <summary>
-        ///     Includes document using the specified path, loading it into session.
-        /// </summary>
-        /// <param name = "path">Path to loaded document.</param>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(string)"/>
         void Include(string path);
 
-        /// <inheritdoc cref="Include(string)"/>>
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, string}})"/>
         void Include(Expression<Func<T, object>> path);
 
-        /// <summary>
-        ///   Includes the specified documents and/or counters in the query, specified by IncludeBuilder
-        /// </summary>
-        /// <param name="includes"></param>
+        /// <inheritdoc cref="Include(string)"/>
         void Include(IncludeBuilder includes);
 
         /// <summary>
@@ -295,14 +285,24 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         void ContainsAll(string fieldName, IEnumerable<object> values);
 
+        /// <inheritdoc cref="IAsyncGroupByDocumentQuery{T}"/>
+        /// <param name="fieldName">Aggregation field</param>
+        /// <param name="fieldNames">Additional aggregation field</param>
         void GroupBy(string fieldName, params string[] fieldNames);
 
+        /// <inheritdoc cref="IAsyncGroupByDocumentQuery{T}"/>
+        /// <param name="field">A tuple of field name to reduce and configuration how to calculate reduce key. See more at <seealso cref="GroupByMethod"/>.</param>
+        /// <param name="fields">Additional fields.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.GroupByArrayContent"/>
         void GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields);
 
+        /// <inheritdoc cref="IAsyncGroupByDocumentQuery{T}.SelectKey"/>
         void GroupByKey(string fieldName, string projectedName = null);
 
+        /// <inheritdoc cref="IAsyncGroupByDocumentQuery{T}.SelectSum"/>
         void GroupBySum(string fieldName, string projectedName = null);
 
+        /// <inheritdoc cref="IAsyncGroupByDocumentQuery{T}.SelectCount"/>
         void GroupByCount(string projectedName = null);
 
         void WhereTrue();

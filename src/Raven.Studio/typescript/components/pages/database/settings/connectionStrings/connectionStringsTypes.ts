@@ -1,4 +1,3 @@
-import database = require("models/resources/database");
 import ElasticSearchConnectionStringDto = Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString;
 import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.OlapConnectionString;
 import QueueConnectionStringDto = Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString;
@@ -85,7 +84,6 @@ export type ConnectionStringDto = Partial<
 
 export interface EditConnectionStringFormProps {
     initialConnection: Connection;
-    db: database;
     isForNewConnection: boolean;
     onSave: (x: Connection) => void;
 }

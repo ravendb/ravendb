@@ -202,6 +202,20 @@ export class IndexesStubs {
                     SurpassingIndex: "Some/SurpassingIndexName",
                 },
             ],
+            Errors: [
+                {
+                    IndexName: "Companies/StockPrices/TradeVolumeByMonth",
+                    Message: "Cannot merge map/reduce indexes",
+                    StackTrace:
+                        "at System.ThrowHelper.ThrowArgumentException(ExceptionResource resource) at System.Collections.Generic.Dictionary`2.Insert(TKey key, TValue value, Boolean add) at System.Collections.Generic.Dictionary`2.Add(TKey key, TValue value) at ExampleNamespace.ExampleClass.ExampleMethod()",
+                },
+                {
+                    IndexName: "Orders/ByShipment/Location",
+                    Message: "Cannot merge map/reduce indexes",
+                    StackTrace:
+                        "at System.ThrowHelper.ThrowArgumentException(ExceptionResource resource) at System.Collections.Generic.Dictionary`2.Insert(TKey key, TValue value, Boolean add) at System.Collections.Generic.Dictionary`2.Add(TKey key, TValue value) at ExampleNamespace.ExampleClass.ExampleMethod()",
+                },
+            ],
         };
     }
 }

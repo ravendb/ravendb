@@ -1402,6 +1402,12 @@ namespace RachisTests.DatabaseCluster
 
                 await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
 
+                var res = await WaitForValueAsync(() =>
+                {
+                    return re?._nodeSelector?.Topology != null;
+                }, true);
+                Assert.True(res);
+
                 var selectorNodes = re._nodeSelector.Topology.Nodes;
                 Assert.Equal(3, selectorNodes.Count);
                 Assert.True(selectorNodes.All(x => x.ServerRole == ServerNode.Role.Member));
@@ -1617,13 +1623,14 @@ namespace RachisTests.DatabaseCluster
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(deleteResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 var db = store.Database;
 
-                Func<ServerStore, bool> waitFunc = (s) =>
+                Func<ServerStore, Task<bool>> waitFunc = (s) =>
                 {
                     using (s.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
                         var result = s.Cluster.ReadDatabase(ctx, db);
-                        return result.DeletionInProgress.Count == 0 && result.Topology.AllNodes.Count() == 2;
+                        var r = result.DeletionInProgress.Count == 0 && result.Topology.AllNodes.Count() == 2;
+                        return Task.FromResult(r);
                     }
                 };
 

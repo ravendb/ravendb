@@ -189,8 +189,11 @@ namespace StressTests.Issues
                 });
                 await Task.WhenAll(t1, t2);
 
-                Assert.True(EnsureReplicating(storeA, storeB, TimeSpan.FromSeconds(60), out var errMsg), errMsg);
-                Assert.True(EnsureReplicating(storeB, storeA, TimeSpan.FromSeconds(60), out errMsg), errMsg);
+                var r1 = await EnsureReplicatingAsync(storeA, storeB, TimeSpan.FromSeconds(60));
+                var r2 = await EnsureReplicatingAsync(storeB, storeA, TimeSpan.FromSeconds(60));
+
+                Assert.True(r1 == null, r1);
+                Assert.True(r2 == null, r2);
 
                 await EnsureNoReplicationLoop(Server, storeA.Database);
                 await EnsureNoReplicationLoop(Server, storeB.Database);
@@ -636,9 +639,8 @@ namespace StressTests.Issues
             return builder.ToString();
         }
 
-        private bool EnsureReplicating(IDocumentStore src, IDocumentStore dst, TimeSpan timeout, out string errorMsg)
+        private async Task<string> EnsureReplicatingAsync(IDocumentStore src, IDocumentStore dst, TimeSpan timeout)
         {
-            errorMsg = string.Empty;
             var id = "marker/" + Guid.NewGuid();
             string cv;
             using (var s = src.OpenSession())
@@ -650,13 +652,13 @@ namespace StressTests.Issues
                 cv = s.Advanced.GetChangeVectorFor(entity);
             }
 
-            if (WaitForDocumentToReplicate<object>(dst, id, (int)timeout.TotalMilliseconds) != null)
-                return true;
+            if (await WaitForDocumentToReplicateAsync<object>(dst, id, (int)timeout.TotalMilliseconds) != null)
+                return null;
 
             var sb = new StringBuilder()
                 .AppendLine($"Failed to replicate from '{src.Database}' to '{dst.Database}'");
 
-            var database = Databases.GetDocumentDatabaseInstanceFor(src).Result;
+            var database = await Databases.GetDocumentDatabaseInstanceFor(src);
             var etag = ChangeVectorUtils.GetEtagById(cv, database.DbBase64Id);
             Console.WriteLine($"document etag : {etag}");
 
@@ -700,9 +702,7 @@ namespace StressTests.Issues
                 }
             }
 
-            errorMsg = sb.ToString();
-
-            return false;
+            return sb.ToString();
         }
 
         private static string ToString(IncomingReplicationPerformanceStats s) =>

@@ -12,8 +12,10 @@ import { useAsyncCallback } from "react-async-hook";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { yupObjectSchema } from "components/utils/yupUtils";
-import { useAccessManager } from "components/hooks/useAccessManager";
 import ConnectionTestError from "components/common/connectionTests/ConnectionTestError";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 type FormData = ConnectionFormData<KafkaConnection>;
 
@@ -22,7 +24,6 @@ interface KafkaConnectionStringProps extends EditConnectionStringFormProps {
 }
 
 export default function KafkaConnectionString({
-    db,
     initialConnection,
     isForNewConnection,
     onSave,
@@ -41,7 +42,9 @@ export default function KafkaConnectionString({
     const formValues = useWatch({ control });
     const { forCurrentDatabase } = useAppUrls();
     const { tasksService } = useServices();
-    const isSecureServer = useAccessManager().isSecuredServer();
+
+    const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     useEffect(() => {
         if (
@@ -59,7 +62,7 @@ export default function KafkaConnectionString({
         }
 
         return tasksService.testKafkaServerConnection(
-            db,
+            databaseName,
             formValues.bootstrapServers,
             false,
             getConnectionOptionsDto(formValues.connectionOptions)

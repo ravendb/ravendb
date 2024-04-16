@@ -17,7 +17,6 @@ import {
     OngoingTaskStatus,
     useTasksOperations,
 } from "../../shared/shared";
-import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import { SubscriptionTaskDistribution } from "./SubscriptionTaskDistribution";
 import genUtils from "common/generalUtils";
@@ -27,6 +26,8 @@ import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
 import { SubscriptionConnectionsDetailsWithId } from "../OngoingTasksReducer";
+import { useAppSelector } from "components/store";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 type SubscriptionPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSubscriptionInfo> & {
     refreshSubscriptionInfo: () => void;
@@ -216,7 +217,6 @@ function ConnectedClients(props: ConnectedClientsProps) {
 
 export function SubscriptionPanel(props: SubscriptionPanelProps) {
     const {
-        db,
         data,
         connections,
         dropSubscription,
@@ -228,10 +228,10 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
         isTogglingState,
     } = props;
 
-    const { canReadWriteDatabase } = useAccessManager();
+    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.hasDatabaseWriteAccess());
     const { forCurrentDatabase } = useAppUrls();
 
-    const canEdit = canReadWriteDatabase(db) && !data.shared.serverWide;
+    const canEdit = hasDatabaseWriteAccess && !data.shared.serverWide;
     const editUrl = forCurrentDatabase.editSubscription(data.shared.taskId, data.shared.taskName)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);

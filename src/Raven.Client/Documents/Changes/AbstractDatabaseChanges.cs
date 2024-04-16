@@ -96,7 +96,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
         if (requestExecutor.Certificate != null)
             clientWebSocket.Options.ClientCertificates.Add(requestExecutor.Certificate);
 
-#if NETCOREAPP
+#if NETCOREAPP3_1_OR_GREATER
         if (RequestExecutor.HasServerCertificateCustomValidationCallback)
         {
             clientWebSocket.Options.RemoteCertificateValidationCallback += RequestExecutor.OnServerCertificateCustomValidationCallback;

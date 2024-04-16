@@ -47,7 +47,7 @@ namespace SlowTests.Issues
 
                     RavenTestHelper.AssertEqualRespectingNewLines(@"declare function output(x) {
 	var test = 1;
-	return { DateTime : x.DateTime, DateTimeMinValue : new Date(-62135596800000), DateTimeMaxValue : new Date(253402297199999), DateTimeUtcNow : ((date) => new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds()))(new Date()), DateTimeToday : new Date(new Date().setHours(0,0,0,0)) };
+	return { DateTime : x.DateTime, DateTimeMinValue : new Date(-62135596800000), DateTimeMaxValue : new Date(253402300799999), DateTimeUtcNow : ((date) => new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds()))(new Date()), DateTimeToday : new Date(new Date().setHours(0,0,0,0)) };
 }
 from 'Articles' as x select output(x)", query.ToString());
 
@@ -61,8 +61,7 @@ from 'Articles' as x select output(x)", query.ToString());
                     // after, the test will not fail
                     Assert.Equal(DateTime.Today, result[0].DateTimeToday, TimeSpan.FromDays(1));
 
-                    // Only missing 0.9999 ms, but with additional timezone
-                    var epsilon = 1 + Math.Abs((DateTime.UtcNow - DateTime.Now).TotalSeconds); // Lower than 1 ms
+                    var epsilon = 0.001; // Only missing 0.0009999 ms due to the precision of JS Date implementation
                     var val = (DateTime.MaxValue - result[0].DateTimeMaxValue).TotalSeconds;
                     Assert.True(Math.Abs(val) < epsilon, $"Math.Abs({val}) < ({epsilon})");
                 }

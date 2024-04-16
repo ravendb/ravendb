@@ -220,7 +220,16 @@ namespace Raven.Server.Rachis
                 var diff = TimeSpan.FromTicks(ticks - previous);
                 if (diff > TimeSpan.FromSeconds(2))
                 {
-                    Console.WriteLine($"Command {type} at index:{index}, term:{term} took {diff} to commit (result:{result}, exception:{exception}){Environment.NewLine}{cmd}");
+                    BlittableJsonReaderObject blittableResult = null;
+                    if (result != null)
+                    {
+                        blittableResult = context.ReadObject(new DynamicJsonValue
+                        {
+                            ["Result"] = result
+                        }, "set-history-result");
+                    }
+
+                    Console.WriteLine($"Command {type} at index:{index}, term:{term} took {diff} to commit (result:{blittableResult}, exception:{exception}){Environment.NewLine}{cmd}");
                 }
             }
             using (Slice.From(context.Allocator, guid, out var guidSlice))

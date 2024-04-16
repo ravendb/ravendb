@@ -16,6 +16,12 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
 
     public bool LicenseRequired { get; set; }
 
+    public bool MsSqlRequired { get; set; }
+
+    public bool ElasticSearchRequired { get; set; }
+
+    public bool NightlyBuildRequired { get; set; }
+
     public override string Skip
     {
         get
@@ -29,8 +35,17 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
                     return RavenDataAttributeBase.ShardingSkipMessage;
             }
 
-            if (LicenseRequiredFactAttribute.ShouldSkip(LicenseRequired))
+            if (LicenseRequired && LicenseRequiredFactAttribute.ShouldSkip())
                 return LicenseRequiredFactAttribute.SkipMessage;
+
+            if (MsSqlRequired && RequiresMsSqlFactAttribute.ShouldSkip(out skip))
+                return skip;
+
+            if (ElasticSearchRequired && RequiresElasticSearchRetryFactAttribute.ShouldSkip(out skip))
+                return skip;
+
+            if (NightlyBuildRequired && NightlyBuildFactAttribute.ShouldSkip(out skip))
+                return skip;
 
             return null;
         }

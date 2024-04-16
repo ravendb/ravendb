@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
@@ -11,19 +10,5 @@ internal abstract class AbstractAdminIndexHandlerProcessorForStaticPut<TRequestH
     protected AbstractAdminIndexHandlerProcessorForStaticPut([NotNull] TRequestHandler requestHandler)
         : base(requestHandler, validatedAsAdmin: true)
     {
-    }
-
-    protected abstract ValueTask HandleLegacyIndexesAsync();
-
-    public override async ValueTask ExecuteAsync()
-    {
-        var isReplicated = RequestHandler.GetBoolValueQueryString("is-replicated", required: false) ?? false;
-        if (isReplicated)
-        {
-            await HandleLegacyIndexesAsync();
-            return;
-        }
-
-        await base.ExecuteAsync();
     }
 }

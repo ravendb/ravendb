@@ -16,7 +16,7 @@ class deleteDatabaseConfirm extends confirmViewModelBase<deleteDatabaseConfirmRe
         super();
         this.databasesToDelete = databasesToDelete;
 
-        this.encryptedCount = databasesToDelete.filter(x => x.encrypted).length;
+        this.encryptedCount = databasesToDelete.filter(x => x.isEncrypted).length;
     }
 
     goToManageDbGroup() {

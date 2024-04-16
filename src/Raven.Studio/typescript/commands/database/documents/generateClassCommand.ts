@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class generateClassCommand extends commandBase {
     
-    constructor(private db: database, private docId: string, private lang: string) {
+    constructor(private db: database | string, private docId: string, private lang: string) {
         super();
     }
 

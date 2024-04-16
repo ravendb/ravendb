@@ -26,6 +26,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -567,9 +568,9 @@ namespace SlowTests.Cluster
             {
                 Name = "Indych"
             };
-            var mre1 = new ManualResetEvent(false);
-            var mre2 = new ManualResetEvent(false);
-            using (var store = GetDocumentStore(options))
+            var mre1 = new AsyncManualResetEvent();
+            var mre2 = new AsyncManualResetEvent();
+            using (var store = GetDocumentStore())
             {
                 var task1 = Task.Run(async () =>
                 {
@@ -579,7 +580,7 @@ namespace SlowTests.Cluster
                     }))
                     {
                         mre1.Set();
-                        mre2.WaitOne(TimeSpan.FromSeconds(30));
+                        await mre2.WaitAsync();
                         session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
                         await session.StoreAsync(user1, "users/1");
                         await session.SaveChangesAsync();
@@ -594,7 +595,7 @@ namespace SlowTests.Cluster
                     }))
                     {
                         mre2.Set();
-                        mre1.WaitOne(TimeSpan.FromSeconds(30));
+                        await mre1.WaitAsync(TimeSpan.FromSeconds(30));
                         session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/karmel", user3);
                         await session.StoreAsync(user3, "users/3");
                         await session.SaveChangesAsync();
@@ -1281,6 +1282,15 @@ namespace SlowTests.Cluster
                     await session.SaveChangesAsync();
                 }
 
+                await WaitAndAssertForValueAsync(async () =>
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        var u = await session.LoadAsync<User>("users/1");
+                        return u.Name;
+                    }
+                }, "Karmel");
+
                 using (var session = store2.OpenAsyncSession(new SessionOptions
                 {
                     TransactionMode = TransactionMode.ClusterWide
@@ -1292,6 +1302,15 @@ namespace SlowTests.Cluster
                     }, "users/1");
                     await session.SaveChangesAsync();
                 }
+
+                await WaitAndAssertForValueAsync(async () =>
+                {
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var u = await session.LoadAsync<User>("users/1");
+                        return u.Name;
+                    }
+                }, "Grisha");
 
                 await Task.WhenAll(SetupReplicationAsync(store1, store2), SetupReplicationAsync(store2, store1));
 

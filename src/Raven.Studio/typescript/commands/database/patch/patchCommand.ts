@@ -9,13 +9,14 @@ interface patchCommandOptions {
     staleTimeout?: string;
     maxOpsPerSecond?: number;
     disableAutoIndexCreation?: boolean;
+    ignoreMaxStepsForScript?: boolean;
 }
 
 class patchCommand extends commandBase {
 
     private static readonly missingUpdateClause = "Update operations must end with UPDATE clause";
     
-    constructor(private queryStr: string, private db: database, private options: patchCommandOptions = null) {
+    constructor(private queryStr: string, private db: database | string, private options: patchCommandOptions = null) {
         super();
                 
         this.options = this.options || {
@@ -31,7 +32,8 @@ class patchCommand extends commandBase {
             staleTimeout: this.options.staleTimeout,
             maxOpsPerSec: this.options.maxOpsPerSecond,
             id: this.options.test ? this.options.documentId : undefined,
-            disableAutoIndexCreation: this.options.disableAutoIndexCreation
+            disableAutoIndexCreation: this.options.disableAutoIndexCreation,
+            ignoreMaxStepsForScript: this.options.ignoreMaxStepsForScript ? true : undefined
         };
 
         const payload = {

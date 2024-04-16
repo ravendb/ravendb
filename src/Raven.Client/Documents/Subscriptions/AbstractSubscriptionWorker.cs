@@ -4,14 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1 || NETCOREAPP3_1)
-#define TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
-#endif
-
-#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
-#define SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
-#endif
-
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -239,7 +231,7 @@ namespace Raven.Client.Documents.Subscriptions
                 var result = await TcpUtils.ConnectSecuredTcpSocket(
                     tcpInfo,
                     requestExecutor.Certificate,
-#if SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
+#if !NETSTANDARD
                     null,
 #endif
                     TcpConnectionHeaderMessage.OperationTypes.Subscription,
@@ -247,7 +239,7 @@ namespace Raven.Client.Documents.Subscriptions
                     context,
                     _options?.ConnectionStreamTimeout,
                     null
-#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+#if !NETSTANDARD
                     ,
                     token
 #endif
@@ -267,7 +259,7 @@ namespace Raven.Client.Documents.Subscriptions
                         $"{_options.SubscriptionName}: TCP negotiation resulted with an invalid protocol version:{_supportedFeatures.ProtocolVersion}");
                 }
 
-#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
+#if !NETSTANDARD
                 if (_supportedFeatures.DataCompression)
                     _stream = new ReadWriteCompressedStream(_stream);
 #endif

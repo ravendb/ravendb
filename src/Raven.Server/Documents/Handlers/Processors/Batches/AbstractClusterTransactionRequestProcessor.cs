@@ -65,13 +65,15 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
             };
 
         ClusterTransactionCommand clusterTransactionCommand = CreateClusterTransactionCommand(parsedCommands, options, raftRequestId);
+        clusterTransactionCommand.Timeout = Timeout.InfiniteTimeSpan; // we rely on the http token to cancel the command
+
         DynamicJsonArray array;
         long index;
 
         using (RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(id: options.TaskId, out var tcs))
         await using (token.Register(() => tcs.TrySetCanceled()))
         {
-            (index, object result) = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
+            (index, object result) = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand, token);
             array = await GetClusterTransactionDatabaseCommandsResults(result, clusterTransactionCommand.DatabaseCommandsCount, index, options, onDatabaseCompletionTask: tcs.Task, token);
         }
 
@@ -108,7 +110,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
         // leader isn't updated (thats why the result is empty),
         // so we'll try to take the result from the local history log.
-        await RequestHandler.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, token);
+        await RequestHandler.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, Timeout.InfiniteTimeSpan, token);
         using (RequestHandler.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
         using (ctx.OpenReadTransaction())
         {
@@ -117,7 +119,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         }
 
         throw new InvalidOperationException(
-            "Cluster-transaction was succeeded, but Leader is outdated and its results are inaccessible (the command has been already deleted from the history log).  We recommend you to update all nodes in the cluster to the last stable version.");
+            "We are not able to verify that the cluster-wide transaction was succeeded. please consider to upgrade your leader to the latest stable version.");
     }
 
     public abstract Task WaitForDatabaseCompletion(Task<HashSet<string>> onDatabaseCompletionTask, long index, ClusterTransactionOptions options, CancellationToken token);

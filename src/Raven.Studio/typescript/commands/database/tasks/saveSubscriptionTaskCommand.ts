@@ -3,9 +3,15 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class saveSubscriptionTaskCommand extends commandBase {
+    private readonly databaseName: string;
+    private readonly taskId: number;
+    private readonly payload: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions;
 
-    constructor(private db: database, private payload: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions, private taskId?: number) {
+    constructor( db: database | string, payload: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions,  taskId?: number) {
         super();
+        this.databaseName = (_.isString(db) ? db : db.name);
+        this.taskId = taskId;
+        this.payload = payload;
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult> {
@@ -14,7 +20,7 @@ class saveSubscriptionTaskCommand extends commandBase {
                 this.reportError("Failed to save subscription task", response.responseText, response.statusText); 
             })
             .done(() => {
-                this.reportSuccess(`Saved subscription task ${this.payload.Name} from database ${this.db.name}`);
+                this.reportSuccess(`Saved subscription task ${this.payload.Name} from database ${this.databaseName}`);
             });
     }
 
@@ -22,17 +28,17 @@ class saveSubscriptionTaskCommand extends commandBase {
         let args: any;
 
         if (this.taskId) {
-            args = { name: this.db.name, id: this.taskId };
+            args = { name: this.databaseName, id: this.taskId };
         } else {
             // New task
-            args = { name: this.db.name };
+            args = { name: this.databaseName };
         }
         
         const url = endpoints.databases.subscriptions.subscriptions + this.urlEncodeArgs(args);
 
         const saveTask = $.Deferred<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult>();
 
-        this.put(url, JSON.stringify(this.payload), this.db)
+        this.put(url, JSON.stringify(this.payload), this.databaseName)
             .done((results: Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult) => { 
                 saveTask.resolve(results);
             })

@@ -2,7 +2,7 @@
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databasesSliceInternal } from "components/common/shell/databasesSlice";
 
-const selectActiveDatabase = (store: RootState) => store.databases.activeDatabase;
+const selectActiveDatabaseName = (store: RootState) => store.databases.activeDatabaseName;
 
 const { databasesSelectors } = databasesSliceInternal;
 
@@ -16,7 +16,7 @@ function selectDatabaseByName(name: string) {
             const rootDatabaseName = DatabaseUtils.shardGroupKey(name);
             const rootDatabase = databasesSelectors.selectById(store.databases.databases, rootDatabaseName);
 
-            if (!rootDatabase || !rootDatabase.sharded) {
+            if (!rootDatabase || !rootDatabase.isSharded) {
                 return null;
             }
 
@@ -26,7 +26,13 @@ function selectDatabaseByName(name: string) {
     };
 }
 
+function selectActiveDatabase(store: RootState) {
+    const activeDatabaseName = selectActiveDatabaseName(store);
+    return selectDatabaseByName(activeDatabaseName)(store);
+}
+
 export const databaseSelectors = {
+    activeDatabaseName: selectActiveDatabaseName,
     activeDatabase: selectActiveDatabase,
     allDatabases: selectAllDatabases,
     allDatabasesCount: selectAllDatabasesCount,

@@ -3,7 +3,6 @@ import { Meta, ComponentStory } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import ClientDatabaseConfiguration from "./ClientDatabaseConfiguration";
 import { mockServices } from "test/mocks/services/MockServices";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
@@ -13,9 +12,10 @@ export default {
 } satisfies Meta<typeof ClientDatabaseConfiguration>;
 
 function commonInit() {
-    const { accessManager, license } = mockStore;
+    const { accessManager, license, databases } = mockStore;
     const { manageServerService } = mockServices;
 
+    databases.withActiveDatabase_NonSharded_SingleNode();
     accessManager.with_securityClearance("ClusterAdmin");
     license.with_License();
     manageServerService.withGetDatabaseClientConfiguration();
@@ -27,7 +27,7 @@ export const WithGlobalConfiguration: ComponentStory<typeof ClientDatabaseConfig
     const { manageServerService } = mockServices;
     manageServerService.withGetGlobalClientConfiguration();
 
-    return <ClientDatabaseConfiguration db={DatabasesStubs.nonShardedSingleNodeDatabase()} />;
+    return <ClientDatabaseConfiguration />;
 };
 
 export const WithoutGlobalConfiguration: ComponentStory<typeof ClientDatabaseConfiguration> = () => {
@@ -36,7 +36,7 @@ export const WithoutGlobalConfiguration: ComponentStory<typeof ClientDatabaseCon
     const { manageServerService } = mockServices;
     manageServerService.withThrowingGetGlobalClientConfiguration();
 
-    return <ClientDatabaseConfiguration db={DatabasesStubs.nonShardedSingleNodeDatabase()} />;
+    return <ClientDatabaseConfiguration />;
 };
 
 export const LicenseRestricted: ComponentStory<typeof ClientDatabaseConfiguration> = () => {
@@ -48,5 +48,5 @@ export const LicenseRestricted: ComponentStory<typeof ClientDatabaseConfiguratio
     manageServerService.withGetGlobalClientConfiguration();
     license.with_LicenseLimited({ HasClientConfiguration: false });
 
-    return <ClientDatabaseConfiguration db={DatabasesStubs.nonShardedSingleNodeDatabase()} />;
+    return <ClientDatabaseConfiguration />;
 };

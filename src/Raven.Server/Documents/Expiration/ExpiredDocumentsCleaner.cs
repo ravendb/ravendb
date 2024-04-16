@@ -31,6 +31,8 @@ namespace Raven.Server.Documents.Expiration
             ? 4096
             : 1024;
 
+        internal static int DefaultMaxItemsToProcessInSingleRun = int.MaxValue;
+
         private readonly DocumentDatabase _database;
         private readonly TimeSpan _refreshPeriod;
         private readonly TimeSpan _expirationPeriod;
@@ -123,15 +125,15 @@ namespace Raven.Server.Documents.Expiration
 
         internal Task CleanupExpiredDocs(int? batchSize = null)
         {
-            return CleanupDocs(batchSize ?? BatchSize, forExpiration: true);
+            return CleanupDocs(batchSize ?? BatchSize, ExpirationConfiguration.MaxItemsToProcess ?? DefaultMaxItemsToProcessInSingleRun, forExpiration: true);
         }
 
         internal Task RefreshDocs(int? batchSize = null)
         {
-            return CleanupDocs(batchSize ?? BatchSize, forExpiration: false);
+            return CleanupDocs(batchSize ?? BatchSize, RefreshConfiguration.MaxItemsToProcess ?? DefaultMaxItemsToProcessInSingleRun, forExpiration: false);
         }
         
-        private async Task CleanupDocs(int batchSize, bool forExpiration)
+        private async Task CleanupDocs(int batchSize, long maxItemsToProcess, bool forExpiration)
         {
             var currentTime = _database.Time.GetUtcNow();
             
@@ -146,21 +148,22 @@ namespace Raven.Server.Documents.Expiration
                     nodeTag = _database.ServerStore.NodeTag;
                 }
 
+                var totalCount = 0;
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    while (true)
+                    while (totalCount < maxItemsToProcess)
                     {
                         context.Reset();
                         context.Renew();
 
                         using (context.OpenReadTransaction())
                         {
-                            var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize);
+                            var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize, maxItemsToProcess);
 
                             var expired =
                                 forExpiration ?
-                                    _database.DocumentsStorage.ExpirationStorage.GetDocuments(options, out var duration, CancellationToken) :
-                                    _database.DocumentsStorage.RefreshStorage.GetDocuments(options, out duration, CancellationToken);
+                                    _database.DocumentsStorage.ExpirationStorage.GetDocuments(options, ref totalCount, out var duration, CancellationToken) :
+                                    _database.DocumentsStorage.RefreshStorage.GetDocuments(options, ref totalCount, out duration, CancellationToken);
 
                             if (expired == null || expired.Count == 0)
                                 return;

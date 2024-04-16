@@ -7,12 +7,12 @@ class indexStalenessReasons extends dialogViewModelBase {
 
     view = require("views/database/indexes/indexStalenessReasons.html");
     
-    private db: database;
+    private db: database | string;
     indexName: string;
     reasons = ko.observable<indexStalenessReasonsResponse>();
     location: databaseLocationSpecifier;
     
-    constructor(db: database, indexName: string, location?: databaseLocationSpecifier) {
+    constructor(db: database | string, indexName: string, location?: databaseLocationSpecifier) {
         super();
         this.db = db;
         this.indexName = indexName;

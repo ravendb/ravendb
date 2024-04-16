@@ -1,23 +1,25 @@
 ﻿import useInterval from "hooks/useInterval";
 import { useServices } from "hooks/useServices";
-import database from "models/resources/database";
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import useTimeout from "hooks/useTimeout";
+import DatabaseUtils from "components/utils/DatabaseUtils";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
 
 interface OngoingTaskProgressProviderProps {
-    db: database;
     onEtlProgress: (progress: EtlTaskProgress[], location: databaseLocationSpecifier) => void;
 }
 
 export function OngoingTaskProgressProvider(props: OngoingTaskProgressProviderProps): JSX.Element {
-    const { db, onEtlProgress } = props;
+    const { onEtlProgress } = props;
     const { tasksService } = useServices();
 
-    const locations = db.getLocations();
+    const db = useAppSelector(databaseSelectors.activeDatabase);
+    const locations = DatabaseUtils.getLocations(db);
 
     const loadProgress = () => {
         locations.forEach(async (location) => {
-            const progressResponse = await tasksService.getProgress(db, location);
+            const progressResponse = await tasksService.getProgress(db.name, location);
             onEtlProgress(progressResponse.Results, location);
         });
     };

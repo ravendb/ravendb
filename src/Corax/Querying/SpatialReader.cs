@@ -8,7 +8,7 @@ using Voron.Impl;
 
 namespace Corax.Querying;
 
-public struct SpatialReader : IDisposable
+public readonly struct SpatialReader
 {
     private readonly FixedSizeTree _fst;
 
@@ -32,10 +32,5 @@ public struct SpatialReader : IDisposable
         coords = (Unsafe.ReadUnaligned<double>(coordPtr.Content.Ptr),
             Unsafe.ReadUnaligned<double>(coordPtr.Content.Ptr + sizeof(double)));
         return true;
-    }
-
-    public void Dispose()
-    {
-        _fst.Dispose();
     }
 }

@@ -32,10 +32,10 @@ interface DefaultConnectionStringsProps {
 export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> = {
     name: "Connection Strings",
     render: (props: DefaultConnectionStringsProps) => {
-        const { accessManager, license } = mockStore;
+        const { accessManager, license, databases } = mockStore;
         const { tasksService } = mockServices;
 
-        accessManager.with_secureServer(props.isSecuredServer);
+        accessManager.with_isServerSecure(props.isSecuredServer);
 
         tasksService.withLocalFolderPathOptions();
         tasksService.withBackupLocation();
@@ -53,6 +53,8 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
             props.isEmpty ? DatabasesStubs.emptyConnectionStrings() : DatabasesStubs.connectionStrings()
         );
 
+        const db = databases.withActiveDatabase_NonSharded_SingleNode();
+
         accessManager.with_securityClearance("ValidUser");
         accessManager.with_databaseAccess({
             [db.name]: props.databaseAccess,
@@ -67,7 +69,7 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
             HasQueueEtl: props.hasQueueEtl,
         });
 
-        return <ConnectionStrings db={db} />;
+        return <ConnectionStrings />;
     },
     args: {
         isEmpty: false,
@@ -82,8 +84,6 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
         hasQueueEtl: true,
     },
 };
-
-const db = DatabasesStubs.nonShardedClusterDatabase();
 
 function mockTestResults(isSuccess: boolean) {
     const { tasksService, manageServerService } = mockServices;

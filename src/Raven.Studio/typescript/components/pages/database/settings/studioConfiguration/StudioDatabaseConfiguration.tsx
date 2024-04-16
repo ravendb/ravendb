@@ -17,7 +17,6 @@ import { LoadError } from "components/common/LoadError";
 import { studioEnvironmentOptions } from "components/common/studioConfiguration/StudioConfigurationUtils";
 import { useServices } from "components/hooks/useServices";
 import appUrl from "common/appUrl";
-import { NonShardedViewProps } from "components/models/common";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
@@ -27,12 +26,14 @@ import FeatureAvailabilitySummaryWrapper, {
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
-export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps) {
+export default function StudioDatabaseConfiguration() {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
 
     const asyncDatabaseSettings = useAsyncCallback<StudioDatabaseConfigurationFormData>(async () => {
-        const settings = await databasesService.getDatabaseStudioConfiguration(db);
+        const settings = await databasesService.getDatabaseStudioConfiguration(databaseName);
 
         return {
             Environment: settings ? settings.Environment : "None",
@@ -66,7 +67,7 @@ export default function StudioDatabaseConfiguration({ db }: NonShardedViewProps)
     const onSave: SubmitHandler<StudioDatabaseConfigurationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
             reportEvent("studio-configuration-database", "save");
-            databasesService.saveDatabaseStudioConfiguration(formData, db);
+            databasesService.saveDatabaseStudioConfiguration(formData, databaseName);
             reset(formData);
         });
     };

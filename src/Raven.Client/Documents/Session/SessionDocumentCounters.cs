@@ -9,6 +9,7 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Session
 {
+    /// <inheritdoc />
     public sealed class SessionDocumentCounters : ISessionDocumentCounters
     {
         private readonly AsyncSessionDocumentCounters _asyncSessionCounters;

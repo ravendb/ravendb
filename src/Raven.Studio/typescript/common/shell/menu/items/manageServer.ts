@@ -126,14 +126,6 @@ function getManageServerMenuItem() {
             dynamicHash: appUrl.forServerWideCustomSorters,
             requiredAccess: "Operator"
         }),
-        new leafMenuItem({
-            route: 'admin/settings/editServerWideCustomSorter',
-            moduleId: require("viewmodels/manage/editServerWideCustomSorter"),
-            title: "Edit Server-Wide Custom Sorter",
-            nav: false,
-            dynamicHash: appUrl.forEditServerWideCustomSorter,
-            itemRouteToHighlight: 'admin/settings/serverWideCustomSorters'
-        }),
         new separatorMenuItem(),
         new separatorMenuItem('Debug'),
         new leafMenuItem({

@@ -6,22 +6,22 @@ import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppSelector } from "components/store";
-import database from "models/resources/database";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 interface OngoingTaskAddModalProps {
-    db: database;
     subscriptionsDatabaseCount: number;
     toggle: () => void;
 }
 
 export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
-    const { toggle, db, subscriptionsDatabaseCount } = props;
+    const { toggle, subscriptionsDatabaseCount } = props;
 
-    const isSharded = db.isSharded();
+    const db = useAppSelector(databaseSelectors.activeDatabase);
+    const isSharded = db.isSharded;
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
     const hasExternalReplication = useAppSelector(licenseSelectors.statusValue("HasExternalReplication"));
@@ -102,7 +102,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                 <Row className="gy-sm">
                     <TaskItem
                         title="Create new External Replication task"
-                        href={appUrl.forEditExternalReplication(db)}
+                        href={appUrl.forEditExternalReplication(db.name)}
                         className="external-replication"
                         target="ExternalReplication"
                     >
@@ -113,7 +113,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
 
                     <TaskItem
                         title="Create new Replication Hub task"
-                        href={appUrl.forEditReplicationHub(db)}
+                        href={appUrl.forEditReplicationHub(db.name)}
                         className="pull-replication-hub"
                         target="ReplicationHub"
                         disabled={isSharded}
@@ -125,7 +125,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                     </TaskItem>
                     <TaskItem
                         title="Create new Replication Sink task"
-                        href={appUrl.forEditReplicationSink(db)}
+                        href={appUrl.forEditReplicationSink(db.name)}
                         className="pull-replication-sink"
                         target="ReplicationSink"
                         disabled={isSharded}
@@ -140,7 +140,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                 <Row className="gy-sm">
                     <TaskItem
                         title="Create new RavenDB ETL task"
-                        href={appUrl.forEditRavenEtl(db)}
+                        href={appUrl.forEditRavenEtl(db.name)}
                         className="ravendb-etl"
                         target="RavenETL"
                     >
@@ -151,7 +151,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
 
                     <TaskItem
                         title="Create new Elasticsearch ETL task"
-                        href={appUrl.forEditElasticSearchEtl(db)}
+                        href={appUrl.forEditElasticSearchEtl(db.name)}
                         className="elastic-etl"
                         target="ElasticSearchETL"
                     >
@@ -162,7 +162,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
 
                     <TaskItem
                         title="Create new Kafka ETL task"
-                        href={appUrl.forEditKafkaEtl(db)}
+                        href={appUrl.forEditKafkaEtl(db.name)}
                         className="kafka-etl"
                         target="KafkaETL"
                         disabled={isSharded}
@@ -175,7 +175,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
 
                     <TaskItem
                         title="Create new SQL ETL task"
-                        href={appUrl.forEditSqlEtl(db)}
+                        href={appUrl.forEditSqlEtl(db.name)}
                         className="sql-etl"
                         target="SqlETL"
                     >
@@ -186,7 +186,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
 
                     <TaskItem
                         title="Create new OLAP ETL task"
-                        href={appUrl.forEditOlapEtl(db)}
+                        href={appUrl.forEditOlapEtl(db.name)}
                         className="olap-etl"
                         target="OlapETL"
                     >
@@ -197,7 +197,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
 
                     <TaskItem
                         title="Create new RabbitMQ ETL task"
-                        href={appUrl.forEditRabbitMqEtl(db)}
+                        href={appUrl.forEditRabbitMqEtl(db.name)}
                         className="rabbitmq-etl"
                         target="RabbitMqETL"
                         disabled={isSharded}
@@ -212,7 +212,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                 <Row className="gy-sm">
                     <TaskItem
                         title="Create new Kafka Sink task"
-                        href={appUrl.forEditKafkaSink(db)}
+                        href={appUrl.forEditKafkaSink(db.name)}
                         className="kafka-sink"
                         target="KafkaSink"
                         disabled={isSharded}
@@ -225,7 +225,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
 
                     <TaskItem
                         title="Create new RabbitMQ Sink task"
-                        href={appUrl.forEditRabbitMqSink(db)}
+                        href={appUrl.forEditRabbitMqSink(db.name)}
                         className="rabbitmq-sink"
                         target="RabbitMqSink"
                         disabled={isSharded}
@@ -240,7 +240,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                 <Row className="gy-sm">
                     <TaskItem
                         title="Create new Backup task"
-                        href={appUrl.forEditPeriodicBackupTask(db, "OngoingTasks")}
+                        href={appUrl.forEditPeriodicBackupTask(db.name, "OngoingTasks")}
                         className="backup"
                         target="PeriodicBackup"
                     >
@@ -251,7 +251,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
 
                     <TaskItem
                         title="Create new Subscription task"
-                        href={appUrl.forEditSubscription(db)}
+                        href={appUrl.forEditSubscription(db.name)}
                         className="subscription"
                         target="Subscription"
                         disabled={isSubscriptionDisabled}

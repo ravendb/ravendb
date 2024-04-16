@@ -720,6 +720,8 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                     // instead of : SetLastReplicatedEtagFrom -> _incoming.ConnectionInfo.SourceDatabaseId, _lastEtag , we will store in context and write once right before commit (one time instead of repeating on all docs in the same Tx)
                     SaveSourceEtag(context);
+                    RecordDatabaseChangeVector(context);
+
                     return operationsCount;
                 }
                 finally
@@ -737,6 +739,45 @@ namespace Raven.Server.Documents.Replication.Incoming
             {
                 context.LastReplicationEtagFrom ??= new Dictionary<string, long>();
                 context.LastReplicationEtagFrom[_replicationInfo.SourceDatabaseId] = _lastEtag;
+            }
+
+            private void RecordDatabaseChangeVector(DocumentsOperationContext context)
+            {
+                if (context.DocumentDatabase.ReplicationLoader.IncomingHandlers.Any() == false)
+                {
+                    if (_replicationInfo.Logger.IsInfoEnabled)
+                        _replicationInfo.Logger.Info("Failed to retrieve incoming replication handler instance.");
+
+                    return;
+                }
+
+                IAbstractIncomingReplicationHandler incomingHandler;
+                try
+                {
+
+                    incomingHandler = context.DocumentDatabase.ReplicationLoader.IncomingHandlers.Single(i =>
+                        i.ConnectionInfo.SourceDatabaseId == _replicationInfo.SourceDatabaseId);
+                }
+                catch (InvalidOperationException e)
+                {
+                    if (_replicationInfo.Logger.IsInfoEnabled)
+                        _replicationInfo.Logger.Info(
+                            $"Failed to retrieve a unique incoming replication handler instance for SourceDatabaseId: {_replicationInfo.SourceDatabaseId}.", e);
+
+                    throw;
+                }
+
+                var stats = incomingHandler.GetLatestReplicationPerformance();
+                var scope = (IncomingReplicationStatsScope)stats.StatsScope;
+
+                // If the scope is null, it indicates that there are no replication statistics available, and we opt not to create a new one here
+                if (scope == null)
+                    return;
+
+                using (var networkStats = scope.For(ReplicationOperation.Incoming.Network))
+                {
+                    networkStats.RecordDatabaseChangeVector(context.LastDatabaseChangeVector);
+                }
             }
 
             private static void UpdateTimeSeriesNameIfNeeded(DocumentsOperationContext context, LazyStringValue docId, TimeSeriesReplicationItem segment, TimeSeriesStorage tss)

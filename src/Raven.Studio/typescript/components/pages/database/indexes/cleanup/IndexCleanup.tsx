@@ -6,7 +6,6 @@ import { Checkbox } from "components/common/Checkbox";
 import moment from "moment";
 import { EmptySet } from "components/common/EmptySet";
 import classNames from "classnames";
-import database from "models/resources/database";
 import useIndexCleanup from "./useIndexCleanup";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { LoadError } from "components/common/LoadError";
@@ -20,20 +19,28 @@ import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import MergeSuggestionsErrorsCarouselCard from "components/pages/database/indexes/cleanup/carouselItems/MergeSuggestionsErrorsCarouselCard";
+import { todo } from "common/developmentHelper";
 
 const mergeIndexesImg = require("Content/img/pages/indexCleanup/merge-indexes.svg");
 const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
 const removeUnusedImg = require("Content/img/pages/indexCleanup/remove-unused.svg");
 const unmergableIndexesImg = require("Content/img/pages/indexCleanup/unmergable-indexes.svg");
+const indexErrorsImg = require("Content/css/fonts/icomoon/index-errors.svg");
 
-interface IndexCleanupProps {
-    db: database;
-}
+todo("Styling", "Kwiato", "Add svg img to error section");
+todo(
+    "Other",
+    "Damian",
+    "Split nav and carouser items to separate components (like MergeSuggestionsErrorsCarouselCard)"
+);
+todo("Other", "Damian", "Move info hub to separate component");
 
-export function IndexCleanup(props: IndexCleanupProps) {
-    const { db } = props;
+export function IndexCleanup() {
+    const { asyncFetchStats, carousel, mergable, surpassing, unused, unmergable, errors } = useIndexCleanup();
 
-    const { asyncFetchStats, carousel, mergable, surpassing, unused, unmergable } = useIndexCleanup(db);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { appUrl } = useAppUrls();
 
     const hasIndexCleanup = useAppSelector(licenseSelectors.statusValue("HasIndexCleanup"));
@@ -171,6 +178,28 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                         </h4>
                                     </Card>
                                 </NavItem>
+                                {errors.data.length > 0 && (
+                                    <NavItem>
+                                        <Card
+                                            className={classNames("p-3", "card-tab", {
+                                                active: carousel.activeTab === 4,
+                                            })}
+                                            onClick={() => carousel.setActiveTab(4)}
+                                        >
+                                            <img
+                                                src={indexErrorsImg}
+                                                alt=""
+                                                style={{
+                                                    aspectRatio: "106/87", // ratio copied from other svg images
+                                                }}
+                                            />
+                                            <Badge className="rounded-pill fs-5" color="primary">
+                                                {hasIndexCleanup ? errors.data.length : "?"}
+                                            </Badge>
+                                            <h4 className="text-center">Merge Suggestions Error</h4>
+                                        </Card>
+                                    </NavItem>
+                                )}
                             </Nav>
 
                             <Carousel
@@ -261,7 +290,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                                                                         <a
                                                                                                             href={appUrl.forEditIndex(
                                                                                                                 index.name,
-                                                                                                                db
+                                                                                                                databaseName
                                                                                                             )}
                                                                                                         >
                                                                                                             {index.name}{" "}
@@ -396,7 +425,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                                                     <a
                                                                                         href={appUrl.forEditIndex(
                                                                                             index.name,
-                                                                                            db
+                                                                                            databaseName
                                                                                         )}
                                                                                     >
                                                                                         {index.name}{" "}
@@ -415,7 +444,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                                                     <a
                                                                                         href={appUrl.forEditIndex(
                                                                                             index.containingIndexName,
-                                                                                            db
+                                                                                            databaseName
                                                                                         )}
                                                                                     >
                                                                                         {index.containingIndexName}{" "}
@@ -535,7 +564,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                                                     <a
                                                                                         href={appUrl.forEditIndex(
                                                                                             index.name,
-                                                                                            db
+                                                                                            databaseName
                                                                                         )}
                                                                                     >
                                                                                         {index.name}{" "}
@@ -608,7 +637,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                                                                     <a
                                                                                         href={appUrl.forEditIndex(
                                                                                             index.name,
-                                                                                            db
+                                                                                            databaseName
                                                                                         )}
                                                                                     >
                                                                                         {index.name}
@@ -633,6 +662,13 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                         </Card>
                                     </div>
                                 </CarouselItem>
+                                {errors.data.length > 0 && (
+                                    <CarouselItem key="carousel-4" onEntering={() => carousel.setHeight(4)}>
+                                        <div ref={(el) => (carousel.carouselRefs.current[4] = el)}>
+                                            <MergeSuggestionsErrorsCarouselCard errors={errors.data} />
+                                        </div>
+                                    </CarouselItem>
+                                )}
                             </Carousel>
                         </div>
                     </Col>

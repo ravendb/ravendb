@@ -21,29 +21,20 @@ namespace Raven.Client.Documents.Session.Loaders
             _session = session;
         }
 
-        /// <summary>
-        /// Includes the specified path.
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc />
         public ILazyLoaderWithInclude<T> Include(string path)
         {
             _includes.Add(path);
             return this;
         }
 
-        /// <summary>
-        /// Includes the specified path.
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc />
         public ILazyLoaderWithInclude<T> Include(Expression<Func<T, string>> path)
         {
             return Include(path.ToPropertyPath(_session.Conventions));
         }
 
-        /// <summary>
-        /// Includes the specified path.
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc />
         public ILazyLoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path)
         {
             return Include(path.ToPropertyPath(_session.Conventions));
@@ -123,30 +114,20 @@ namespace Raven.Client.Documents.Session.Loaders
             _session = session;
         }
 
-        /// <summary>
-        /// Includes the specified path.
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc />
         public IAsyncLazyLoaderWithInclude<T> Include(string path)
         {
             _includes.Add(path);
             return this;
         }
 
-        /// <summary>
-        /// Includes the specified path.
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc />
         public IAsyncLazyLoaderWithInclude<T> Include(Expression<Func<T, string>> path)
         {
             return Include(path.ToPropertyPath(_session.Conventions));
         }
 
-
-        /// <summary>
-        /// Includes the specified path.
-        /// </summary>
-        /// <param name="path">The path.</param>
+        /// <inheritdoc />
         public IAsyncLazyLoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path)
         {
             return Include(path.ToPropertyPath(_session.Conventions));

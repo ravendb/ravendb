@@ -301,7 +301,7 @@ export const selectTopLevelState = (name: string) =>
         (store: RootState): locationAwareLoadableData<TopLevelDatabaseInfo>[] => {
             const db = databaseSelectors.databaseByName(name)(store);
 
-            if (db.sharded) {
+            if (db.isSharded) {
                 const state = selectOrchestratorState(db.name)(store);
 
                 return state.map((orchestratorState) => {

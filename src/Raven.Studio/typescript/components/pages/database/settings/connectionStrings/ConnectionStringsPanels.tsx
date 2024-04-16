@@ -1,7 +1,6 @@
 import { HrHeader } from "components/common/HrHeader";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { useAppSelector } from "components/store";
-import database from "models/resources/database";
 import React from "react";
 import { useDispatch } from "react-redux";
 import { Button } from "reactstrap";
@@ -14,13 +13,11 @@ import IconName from "../../../../../../typings/server/icons";
 interface ConnectionStringsPanelsProps {
     connections: Connection[];
     connectionsType: Connection["type"];
-    db: database;
 }
 
-export default function ConnectionStringsPanels({ connections, connectionsType, db }: ConnectionStringsPanelsProps) {
-    const isDatabaseAdmin =
-        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
+export default function ConnectionStringsPanels({ connections, connectionsType }: ConnectionStringsPanelsProps) {
     const dispatch = useDispatch();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
 
     if (connections.length === 0) {
         return null;
@@ -30,7 +27,7 @@ export default function ConnectionStringsPanels({ connections, connectionsType, 
         <div className="mb-4">
             <HrHeader
                 right={
-                    isDatabaseAdmin && (
+                    hasDatabaseAdminAccess && (
                         <Button
                             color="info"
                             size="sm"
@@ -50,7 +47,7 @@ export default function ConnectionStringsPanels({ connections, connectionsType, 
                 {getTypeLabel(connectionsType)}
             </HrHeader>
             {connections.map((connection) => (
-                <ConnectionStringsPanel key={connection.type + "_" + connection.name} db={db} connection={connection} />
+                <ConnectionStringsPanel key={connection.type + "_" + connection.name} connection={connection} />
             ))}
         </div>
     );

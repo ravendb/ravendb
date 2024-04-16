@@ -1,9 +1,9 @@
 ﻿import { useState } from "react";
 import { NodeInfo } from "components/models/databases";
-import { useAccessManager } from "hooks/useAccessManager";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useSortableModeCounter } from "./useSortableModeCounter";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 export function useGroup(nodes: NodeInfo[], initialFixOrder: boolean) {
     const [fixOrder, setFixOrder] = useState(initialFixOrder);
@@ -12,8 +12,8 @@ export function useGroup(nodes: NodeInfo[], initialFixOrder: boolean) {
     const clusterNodeTags = useAppSelector(clusterSelectors.allNodeTags);
     const { setCounter: setSortableModeCounter } = useSortableModeCounter();
 
-    const { isOperatorOrAbove } = useAccessManager();
-    const canSort = nodes.length === 1 || !isOperatorOrAbove();
+    const isOperatorOrAbove = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
+    const canSort = nodes.length === 1 || !isOperatorOrAbove;
 
     const enableReorder = () => {
         setNewOrder(nodes.slice());
@@ -26,7 +26,7 @@ export function useGroup(nodes: NodeInfo[], initialFixOrder: boolean) {
     };
 
     const existingTags = nodes ? nodes.map((x) => x.tag) : [];
-    const addNodeEnabled = isOperatorOrAbove() && clusterNodeTags.some((x) => !existingTags.includes(x));
+    const addNodeEnabled = isOperatorOrAbove && clusterNodeTags.some((x) => !existingTags.includes(x));
 
     return {
         fixOrder,

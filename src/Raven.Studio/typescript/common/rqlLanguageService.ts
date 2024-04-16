@@ -4,6 +4,7 @@ import database = require("models/resources/database");
 import remoteMetadataProvider = require("./autoComplete/remoteMetadataProvider");
 import cachedMetadataProvider = require("./autoComplete/cachedMetadataProvider");
 import { LanguageService } from "components/models/aceEditor";
+import { DatabaseSharedInfo } from "components/models/databases";
 
 class rqlLanguageService implements LanguageService {
     
@@ -16,7 +17,7 @@ class rqlLanguageService implements LanguageService {
     private readonly queryType: rqlQueryType;
     
     constructor(
-        db: database, 
+        db: database | DatabaseSharedInfo, 
         indexes: () => string[],
         queryType: rqlQueryType) {
         this.worker = new Worker("/studio/assets/rql_worker.js");

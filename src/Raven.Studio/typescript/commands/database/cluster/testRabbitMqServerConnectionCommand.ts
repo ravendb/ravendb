@@ -3,10 +3,10 @@ import endpoints = require("endpoints");
 import database = require("models/resources/database");
 
 class testRabbitMqServerConnectionCommand extends commandBase {
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly connectionString: string;
 
-    constructor(db: database, connectionString: string) {
+    constructor(db: database | string, connectionString: string) {
         super();
         this.db = db;
         this.connectionString = connectionString;

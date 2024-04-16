@@ -38,7 +38,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void Dispose()
         {
-            DocumentMapEntries?.Dispose();
             DocumentMapEntries = null;
             MapPhaseTree = null;
             ReducePhaseTree = null;

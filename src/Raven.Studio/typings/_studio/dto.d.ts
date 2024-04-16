@@ -384,13 +384,17 @@ type subscriptionType =  "SubscriptionConnection" | "SubscriptionBatch" | "Aggre
 
 type ongoingTaskStatType = Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType | StudioEtlType | subscriptionType | StudioQueueSinkType;
 
-interface ReplicationPerformanceBaseWithCache extends Raven.Client.Documents.Replication.ReplicationPerformanceBase {
+interface ReplicationPerformanceBaseCache {
     StartedAsDate: Date;
     CompletedAsDate: Date;
     Type: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType;
     Description: string;
     HasErrors: boolean;
 }
+
+type OutgoingReplicationPerformanceWithCache = Raven.Client.Documents.Replication.OutgoingReplicationPerformanceStats & ReplicationPerformanceBaseCache;
+type IncomingReplicationPerformanceWithCache = Raven.Client.Documents.Replication.IncomingReplicationPerformanceStats & ReplicationPerformanceBaseCache;
+type ReplicationPerformanceWithCache = OutgoingReplicationPerformanceWithCache | IncomingReplicationPerformanceWithCache;
 
 interface EtlPerformanceBaseWithCache extends Raven.Server.Documents.ETL.Stats.EtlPerformanceStats {
     StartedAsDate: Date;

@@ -161,15 +161,15 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
         }
     }
     
-    protected override ClusterTransactionBatchCollector CollectCommandsBatch(ClusterOperationContext context, int take)
+    protected override ClusterTransactionBatchCollector CollectCommandsBatch(ClusterOperationContext context, long lastCompletedClusterTransactionIndex, int take)
     {
         var batchCollector = new ShardedClusterTransactionBatchCollector(this, take);
-        var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, ShardedDatabaseName, fromCount: _nextClusterCommand, take: take);
+        var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, ShardedDatabaseName, fromCount: _nextClusterCommand, lastCompletedClusterTransactionIndex, take);
 
         foreach (var command in readCommands)
         {
             batchCollector.MaxIndex = command.Index;
-            batchCollector.MaxCommandCount = command.PreviousCount + command.Commands.Length;
+            batchCollector.MaxCommandCount = command.PreviousCount + command.Commands.Count;
             if (command.ShardNumber == ShardNumber)
                 batchCollector.Add(command);
         }
@@ -231,6 +231,7 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
                     return;
                 // we have more docs, batch limit reached.
                 case DeleteBucketCommand.DeleteBucketResult.FullBatch:
+                case DeleteBucketCommand.DeleteBucketResult.ReachedTransactionLimit:
                     continue;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -304,7 +305,8 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
         {
             Empty,
             Skipped,
-            FullBatch
+            FullBatch,
+            ReachedTransactionLimit
         }
     }
 }

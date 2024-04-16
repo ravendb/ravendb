@@ -58,6 +58,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                                         LockMode = x.Definition.LockMode,
                                         ArchivedDataProcessingBehavior = x.Definition.ArchivedDataProcessingBehavior,
                                         Priority = x.Definition.Priority,
+                                        ReferencedCollections = x.GetReferencedCollectionNames()
                                     };
                                 }
                                 catch (Exception e)
@@ -107,6 +108,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                                         LockMode = x.Definition.LockMode,
                                         ArchivedDataProcessingBehavior = x.Definition.ArchivedDataProcessingBehavior,
                                         Priority = x.Definition.Priority,
+                                        ReferencedCollections = x.GetReferencedCollectionNames()
                                     };
                                 }
                             })

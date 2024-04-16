@@ -6,11 +6,11 @@ export default class openFaultyIndexCommand extends commandBase {
 
     private indexNameToOpen: string;
 
-    private db: database;
+    private db: database | string;
 
     private location: databaseLocationSpecifier;
 
-    constructor(indexNameToOpen: string, db: database, location: databaseLocationSpecifier) {
+    constructor(indexNameToOpen: string, db: database | string, location: databaseLocationSpecifier) {
         super();
         this.location = location;
         this.db = db;

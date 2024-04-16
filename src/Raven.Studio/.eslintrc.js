@@ -22,7 +22,8 @@ module.exports = {
     "@typescript-eslint/triple-slash-reference": "off",
     "@typescript-eslint/no-explicit-any": "off",
     "react/jsx-key": "off",
-    "@typescript-eslint/prefer-namespace-keyword": "off"
+    "@typescript-eslint/prefer-namespace-keyword": "off",
+    "@typescript-eslint/no-unused-vars": "warn"
   },
   "settings": {
     "react": {

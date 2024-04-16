@@ -6,6 +6,8 @@ namespace Raven.Client.Documents.Operations.Replication
 {
     public class ExternalReplication : ExternalReplicationBase, IExternalReplication
     {
+        public TimeSpan DelayReplicationFor { get; set; }
+
         public ExternalReplication()
         {
         }
@@ -14,7 +16,7 @@ namespace Raven.Client.Documents.Operations.Replication
         {
         }
 
-        public TimeSpan DelayReplicationFor { get; set; }
+        public override ReplicationType GetReplicationType() => ReplicationType.External;
 
         public override DynamicJsonValue ToJson()
         {
@@ -27,6 +29,7 @@ namespace Raven.Client.Documents.Operations.Replication
         {
             return ToJson();
         }
+
         public override bool IsEqualTo(ReplicationNode other)
         {
             if (other is ExternalReplication externalReplication)

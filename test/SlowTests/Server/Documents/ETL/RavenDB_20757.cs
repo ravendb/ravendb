@@ -11,6 +11,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -63,7 +64,7 @@ public class RavenDB_20757 : ReplicationTestBase
                 session.SaveChanges();
             }
 
-            Assert.True(etlDone.Wait(TimeSpan.FromSeconds(10)));
+            Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(10)));
 
             var destDb = await GetDatabase(destNode, dest.Database);
 
@@ -88,8 +89,8 @@ public class RavenDB_20757 : ReplicationTestBase
 
             // etl should reach destination but fail to complete batch (can't update process state)
             Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Jerry"));
-            var timeout = (int)mentor.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan.TotalMilliseconds * 3;
-            Assert.False(etlDone.Wait(timeout));
+            var timeout = mentor.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan * 3;
+            Assert.False(await etlDone.WaitAsync(timeout));
 
             // assert that the same modification wasn't sent more than once
             using (var session = dest.OpenAsyncSession())
@@ -135,7 +136,7 @@ public class RavenDB_20757 : ReplicationTestBase
             });
 
             // now etl should complete batch successfully  
-            Assert.True(etlDone.Wait(TimeSpan.FromSeconds(60)));
+            Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(60)));
             etlDone.Reset();
 
             using (var session = src.OpenSession())
@@ -145,7 +146,7 @@ public class RavenDB_20757 : ReplicationTestBase
                 session.SaveChanges();
             }
 
-            Assert.True(etlDone.Wait(TimeSpan.FromSeconds(10)));
+            Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(10)));
 
             using (var session = dest.OpenAsyncSession())
             {
@@ -192,10 +193,10 @@ public class RavenDB_20757 : ReplicationTestBase
         }));
     }
 
-    private static async Task<ManualResetEventSlim> WaitForEtl(RavenServer server, string database)
+    private static async Task<AsyncManualResetEvent> WaitForEtl(RavenServer server, string database)
     {
         var documentDatabase = await GetDatabase(server, database);
-        var mre = new ManualResetEventSlim();
+        var mre = new AsyncManualResetEvent();
         documentDatabase.EtlLoader.BatchCompleted += x =>
         {
             if (x.Statistics.LoadSuccesses > 0)

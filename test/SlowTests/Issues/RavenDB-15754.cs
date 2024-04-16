@@ -13,6 +13,7 @@ using Raven.Client.Documents.Session;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -90,6 +91,75 @@ namespace SlowTests.Issues
                 await AssertCount(store, _companyName2, _employeesCount);
                 Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
                 Assert.True(batchCount > 1);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public async Task CanIndexReferencedDocumentWithMultipleReferences()
+        {
+            using (var store = GetDocumentStore(new Options()))
+            {
+                const string oldManagerName = "Grisha";
+                const string newManagerName = "Grisha Kotler";
+
+                const int employeesCount = 128;
+
+                var company = new Company
+                {
+                    Name = _companyName1
+                };
+
+                var manager = new Manager
+                {
+                    Name = oldManagerName
+                };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.StoreAsync(manager);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var bulk = store.BulkInsert())
+                {
+                    for (var i = 0; i < employeesCount; i++)
+                    {
+                        await bulk.StoreAsync(new Employee
+                        {
+                            CompanyId = company.Id,
+                            ManagerId = manager.Id
+                        });
+                    }
+                }
+
+                var index = new DocumentsIndex();
+                await index.ExecuteAsync(store);
+
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+                await AssertCount(store, _companyName1, employeesCount, managerName: oldManagerName);
+                var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
+                Assert.Equal(employeesCount, indexStats.MapAttempts);
+                Assert.Equal(employeesCount, indexStats.MapSuccesses);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    company.Name = _companyName2;
+                    manager.Name = newManagerName;
+                    await session.StoreAsync(company, company.Id);
+                    await session.StoreAsync(manager, manager.Id);
+                    await session.SaveChangesAsync();
+                }
+
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(10));
+                await AssertCount(store, _companyName1, 0);
+                await AssertCount(store, _companyName2, employeesCount, managerName: newManagerName);
+
+                indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
+
+                // we expect the parent document to be indexed only once
+                Assert.Equal(employeesCount, indexStats.MapReferenceAttempts); // was employeesCount * 2
+                Assert.Equal(employeesCount, indexStats.MapReferenceSuccesses); // was employeesCount * 2
             }
         }
 
@@ -814,7 +884,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static async Task AssertCount(DocumentStore store, string companyName, int expectedCount)
+        private static async Task AssertCount(DocumentStore store, string companyName, int expectedCount, string managerName = null)
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -822,6 +892,14 @@ namespace SlowTests.Issues
                     .Where(x => x.CompanyName == companyName).CountAsync();
 
                 Assert.Equal(expectedCount, itemsCount);
+
+                if (managerName != null)
+                {
+                    itemsCount = await session.Query<DocumentsIndex.Result, DocumentsIndex>()
+                        .Where(x => x.ManagerName == managerName).CountAsync();
+
+                    Assert.Equal(expectedCount, itemsCount);
+                }
             }
         }
 
@@ -892,6 +970,14 @@ namespace SlowTests.Issues
             public string Id { get; set; }
 
             public string CompanyId { get; set; }
+
+            public string ManagerId { get; set; }
+        }
+
+        private class Manager
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
         }
 
         private class DocumentsIndex : AbstractIndexCreationTask<Employee>
@@ -899,6 +985,7 @@ namespace SlowTests.Issues
             public class Result
             {
                 public string CompanyName { get; set; }
+                public string ManagerName { get; set; }
             }
 
             public DocumentsIndex()
@@ -907,7 +994,8 @@ namespace SlowTests.Issues
                     from employee in employees
                     select new Result
                     {
-                        CompanyName = LoadDocument<Company>(employee.CompanyId).Name
+                        CompanyName = LoadDocument<Company>(employee.CompanyId).Name,
+                        ManagerName = LoadDocument<Manager>(employee.ManagerId).Name
                     };
             }
         }

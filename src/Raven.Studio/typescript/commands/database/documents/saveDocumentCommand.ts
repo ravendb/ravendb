@@ -5,7 +5,7 @@ import endpoints = require("endpoints");
 
 class saveDocumentCommand extends commandBase {
 
-    constructor(private id: string, private document: document, private db: database, private reportSaveProgress: boolean = true) {
+    constructor(private id: string, private document: document, private db: database | string, private reportSaveProgress: boolean = true) {
         super();
     }
 

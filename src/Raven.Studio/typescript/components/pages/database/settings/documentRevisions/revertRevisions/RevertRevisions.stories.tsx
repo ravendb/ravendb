@@ -2,7 +2,6 @@ import { Meta, StoryObj } from "@storybook/react";
 import React from "react";
 import { mockStore } from "test/mocks/store/MockStore";
 import { withStorybookContexts, withBootstrap5, databaseAccessArgType } from "test/storybookTestUtils";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import RevertRevisions from "./RevertRevisions";
 
 export default {
@@ -13,8 +12,6 @@ export default {
     },
 } satisfies Meta;
 
-const db = DatabasesStubs.nonShardedClusterDatabase();
-
 interface DefaultRevertRevisionsProps {
     databaseAccess: databaseAccessLevel;
 }
@@ -22,7 +19,9 @@ interface DefaultRevertRevisionsProps {
 export const DefaultRevertRevisions: StoryObj<DefaultRevertRevisionsProps> = {
     name: "Revert Revisions",
     render: ({ databaseAccess }: DefaultRevertRevisionsProps) => {
-        const { collectionsTracker, accessManager } = mockStore;
+        const { collectionsTracker, accessManager, databases } = mockStore;
+
+        const db = databases.withActiveDatabase_NonSharded_SingleNode();
 
         accessManager.with_securityClearance("ValidUser");
         accessManager.with_databaseAccess({
@@ -31,7 +30,7 @@ export const DefaultRevertRevisions: StoryObj<DefaultRevertRevisionsProps> = {
 
         collectionsTracker.with_Collections();
 
-        return <RevertRevisions db={db} />;
+        return <RevertRevisions />;
     },
     args: {
         databaseAccess: "DatabaseAdmin",

@@ -10,6 +10,7 @@ interface DatabaseAccessInfo {
 interface AccessManagerState {
     databaseAccess: EntityState<DatabaseAccessInfo, string>;
     securityClearance: SecurityClearance;
+    isSecureServer: boolean;
 }
 
 const databaseAccessAdapter = createEntityAdapter<DatabaseAccessInfo, string>({
@@ -21,13 +22,12 @@ const databaseAccessSelectors = databaseAccessAdapter.getSelectors();
 const initialState: AccessManagerState = {
     databaseAccess: databaseAccessAdapter.getInitialState(),
     securityClearance: "ClusterAdmin",
+    isSecureServer: false,
 };
-
-const sliceName = "accessManager";
 
 export const accessManagerSlice = createSlice({
     initialState,
-    name: sliceName,
+    name: "accessManager",
     reducers: {
         onDatabaseAccessLoaded: (state, action: PayloadAction<dictionary<databaseAccessLevel>>) => {
             const items: DatabaseAccessInfo[] = Object.entries(action.payload).map((value) => {
@@ -41,38 +41,64 @@ export const accessManagerSlice = createSlice({
         onSecurityClearanceSet: (state, action: PayloadAction<SecurityClearance>) => {
             state.securityClearance = action.payload;
         },
+        onIsSecureServerSet: (state, action: PayloadAction<boolean>) => {
+            state.isSecureServer = action.payload;
+        },
     },
 });
 
 const selectDatabaseAccessLevel = (databaseName: string) => (store: RootState) =>
     databaseAccessSelectors.selectById(store.accessManager.databaseAccess, databaseName)?.level;
 
-const selectOperatorOrAbove = (store: RootState) => {
+const selectIsOperatorOrAbove = (store: RootState) => {
     const clearance = store.accessManager.securityClearance;
 
     return clearance === "ClusterAdmin" || clearance === "ClusterNode" || clearance === "Operator";
 };
 
-const selectEffectiveDatabaseAccessLevel = (databaseName: string) => {
-    const accessLevel = selectDatabaseAccessLevel(databaseName);
+const selectIsClusterAdminOrClusterNode = (store: RootState) => {
+    const clearance = store.accessManager.securityClearance;
 
+    return clearance === "ClusterAdmin" || clearance === "ClusterNode";
+};
+
+// If name is not provided, it will use the active database
+const selectEffectiveDatabaseAccessLevel = (databaseName?: string) => {
     return (store: RootState): databaseAccessLevel => {
-        const operatorOrAbove = selectOperatorOrAbove(store);
-        if (operatorOrAbove) {
+        const isOperatorOrAbove = selectIsOperatorOrAbove(store);
+        if (isOperatorOrAbove) {
             return "DatabaseAdmin";
         }
 
-        return accessLevel(store);
+        return selectDatabaseAccessLevel(databaseName ?? store.databases.activeDatabaseName)(store);
     };
 };
 
-export const accessManagerActions = {
-    onDatabaseAccessLoaded: accessManagerSlice.actions.onDatabaseAccessLoaded,
-    onSecurityClearanceSet: accessManagerSlice.actions.onSecurityClearanceSet,
+const selectHasDatabaseAccessAdmin = (databaseName?: string) => {
+    return (store: RootState) => {
+        const effectiveDatabaseAccessLevel = selectEffectiveDatabaseAccessLevel(databaseName)(store);
+
+        return effectiveDatabaseAccessLevel === "DatabaseAdmin";
+    };
 };
 
+const selectHasDatabaseAccessWrite = (databaseName?: string) => {
+    return (store: RootState) => {
+        const effectiveDatabaseAccessLevel = selectEffectiveDatabaseAccessLevel(databaseName)(store);
+
+        return effectiveDatabaseAccessLevel === "DatabaseAdmin" || effectiveDatabaseAccessLevel === "DatabaseReadWrite";
+    };
+};
+
+const selectIsSecureServer = (store: RootState) => store.accessManager.isSecureServer;
+
+export const accessManagerActions = accessManagerSlice.actions;
+
 export const accessManagerSelectors = {
-    databaseAccessLevel: selectDatabaseAccessLevel,
-    operatorOrAbove: selectOperatorOrAbove,
+    isSecureServer: selectIsSecureServer,
+    isOperatorOrAbove: selectIsOperatorOrAbove,
+    isClusterAdminOrClusterNode: selectIsClusterAdminOrClusterNode,
+    hasDatabaseAdminAccess: selectHasDatabaseAccessAdmin,
+    hasDatabaseWriteAccess: selectHasDatabaseAccessWrite,
     effectiveDatabaseAccessLevel: selectEffectiveDatabaseAccessLevel,
 };

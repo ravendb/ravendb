@@ -197,13 +197,21 @@ namespace Corax.Querying.Matches.SortingMatches;
             }
         }
 
-        private static void MaybeBreakTies<TComparer>(Span<long> buffer, TComparer tieBreaker) where TComparer : struct, IComparer<long>
+        private static void MaybeBreakTies<TComparer>(Span<long> buffer, TComparer tieBreaker, bool isDescending) where TComparer : struct, IComparer<long>
         {
             // We may have ties, have to resolve that before we can continue
             for (int i = 1; i < buffer.Length; i++)
             {
-                var x = buffer[i - 1] >> 15;
-                var y = buffer[i] >> 15;
+                var x = buffer[i - 1];
+                var y = buffer[i];
+                if (isDescending)
+                {
+                    x = -x;
+                    y = -y;
+                }
+
+                x >>= 15;
+                y >>= 15;
                 if (x != y)
                     continue;
 
@@ -211,7 +219,11 @@ namespace Corax.Querying.Matches.SortingMatches;
                 int end = i;
                 for (; end < buffer.Length; end++)
                 {
-                    if (x != (buffer[end] >> 15))
+                    y = buffer[end];
+                    if (isDescending)
+                        y = -y;
+                    y >>= 15;
+                    if (x != y)
                         break;
                 }
 
@@ -252,7 +264,7 @@ namespace Corax.Querying.Matches.SortingMatches;
                 buffer.Length > match._take)
                 buffer = buffer[..match._take];
             
-            MaybeBreakTies(buffer, tieBreaker);
+            MaybeBreakTies(buffer, tieBreaker, isDescending);
 
             return ExtractIndexes(buffer, isDescending);
         }
@@ -537,7 +549,9 @@ namespace Corax.Querying.Matches.SortingMatches;
             var xIdx = (ushort)x & 0X7FFF;
             var yIdx = (ushort)y & 0X7FFF;
             Debug.Assert(yIdx < SortingMatch.SortBatchSize && xIdx < SortingMatch.SortBatchSize);
-            return _inner.Compare(_terms[xIdx], _terms[yIdx]);
+            return _isDescending 
+                        ? -_inner.Compare(_terms[xIdx], _terms[yIdx])
+                        : _inner.Compare(_terms[xIdx], _terms[yIdx]);
         }
 
         public int Compare(int x, int y)

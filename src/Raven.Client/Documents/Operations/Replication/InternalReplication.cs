@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Replication;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
@@ -17,6 +18,9 @@ namespace Raven.Client.Documents.Operations.Replication
                 _nodeTag = value;
             }
         }
+
+        public override ReplicationType GetReplicationType() => ReplicationType.Internal;
+
         public override string FromString()
         {
             return $"[{NodeTag}/{Url}]";
@@ -31,7 +35,7 @@ namespace Raven.Client.Documents.Operations.Replication
             }
             return false;
         }
-        
+
         public override int GetHashCode()
         {
             unchecked
@@ -40,6 +44,13 @@ namespace Raven.Client.Documents.Operations.Replication
                 HashCodeSealed = true;
                 return hashCode;
             }
+        }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(NodeTag)] = NodeTag;
+            return json;
         }
     }
 }

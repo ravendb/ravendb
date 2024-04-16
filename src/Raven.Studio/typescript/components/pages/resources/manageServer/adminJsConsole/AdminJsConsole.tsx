@@ -35,7 +35,7 @@ export default function AdminJSConsole() {
     const asyncRunAdminJsScript = useAsyncCallback(manageServerService.runAdminJsScript);
     const allDatabases = useAppSelector(databaseSelectors.allDatabases);
 
-    const allDatabaseNames = allDatabases.flatMap((db) => (db.sharded ? db.shards.map((x) => x.name) : [db.name]));
+    const allDatabaseNames = allDatabases.flatMap((db) => (db.isSharded ? db.shards.map((x) => x.name) : [db.name]));
 
     const adminJsConsoleDocsLink = useRavenLink({ hash: "IBUJ7M" });
 

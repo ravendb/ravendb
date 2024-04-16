@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
@@ -66,7 +67,7 @@ namespace Raven.Server.Smuggler.Documents
             _compressionLevel = compressionLevel;
         }
 
-        public ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
+        public ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, long buildVersion)
         {
             _outputStream = BackupUtils.GetCompressionStream(_stream, _compressionAlgorithm, _compressionLevel);
             _writer = new AsyncBlittableJsonTextWriter(_context, _outputStream);
@@ -1033,7 +1034,7 @@ namespace Raven.Server.Smuggler.Documents
                 _context = context;
             }
 
-            public async ValueTask WriteIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType)
+            public async ValueTask WriteAutoIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType, AuthorizationStatus authorizationStatus)
             {
                 if (First == false)
                     Writer.WriteComma();
@@ -1053,7 +1054,7 @@ namespace Raven.Server.Smuggler.Documents
                 await Writer.MaybeFlushAsync();
             }
 
-            public async ValueTask WriteIndexAsync(IndexDefinition indexDefinition)
+            public async ValueTask WriteIndexAsync(IndexDefinition indexDefinition, AuthorizationStatus authorizationStatus)
             {
                 if (First == false)
                     Writer.WriteComma();

@@ -156,6 +156,11 @@ namespace Raven.Client.Documents.Indexes
         public int ErrorsCount { get; set; }
         
         public IndexSourceType SourceType { get; set; }
+        
+        /// <summary>
+        /// Returns the names of referenced collections.
+        /// </summary>
+        public HashSet<string> ReferencedCollections { get; set; }
 
 #if FEATURE_TEST_INDEX
         /// <summary>

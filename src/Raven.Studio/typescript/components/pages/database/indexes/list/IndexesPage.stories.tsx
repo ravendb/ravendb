@@ -1,18 +1,16 @@
 import { IndexesPage } from "./IndexesPage";
-import { Meta, ComponentStory } from "@storybook/react";
+import { Meta, StoryFn } from "@storybook/react";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { IndexesStubs } from "test/stubs/IndexesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
     title: "Pages/Indexes/List of indexes",
-    component: IndexesPage,
     decorators: [withStorybookContexts, withBootstrap5],
-} satisfies Meta<typeof IndexesPage>;
+} satisfies Meta;
 
 function commonInit() {
     const { accessManager, license } = mockStore;
@@ -74,10 +72,11 @@ function configureDifferentIndexStates() {
     );
 }
 
-export const EmptyView: ComponentStory<typeof IndexesPage> = () => {
-    const db = DatabasesStubs.nonShardedSingleNodeDatabase();
-
+export const EmptyView: StoryFn = () => {
     commonInit();
+
+    const { databases } = mockStore;
+    databases.withActiveDatabase_NonSharded_SingleNode();
 
     const { indexesService } = mockServices;
 
@@ -88,57 +87,60 @@ export const EmptyView: ComponentStory<typeof IndexesPage> = () => {
         dto.length = 0;
     });
 
-    return <IndexesPage db={db} />;
+    return <IndexesPage />;
 };
 
-export const SampleDataSingleNode: ComponentStory<typeof IndexesPage> = () => {
-    const db = DatabasesStubs.nonShardedSingleNodeDatabase();
-
+export const SampleDataSingleNode: StoryFn = () => {
     commonInit();
     configureIndexService();
 
-    return <IndexesPage db={db} />;
+    const { databases } = mockStore;
+    databases.withActiveDatabase_NonSharded_SingleNode();
+
+    return <IndexesPage />;
 };
 
-export const SampleDataCluster: ComponentStory<typeof IndexesPage> = () => {
-    const db = DatabasesStubs.nonShardedClusterDatabase();
-
+export const SampleDataCluster: StoryFn = () => {
     commonInit();
     configureIndexService();
 
-    return <IndexesPage db={db} />;
+    const { databases } = mockStore;
+    databases.withActiveDatabase_NonSharded_Cluster();
+
+    return <IndexesPage />;
 };
 
-export const SampleDataSharded: ComponentStory<typeof IndexesPage> = () => {
-    const db = DatabasesStubs.shardedDatabase();
-
+export const SampleDataSharded: StoryFn = () => {
     commonInit();
     configureIndexService();
 
-    return <IndexesPage db={db} />;
+    const { databases } = mockStore;
+    databases.withActiveDatabase_Sharded();
+
+    return <IndexesPage />;
 };
 
-export const DifferentIndexNodeStatesSingleNode: ComponentStory<typeof IndexesPage> = () => {
-    const db = DatabasesStubs.nonShardedSingleNodeDatabase();
-
+export const DifferentIndexNodeStatesSingleNode: StoryFn = () => {
     commonInit();
     configureDifferentIndexStates();
 
-    return <IndexesPage db={db} />;
+    const { databases } = mockStore;
+    databases.withActiveDatabase_NonSharded_SingleNode();
+
+    return <IndexesPage />;
 };
 
-export const DifferentIndexNodeStatesSharded: ComponentStory<typeof IndexesPage> = () => {
-    const db = DatabasesStubs.shardedDatabase();
-
+export const DifferentIndexNodeStatesSharded: StoryFn = () => {
     commonInit();
     configureDifferentIndexStates();
 
-    return <IndexesPage db={db} />;
+    const { databases } = mockStore;
+    databases.withActiveDatabase_Sharded();
+
+    return <IndexesPage />;
 };
 
-export const FaultyIndexSingleNode: ComponentStory<typeof IndexesPage> = () => {
-    const db = DatabasesStubs.nonShardedSingleNodeDatabase();
-
+export const FaultyIndexSingleNode: StoryFn = () => {
     commonInit();
     const { indexesService } = mockServices;
 
@@ -147,12 +149,13 @@ export const FaultyIndexSingleNode: ComponentStory<typeof IndexesPage> = () => {
     indexesService.withGetStats([faultyStats].filter((x) => x));
     indexesService.withGetProgress([]);
 
-    return <IndexesPage db={db} />;
+    const { databases } = mockStore;
+    databases.withActiveDatabase_NonSharded_SingleNode();
+
+    return <IndexesPage />;
 };
 
-export const FaultyIndexSharded: ComponentStory<typeof IndexesPage> = () => {
-    const db = DatabasesStubs.shardedDatabase();
-
+export const FaultyIndexSharded: StoryFn = () => {
     commonInit();
     const { indexesService } = mockServices;
 
@@ -161,18 +164,22 @@ export const FaultyIndexSharded: ComponentStory<typeof IndexesPage> = () => {
     indexesService.withGetStats([faultyStats].filter((x) => x));
     indexesService.withGetProgress([]);
 
-    return <IndexesPage db={db} />;
+    const { databases } = mockStore;
+    databases.withActiveDatabase_Sharded();
+
+    return <IndexesPage />;
 };
 
-export const LicenseLimits: ComponentStory<typeof IndexesPage> = () => {
-    const db = DatabasesStubs.shardedDatabase();
-    const { license } = mockStore;
-
+export const LicenseLimits: StoryFn = () => {
     commonInit();
     configureDifferentIndexStates();
+
+    const { databases, license } = mockStore;
 
     license.with_LicenseLimited();
     license.with_LimitsUsage();
 
-    return <IndexesPage db={db} />;
+    databases.withActiveDatabase_Sharded();
+
+    return <IndexesPage />;
 };

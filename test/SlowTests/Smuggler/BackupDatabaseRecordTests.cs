@@ -402,6 +402,7 @@ namespace SlowTests.Smuggler
                         }
                     }, Server.ServerStore);
                     await migrate.UpdateBuildInfoIfNeeded();
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(store2);
                     var operationId = migrate.StartMigratingSingleDatabase(new DatabaseMigrationSettings
                     {
                         DatabaseName = store1.Database,
@@ -418,7 +419,7 @@ namespace SlowTests.Smuggler
                                                        DatabaseRecordItemType.SqlEtls |
                                                        DatabaseRecordItemType.RavenConnectionStrings |
                                                        DatabaseRecordItemType.Analyzers
-                    }, Databases.GetDocumentDatabaseInstanceFor(store2).Result);
+                    }, database);
 
                     WaitForValue(() =>
                     {

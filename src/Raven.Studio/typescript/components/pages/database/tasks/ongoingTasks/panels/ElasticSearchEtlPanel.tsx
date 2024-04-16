@@ -11,7 +11,6 @@ import {
     useTasksOperations,
 } from "../../shared/shared";
 import { OngoingTaskElasticSearchEtlInfo } from "components/models/tasks";
-import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
@@ -24,13 +23,21 @@ import {
 } from "components/common/RichPanel";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 import { Collapse, Input } from "reactstrap";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
 type ElasticSearchEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskElasticSearchEtlInfo>;
 
 function Details(props: ElasticSearchEtlPanelProps & { canEdit: boolean }) {
-    const { data, canEdit, db } = props;
+    const { data, canEdit } = props;
     const { appUrl } = useAppUrls();
-    const connectionStringsUrl = appUrl.forConnectionStrings(db, "ElasticSearch", data.shared.connectionStringName);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const connectionStringsUrl = appUrl.forConnectionStrings(
+        databaseName,
+        "ElasticSearch",
+        data.shared.connectionStringName
+    );
 
     return (
         <RichPanelDetails>
@@ -51,13 +58,12 @@ function Details(props: ElasticSearchEtlPanelProps & { canEdit: boolean }) {
 }
 
 export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps & ICanShowTransformationScriptPreview) {
-    const { db, data, showItemPreview, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } =
-        props;
+    const { data, showItemPreview, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
-    const { isAdminAccessOrAbove } = useAccessManager();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
     const { forCurrentDatabase } = useAppUrls();
 
-    const canEdit = isAdminAccessOrAbove(db) && !data.shared.serverWide;
+    const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
     const editUrl = forCurrentDatabase.editElasticSearchEtl(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);

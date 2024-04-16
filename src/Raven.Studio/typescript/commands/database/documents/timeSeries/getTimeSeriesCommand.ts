@@ -7,7 +7,7 @@ import moment = require("moment");
 
 class getTimeSeriesCommand extends commandBase {
     
-    constructor(private docId: string, private timeSeriesName: string, private db: database, 
+    constructor(private docId: string, private timeSeriesName: string, private db: database | string, 
                 private start: number, private pageSize: number, private suppressNotFound = false,
                 private startDateLocal?: moment.Moment, private endDateLocal?: moment.Moment) {
         super();

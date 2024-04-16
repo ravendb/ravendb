@@ -11,6 +11,7 @@
 //    #define DETECT_LEAKS  //for now always enable DETECT_LEAKS in debug.
 //#endif
 
+
 using Sparrow.Utils;
 
 namespace Sparrow
@@ -22,6 +23,7 @@ namespace Sparrow
     using System.Threading;
 
 #if DETECT_LEAKS
+    using Sparrow.Threading;
     using System.Runtime.CompilerServices;
 #endif
 
@@ -129,7 +131,7 @@ namespace Sparrow
                 // If you are seeing this message it means that object has been allocated from the pool 
                 // and has not been returned back. This is not critical, but turns pool into rather 
                 // inefficient kind of "new".
-                Debug.WriteLine(string.Format("TRACEOBJECTPOOLLEAKS_BEGIN\nPool detected potential leaking of {0}. \n Location of the leak: \n {1} TRACEOBJECTPOOLLEAKS_END", typeof(T), GetTrace()));
+                Debug.WriteLine($"TRACEOBJECTPOOLLEAKS_BEGIN\nPool detected potential leaking of {typeof(T)}. \n Location of the leak: \n {GetTrace()} TRACEOBJECTPOOLLEAKS_END");
             }
         }
     }
@@ -180,12 +182,12 @@ namespace Sparrow
             }
 
 #if DETECT_LEAKS
-        var tracker = new LeakTracker();
-        LeakTrackers.Add(inst, tracker);
+            var tracker = new LeakTracker();
+            LeakTrackers.Add(inst, tracker);
 
 #if TRACE_LEAKS
-        var frame = CaptureStackTrace();
-        tracker.Trace = frame;
+            var frame = CaptureStackTrace();
+            tracker.Trace = frame;
 #endif
 #endif
             return inst;
@@ -267,39 +269,40 @@ namespace Sparrow
         /// return a larger array to the pool than was originally allocated.
         /// </summary>
         [Conditional("DEBUG")]
+        [Conditional("DETECT_LEAKS")]
         public void ForgetTrackedObject(T old, T replacement = null)
         {
 #if DETECT_LEAKS
-        LeakTracker tracker;
-        if (LeakTrackers.TryGetValue(old, out tracker))
-        {
-            tracker.Dispose();
-            LeakTrackers.Remove(old);
-        }
-        else
-        {
-            var trace = CaptureStackTrace();
-            Debug.WriteLine(string.Format("TRACEOBJECTPOOLLEAKS_BEGIN\nObject of type {0} was freed, but was not from pool. \n Callstack: \n {1} TRACEOBJECTPOOLLEAKS_END", typeof(T), trace));
-        }
+            if (LeakTrackers.TryGetValue(old, out LeakTracker tracker))
+            {
+                tracker.Dispose();
+                LeakTrackers.Remove(old);
+            }
+            else
+            {
+                var trace = CaptureStackTrace();
+                Debug.WriteLine($"TRACEOBJECTPOOLLEAKS_BEGIN\nObject of type {typeof(T)} was freed, but was not from pool. \n Callstack: \n {trace} TRACEOBJECTPOOLLEAKS_END");
+            }
 
-        if (replacement != null)
-        {
-            tracker = new LeakTracker();
-            LeakTrackers.Add(replacement, tracker);
-        }
+            if (replacement != null)
+            {
+                tracker = new LeakTracker();
+                LeakTrackers.Add(replacement, tracker);
+            }
 #endif
         }
 
 #if DETECT_LEAKS
-    private static Lazy<Type> _stackTraceType = new Lazy<Type>(() => Type.GetType("System.Diagnostics.StackTrace"));
+        private static Lazy<Type> _stackTraceType = new Lazy<Type>(() => Type.GetType("System.Diagnostics.StackTrace"));
 
-    private static object CaptureStackTrace()
-    {
-        return Activator.CreateInstance(_stackTraceType.Value);
-    }
+        private static object CaptureStackTrace()
+        {
+            return Activator.CreateInstance(_stackTraceType.Value);
+        }
 #endif
 
         [Conditional("DEBUG")]
+        [Conditional("DETECT_LEAKS")]
         private void Validate(object obj)
         {
             Debug.Assert(obj != null, "freeing null?");

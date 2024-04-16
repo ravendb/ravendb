@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class importFromCsvCommand extends commandBase {
 
-    constructor(private db: database, private operationId: number, private file: File, private collectionName: string,
+    constructor(private db: database | string, private operationId: number, private file: File, private collectionName: string,
                 private isUploading: KnockoutObservable<boolean>, private uploadStatus: KnockoutObservable<number>,
                 private csvConfig: Raven.Server.Smuggler.Documents.CsvImportOptions) {
         super();

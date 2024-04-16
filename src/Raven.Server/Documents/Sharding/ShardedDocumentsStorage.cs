@@ -6,12 +6,14 @@ using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
+using Voron.Global;
 using Voron.Impl;
 using static Raven.Server.Documents.Schemas.Attachments;
 using static Raven.Server.Documents.Schemas.Conflicts;
@@ -332,7 +334,9 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
         }
     }
 
-    public const long MaxDocumentsToDeleteInBucket = 1024;
+    private const long MaxDocumentsToDeleteInBucket = 1024;
+
+    private readonly Size _maxTransactionSize = new Size(16 * Constants.Size.Megabyte, SizeUnit.Bytes);
 
     public ShardedDocumentDatabase.DeleteBucketCommand.DeleteBucketResult DeleteBucket(DocumentsOperationContext context, int bucket, ChangeVector upTo)
     {
@@ -363,6 +367,9 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
             // delete revisions for document
             RevisionsStorage.ForceDeleteAllRevisionsFor(context, document.Id);
             deleted++;
+
+            if (context.Transaction.InnerTransaction.LowLevelTransaction.TransactionSize > _maxTransactionSize)
+                return ShardedDocumentDatabase.DeleteBucketCommand.DeleteBucketResult.ReachedTransactionLimit;
         }
 
         if (deleted >= MaxDocumentsToDeleteInBucket)

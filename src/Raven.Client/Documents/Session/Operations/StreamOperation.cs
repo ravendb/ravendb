@@ -362,14 +362,14 @@ namespace Raven.Client.Documents.Session.Operations
             private readonly IDisposable _inputReturnContext;
             private BlittableJsonDocumentBuilder _builder;
 
-#if NETSTANDARD2_0 || NETCOREAPP2_1
+#if NETSTANDARD2_0
             public ValueTask DisposeAsync()
 #else
 
             public async ValueTask DisposeAsync()
 #endif
             {
-#if NETSTANDARD2_0 || NETCOREAPP2_1
+#if NETSTANDARD2_0
                 Dispose();
                 return default;
 #else

@@ -314,9 +314,9 @@ namespace Voron
             Interlocked.Exchange(ref _transactionsCounter, header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
             var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
-            using (var root = Tree.Open(tx, null, Constants.RootTreeNameSlice, header->TransactionId == 0 ? &entry.Root : &header->Root))
             using (var writeTx = new Transaction(tx))
             {
+                var root = Tree.Open(tx, null, Constants.RootTreeNameSlice, header->TransactionId == 0 ? &entry.Root : &header->Root);
                 tx.UpdateRootsIfNeeded(root);
 
                 var metadataTree = writeTx.ReadTree(Constants.MetadataTreeNameSlice);
@@ -456,15 +456,14 @@ namespace Voron
 
             var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
-            using (var root = Tree.Create(tx, null, Constants.RootTreeNameSlice))
             {
-
+                var root = Tree.Create(tx, null, Constants.RootTreeNameSlice);
+                
                 // important to first create the root trees, then set them on the env
                 tx.UpdateRootsIfNeeded(root);
 
                 using (var treesTx = new Transaction(tx))
                 {
-
                     FillBase64Id(Guid.NewGuid());
 
                     var metadataTree = treesTx.CreateTree(Constants.MetadataTreeNameSlice);
@@ -476,7 +475,6 @@ namespace Voron
                     tx.Commit();
                 }
             }
-
         }
 
         public IFreeSpaceHandling FreeSpaceHandling => _freeSpaceHandling;
@@ -776,6 +774,16 @@ namespace Voron
                 }
                 throw;
             }
+        }
+
+        internal void InvokeNewTransactionCreated(LowLevelTransaction tx)
+        {
+            NewTransactionCreated?.Invoke(tx);
+        }
+
+        internal void InvokeAfterCommitWhenNewTransactionsPrevented(LowLevelTransaction tx)
+        {
+            AfterCommitWhenNewTransactionsPrevented?.Invoke(tx);
         }
 
         [Conditional("DEBUG")]
@@ -1104,7 +1112,6 @@ namespace Voron
         public unsafe Dictionary<long, string> GetPageOwners(Transaction tx, Func<PostingList, List<long>> onPostingList = null)
         {
             var r = new Dictionary<long, string>();
-            r[tx.LowLevelTransaction.RootObjects.State.RootPageNumber] = "RootObjects";
             RegisterPages(_freeSpaceHandling.AllPages(tx.LowLevelTransaction), "Freed Page");
             for (long pageNumber = NextPageNumber; pageNumber < _dataPager.NumberOfAllocatedPages; pageNumber++)
             {
@@ -1114,7 +1121,7 @@ namespace Voron
             var globalAllocator = new NewPageAllocator(tx.LowLevelTransaction, tx.LowLevelTransaction.RootObjects);
             RegisterPages(globalAllocator.GetAllocationStorageFst().AllPages(), "Global/PreAllocatedPages/Bitmaps");
             RegisterPages(globalAllocator.AllPages(), "Global/PreAllocatedPages");
-
+            RegisterPages(tx.LowLevelTransaction.RootObjects.AllPages(), "RootObjects");
             using (var rootIterator = tx.LowLevelTransaction.RootObjects.Iterate(false))
             {
                 if (rootIterator.Seek(Slices.BeforeAllKeys))

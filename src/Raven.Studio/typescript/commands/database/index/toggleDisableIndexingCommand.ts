@@ -1,16 +1,15 @@
 ﻿import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
-import { DatabaseSharedInfo } from "components/models/databases";
 
 class toggleDisableIndexingCommand extends commandBase {
 
     private readonly start: boolean;
 
-    private readonly db: DatabaseSharedInfo;
+    private readonly databaseName: string;
 
-    constructor(start: boolean, db: DatabaseSharedInfo) {
+    constructor(start: boolean, databaseName: string) {
         super();
-        this.db = db;
+        this.databaseName = databaseName;
         this.start = start;
     }
 
@@ -22,7 +21,7 @@ class toggleDisableIndexingCommand extends commandBase {
         const url = endpoints.global.adminDatabases.adminDatabasesIndexing + this.urlEncodeArgs(args);
 
         const payload: Raven.Client.ServerWide.Operations.ToggleDatabasesStateOperation.Parameters = {
-            DatabaseNames: [this.db.name]
+            DatabaseNames: [this.databaseName]
         };
 
         //TODO: report messages!

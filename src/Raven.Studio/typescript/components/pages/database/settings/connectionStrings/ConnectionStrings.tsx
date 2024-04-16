@@ -3,7 +3,6 @@ import { Button, Col, Row, UncontrolledTooltip } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { NonShardedViewProps } from "components/models/common";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import { ConnectionStringsInfoHub } from "./ConnectionStringsInfoHub";
 import EditConnectionStrings from "./EditConnectionStrings";
@@ -14,18 +13,19 @@ import ConnectionStringsPanels from "./ConnectionStringsPanels";
 import { exhaustiveStringTuple } from "components/utils/common";
 import useConnectionStringsLicense from "./useConnectionStringsLicense";
 import { LoadError } from "components/common/LoadError";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 export interface ConnectionStringsUrlParameters {
     name?: string;
     type?: StudioEtlType;
 }
 
-export default function ConnectionStrings(props: NonShardedViewProps & ConnectionStringsUrlParameters) {
-    const { db, name: nameFromUrl, type: typeFromUrl } = props;
+export default function ConnectionStrings(props: ConnectionStringsUrlParameters) {
+    const { name: nameFromUrl, type: typeFromUrl } = props;
 
     const { hasNone: hasNoneInLicense } = useConnectionStringsLicense();
-    const isDatabaseAdmin =
-        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
+    const db = useAppSelector(databaseSelectors.activeDatabase);
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
 
     const dispatch = useAppDispatch();
 
@@ -59,11 +59,11 @@ export default function ConnectionStrings(props: NonShardedViewProps & Connectio
 
     return (
         <Row className="content-margin gy-sm">
-            {initialEditConnection && <EditConnectionStrings initialConnection={initialEditConnection} db={db} />}
+            {initialEditConnection && <EditConnectionStrings initialConnection={initialEditConnection} />}
 
             <Col>
                 <AboutViewHeading title="Connection Strings" icon="manage-connection-strings" />
-                {isDatabaseAdmin && (
+                {hasDatabaseAdminAccess && (
                     <>
                         <div id={addNewButtonId} style={{ width: "fit-content" }}>
                             <Button
@@ -90,7 +90,6 @@ export default function ConnectionStrings(props: NonShardedViewProps & Connectio
                         allStudioEtlTypes.map((type) => (
                             <ConnectionStringsPanels
                                 key={type}
-                                db={db}
                                 connections={connections[type]}
                                 connectionsType={type}
                             />

@@ -7,6 +7,7 @@ using System.Runtime.Intrinsics;
 using System.Text;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Json;
 using Sparrow.Server;
 using Voron.Exceptions;
 using Voron.Global;
@@ -20,9 +21,11 @@ namespace Voron.Data.CompactTrees;
 public sealed unsafe class CompactKey : IDisposable
 {
     public static readonly CompactKey NullInstance = new();
-    
-    private static readonly ArrayPool<byte> StoragePool = ArrayPool<byte>.Shared;
-    private static readonly ArrayPool<long> KeyMappingPool = ArrayPool<long>.Shared;
+
+    [ThreadStatic]
+    private static ArrayPool<byte> StoragePool;
+    [ThreadStatic]
+    private static ArrayPool<long> KeyMappingPool;
 
     private LowLevelTransaction _owner;
 
@@ -65,6 +68,9 @@ public sealed unsafe class CompactKey : IDisposable
 
         _currentIdx = 0;
         MaxLength = 0;
+
+        StoragePool ??= ArrayPool<byte>.Create();
+        KeyMappingPool ??= ArrayPool<long>.Create();
 
         _storage = StoragePool.Rent(2 * Constants.CompactTree.MaximumKeySize);
         _keyMappingCache = KeyMappingPool.Rent(2 * MappingTableMask);
@@ -115,8 +121,9 @@ public sealed unsafe class CompactKey : IDisposable
             var dictionary = _owner.GetEncodingDictionary(dictionaryId);
             int maxSize = dictionary.GetMaxEncodingBytes(decodedKey.Length) + 4;
 
-            if (maxSize + _currentIdx + sizeof(int) > _storage.Length)
-                UnlikelyGrowStorage(_storage.Length + sizeof(int) + maxSize);
+            int expectedSize = maxSize + _currentIdx + sizeof(int);
+            if (expectedSize > _storage.Length)
+                UnlikelyGrowStorage(expectedSize);
 
             int encodedStartIdx = _currentIdx;
             var encodedKey = _storage.AsSpan(encodedStartIdx + sizeof(int), maxSize);
@@ -183,10 +190,11 @@ public sealed unsafe class CompactKey : IDisposable
         int encodedKeyLength = Bits.ToBytes(encodedKeyLengthInBits);
 
         int maxSize = dictionary.GetMaxDecodingBytes(encodedKeyLength) + sizeof(int);
-        if (maxSize + sizeof(int) + _currentIdx > _storage.Length)
+        int expectedSize = maxSize + sizeof(int) + _currentIdx;
+        if (expectedSize > _storage.Length)
         {
             // IMPORTANT: Pointers are potentially invalidated by the grow storage call but not the indexes. 
-            UnlikelyGrowStorage(maxSize + _currentKeyIdx + sizeof(int));
+            UnlikelyGrowStorage(expectedSize);
             encodedStartIdx = currentKeyIdx;
         }
 
@@ -217,8 +225,10 @@ public sealed unsafe class CompactKey : IDisposable
 
     private void UnlikelyGrowStorage(int maxSize)
     {
+        var oldStorage = _storage;
+
         // Request more memory, copy the content and return it.
-        maxSize = Math.Max(maxSize, _storage.Length) * 2;
+        maxSize = Math.Max(maxSize, oldStorage.Length) * 2;
 
         var storage = StoragePool.Rent(maxSize);
         _storage.AsSpan(0, _currentIdx).CopyTo(storage.AsSpan());
@@ -236,6 +246,12 @@ public sealed unsafe class CompactKey : IDisposable
         _decodedKeyIdx = 0;
         _currentKeyIdx = Invalid;
         Dictionary = Invalid;
+
+        int maxLength = key.Length + sizeof(int);
+        if (maxLength > _storage.Length)
+            UnlikelyGrowStorage(maxLength);
+
+        Debug.Assert(_storage.Length >= maxLength);
 
         // We write the size and the key. 
         Unsafe.WriteUnaligned<int>(ref _storage[0], key.Length);
@@ -276,11 +292,17 @@ public sealed unsafe class CompactKey : IDisposable
         KeyMappingCache(bucketIdx) = dictionaryId;
         KeyMappingCacheIndex(bucketIdx) = _currentKeyIdx;
 
+        int keyLength = Bits.ToBytes(keyLengthInBits);
+        int maxLength = keyLength + sizeof(int);
+        if (maxLength > _storage.Length)
+            UnlikelyGrowStorage(maxLength);
+
+        Debug.Assert(_storage.Length >= maxLength);
+
         // We write the size and the key. 
         Unsafe.WriteUnaligned(ref _storage[0], keyLengthInBits);
 
         // PERF: Between pinning the pointer and just execute the Unsafe.CopyBlock unintuitively it is faster to just copy. 
-        int keyLength = Bits.ToBytes(keyLengthInBits);
         Unsafe.CopyBlock(ref _storage[sizeof(int)], ref keyRef, (uint)keyLength);
 
         _currentIdx = keyLength + sizeof(int); // We update the new pointer. 

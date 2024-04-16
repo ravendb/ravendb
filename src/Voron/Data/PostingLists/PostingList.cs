@@ -123,7 +123,8 @@ namespace Voron.Data.PostingLists
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void ResizeCursorState()
         {
-            _llt.Allocator.Allocate(_stk.Length * 2 * sizeof(PostingListCursorState), out ByteString buffer);
+            _scope.Dispose();
+            _scope = _llt.Allocator.Allocate(_stk.Length * 2 * sizeof(PostingListCursorState), out ByteString buffer);
             var newStk = new UnmanagedSpan<PostingListCursorState>(buffer.Ptr, buffer.Size);
             _stk.ToReadOnlySpan().CopyTo(newStk.ToSpan());
             _stk = newStk;

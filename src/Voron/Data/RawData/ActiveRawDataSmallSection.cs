@@ -13,22 +13,14 @@ namespace Voron.Data.RawData
 {
     /// <summary>
     ///     Handles small values (lt 2Kb) by packing them into pages
-    ///     It will allocate a 512 pages (2MB in using 4KB pages) and work with them.
+    ///     It will allocate 512 pages (2MB in using 4KB pages) and work with them.
     ///     It can grow up to 2,000 pages (7.8 MB in size using 4KB pages), the section size
     ///     is dependent on the size of the database file.
     ///     All attempts are made to reduce the number of times that we need to move data, even
     ///     at the cost of fragmentation.
     /// </summary>
-    public sealed unsafe class ActiveRawDataSmallSection : RawDataSection
+    public sealed unsafe class ActiveRawDataSmallSection(Transaction tx, long pageNumber) : RawDataSection(tx.LowLevelTransaction, pageNumber)
     {
-        private readonly Transaction _transaction;
-
-        public ActiveRawDataSmallSection(Transaction tx, long pageNumber)
-            : base(tx.LowLevelTransaction, pageNumber)
-        {
-            _transaction = tx;
-        }
-
         /// <summary>
         ///     Try allocating some space in the section, defrag if needed (including moving other valid entries)
         ///     Once a section returned false for try allocation, it should be retired as an actively allocating
@@ -178,7 +170,7 @@ namespace Voron.Data.RawData
                         var size = oldSize->UsedSize;
                         if (oldSize->IsCompressed)
                         {
-                            using var __ = Table.DecompressValue(_transaction, entryPos, size, out var buffer);
+                            using var __ = Table.DecompressValue(tx, entryPos, size, out var buffer);
                             OnDataMoved(prevId, newId, buffer.Ptr, buffer.Length, compressed: true);
                         }
                         else
@@ -256,30 +248,21 @@ namespace Voron.Data.RawData
         /// </summary>
         private static ushort GetNumberOfPagesInSmallSection(LowLevelTransaction tx)
         {
-            // all sizes are with 8 Kb page size
-            if (tx.DataPager.NumberOfAllocatedPages > 1024 * 32) // 256 MB 
+            return tx.DataPager.NumberOfAllocatedPages switch
             {
-                // roughly 16 MB
-                return (Constants.Storage.PageSize - ReservedHeaderSpace) / 2;
-            }
-            if (tx.DataPager.NumberOfAllocatedPages > 1024 * 16) // 64 MB
-            {
-                // 8 MB
-                return 1024;
-            }
-            if (tx.DataPager.NumberOfAllocatedPages > 1024 * 8) // 32 MB
-            {
-                // 4 MB
-                return 512;
-            }
-            if (tx.DataPager.NumberOfAllocatedPages > 1024 * 4) // 16 MB
-            {
-                // 2 MB
-                return 128;
-            }
-            // we are less than 16 MB
-            // 512 KB
-            return 32;
+                // all sizes are with 8 Kb page size
+                // 256 MB 
+                > 1024 * 32 => (Constants.Storage.PageSize - ReservedHeaderSpace) / 2,
+                // 64 MB
+                > 1024 * 16 => 1024,
+                // 32 MB
+                > 1024 * 8 => 512,
+                // 16 MB
+                > 1024 * 4 => 128,
+                // we are less than 16 MB
+                // 512 KB
+                _ => 32
+            };
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

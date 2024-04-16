@@ -1,6 +1,5 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 
-import database from "models/resources/database";
 import getOngoingTasksCommand from "commands/database/tasks/getOngoingTasksCommand";
 import deleteOngoingTaskCommand from "commands/database/tasks/deleteOngoingTaskCommand";
 import toggleOngoingTaskCommand from "commands/database/tasks/toggleOngoingTaskCommand";
@@ -16,7 +15,6 @@ import createSampleDataCommand from "commands/database/studio/createSampleDataCo
 import getCollectionsStatsCommand from "commands/database/documents/getCollectionsStatsCommand";
 import collectionsStats from "models/database/documents/collectionsStats";
 import getDatabaseForStudioCommand from "commands/resources/getDatabaseForStudioCommand";
-import collectionsTracker from "common/helpers/database/collectionsTracker";
 import testClusterNodeConnectionCommand from "commands/database/cluster/testClusterNodeConnectionCommand";
 import testElasticSearchNodeConnectionCommand from "commands/database/cluster/testElasticSearchNodeConnectionCommand";
 import testKafkaServerConnectionCommand from "commands/database/cluster/testKafkaServerConnectionCommand";
@@ -30,102 +28,97 @@ import getFolderPathOptionsCommand from "commands/resources/getFolderPathOptions
 import getBackupLocationCommand from "commands/database/tasks/getBackupLocationCommand";
 
 export default class TasksService {
-    async getOngoingTasks(db: database, location: databaseLocationSpecifier) {
-        return new getOngoingTasksCommand(db, location).execute();
+    async getOngoingTasks(databaseName: string, location: databaseLocationSpecifier) {
+        return new getOngoingTasksCommand(databaseName, location).execute();
     }
 
     async dropSubscription(
-        db: database,
+        databaseName: string,
         taskId: number,
         taskName: string,
         nodeTag: string = undefined,
         workerId: string = null
     ) {
-        return new dropSubscriptionConnectionCommand(db, taskId, taskName, nodeTag, workerId).execute();
+        return new dropSubscriptionConnectionCommand(databaseName, taskId, taskName, nodeTag, workerId).execute();
     }
 
     async getSubscriptionTaskInfo(
-        db: database,
+        databaseName: string,
         taskId: number,
         taskName: string,
         nodeTag?: string
     ): Promise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription> {
-        return getOngoingTaskInfoCommand.forSubscription(db, taskId, taskName, nodeTag).execute();
+        return getOngoingTaskInfoCommand.forSubscription(databaseName, taskId, taskName, nodeTag).execute();
     }
 
-    async getSubscriptionConnectionDetails(db: database, taskId: number, taskName: string, nodeTag: string) {
-        return new getSubscriptionConnectionDetailsCommand(db, taskId, taskName, nodeTag).execute();
+    async getSubscriptionConnectionDetails(databaseName: string, taskId: number, taskName: string, nodeTag: string) {
+        return new getSubscriptionConnectionDetailsCommand(databaseName, taskId, taskName, nodeTag).execute();
     }
 
-    async deleteOngoingTask(db: database, task: OngoingTaskSharedInfo) {
+    async deleteOngoingTask(databaseName: string, task: OngoingTaskSharedInfo) {
         const taskType = TaskUtils.studioTaskTypeToTaskType(task.taskType);
-        return new deleteOngoingTaskCommand(db, taskType, task.taskId, task.taskName).execute();
+        return new deleteOngoingTaskCommand(databaseName, taskType, task.taskId, task.taskName).execute();
     }
 
-    async toggleOngoingTask(db: database, task: OngoingTaskSharedInfo, enable: boolean) {
+    async toggleOngoingTask(databaseName: string, task: OngoingTaskSharedInfo, enable: boolean) {
         const taskType = TaskUtils.studioTaskTypeToTaskType(task.taskType);
-        return new toggleOngoingTaskCommand(db, taskType, task.taskId, task.taskName, !enable).execute();
+        return new toggleOngoingTaskCommand(databaseName, taskType, task.taskId, task.taskName, !enable).execute();
     }
 
-    async getProgress(db: database, location: databaseLocationSpecifier) {
-        return new etlProgressCommand(db, location, false).execute();
+    async getProgress(databaseName: string, location: databaseLocationSpecifier) {
+        return new etlProgressCommand(databaseName, location, false).execute();
     }
 
-    async getManualBackup(db: database) {
-        return new getManualBackupCommand(db.name).execute();
+    async getManualBackup(databaseName: string) {
+        return new getManualBackupCommand(databaseName).execute();
     }
 
-    async getSampleDataClasses(db: database): Promise<string> {
-        return new createSampleDataClassCommand(db).execute();
+    async getSampleDataClasses(databaseName: string): Promise<string> {
+        return new createSampleDataClassCommand(databaseName).execute();
     }
 
-    async createSampleData(db: database): Promise<void> {
-        return new createSampleDataCommand(db).execute().done(() => {
-            if (!db.hasRevisionsConfiguration()) {
-                new getDatabaseForStudioCommand(db.name).execute().done((dbInfo) => {
-                    if (dbInfo.HasRevisionsConfiguration) {
-                        db.hasRevisionsConfiguration(true);
-                        collectionsTracker.default.configureRevisions(db);
-                    }
-                });
-            }
-        });
+    async createSampleData(databaseName: string): Promise<void> {
+        return new createSampleDataCommand(databaseName).execute();
     }
 
-    async fetchCollectionsStats(db: database): Promise<collectionsStats> {
-        return new getCollectionsStatsCommand(db).execute();
+    async getDatabaseForStudio(databaseName: string) {
+        return new getDatabaseForStudioCommand(databaseName).execute();
     }
 
-    async getConnectionStrings(db: database) {
-        return new getConnectionStringsCommand(db).execute();
+    async fetchCollectionsStats(databaseName: string): Promise<collectionsStats> {
+        return new getCollectionsStatsCommand(databaseName).execute();
     }
 
-    async saveConnectionString(db: database, connectionString: ConnectionStringDto) {
-        return new saveConnectionStringCommand(db, connectionString).execute();
+    async getConnectionStrings(databaseName: string) {
+        return new getConnectionStringsCommand(databaseName).execute();
+    }
+
+    async saveConnectionString(databaseName: string, connectionString: ConnectionStringDto) {
+        return new saveConnectionStringCommand(databaseName, connectionString).execute();
     }
 
     async deleteConnectionString(
-        db: database,
+        databaseName: string,
         type: Raven.Client.Documents.Operations.ETL.EtlType,
         connectionStringName: string
     ) {
-        return new deleteConnectionStringCommand(db, type, connectionStringName).execute();
+        return new deleteConnectionStringCommand(databaseName, type, connectionStringName).execute();
     }
 
     async testClusterNodeConnection(serverUrl: string, databaseName?: string, bidirectional = true) {
         return new testClusterNodeConnectionCommand(serverUrl, databaseName, bidirectional).execute();
     }
 
-    async testSqlConnectionString(db: database, connectionString: string, factoryName: string) {
-        return new testSqlConnectionStringCommand(db, connectionString, factoryName).execute();
+    async testSqlConnectionString(databaseName: string, connectionString: string, factoryName: string) {
+        return new testSqlConnectionStringCommand(databaseName, connectionString, factoryName).execute();
     }
 
-    async testRabbitMqServerConnection(db: database, connectionString: string) {
-        return new testRabbitMqServerConnectionCommand(db, connectionString).execute();
+    async testRabbitMqServerConnection(databaseName: string, connectionString: string) {
+        return new testRabbitMqServerConnectionCommand(databaseName, connectionString).execute();
     }
 
     async testKafkaServerConnection(
-        db: database,
+        databaseName: string,
         bootstrapServers: string,
         useServerCertificate: boolean,
         connectionOptionsDto: {
@@ -133,7 +126,7 @@ export default class TasksService {
         }
     ) {
         return new testKafkaServerConnectionCommand(
-            db,
+            databaseName,
             bootstrapServers,
             useServerCertificate,
             connectionOptionsDto
@@ -141,18 +134,18 @@ export default class TasksService {
     }
 
     async testElasticSearchNodeConnection(
-        db: database,
+        databaseName: string,
         serverUrl: string,
         authenticationDto: Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication
     ) {
-        return new testElasticSearchNodeConnectionCommand(db, serverUrl, authenticationDto).execute();
+        return new testElasticSearchNodeConnectionCommand(databaseName, serverUrl, authenticationDto).execute();
     }
 
-    async getLocalFolderPathOptions(path: string, db: database) {
-        return getFolderPathOptionsCommand.forServerLocal(path, true, null, db).execute();
+    async getLocalFolderPathOptions(path: string, databaseName: string) {
+        return getFolderPathOptionsCommand.forServerLocal(path, true, null, databaseName).execute();
     }
 
-    async getBackupLocation(path: string, db: database) {
-        return new getBackupLocationCommand(path, db).execute();
+    async getBackupLocation(path: string, databaseName: string) {
+        return new getBackupLocationCommand(path, databaseName).execute();
     }
 }

@@ -59,7 +59,9 @@ namespace FastTests.Voron.Tables
                     builder.Add(Bits.SwapBytes(number));
                     builder.Add(val);
                     long id = itemsTable.Insert(builder);
-                    firstAllocatedSize = itemsTable.GetAllocatedSize(id);
+                    var info = itemsTable.GetInfoFor(id);
+                    firstAllocatedSize = info.AllocatedSize;
+                    Assert.True(info.IsCompressed);
                 }
 
                 var minAllocatedSize = 0;
@@ -73,8 +75,9 @@ namespace FastTests.Voron.Tables
                         builder.Add(Bits.SwapBytes(++number));
                         builder.Add(val);
                         long id = itemsTable.Insert(builder);
-                        var allocatedSize = itemsTable.GetAllocatedSize(id);
-                        minAllocatedSize = Math.Min(minAllocatedSize, allocatedSize);
+                        var info = itemsTable.GetInfoFor(id);
+                        minAllocatedSize = Math.Min(minAllocatedSize, info.AllocatedSize);
+                        Assert.True(info.IsCompressed);
                     }
                 }
 
@@ -116,8 +119,9 @@ namespace FastTests.Voron.Tables
                     builder.Add(Bits.SwapBytes(number));
                     builder.Add(val);
                     long id = itemsTable.Insert(builder);
-                    var allocatedSize = itemsTable.GetAllocatedSize(id);
-                    Assert.True(allocatedSize < 128);
+                    var info = itemsTable.GetInfoFor(id);
+                    Assert.True(info.AllocatedSize < 128);
+                    Assert.True(info.IsCompressed);
                 }
 
                 using (Slice.From(tx.Allocator, "val1", out var key))
@@ -174,8 +178,9 @@ namespace FastTests.Voron.Tables
                     builder.Add(Bits.SwapBytes(number));
                     builder.Add(val);
                     long id = itemsTable.Insert(builder);
-                    var allocatedSize = itemsTable.GetAllocatedSize(id);
-                    Assert.True(allocatedSize < 128);
+                    var info = itemsTable.GetInfoFor(id);
+                    Assert.True(info.AllocatedSize < 128);
+                    Assert.True(info.IsCompressed);
                 }
 
                 using (itemsTable.Allocate(out TableValueBuilder builder))
@@ -191,8 +196,9 @@ namespace FastTests.Voron.Tables
                 using (Slice.From(tx.Allocator, "val1", out var key))
                 {
                     Assert.True(itemsTable.ReadByKey(key, out var reader));
-                    Assert.True(itemsTable.GetAllocatedSize(reader.Id) < 128);
-
+                    var info = itemsTable.GetInfoFor(reader.Id);
+                    Assert.True(info.AllocatedSize < 128);
+                    Assert.True(info.IsCompressed);
                 }
             }
         }
@@ -235,8 +241,9 @@ namespace FastTests.Voron.Tables
                     builder.Add(Bits.SwapBytes(number));
                     builder.Add(val);
                     long id = itemsTable.Insert(builder);
-                    long allocatedSize = itemsTable.GetAllocatedSize(id);
-                    Assert.True(allocatedSize > 8192 && allocatedSize < str.Length);
+                    var info = itemsTable.GetInfoFor(id);
+                    Assert.True(info.AllocatedSize > 8192 && info.AllocatedSize < str.Length);
+                    Assert.True(info.IsCompressed);
                 }
 
                 using (Slice.From(tx.Allocator, "val1", out var key))

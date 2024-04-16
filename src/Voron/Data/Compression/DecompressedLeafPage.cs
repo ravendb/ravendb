@@ -31,10 +31,11 @@ namespace Voron.Data.Compression
 
         public void Dispose()
         {
-            if (Cached)
+            // RavenDB-22090: We must not dispose leaf pages more than once.
+            if (_disposed)
                 return;
 
-            if (_disposed)
+            if (Cached)
                 return;
 
             _disposable.Dispose();

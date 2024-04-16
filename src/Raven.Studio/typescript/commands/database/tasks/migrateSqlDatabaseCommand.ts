@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class migrateSqlDatabaseCommand extends commandBase {
     
-    constructor(private db: database, private dto: Raven.Server.SqlMigration.Model.MigrationRequest) {
+    constructor(private db: database | string, private dto: Raven.Server.SqlMigration.Model.MigrationRequest) {
           super();
     }
 

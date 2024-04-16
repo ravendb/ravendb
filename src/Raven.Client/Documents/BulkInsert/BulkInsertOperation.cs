@@ -195,6 +195,17 @@ namespace Raven.Client.Documents.BulkInsert
                     {
                         flushEx = e;
                     }
+                    finally
+                    {
+                        try
+                        {
+                            _timer.Dispose();
+                        }
+                        catch (Exception)
+                        {
+                            // Ignore
+                        }
+                    }
 
                     if (OperationId == -1)
                     {
@@ -219,14 +230,6 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     _resetContext.Dispose();
                     _streamLock.Dispose();
-                    try
-                    {
-                        _timer.Dispose();
-                    }
-                    catch (Exception)
-                    {
-                        // Ignore
-                    }
                 }
             });
         }

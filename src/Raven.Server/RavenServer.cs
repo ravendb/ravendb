@@ -2869,6 +2869,7 @@ namespace Raven.Server
                 if (SkipCertificateDispose == false)
                     ea.Execute(() => Certificate?.Dispose());
 
+                ea.Execute(() => DiskStatsGetter?.Dispose());
                 // this should be last
                 ea.Execute(() => AfterDisposal?.Invoke());
 
@@ -3048,7 +3049,7 @@ namespace Raven.Server
                 if (licenseStatus.Version.Major >= 6)
                 {
                     serverStore.LicenseManager.OnBeforeInitialize += () =>
-                        serverStore.LicenseManager.ActivateAsync(licenseFromApi, RaftIdGenerator.NewId())
+                        serverStore.LicenseManager.ActivateAsync(licenseFromApi, RaftIdGenerator.NewId(), fromApi: true)
                             .Wait(serverStore.ServerShutdown);
                     return;
                 }

@@ -38,7 +38,7 @@ public static class TimeFields
         if (fieldsNames == null || fieldsNames.Count == 0)
             return;
 
-        using var indexTimeFieldsTree = tx.CreateTree(Constants.IndexTimeFieldsSlice);
+        var indexTimeFieldsTree = tx.CreateTree(Constants.IndexTimeFieldsSlice);
         foreach (var field in fieldsNames)
             indexTimeFieldsTree.MultiAdd(Constants.IndexTimeFieldsSlice, field);
     }

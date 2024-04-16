@@ -4,11 +4,11 @@ import endpoints = require("endpoints");
 
 class getIndexesProgressCommand extends commandBase {
 
-    private db: database;
+    private db: database | string;
 
     private location: databaseLocationSpecifier;
 
-    constructor(db: database, location: databaseLocationSpecifier) {
+    constructor(db: database | string, location: databaseLocationSpecifier) {
         super();
         this.location = location;
         this.db = db;

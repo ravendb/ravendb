@@ -2,11 +2,7 @@
 
 import saveDatabaseLockModeCommand from "commands/resources/saveDatabaseLockModeCommand";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
-import { DatabaseSharedInfo } from "../models/databases";
-import database from "models/resources/database";
-import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
 import getEssentialDatabaseStatsCommand from "commands/resources/getEssentialDatabaseStatsCommand";
-import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
 import getDatabaseDetailedStatsCommand from "commands/resources/getDatabaseDetailedStatsCommand";
 import deleteDatabaseFromNodeCommand from "commands/resources/deleteDatabaseFromNodeCommand";
 import toggleDynamicNodeAssignmentCommand from "commands/database/dbGroup/toggleDynamicNodeAssignmentCommand";
@@ -14,7 +10,6 @@ import reorderNodesInDatabaseGroupCommand = require("commands/database/dbGroup/r
 import deleteOrchestratorFromNodeCommand from "commands/resources/deleteOrchestratorFromNodeCommand";
 import deleteDatabaseCommand from "commands/resources/deleteDatabaseCommand";
 import toggleDatabaseCommand from "commands/resources/toggleDatabaseCommand";
-import StudioDatabasesState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState;
 import getDatabasesStateForStudioCommand from "commands/resources/getDatabasesStateForStudioCommand";
 import getDatabaseStateForStudioCommand from "commands/resources/getDatabaseStateForStudioCommand";
 import restartDatabaseCommand = require("commands/resources/restartDatabaseCommand");
@@ -62,199 +57,214 @@ import deleteConnectionStringCommand = require("commands/database/settings/delet
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
+import saveCustomSorterCommand = require("commands/database/settings/saveCustomSorterCommand");
+import queryCommand = require("commands/database/query/queryCommand");
+import getIntegrationsPostgreSqlSupportCommand = require("commands/database/settings/getIntegrationsPostgreSqlSupportCommand");
+import getIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/getIntegrationsPostgreSqlCredentialsCommand");
+import saveIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/saveIntegrationsPostgreSqlCredentialsCommand");
+import deleteIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/deleteIntegrationsPostgreSqlCredentialsCommand");
+import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import saveUnusedDatabaseIDsCommand = require("commands/database/settings/saveUnusedDatabaseIDsCommand");
 
 export default class DatabasesService {
-    async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
-        return new saveDatabaseLockModeCommand(databases, newLockMode).execute();
+    async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
+        return new saveDatabaseLockModeCommand(databaseNames, newLockMode).execute();
     }
 
-    async toggle(databases: DatabaseSharedInfo[], enable: boolean) {
-        return new toggleDatabaseCommand(databases, enable).execute();
+    async toggle(databaseNames: string[], enable: boolean) {
+        return new toggleDatabaseCommand(databaseNames, enable).execute();
     }
 
     async deleteDatabase(toDelete: string[], hardDelete: boolean) {
         return new deleteDatabaseCommand(toDelete, hardDelete).execute();
     }
 
-    async getEssentialStats(db: DatabaseSharedInfo): Promise<EssentialDatabaseStatistics> {
-        return new getEssentialDatabaseStatsCommand(db).execute();
+    async getEssentialStats(databaseName: string) {
+        return new getEssentialDatabaseStatsCommand(databaseName).execute();
     }
 
-    async getDatabasesState(targetNodeTag: string): Promise<StudioDatabasesState> {
+    async getDatabasesState(targetNodeTag: string) {
         return new getDatabasesStateForStudioCommand(targetNodeTag).execute();
     }
 
-    async getDatabaseState(targetNodeTag: string, databaseName: string): Promise<StudioDatabasesState> {
+    async getDatabaseState(targetNodeTag: string, databaseName: string) {
         return new getDatabaseStateForStudioCommand(targetNodeTag, databaseName).execute();
     }
 
-    async getDetailedStats(
-        db: DatabaseSharedInfo,
-        location: databaseLocationSpecifier
-    ): Promise<DetailedDatabaseStatistics> {
-        return new getDatabaseDetailedStatsCommand(db, location).execute();
+    async getDetailedStats(databaseName: string, location: databaseLocationSpecifier) {
+        return new getDatabaseDetailedStatsCommand(databaseName, location).execute();
     }
 
-    async deleteDatabaseFromNode(db: DatabaseSharedInfo, nodes: string[], hardDelete: boolean) {
-        return new deleteDatabaseFromNodeCommand(db, nodes, hardDelete).execute();
+    async deleteDatabaseFromNode(databaseName: string, nodes: string[], hardDelete: boolean) {
+        return new deleteDatabaseFromNodeCommand(databaseName, nodes, hardDelete).execute();
     }
 
-    async deleteOrchestratorFromNode(db: DatabaseSharedInfo, node: string) {
-        return new deleteOrchestratorFromNodeCommand(db, node).execute();
+    async deleteOrchestratorFromNode(databaseName: string, node: string) {
+        return new deleteOrchestratorFromNodeCommand(databaseName, node).execute();
     }
 
     async toggleDynamicNodeAssignment(databaseName: string, enabled: boolean) {
         return new toggleDynamicNodeAssignmentCommand(databaseName, enabled).execute();
     }
 
-    async reorderNodesInGroup(db: DatabaseSharedInfo, tagsOrder: string[], fixOrder: boolean) {
-        return new reorderNodesInDatabaseGroupCommand(db.name, tagsOrder, fixOrder).execute();
+    async reorderNodesInGroup(databaseName: string, tagsOrder: string[], fixOrder: boolean) {
+        return new reorderNodesInDatabaseGroupCommand(databaseName, tagsOrder, fixOrder).execute();
     }
 
-    async restartDatabase(db: DatabaseSharedInfo, location: databaseLocationSpecifier) {
-        return new restartDatabaseCommand(db, location).execute();
+    async restartDatabase(databaseName: string, location: databaseLocationSpecifier) {
+        return new restartDatabaseCommand(databaseName, location).execute();
     }
 
-    async getDatabaseStudioConfiguration(db: database) {
-        return new getDatabaseStudioConfigurationCommand(db).execute();
+    async getDatabaseStudioConfiguration(databaseName: string) {
+        return new getDatabaseStudioConfigurationCommand(databaseName).execute();
     }
 
-    async saveDatabaseStudioConfiguration(dto: Partial<StudioConfiguration>, db: database) {
-        return new saveDatabaseStudioConfigurationCommand(dto, db).execute();
+    async saveDatabaseStudioConfiguration(dto: Partial<StudioConfiguration>, databaseName: string) {
+        return new saveDatabaseStudioConfigurationCommand(dto, databaseName).execute();
     }
 
-    async getNextOperationId(db: database) {
-        return new getNextOperationIdCommand(db).execute();
+    async getNextOperationId(databaseName: string) {
+        return new getNextOperationIdCommand(databaseName).execute();
     }
 
-    async killOperation(db: database, taskId: number) {
-        return new killOperationCommand(db, taskId).execute();
+    async killOperation(databaseName: string, taskId: number) {
+        return new killOperationCommand(databaseName, taskId).execute();
     }
 
-    async getRefreshConfiguration(db: database) {
-        return new getRefreshConfigurationCommand(db).execute();
+    async getRefreshConfiguration(databaseName: string) {
+        return new getRefreshConfigurationCommand(databaseName).execute();
     }
 
-    async saveRefreshConfiguration(db: database, dto: RefreshConfiguration) {
-        return new saveRefreshConfigurationCommand(db, dto).execute();
+    async saveRefreshConfiguration(databaseName: string, dto: RefreshConfiguration) {
+        return new saveRefreshConfigurationCommand(databaseName, dto).execute();
     }
 
-    async getDataArchivalConfiguration(
-        db: database
-    ): Promise<Raven.Client.Documents.Operations.DataArchival.DataArchivalConfiguration> {
-        return new getDataArchivalConfigurationCommand(db).execute();
+    async getDataArchivalConfiguration(databaseName: string) {
+        return new getDataArchivalConfigurationCommand(databaseName).execute();
     }
 
-    async saveDataArchivalConfiguration(db: database, dto: DataArchivalConfiguration): Promise<any> {
-        return new saveDataArchivalConfigurationCommand(db, dto).execute();
+    async saveDataArchivalConfiguration(databaseName: string, dto: DataArchivalConfiguration): Promise<any> {
+        return new saveDataArchivalConfigurationCommand(databaseName, dto).execute();
     }
 
-    async getExpirationConfiguration(db: database) {
-        return new getExpirationConfigurationCommand(db).execute();
+    async getExpirationConfiguration(databaseName: string) {
+        return new getExpirationConfigurationCommand(databaseName).execute();
     }
 
-    async saveExpirationConfiguration(db: database, dto: ExpirationConfiguration) {
-        return new saveExpirationConfigurationCommand(db, dto).execute();
+    async saveExpirationConfiguration(databaseName: string, dto: ExpirationConfiguration) {
+        return new saveExpirationConfigurationCommand(databaseName, dto).execute();
     }
 
-    async getTombstonesState(db: database, location: databaseLocationSpecifier) {
-        return new getTombstonesStateCommand(db, location).execute();
+    async getTombstonesState(databaseName: string, location: databaseLocationSpecifier) {
+        return new getTombstonesStateCommand(databaseName, location).execute();
     }
 
-    async forceTombstonesCleanup(db: database, location: databaseLocationSpecifier) {
-        return new forceTombstonesCleanupCommand(db, location).execute();
+    async forceTombstonesCleanup(databaseName: string, location: databaseLocationSpecifier) {
+        return new forceTombstonesCleanupCommand(databaseName, location).execute();
     }
 
-    async getRevisionsForConflictsConfiguration(db: database) {
-        return new getRevisionsForConflictsConfigurationCommand(db).execute();
+    async getRevisionsForConflictsConfiguration(databaseName: string) {
+        return new getRevisionsForConflictsConfigurationCommand(databaseName).execute();
     }
 
-    async saveRevisionsForConflictsConfiguration(db: database, dto: RevisionsCollectionConfiguration) {
-        return new saveRevisionsForConflictsConfigurationCommand(db, dto).execute();
+    async saveRevisionsForConflictsConfiguration(databaseName: string, dto: RevisionsCollectionConfiguration) {
+        return new saveRevisionsForConflictsConfigurationCommand(databaseName, dto).execute();
     }
 
-    async getRevisionsConfiguration(db: database) {
-        return new getRevisionsConfigurationCommand(db).execute();
+    async getRevisionsConfiguration(databaseName: string) {
+        return new getRevisionsConfigurationCommand(databaseName).execute();
     }
 
-    async saveRevisionsConfiguration(db: database, dto: RevisionsConfiguration) {
-        return new saveRevisionsConfigurationCommand(db, dto).execute();
+    async saveRevisionsConfiguration(databaseName: string, dto: RevisionsConfiguration) {
+        return new saveRevisionsConfigurationCommand(databaseName, dto).execute();
     }
 
-    async enforceRevisionsConfiguration(db: database, includeForceCreated = false, collections: string[] = null) {
-        return new enforceRevisionsConfigurationCommand(db, includeForceCreated, collections).execute();
+    async enforceRevisionsConfiguration(
+        databaseName: string,
+        includeForceCreated = false,
+        collections: string[] = null
+    ) {
+        return new enforceRevisionsConfigurationCommand(databaseName, includeForceCreated, collections).execute();
     }
 
-    async revertRevisions(db: database, dto: Raven.Server.Documents.Revisions.RevertRevisionsRequest) {
-        return new revertRevisionsCommand(dto, db).execute();
+    async revertRevisions(databaseName: string, dto: Raven.Server.Documents.Revisions.RevertRevisionsRequest) {
+        return new revertRevisionsCommand(dto, databaseName).execute();
     }
 
-    async getCustomAnalyzers(db: database, getNamesOnly = false) {
-        return new getCustomAnalyzersCommand(db, getNamesOnly).execute();
+    async getCustomAnalyzers(databaseName: string, getNamesOnly = false) {
+        return new getCustomAnalyzersCommand(databaseName, getNamesOnly).execute();
     }
 
-    async deleteCustomAnalyzer(db: database, name: string) {
-        return new deleteCustomAnalyzerCommand(db, name).execute();
+    async deleteCustomAnalyzer(databaseName: string, name: string) {
+        return new deleteCustomAnalyzerCommand(databaseName, name).execute();
     }
 
-    async getCustomSorters(db: database) {
-        return new getCustomSortersCommand(db).execute();
+    async getCustomSorters(databaseName: string) {
+        return new getCustomSortersCommand(databaseName).execute();
     }
 
-    async deleteCustomSorter(db: database, name: string) {
-        return new deleteCustomSorterCommand(db, name).execute();
+    async deleteCustomSorter(databaseName: string, name: string) {
+        return new deleteCustomSorterCommand(databaseName, name).execute();
     }
 
-    async getDocumentsCompressionConfiguration(db: database) {
-        return new getDocumentsCompressionConfigurationCommand(db).execute();
+    async saveCustomSorter(...args: ConstructorParameters<typeof saveCustomSorterCommand>) {
+        return new saveCustomSorterCommand(...args).execute();
     }
 
-    async saveDocumentsCompression(db: database, dto: Raven.Client.ServerWide.DocumentsCompressionConfiguration) {
-        return new saveDocumentsCompressionCommand(db, dto).execute();
+    async getDocumentsCompressionConfiguration(databaseName: string) {
+        return new getDocumentsCompressionConfigurationCommand(databaseName).execute();
+    }
+
+    async saveDocumentsCompression(
+        databaseName: string,
+        dto: Raven.Client.ServerWide.DocumentsCompressionConfiguration
+    ) {
+        return new saveDocumentsCompressionCommand(databaseName, dto).execute();
     }
 
     async promoteDatabaseNode(databaseName: string, nodeTag: string) {
         return new promoteDatabaseNodeCommand(databaseName, nodeTag).execute();
     }
 
-    async getConflictSolverConfiguration(db: database) {
-        return new getConflictSolverConfigurationCommand(db).execute();
+    async getConflictSolverConfiguration(databaseName: string) {
+        return new getConflictSolverConfigurationCommand(databaseName).execute();
     }
 
-    async saveConflictSolverConfiguration(db: database, dto: Raven.Client.ServerWide.ConflictSolver) {
-        return new saveConflictSolverConfigurationCommand(db, dto).execute();
+    async saveConflictSolverConfiguration(databaseName: string, dto: Raven.Client.ServerWide.ConflictSolver) {
+        return new saveConflictSolverConfigurationCommand(databaseName, dto).execute();
     }
 
-    async getConnectionStrings(db: database) {
-        return new getConnectionStringsCommand(db).execute();
+    async getConnectionStrings(databaseName: string) {
+        return new getConnectionStringsCommand(databaseName).execute();
     }
 
-    async saveConnectionString(db: database, connectionString: ConnectionStringDto) {
-        return new saveConnectionStringCommand(db, connectionString).execute();
+    async saveConnectionString(databaseName: string, connectionString: ConnectionStringDto) {
+        return new saveConnectionStringCommand(databaseName, connectionString).execute();
     }
 
     async deleteConnectionString(
-        db: database,
+        databaseName: string,
         type: Raven.Client.Documents.Operations.ETL.EtlType,
         connectionStringName: string
     ) {
-        return new deleteConnectionStringCommand(db, type, connectionStringName).execute();
+        return new deleteConnectionStringCommand(databaseName, type, connectionStringName).execute();
     }
 
     async testClusterNodeConnection(serverUrl: string, databaseName?: string, bidirectional = true) {
         return new testClusterNodeConnectionCommand(serverUrl, databaseName, bidirectional).execute();
     }
 
-    async testSqlConnectionString(db: database, connectionString: string, factoryName: string) {
-        return new testSqlConnectionStringCommand(db, connectionString, factoryName).execute();
+    async testSqlConnectionString(databaseName: string, connectionString: string, factoryName: string) {
+        return new testSqlConnectionStringCommand(databaseName, connectionString, factoryName).execute();
     }
 
-    async testRabbitMqServerConnection(db: database, connectionString: string) {
-        return new testRabbitMqServerConnectionCommand(db, connectionString).execute();
+    async testRabbitMqServerConnection(databaseName: string, connectionString: string) {
+        return new testRabbitMqServerConnectionCommand(databaseName, connectionString).execute();
     }
 
     async testKafkaServerConnection(
-        db: database,
+        databaseName: string,
         bootstrapServers: string,
         useServerCertificate: boolean,
         connectionOptionsDto: {
@@ -262,7 +272,7 @@ export default class DatabasesService {
         }
     ) {
         return new testKafkaServerConnectionCommand(
-            db,
+            databaseName,
             bootstrapServers,
             useServerCertificate,
             connectionOptionsDto
@@ -270,18 +280,50 @@ export default class DatabasesService {
     }
 
     async testElasticSearchNodeConnection(
-        db: database,
+        databaseName: string,
         serverUrl: string,
         authenticationDto: Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication
     ) {
-        return new testElasticSearchNodeConnectionCommand(db, serverUrl, authenticationDto).execute();
+        return new testElasticSearchNodeConnectionCommand(databaseName, serverUrl, authenticationDto).execute();
     }
 
-    async getDatabaseRecord(db: database, reportRefreshProgress = false) {
-        return new getDatabaseRecordCommand(db, reportRefreshProgress).execute();
+    async getDatabaseRecord(databaseName: string, reportRefreshProgress = false) {
+        return new getDatabaseRecordCommand(databaseName, reportRefreshProgress).execute();
     }
 
-    async saveDatabaseRecord(db: database, databaseRecord: documentDto, etag: number) {
-        return new saveDatabaseRecordCommand(db, databaseRecord, etag).execute();
+    async saveDatabaseRecord(databaseName: string, databaseRecord: documentDto, etag: number) {
+        return new saveDatabaseRecordCommand(databaseName, databaseRecord, etag).execute();
+    }
+
+    async query(...args: ConstructorParameters<typeof queryCommand>) {
+        return new queryCommand(...args).execute();
+    }
+
+    async getIntegrationsPostgreSqlSupport(databaseName: string) {
+        return new getIntegrationsPostgreSqlSupportCommand(databaseName).execute();
+    }
+
+    async getIntegrationsPostgreSqlCredentials(databaseName: string) {
+        return new getIntegrationsPostgreSqlCredentialsCommand(databaseName).execute();
+    }
+
+    async saveIntegrationsPostgreSqlCredentials(databaseName: string, username: string, password: string) {
+        return new saveIntegrationsPostgreSqlCredentialsCommand(databaseName, username, password).execute();
+    }
+
+    async deleteIntegrationsPostgreSqlCredentials(databaseName: string, username: string) {
+        return new deleteIntegrationsPostgreSqlCredentialsCommand(databaseName, username).execute();
+    }
+
+    async generateSecret() {
+        return new generateSecretCommand().execute();
+    }
+
+    async getDatabaseStats(...args: ConstructorParameters<typeof getDatabaseStatsCommand>) {
+        return new getDatabaseStatsCommand(...args).execute();
+    }
+
+    async saveUnusedDatabaseIDs(...args: ConstructorParameters<typeof saveUnusedDatabaseIDsCommand>) {
+        return new saveUnusedDatabaseIDsCommand(...args).execute();
     }
 }

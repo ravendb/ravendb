@@ -1,7 +1,6 @@
 import { PayloadAction, createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { services } from "components/hooks/useServices";
 import { loadStatus } from "components/models/common";
-import database from "models/resources/database";
 import { Connection } from "../connectionStringsTypes";
 import { RootState } from "components/store";
 import { ConnectionStringsUrlParameters } from "../ConnectionStrings";
@@ -14,6 +13,8 @@ import {
     mapSqlConnectionsFromDto,
 } from "./connectionStringsMapsFromDto";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { DatabaseSharedInfo } from "components/models/databases";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 interface ConnectionStringsState {
     loadStatus: loadStatus;
@@ -110,7 +111,7 @@ export const connectionStringsSlice = createSlice({
 
                 state.loadStatus = "success";
 
-                if (payload.isDatabaseAdmin && urlParameters.name && urlParameters.type) {
+                if (payload.hasDatabaseAdminAccess && urlParameters.name && urlParameters.type) {
                     const foundConnection = state.connections?.[urlParameters.type]?.find(
                         (x) => x?.name === urlParameters.name
                     );
@@ -130,12 +131,12 @@ export const connectionStringsSlice = createSlice({
 interface FetchDataResult {
     ongoingTasksDto: Raven.Server.Web.System.OngoingTasksResult;
     connectionStringsDto: GetConnectionStringsResult;
-    isDatabaseAdmin: boolean;
+    hasDatabaseAdminAccess: boolean;
 }
 
 const fetchData = createAsyncThunk<
     FetchDataResult,
-    database,
+    DatabaseSharedInfo,
     {
         state: RootState;
     }
@@ -143,17 +144,17 @@ const fetchData = createAsyncThunk<
     const state = getState();
 
     const ongoingTasksDto = await services.tasksService.getOngoingTasks(
-        db,
-        db.getFirstLocation(state.cluster.localNodeTag)
+        db.name,
+        DatabaseUtils.getFirstLocation(db, state.cluster.localNodeTag)
     );
-    const connectionStringsDto = await services.tasksService.getConnectionStrings(db);
+    const connectionStringsDto = await services.tasksService.getConnectionStrings(db.name);
 
-    const isDatabaseAdmin = accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)(state) === "DatabaseAdmin";
+    const hasDatabaseAdminAccess = accessManagerSelectors.hasDatabaseAdminAccess(db.name)(state);
 
     return {
         ongoingTasksDto,
         connectionStringsDto,
-        isDatabaseAdmin,
+        hasDatabaseAdminAccess,
     };
 });
 

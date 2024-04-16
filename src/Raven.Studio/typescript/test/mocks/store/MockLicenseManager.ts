@@ -1,6 +1,7 @@
 ﻿import { globalDispatch } from "components/storeCompat";
 import { licenseActions } from "components/common/shell/licenseSlice";
 import { LicenseStubs } from "test/stubs/LicenseStubs";
+import { mockServices } from "test/mocks/services/MockServices";
 
 export class MockLicenseManager {
     with_License(override?: Partial<LicenseStatus>) {
@@ -12,6 +13,9 @@ export class MockLicenseManager {
     }
 
     with_LimitsUsage(override?: Partial<Raven.Server.Commercial.LicenseLimitsUsage>) {
+        const { licenseService } = mockServices;
+
+        licenseService.withLimitsUsage({ ...LicenseStubs.limitsUsage(), ...override });
         globalDispatch(licenseActions.limitsUsageLoaded({ ...LicenseStubs.limitsUsage(), ...override }));
     }
 }

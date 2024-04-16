@@ -5,7 +5,6 @@ import useBoolean from "components/hooks/useBoolean";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useServices } from "components/hooks/useServices";
 import { milliSecondsInWeek } from "components/utils/common";
-import database from "models/resources/database";
 import moment from "moment";
 import router from "plugins/router";
 import { useEffect, useRef, useState } from "react";
@@ -15,6 +14,9 @@ import IndexUtils from "components/utils/IndexUtils";
 import useConfirm from "components/common/ConfirmDialog";
 import React from "react";
 import messagePublisher from "common/messagePublisher";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 type IndexStats = Map<string, Raven.Client.Documents.Indexes.IndexStats>;
 
@@ -48,7 +50,15 @@ interface UnmergableIndex {
     reason: string;
 }
 
-export default function useIndexCleanup(db: database) {
+export interface MergeSuggestionsError {
+    indexName: string;
+    message: string;
+    stackTrace: string;
+}
+
+export default function useIndexCleanup() {
+    const db = useAppSelector(databaseSelectors.activeDatabase);
+
     const [activeTab, setActiveTab] = useState(0);
     const [indexStats, setIndexStats] = useState<IndexStats>(null);
 
@@ -59,6 +69,7 @@ export default function useIndexCleanup(db: database) {
     const [surpassingIndexes, setSurpassingIndexes] = useState<SurpassingIndex[]>([]);
     const [unusedIndexes, setUnusedIndexes] = useState<UnusedIndex[]>([]);
     const [unmergableIndexes, setUnmergableIndexes] = useState<UnmergableIndex[]>([]);
+    const [mergeSuggestionsErrors, setMergeSuggestionsErrors] = useState<MergeSuggestionsError[]>([]);
 
     const [selectedSurpassingIndexes, setSelectedSurpassingIndexes] = useState<string[]>([]);
     const [selectedUnusedIndexes, setSelectedUnusedIndexes] = useState<string[]>([]);
@@ -94,7 +105,7 @@ export default function useIndexCleanup(db: database) {
     };
 
     const fetchIndexMergeSuggestions = async (indexStats: IndexStats) => {
-        const results = await indexesService.getIndexMergeSuggestions(db);
+        const results = await indexesService.getIndexMergeSuggestions(db.name);
 
         const suggestions = results.Suggestions;
         const mergeCandidatesRaw = suggestions.filter((x) => x.MergedIndex);
@@ -137,11 +148,15 @@ export default function useIndexCleanup(db: database) {
                 reason: results.Unmergables[key],
             }))
         );
+
+        setMergeSuggestionsErrors(
+            results.Errors.map((x) => ({ indexName: x.IndexName, message: x.Message, stackTrace: x.StackTrace }))
+        );
     };
 
     const fetchStats = async () => {
-        const locations = db.getLocations();
-        const allStats = locations.map((location) => indexesService.getStats(db, location));
+        const locations = DatabaseUtils.getLocations(db);
+        const allStats = locations.map((location) => indexesService.getStats(db.name, location));
 
         const resultMap = new Map<string, Raven.Client.Documents.Indexes.IndexStats>();
 
@@ -253,7 +268,7 @@ export default function useIndexCleanup(db: database) {
             return;
         }
 
-        const tasks = confirmData.indexesInfoForDelete.map((x) => indexesService.deleteIndex(x.indexName, db));
+        const tasks = confirmData.indexesInfoForDelete.map((x) => indexesService.deleteIndex(x.indexName, db.name));
         await Promise.all(tasks);
 
         if (tasks.length > 1) {
@@ -265,12 +280,12 @@ export default function useIndexCleanup(db: database) {
 
     const navigateToMergeSuggestion = (item: MergeIndex) => {
         const mergedIndexName = mergedIndexesStorage.saveMergedIndex(
-            db,
+            db.name,
             item.mergedIndexDefinition,
             item.toMerge.map((x) => x.name)
         );
 
-        const targetUrl = appUrl.forEditIndex(mergedIndexName, db);
+        const targetUrl = appUrl.forEditIndex(mergedIndexName, db.name);
 
         router.navigate(targetUrl);
     };
@@ -308,6 +323,9 @@ export default function useIndexCleanup(db: database) {
         },
         unmergable: {
             data: unmergableIndexes,
+        },
+        errors: {
+            data: mergeSuggestionsErrors,
         },
     };
 }

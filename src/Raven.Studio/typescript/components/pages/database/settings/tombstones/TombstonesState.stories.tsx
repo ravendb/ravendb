@@ -2,8 +2,8 @@ import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import TombstonesState from "./TombstonesState";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockServices } from "test/mocks/services/MockServices";
+import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
     title: "Pages/Database/Settings",
@@ -14,8 +14,11 @@ export default {
 export const Tombstones: StoryObj<typeof TombstonesState> = {
     render: () => {
         const { databasesService } = mockServices;
-        databasesService.withTombstonesState();
+        const { databases } = mockStore;
 
-        return <TombstonesState db={DatabasesStubs.nonShardedClusterDatabase()} />;
+        databasesService.withTombstonesState();
+        databases.withActiveDatabase_NonSharded_SingleNode();
+
+        return <TombstonesState />;
     },
 };

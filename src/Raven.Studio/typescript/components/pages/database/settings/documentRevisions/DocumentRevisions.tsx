@@ -11,7 +11,6 @@ import EditRevision, {
 } from "components/pages/database/settings/documentRevisions/EditRevision";
 import EnforceConfiguration from "components/pages/database/settings/documentRevisions/EnforceConfiguration";
 import { todo } from "common/developmentHelper";
-import { NonShardedViewProps } from "components/models/common";
 import { LoadingView } from "components/common/LoadingView";
 import { DocumentRevisionsConfig, documentRevisionsActions } from "./store/documentRevisionsSlice";
 import { documentRevisionsSelectors } from "./store/documentRevisionsSliceSelectors";
@@ -36,6 +35,8 @@ import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 
 interface EditRevisionData {
     onConfirm: (config: DocumentRevisionsConfig) => void;
@@ -47,7 +48,10 @@ interface EditRevisionData {
 
 todo("Feature", "Damian", "Add the Revert revisions view");
 
-export default function DocumentRevisions({ db }: NonShardedViewProps) {
+export default function DocumentRevisions() {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+
     const { value: isEnforceConfigurationModalOpen, toggle: toggleEnforceConfigurationModal } = useBoolean(false);
     const [editRevisionData, setEditRevisionData] = useState<EditRevisionData>(null);
 
@@ -56,9 +60,6 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const defaultConflictsConfig = useAppSelector(documentRevisionsSelectors.defaultConflictsConfig);
     const collectionConfigs = useAppSelector(documentRevisionsSelectors.collectionConfigs);
     const isAnyModified = useAppSelector(documentRevisionsSelectors.isAnyModified);
-
-    const isDatabaseAdmin =
-        useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name)) === "DatabaseAdmin";
 
     const canSetupDefaultRevisionsConfiguration = useAppSelector(
         licenseSelectors.statusValue("CanSetupDefaultRevisionsConfiguration")
@@ -93,12 +94,12 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
     const documentRevisionsDocsLink = useRavenLink({ hash: "OFVLX8" });
 
     useEffect(() => {
-        dispatch(documentRevisionsActions.fetchConfigs(db));
+        dispatch(documentRevisionsActions.fetchConfigs(databaseName));
 
         return () => {
             dispatch(documentRevisionsActions.reset());
         };
-    }, [db, dispatch]);
+    }, [databaseName, dispatch]);
 
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
@@ -107,11 +108,11 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
         reportEvent("revisions", "save");
 
         const promises = [
-            databasesService.saveRevisionsConfiguration(db, {
+            databasesService.saveRevisionsConfiguration(databaseName, {
                 Default: mapToDto(defaultDocumentsConfig),
                 Collections: Object.fromEntries(collectionConfigs.map((x) => [x.Name, mapToDto(x)])),
             }),
-            databasesService.saveRevisionsForConflictsConfiguration(db, mapToDto(defaultConflictsConfig)),
+            databasesService.saveRevisionsForConflictsConfiguration(databaseName, mapToDto(defaultConflictsConfig)),
         ];
 
         await Promise.all(promises);
@@ -122,9 +123,16 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
 
     const asyncEnforceRevisionsConfiguration = useAsyncCallback(
         async (includeForceCreated: boolean, collections: string[]) => {
-            const dto = await databasesService.enforceRevisionsConfiguration(db, includeForceCreated, collections);
+            const dto = await databasesService.enforceRevisionsConfiguration(
+                databaseName,
+                includeForceCreated,
+                collections
+            );
 
-            notificationCenter.instance.openDetailsForOperationById(db, dto.OperationId);
+            notificationCenter.instance.openDetailsForOperationById(
+                activeDatabaseTracker.default.database(),
+                dto.OperationId
+            );
         }
     );
 
@@ -149,7 +157,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
         return (
             <LoadError
                 error="Unable to load document revisions"
-                refresh={() => documentRevisionsActions.fetchConfigs(db)}
+                refresh={() => documentRevisionsActions.fetchConfigs(databaseName)}
             />
         );
     }
@@ -169,7 +177,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                     <Col>
                         <AboutViewHeading title="Document Revisions" icon="revisions" marginBottom={2} />
 
-                        {isDatabaseAdmin && (
+                        {hasDatabaseAdminAccess && (
                             <StickyHeader>
                                 <Row>
                                     <div className="d-flex flex-wrap gap-2">
@@ -220,7 +228,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                         <div className="mt-5">
                             <HrHeader
                                 right={
-                                    isDatabaseAdmin && !defaultDocumentsConfig ? (
+                                    hasDatabaseAdminAccess && !defaultDocumentsConfig ? (
                                         <>
                                             <div id="add-default-config-button">
                                                 <Button
@@ -258,7 +266,6 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                             </HrHeader>
                             {defaultDocumentsConfig && (
                                 <DocumentRevisionsConfigPanel
-                                    isDatabaseAdmin={isDatabaseAdmin}
                                     config={defaultDocumentsConfig}
                                     onToggle={() =>
                                         dispatch(
@@ -280,7 +287,6 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 />
                             )}
                             <DocumentRevisionsConfigPanel
-                                isDatabaseAdmin={isDatabaseAdmin}
                                 config={defaultConflictsConfig}
                                 onToggle={() =>
                                     dispatch(documentRevisionsActions.toggleConfigState(defaultConflictsConfig.Name))
@@ -298,7 +304,7 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                         <div className="mt-5">
                             <HrHeader
                                 right={
-                                    isDatabaseAdmin ? (
+                                    hasDatabaseAdminAccess ? (
                                         <Button
                                             color="info"
                                             size="sm"
@@ -326,7 +332,6 @@ export default function DocumentRevisions({ db }: NonShardedViewProps) {
                                 collectionConfigs.map((config) => (
                                     <DocumentRevisionsConfigPanel
                                         key={config.Name}
-                                        isDatabaseAdmin={isDatabaseAdmin}
                                         config={config}
                                         onToggle={() =>
                                             dispatch(documentRevisionsActions.toggleConfigState(config.Name))

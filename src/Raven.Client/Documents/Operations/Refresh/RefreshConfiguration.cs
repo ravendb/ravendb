@@ -8,10 +8,11 @@ namespace Raven.Client.Documents.Operations.Refresh
 
         public long? RefreshFrequencyInSec { get; set; }
 
+        public long? MaxItemsToProcess { get; set; }
 
         private bool Equals(RefreshConfiguration other)
         {
-            return Disabled == other.Disabled && RefreshFrequencyInSec == other.RefreshFrequencyInSec;
+            return Disabled == other.Disabled && RefreshFrequencyInSec == other.RefreshFrequencyInSec && MaxItemsToProcess == other.MaxItemsToProcess;
         }
 
         public override bool Equals(object obj)
@@ -29,8 +30,9 @@ namespace Raven.Client.Documents.Operations.Refresh
         {
             unchecked
             {
-                var hashCode = Disabled.GetHashCode();
-                hashCode = (hashCode * 397) ^ RefreshFrequencyInSec.GetHashCode();
+                int hashCode = Disabled.GetHashCode();
+                hashCode = (hashCode * 397) ^ (RefreshFrequencyInSec?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (MaxItemsToProcess?.GetHashCode() ?? 0);
                 return hashCode;
             }
         }
@@ -42,6 +44,7 @@ namespace Raven.Client.Documents.Operations.Refresh
             {
                 [nameof(Disabled)] = Disabled,
                 [nameof(RefreshFrequencyInSec)] = RefreshFrequencyInSec,
+                [nameof(MaxItemsToProcess)] = MaxItemsToProcess
             };
         }
     }

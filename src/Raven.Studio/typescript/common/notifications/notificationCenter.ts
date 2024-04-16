@@ -66,6 +66,8 @@ import conflictExceededDetails
     from "viewmodels/common/notificationCenter/detailViewer/alerts/conflictExceededDetails";
 import complexFieldsAlertDetails
     from "viewmodels/common/notificationCenter/detailViewer/alerts/complexFieldsAlertDetails";
+import cpuCreditsBalanceDetails
+    from "viewmodels/common/notificationCenter/detailViewer/alerts/cpuCreditsBalanceDetails";
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
     showDetailsFor(notification: abstractNotification, notificationCenter: notificationCenter): JQueryPromise<void> | void;
@@ -187,6 +189,7 @@ class notificationCenter {
             mismatchedReferenceLoadDetails,
             blockingTombstonesDetails,
             queueSinkErrorDetails,
+            cpuCreditsBalanceDetails,
             serverLimitsDetails,
             conflictExceededDetails,
             complexFieldsAlertDetails,

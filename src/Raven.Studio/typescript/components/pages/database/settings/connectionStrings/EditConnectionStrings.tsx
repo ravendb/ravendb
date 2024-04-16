@@ -9,7 +9,6 @@ import Select, {
 } from "components/common/select/Select";
 import { Connection, EditConnectionStringFormProps } from "./connectionStringsTypes";
 import RavenConnectionString from "./editForms/RavenConnectionString";
-import database from "models/resources/database";
 import { useDispatch } from "react-redux";
 import { connectionStringsActions } from "./store/connectionStringsSlice";
 import ElasticSearchConnectionString from "./editForms/ElasticSearchConnectionString";
@@ -24,14 +23,15 @@ import { useAsyncCallback } from "react-async-hook";
 import { mapConnectionStringToDto } from "./store/connectionStringsMapsToDto";
 import useConnectionStringsLicense, { ConnectionStringsLicenseFeatures } from "./useConnectionStringsLicense";
 import assertUnreachable from "components/utils/assertUnreachable";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
 
 export interface EditConnectionStringsProps {
-    db: database;
     initialConnection?: Connection;
 }
 
 export default function EditConnectionStrings(props: EditConnectionStringsProps) {
-    const { db, initialConnection } = props;
+    const { initialConnection } = props;
 
     const isForNewConnection = !initialConnection.name;
 
@@ -42,7 +42,8 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
 
     const EditConnectionStringComponent = getEditConnectionStringComponent(connectionStringType);
 
-    const asyncSave = useAsyncCallback((dto: any) => tasksService.saveConnectionString(db, dto));
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const asyncSave = useAsyncCallback((dto: any) => tasksService.saveConnectionString(databaseName, dto));
 
     const save = async (newConnection: Connection) => {
         return tryHandleSubmit(async () => {
@@ -98,7 +99,6 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                 {EditConnectionStringComponent && (
                     <EditConnectionStringComponent
                         initialConnection={initialConnection}
-                        db={db}
                         isForNewConnection={isForNewConnection}
                         onSave={save}
                     />

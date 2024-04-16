@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class finishRollingCommand extends commandBase {
-    constructor(private db: database, private indexName: string, private nodeTag: string = null) {
+    constructor(private db: database | string, private indexName: string, private nodeTag: string = null) {
         super();
     }
 

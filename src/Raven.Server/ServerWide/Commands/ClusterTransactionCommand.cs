@@ -699,7 +699,7 @@ namespace Raven.Server.ServerWide.Commands
             return result;
         }
 
-        private static long GetPrevCount(ClusterOperationContext context, Tree commandsCountPerDatabase, string databaseName)
+        internal static long GetPrevCount(ClusterOperationContext context, Tree commandsCountPerDatabase, string databaseName)
         {
             using (GetPrefix(context, databaseName, out var databaseSlice))
             {
@@ -811,7 +811,7 @@ namespace Raven.Server.ServerWide.Commands
         public sealed class SingleClusterDatabaseCommand : IDynamicJson
         {
             public ClusterTransactionOptions Options;
-            public BlittableJsonReaderArray Commands;
+            public List<ClusterTransactionDataCommand> Commands;
             public long Index;
             public long PreviousCount;
             public string Database;
@@ -858,7 +858,7 @@ namespace Raven.Server.ServerWide.Commands
         }
 
 
-        public static IEnumerable<SingleClusterDatabaseCommand> ReadCommandsBatch<TTransaction>(TransactionOperationContext<TTransaction> context, string database, long? fromCount, long take = 128)
+        public static IEnumerable<SingleClusterDatabaseCommand> ReadCommandsBatch<TTransaction>(TransactionOperationContext<TTransaction> context, string database, long? fromCount, long? lastCompletedClusterTransactionIndex = null, long take = 128)
             where TTransaction : RavenTransaction
         {
             var lowerDb = database.ToLowerInvariant();
@@ -876,6 +876,8 @@ namespace Raven.Server.ServerWide.Commands
                         continue;
                     if (result.PreviousCount < fromCount)
                         continue;
+                    if (lastCompletedClusterTransactionIndex.HasValue && result.Index <= lastCompletedClusterTransactionIndex)
+                        continue;
                     if (take <= 0)
                         yield break;
                     take--;
@@ -891,7 +893,7 @@ namespace Raven.Server.ServerWide.Commands
             if (ptr == null)
                 return null;
 
-            var blittable = new BlittableJsonReaderObject(ptr, size, context);
+            using var blittable = new BlittableJsonReaderObject(ptr, size, context);
             blittable.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray array);
 
             ClusterTransactionOptions options = null;
@@ -904,12 +906,20 @@ namespace Raven.Server.ServerWide.Commands
             var keyPtr = reader.Read((int)TransactionCommandsColumn.Key, out size);
             var database = Encoding.UTF8.GetString(keyPtr, size - sizeof(long) - 1);
 
+            var databaseCommands = new List<ClusterTransactionDataCommand>();
+            foreach (BlittableJsonReaderObject blittableCommand in array)
+            {
+                var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
+                cmd.Document = cmd.Document?.CloneOnTheSameContext(); // we need to get it out of the array
+                databaseCommands.Add(cmd);
+            }
+
             blittable.TryGet(nameof(SingleClusterDatabaseCommand.ShardNumber), out int? shardNumber);
 
             return new SingleClusterDatabaseCommand
             {
                 Options = options,
-                Commands = array,
+                Commands = databaseCommands,
                 Index = index,
                 PreviousCount = Bits.SwapBytes(*(long*)(keyPtr + size - sizeof(long))),
                 Database = database,
@@ -1034,7 +1044,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public override string AdditionalDebugInformation(Exception exception)
         {
-            return $"guid: {UniqueRequestId} {string.Join(", ", ClusterCommands.Select(c => c.Id))}";
+            return $"guid: {UniqueRequestId} {string.Join(", ", ClusterCommands.Select(c => $"({c.Id}, {c.Index})"))}";
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)

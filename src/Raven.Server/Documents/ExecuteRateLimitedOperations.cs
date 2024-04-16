@@ -17,7 +17,7 @@ namespace Raven.Server.Documents
         private readonly Func<T, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> _commandToExecute;
         private readonly RateGate _rateGate;
         private readonly OperationCancelToken _token;
-        private readonly int? _maxTransactionSizeInPages;
+        private readonly Size? _maxTransactionSize;
         private readonly int? _batchSize;
         private readonly CancellationToken _cancellationToken;
 
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents
             _rateGate = rateGate;
             _token = token;
             if (maxTransactionSize != null)
-                _maxTransactionSizeInPages = Math.Max(1, maxTransactionSize.Value / Constants.Storage.PageSize);
+                _maxTransactionSize = new Size(maxTransactionSize.Value, SizeUnit.Bytes);
             _batchSize = batchSize;
             _cancellationToken = token.Token;
         }
@@ -73,9 +73,8 @@ namespace Raven.Server.Documents
                 if (_batchSize != null && Processed >= _batchSize)
                     break;
 
-                if (_maxTransactionSizeInPages != null &&
-                    context.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages +
-                    context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes) / Constants.Storage.PageSize > _maxTransactionSizeInPages)
+                if (_maxTransactionSize != null &&
+                    context.Transaction.InnerTransaction.LowLevelTransaction.TransactionSize > _maxTransactionSize)
                     break;
 
                 if (context.CachedProperties.NeedClearPropertiesCache())

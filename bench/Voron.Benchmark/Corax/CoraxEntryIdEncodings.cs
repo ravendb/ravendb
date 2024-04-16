@@ -30,9 +30,9 @@ public class CoraxEntryIdEncodings
     [Benchmark]
     public Span<long> DiscardWithSimd()
     {
-        EntryIdEncodings.DecodeAndDiscardFrequencyAvx2(_idsWithEncodingsForSimd, BufferSize);
-        EntryIdEncodings.DecodeAndDiscardFrequencyAvx2(_idsWithEncodingsForSimd, BufferSize);
-        EntryIdEncodings.DecodeAndDiscardFrequencyAvx2(_idsWithEncodingsForSimd, BufferSize);
+        EntryIdEncodings.DecodeAndDiscardFrequencyVector256(_idsWithEncodingsForSimd, BufferSize);
+        EntryIdEncodings.DecodeAndDiscardFrequencyVector256(_idsWithEncodingsForSimd, BufferSize);
+        EntryIdEncodings.DecodeAndDiscardFrequencyVector256(_idsWithEncodingsForSimd, BufferSize);
 
         return _idsWithEncodingsForSimd;
     }

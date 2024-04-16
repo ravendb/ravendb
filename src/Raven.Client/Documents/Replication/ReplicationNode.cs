@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Replication
     /// <summary>
     /// Data class for replication destination
     /// </summary>
-    public abstract class ReplicationNode : IEquatable<ReplicationNode>
+    public abstract class ReplicationNode : IEquatable<ReplicationNode>, IDynamicJson
     {
         /// <summary>
         /// The name of the connection string specified in the 
@@ -49,6 +49,21 @@ namespace Raven.Client.Documents.Replication
         /// </summary>
         public bool Disabled { get; set; }
 
+        /// <summary>
+        /// Replication type
+        /// </summary>
+        public ReplicationType Type => GetReplicationType();
+       
+        public enum ReplicationType
+        {
+            External,
+            PullAsSink,
+            Internal,
+            Migration
+        }
+
+        public abstract ReplicationType GetReplicationType();
+
         public bool Equals(ReplicationNode other) => IsEqualTo(other);
 
         public virtual bool IsEqualTo(ReplicationNode other)
@@ -58,9 +73,12 @@ namespace Raven.Client.Documents.Replication
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
             return Equals((ReplicationNode)obj);
         }
 
@@ -81,7 +99,8 @@ namespace Raven.Client.Documents.Replication
             {
                 [nameof(Database)] = Database,
                 [nameof(Url)] = Url,
-                [nameof(Disabled)] = Disabled
+                [nameof(Disabled)] = Disabled,
+                [nameof(Type)] = Type
             };
         }
 
@@ -93,6 +112,6 @@ namespace Raven.Client.Documents.Replication
             return str;
         }
 
-        public abstract string FromString();
+        public virtual string FromString() => $"[{Database} @ {Url}]";
     }
 }

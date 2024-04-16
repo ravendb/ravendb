@@ -29,5 +29,29 @@ namespace Tests.Infrastructure
             if (_canConnect == false)
                 Skip = "Test requires ElasticSearch instance";
         }
+
+        public static bool ShouldSkip(out string skipMessage)
+        {
+            if (RavenTestHelper.SkipIntegrationTests)
+            {
+                skipMessage = RavenTestHelper.SkipIntegrationMessage;
+                return true;
+            }
+
+            if (RavenTestHelper.IsRunningOnCI)
+            {
+                skipMessage = null;
+                return false;
+            }
+
+            if (_canConnect == false)
+            {
+                skipMessage = "Test requires ElasticSearch instance";
+                return true;
+            }
+
+            skipMessage = null;
+            return false;
+        }
     }
 }

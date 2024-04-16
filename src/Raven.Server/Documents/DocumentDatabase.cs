@@ -74,6 +74,7 @@ using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
+using static Raven.Server.Smuggler.Documents.CounterItem;
 
 namespace Raven.Server.Documents
 {
@@ -89,7 +90,7 @@ namespace Raven.Server.Documents
 
         private readonly object _idleLocker = new object();
 
-        private readonly SemaphoreSlim _clusterLocker = new(1, 1);
+        private readonly SemaphoreSlim _updateValuesLocker = new(1, 1);
 
         public Action<string> AddToInitLog => _addToInitLog;
 
@@ -138,7 +139,7 @@ namespace Raven.Server.Documents
             _databaseShutdown = CancellationTokenSource.CreateLinkedTokenSource(serverStore.ServerShutdown);
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
 
-            _databaseStateChange = new DatabasesLandlord.StateChange(ServerStore, name, _logger, UpdateOnStateChange, 0, _databaseShutdown.Token, _clusterLocker);
+            _databaseStateChange = new DatabasesLandlord.StateChange(ServerStore, name, _logger, UpdateOnStateChange, 0, _databaseShutdown.Token);
 
             try
             {
@@ -631,19 +632,21 @@ namespace Raven.Server.Documents
             public virtual void Dispose() => ArrayPool<ClusterTransactionCommand.SingleClusterDatabaseCommand>.Shared.Return(_data);
         }
 
-        protected virtual ClusterTransactionBatchCollector CollectCommandsBatch(ClusterOperationContext context, int take)
+        protected virtual ClusterTransactionBatchCollector CollectCommandsBatch(ClusterOperationContext context, long lastCompletedClusterTransactionIndex, int take)
         {
             var batchCollector = new ClusterTransactionBatchCollector(take);
-            var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take);
+            var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, lastCompletedClusterTransactionIndex, take);
             batchCollector.Add(readCommands);
             return batchCollector;
         }
 
         public (long BatchSize, long CommandsCount) ExecuteClusterTransaction(ClusterOperationContext context, int batchSize)
         {
-            using var batchCollector = CollectCommandsBatch(context, batchSize);
-            Stopwatch stopwatch = null;
+            using var batchCollector = CollectCommandsBatch(context, LastCompletedClusterTransactionIndex, batchSize);
 
+            ServerStore.ForTestingPurposes?.BeforeExecuteClusterTransactionBatch?.Invoke(Name, batchCollector.GetData().ToList());
+
+            Stopwatch stopwatch = null;
             try
             {
                 if (_logger.IsInfoEnabled)
@@ -707,7 +710,7 @@ namespace Raven.Server.Documents
                 var commandsCount = 0;
                 foreach (var command in batch)
                 {
-                    commandsCount += command.Commands.Length;
+                    commandsCount += command.Commands.Count;
 
                     OnClusterTransactionCompletion(command, mergedCommands);
                 }
@@ -743,7 +746,7 @@ namespace Raven.Server.Documents
                         Name,
                         "Cluster transaction failed to execute",
                         $"Failed to execute cluster transactions with raft index: {command.Index}. {Environment.NewLine}" +
-                        $"With the following document ids involved: {string.Join(", ", command.Commands.Select(item => JsonDeserializationServer.ClusterTransactionDataCommand((BlittableJsonReaderObject)item).Id))} {Environment.NewLine}" +
+                        $"With the following document ids involved: {string.Join(", ", command.Commands.Select(item => item.Id))} {Environment.NewLine}" +
                         "Performing cluster transactions on this database will be stopped until the issue is resolved.",
                         AlertType.ClusterTransactionFailure,
                         NotificationSeverity.Error,
@@ -771,15 +774,15 @@ namespace Raven.Server.Documents
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                 ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
 
-                _nextClusterCommand = command.PreviousCount + command.Commands.Length;
+                _nextClusterCommand = command.PreviousCount + command.Commands.Count;
                 _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
             }
             catch (Exception e)
             {
                 // nothing we can do
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsOperationsEnabled)
                 {
-                    _logger.Info($"Failed to notify about transaction completion for database '{Name}'.", e);
+                    _logger.Operations($"Failed to notify about transaction completion for database '{Name}'.", e);
                 }
             }
         }
@@ -797,9 +800,9 @@ namespace Raven.Server.Documents
             catch (Exception e)
             {
                 // nothing we can do
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsOperationsEnabled)
                 {
-                    _logger.Info($"Failed to notify about transaction completion for database '{Name}'.", e);
+                    _logger.Operations($"Failed to notify about transaction completion for database '{Name}'.", e);
                 }
             }
         }
@@ -897,9 +900,9 @@ namespace Raven.Server.Documents
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
 
-            var lockTaken = _clusterLocker.Wait(TimeSpan.FromSeconds(5));
+            var lockTaken = _databaseStateChange.Locker.Wait(TimeSpan.FromSeconds(5));
             
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Acquired cluster lock. Taken: {lockTaken}");
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Acquired the update database record lock. Taken: {lockTaken}");
 
             if (lockTaken == false && _logger.IsOperationsEnabled)
                 _logger.Operations("Failed to acquire lock during database dispose for cluster notifications. Will dispose rudely...");
@@ -933,13 +936,25 @@ namespace Raven.Server.Documents
             // must acquire the lock in order to prevent concurrent access to index files
             if (lockTaken == false)
             {
-                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
-                _clusterLocker.Wait();
-                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquired cluster lock");
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring the update database record lock");
+                // ReSharper disable once MethodSupportsCancellation
+                _databaseStateChange.Locker.Wait();
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquired the update database record lock");
             }
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing the cluster locker");
-            exceptionAggregator.Execute(() => _clusterLocker.Dispose());
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing the update database record lock");
+            exceptionAggregator.Execute(() => _databaseStateChange.Locker.Dispose());
+
+            // To avoid potential deadlocks, it's vital to maintain a consistent lock acquisition order,
+            // especially considering the nested locks involved.
+            // Specifically, we need to acquire the 'update database record' lock
+            // BEFORE obtaining the 'update values' lock.
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring the update values lock");
+            // ReSharper disable once MethodSupportsCancellation
+            _updateValuesLocker.Wait();
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing the update values lock");
+            exceptionAggregator.Execute(() => _updateValuesLocker.Dispose());
 
             var indexStoreTask = _indexStoreTask;
             if (indexStoreTask != null)
@@ -1578,15 +1593,31 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void UpdateOnStateChange(DatabaseRecord record, long index)
+        public async Task UpdateOnStateChange(DatabaseRecord record, long index)
         {
             SetIds(record);
             SetUnusedDatabaseIds(record);
             InitializeFromDatabaseRecord(record);
             IndexStore.HandleDatabaseRecordChange(record, index);
             ReplicationLoader?.HandleDatabaseRecordChange(record, index);
-            EtlLoader?.HandleDatabaseRecordChange(record);
-            SubscriptionStorage?.HandleDatabaseRecordChange();
+
+
+            // We've already begun executing the operation and aim to see it through without interruption,
+            // hence we won't be passing the cancellation token.
+            // ReSharper disable once MethodSupportsCancellation
+            await _updateValuesLocker.WaitAsync();
+
+            try
+            {
+                PeriodicBackupRunner?.UpdateConfigurations(record.PeriodicBackups);
+                EtlLoader?.HandleDatabaseRecordChange(record);
+                SubscriptionStorage?.HandleDatabaseRecordChange();
+            }
+            finally
+            {
+                _updateValuesLocker.Release();
+            }
+
             QueueSinkLoader?.HandleDatabaseRecordChange(record);
 
             OnDatabaseRecordChanged(record);
@@ -1638,20 +1669,17 @@ namespace Raven.Server.Documents
             var taken = false;
             while (taken == false)
             {
-                taken = await _clusterLocker.WaitAsync(TimeSpan.FromSeconds(5));
+                taken = await _updateValuesLocker.WaitAsync(TimeSpan.FromSeconds(5), DatabaseShutdown);
 
                 try
                 {
                     if (CanSkipValueChange(index, type))
                         return;
 
-                    if (DatabaseShutdown.IsCancellationRequested)
-                        return;
+                    DatabaseShutdown.ThrowIfCancellationRequested();
 
                     if (taken == false)
                         continue;
-
-                    DatabaseShutdown.ThrowIfCancellationRequested();
 
                     SubscriptionStorage?.HandleDatabaseRecordChange();
                     EtlLoader?.HandleDatabaseValueChanged();
@@ -1662,7 +1690,7 @@ namespace Raven.Server.Documents
                 finally
                 {
                     if (taken)
-                        _clusterLocker.Release();
+                        _updateValuesLocker.Release();
                 }
             }
         }
@@ -1695,7 +1723,6 @@ namespace Raven.Server.Documents
             ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
             DataArchivist = DataArchivist.LoadConfiguration(this, record, DataArchivist);
             TimeSeriesPolicyRunner = TimeSeriesPolicyRunner.LoadConfigurations(this, record, TimeSeriesPolicyRunner);
-            PeriodicBackupRunner.UpdateConfigurations(record.PeriodicBackups);
             UpdateCompressionConfigurationFromDatabaseRecord(record);
         }
 

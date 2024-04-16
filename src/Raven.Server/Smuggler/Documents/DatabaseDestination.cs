@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
@@ -16,6 +17,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
@@ -44,6 +46,8 @@ namespace Raven.Server.Smuggler.Documents
         private readonly Logger _log;
         private BuildVersionType _buildType;
         private DatabaseSmugglerOptionsServerSide _options;
+        protected SmugglerResult _result;
+        protected Action<IOperationProgress> _onProgress;
 
         public DatabaseDestination(DocumentDatabase database, CancellationToken token = default)
         {
@@ -53,10 +57,12 @@ namespace Raven.Server.Smuggler.Documents
             _duplicateDocsHandler = new DuplicateDocsHandler(_database);
         }
 
-        public ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
+        public ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, long buildVersion)
         {
             _buildType = BuildVersion.Type(buildVersion);
             _options = options;
+            _result = result;
+            _onProgress = onProgress;
 
             var d = new AsyncDisposableAction(() =>
             {
@@ -117,12 +123,12 @@ namespace Raven.Server.Smuggler.Documents
 
         protected virtual ICompareExchangeActions CreateCompareExchangeActions(string databaseName, JsonOperationContext context, BackupKind? backupKind)
         {
-            return new DatabaseCompareExchangeActions(databaseName, _database, context, backupKind, _token);
+            return new DatabaseCompareExchangeActions(databaseName, _database, context, backupKind, _result, _onProgress, _token);
         }
 
         public ICompareExchangeActions CompareExchangeTombstones(string databaseName, JsonOperationContext context)
         {
-            return new DatabaseCompareExchangeActions(databaseName, _database, context, backupKind: null, _token);
+            return new DatabaseCompareExchangeActions(databaseName, _database, context, backupKind: null, _result, _onProgress, _token);
         }
 
         public ICounterActions Counters(SmugglerResult result)
@@ -654,7 +660,8 @@ namespace Raven.Server.Smuggler.Documents
                         if ((document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler)) &&
                             (_missingDocumentsForRevisions != null))
                         {
-                            if (_database.DocumentsStorage.Get(context, document.Id) == null)
+                            if (_database.DocumentsStorage.Get(context, document.Id) == null &&
+                                document.ChangeVector.Contains(ChangeVectorParser.TrxnTag) == false)
                             {
                                 var collection = _database.DocumentsStorage.ExtractCollectionName(context, document.Data);
                                 _missingDocumentsForRevisions.TryAdd(document.Id.ToString(), collection);

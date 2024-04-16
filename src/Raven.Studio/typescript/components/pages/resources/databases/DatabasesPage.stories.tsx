@@ -25,7 +25,7 @@ function commonInit() {
 }
 
 function getDatabaseNamesForNode(nodeTag: string, dto: DatabaseSharedInfo): string[] {
-    if (dto.sharded) {
+    if (dto.isSharded) {
         return dto.shards.map((x) => (x.nodes.some((n) => n.tag === nodeTag) ? x.name : null)).filter((x) => x);
     }
 

@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class testElasticSearchEtlCommand extends commandBase {
-    constructor(private db: database, private payload: Raven.Server.Documents.ETL.Providers.ElasticSearch.Test.TestElasticSearchEtlScript) {
+    constructor(private db: database | string, private payload: Raven.Server.Documents.ETL.Providers.ElasticSearch.Test.TestElasticSearchEtlScript) {
         super();
     }  
 

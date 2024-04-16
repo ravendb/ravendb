@@ -30,7 +30,7 @@ namespace Sparrow.Json
         public static readonly byte[] TrueBuffer = "true"u8.ToArray();
         public static readonly byte[] FalseBuffer = "false"u8.ToArray();
 
-        /// <summary>
+        /// <summary><![CDATA[
         /// The original code that generates this flatten sequence.
         /// ControlCodeEscapes = new byte[32][];
         /// for (int i = 0; i< 32; i++)
@@ -38,12 +38,12 @@ namespace Sparrow.Json
         ///    ControlCodeEscapes[i] = Encodings.Utf8.GetBytes(i.ToString("X4"));
         /// }
         /// 
-        /// </summary>
+        /// ]]></summary>
         private static ReadOnlySpan<byte> _controlCodeEscapes => "0000000100020003000400050006000700080009000A000B000C000D000E000F0010001100120013001400150016001700180019001A001B001C001D001E001F"u8;
 
         internal static ReadOnlySpan<int> ControlCodeEscapes => MemoryMarshal.Cast<byte, int>(_controlCodeEscapes);
 
-        /// <summary>
+        /// <summary><![CDATA[
         /// The original code that generates this flatten sequence.
         /// EscapeCharacters = new byte[256];
         /// for (int i = 0; i< 32; i++)
@@ -60,7 +60,7 @@ namespace Sparrow.Json
         /// EscapeCharacters[(byte)'\\'] = (byte)'\\';
         /// EscapeCharacters[(byte)'/'] = (byte)'/';
         /// EscapeCharacters[(byte)'"'] = (byte)'"';
-        /// </summary>
+        /// ]]></summary>
         private static ReadOnlySpan<byte> EscapeCharacters => new byte[]
         {
               0,   0,   0,   0,   0,   0,   0,   0,  98, 116, 110,   0, 102, 114,   0,   0,

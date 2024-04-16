@@ -614,7 +614,15 @@ namespace Voron.Data.BTrees
                 return TreeNodeHeader.ToSlice(tx.Allocator, node, type, out result);
             }
             return TreeNodeHeader.ToSlicePtr(tx.Allocator, node, type, out result);
-        }  
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetNodeKey(int nodeNumber, out ReadOnlySpan<byte> result)
+        {
+            var node = GetNode(nodeNumber);
+            byte* ptr = TreeNodeHeader.GetKeyPtr(node, out int size);
+            result = new ReadOnlySpan<byte>(ptr, size);
+        }
 
         public string DebugView(LowLevelTransaction tx)
         {

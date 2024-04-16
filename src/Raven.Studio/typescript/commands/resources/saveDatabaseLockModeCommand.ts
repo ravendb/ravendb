@@ -1,15 +1,14 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
-import { DatabaseSharedInfo } from "components/models/databases";
 
 class saveDatabaseLockModeCommand extends commandBase {
 
-    private dbs: Array<database | DatabaseSharedInfo>;
+    private dbs: Array<database | string>;
 
     private lockMode: Raven.Client.ServerWide.DatabaseLockMode;
 
-    constructor(dbs: Array<database | DatabaseSharedInfo>, lockMode: Raven.Client.ServerWide.DatabaseLockMode) {
+    constructor(dbs: Array<database | string>, lockMode: Raven.Client.ServerWide.DatabaseLockMode) {
         super();
         this.lockMode = lockMode;
         this.dbs = dbs;
@@ -17,7 +16,7 @@ class saveDatabaseLockModeCommand extends commandBase {
 
     execute(): JQueryPromise<void> {
         const payload: Raven.Client.ServerWide.Operations.SetDatabasesLockOperation.Parameters = {
-            DatabaseNames: this.dbs.map(x => x.name),
+            DatabaseNames: this.dbs.map(x => (_.isString(x) ? x : x.name)),
             Mode: this.lockMode
         };
 

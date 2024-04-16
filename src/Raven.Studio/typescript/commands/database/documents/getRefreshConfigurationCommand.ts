@@ -5,9 +5,9 @@ import RefreshConfiguration = Raven.Client.Documents.Operations.Refresh.RefreshC
 
 class getRefreshConfigurationCommand extends commandBase {
 
-    private readonly db: database;
+    private readonly db: database | string;
     
-    constructor(db: database) {
+    constructor(db: database | string) {
         super();
         this.db = db;
     }

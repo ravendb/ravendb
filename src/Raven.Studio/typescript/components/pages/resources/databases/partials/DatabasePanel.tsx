@@ -28,7 +28,6 @@ import useBoolean from "hooks/useBoolean";
 import { DatabaseDistribution } from "components/pages/resources/databases/partials/DatabaseDistribution";
 import { ValidDatabasePropertiesPanel } from "components/pages/resources/databases/partials/ValidDatabasePropertiesPanel";
 import { locationAwareLoadableData } from "components/models/common";
-import { useAccessManager } from "hooks/useAccessManager";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 import genUtils from "common/generalUtils";
@@ -97,7 +96,7 @@ function badgeText(db: DatabaseSharedInfo, localInfo: locationAwareLoadableData<
 export function DatabasePanel(props: DatabasePanelProps) {
     const { databaseName, selected, toggleSelection } = props;
     const db = useAppSelector(databaseSelectors.databaseByName(databaseName));
-    const activeDatabase = useAppSelector(databaseSelectors.activeDatabase);
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const dbState = useAppSelector(selectDatabaseState(db.name));
     const { appUrl } = useAppUrls();
     const dispatch = useAppDispatch();
@@ -124,18 +123,20 @@ export function DatabasePanel(props: DatabasePanelProps) {
     } = useBoolean(false);
 
     const localDocumentsUrl = appUrl.forDocuments(null, db.name);
-    const documentsUrl = db.currentNode.relevant
+    const documentsUrl = db.currentNode.isRelevant
         ? localDocumentsUrl
         : appUrl.toExternalDatabaseUrl(db, localDocumentsUrl);
 
     const localManageGroupUrl = appUrl.forManageDatabaseGroup(db.name);
-    const manageGroupUrl = db.currentNode.relevant
+    const manageGroupUrl = db.currentNode.isRelevant
         ? localManageGroupUrl
         : appUrl.toExternalDatabaseUrl(db, localManageGroupUrl);
 
-    const { isOperatorOrAbove, isSecuredServer, isAdminAccessOrAbove } = useAccessManager();
+    const isOperatorOrAbove = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
+    const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess(db.name));
 
-    const canNavigateToDatabase = !db.disabled;
+    const canNavigateToDatabase = !db.isDisabled;
 
     const indexingDisabled = dbState.some((x) => x.status === "success" && x.data.indexingStatus === "Disabled");
     const canPauseAnyIndexing = dbState.some((x) => x.status === "success" && x.data.indexingStatus === "Running");
@@ -143,10 +144,10 @@ export function DatabasePanel(props: DatabasePanelProps) {
         (x) => x.status === "success" && x.data?.indexingStatus === "Paused"
     );
 
-    const canDisableIndexing = isOperatorOrAbove() && !indexingDisabled;
-    const canEnableIndexing = isOperatorOrAbove() && indexingDisabled;
+    const canDisableIndexing = isOperatorOrAbove && !indexingDisabled;
+    const canEnableIndexing = isOperatorOrAbove && indexingDisabled;
 
-    const canRestartDatabase = isAdminAccessOrAbove(db) && !db.disabled;
+    const canRestartDatabase = hasDatabaseAdminAccess && !db.isDisabled;
 
     const onChangeLockMode = async (lockMode: DatabaseLockMode) => {
         if (db.lockMode === lockMode) {
@@ -218,7 +219,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
     };
 
     const onToggleDatabase = async () => {
-        const enable = db.disabled;
+        const enable = db.isDisabled;
 
         const confirmation = await dispatch(confirmToggleDatabases([db], enable));
         if (confirmation) {
@@ -228,7 +229,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
     const onHeaderClicked = async (db: DatabaseSharedInfo, e: MouseEvent<HTMLElement>) => {
         if (genUtils.canConsumeDelegatedEvent(e)) {
-            if (!db || db.disabled || !db.currentNode.relevant) {
+            if (!db || db.isDisabled || !db.currentNode.isRelevant) {
                 return true;
             }
 
@@ -264,23 +265,23 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
         for (const { nodeTag, shardNumbers, includeOrchestrator: includeOrchestrator } of contextPoints) {
             if (includeOrchestrator) {
-                await databasesService.restartDatabase(db, {
+                await databasesService.restartDatabase(db.name, {
                     nodeTag,
                 });
             }
 
             const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
             for (const location of locations) {
-                await databasesService.restartDatabase(db, location);
+                await databasesService.restartDatabase(db.name, location);
             }
         }
     };
 
     return (
         <RichPanel
-            hover={db.currentNode.relevant}
+            hover={db.currentNode.isRelevant}
             className={classNames("flex-row", "with-status", {
-                active: activeDatabase === db.name,
+                active: activeDatabaseName === db.name,
                 relevant: true,
             })}
         >
@@ -289,7 +290,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                 <div className="flex-grow-1">
                     <RichPanelHeader onClick={(e) => onHeaderClicked(db, e)}>
                         <RichPanelInfo>
-                            {isOperatorOrAbove() && (
+                            {isOperatorOrAbove && (
                                 <RichPanelSelect>
                                     <Input type="checkbox" checked={selected} onChange={toggleSelection} />
                                 </RichPanelSelect>
@@ -301,14 +302,14 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                         href={documentsUrl}
                                         className={classNames(
                                             { "link-disabled": db.currentNode.isBeingDeleted },
-                                            { "link-shard": db.sharded }
+                                            { "link-shard": db.isSharded }
                                         )}
-                                        target={db.currentNode.relevant ? undefined : "_blank"}
+                                        target={db.currentNode.isRelevant ? undefined : "_blank"}
                                         title={db.name}
                                     >
                                         <Icon
-                                            icon={db.sharded ? "sharding" : "database"}
-                                            addon={db.currentNode.relevant ? "home" : null}
+                                            icon={db.isSharded ? "sharding" : "database"}
+                                            addon={db.currentNode.isRelevant ? "home" : null}
                                             margin="me-2"
                                         />
                                         {db.name}
@@ -317,7 +318,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     <span title="Database is disabled" className="d-block text-truncate">
                                         <Icon
                                             icon="database"
-                                            addon={db.currentNode.relevant ? "home" : null}
+                                            addon={db.currentNode.isRelevant ? "home" : null}
                                             margin="me-2"
                                         />
                                         {db.name}
@@ -325,16 +326,16 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 )}
                             </RichPanelName>
                             <div className="text-muted align-self-center">
-                                {dbAccess && isSecuredServer() && <AccessIcon dbAccess={dbAccess} />}
+                                {dbAccess && isSecureServer && <AccessIcon dbAccess={dbAccess} />}
                             </div>
                         </RichPanelInfo>
 
                         <RichPanelActions>
-                            {isOperatorOrAbove() && (
+                            {isOperatorOrAbove && (
                                 <Button
                                     href={manageGroupUrl}
                                     title="Manage the Database Group"
-                                    target={db.currentNode.relevant ? undefined : "_blank"}
+                                    target={db.currentNode.isRelevant ? undefined : "_blank"}
                                     disabled={!canNavigateToDatabase || db.currentNode.isBeingDeleted}
                                 >
                                     <span>
@@ -343,12 +344,12 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 </Button>
                             )}
 
-                            {isAdminAccessOrAbove(db) && (
+                            {hasDatabaseAdminAccess && (
                                 <UncontrolledDropdown>
                                     <ButtonGroup>
-                                        {isOperatorOrAbove() && (
+                                        {isOperatorOrAbove && (
                                             <Button onClick={onToggleDatabase}>
-                                                {db.disabled ? (
+                                                {db.isDisabled ? (
                                                     <span>
                                                         <Icon icon="database" addon="play2" /> Enable
                                                     </span>
@@ -383,10 +384,10 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                                 <Icon icon="play" /> Enable indexing
                                             </DropdownItem>
                                         )}
-                                        {isOperatorOrAbove() && (
+                                        {isOperatorOrAbove && (
                                             <>
                                                 <DropdownItem divider />
-                                                {isAdminAccessOrAbove(db) && (
+                                                {hasDatabaseAdminAccess && (
                                                     <>
                                                         {isOpenDatabaseRestartConfirm && (
                                                             <BulkDatabaseResetConfirm
@@ -414,7 +415,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 </UncontrolledDropdown>
                             )}
 
-                            {isOperatorOrAbove() && (
+                            {isOperatorOrAbove && (
                                 <UncontrolledDropdown>
                                     <ButtonGroup>
                                         <Button

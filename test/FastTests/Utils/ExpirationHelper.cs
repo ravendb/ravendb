@@ -7,7 +7,7 @@ namespace FastTests.Utils
 {
     public static class ExpirationHelper
     {
-        public static async Task SetupExpiration(IDocumentStore store, Raven.Server.ServerWide.ServerStore serverStore, ExpirationConfiguration configuration)
+        public static async Task SetupExpiration(IDocumentStore store, Raven.Server.ServerWide.ServerStore serverStore, ExpirationConfiguration configuration, string database = null)
         {
             if (store == null)
                 throw new ArgumentNullException(nameof(store));
@@ -18,7 +18,7 @@ namespace FastTests.Utils
 
             var result = await store.Maintenance.SendAsync(new ConfigureExpirationOperation(configuration));
 
-            var documentDatabase = await serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            var documentDatabase = await serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
             await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, serverStore.Engine.OperationTimeout);
         }
     }

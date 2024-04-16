@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class generateCertificateForReplicationCommand extends commandBase {
 
-    constructor(private db: database, private expirationInMonths: number) {
+    constructor(private db: database | string, private expirationInMonths: number) {
         super();
     }
 

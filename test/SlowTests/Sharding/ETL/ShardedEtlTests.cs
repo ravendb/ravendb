@@ -1148,7 +1148,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding, MsSqlRequired = true)]
         public async Task SqlEtl_SimpleTransformation()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -1658,7 +1658,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                     session.SaveChanges();
                 }
-                
+
                 var ordersCountAfterDelete = await WaitForValueAsync(async () =>
                 {
                     EnsureNonStaleElasticResults(client);
@@ -1955,7 +1955,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
             }
         }
 
-        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding, ElasticSearchRequired = true)]
         public void Sharded_Etl_DontAllowMentorNode()
         {
             using (var src = Sharding.GetDocumentStore())
@@ -2275,10 +2275,10 @@ loadToAddresses(this.Address);
             foreach (var indexName in indices.Indices.Keys)
             {
                 var response = client.Indices.Delete(Indices.Index(indexName));
-                
+
                 if (response.IsValidResponse)
                     continue;
-                
+
                 response.TryGetOriginalException(out var originalException);
                 response.TryGetElasticsearchServerError(out var elasticsearchServerError);
                 throw new InvalidOperationException($"Failed to delete elasticsearch index '{indexName}'. Elasticsearch Server Error: {elasticsearchServerError.Error}",

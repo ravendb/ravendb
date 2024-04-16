@@ -5,7 +5,6 @@ import { AppDispatch, AppThunkApi, RootState } from "components/store";
 import { services } from "hooks/useServices";
 import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
 import { loadableData, loadStatus, locationAwareLoadableData } from "components/models/common";
-import database from "models/resources/database";
 import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 import {
     createFailureState,
@@ -16,7 +15,7 @@ import {
 import { IndexItem, PerLocationIndexStats } from "components/pages/database/status/statistics/store/models";
 import { Draft } from "immer";
 import { DatabaseSharedInfo } from "components/models/databases";
-import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 interface StatisticsState {
     databaseName: string;
@@ -71,8 +70,7 @@ const selectAllIndexesLoadStatus = (state: RootState) => state.statistics.indexD
 const fetchEssentialStats = createAsyncThunk(sliceName + "/fetchEssentialStats", async (_, thunkAPI: AppThunkApi) => {
     const state = thunkAPI.getState();
     const dbName = databaseNameSelector(state);
-    const db = databaseSelectors.databaseByName(dbName)(state);
-    return services.databasesService.getEssentialStats(db);
+    return services.databasesService.getEssentialStats(dbName);
 });
 
 export const refresh = () => async (dispatch: AppDispatch, getState: () => RootState) => {
@@ -95,17 +93,17 @@ export const refresh = () => async (dispatch: AppDispatch, getState: () => RootS
 const fetchDetailedDatabaseStats = createAsyncThunk(
     sliceName + "/fetchDetailedDatabaseStats",
     async (payload: {
-        db: DatabaseSharedInfo;
+        databaseName: string;
         location: databaseLocationSpecifier;
     }): Promise<DetailedDatabaseStatistics> => {
-        return await services.databasesService.getDetailedStats(payload.db, payload.location);
+        return await services.databasesService.getDetailedStats(payload.databaseName, payload.location);
     }
 );
 
 const fetchDetailedIndexStats = createAsyncThunk(
     sliceName + "/fetchDetailedIndexStats",
-    async (payload: { db: DatabaseSharedInfo; location: databaseLocationSpecifier }): Promise<IndexStats[]> => {
-        return await services.indexesService.getStats(payload.db, payload.location);
+    async (payload: { databaseName: string; location: databaseLocationSpecifier }): Promise<IndexStats[]> => {
+        return await services.indexesService.getStats(payload.databaseName, payload.location);
     }
 );
 
@@ -113,9 +111,9 @@ const fetchAllDetailedDatabaseStats = () => async (dispatch: AppDispatch, getSta
     const state = getState();
     const locations = databaseStatsSelectors.selectAll(state).map((x) => x.location);
 
-    const db = databaseSelectors.databaseByName(state.statistics.databaseName)(state);
-
-    const tasks = locations.map((location) => dispatch(fetchDetailedDatabaseStats({ db, location })).unwrap());
+    const tasks = locations.map((location) =>
+        dispatch(fetchDetailedDatabaseStats({ databaseName: state.statistics.databaseName, location })).unwrap()
+    );
     await Promise.all(tasks);
 };
 
@@ -124,9 +122,9 @@ const fetchAllDetailedIndexStats = () => async (dispatch: AppDispatch, getState:
 
     const locations = databaseStatsSelectors.selectAll(state).map((x) => x.location);
 
-    const db = databaseSelectors.databaseByName(state.statistics.databaseName)(state);
-
-    const tasks = locations.map((location) => dispatch(fetchDetailedIndexStats({ db, location })).unwrap());
+    const tasks = locations.map((location) =>
+        dispatch(fetchDetailedIndexStats({ databaseName: state.statistics.databaseName, location })).unwrap()
+    );
     await Promise.all(tasks);
 };
 
@@ -296,12 +294,11 @@ export const statisticsViewSlice = createSlice({
 
 const { initForDatabase, refreshStarted, refreshFinished } = statisticsViewSlice.actions;
 
-export const initView = (db: database) => async (dispatch: AppDispatch, getState: () => RootState) => {
-    dispatch(initForDatabase(db.name, db.getLocations()));
-
+export const initView = (db: DatabaseSharedInfo) => async (dispatch: AppDispatch, getState: () => RootState) => {
     const firstTime = selectEssentialStats(getState()).status === "idle";
 
     if (firstTime) {
+        dispatch(initForDatabase(db.name, DatabaseUtils.getLocations(db)));
         dispatch(fetchEssentialStats());
     } else {
         dispatch(refresh());

@@ -16,7 +16,7 @@ public readonly struct FieldMetadata
     public readonly Analyzer Analyzer;
     public readonly bool HasBoost;
 
-    private FieldMetadata(Slice fieldName, Slice termLengthSumName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost = false)
+    private FieldMetadata(Slice fieldName, Slice termLengthSumName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost)
     {
         TermLengthSumName = termLengthSumName;
         FieldName = fieldName;
@@ -41,7 +41,7 @@ public readonly struct FieldMetadata
         else
             throw new NotSupportedException(typeof(T).FullName);
         
-        return new FieldMetadata(numericTree, default, FieldId, Mode, Analyzer);
+        return new FieldMetadata(numericTree, default, FieldId, Mode, Analyzer, HasBoost);
     }
 
     internal Slice GetPhraseQueryContainerName(ByteStringContext alloc)

@@ -1,5 +1,4 @@
 ﻿import React, { useEffect } from "react";
-import { NonShardedViewProps } from "components/models/common";
 import { Card, CardBody, Col, Form, Row } from "reactstrap";
 import { useServices } from "hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
@@ -11,7 +10,6 @@ import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { useDirtyFlag } from "hooks/useDirtyFlag";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import DataArchivalConfiguration = Raven.Client.Documents.Operations.DataArchival.DataArchivalConfiguration;
-import { useAccessManager } from "hooks/useAccessManager";
 import { tryHandleSubmit } from "components/utils/common";
 import messagePublisher from "common/messagePublisher";
 import { LoadingView } from "components/common/LoadingView";
@@ -29,11 +27,18 @@ import FeatureAvailabilitySummaryWrapper, {
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
-export default function DataArchival({ db }: NonShardedViewProps) {
+export default function DataArchival() {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDataArchival = useAppSelector(licenseSelectors.statusValue("HasDataArchival"));
+
     const { databasesService } = useServices();
     const asyncGetDataArchivalConfiguration = useAsyncCallback<DataArchivalFormData>(async () =>
-        mapToFormData(await databasesService.getDataArchivalConfiguration(db))
+        mapToFormData(await databasesService.getDataArchivalConfiguration(databaseName))
     );
     const { handleSubmit, control, formState, reset, setValue } = useForm<DataArchivalFormData>({
         resolver: dataArchivalYupResolver,
@@ -43,9 +48,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
     useDirtyFlag(formState.isDirty);
     const formValues = useWatch({ control: control });
     const { reportEvent } = useEventsCollector();
-    const { isAdminAccessOrAbove } = useAccessManager();
 
-    const hasDataArchival = useAppSelector(licenseSelectors.statusValue("HasDataArchival"));
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
         overwrites: [
@@ -69,13 +72,13 @@ export default function DataArchival({ db }: NonShardedViewProps) {
         return tryHandleSubmit(async () => {
             reportEvent("data-archival-configuration", "save");
 
-            await databasesService.saveDataArchivalConfiguration(db, {
+            await databasesService.saveDataArchivalConfiguration(databaseName, {
                 Disabled: !formData.isDataArchivalEnabled,
                 ArchiveFrequencyInSec: formData.isArchiveFrequencyEnabled ? formData.archiveFrequency : null,
             });
 
             messagePublisher.reportSuccess("Data archival configuration saved successfully");
-            db.hasArchivalConfiguration(formData.isDataArchivalEnabled);
+            activeDatabaseTracker.default.database().hasArchivalConfiguration(formData.isDataArchivalEnabled);
             reset(formData);
         });
     };
@@ -110,7 +113,7 @@ export default function DataArchival({ db }: NonShardedViewProps) {
                                     color="primary"
                                     className="mb-3"
                                     icon="save"
-                                    disabled={!formState.isDirty || !isAdminAccessOrAbove}
+                                    disabled={!formState.isDirty || !hasDatabaseAdminAccess}
                                     isSpinning={formState.isSubmitting}
                                 >
                                     Save

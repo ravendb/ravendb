@@ -5,10 +5,10 @@ import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 
 class forceTombstonesCleanupCommand extends commandBase {
 
-    private readonly db: database;
+    private readonly db: database | string;
     private readonly location: databaseLocationSpecifier;
 
-    constructor(db: database, location: databaseLocationSpecifier) {
+    constructor(db: database | string, location: databaseLocationSpecifier) {
         super();
         this.db = db;
         this.location = location;

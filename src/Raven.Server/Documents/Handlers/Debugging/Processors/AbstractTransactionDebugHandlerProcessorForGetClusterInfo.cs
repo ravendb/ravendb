@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Handlers.Debugging.Processors
             {
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["Results"] = new DynamicJsonArray(ClusterTransactionCommand.ReadCommandsBatch(context, RequestHandler.DatabaseName, from, take))
+                    ["Results"] = new DynamicJsonArray(ClusterTransactionCommand.ReadCommandsBatch(context, RequestHandler.DatabaseName, fromCount: from, take: take))
                 });
             }
         }

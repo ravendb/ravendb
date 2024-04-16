@@ -1,12 +1,21 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using Raven.Client.Exceptions;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Sharding;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Server;
 
 namespace Raven.Server.Web.System
 {
@@ -116,6 +125,134 @@ namespace Raven.Server.Web.System
                         $"Problem trying to create a new database {record.DatabaseName}. Can't have a sharding configuration in the record while no shards are defined.");
                 
                 record.Topology?.ValidateTopology(record.DatabaseName);
+            }
+        }
+        public static void FillDatabaseTopology(ServerStore server, ClusterOperationContext context, string name, DatabaseRecord record, int replicationFactor, long? index)
+        {
+            if (replicationFactor <= 0)
+                throw new ArgumentException("Replication factor must be greater than 0.");
+
+            try
+            {
+                Validate(name, record, server.Configuration);
+            }
+            catch (Exception e)
+            {
+                throw new BadRequestException("Database document validation failed.", e);
+            }
+
+            var clusterTopology = server.GetClusterTopology(context);
+            ValidateClusterMembers(server, clusterTopology, record);
+            InitializeDatabaseTopology(server, record, clusterTopology, replicationFactor);
+
+            if (record.IsSharded)
+            {
+                server.Sharding.FillShardingConfiguration(record, clusterTopology, index);
+
+                if (server.Sharding.BlockPrefixedSharding && record.Sharding.Prefixed is { Count: > 0 })
+                    throw new InvalidOperationException("Cannot use prefixed sharding, this feature is currently blocked");
+
+                if (string.IsNullOrEmpty(record.Sharding.DatabaseId))
+                {
+                    record.Sharding.DatabaseId = Guid.NewGuid().ToBase64Unpadded();
+                    record.UnusedDatabaseIds ??= new HashSet<string>();
+                    record.UnusedDatabaseIds.Add(record.Sharding.DatabaseId);
+                }
+            }
+            else
+            {
+                if (record.Topology.Count == 0)
+                {
+                    server.AssignNodesToDatabase(clusterTopology,
+                        record.DatabaseName,
+                        record.Encrypted,
+                        record.Topology);
+                }
+            }
+        }
+
+        private static void ValidateClusterMembers(ServerStore server, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+        {
+            var topology = databaseRecord.Topology;
+
+            if (topology == null)
+                return;
+
+            if (topology.Members?.Count == 1 && topology.Members[0] == "?")
+            {
+                // this is a special case where we pass '?' as member.
+                topology.Members.Clear();
+            }
+
+            var unique = new HashSet<string>();
+            foreach (var node in topology.AllNodes)
+            {
+                if (unique.Add(node) == false)
+                    throw new InvalidOperationException($"node '{node}' already exists. This is not allowed. Database Topology : {topology}");
+
+                var url = clusterTopology.GetUrlFromTag(node);
+                if (databaseRecord.Encrypted && AdminDatabasesHandler.NotUsingHttps(url) && server.Server.AllowEncryptedDatabasesOverHttp == false)
+                    throw new InvalidOperationException(
+                        $"{databaseRecord.DatabaseName} is encrypted but node {node} with url {url} doesn't use HTTPS. This is not allowed.");
+            }
+        }
+
+        private static void SetReplicationFactor(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, int replicationFactor)
+        {
+            databaseTopology.ReplicationFactor = Math.Max(databaseTopology.ReplicationFactor, replicationFactor);
+            databaseTopology.ReplicationFactor = Math.Min(databaseTopology.ReplicationFactor, clusterTopology.AllNodes.Count);
+        }
+
+        private static void InitializeDatabaseTopology(ServerStore server, DatabaseTopology databaseTopology, ClusterTopology clusterTopology, int replicationFactor,
+            string clusterTransactionId)
+        {
+            Debug.Assert(databaseTopology != null);
+
+            foreach (var node in databaseTopology.AllNodes)
+            {
+                if (string.IsNullOrEmpty(node))
+                    throw new InvalidOperationException(
+                        $"Attempting to save the database record but one of its specified topology nodes is null.");
+            }
+
+            if (databaseTopology.Members?.Count > 0)
+            {
+                foreach (var member in databaseTopology.Members)
+                {
+                    if (clusterTopology.Contains(member) == false)
+                        throw new ArgumentException($"Failed to add node {member}, because we don't have it in the cluster.");
+                }
+
+                replicationFactor = databaseTopology.Count;
+            }
+
+            SetReplicationFactor(databaseTopology, clusterTopology, replicationFactor);
+
+            databaseTopology.ClusterTransactionIdBase64 ??= clusterTransactionId;
+            databaseTopology.DatabaseTopologyIdBase64 ??= Guid.NewGuid().ToBase64Unpadded();
+            databaseTopology.Stamp ??= new LeaderStamp();
+            databaseTopology.Stamp.Term = server.Engine.CurrentTerm;
+            databaseTopology.Stamp.LeadersTicks = server.Engine.CurrentLeader?.LeaderShipDuration ?? 0;
+            databaseTopology.NodesModifiedAt = SystemTime.UtcNow;
+        }
+
+        private static void InitializeDatabaseTopology(ServerStore server, DatabaseRecord databaseRecord, ClusterTopology clusterTopology, int replicationFactor)
+        {
+            var clusterTransactionId = Guid.NewGuid().ToBase64Unpadded();
+
+            if (databaseRecord.IsSharded)
+            {
+                databaseRecord.Sharding.Orchestrator ??= new OrchestratorConfiguration();
+                databaseRecord.Sharding.Orchestrator.Topology ??= new OrchestratorTopology();
+                InitializeDatabaseTopology(server, databaseRecord.Sharding.Orchestrator.Topology, clusterTopology, replicationFactor, clusterTransactionId);
+
+                foreach (var (shardNumber, databaseTopology) in databaseRecord.Sharding.Shards)
+                    InitializeDatabaseTopology(server, databaseTopology, clusterTopology, replicationFactor, clusterTransactionId);
+            }
+            else
+            {
+                databaseRecord.Topology ??= new DatabaseTopology();
+                InitializeDatabaseTopology(server, databaseRecord.Topology, clusterTopology, replicationFactor, clusterTransactionId);
             }
         }
     }

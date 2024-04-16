@@ -1,6 +1,11 @@
 ﻿import React from "react";
-import { Meta } from "@storybook/react";
-import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
+import { Meta, StoryObj } from "@storybook/react";
+import {
+    withStorybookContexts,
+    withBootstrap5,
+    databaseAccessArgType,
+    withForceRerender,
+} from "test/storybookTestUtils";
 import DatabaseCustomSorters from "./DatabaseCustomSorters";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
@@ -9,73 +14,58 @@ import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 
 export default {
     title: "Pages/Database/Settings/Custom Sorters",
-    component: DatabaseCustomSorters,
-    decorators: [withStorybookContexts, withBootstrap5],
-} satisfies Meta<typeof DatabaseCustomSorters>;
+    decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
+} satisfies Meta;
 
-const db = DatabasesStubs.nonShardedClusterDatabase();
-
-function commonInit() {
-    const { accessManager } = mockStore;
-    const { manageServerService, licenseService } = mockServices;
-
-    accessManager.with_securityClearance("ValidUser");
-
-    licenseService.withLimitsUsage();
-    manageServerService.withServerWideCustomSorters();
+interface DefaultDatabaseCustomSortersProps {
+    isEmpty: boolean;
+    databaseAccess: databaseAccessLevel;
+    hasServerWideCustomSorters: boolean;
+    maxNumberOfCustomSortersPerDatabase: number;
+    maxNumberOfCustomSortersPerCluster: number;
 }
 
-export function NoLimits() {
-    commonInit();
+export const DatabaseCustomSortersStory: StoryObj<DefaultDatabaseCustomSortersProps> = {
+    name: "Custom Sorters",
+    render: (props: DefaultDatabaseCustomSortersProps) => {
+        const { accessManager, license, databases } = mockStore;
+        const { databasesService, manageServerService } = mockServices;
 
-    const { accessManager, license } = mockStore;
-    const { databasesService } = mockServices;
+        const db = databases.withActiveDatabase_NonSharded_SingleNode();
 
-    accessManager.with_databaseAccess({
-        [db.name]: "DatabaseAdmin",
-    });
+        accessManager.with_securityClearance("ValidUser");
+        accessManager.with_databaseAccess({
+            [db.name]: props.databaseAccess,
+        });
 
-    databasesService.withCustomSorters([
-        ...DatabasesStubs.customSorters(),
-        ManageServerStubs.serverWideCustomSorters()[0],
-    ]);
+        manageServerService.withServerWideCustomSorters(
+            props.isEmpty ? [] : ManageServerStubs.serverWideCustomSorters()
+        );
 
-    license.with_License();
+        databasesService.withEssentialStats();
+        databasesService.withCustomSorters(props.isEmpty ? [] : DatabasesStubs.customSorters());
+        databasesService.withQueryResult();
 
-    return <DatabaseCustomSorters db={db} />;
-}
+        license.with_LimitsUsage({
+            NumberOfCustomSortersInCluster: ManageServerStubs.serverWideCustomSorters().length,
+        });
 
-export function BelowDatabaseAdmin() {
-    commonInit();
+        license.with_License({
+            HasServerWideCustomSorters: props.hasServerWideCustomSorters,
+            MaxNumberOfCustomSortersPerDatabase: props.maxNumberOfCustomSortersPerDatabase,
+            MaxNumberOfCustomSortersPerCluster: props.maxNumberOfCustomSortersPerCluster,
+        });
 
-    const { accessManager, license } = mockStore;
-    const { databasesService } = mockServices;
-
-    accessManager.with_databaseAccess({
-        [db.name]: "DatabaseRead",
-    });
-
-    databasesService.withCustomSorters();
-
-    license.with_License();
-
-    return <DatabaseCustomSorters db={db} />;
-}
-
-export function LicenseLimits() {
-    commonInit();
-
-    const { accessManager, license } = mockStore;
-    const { databasesService } = mockServices;
-
-    accessManager.with_databaseAccess({
-        [db.name]: "DatabaseAdmin",
-    });
-
-    databasesService.withCustomSorters();
-
-    license.with_LicenseLimited();
-    license.with_LimitsUsage();
-
-    return <DatabaseCustomSorters db={db} />;
-}
+        return <DatabaseCustomSorters />;
+    },
+    args: {
+        isEmpty: false,
+        databaseAccess: "DatabaseAdmin",
+        hasServerWideCustomSorters: true,
+        maxNumberOfCustomSortersPerDatabase: 3,
+        maxNumberOfCustomSortersPerCluster: 10,
+    },
+    argTypes: {
+        databaseAccess: databaseAccessArgType,
+    },
+};

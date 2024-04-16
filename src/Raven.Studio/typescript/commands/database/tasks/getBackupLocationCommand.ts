@@ -5,9 +5,9 @@ import database = require("models/resources/database");
 class getBackupLocationCommand extends commandBase {
 
     private readonly inputPath: string;
-    private readonly database: database;
+    private readonly database: database | string;
 
-    constructor( inputPath: string,  database: database) {
+    constructor( inputPath: string,  database: database | string) {
         super();
         this.inputPath = inputPath;
         this.database = database;

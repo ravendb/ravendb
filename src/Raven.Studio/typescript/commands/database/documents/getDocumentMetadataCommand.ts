@@ -6,7 +6,7 @@ import documentMetadata = require("models/database/documents/documentMetadata");
 
 class getDocumentMetadataCommand extends commandBase {
 
-    constructor(private id: string, private db: database, private shouldResolveNotFoundAsNull: boolean = false) {
+    constructor(private id: string, private db: database | string, private shouldResolveNotFoundAsNull: boolean = false) {
         super();
 
         if (!id) {

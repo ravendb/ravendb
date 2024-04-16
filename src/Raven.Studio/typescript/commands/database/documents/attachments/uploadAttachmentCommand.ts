@@ -6,7 +6,7 @@ class uploadAttachmentCommand extends commandBase {
 
     private xhr: XMLHttpRequest;
     
-    constructor(private file: File, private documentId: string, private db: database, private onProgress?: (event: ProgressEvent) => void) {
+    constructor(private file: File, private documentId: string, private db: database | string, private onProgress?: (event: ProgressEvent) => void) {
         super();
     }
     

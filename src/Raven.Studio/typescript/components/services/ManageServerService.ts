@@ -3,13 +3,13 @@ import saveGlobalClientConfigurationCommand = require("commands/resources/saveGl
 import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.ClientConfiguration;
 import getClientConfigurationCommand = require("commands/resources/getClientConfigurationCommand");
 import saveClientConfigurationCommand = require("commands/resources/saveClientConfigurationCommand");
-import database = require("models/resources/database");
 import adminJsScriptCommand = require("commands/maintenance/adminJsScriptCommand");
 import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyzers/getServerWideCustomAnalyzersCommand");
 import deleteServerWideCustomAnalyzerCommand = require("commands/serverWide/analyzers/deleteServerWideCustomAnalyzerCommand");
 import getServerWideCustomSortersCommand = require("commands/serverWide/sorters/getServerWideCustomSortersCommand");
 import deleteServerWideCustomSorterCommand = require("commands/serverWide/sorters/deleteServerWideCustomSorterCommand");
 import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testPeriodicBackupCredentialsCommand");
+import saveServerWideCustomSorterCommand = require("commands/serverWide/sorters/saveServerWideCustomSorterCommand");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -20,12 +20,12 @@ export default class ManageServerService {
         return new saveGlobalClientConfigurationCommand(dto).execute();
     }
 
-    async getClientConfiguration(db: database): Promise<ClientConfiguration> {
-        return new getClientConfigurationCommand(db).execute();
+    async getClientConfiguration(databaseName: string): Promise<ClientConfiguration> {
+        return new getClientConfigurationCommand(databaseName).execute();
     }
 
-    async saveClientConfiguration(dto: ClientConfiguration, db: database): Promise<void> {
-        return new saveClientConfigurationCommand(dto, db).execute();
+    async saveClientConfiguration(dto: ClientConfiguration, databaseName: string): Promise<void> {
+        return new saveClientConfigurationCommand(dto, databaseName).execute();
     }
 
     async runAdminJsScript(script: string, targetDatabaseName?: string): Promise<{ Result: any }> {
@@ -46,6 +46,10 @@ export default class ManageServerService {
 
     async deleteServerWideCustomSorter(name: string) {
         return new deleteServerWideCustomSorterCommand(name).execute();
+    }
+
+    async saveServerWideCustomSorter(...args: ConstructorParameters<typeof saveServerWideCustomSorterCommand>) {
+        return new saveServerWideCustomSorterCommand(...args).execute();
     }
 
     async testPeriodicBackupCredentials(

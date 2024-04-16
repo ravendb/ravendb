@@ -71,7 +71,7 @@ namespace Raven.Client.Http
         private readonly string _databaseName;
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
-        
+
         public readonly JsonContextPool ContextPool;
 
         public readonly AsyncLocal<AggressiveCacheOptions> AggressiveCaching = new AsyncLocal<AggressiveCacheOptions>();
@@ -331,7 +331,7 @@ namespace Raven.Client.Http
 
             _databaseName = databaseName;
             Certificate = certificate;
-            
+
             Conventions = conventions.Clone();
 
             var maxNumberOfContextsToKeepInGlobalStack = PlatformDetails.Is32Bits == false
@@ -362,7 +362,7 @@ namespace Raven.Client.Http
             {
 #if DEBUG
                 Console.WriteLine($"Finalizer of {GetType()} got an exception:{Environment.NewLine}{e}");
-#endif          
+#endif
                 // nothing we can do here
             }
         }
@@ -728,7 +728,7 @@ namespace Raven.Client.Http
             var selector = requestExecutor._nodeSelector;
             if (selector == null || selector.Topology == null)
                 return;
-            
+
             // Fetch topologies from all nodes, the executor's topology will be updated to the most recent one
             foreach (var serverNode in selector.Topology.Nodes)
             {
@@ -1199,7 +1199,7 @@ namespace Raven.Client.Http
             //       and therefore we dimish its cost by orders of magnitude just doing it
             //       once in a while. We dont care also about the potential race conditions that may happen
             //       here mainly because the idea is to have a lax mechanism to recheck that is at least
-            //       orders of magnitude faster than currently. 
+            //       orders of magnitude faster than currently.
             if (chosenNode.ShouldUpdateServerVersion())
             {
                 if (TryGetServerVersion(response, out var serverVersion))
@@ -1207,23 +1207,6 @@ namespace Raven.Client.Http
             }
 
             LastServerVersion = chosenNode.LastServerVersion;
-
-            if (sessionInfo?.LastClusterTransactionIndex != null)
-            {
-                // if we reach here it means that sometime a cluster transaction has occurred against this database.
-                // Since the current executed command can be dependent on that, we have to wait for the cluster transaction.
-                // But we can't do that if the server is an old one.
-
-                if (LastServerVersion == null || string.Compare(LastServerVersion, "4.1", StringComparison.Ordinal) < 0)
-                {
-                    using (response)
-                    {
-                        throw new ClientVersionMismatchException(
-                            $"The server on {chosenNode.Url} has an old version and can't perform the command '{command.GetType()}', " +
-                            "since this command dependent on a cluster transaction which this node doesn't support");
-                    }
-                }
-            }
 
             return response;
         }
@@ -1533,7 +1516,7 @@ namespace Raven.Client.Http
                 request.Version = Conventions.HttpVersion;
             }
 
-#if NETCOREAPP
+#if NETCOREAPP3_1_OR_GREATER
             if (Conventions.HttpVersionPolicy != null)
                 request.VersionPolicy = Conventions.HttpVersionPolicy.Value;
 #endif
@@ -1705,7 +1688,7 @@ namespace Raven.Client.Http
                 return false;
             }
 
-            // As the server is down, we discard the server version to ensure we update when it goes up. 
+            // As the server is down, we discard the server version to ensure we update when it goes up.
             chosenNode.DiscardServerVersion();
 
             _nodeSelector.OnFailedRequest(nodeIndex.Value);

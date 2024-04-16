@@ -10,8 +10,6 @@ using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow;
 using Sparrow.Server;
-using Voron;
-using Voron.Data.PostingLists;
 using Voron.Util;
 
 namespace Corax.Querying.Matches.SortingMatches;
@@ -37,6 +35,11 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     private SortingDataTransfer _sortingDataTransfer;
     private ContextBoundNativeList<SpatialResult> _distancesResults;
     private ContextBoundNativeList<float> _scoresResults;
+    
+    // This is data persisted for holding score from secondary comparer.
+    private UnmanagedSpan<float> _secondaryScoreBuffer;
+    private IDisposable _scoreBufferHandler;
+    
     private int _alreadyReadIdx;
 
 
@@ -53,7 +56,6 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         _alreadyReadIdx = 0;
         _results = new ContextBoundNativeList<long>(searcher.Allocator);
         TotalResults = NotStarted;
-        AssertNoScoreInnerComparer(orderMetadata);
         _fillFunc = SortBy(orderMetadata);
         
         _nextComparers = orderMetadata.Length > NextComparerOffset 
@@ -82,6 +84,10 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                     
                     (true, MatchCompareFieldType.Spatial) => new EntryComparerBySpatial(),
                     (false, MatchCompareFieldType.Spatial) => new Descending<EntryComparerBySpatial>(),
+                    
+                    (true, MatchCompareFieldType.Score) => new EntryComparerByScore(),
+                    (false, MatchCompareFieldType.Score) => new Descending<EntryComparerByScore>(),
+                    
                     _ => throw new NotSupportedException($"Ascending: {orderMetadata[metadataId].Ascending} | FieldType: {orderMetadata[metadataId].FieldType}.")
                 };
             }
@@ -97,21 +103,6 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             _distancesResults = new(_searcher.Allocator);
         if (sortingDataTransfer.IncludeScores)
             _scoresResults = new(_searcher.Allocator);
-    }
-
-    private void AssertNoScoreInnerComparer(in OrderMetadata[] orderMetadata)
-    {
-        //In Corax's implementation of ranking, we assume that the IDs in the `Score()` parameter are sorted.
-        //This way, we can perform a BinarySearch to find the pair <Entry, Score> and append the score to it.
-        //In the case of compound sorting, when boosting is not the main comparator, matches are not sorted because the previous comparator may have changed the order.
-        //This would require a linear search, which can be extremely costly. Additionally, this would require changing the API of Scoring to indicate whether it's ordered or not.
-        for (int comparerId = 0; comparerId < orderMetadata.Length; ++comparerId)
-        {
-            if (orderMetadata[comparerId].FieldType is MatchCompareFieldType.Score && comparerId != 0)
-            {
-                throw new NotSupportedException(ScoreComparerAsInnerExceptionMessage);
-            }
-        }
     }
 
     private static int Fill<TComparer1, TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, Span<long> matches)
@@ -142,7 +133,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         var read = match._results.CopyTo(matches, match._alreadyReadIdx);
         match._distancesResults.CopyTo(match._sortingDataTransfer.DistancesBuffer, match._alreadyReadIdx, read);
         match._scoresResults.CopyTo(match._sortingDataTransfer.ScoresBuffer, match._alreadyReadIdx, read);
-
+        
         if (read != 0)
         {
             match._alreadyReadIdx += read;
@@ -155,7 +146,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         match._scoresResults.Dispose();
         match._distancesResults.Dispose();
         match._entriesBufferScope.Dispose();
-
+        
         return 0;
     }
     
@@ -260,5 +251,4 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     }
 
     string DebugView => Inspect().ToString();
-    private static string ScoreComparerAsInnerExceptionMessage => $"{nameof(SortingMultiMatch)} can compare score only as main property. Queries like 'order by Field, [..], score(), [..] ' etc are not supported.";
 }

@@ -4,14 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1 || NETCOREAPP3_1)
-#define TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
-#endif
-
-#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
-#define SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
-#endif
-
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;

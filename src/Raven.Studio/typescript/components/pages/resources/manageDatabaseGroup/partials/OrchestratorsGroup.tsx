@@ -11,7 +11,6 @@ import { DeletionInProgress } from "components/pages/resources/manageDatabaseGro
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { useServices } from "hooks/useServices";
 import app from "durandal/app";
-import { DatabaseSharedInfo } from "components/models/databases";
 import addNewOrchestratorToDatabase from "viewmodels/resources/addNewOrchestatorToDatabaseGroup";
 import classNames from "classnames";
 import {
@@ -31,13 +30,11 @@ import {
 import { useGroup } from "components/pages/resources/manageDatabaseGroup/partials/useGroup";
 import { Icon } from "components/common/Icon";
 import useConfirm from "components/common/ConfirmDialog";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
 
-export interface OrchestratorsGroupProps {
-    db: DatabaseSharedInfo;
-}
-
-export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
-    const { db } = props;
+export function OrchestratorsGroup() {
+    const db = useAppSelector(databaseSelectors.activeDatabase);
 
     const {
         fixOrder,
@@ -49,7 +46,7 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
         sortableMode,
         enableReorder,
         exitReorder,
-    } = useGroup(db.nodes, db.fixOrder);
+    } = useGroup(db.nodes, db.isFixOrder);
 
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
@@ -63,10 +60,10 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
     const saveNewOrder = useCallback(
         async (tagsOrder: string[], fixOrder: boolean) => {
             reportEvent("db-group", "save-order");
-            await databasesService.reorderNodesInGroup(db, tagsOrder, fixOrder);
+            await databasesService.reorderNodesInGroup(db.name, tagsOrder, fixOrder);
             exitReorder();
         },
-        [databasesService, db, reportEvent, exitReorder]
+        [databasesService, db.name, reportEvent, exitReorder]
     );
 
     const deleteOrchestratorFromGroup = useCallback(
@@ -83,10 +80,10 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
             });
 
             if (isConfirmed) {
-                await databasesService.deleteOrchestratorFromNode(db, nodeTag);
+                await databasesService.deleteOrchestratorFromNode(db.name, nodeTag);
             }
         },
-        [confirm, databasesService, db]
+        [confirm, databasesService, db.name]
     );
 
     const onSave = async () => {

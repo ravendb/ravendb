@@ -18,10 +18,12 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public LazyStringValue Id;
         public DocumentFlags Flags;
 
+        public override long Size => GetReplicationBatchItemSize();
+
         public override DynamicJsonValue ToDebugJson()
         {
             var djv = base.ToDebugJson();
-            
+
             if (Flags.Contain(DocumentFlags.Revision))
             {
                 djv[nameof(Type)] = "Revision";
@@ -68,27 +70,32 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             };
         }
 
-        public override long AssertChangeVectorSize()
-        {
-            var size = sizeof(byte) + // type
-                       sizeof(int) + //  size of change vector
-                       Encodings.Utf8.GetByteCount(ChangeVector) +
-                       sizeof(short) + // transaction marker
-                       sizeof(long) + // Last modified ticks
-                       sizeof(DocumentFlags) +
-                       sizeof(int) + // size of document ID
-                       Id.Size +
-                       sizeof(int); // size of document
+        public override long AssertChangeVectorSize() => GetReplicationBatchItemSize(includeDetails: false);
 
-            if (Collection != null)
+        private long GetReplicationBatchItemSize(bool includeDetails = true)
+        {
+            var size = base.Size + // common 
+
+                    sizeof(long) + // Last modified ticks
+
+                    sizeof(DocumentFlags) +
+
+                    sizeof(int) + // size of document ID
+                    Id.Size +
+
+                    sizeof(int); // size of document
+
+            if (includeDetails)
             {
-                size += Collection.Size + sizeof(int);
+                if (Data != null)
+                    size += Data.Size;
+
+                if (Collection != null)
+                    size += Collection.Size + sizeof(int);
             }
 
             return size;
         }
-
-        public override long Size => Data?.Size ?? 0;
 
         public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats)
         {
@@ -131,7 +138,10 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                         docReadPos += sizeToCopy;
                     }
 
-                    stats.RecordDocumentOutput(Data.Size);
+                    if (Flags.Contain(DocumentFlags.Revision))
+                        stats.RecordRevisionOutput(Size);
+                    else
+                        stats.RecordDocumentOutput(Size);
                 }
                 else
                 {
@@ -153,7 +163,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                     Memory.Copy(pTemp + tempBufferPos, Collection.Buffer, Collection.Size);
                     tempBufferPos += Collection.Size;
 
-                    stats.RecordDocumentTombstoneOutput();
+                    stats.RecordDocumentTombstoneOutput(Size);
                 }
 
                 stream.Write(tempBuffer, 0, tempBufferPos);
@@ -162,18 +172,9 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats)
         {
-            IncomingReplicationStatsScope scope;
-
-            if (Type == ReplicationItemType.Document)
-            {
-                scope = stats.For(ReplicationOperation.Incoming.DocumentRead, start: false);
-                stats.RecordDocumentRead();
-            }
-            else
-            {
-                scope = stats.For(ReplicationOperation.Incoming.TombstoneRead, start: false);
-                stats.RecordDocumentTombstoneRead();
-            }
+            var scope = Type == ReplicationItemType.Document ?
+                stats.For(ReplicationOperation.Incoming.DocumentRead, start: false) :
+                stats.For(ReplicationOperation.Incoming.TombstoneRead, start: false);
 
             using (scope.Start())
             {
@@ -191,10 +192,17 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                     Data = new BlittableJsonReaderObject(mem, documentSize, context);
                     Data.BlittableValidation();
+
+                    if (Flags.Contain(DocumentFlags.Revision))
+                        stats.RecordRevisionRead(Size);
+                    else
+                        stats.RecordDocumentRead(Size);
                 }
                 else
                 {
                     SetLazyStringValueFromString(context, out Collection);
+
+                    stats.RecordDocumentTombstoneRead(Size);
                 }
             }
         }
@@ -220,7 +228,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public override string ToString()
         {
             var type = Data == null ? "Tombstone" : "Document";
-            
+
             if (Flags.Contain(DocumentFlags.Revision))
             {
                 type = "Revision";
@@ -243,7 +251,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 _doc = doc;
                 _context = context;
             }
-            
+
             public void Dispose()
             {
                 _context.Transaction.ForgetAbout(_doc);

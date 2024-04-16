@@ -2,7 +2,6 @@
 import { Meta, StoryObj } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5, databaseAccessArgType, licenseArgType } from "test/storybookTestUtils";
 import DocumentRevisions from "./DocumentRevisions";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 
@@ -15,8 +14,6 @@ export default {
         databaseAccess: databaseAccessArgType,
     },
 } satisfies Meta;
-
-const db = DatabasesStubs.nonShardedClusterDatabase();
 
 interface DefaultDocumentRevisionsProps {
     licenseType: Raven.Server.Commercial.LicenseType;
@@ -37,8 +34,10 @@ export const DefaultDocumentRevisions: StoryObj<DefaultDocumentRevisionsProps> =
         maxNumberOfRevisionAgeToKeepInDays,
         databaseAccess,
     }: DefaultDocumentRevisionsProps) => {
-        const { collectionsTracker, accessManager, license } = mockStore;
+        const { collectionsTracker, accessManager, license, databases } = mockStore;
         const { databasesService } = mockServices;
+
+        const db = databases.withActiveDatabase_NonSharded_SingleNode();
 
         accessManager.with_securityClearance("ValidUser");
 
@@ -59,7 +58,7 @@ export const DefaultDocumentRevisions: StoryObj<DefaultDocumentRevisionsProps> =
             MaxNumberOfRevisionsToKeep: maxNumberOfRevisionsToKeep,
         });
 
-        return <DocumentRevisions db={db} />;
+        return <DocumentRevisions />;
     },
     args: {
         licenseType: "Community",

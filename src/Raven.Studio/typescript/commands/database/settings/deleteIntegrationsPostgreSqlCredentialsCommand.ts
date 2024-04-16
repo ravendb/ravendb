@@ -5,7 +5,7 @@ import genUtils = require("common/generalUtils");
 
 class deleteIntegrationsPostgreSqlCredentialsCommand extends commandBase {
 
-    constructor(private db: database, private username: string) {
+    constructor(private db: database | string, private username: string) {
         super();
     }
 

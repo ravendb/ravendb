@@ -6,7 +6,7 @@ import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDat
 
 export interface DatabasesState {
     databases: EntityState<DatabaseSharedInfo, string>;
-    activeDatabase: string;
+    activeDatabaseName: string;
 }
 
 const databasesAdapter = createEntityAdapter<DatabaseSharedInfo, string>({
@@ -18,7 +18,7 @@ const databasesSelectors = databasesAdapter.getSelectors();
 
 const initialState: DatabasesState = {
     databases: databasesAdapter.getInitialState(),
-    activeDatabase: null,
+    activeDatabaseName: null,
 };
 
 const sliceName = "databases";
@@ -28,7 +28,7 @@ export const databasesSlice = createSlice({
     name: sliceName,
     reducers: {
         activeDatabaseChanged: (state, action: PayloadAction<string>) => {
-            state.activeDatabase = action.payload;
+            state.activeDatabaseName = action.payload;
         },
         databasesLoaded: (state, action: PayloadAction<DatabaseSharedInfo[]>) => {
             //TODO: update in shallow mode?

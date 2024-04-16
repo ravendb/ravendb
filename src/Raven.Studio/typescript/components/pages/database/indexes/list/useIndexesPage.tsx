@@ -8,7 +8,6 @@ import {
     IndexStatus,
     IndexType,
 } from "components/models/indexes";
-import database from "models/resources/database";
 import {
     indexesStatsReducer,
     indexesStatsReducerInitializer,
@@ -40,6 +39,8 @@ import React from "react";
 import { Alert } from "reactstrap";
 import DeleteIndexesConfirmBody, { DeleteIndexesConfirmBodyProps } from "../shared/DeleteIndexesConfirmBody";
 import assertUnreachable from "components/utils/assertUnreachable";
+import DatabaseUtils from "components/utils/DatabaseUtils";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
@@ -58,13 +59,12 @@ export interface SwapSideBySideData {
     inProgress: (indexName: string) => boolean;
 }
 
-export function useIndexesPage(database: database, stale: boolean) {
-    //TODO: use DatabaseSharedInfo?
-
+export function useIndexesPage(stale: boolean) {
     const autoDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerDatabase"));
     const staticDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerDatabase"));
 
-    const locations = database.getLocations();
+    const db = useAppSelector(databaseSelectors.activeDatabase);
+    const locations = useMemo(() => DatabaseUtils.getLocations(db), [db]);
 
     const [bulkOperationConfirm, setBulkOperationConfirm] = useState<{
         type: Parameters<typeof BulkIndexOperationConfirm>[0]["type"];
@@ -115,7 +115,7 @@ export function useIndexesPage(database: database, stale: boolean) {
 
     const fetchProgress = async (location: databaseLocationSpecifier) => {
         try {
-            const progress = await indexesService.getProgress(database, location);
+            const progress = await indexesService.getProgress(db.name, location);
 
             dispatch({
                 type: "ProgressLoaded",
@@ -133,25 +133,25 @@ export function useIndexesPage(database: database, stale: boolean) {
 
     const fetchStats = useCallback(
         async (location: databaseLocationSpecifier) => {
-            const stats = await indexesService.getStats(database, location);
+            const stats = await indexesService.getStats(db.name, location);
             dispatch({
                 type: "StatsLoaded",
                 location,
                 stats,
             });
         },
-        [database, indexesService]
+        [db.name, indexesService]
     );
 
     const throttledRefresh = useRef(
         _.throttle(() => {
-            database.getLocations().forEach(fetchStats);
+            locations.forEach(fetchStats);
         }, 3_000)
     );
 
     const throttledProgressRefresh = useRef(
         _.throttle(() => {
-            database.getLocations().forEach((location) => fetchProgress(location));
+            locations.forEach((location) => fetchProgress(location));
         }, 10_000)
     );
 
@@ -170,7 +170,7 @@ export function useIndexesPage(database: database, stale: boolean) {
     const [resettingIndex, setResettingIndex] = useState(false);
 
     const { loading } = useAsync(async () => {
-        const tasks = database.getLocations().map(fetchStats);
+        const tasks = locations.map(fetchStats);
         try {
             await Promise.race(tasks);
             throttledUpdateLicenseLimitsUsage();
@@ -210,12 +210,12 @@ export function useIndexesPage(database: database, stale: boolean) {
 
             dispatch({
                 type: "LocationsLoaded",
-                locations: database.getLocations(),
+                locations: locations,
             });
 
             currentProcessor.current(e);
         },
-        [database]
+        [locations]
     );
 
     useEffect(() => {
@@ -270,7 +270,7 @@ export function useIndexesPage(database: database, stale: boolean) {
                         }
 
                         disableRequests.push(
-                            indexesService.disable(index, database, location).then(() => {
+                            indexesService.disable(index, db.name, location).then(() => {
                                 dispatch({
                                     type: "DisableIndexing",
                                     indexName: index.name,
@@ -285,7 +285,7 @@ export function useIndexesPage(database: database, stale: boolean) {
             await Promise.all(disableRequests);
             messagePublisher.reportSuccess(`${indexes.length === 1 ? "Index" : "Indexes"} disabled successfully.`);
         },
-        [indexesService, database, eventsCollector]
+        [indexesService, db.name, eventsCollector]
     );
 
     const disableIndexes = useCallback(
@@ -293,11 +293,11 @@ export function useIndexesPage(database: database, stale: boolean) {
             setBulkOperationConfirm({
                 type: "disable",
                 indexes,
-                allActionContexts: ActionContextUtils.getContexts(database.getLocations()),
+                allActionContexts: ActionContextUtils.getContexts(locations),
                 onConfirm: (contexts: DatabaseActionContexts[]) => onDisableIndexesConfirm(indexes, contexts),
             });
         },
-        [setBulkOperationConfirm, onDisableIndexesConfirm, database]
+        [locations, onDisableIndexesConfirm]
     );
 
     const onPauseIndexesConfirm = useCallback(
@@ -318,7 +318,7 @@ export function useIndexesPage(database: database, stale: boolean) {
                         }
 
                         pauseRequests.push(
-                            indexesService.pause(index, database, location).then(() => {
+                            indexesService.pause(index, db.name, location).then(() => {
                                 dispatch({
                                     type: "PauseIndexing",
                                     indexName: index.name,
@@ -333,7 +333,7 @@ export function useIndexesPage(database: database, stale: boolean) {
             await Promise.all(pauseRequests);
             messagePublisher.reportSuccess(`${indexes.length === 1 ? "Index" : "Indexes"} paused successfully.`);
         },
-        [eventsCollector, indexesService, database]
+        [eventsCollector, indexesService, db.name]
     );
 
     const pauseIndexes = useCallback(
@@ -341,11 +341,11 @@ export function useIndexesPage(database: database, stale: boolean) {
             setBulkOperationConfirm({
                 type: "pause",
                 indexes,
-                allActionContexts: ActionContextUtils.getContexts(database.getLocations()),
+                allActionContexts: ActionContextUtils.getContexts(locations),
                 onConfirm: (contexts: DatabaseActionContexts[]) => onPauseIndexesConfirm(indexes, contexts),
             });
         },
-        [setBulkOperationConfirm, onPauseIndexesConfirm, database]
+        [locations, onPauseIndexesConfirm]
     );
 
     const onStartIndexesConfirm = useCallback(
@@ -362,7 +362,7 @@ export function useIndexesPage(database: database, stale: boolean) {
 
                         if (details?.status === "Paused" && details?.state !== "Error") {
                             startRequests.push(
-                                indexesService.resume(index, database, location).then(() => {
+                                indexesService.resume(index, db.name, location).then(() => {
                                     dispatch({
                                         type: "ResumeIndexing",
                                         indexName: index.name,
@@ -372,7 +372,7 @@ export function useIndexesPage(database: database, stale: boolean) {
                             );
                         } else {
                             startRequests.push(
-                                indexesService.enable(index, database, location).then(() => {
+                                indexesService.enable(index, db.name, location).then(() => {
                                     dispatch({
                                         type: "EnableIndexing",
                                         indexName: index.name,
@@ -388,7 +388,7 @@ export function useIndexesPage(database: database, stale: boolean) {
             await Promise.all(startRequests);
             messagePublisher.reportSuccess(`${indexes.length === 1 ? "Index" : "Indexes"} started successfully.`);
         },
-        [eventsCollector, indexesService, database]
+        [eventsCollector, indexesService, db.name]
     );
 
     const startIndexes = useCallback(
@@ -396,16 +396,16 @@ export function useIndexesPage(database: database, stale: boolean) {
             setBulkOperationConfirm({
                 type: "start",
                 indexes,
-                allActionContexts: ActionContextUtils.getContexts(database.getLocations()),
+                allActionContexts: ActionContextUtils.getContexts(locations),
                 onConfirm: (contexts: DatabaseActionContexts[]) => onStartIndexesConfirm(indexes, contexts),
             });
         },
-        [database, onStartIndexesConfirm]
+        [locations, onStartIndexesConfirm]
     );
 
     const setIndexLockModeInternal = useCallback(
         async (index: IndexSharedInfo, lockMode: IndexLockMode) => {
-            await indexesService.setLockMode([index], lockMode, database);
+            await indexesService.setLockMode([index], lockMode, db.name);
 
             dispatch({
                 type: "SetLockMode",
@@ -413,7 +413,7 @@ export function useIndexesPage(database: database, stale: boolean) {
                 indexName: index.name,
             });
         },
-        [database, indexesService]
+        [db.name, indexesService]
     );
 
     const setLockModeSelectedIndexes = useCallback(
@@ -471,7 +471,7 @@ export function useIndexesPage(database: database, stale: boolean) {
         [getSelectedIndexes, confirm, setLockModeSelectedIndexes]
     );
 
-    const confirmDeleteIndexes = async (db: database, indexes: IndexSharedInfo[]): Promise<void> => {
+    const confirmDeleteIndexes = async (indexes: IndexSharedInfo[]): Promise<void> => {
         eventsCollector.reportEvent("indexes", "delete");
 
         const confirmData = getIndexInfoForDelete(indexes);
@@ -488,7 +488,7 @@ export function useIndexesPage(database: database, stale: boolean) {
             return;
         }
 
-        const tasks = confirmData.indexesInfoForDelete.map((x) => indexesService.deleteIndex(x.indexName, db));
+        const tasks = confirmData.indexesInfoForDelete.map((x) => indexesService.deleteIndex(x.indexName, db.name));
         await Promise.all(tasks);
 
         if (tasks.length > 1) {
@@ -505,7 +505,7 @@ export function useIndexesPage(database: database, stale: boolean) {
     };
 
     const setIndexPriority = async (index: IndexSharedInfo, priority: IndexPriority) => {
-        await indexesService.setPriority(index, priority, database);
+        await indexesService.setPriority(index, priority, db.name);
 
         dispatch({
             type: "SetPriority",
@@ -545,7 +545,7 @@ export function useIndexesPage(database: database, stale: boolean) {
 
         if (isConfirmed) {
             eventsCollector.reportEvent("indexes", "open");
-            await indexesService.openFaulty(index, database, location);
+            await indexesService.openFaulty(index, db.name, location);
         }
     };
 
@@ -560,7 +560,7 @@ export function useIndexesPage(database: database, stale: boolean) {
 
                 for (const location of locations) {
                     resetRequests.push(
-                        indexesService.resetIndex(resetIndexName, database, location).then(() => {
+                        indexesService.resetIndex(resetIndexName, db.name, location).then(() => {
                             dispatch({
                                 type: "ResetIndex",
                                 indexName: resetIndexName,
@@ -592,7 +592,7 @@ export function useIndexesPage(database: database, stale: boolean) {
                 const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
 
                 for (const location of locations) {
-                    swapRequests.push(indexesService.forceReplace(swapSideBySideConfirmIndexName, database, location));
+                    swapRequests.push(indexesService.forceReplace(swapSideBySideConfirmIndexName, db.name, location));
                 }
             }
 
