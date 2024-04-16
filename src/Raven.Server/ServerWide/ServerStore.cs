@@ -2570,6 +2570,11 @@ namespace Raven.Server.ServerWide
 
         public Guid ServerId => GetServerId();
 
+        public bool IsShutdownRequested()
+        {
+            return _shutdownNotification.IsCancellationRequested;
+        }
+
         public void Dispose()
         {
             if (_shutdownNotification.IsCancellationRequested || _disposed)

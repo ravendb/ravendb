@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
-        public override bool IsShutdownRequested() => base.IsShutdownRequested() || DatabaseContext.DatabaseShutdown.IsCancellationRequested;
+        public override bool IsShutdownRequested() => base.IsShutdownRequested() || DatabaseContext.IsShutdownRequested();
 
         [DoesNotReturn]
         public override void ThrowShutdownException(Exception inner = null) => throw new DatabaseDisabledException("The database " + DatabaseName + " is shutting down", inner);
