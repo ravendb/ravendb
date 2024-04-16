@@ -25,23 +25,13 @@ namespace Raven.Server.Documents
 
         public void TrySetException(string id, long index, Exception e)
         {
-            Database.RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
-            {
-                Index = index,
-                Exception = e,
-                Type = DatabaseNotificationChangeType.ClusterTransactionCompleted
-            });
+            Database.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
             TrySetException(id, e);
         }
 
         public void TrySetResult(string id, long index, HashSet<string> result)
         {
-            Database.RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
-            {
-                Index = index,
-                Exception = null,
-                Type = DatabaseNotificationChangeType.ClusterTransactionCompleted
-            });
+            Database.RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
             TrySetResult(id, result);
         }
     }

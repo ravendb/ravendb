@@ -4611,11 +4611,6 @@ namespace Raven.Server.ServerWide
                 _recentNotifications.TryDequeue(out _);
         }
 
-        public void NotifyListenersAbout(long index, Exception e)
-        {
-            NotifyListenersInternal(index, e);
-        }
-
         public void SetTaskCompleted(long index, Exception e)
         {
             if (_tasksDictionary.TryGetValue(index, out var tcs))
@@ -4651,10 +4646,57 @@ namespace Raven.Server.ServerWide
             _tasksDictionary.TryAdd(index, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
         }
 
-        internal override ConcurrentDictionary<long, TaskCompletionSource<object>> GetTasksDictionary()
+        public override async Task<bool> WaitForTaskCompletion(long index, Lazy<Task> waitingTask)
         {
-            return _tasksDictionary;
+            if (_tasksDictionary.TryGetValue(index, out var tcs) == false)
+            {
+                // the task has already completed
+                // let's check if we had errors in it
+                foreach (var error in _errors)
+                {
+                    if (error.Index == index)
+                        error.Exception.Throw(); // rethrow
+                }
+
+                return true;
+            }
+
+            var task = tcs.Task;
+
+            if (task.IsCompleted)
+            {
+                if (task.IsFaulted)
+                {
+                    try
+                    {
+                        await task; // will throw on error
+                    }
+                    catch (Exception e)
+                    {
+                        ThrowApplyException(index, e);
+                    }
+                }
+
+                if (task.IsCanceled)
+                    ThrowCanceledException(index, LastModifiedIndex);
+
+                return true;
+            }
+
+            var result = await Task.WhenAny(task, waitingTask.Value);
+
+            if (result.IsFaulted)
+                await result; // will throw
+
+            if (task.IsCanceled)
+                ThrowCanceledException(index, LastModifiedIndex);
+
+            if (result == task)
+                return true;
+
+            return false;
         }
+
     }
 
     public class RecentLogIndexNotification

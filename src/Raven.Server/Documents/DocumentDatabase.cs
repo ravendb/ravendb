@@ -380,21 +380,11 @@ namespace Raven.Server.Documents
                     try
                     {
                         await NotifyFeaturesAboutStateChangeAsync(record, index);
-                        RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
-                        {
-                            Index = index, 
-                            Exception = null, 
-                            Type = DatabaseNotificationChangeType.StateChanged
-                        });
+                        RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
                     }
                     catch (Exception e)
                     {
-                        RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
-                        {
-                            Index = index, 
-                            Exception = e,
-                            Type = DatabaseNotificationChangeType.StateChanged
-                        });
+                        RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                     }
                 });
 
@@ -466,12 +456,7 @@ namespace Raven.Server.Documents
         {
             if (changeType == DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted)
             {
-                RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification
-                {
-                    Index = index,
-                    Exception = null,
-                    Type = DatabaseNotificationChangeType.PendingClusterTransactions
-                });
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
                 return;
             }
 
@@ -565,12 +550,7 @@ namespace Raven.Server.Documents
                 var index = _serverStore.Cluster.GetLastCompareExchangeIndexForDatabase(context, Name);
 
                 if (RachisLogIndexNotifications.LastModifiedIndex != index)
-                    RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
-                    {
-                        Index = index, 
-                        Exception = null, 
-                        Type = DatabaseNotificationChangeType.ClusterTransactionCompleted
-                    });
+                    RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
 
                 return batch;
             }
@@ -1383,21 +1363,11 @@ namespace Raven.Server.Documents
                     ThrowDatabaseShutdown();
 
                 await NotifyFeaturesAboutValueChangeAsync(index, type, changeState);
-                RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
-                {
-                    Index = index, 
-                    Exception = null, 
-                    Type = DatabaseNotificationChangeType.ValueChanged
-                });
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
             }
             catch (Exception e)
             {
-                RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
-                {
-                    Index = index, 
-                    Exception = e, 
-                    Type = DatabaseNotificationChangeType.ValueChanged
-                });
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e);
 
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
@@ -1431,12 +1401,7 @@ namespace Raven.Server.Documents
 
                 await NotifyFeaturesAboutStateChangeAsync(record, index);
 
-                RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
-                {
-                    Index = index,
-                    Exception = null,
-                    Type = DatabaseNotificationChangeType.StateChanged
-                });
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
             }
             catch (Exception e)
             {
@@ -1445,12 +1410,7 @@ namespace Raven.Server.Documents
                 if (_databaseShutdown.IsCancellationRequested && e is DatabaseDisabledException == false)
                     e = throwShutDown = CreateDatabaseShutdownException(e);
 
-                RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
-                {
-                    Index = index,
-                    Exception = e,
-                    Type = DatabaseNotificationChangeType.StateChanged  
-                });
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e);
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Got exception during StateChanged({index}).", e);

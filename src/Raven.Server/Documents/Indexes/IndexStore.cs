@@ -134,12 +134,7 @@ namespace Raven.Server.Documents.Indexes
                             catch (OperationCanceledException e)
                             {
                                 AddToIndexesToDelete(index);
-                                _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
-                                {
-                                    Index = raftIndex,
-                                    Exception = e,
-                                    Type = DatabaseNotificationChangeType.IndexStart
-                                });
+                                _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
                                 return;
                             }
 
@@ -151,12 +146,7 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 AddToIndexesToDelete(index);
 
-                                _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
-                                {
-                                    Index = raftIndex,
-                                    Exception = e,
-                                    Type = DatabaseNotificationChangeType.IndexStart
-                                });
+                                _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
                                 if (Logger.IsInfoEnabled)
                                     Logger.Info($"Could not start index '{index.Name}'", e);
                             }
@@ -251,12 +241,7 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
-                _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
-                {
-                    Index = index,
-                    Exception = e,
-                    Type = DatabaseNotificationChangeType.IndexUpdateSorters
-                });
+                _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Could not update sorters", e);
             }
@@ -270,12 +255,7 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
-                _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
-                {
-                    Index = index,
-                    Exception = e,
-                    Type = DatabaseNotificationChangeType.IndexUpdateAnalyzers
-                });
+                _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Could not update analyzers", e);
             }
@@ -302,12 +282,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
-                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
-                    {
-                        Index = index,
-                        Exception = e,
-                        Type = DatabaseNotificationChangeType.AutoIndexStart
-                    });
+                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Could not create auto index {name}", e);
                 }
@@ -453,12 +428,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception exception)
                 {
-                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
-                    {
-                        Index = index,
-                        Exception = exception,
-                        Type = DatabaseNotificationChangeType.UpdateStaticIndex
-                    });
+                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, exception);
 
                     var indexName = name;
 
@@ -826,12 +796,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
-                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(new DatabaseNotification()
-                    {
-                        Index = raftLogIndex,
-                        Exception = e,
-                        Type = DatabaseNotificationChangeType.DeleteIndex
-                    });
+                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftLogIndex, e);
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Could not delete index {index.Name}", e);
                 }
