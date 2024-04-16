@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Patch
         private readonly ScriptRunnerCache _parent;
         internal readonly bool _enableClr;
         private readonly DateTime _creationTime;
-        public readonly List<Script> ScriptsSource = new List<Script>();
+        public readonly List<Prepared<Script>> ScriptsSource = new List<Prepared<Script>>();
 
         public int NumberOfCachedScripts => _cache.Count(x =>
             x.Value != null ||
@@ -259,7 +259,7 @@ namespace Raven.Server.Documents.Patch
             private const string _unarchiveSignature = "unarchive(doc)";
             public const string GetMetadataMethod = "getMetadata";
 
-            public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<Script> scriptsSource, bool ignoreValidationErrors)
+            public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<Prepared<Script>> scriptsSource, bool ignoreValidationErrors)
             {
                 _database = database;
                 _configuration = configuration;
