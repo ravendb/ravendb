@@ -775,7 +775,7 @@ namespace Raven.Server.Web
             HttpContext.Response.Headers["Location"] = leaderLocation;
         }
 
-        public virtual bool IsShutdownRequested() => ServerStore.ServerShutdown.IsCancellationRequested;
+        public virtual bool IsShutdownRequested() => ServerStore.IsShutdownRequested();
 
         [DoesNotReturn]
         public virtual void ThrowShutdownException(Exception inner = null) => throw new OperationCanceledException($"Server on node {ServerStore.NodeTag} is shutting down", inner);
