@@ -173,7 +173,7 @@ class editSqlEtlTask extends viewModelBase {
 
     view = require("views/database/tasks/editSqlEtlTask.html");
     connectionStringView = require("views/database/settings/connectionStringSql.html");
-    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    taskResponsibleNodeSectionView = require("views/partial/taskResponsibleNodeSection.html");
     pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     static readonly scriptNamePrefix = "Script_";

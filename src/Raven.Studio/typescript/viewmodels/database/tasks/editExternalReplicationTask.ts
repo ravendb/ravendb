@@ -19,7 +19,7 @@ class editExternalReplicationTask extends viewModelBase {
     licenseType = licenseModel.licenseStatus().Type; //TODO Get feature availability form API
     connectionStringView = require("views/database/settings/connectionStringRaven.html");
     certificateUploadInfoForOngoingTasks = require("views/partial/certificateUploadInfoForOngoingTasks.html");
-    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    taskResponsibleNodeSectionView = require("views/partial/taskResponsibleNodeSection.html");
     pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     editedExternalReplication = ko.observable<ongoingTaskReplicationEditModel>();

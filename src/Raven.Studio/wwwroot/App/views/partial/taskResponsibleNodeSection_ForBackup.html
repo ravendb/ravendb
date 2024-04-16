@@ -1,0 +1,30 @@
+<div data-bind="validationElement: mentorNode, collapse: manualChooseMentor">
+    <div class="row" data-bind="css: { 'margin-bottom-xs': mentorNode() }">
+        <label class="control-label col-sm-4 col-lg-2">Responsible Node</label>
+        <div class="col-sm-4 flex-horizontal">
+            <div class="dropdown btn-block">
+                <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                    <span data-bind="text: mentorNode() ? 'Node ' + mentorNode() : 'Select responsible node'"></span>
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
+                    <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.mentorNode.bind($parent.mentorNode, $data)"></a></li>
+                </ul>
+                <span class="help-block" data-bind="validationMessage: mentorNode"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row margin-bottom small">
+        <div class="col-sm-offset-4 col-lg-offset-2 col-sm-4" data-bind="visible: mentorNode">
+            <div class="toggle" data-placement="right" data-toggle="tooltip" title="Toggle on to pin selected node" data-animation="true">
+            <input id="pinMentorNode" type="checkbox" data-bind="checked: pinMentorNode">
+            <label for="pinMentorNode">Pin node</label>
+        </div>
+        </div>
+    </div>
+    <div class="row margin-bottom small">
+        <div class="col-sm-offset-4 col-lg-offset-2 col-sm-4" data-bind="visible: mentorNode">
+            <div data-bind="compose: $root.pinResponsibleNodeTextScriptView"></div>
+        </div>
+    </div>
+</div>
