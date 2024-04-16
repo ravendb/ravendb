@@ -2027,13 +2027,13 @@ namespace Raven.Server.Documents.Patch
                             case BlittableJsonToken.Boolean:
                                 return (bool)propDetails.Value;
                             case BlittableJsonToken.Integer:
-                                return new ObjectWrapper(selfInstance.Engine, value);
+                                return ObjectWrapper.Create(selfInstance.Engine, value);
                             case BlittableJsonToken.LazyNumber:
-                                return new ObjectWrapper(selfInstance.Engine, value);
+                                return ObjectWrapper.Create(selfInstance.Engine, value);
                             case BlittableJsonToken.String:
-                                return new ObjectWrapper(selfInstance.Engine, value);
+                                return ObjectWrapper.Create(selfInstance.Engine, value);
                             case BlittableJsonToken.CompressedString:
-                                return new ObjectWrapper(selfInstance.Engine, value);
+                                return ObjectWrapper.Create(selfInstance.Engine, value);
                             default:
                                 throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must return either raw numeric or raw string types");
                         }

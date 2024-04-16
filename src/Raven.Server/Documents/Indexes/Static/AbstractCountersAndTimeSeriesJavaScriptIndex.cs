@@ -76,7 +76,7 @@ function map() {{
 
         protected override void ProcessMaps(ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList, List<MapMetadata> mapReferencedCollections, out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
         {
-            var mapsArray = definitions.GetProperty(MapsProperty).Value;
+            var mapsArray = definitions.GetOwnProperty(MapsProperty).Value;
             if (mapsArray.IsNull() || mapsArray.IsUndefined() || mapsArray.IsArray() == false)
                 ThrowIndexCreationException($"doesn't contain any map function or '{GlobalDefinitions}.{Maps}' was modified in the script");
 

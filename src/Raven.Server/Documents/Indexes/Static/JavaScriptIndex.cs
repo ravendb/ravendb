@@ -66,7 +66,7 @@ function map(name, lambda) {
 
         protected override void ProcessMaps(ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList, List<MapMetadata> mapReferencedCollections, out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
         {
-            var mapsArray = definitions.GetProperty(MapsProperty).Value;
+            var mapsArray = definitions.GetOwnProperty(MapsProperty).Value;
             if (mapsArray.IsNull() || mapsArray.IsUndefined() || mapsArray.IsArray() == false)
                 ThrowIndexCreationException($"doesn't contain any map function or '{GlobalDefinitions}.{Maps}' was modified in the script");
 
@@ -322,12 +322,12 @@ function map(name, lambda) {
 
         private void ProcessReduce(IndexDefinition definition, ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, long indexVersion)
         {
-            var reduceObj = definitions.GetProperty(ReduceProperty)?.Value;
+            var reduceObj = definitions.GetOwnProperty(ReduceProperty)?.Value;
             if (reduceObj != null && reduceObj.IsObject())
             {
                 var reduceAsObj = reduceObj.AsObject();
-                var groupByKey = reduceAsObj.GetProperty(KeyProperty).Value.As<ScriptFunction>();
-                var reduce = reduceAsObj.GetProperty(AggregateByProperty).Value.As<ScriptFunction>();
+                var groupByKey = reduceAsObj.GetOwnProperty(KeyProperty).Value.As<ScriptFunction>();
+                var reduce = reduceAsObj.GetOwnProperty(AggregateByProperty).Value.As<ScriptFunction>();
                 ReduceOperation = new JavaScriptReduceOperation(reduce, groupByKey, _engine, resolver, indexVersion) { ReduceString = definition.Reduce };
                 GroupByFields = ReduceOperation.GetReduceFieldsNames();
                 Reduce = ReduceOperation.IndexingFunction;
