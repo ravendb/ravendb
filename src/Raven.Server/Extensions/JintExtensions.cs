@@ -46,19 +46,6 @@ namespace Raven.Server.Extensions
             }
         }
 
-        public static void ExecuteWithReset(this Engine engine, Script script)
-        {
-            try
-            {
-                engine.Execute(script);
-            }
-            finally
-            {
-                engine.Advanced.ResetCallStack();
-                engine.Constraints.Reset();
-            }
-        }
-
         public static string TryGetFieldFromSimpleLambdaExpression(this IFunction function)
         {
             if (function.Params.Count == 0 || function.Params[0] is not Identifier identifier)

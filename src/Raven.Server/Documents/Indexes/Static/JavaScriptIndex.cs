@@ -354,9 +354,11 @@ function map(name, lambda) {
 
         private MapMetadata ExecuteCodeAndCollectReferencedCollections(string code, string additionalSources)
         {
+            _engine.ExecuteWithReset(code);
+
             var javascriptParser = new JavaScriptParser(DefaultParserOptions);
             var program = javascriptParser.ParseScript(code);
-            _engine.ExecuteWithReset(program);
+
             var loadVisitor = new EsprimaReferencedCollectionVisitor();
             if (string.IsNullOrEmpty(additionalSources) == false)
                 loadVisitor.Visit(javascriptParser.ParseScript(additionalSources));
