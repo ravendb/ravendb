@@ -105,6 +105,11 @@ namespace Raven.Server.Documents
             return new OperationCancelToken(Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
+        public override OperationCancelToken CreateHttpRequestBoundOperationToken(CancellationToken token)
+        {
+            return new OperationCancelToken(Database.DatabaseShutdown, HttpContext.RequestAborted, token);
+        }
+
         public override OperationCancelToken CreateTimeLimitedBackgroundOperationTokenForQueryOperation()
         {
             return new OperationCancelToken(Database.Configuration.Databases.QueryOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
