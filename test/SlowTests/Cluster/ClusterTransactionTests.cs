@@ -987,10 +987,7 @@ namespace SlowTests.Cluster
                 var server = Servers[1];
                 var result1 = await DisposeServerAndWaitForFinishOfDisposalAsync(server);
 
-                using (var session = leaderStore.OpenAsyncSession(new SessionOptions
-                {
-                    TransactionMode = TransactionMode.ClusterWide
-                }))
+                using (var session = leaderStore.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     Assert.Equal(1, session.Advanced.RequestExecutor.TopologyNodes.Count);
                     Assert.Equal(leader.WebUrl, session.Advanced.RequestExecutor.Url);
@@ -1454,6 +1451,97 @@ namespace SlowTests.Cluster
                                {
                                    user.Name
                                };
+            }
+        }
+
+        class TestObj
+        {
+            public string Id { get; set; }
+            public string Prop { get; set; }
+            public string ExternalId { get; set; }
+        }
+
+        private class TestIndex : AbstractIndexCreationTask<TestObj>
+        {
+            public override string IndexName { get; }
+
+            public TestIndex(string name)
+            {
+                IndexName = name;
+                Map = testObjs => from user in testObjs
+                    select new { user.Prop };
+            }
+        }
+
+        public class TestCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly ManualResetEvent _manualResetEvent;
+            private readonly TimeSpan _timeout;
+
+            public TestCommand(ManualResetEvent manualResetEvent, TimeSpan timeout)
+            {
+                _manualResetEvent = manualResetEvent;
+                _timeout = timeout;
+            }
+
+            protected override long ExecuteCmd(DocumentsOperationContext context)
+            {
+                _manualResetEvent.WaitOne(_timeout);
+                return 1;
+            }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(
+                TransactionOperationContext<TTransaction> context)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task ClusterTransaction_WhenLoadReturnEmptyAndCompareExchangeExit_ShouldStillThrowConcurrency(bool clusterTrxBefore)
+        {
+            const string id = "testObjs/1";
+            using var store = GetDocumentStore();
+
+            var database = await GetDatabase(store.Database);
+
+            if (clusterTrxBefore)
+            {
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                await session.StoreAsync(new User());
+                await session.SaveChangesAsync();
+            }
+
+            var mre = new ManualResetEvent(false);
+            try
+            {
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                using var session2 = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+
+                await session.StoreAsync(new TestObj { Prop = $"new 1", Id = id });
+                var testCommandTask = database.TxMerger.Enqueue(new TestCommand(mre, TimeSpan.FromSeconds(5)));
+                var saveChangesTask = session.SaveChangesAsync();
+
+                //The origin issue occured if a cluster operation was made between the compare exchange operation to database operation
+                await store.ExecuteIndexAsync(new TestIndex("TestIndex"));
+                var testObj = await session2.LoadAsync<TestObj>(id);
+                if (testObj == null)
+                {
+                    testObj = new TestObj{ Prop = $"new 2", Id = id };
+                    await session2.StoreAsync(testObj);
+                    await Assert.ThrowsAnyAsync<Exception>(async () => await session2.SaveChangesAsync());
+                }
+
+                mre.Set();
+                await testCommandTask;
+                await saveChangesTask;
+            }
+            finally
+            {
+                mre.Set();
             }
         }
     }

@@ -229,7 +229,7 @@ namespace Raven.Server.Documents.Handlers
             GetCompareExchangeValueQueryString(Database, clusterWideTx, out var includeCompareExchangeValues);
 
             // we have to read this _before_ we open the transaction
-            long lastModifiedIndex = Database.RachisLogIndexNotifications.LastModifiedIndex;
+            long lastModifiedIndex = Database.LastCompletedClusterTransactionIndex;
 
             using (context.OpenReadTransaction())
             using (includeCompareExchangeValues)
