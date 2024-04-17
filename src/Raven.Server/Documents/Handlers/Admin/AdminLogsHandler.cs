@@ -127,6 +127,8 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, true))
                 {
+                    bool isEmptyArchive = true;
+
                     foreach (var filePath in Directory.GetFiles(ServerStore.Configuration.Logs.Path.FullPath))
                     {
                         var fileName = Path.GetFileName(filePath);
@@ -160,6 +162,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                                 {
                                     await fs.CopyToAsync(entryStream);
                                 }
+
+                                isEmptyArchive = false;
                             }
                         }
                         catch (Exception e)
@@ -167,14 +171,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                             await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, fileName);
                         }
                     }
-                }
 
-                // Add an informational file to the archive if no log files match the specified date range,
-                // ensuring the user receives a non-empty archive with an explanation.
-                using (var archive = new ZipArchive(stream, ZipArchiveMode.Update, true))
-                {
-                    // Check if any file was added to the zip
-                    if (archive.Entries.Count == 0)
+                    // Add an informational file to the archive if no log files match the specified date range,
+                    // ensuring the user receives a non-empty archive with an explanation.
+                    if (isEmptyArchive)
                     {
                         const string infoFileName = "No logs matched the date range.txt";
 
