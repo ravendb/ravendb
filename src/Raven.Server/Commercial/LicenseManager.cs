@@ -553,12 +553,12 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static async Task<HttpResponseMessage> GetUpdatedLicenseResponseMessage(License currentLicense, TransactionContextPool contextPool)
+        public static async Task<HttpResponseMessage> GetUpdatedLicenseResponseMessage(License currentLicense, TransactionContextPool contextPool, CancellationToken token)
         {
             var leaseLicenseInfo = GetLeaseLicenseInfo(currentLicense, contextPool);
 
             var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/lease",
-                    new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"))
+                    new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"), token)
                 .ConfigureAwait(false);
 
             return response;
@@ -566,20 +566,20 @@ namespace Raven.Server.Commercial
 
         public async Task<License> GetUpdatedLicense(License currentLicense)
         {
-            var response = await GetUpdatedLicenseResponseMessage(currentLicense, _serverStore.ContextPool).ConfigureAwait(false);
+            var response = await GetUpdatedLicenseResponseMessage(currentLicense, _serverStore.ContextPool, _serverStore.ServerShutdown).ConfigureAwait(false);
             if (response.IsSuccessStatusCode == false)
                 return null;
 
-            var leasedLicense = await ConvertResponseToLeasedLicense(response).ConfigureAwait(false);
+            var leasedLicense = await ConvertResponseToLeasedLicense(response, _serverStore.ServerShutdown).ConfigureAwait(false);
             return leasedLicense.License;
         }
 
-        public static async Task<LeasedLicense> ConvertResponseToLeasedLicense(HttpResponseMessage httpResponseMessage)
+        public static async Task<LeasedLicense> ConvertResponseToLeasedLicense(HttpResponseMessage httpResponseMessage, CancellationToken token)
         {
-            var leasedLicenseAsStream = await httpResponseMessage.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
+            var leasedLicenseAsStream = await httpResponseMessage.Content.ReadAsStreamWithZstdSupportAsync(token).ConfigureAwait(false);
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var json = await context.ReadForMemoryAsync(leasedLicenseAsStream, "leased license info");
+                var json = await context.ReadForMemoryAsync(leasedLicenseAsStream, "leased license info", token);
                 var leasedLicense = JsonDeserializationServer.LeasedLicense(json);
                 return leasedLicense;
             }
@@ -670,7 +670,7 @@ namespace Raven.Server.Commercial
                     return (null, false);
                 }
 
-                var response = await GetUpdatedLicenseResponseMessage(currentLicense, _serverStore.ContextPool).ConfigureAwait(false);
+                var response = await GetUpdatedLicenseResponseMessage(currentLicense, _serverStore.ContextPool, _serverStore.ServerShutdown).ConfigureAwait(false);
 
                 if (response.IsSuccessStatusCode == false)
                 {
@@ -680,12 +680,12 @@ namespace Raven.Server.Commercial
                     if (license != null)
                         return (license, false);
 
-                    var responseString = await response.Content.ReadAsStringWithZstdSupportAsync().ConfigureAwait(false);
+                    var responseString = await response.Content.ReadAsStringWithZstdSupportAsync(_serverStore.ServerShutdown).ConfigureAwait(false);
                     AddLeaseLicenseError($"status code: {response.StatusCode}, response: {responseString}");
                     return (null, false);
                 }
 
-                var leasedLicense = await ConvertResponseToLeasedLicense(response).ConfigureAwait(false);
+                var leasedLicense = await ConvertResponseToLeasedLicense(response, _serverStore.ServerShutdown).ConfigureAwait(false);
                 var newLicense = leasedLicense.License;
                 var licenseChanged = newLicense.Equals(currentLicense) == false;
 

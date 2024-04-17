@@ -48,7 +48,7 @@ class editSubscriptionTask extends shardViewModelBase {
     languageService: rqlLanguageService;
     
     view = require("views/database/tasks/editSubscriptionTask.html");
-    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    taskResponsibleNodeSectionView = require("views/partial/taskResponsibleNodeSection.html");
     pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     infoHubView: ReactInKnockout<typeof EditSubscriptionTaskInfoHub>;

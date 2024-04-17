@@ -3049,8 +3049,7 @@ namespace Raven.Server
                 if (licenseStatus.Version.Major >= 6)
                 {
                     serverStore.LicenseManager.OnBeforeInitialize += () =>
-                        serverStore.LicenseManager.ActivateAsync(licenseFromApi, RaftIdGenerator.NewId(), fromApi: true)
-                            .Wait(serverStore.ServerShutdown);
+                        AsyncHelpers.RunSync(() => serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure));
                     return;
                 }
             }
@@ -3063,8 +3062,8 @@ namespace Raven.Server
                 if (licenseStatus.Version.Major >= 6)
                 {
                     serverStore.LicenseManager.OnBeforeInitialize += () =>
-                        serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure)
-                            .Wait(serverStore.ServerShutdown);
+                        AsyncHelpers.RunSync(() =>
+                            serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure));
                     return;
                 }
             }
@@ -3080,9 +3079,9 @@ namespace Raven.Server
         {
             try
             {
-                var response = await LicenseManager.GetUpdatedLicenseResponseMessage(license, contextPool)
+                var response = await LicenseManager.GetUpdatedLicenseResponseMessage(license, contextPool, CancellationToken.None)
                     .ConfigureAwait(false);
-                var leasedLicense = await LicenseManager.ConvertResponseToLeasedLicense(response)
+                var leasedLicense = await LicenseManager.ConvertResponseToLeasedLicense(response, CancellationToken.None)
                     .ConfigureAwait(false);
                 return leasedLicense.License;
             }
@@ -3110,7 +3109,8 @@ namespace Raven.Server
                     var localLicenseStatus = LicenseManager.GetLicenseStatus(localLicense);
                     if (localLicenseStatus.Expiration >= RavenVersionAttribute.Instance.ReleaseDate)
                     {
-                        serverStore.LicenseManager.OnBeforeInitialize += () => serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure).Wait(serverStore.ServerShutdown);
+                        serverStore.LicenseManager.OnBeforeInitialize += () => AsyncHelpers.RunSync(() =>
+                            serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure));
                         return;
                     }
 
