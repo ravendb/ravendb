@@ -12,11 +12,25 @@ internal abstract class AbstractIndexHandlerProcessorForReset<TRequestHandler, T
     protected AbstractIndexHandlerProcessorForReset([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
+    
+    private const string SideBySideQueryParameterName = "isSideBySide";
 
-    protected override RavenCommand CreateCommandForNode(string nodeTag) => new ResetIndexOperation.ResetIndexCommand(GetName(), nodeTag);
+    protected override RavenCommand CreateCommandForNode(string nodeTag) => new ResetIndexOperation.ResetIndexCommand(GetName(), IsSideBySide(), nodeTag);
 
     protected string GetName()
     {
         return RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+    }
+
+    protected bool IsSideBySide()
+    {
+        var sideBySideQueryParam = RequestHandler.GetBoolValueQueryString(SideBySideQueryParameterName, false);
+        
+        var sideBySide = false;
+        
+        if (sideBySideQueryParam.HasValue)
+            sideBySide = sideBySideQueryParam.Value;
+
+        return sideBySide;
     }
 }

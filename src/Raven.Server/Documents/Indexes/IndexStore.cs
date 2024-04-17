@@ -1051,6 +1051,10 @@ namespace Raven.Server.Documents.Indexes
             if (indexDef != null)
             {
                 differences = existingIndex.Definition.Compare(indexDef);
+                
+                if (indexDef.ForceUpdate)
+                    return IndexCreationOptions.Update;
+                
                 if (indexDef.ClusterState?.LastStateIndex > (existingIndex.Definition.ClusterState?.LastStateIndex ?? -1))
                 {
                     differences |= IndexDefinitionCompareDifferences.State;
@@ -1157,13 +1161,13 @@ namespace Raven.Server.Documents.Indexes
             return true;
         }
 
-        public Index ResetIndex(string name)
+        public Index ResetIndex(string name, bool sideBySide = false)
         {
             var index = GetIndex(name);
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(name);
 
-            return ResetIndexInternal(index);
+            return sideBySide ? ResetIndexSideBySideInternal(index) : ResetIndexInternal(index);
         }
 
         public async Task DeleteIndex(string name, string raftRequestId)
@@ -1507,6 +1511,34 @@ namespace Raven.Server.Documents.Indexes
                 {
                     throw new IndexCreationException($"Failed to reset index: {index.Name}", e);
                 }
+            }
+        }
+
+        private Index ResetIndexSideBySideInternal(Index index)
+        {
+            try
+            {
+                var definitionClone = new IndexDefinition();
+                var definition = index.GetIndexDefinition();
+                definition.CopyTo(definitionClone);
+
+                definitionClone.ForceUpdate = true;
+
+                var sideBySideIndex = HandleStaticIndexChange(index.Name, definitionClone);
+                using (IndexLock(sideBySideIndex.Name))
+                {
+                    StartIndex(sideBySideIndex);
+                }
+
+                return sideBySideIndex;
+            }
+            catch (TimeoutException toe)
+            {
+                throw new IndexCreationException($"Failed to reset index side by side: {index.Name}", toe);
+            }
+            catch (Exception e)
+            {
+                throw new IndexCreationException($"Failed to reset index side by side: {index.Name}", e);
             }
         }
 
