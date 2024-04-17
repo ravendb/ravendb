@@ -2,13 +2,13 @@
   <PropertyGroup>
     <Description>Voron Recovery Tool</Description>
     <Authors>Hibernating Rhinos</Authors>
-    <TargetFramework>net7.0</TargetFramework>
-    <RuntimeFrameworkVersion>7.0.18</RuntimeFrameworkVersion>
+    <TargetFramework>net8.0</TargetFramework>
+    <RuntimeFrameworkVersion>8.0.4</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Voron.Recovery</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>Voron.Recovery</PackageId>
-    <RuntimeIdentifiers>win7-x64;win8-x64;win10-x64;ubuntu.14.04-x64</RuntimeIdentifiers>
+    <RuntimeIdentifiers>win-x64;win-x86;linux-x64;osx-x64</RuntimeIdentifiers>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
@@ -19,8 +19,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
-    <PackageReference Include="System.Collections.Immutable" Version="7.0.0" />
-    <PackageReference Include="System.Reflection.Metadata" Version="7.0.2" />
+    <PackageReference Include="System.Collections.Immutable" Version="8.0.0" />
+    <PackageReference Include="System.Reflection.Metadata" Version="8.0.0" />
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
   </ItemGroup>
