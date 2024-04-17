@@ -524,6 +524,8 @@ namespace Raven.Client.Documents.Indexes
         /// Define index deployment mode
         /// </summary>
         public IndexDeploymentMode? DeploymentMode { get; set; }
+        
+        internal bool ForceUpdate { get; set; }
 
         public override string ToString()
         {

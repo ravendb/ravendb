@@ -14,10 +14,20 @@ internal sealed class IndexHandlerProcessorForReset : AbstractIndexHandlerProces
 
     protected override bool SupportsCurrentNode => true;
 
+    private const string SideBySideQueryParameterName = "isSideBySide";
+
     protected override ValueTask HandleCurrentNodeAsync()
     {
         var name = GetName();
-        RequestHandler.Database.IndexStore.ResetIndex(name);
+
+        var sideBySideQueryParam = RequestHandler.GetBoolValueQueryString(SideBySideQueryParameterName, false);
+
+        var sideBySide = false;
+        
+        if (sideBySideQueryParam.HasValue)
+            sideBySide = sideBySideQueryParam.Value;
+        
+        RequestHandler.Database.IndexStore.ResetIndex(name, sideBySide);
 
         return ValueTask.CompletedTask;
     }
