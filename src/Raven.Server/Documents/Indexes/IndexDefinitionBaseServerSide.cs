@@ -44,8 +44,6 @@ namespace Raven.Server.Documents.Indexes
         internal IndexDefinitionClusterState ClusterState;
 
         public IndexDeploymentMode DeploymentMode { get; set; }
-        
-        internal bool ForceUpdate { get; set; }
 
         public virtual bool HasDynamicFields => false;
 
