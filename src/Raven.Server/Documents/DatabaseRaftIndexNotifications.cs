@@ -14,9 +14,8 @@ using static Raven.Server.Documents.DatabasesLandlord;
 
 namespace Raven.Server.Documents;
 
-public class DatabaseRaftIndexNotifications : AbstractRaftIndexNotifications
+public class DatabaseRaftIndexNotifications : AbstractRaftIndexNotifications<RaftIndexNotification>
 {
-    private readonly Queue<DatabaseNotification> _recentNotifications = new Queue<DatabaseNotification>();
 
     private readonly RachisLogIndexNotifications _clusterStateMachineLogIndexNotifications;
 
@@ -30,32 +29,9 @@ public class DatabaseRaftIndexNotifications : AbstractRaftIndexNotifications
         return _clusterStateMachineLogIndexNotifications.WaitForTaskCompletion(index, waitingTask);
     }
 
-    protected override string PrintLastNotifications()
-    {
-        var notifications = _recentNotifications.ToArray();
-        var builder = new StringBuilder(notifications.Length);
-        foreach (var notification in notifications)
-        {
-            builder
-                .Append("Index: ")
-                .Append(notification.Index)
-                .Append(". Exception: ")
-                .Append(notification.Exception)
-                .AppendLine();
-        }
-        return builder.ToString();
-    }
-
-    private void RecordNotification(DatabaseNotification notification)
-    {
-        _recentNotifications.Enqueue(notification);
-        while (_recentNotifications.Count > 50)
-            _recentNotifications.TryDequeue(out _);
-    }
-
     public override void NotifyListenersAbout(long index, Exception e)
     {
-        RecordNotification(new DatabaseNotification
+        RecordNotification(new RaftIndexNotification
         {
             Index = index,
             Exception = e
@@ -64,9 +40,4 @@ public class DatabaseRaftIndexNotifications : AbstractRaftIndexNotifications
         base.NotifyListenersAbout(index, e);
     }
 
-    private class DatabaseNotification
-    {
-        public long Index;
-        public Exception Exception;
-    }
 }

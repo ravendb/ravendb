@@ -1,27 +1,32 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide;
 
-public abstract class AbstractRaftIndexNotifications : IDisposable
+public abstract class AbstractRaftIndexNotifications<TNotification> : IDisposable
+where TNotification : RaftIndexNotification
 {
     public long LastModifiedIndex;
     protected readonly ConcurrentQueue<ErrorHolder> _errors = new ConcurrentQueue<ErrorHolder>();
+    private readonly Queue<TNotification> _recentNotifications = new Queue<TNotification>();
     private readonly AsyncManualResetEvent _notifiedListeners;
     private int _numberOfErrors;
 
     protected AbstractRaftIndexNotifications(CancellationToken token)
     {
         _notifiedListeners = new AsyncManualResetEvent(token);
+    }
+
+    public virtual void Dispose()
+    {
+        _notifiedListeners.Dispose();
     }
 
     public async Task WaitForIndexNotification(long index, CancellationToken token)
@@ -80,43 +85,6 @@ public abstract class AbstractRaftIndexNotifications : IDisposable
 
     public abstract Task<bool> WaitForTaskCompletion(long index, Lazy<Task> waitingTask);
 
-    protected void ThrowCanceledException(long index, long lastModifiedIndex, bool isExecution = false)
-    {
-        var openingString = isExecution
-            ? $"Cancelled while waiting for task with index {index} to complete. "
-            : $"Cancelled while waiting to get an index notification for {index}. ";
-
-        var closingString = isExecution
-            ? string.Empty
-            : Environment.NewLine +
-              PrintLastNotifications();
-
-        throw new OperationCanceledException(openingString +
-                                             $"Last commit index is: {lastModifiedIndex}. " +
-                                             $"Number of errors is: {_numberOfErrors}." + closingString);
-    }
-
-    private void ThrowTimeoutException(TimeSpan value, long index, long lastModifiedIndex, bool isExecution = false)
-    {
-        var openingString = isExecution
-            ? $"Waited for {value} for task with index {index} to complete. "
-            : $"Waited for {value} but didn't get an index notification for {index}. ";
-
-        var closingString = isExecution
-            ? string.Empty
-            : Environment.NewLine +
-              PrintLastNotifications();
-
-        throw new TimeoutException(openingString +
-                                   $"Last commit index is: {lastModifiedIndex}. " +
-                                   $"Number of errors is: {_numberOfErrors}." + closingString);
-    }
-
-    protected void ThrowApplyException(long index, Exception e)
-    {
-        throw new InvalidOperationException($"Index {index} was successfully committed, but the apply failed.", e);
-    }
-
     public virtual void NotifyListenersAbout(long index, Exception e)
     {
         if (e != null)
@@ -138,11 +106,61 @@ public abstract class AbstractRaftIndexNotifications : IDisposable
         _notifiedListeners.SetAndResetAtomically();
     }
 
-    protected abstract string PrintLastNotifications();
-
-    public virtual void Dispose()
+    public void RecordNotification(TNotification notification)
     {
-        _notifiedListeners.Dispose();
+        _recentNotifications.Enqueue(notification);
+        while (_recentNotifications.Count > 50)
+            _recentNotifications.TryDequeue(out _);
+    }
+
+    protected void ThrowCanceledException(long index, long lastModifiedIndex, bool isExecution = false)
+    {
+        var openingString = isExecution
+            ? $"Cancelled while waiting for task with index {index} to complete. "
+            : $"Cancelled while waiting to get an index notification for {index}. ";
+
+        var closingString = isExecution
+            ? string.Empty
+            : Environment.NewLine +
+              PrintLastNotifications();
+
+        throw new OperationCanceledException(openingString +
+                                             $"Last commit index is: {lastModifiedIndex}. " +
+                                             $"Number of errors is: {_numberOfErrors}." + closingString);
+    }
+    
+    protected void ThrowApplyException(long index, Exception e)
+    {
+        throw new InvalidOperationException($"Index {index} was successfully committed, but the apply failed.", e);
+    }
+
+    private void ThrowTimeoutException(TimeSpan value, long index, long lastModifiedIndex, bool isExecution = false)
+    {
+        var openingString = isExecution
+            ? $"Waited for {value} for task with index {index} to complete. "
+            : $"Waited for {value} but didn't get an index notification for {index}. ";
+
+        var closingString = isExecution
+            ? string.Empty
+            : Environment.NewLine +
+              PrintLastNotifications();
+
+        throw new TimeoutException(openingString +
+                                   $"Last commit index is: {lastModifiedIndex}. " +
+                                   $"Number of errors is: {_numberOfErrors}." + closingString);
+    }
+
+    private string PrintLastNotifications()
+    {
+        var notifications = _recentNotifications.ToArray();
+        var builder = new StringBuilder(notifications.Length);
+        foreach (var notification in notifications)
+        {
+            builder
+                .Append(notification.ToString())
+                .AppendLine();
+        }
+        return builder.ToString();
     }
 }
 
@@ -150,4 +168,15 @@ public class ErrorHolder
 {
     public long Index;
     public ExceptionDispatchInfo Exception;
+}
+
+public class RaftIndexNotification
+{
+    public long Index;
+    public Exception Exception;
+
+    public override string ToString()
+    {
+        return $"Index: {Index}. Exception: {Exception}";
+    }
 }
