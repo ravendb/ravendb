@@ -70,8 +70,6 @@ public class RavenDB_22217: RavenTestBase
                 var delayTask = Task.Delay(200);
                 var task = await Task.WhenAny(saveIndexTask, delayTask);
 
-                // WaitForUserToContinueTheTest(store, false);
-
                 Assert.Equal(delayTask, task);
 
                 Assert.True(saveIndexTask.IsCompleted == false);
