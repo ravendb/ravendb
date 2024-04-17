@@ -14,7 +14,7 @@ public class DebugMemoryTests : NoDisposalNeeded
     [Fact]
     public void Allocation_Debug_Event()
     {
-        Assert.True(Environment.Version.Major == 7 && AdminGcDebugHandler.GcAllocationsEventListener.AllocationEventName == "GCAllocationTick_V4",
+        Assert.True(Environment.Version.Major == 8 && AdminGcDebugHandler.GcAllocationsEventListener.AllocationEventName == "GCAllocationTick_V4",
             "Check if GCAllocationTick event was updated: https://github.com/dotnet/runtime/blob/main/src/coreclr/gc/gcevents.h");
     }
 }
