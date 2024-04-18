@@ -65,9 +65,15 @@ internal static class HttpCompressionAlgorithmExtensions
 #endif
     }
 
+#if NET6_0_OR_GREATER
+    internal static async Task<Stream> ReadAsStreamWithZstdSupportAsync(this HttpContent httpContent, CancellationToken cancellationToken = default)
+    {
+        var contentStream = await httpContent.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+#else
     internal static async Task<Stream> ReadAsStreamWithZstdSupportAsync(this HttpContent httpContent)
     {
         var contentStream = await httpContent.ReadAsStreamAsync().ConfigureAwait(false);
+#endif
         var contentStreamType = contentStream.GetType();
 #if FEATURE_BROTLI_SUPPORT
         if (contentStreamType == typeof(BrotliStream))

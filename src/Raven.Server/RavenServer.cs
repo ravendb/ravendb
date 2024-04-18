@@ -3042,15 +3042,14 @@ namespace Raven.Server
             if (licenseStatus.Version.Major >= 6 || licenseStatus.IsCloud)
                 return;
 
-            var licenseFromApi = GetLicenseFromApi(license, contextPool).GetAwaiter().GetResult();
+            var licenseFromApi = AsyncHelpers.RunSync(() => GetLicenseFromApi(license, contextPool, serverStore.ServerShutdown));
             if (licenseFromApi != null)
             {
                 licenseStatus = LicenseManager.GetLicenseStatus(licenseFromApi);
                 if (licenseStatus.Version.Major >= 6)
                 {
                     serverStore.LicenseManager.OnBeforeInitialize += () =>
-                        serverStore.LicenseManager.ActivateAsync(licenseFromApi, RaftIdGenerator.NewId(), fromApi: true)
-                            .Wait(serverStore.ServerShutdown);
+                        AsyncHelpers.RunSync(() => serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure));
                     return;
                 }
             }
@@ -3063,8 +3062,8 @@ namespace Raven.Server
                 if (licenseStatus.Version.Major >= 6)
                 {
                     serverStore.LicenseManager.OnBeforeInitialize += () =>
-                        serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure)
-                            .Wait(serverStore.ServerShutdown);
+                        AsyncHelpers.RunSync(() =>
+                            serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure));
                     return;
                 }
             }
@@ -3076,13 +3075,13 @@ namespace Raven.Server
                                             $"or downgrade to the previous version of RavenDB, apply the new license and continue the update procedure.");
         }
 
-        private static async Task<License> GetLicenseFromApi(License license, TransactionContextPool contextPool)
+        private static async Task<License> GetLicenseFromApi(License license, TransactionContextPool contextPool, CancellationToken token)
         {
             try
             {
-                var response = await LicenseManager.GetUpdatedLicenseResponseMessage(license, contextPool)
+                var response = await LicenseManager.GetUpdatedLicenseResponseMessage(license, contextPool, token)
                     .ConfigureAwait(false);
-                var leasedLicense = await LicenseManager.ConvertResponseToLeasedLicense(response)
+                var leasedLicense = await LicenseManager.ConvertResponseToLeasedLicense(response, token)
                     .ConfigureAwait(false);
                 return leasedLicense.License;
             }
@@ -3110,7 +3109,8 @@ namespace Raven.Server
                     var localLicenseStatus = LicenseManager.GetLicenseStatus(localLicense);
                     if (localLicenseStatus.Expiration >= RavenVersionAttribute.Instance.ReleaseDate)
                     {
-                        serverStore.LicenseManager.OnBeforeInitialize += () => serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure).Wait(serverStore.ServerShutdown);
+                        serverStore.LicenseManager.OnBeforeInitialize += () => AsyncHelpers.RunSync(() =>
+                            serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure));
                         return;
                     }
 
