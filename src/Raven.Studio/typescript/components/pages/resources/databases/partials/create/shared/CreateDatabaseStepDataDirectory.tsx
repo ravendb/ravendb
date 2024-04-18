@@ -43,7 +43,7 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
         <div>
             <h2 className="text-center">Data Directory</h2>
             <InputGroup className="my-4">
-                <InputGroupText>
+                <InputGroupText className="rounded me-1">
                     <FormCheckbox control={control} name="dataDirectoryStep.isDefault">
                         Use server directory
                     </FormCheckbox>
