@@ -1493,7 +1493,7 @@ namespace Voron.Data.BTrees
             {
                 fixedTree = new FixedSizeTree(_llt, this, key, valSize);
 
-                if (_llt.Flags is TransactionFlags.ReadWrite)
+                if (_llt.Flags is TransactionFlags.ReadWrite && (State.Header.Flags & TreeFlags.FixedSizeTrees) != TreeFlags.FixedSizeTrees)
                 {
                     ref var state = ref State.Modify();
                     state.Flags |= TreeFlags.FixedSizeTrees;
