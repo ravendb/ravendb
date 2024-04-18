@@ -382,7 +382,7 @@ public unsafe struct IndexEntryWriter : IDisposable
         geohashPtrTableLocation = dataLocation; // We write the current location.
         for (int i = 0; i < entries.Length; ++i)
         {
-            ref var entry = ref Unsafe.AsRef(entries[i]);
+            ref var entry = ref Unsafe.AsRef(in entries[i]);
             latitudesList[i] = entry.Latitude;
             longitudesList[i] = entry.Longitude;
 
