@@ -245,7 +245,7 @@ public partial class RavenTestBase
         public async Task AssertNumberOfCommandsPerNode(long expectedNumberOfCommands, List<RavenServer> servers, string commandType, int timeout = 30_000, int interval = 1_000)
         {
             var numberOfCommandsPerNode = new Dictionary<string, long>();
-            var isExpectedNumberOfCommandsPerNode = await WaitForValueAsync(async () =>
+            var isExpectedNumberOfCommandsPerNode = await WaitForValueAsync(() =>
                 {
                     numberOfCommandsPerNode = new Dictionary<string, long>();
 
@@ -257,7 +257,7 @@ public partial class RavenTestBase
                         numberOfCommandsPerNode.Add(nodeTag, numberOfCommands);
                     }
 
-                    return numberOfCommandsPerNode.All(x => x.Value == expectedNumberOfCommands);
+                    return Task.FromResult(numberOfCommandsPerNode.All(x => x.Value == expectedNumberOfCommands));
                 },
                 expectedVal: true,
                 timeout, interval);
