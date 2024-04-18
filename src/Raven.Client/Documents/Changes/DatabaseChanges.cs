@@ -566,6 +566,7 @@ namespace Raven.Client.Documents.Changes
                             await _client.ConnectAsync(_url, timeoutCts.Token).ConfigureAwait(false);
                         }
 
+                        timerInSec = 1;
                         wasConnected = true;
                         Interlocked.Exchange(ref _immediateConnection, 1);
 
@@ -605,7 +606,7 @@ namespace Raven.Client.Documents.Changes
                             if (string.IsNullOrEmpty(nodeTag))
                                 _serverNode = await _requestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
                             else
-                                await _requestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(_serverNode) { TimeoutInMs = 0, ForceUpdate = true, DebugTag = "handle-server-not-responsive" }).ConfigureAwait(false);
+                                await _requestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(_serverNode) { TimeoutInMs = 0, ForceUpdate = true, DebugTag = "changes-api-connection-failure" }).ConfigureAwait(false);
                         }
                         catch (DatabaseDoesNotExistException databaseDoesNotExistException)
                         {
