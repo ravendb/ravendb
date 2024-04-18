@@ -55,7 +55,7 @@ namespace Sparrow.Server.Collections.Persistent
         private ushort FreeNodes
         {
             get { return MemoryMarshal.Read<ushort>(_storage); }
-            set { MemoryMarshal.Write(_storage, ref value); }
+            set { MemoryMarshal.Write(_storage, in value); }
         }
 
         public int MaxNodes => _nodes.Length - 1;

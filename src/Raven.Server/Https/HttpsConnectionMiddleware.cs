@@ -25,7 +25,9 @@ namespace Raven.Server.Https
         {
             _server = server;
             CipherSuitesPolicy = server.Configuration.Security.TlsCipherSuites != null && server.Configuration.Security.TlsCipherSuites.Length > 0
+#pragma warning disable CA1416
                 ? new CipherSuitesPolicy(server.Configuration.Security.TlsCipherSuites)
+#pragma warning restore CA1416
                 : null;
 
             _originalServerCertificate = originalServerCertificate;

@@ -395,7 +395,7 @@ namespace Sparrow.Server.Compression
         public int NumberOfEntries
         {
             get { return ReadNumberOfEntries(_state); }
-            set { MemoryMarshal.Write(_state.EncodingTable, ref value);}
+            set { MemoryMarshal.Write(_state.EncodingTable, in value);}
         }
 
         private static int ReadNumberOfEntries(in TEncoderState encoderState)
@@ -411,7 +411,7 @@ namespace Sparrow.Server.Compression
             set
             {
                 byte valueAsByte = (byte)value;
-                MemoryMarshal.Write(_state.EncodingTable.Slice(4, 1), ref valueAsByte);
+                MemoryMarshal.Write(_state.EncodingTable.Slice(4, 1), in valueAsByte);
             }
         }
 
@@ -421,7 +421,7 @@ namespace Sparrow.Server.Compression
             set
             {
                 byte valueAsByte = (byte)value;
-                MemoryMarshal.Write(_state.EncodingTable.Slice(5, 1), ref valueAsByte);
+                MemoryMarshal.Write(_state.EncodingTable.Slice(5, 1), in valueAsByte);
             }
         }
 

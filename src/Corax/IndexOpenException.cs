@@ -21,9 +21,5 @@ namespace Corax
         public IndexOpenException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-        protected IndexOpenException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

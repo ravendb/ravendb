@@ -307,7 +307,7 @@ public unsafe class CompactKey : IDisposable
         currentPtr += sizeof(int);
 
         // PERF: Between pinning the pointer and just execute the Unsafe.CopyBlock unintuitively it is faster to just copy. 
-        Unsafe.CopyBlock(ref Unsafe.AsRef<byte>(currentPtr), ref Unsafe.AsRef<byte>(key[0]), (uint)keyLength);
+        Unsafe.CopyBlock(ref Unsafe.AsRef<byte>(currentPtr), ref Unsafe.AsRef<byte>(in key[0]), (uint)keyLength);
 
         currentPtr += keyLength; // We update the new pointer. 
         _currentPtr = currentPtr;

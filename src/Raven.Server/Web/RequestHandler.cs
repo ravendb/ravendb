@@ -689,7 +689,7 @@ namespace Raven.Server.Web
 
         public static void SetupCORSHeaders(HttpContext httpContext, ServerStore serverStore, CorsMode corsMode)
         {
-            httpContext.Response.Headers.Add("Vary", "Origin");
+            httpContext.Response.Headers["Vary"] = "Origin";
 
             var requestedOrigin = httpContext.Request.Headers["Origin"];
 
@@ -712,10 +712,10 @@ namespace Raven.Server.Web
                     break;
             }
 
-            httpContext.Response.Headers.Add("Access-Control-Allow-Origin", allowedOrigin);
-            httpContext.Response.Headers.Add("Access-Control-Allow-Methods", "PUT, POST, GET, OPTIONS, DELETE");
-            httpContext.Response.Headers.Add("Access-Control-Allow-Headers", httpContext.Request.Headers["Access-Control-Request-Headers"]);
-            httpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
+            httpContext.Response.Headers["Access-Control-Allow-Origin"] = allowedOrigin;
+            httpContext.Response.Headers["Access-Control-Allow-Methods"] = "PUT, POST, GET, OPTIONS, DELETE";
+            httpContext.Response.Headers["Access-Control-Allow-Headers"] = httpContext.Request.Headers["Access-Control-Request-Headers"];
+            httpContext.Response.Headers["Access-Control-Max-Age"] = "86400";
         }
 
         private static bool IsOriginAllowed(string origin, ServerStore serverStore)
@@ -777,7 +777,7 @@ namespace Raven.Server.Web
             var leaderLocation = url + HttpContext.Request.Path + HttpContext.Request.QueryString;
             HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
             HttpContext.Response.Headers.Remove("Content-Type");
-            HttpContext.Response.Headers.Add("Location", leaderLocation);
+            HttpContext.Response.Headers["Location"] = leaderLocation;
         }
 
         protected virtual OperationCancelToken CreateHttpRequestBoundOperationToken()
