@@ -533,7 +533,7 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
     );
 }
 
-export default function FormPathSelector<
+export function FormPathSelector<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
     ParamsType extends unknown[] = unknown[],
@@ -568,6 +568,7 @@ export default function FormPathSelector<
                 <InputGroup>
                     <FormInput
                         type="text"
+                        className="rounded-0 rounded-start"
                         control={control}
                         name={name}
                         disabled={disabled || formState.isSubmitting}

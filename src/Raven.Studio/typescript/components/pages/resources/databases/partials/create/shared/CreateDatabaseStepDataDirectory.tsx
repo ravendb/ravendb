@@ -1,7 +1,7 @@
 import React from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Alert, InputGroup, InputGroupText, Spinner } from "reactstrap";
-import { FormCheckbox, FormSelectAutocomplete } from "components/common/Form";
+import { FormCheckbox, FormPathSelector } from "components/common/Form";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useServices } from "components/hooks/useServices";
@@ -27,13 +27,10 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
     const allNodeTags = useAppSelector(clusterSelectors.allNodeTags);
     const selectedNodeTags = manualSelectedNodes ?? allNodeTags;
 
-    const asyncGetFolderOptions = useAsyncDebounce(
-        async (directory, isBackupFolder) => {
-            const dto = await resourcesService.getFolderPathOptions_ServerLocal(directory || "", isBackupFolder);
-            return dto?.List.map((x) => ({ value: x, label: x }));
-        },
-        [dataDirectoryStep.directory, isBackupFolder]
-    );
+    const getFolderOptions = async (path: string, isBackupFolder: boolean) => {
+        const dto = await resourcesService.getFolderPathOptions_ServerLocal(path || "", isBackupFolder);
+        return dto?.List || [];
+    };
 
     const asyncGetDatabaseLocation = useAsyncDebounce(
         (databaseName, directory, isDefault) => {
@@ -51,13 +48,15 @@ export default function CreateDatabaseStepPath({ manualSelectedNodes, isBackupFo
                         Use server directory
                     </FormCheckbox>
                 </InputGroupText>
-                <FormSelectAutocomplete
+
+                <FormPathSelector
                     control={control}
                     name="dataDirectoryStep.directory"
-                    placeholder={dataDirectoryStep.isDefault ? "" : "Enter database directory"}
-                    options={asyncGetFolderOptions.result ?? []}
-                    isLoading={asyncGetFolderOptions.loading}
-                    isDisabled={dataDirectoryStep.isDefault}
+                    selectorTitle="Select database directory"
+                    placeholder="Enter database directory"
+                    getPaths={getFolderOptions}
+                    getPathDependencies={(path: string) => [path, isBackupFolder]}
+                    disabled={dataDirectoryStep.isDefault}
                 />
             </InputGroup>
             <PathInfo asyncGetDatabaseLocation={asyncGetDatabaseLocation} nodeTagsToDisplay={selectedNodeTags} />
