@@ -1,12 +1,11 @@
 ﻿import React from "react";
 import { Alert, Card, CardBody, Collapse, Label, Spinner } from "reactstrap";
-import { FormSelectAutocomplete, FormSwitch } from "components/common/Form";
+import { FormSwitch, FormPathSelector } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { FormDestinations } from "./utils/formDestinationsTypes";
 import { useServices } from "components/hooks/useServices";
 import { UseAsyncReturn, useAsync } from "react-async-hook";
-import { SelectOption } from "../select/Select";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 
@@ -19,18 +18,17 @@ export default function Local() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { tasksService } = useServices();
 
-    const asyncGetLocalFolderPathOptions = useAsync(
-        () => tasksService.getLocalFolderPathOptions(formValues.folderPath, databaseName),
-        [formValues.folderPath]
-    );
+    const getLocalFolderPaths = async (folderPath: string, databaseName: string) => {
+        const dto = await tasksService.getLocalFolderPathOptions(folderPath, databaseName);
+        return dto?.List || [];
+    };
+
     const asyncGetBackupLocation = useAsync(() => {
         if (!formValues.folderPath) {
             return;
         }
         return tasksService.getBackupLocation(formValues.folderPath, databaseName);
     }, [formValues.folderPath]);
-
-    const pathOptions = getAvailableFolderOptions(asyncGetLocalFolderPathOptions.result?.List);
 
     return (
         <Card className="well">
@@ -53,11 +51,13 @@ export default function Local() {
                     ) : (
                         <div className="mt-2">
                             <Label>Folder path</Label>
-                            <FormSelectAutocomplete
+                            <FormPathSelector
                                 control={control}
                                 name={getName("folderPath")}
-                                placeholder="Full directory path"
-                                options={pathOptions}
+                                selectorTitle="Select database directory"
+                                placeholder="Enter directory path"
+                                getPaths={getLocalFolderPaths}
+                                getPathDependencies={(path: string) => [path, databaseName]}
                             />
                             <PathInfo
                                 asyncGetBackupLocation={asyncGetBackupLocation}
@@ -138,12 +138,4 @@ type FormFieldNames = keyof FormDestinations["destinations"]["local"];
 
 function getName(fieldName: FormFieldNames): `${typeof fieldBase}.${FormFieldNames}` {
     return `${fieldBase}.${fieldName}`;
-}
-
-function getAvailableFolderOptions(backupLocation: string[]): SelectOption[] {
-    if (!backupLocation) {
-        return [];
-    }
-
-    return backupLocation.map((x) => ({ value: x, label: x }));
 }

@@ -1,5 +1,4 @@
-import { FormSelectAutocomplete } from "components/common/Form";
-import { SelectOption } from "components/common/select/Select";
+import { FormPathSelector } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
 import React from "react";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -17,24 +16,10 @@ export default function BackupSourceLocal() {
     const { resourcesService } = useServices();
     const { control } = useFormContext<FormData>();
 
-    const {
-        sourceStep: {
-            sourceData: {
-                local: { directory },
-            },
-        },
-    } = useWatch({
-        control,
-    });
-
-    const asyncGetLocalFolderPathOptions = useAsyncDebounce(
-        async (directory) => {
-            const dto = await resourcesService.getFolderPathOptions_ServerLocal(directory, true);
-
-            return dto.List.map((x) => ({ value: x, label: x }) satisfies SelectOption);
-        },
-        [directory]
-    );
+    const getLocalFolderPaths = async (path: string) => {
+        const dto = await resourcesService.getFolderPathOptions_ServerLocal(path, true);
+        return dto?.List || [];
+    };
 
     return (
         <>
@@ -43,12 +28,13 @@ export default function BackupSourceLocal() {
                     <label className="col-form-label">Directory Path</label>
                 </Col>
                 <Col>
-                    <FormSelectAutocomplete
+                    <FormPathSelector
                         control={control}
                         name="sourceStep.sourceData.local.directory"
-                        options={asyncGetLocalFolderPathOptions.result || []}
-                        isLoading={asyncGetLocalFolderPathOptions.loading}
+                        selectorTitle="Select backup directory path"
                         placeholder="Enter backup directory path"
+                        getPaths={getLocalFolderPaths}
+                        getPathDependencies={(path: string) => [path]}
                     />
                 </Col>
             </Row>

@@ -1,5 +1,5 @@
 import { Meta } from "@storybook/react";
-import FormPathSelector, {
+import {
     FormInput,
     FormCheckbox,
     FormCheckboxes,
@@ -11,6 +11,7 @@ import FormPathSelector, {
     FormSelectCreatable,
     FormSwitch,
     FormAceEditor,
+    FormPathSelector,
 } from "./Form";
 import React, { useEffect } from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
