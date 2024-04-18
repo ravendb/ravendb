@@ -4,6 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.Math;
+using Org.BouncyCastle.Security;
 
 namespace Raven.Server.Commercial
 {
@@ -87,21 +91,21 @@ namespace Raven.Server.Commercial
                 ms.SetLength(attributesLen);
 
                 using (var binaryWriter = new BinaryWriter(ms))
-                using (var rsa = RSA.Create())
                 {
                     binaryWriter.Write(licenseKey.Id.ToByteArray());
                     binaryWriter.Write(licenseKey.Name);
 
-                    rsa.ImportParameters(rsaParameters);
+                    RsaKeyParameters publicKey = new(false,
+                        new BigInteger(1, rsaParameters.Modulus),
+                        new BigInteger(1, rsaParameters.Exponent));
 
-                    using (var sha1 = SHA1.Create())
-                    {
-                        ms.Position = 0;
-                        var hash = sha1.ComputeHash(ms);
+                    var dataToVerify = ms.ToArray();
+                    ISigner verifier = SignerUtilities.GetSigner("SHA1withRSA");
+                    verifier.Init(false, publicKey);
+                    verifier.BlockUpdate(dataToVerify, 0, dataToVerify.Length);
 
-                        if (rsa.VerifyHash(hash, keys.Signature, HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1) == false)
-                            throw new InvalidDataException("Could not validate signature on license");
-                    }
+                    if (verifier.VerifySignature(keys.Signature) == false)
+                        throw new InvalidDataException("Could not validate signature on license");
                 }
 
                 return result;
