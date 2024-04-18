@@ -61,7 +61,12 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
                                 &gt; {pathInput}
                             </strong>
                             {canGoBack && (
-                                <Button className="btn-link" color="link" onClick={() => setPathInput(parentDir)}>
+                                <Button
+                                    className="btn-link"
+                                    color="link"
+                                    onClick={() => setPathInput(parentDir)}
+                                    title="Go back"
+                                >
                                     <Icon icon="arrow-left" />
                                 </Button>
                             )}

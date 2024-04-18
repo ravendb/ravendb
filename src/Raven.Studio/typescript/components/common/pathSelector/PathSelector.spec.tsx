@@ -9,7 +9,7 @@ const { PathSelectorStory } = composeStories(stories);
 
 const selectors = {
     mainButtonText: /Select path/,
-    goBackIconClass: "icon-arrow-left",
+    goBackButtonTitle: /Go back/,
 };
 
 describe("PathSelector", () => {
@@ -83,7 +83,7 @@ describe("PathSelector", () => {
             await waitForLoad();
             expect(screen.getByRole("textbox", { name: "Path" })).toHaveValue("C:\\Desktop\\");
 
-            await fireClick(screen.getByClassName(selectors.goBackIconClass));
+            await fireClick(screen.getByTitle(selectors.goBackButtonTitle));
             expect(screen.getByRole("textbox", { name: "Path" })).toHaveValue("C:\\");
         });
     });
