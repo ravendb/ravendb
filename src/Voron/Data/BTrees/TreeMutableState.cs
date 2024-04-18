@@ -1,6 +1,4 @@
-﻿using System;
-using System.Diagnostics.CodeAnalysis;
-using Voron.Global;
+﻿using Voron.Global;
 using Voron.Impl;
 
 namespace Voron.Data.BTrees
@@ -35,17 +33,10 @@ namespace Voron.Data.BTrees
 
         internal ref TreeRootHeader Modify()
         {
-            if (_tx.Flags != TransactionFlags.ReadWrite)
-                ThrowCanOnlyModifyInWriteTransaction();
-
+            VoronExceptions.ThrowIfReadOnly(_tx);
+            
             _stateIsModified = true;
             return ref _header;
-        }
-
-        [DoesNotReturn]
-        private static void ThrowCanOnlyModifyInWriteTransaction()
-        {
-            throw new InvalidOperationException("Invalid operation outside of a write transaction");
         }
 
         public void CopyTo(TreeRootHeader* header)

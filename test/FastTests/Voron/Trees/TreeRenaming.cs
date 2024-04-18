@@ -93,7 +93,7 @@ namespace FastTests.Voron.Trees
         {
             using (var tx = Env.ReadTransaction())
             {
-                var ae = Assert.Throws<ArgumentException>(() => tx.RenameTree( "tree_1", "tree_2"));
+                var ae = Assert.Throws<InvalidOperationException>(() => tx.RenameTree( "tree_1", "tree_2"));
 
                 Assert.Equal("Cannot rename a new tree with a read only transaction", ae.Message);
             }

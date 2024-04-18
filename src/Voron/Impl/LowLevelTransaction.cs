@@ -482,7 +482,6 @@ namespace Voron.Impl
             UncompressedSize = 0
         };
 
-
         private void InitTransactionHeader()
         {
             if (_id > 1 && _state.NextPageNumber <= 1)

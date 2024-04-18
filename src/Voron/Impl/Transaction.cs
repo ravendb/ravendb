@@ -132,8 +132,7 @@ namespace Voron.Impl
 
         public Transaction BeginAsyncCommitAndStartNewTransaction(TransactionPersistentContext persistentContext)
         {
-            if (_lowLevelTransaction.Flags != TransactionFlags.ReadWrite)
-                ThrowInvalidAsyncCommitOnRead();
+            VoronExceptions.ThrowIfReadOnly(_lowLevelTransaction, "Cannot call begin async commit on read tx");
 
             PrepareForCommit();
             
@@ -141,11 +140,6 @@ namespace Voron.Impl
             return new Transaction(tx);
         }
 
-        [DoesNotReturn]
-        private static void ThrowInvalidAsyncCommitOnRead()
-        {
-            throw new InvalidOperationException("Cannot call begin async commit on read tx");
-        }
 
         public void EndAsyncCommit()
         {
@@ -399,8 +393,7 @@ namespace Voron.Impl
 
         public void DeleteTree(Slice name)
         {
-            if (_lowLevelTransaction.Flags == TransactionFlags.ReadWrite == false)
-                throw new ArgumentException("Cannot create a new newRootTree with a read only transaction");
+            VoronExceptions.ThrowIfReadOnly(_lowLevelTransaction, "Cannot create a new newRootTree with a read only transaction");
 
             Tree tree = ReadTree(name);
             if (tree == null)
@@ -452,8 +445,7 @@ namespace Voron.Impl
 
         public void RenameTree(Slice fromName, Slice toName)
         {
-            if (_lowLevelTransaction.Flags == TransactionFlags.ReadWrite == false)
-                throw new ArgumentException("Cannot rename a new tree with a read only transaction");
+            VoronExceptions.ThrowIfReadOnly(_lowLevelTransaction, "Cannot rename a new tree with a read only transaction");
 
             if (SliceComparer.Equals(toName, Constants.RootTreeNameSlice))
                 throw new InvalidOperationException("Cannot create a tree with reserved name: " + toName);
@@ -492,9 +484,7 @@ namespace Voron.Impl
             if (tree != null)
                 return tree;
 
-            if (_lowLevelTransaction.Flags == TransactionFlags.ReadWrite == false)
-                throw new InvalidOperationException("No such tree: '" + name +
-                                                    "' and cannot create trees in read transactions");
+            VoronExceptions.ThrowIfReadOnly(_lowLevelTransaction, $"No such tree: '{name}' and cannot create trees in read transactions");
 
             tree = Tree.Create(_lowLevelTransaction, this, name, flags, type, isIndexTree, newPageAllocator);
             ref var state = ref tree.State.Modify();
