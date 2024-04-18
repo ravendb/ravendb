@@ -46,7 +46,7 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
                 {selectorButtonName || "Select path"}
             </Button>
             {isModalOpen && (
-                <Modal isOpen wrapClassName="bs5" centered fade>
+                <Modal isOpen wrapClassName="bs5" zIndex="var(--zindex-modal-1)" centered fade>
                     <ModalBody>
                         <div className="d-flex">
                             <h3>{selectorTitle || "Select path"}</h3>
@@ -92,7 +92,7 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
                         </FormGroup>
                     </ModalBody>
                     <ModalFooter className="hstack gap-2">
-                        <Button className="me-auto" color="secondary" onClick={() => setPathInput(defaultPath)}>
+                        <Button className="me-auto" color="secondary" onClick={() => setPathInput(defaultPath || "")}>
                             Reset to default
                         </Button>
                         <Button color="secondary" onClick={toggleIsModalOpen}>
@@ -162,6 +162,9 @@ function PathsLoading() {
 }
 
 function getSeparator(path: string): string {
+    if (!path) {
+        return "";
+    }
     if (path.includes("\\")) {
         return "\\";
     }
