@@ -24,7 +24,7 @@ namespace SlowTests.Issues
 
             // Verifying that each node in the cluster has issued the same number of `UpdateLicenseLimitsCommand` commands,
             // as each node is expected to independently send its own details.
-            Cluster.AssertNumberOfCommandsPerNode(expectedNumberOfCommands: numberOfNodes, servers, nameof(UpdateLicenseLimitsCommand));
+            await Cluster.AssertNumberOfCommandsPerNode(expectedNumberOfCommands: numberOfNodes, servers, nameof(UpdateLicenseLimitsCommand));
 
             // 10 leader changes
             for (int i = 0; i < 10; i++)
@@ -35,7 +35,7 @@ namespace SlowTests.Issues
                 });
 
             // Nothing should have changed
-            Cluster.AssertNumberOfCommandsPerNode(expectedNumberOfCommands: numberOfNodes, servers, nameof(UpdateLicenseLimitsCommand));
+            await Cluster.AssertNumberOfCommandsPerNode(expectedNumberOfCommands: numberOfNodes, servers, nameof(UpdateLicenseLimitsCommand));
         }
 
         [RavenFact(RavenTestCategory.Cluster)]
