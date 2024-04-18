@@ -299,10 +299,9 @@ namespace SlowTests.Cluster
             Assert.True(copy.All(record.Topology.Members.Contains));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
         public async Task ChangesApiShouldNotFailOverWhenWaitingForCompletionOfOperation()
         {
-            DoNotReuseServer();
             using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2)))
             {
                 var (clusterNodes, leader) = await CreateRaftCluster(3, leaderIndex: 0, shouldRunInMemory: false);
@@ -376,10 +375,9 @@ update {{
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
         public async Task ChangesApiForOperationShouldCleanUpFaultyConnection_AfterUnrecoverableError()
         {
-            DoNotReuseServer();
             using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2)))
             {
                 var (clusterNodes, leader) = await CreateRaftCluster(1, leaderIndex: 0, shouldRunInMemory: false);
@@ -462,10 +460,9 @@ update {{
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
         public async Task ChangesApiShouldNotThrowOnConnectionError()
         {
-            DoNotReuseServer();
             using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2)))
             {
                 var (clusterNodes, leader) = await CreateRaftCluster(1, leaderIndex: 0, shouldRunInMemory: false);
@@ -529,12 +526,11 @@ update {{
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
         public async Task ChangesApiShouldNotIndependentlyFailOverWhenNodeTagSpecified_OnlyRequestExecutorWillFailOver()
         {
             // request executor will failover after server is down and changes api will not attempt to failover the same connection, but instead will open a new connection for the new specific node
             // that is in order to avoid having a connection entry in _databaseChanges that contains a certain node as key but the connection inside has failed over to another node
-            DoNotReuseServer();
             using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
             {
                 var (clusterNodes, leader) = await CreateRaftCluster(3, leaderIndex: 0, shouldRunInMemory: false);
@@ -612,11 +608,10 @@ update {{
                 }
             }
         }
-        
-        [Fact]
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ChangesApiShouldCleanupFaultyConnectionAfterDispose_TrackingSpecificNode()
         {
-            DoNotReuseServer();
             using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
             {
                 var (_, leader) = await CreateRaftCluster(3, leaderIndex: 0, shouldRunInMemory: false);

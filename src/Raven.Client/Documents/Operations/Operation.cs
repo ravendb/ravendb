@@ -120,7 +120,7 @@ namespace Raven.Client.Documents.Operations
                         // so if we subscribe after the operation was already completed we will miss the notification for it. 
                         await FetchOperationStatus().ConfigureAwait(false);
                     }
-                    catch (Exception e)
+                    catch
                     {
                         // If the websocket connection failed, we need to remove it from the dictionary
                         // so we won't attempt to reuse it in the next call to the same node
