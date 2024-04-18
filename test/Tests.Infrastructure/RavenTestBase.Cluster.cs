@@ -242,10 +242,10 @@ public partial class RavenTestBase
             server.ServerStore.Observer.Suspended = true;
         }
 
-        public void AssertNumberOfCommandsPerNode(long expectedNumberOfCommands, List<RavenServer> servers, string commandType, int timeout = 30_000, int interval = 1_000)
+        public async Task AssertNumberOfCommandsPerNode(long expectedNumberOfCommands, List<RavenServer> servers, string commandType, int timeout = 30_000, int interval = 1_000)
         {
             var numberOfCommandsPerNode = new Dictionary<string, long>();
-            var isExpectedNumberOfCommandsPerNode = WaitForValue(() =>
+            var isExpectedNumberOfCommandsPerNode = await WaitForValueAsync(async () =>
                 {
                     numberOfCommandsPerNode = new Dictionary<string, long>();
 
