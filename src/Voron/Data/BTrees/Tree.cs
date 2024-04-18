@@ -148,8 +148,7 @@ namespace Voron.Data.BTrees
             if (type != RootObjectType.VariableSizeTree && type != RootObjectType.Table)
                 ThrowInvalidTreeCreateType();
 
-            if (llt.Flags != TransactionFlags.ReadWrite)
-                ThrowCannotCreateTreeInReadTx();
+            VoronExceptions.ThrowIfReadOnly(llt);
 
             var newPage = newPageAllocator?.AllocateSinglePage(0) ?? llt.AllocatePage(1);
 
@@ -168,12 +167,6 @@ namespace Voron.Data.BTrees
 
             tree.RecordNewPage(newRootPage, 1);
             return tree;
-        }
-
-        [DoesNotReturn]
-        private static void ThrowCannotCreateTreeInReadTx()
-        {
-            throw new ArgumentException("Cannot create a tree in a read only transaction");
         }
 
         [DoesNotReturn]
@@ -319,9 +312,8 @@ namespace Voron.Data.BTrees
 
         private static void ValidateValueLength(Stream value)
         {
-            if (value == null)
-                ThrowNullReferenceException();
-            Debug.Assert(value != null);
+            ArgumentNullException.ThrowIfNull(value);
+
             if (value.Length > int.MaxValue)
                 ThrowValueTooLarge();
         }
@@ -332,29 +324,20 @@ namespace Voron.Data.BTrees
             throw new ArgumentException("Cannot add a value that is over 2GB in size");
         }
 
-        [DoesNotReturn]
-        private static void ThrowNullReferenceException()
-        {
-            throw new ArgumentNullException();
-        }
-
         public void Add(Slice key, ReadOnlySpan<byte> value)
         {
-            if (value == null)
-                ThrowNullReferenceException();
-
-            Debug.Assert(value != null);
-
             using (DirectAdd(key, value.Length, out byte* ptr))
                 value.CopyTo(new Span<byte>(ptr, value.Length));
         }
 
         public void Add(Slice key, Slice value)
         {
-            Debug.Assert((_header.Flags & TreeFlags.MultiValue) == TreeFlags.None,"(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
+            VoronExceptions.ThrowIfNull(value);
             
+            Debug.Assert((ReadHeader().Flags & TreeFlags.MultiValue) == TreeFlags.None,"(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
+
             if (!value.HasValue)
-                ThrowNullReferenceException();
+                throw new NullReferenceException();
 
             using (DirectAdd(key, value.Size, out byte* ptr))
                 value.CopyTo(ptr);
@@ -376,8 +359,7 @@ namespace Voron.Data.BTrees
         {
             AssertNotDisposed();
 
-            if (_llt.Flags is TransactionFlags.Read)
-                ThrowCannotAddInReadTx();
+            VoronExceptions.ThrowIfReadOnly(_llt);
 
             if (key.Size > Constants.Tree.MaxKeySize)
                 ThrowInvalidKeySize(key);
@@ -526,6 +508,7 @@ namespace Voron.Data.BTrees
 
         }
 
+        [DoesNotReturn]
         private static void ThrowUnknownNodeTypeAddOperation(TreeNodeFlags nodeType)
         {
             throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
@@ -537,11 +520,6 @@ namespace Voron.Data.BTrees
             throw new ArgumentException(
                 $"Key size is too big, must be at most {Constants.Tree.MaxKeySize} bytes, but was {(key.Size + Constants.Tree.RequiredSpaceForNewNode)}",
                 nameof(key));
-        }
-
-        private void ThrowCannotAddInReadTx()
-        {
-            throw new ArgumentException("Cannot add a value in a read only transaction on " + Name + " in " + _llt.Flags);
         }
 
         public TreePage ModifyPage(TreePage page)
@@ -617,8 +595,6 @@ namespace Voron.Data.BTrees
 
         public void ValidateTree_Forced(long rootPageNumber)
         {
-
-
             var pages = new HashSet<long>();
             var stack = new Stack<TreePage>();
             var root = GetReadOnlyTreePage(rootPageNumber);
@@ -721,9 +697,7 @@ namespace Voron.Data.BTrees
 
         internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node, out TreeCursorConstructor cursor, bool allowCompressed = false)
         {
-            TreePage p;
-
-            if (TryUseRecentTransactionPage(key, out cursor, out p, out node))
+            if (TryUseRecentTransactionPage(key, out cursor, out TreePage p, out node))
             {
                 if (allowCompressed == false && p.IsCompressed)
                     ThrowOnCompressedPage(p);
@@ -1087,8 +1061,7 @@ namespace Voron.Data.BTrees
         {
             AssertNotDisposed();
 
-            if (_llt.Flags == (TransactionFlags.ReadWrite) == false)
-                throw new ArgumentException("Cannot delete a value in a read only transaction");
+            VoronExceptions.ThrowIfReadOnly(_llt, "Cannot delete a value in a read only transaction");
 
             var page = FindPageFor(key, node: out TreeNodeHeader* _, cursor: out var cursorConstructor, allowCompressed: true);
             if (page.IsCompressed)
