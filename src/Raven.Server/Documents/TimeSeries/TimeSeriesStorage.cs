@@ -527,12 +527,12 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var storage = ctx.DocumentDatabase.DocumentsStorage;
 
-            var doc = storage.Get(ctx, docId);
-            if (doc == null)
-                return;
-
             var tss = storage.TimeSeriesStorage;
             if (tss.Stats.GetStats(ctx, docId, tsName).Count > 0)
+                return;
+            
+            var doc = storage.Get(ctx, docId);
+            if (doc == null)
                 return;
 
             var data = doc.Data;

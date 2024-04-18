@@ -95,6 +95,8 @@ namespace Voron.Impl
 
         public event Action<LowLevelTransaction> LastChanceToReadFromWriteTransactionBeforeCommit;
 
+        public Size TransactionSize => new Size(NumberOfModifiedPages * Constants.Storage.PageSize, SizeUnit.Bytes) + AdditionalMemoryUsageSize;
+
         public Size AdditionalMemoryUsageSize
         {
             get
