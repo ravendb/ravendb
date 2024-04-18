@@ -50,7 +50,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/build/version", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task Get()
         {
-            HttpContext.Response.Headers.Add(Constants.Headers.ServerStartupTime, ServerStore.Server.Statistics.StartUpTime.GetDefaultRavenFormat(isUtc: true));
+            HttpContext.Response.Headers[Constants.Headers.ServerStartupTime] = ServerStore.Server.Statistics.StartUpTime.GetDefaultRavenFormat(isUtc: true);
 
             var versionBuffer = VersionBuffer.Value;
             await ResponseBodyStream().WriteAsync(versionBuffer, 0, versionBuffer.Length);
