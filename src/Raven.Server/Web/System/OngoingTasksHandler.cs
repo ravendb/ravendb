@@ -437,7 +437,7 @@ namespace Raven.Server.Web.System
             var location = url + HttpContext.Request.Path + HttpContext.Request.QueryString;
             HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
             HttpContext.Response.Headers.Remove("Content-Type");
-            HttpContext.Response.Headers.Add("Location", location);
+            HttpContext.Response.Headers["Location"] = location;
         }
 
         private static int _oneTimeBackupCounter;

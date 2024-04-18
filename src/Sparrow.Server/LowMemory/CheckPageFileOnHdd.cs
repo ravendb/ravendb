@@ -333,7 +333,7 @@ namespace Sparrow.Server.LowMemory
         private struct VOLUME_DISK_EXTENTS
         {
             private readonly uint NumberOfDiskExtents;
-            [MarshalAs(UnmanagedType.ByValArray)] public readonly DISK_EXTENT[] Extents;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 1)] public readonly DISK_EXTENT[] Extents;
         }
 
         // DeviceIoControl to get disk extents

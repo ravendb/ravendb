@@ -437,7 +437,7 @@ namespace Raven.Server
             if (exception is DatabaseNotRelevantException)
             {
                 response.StatusCode = (int)HttpStatusCode.Gone;
-                response.Headers.Add("Cache-Control", new Microsoft.Extensions.Primitives.StringValues(new[] { "must-revalidate", "no-cache" }));
+                response.Headers["Cache-Control"] = new Microsoft.Extensions.Primitives.StringValues(new[] { "must-revalidate", "no-cache" });
                 return;
             }
 
