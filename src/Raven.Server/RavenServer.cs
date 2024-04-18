@@ -3042,7 +3042,7 @@ namespace Raven.Server
             if (licenseStatus.Version.Major >= 6 || licenseStatus.IsCloud)
                 return;
 
-            var licenseFromApi = GetLicenseFromApi(license, contextPool).GetAwaiter().GetResult();
+            var licenseFromApi = AsyncHelpers.RunSync(() => GetLicenseFromApi(license, contextPool, serverStore.ServerShutdown));
             if (licenseFromApi != null)
             {
                 licenseStatus = LicenseManager.GetLicenseStatus(licenseFromApi);
@@ -3075,13 +3075,13 @@ namespace Raven.Server
                                             $"or downgrade to the previous version of RavenDB, apply the new license and continue the update procedure.");
         }
 
-        private static async Task<License> GetLicenseFromApi(License license, TransactionContextPool contextPool)
+        private static async Task<License> GetLicenseFromApi(License license, TransactionContextPool contextPool, CancellationToken token)
         {
             try
             {
-                var response = await LicenseManager.GetUpdatedLicenseResponseMessage(license, contextPool, CancellationToken.None)
+                var response = await LicenseManager.GetUpdatedLicenseResponseMessage(license, contextPool, token)
                     .ConfigureAwait(false);
-                var leasedLicense = await LicenseManager.ConvertResponseToLeasedLicense(response, CancellationToken.None)
+                var leasedLicense = await LicenseManager.ConvertResponseToLeasedLicense(response, token)
                     .ConfigureAwait(false);
                 return leasedLicense.License;
             }
