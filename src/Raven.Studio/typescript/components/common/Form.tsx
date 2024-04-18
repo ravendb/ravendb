@@ -13,6 +13,7 @@ import { GetOptionValue, GroupBase, InputActionMeta, OnChangeValue, OptionsOrGro
 import Select, { InputNotHidden, SelectValue } from "./select/Select";
 import DatePicker from "./DatePicker";
 import { Icon } from "components/common/Icon";
+import PathSelector, { PathSelectorProps } from "components/common/pathSelector/PathSelector";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -527,6 +528,60 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
                     disabled={formState.isSubmitting}
                     {...rest}
                 />
+            </div>
+        </div>
+    );
+}
+
+export default function FormPathSelector<
+    TFieldValues extends FieldValues = FieldValues,
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+    ParamsType extends unknown[] = unknown[],
+>(props: FormElementProps<TFieldValues, TName> & Omit<PathSelectorProps<ParamsType>, "handleSelect">) {
+    const {
+        name,
+        control,
+        defaultValue,
+        rules,
+        shouldUnregister,
+        selectorTitle,
+        placeholder,
+        getPaths,
+        getPathDependencies,
+        disabled,
+    } = props;
+
+    const {
+        field: { onChange, value: formValuePath },
+        formState,
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    return (
+        <div className="position-relative flex-grow-1">
+            <div className="d-flex flex-grow-1">
+                <InputGroup>
+                    <FormInput
+                        type="text"
+                        control={control}
+                        name={name}
+                        disabled={disabled || formState.isSubmitting}
+                        placeholder={placeholder || "Enter path"}
+                    />
+                    <PathSelector
+                        getPaths={getPaths}
+                        getPathDependencies={getPathDependencies}
+                        handleSelect={onChange}
+                        defaultPath={formValuePath}
+                        selectorTitle={selectorTitle}
+                        disabled={disabled || formState.isSubmitting}
+                    />
+                </InputGroup>
             </div>
         </div>
     );

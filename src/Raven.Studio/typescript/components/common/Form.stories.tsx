@@ -1,5 +1,5 @@
 import { Meta } from "@storybook/react";
-import {
+import FormPathSelector, {
     FormInput,
     FormCheckbox,
     FormCheckboxes,
@@ -145,6 +145,15 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                 <Label>Ace editor</Label>
                 <FormAceEditor mode="javascript" control={control} name="inputAceEditor" />
             </div>
+            <div>
+                <Label>Path selector</Label>
+                <FormPathSelector
+                    control={control}
+                    name="inputPath"
+                    getPaths={() => Promise.resolve(["C:\\", "D:\\"])}
+                    getPathDependencies={(path: string) => [path]}
+                />
+            </div>
         </div>
     );
 }
@@ -164,6 +173,7 @@ const schema = yup.object().shape({
     inputDatePicker: yup.date().required(),
     inputDurationPicker: yup.number().required(),
     inputAceEditor: yup.string().required(),
+    inputPath: yup.string().required(),
 });
 
 const formResolver = yupResolver(schema);
@@ -182,6 +192,7 @@ const validValues: FormData = {
     inputDatePicker: new Date(),
     inputDurationPicker: 2,
     inputAceEditor: "const x = 1;",
+    inputPath: "C:\\",
 };
 
 const invalidValues: FormData = {
@@ -197,4 +208,5 @@ const invalidValues: FormData = {
     inputDatePicker: null,
     inputDurationPicker: null,
     inputAceEditor: "",
+    inputPath: "",
 };
