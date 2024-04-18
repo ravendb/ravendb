@@ -362,7 +362,6 @@ namespace Voron.Impl
             UncompressedSize = 0
         };
 
-
         private void InitTransactionHeader()
         {
             long nextPageNumber = GetNextPageNumber();

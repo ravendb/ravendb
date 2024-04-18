@@ -262,8 +262,7 @@ namespace Voron.Data.Fixed
 
         public DirectAddScope DirectAdd(TVal key, out bool isNew, out byte* ptr)
         {
-            if (_tx.Flags == TransactionFlags.Read)
-                throw new InvalidOperationException("Cannot add a value in a read only transaction");
+            VoronExceptions.ThrowIfReadOnly(_tx, "Cannot add a value in a read only transaction");
 
             _changes++;
 
@@ -868,8 +867,7 @@ namespace Voron.Data.Fixed
 
         public DeletionResult Delete(TVal key)
         {
-            if (_tx.Flags == TransactionFlags.Read)
-                throw new InvalidOperationException("Cannot delete a value in a read only transaction");
+            VoronExceptions.ThrowIfReadOnly(_tx, "Cannot delete a value in a read only transaction");
 
             _changes++;
             switch (Type)
@@ -895,31 +893,30 @@ namespace Voron.Data.Fixed
 
         public DeletionResult DeleteRange(TVal start, TVal end)
         {
-            if (_tx.Flags == TransactionFlags.Read)
-                throw new InvalidOperationException("Cannot delete a range in a read only transaction");
+            VoronExceptions.ThrowIfReadOnly(_tx, "Cannot delete a range in a read only transaction");
 
             _changes++;
             if (start > end)
                 throw new InvalidOperationException("Start range cannot be greater than the end of the range");
 
-            long entriedDeleted;
+            long entriesDeleted;
             switch (Type)
             {
                 case null:
-                    entriedDeleted = 0;
+                    entriesDeleted = 0;
                     break;
                 case RootObjectType.EmbeddedFixedSizeTree:
-                    entriedDeleted = DeleteRangeEmbedded(start, end);
+                    entriesDeleted = DeleteRangeEmbedded(start, end);
                     break;
                 case RootObjectType.FixedSizeTree:
-                    entriedDeleted = DeleteRangeLarge(start, end);
+                    entriesDeleted = DeleteRangeLarge(start, end);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(Type?.ToString());
             }
             return new DeletionResult
             {
-                NumberOfEntriesDeleted = entriedDeleted,
+                NumberOfEntriesDeleted = entriesDeleted,
                 TreeRemoved = Type == null
             };
         }
