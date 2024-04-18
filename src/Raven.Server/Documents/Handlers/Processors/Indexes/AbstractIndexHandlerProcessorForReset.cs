@@ -13,7 +13,7 @@ internal abstract class AbstractIndexHandlerProcessorForReset<TRequestHandler, T
     {
     }
     
-    private const string SideBySideQueryParameterName = "isSideBySide";
+    private const string SideBySideQueryParameterName = "asSideBySide";
 
     protected override RavenCommand CreateCommandForNode(string nodeTag) => new ResetIndexOperation.ResetIndexCommand(GetName(), IsSideBySide(), nodeTag);
 
