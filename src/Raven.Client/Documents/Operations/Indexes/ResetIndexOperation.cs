@@ -10,40 +10,45 @@ namespace Raven.Client.Documents.Operations.Indexes
     public sealed class ResetIndexOperation : IMaintenanceOperation
     {
         private readonly string _indexName;
-        private readonly bool _isSideBySide;
+        private readonly bool _asSideBySide;
 
-        public ResetIndexOperation(string indexName, bool isSideBySide = false)
+        public ResetIndexOperation(string indexName)
         {
             _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
-            _isSideBySide = isSideBySide;
+        }
+        
+        public ResetIndexOperation(string indexName, bool asSideBySide)
+        {
+            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
+            _asSideBySide = asSideBySide;
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new ResetIndexCommand(_indexName, _isSideBySide);
+            return new ResetIndexCommand(_indexName, _asSideBySide);
         }
 
         internal sealed class ResetIndexCommand : RavenCommand
         {
             private readonly string _indexName;
-            private readonly bool _isSideBySide;
+            private readonly bool _asSideBySide;
 
-            public ResetIndexCommand(string indexName, bool isSideBySide = false)
-                : this(indexName, isSideBySide: false, nodeTag: null)
+            public ResetIndexCommand(string indexName, bool asSideBySide = false)
+                : this(indexName, asSideBySide: false, nodeTag: null)
             {
-                _isSideBySide = isSideBySide;
+                _asSideBySide = asSideBySide;
             }
 
-            internal ResetIndexCommand(string indexName, bool isSideBySide, string nodeTag)
+            internal ResetIndexCommand(string indexName, bool asSideBySide, string nodeTag)
             {
                 _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
-                _isSideBySide = isSideBySide;
+                _asSideBySide = asSideBySide;
                 SelectedNodeTag = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/indexes?name={Uri.EscapeDataString(_indexName)}&isSideBySide={(_isSideBySide ? "true" : "false")}";
+                url = $"{node.Url}/databases/{node.Database}/indexes?name={Uri.EscapeDataString(_indexName)}&asSideBySide={(_asSideBySide ? "true" : "false")}";
 
                 return new HttpRequestMessage
                 {

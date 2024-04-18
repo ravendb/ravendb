@@ -14,7 +14,7 @@ internal sealed class IndexHandlerProcessorForReset : AbstractIndexHandlerProces
 
     protected override bool SupportsCurrentNode => true;
 
-    private const string SideBySideQueryParameterName = "isSideBySide";
+    private const string SideBySideQueryParameterName = "asSideBySide";
 
     protected override ValueTask HandleCurrentNodeAsync()
     {

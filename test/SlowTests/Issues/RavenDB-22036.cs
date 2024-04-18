@@ -31,7 +31,7 @@ public class RavenDB_22036 : RavenTestBase
             
             store.Maintenance.Send(new StopIndexingOperation());
 
-            store.Maintenance.Send(new ResetIndexOperation(indexName, isSideBySide: true));
+            store.Maintenance.Send(new ResetIndexOperation(indexName, asSideBySide: true));
             
             var database = GetDatabase(store.Database).Result;
             
@@ -65,7 +65,7 @@ public class RavenDB_22036 : RavenTestBase
             
             store.Maintenance.Send(new StopIndexingOperation());
 
-            store.Maintenance.Send(new ResetIndexOperation(indexName, isSideBySide: false));
+            store.Maintenance.Send(new ResetIndexOperation(indexName, asSideBySide: false));
             
             var database = GetDatabase(store.Database).Result;
             
@@ -104,7 +104,7 @@ public class RavenDB_22036 : RavenTestBase
             
             store.Maintenance.Send(new StopIndexingOperation());
 
-            store.Maintenance.Send(new ResetIndexOperation(indexName, isSideBySide: true));
+            store.Maintenance.Send(new ResetIndexOperation(indexName, asSideBySide: true));
             
             var database = GetDatabase(store.Database).Result;
             
@@ -116,7 +116,7 @@ public class RavenDB_22036 : RavenTestBase
             
             Assert.Equal(2, indexesCount);
             
-            store.Maintenance.Send(new ResetIndexOperation(indexName, isSideBySide: true));
+            store.Maintenance.Send(new ResetIndexOperation(indexName, asSideBySide: true));
             
             replacementIndexInstance = database.IndexStore.GetIndex($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}");
 
