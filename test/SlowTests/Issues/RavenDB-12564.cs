@@ -81,12 +81,10 @@ namespace SlowTests.Issues
                     var e = Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<JObject>(@"
                         match (Dogs as d2)-[Likes]->(Dogs as d2)-[Likes]->(d2)").ToArray());
                     
-                    Assert.DoesNotContain("implicit", e.Message,StringComparison.OrdinalIgnoreCase);
-                    Assert.Contains("duplicate", e.Message, StringComparison.OrdinalIgnoreCase);
-                    Assert.Contains("alias", e.Message, StringComparison.OrdinalIgnoreCase);
+                    Assert.False(e.Message.Contains("implicit",StringComparison.OrdinalIgnoreCase));
+                    Assert.True(e.Message.Contains("Found redefinition of alias", StringComparison.OrdinalIgnoreCase));
                 }
             }
-
         }
 
         [Fact]
