@@ -95,13 +95,13 @@ namespace Raven.Server.Commercial
                     binaryWriter.Write(licenseKey.Id.ToByteArray());
                     binaryWriter.Write(licenseKey.Name);
 
-                    RsaKeyParameters publicKey = new(false,
+                    RsaKeyParameters publicKey = new(isPrivate: false,
                         new BigInteger(1, rsaParameters.Modulus),
                         new BigInteger(1, rsaParameters.Exponent));
 
                     var dataToVerify = ms.ToArray();
                     ISigner verifier = SignerUtilities.GetSigner("SHA1withRSA");
-                    verifier.Init(false, publicKey);
+                    verifier.Init(forSigning: false, publicKey);
                     verifier.BlockUpdate(dataToVerify, 0, dataToVerify.Length);
 
                     if (verifier.VerifySignature(keys.Signature) == false)
