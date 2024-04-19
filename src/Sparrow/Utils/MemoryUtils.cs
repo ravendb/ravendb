@@ -11,7 +11,7 @@ public static class MemoryUtils
     private static readonly InvertedComparer InvertedComparerInstance = new InvertedComparer();
     private const int MinAllocatedThresholdInBytes = 10 * 1024 * 1024;
 
-    public static string GetExtendedMemoryInfo(MemoryInfoResult memoryInfo)
+    public static string GetExtendedMemoryInfo(MemoryInfoResult memoryInfo, DirtyMemoryState dirtyState)
     {
         try
         {
@@ -19,7 +19,7 @@ public static class MemoryUtils
             TryAppend(() => sb.Append("Commit charge: ").Append(memoryInfo.CurrentCommitCharge).Append(" / ").Append(memoryInfo.TotalCommittableMemory).Append(", "));
             TryAppend(() => sb.Append("Memory: ").Append(memoryInfo.TotalPhysicalMemory - memoryInfo.AvailableMemory).Append(" / ").Append(memoryInfo.TotalPhysicalMemory).Append(", "));
             TryAppend(() => sb.Append("Available memory for processing: ").Append(memoryInfo.AvailableMemoryForProcessing).Append(", "));
-            TryAppend(() => sb.Append("Dirty memory: ").Append(memoryInfo.TotalScratchDirtyMemory).Append(", "));
+            TryAppend(() => sb.Append("Dirty memory: ").Append(dirtyState.TotalDirty).Append(", "));
             TryAppend(() => sb.Append("Managed memory: ").Append(new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes)).Append(", "));
             TryAppend(() => sb.Append("Unmanaged allocations: ").Append(new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)).Append(", "));
             TryAppend(() => sb.Append("Lucene managed: ").Append(new Size(NativeMemory.TotalLuceneManagedAllocationsForTermCache, SizeUnit.Bytes)).Append(", "));

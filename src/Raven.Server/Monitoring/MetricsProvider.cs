@@ -154,8 +154,7 @@ public class MetricsProvider
         result.TotalSwapUsageInMb = memoryInfoResult.TotalSwapUsage.GetValue(SizeUnit.Megabytes);
         result.WorkingSetSwapUsageInMb = memoryInfoResult.WorkingSetSwapUsage.GetValue(SizeUnit.Megabytes);
 
-        var totalDirtyInBytes = MemoryInformation.GetDirtyMemoryState().TotalDirtyInBytes;
-        result.TotalDirtyInMb = new Size(totalDirtyInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+        result.TotalDirtyInMb = MemoryInformation.GetDirtyMemoryState().TotalDirty.GetValue(SizeUnit.Megabytes);
 
         return result;
     }
