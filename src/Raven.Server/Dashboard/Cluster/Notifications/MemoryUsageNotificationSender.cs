@@ -57,7 +57,7 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
                 EncryptionBuffersInUse = encryptionBuffers.CurrentlyInUseSize,
                 EncryptionBuffersPool = encryptionBuffers.TotalPoolSize,
                 MemoryMapped = totalMapping,
-                DirtyMemory = dirtyMemoryState.TotalDirtyInBytes,
+                DirtyMemory = dirtyMemoryState.TotalDirty.GetValue(SizeUnit.Bytes),
                 AvailableMemory = memoryInfo.AvailableMemory.GetValue(SizeUnit.Bytes),
                 AvailableMemoryForProcessing = memoryInfo.AvailableMemoryForProcessing.GetValue(SizeUnit.Bytes),
                 TotalSwapUsage = memoryInfo.TotalSwapUsage.GetValue(SizeUnit.Bytes)

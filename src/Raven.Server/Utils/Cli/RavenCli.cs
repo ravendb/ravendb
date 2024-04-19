@@ -584,13 +584,15 @@ namespace Raven.Server.Utils.Cli
         public static string GetInfoText()
         {
             var memoryInfo = MemoryInformation.GetMemoryInformationUsingOneTimeSmapsReader();
+            var dirtyMemoryState = MemoryInformation.GetDirtyMemoryState();
+
             using (var currentProcess = Process.GetCurrentProcess())
             {
                 return $" Build {ServerVersion.Build}, Version {ServerVersion.Version}, SemVer {ServerVersion.FullVersion}, Commit {ServerVersion.CommitHash}" +
                        Environment.NewLine +
                        $" PID {currentProcess.Id}, {IntPtr.Size * 8} bits, {ProcessorInfo.ProcessorCount} Cores, Arch: {RuntimeInformation.OSArchitecture}" +
                        Environment.NewLine +
-                       $" {memoryInfo.TotalPhysicalMemory} Physical Memory, {memoryInfo.AvailableMemory} Available Memory, {memoryInfo.AvailableMemoryForProcessing} Calculated Available Memory, {memoryInfo.TotalScratchDirtyMemory} Scratch Dirty Memory" +
+                       $" {memoryInfo.TotalPhysicalMemory} Physical Memory, {memoryInfo.AvailableMemory} Available Memory, {memoryInfo.AvailableMemoryForProcessing} Calculated Available Memory, {dirtyMemoryState.TotalDirty} Scratch Dirty Memory" +
                        Environment.NewLine +
                        $" {RuntimeSettings.Describe()}" +
                        Environment.NewLine +
@@ -1118,7 +1120,7 @@ namespace Raven.Server.Utils.Cli
                 SizeClient.Humane(MemoryInformation.GetWorkingSetInBytes()),
                 SizeClient.Humane(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes()),
                 SizeClient.Humane(AbstractLowMemoryMonitor.GetManagedMemoryInBytes()),
-                SizeClient.Humane(MemoryInformation.GetTotalScratchAllocatedMemory()),
+                SizeClient.Humane(MemoryInformation.GetTotalScratchAllocatedMemoryInBytes()),
                 SizeClient.Humane(totalMemoryMapped));
         }
 
