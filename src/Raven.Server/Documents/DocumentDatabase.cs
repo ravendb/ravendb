@@ -647,9 +647,9 @@ namespace Raven.Server.Documents
                 var index = command.Index;
                 var options = mergedCommands.Options[index];
 
-                ClusterTransactionWaiter.TrySetResult(options.TaskId, index, mergedCommands.ModifiedCollections);
-
                 ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
+
+                ClusterTransactionWaiter.TrySetResult(options.TaskId, index, mergedCommands.ModifiedCollections);
 
                 _nextClusterCommand = command.PreviousCount + command.Commands.Count;
                 _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
