@@ -60,6 +60,8 @@ namespace RachisTests
         [Fact]
         public async Task RavenDB_13659()
         {
+            EnableCaptureWriteTransactionStackTrace = true;
+
             var leader = await CreateNetworkAndGetLeader(1);
             var mre = new AsyncManualResetEvent();
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);

@@ -779,6 +779,10 @@ namespace Voron
             AfterCommitWhenNewTransactionsPrevented?.Invoke(tx);
         }
 
+#if DEBUG
+        public bool CaptureTransactionStackTrace;
+#endif
+
         [Conditional("DEBUG")]
         private void ThrowOnWriteTransactionOpenedByTheSameThread()
         {
@@ -790,9 +794,12 @@ namespace Voron
                                                     $"{currentWriteTransactionHolder.Name}, Id: {currentWriteTransactionHolder.ManagedThreadId}{Environment.NewLine}" +
                                                     $"{currentWriteTransactionHolder.CapturedStackTrace}");
             }
-
-            if (currentWriteTransactionHolder != null)
+#if DEBUG
+            if (currentWriteTransactionHolder != null && CaptureTransactionStackTrace)
+            {
                 currentWriteTransactionHolder.CapturedStackTrace = Environment.StackTrace;
+            }
+#endif
         }
 
         internal void IncrementUsageOnNewTransaction()

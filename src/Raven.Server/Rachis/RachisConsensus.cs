@@ -439,6 +439,9 @@ namespace Raven.Server.Rachis
             try
             {
                 _persistentState = env;
+#if DEBUG
+                _persistentState.CaptureTransactionStackTrace = ServerStore.EnableCaptureWriteTransactionStackTrace;
+#endif
 
                 OperationTimeout = configuration.Cluster.OperationTimeout.AsTimeSpan;
                 ElectionTimeout = configuration.Cluster.ElectionTimeout.AsTimeSpan;

@@ -3858,6 +3858,10 @@ namespace Raven.Server.ServerWide
             internal Action<string, List<ClusterTransactionCommand.SingleClusterDatabaseCommand>> BeforeExecuteClusterTransactionBatch;
         }
 
+#if DEBUG
+        public bool EnableCaptureWriteTransactionStackTrace = false;
+#endif
+
         public readonly MemoryCache QueryClauseCache;
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
