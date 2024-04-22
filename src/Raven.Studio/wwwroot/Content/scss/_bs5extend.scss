@@ -454,8 +454,11 @@ select {
     border-bottom-right-radius: $border-radius-sm !important;
 }
 
-.btn-preview {
+.input-btn {
+    position: absolute !important;
     z-index: 5 !important;
+    right: 0;
+    height: 100%;
 }
 
 //Checkbox that activates input, e.g. Client Configuration form
