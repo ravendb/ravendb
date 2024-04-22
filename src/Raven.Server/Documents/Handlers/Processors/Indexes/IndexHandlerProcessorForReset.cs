@@ -1,5 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
@@ -14,20 +16,18 @@ internal sealed class IndexHandlerProcessorForReset : AbstractIndexHandlerProces
 
     protected override bool SupportsCurrentNode => true;
 
-    private const string SideBySideQueryParameterName = "asSideBySide";
-
     protected override ValueTask HandleCurrentNodeAsync()
     {
         var name = GetName();
 
-        var sideBySideQueryParam = RequestHandler.GetBoolValueQueryString(SideBySideQueryParameterName, false);
+        var indexResetModeQueryParam = RequestHandler.GetStringQueryString(nameof(IndexResetMode), false);
 
-        var sideBySide = false;
+        var indexResetMode = RequestHandler.Database.Configuration.Indexing.DefaultIndexResetMode;
+
+        if (indexResetModeQueryParam is not null)
+            indexResetMode = Enum.Parse<IndexResetMode>(indexResetModeQueryParam);
         
-        if (sideBySideQueryParam.HasValue)
-            sideBySide = sideBySideQueryParam.Value;
-        
-        RequestHandler.Database.IndexStore.ResetIndex(name, sideBySide);
+        RequestHandler.Database.IndexStore.ResetIndex(name, indexResetMode);
 
         return ValueTask.CompletedTask;
     }

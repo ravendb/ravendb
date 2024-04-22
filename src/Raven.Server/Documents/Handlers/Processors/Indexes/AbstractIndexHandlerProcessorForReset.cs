@@ -1,4 +1,6 @@
-﻿using JetBrains.Annotations;
+﻿using System;
+using JetBrains.Annotations;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Http;
 using Sparrow.Json;
@@ -13,24 +15,20 @@ internal abstract class AbstractIndexHandlerProcessorForReset<TRequestHandler, T
     {
     }
     
-    private const string SideBySideQueryParameterName = "asSideBySide";
-
-    protected override RavenCommand CreateCommandForNode(string nodeTag) => new ResetIndexOperation.ResetIndexCommand(GetName(), IsSideBySide(), nodeTag);
+    protected override RavenCommand CreateCommandForNode(string nodeTag) => new ResetIndexOperation.ResetIndexCommand(GetName(), GetIndexResetMode(), nodeTag);
 
     protected string GetName()
     {
         return RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
     }
 
-    protected bool IsSideBySide()
+    private IndexResetMode? GetIndexResetMode()
     {
-        var sideBySideQueryParam = RequestHandler.GetBoolValueQueryString(SideBySideQueryParameterName, false);
-        
-        var sideBySide = false;
-        
-        if (sideBySideQueryParam.HasValue)
-            sideBySide = sideBySideQueryParam.Value;
+        var indexResetModeQueryParam = RequestHandler.GetStringQueryString(nameof(IndexResetMode), false);
 
-        return sideBySide;
+        if (indexResetModeQueryParam is null)
+            return null;
+            
+        return Enum.Parse<IndexResetMode>(indexResetModeQueryParam);
     }
 }

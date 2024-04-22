@@ -1,9 +1,10 @@
-using System.Linq;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Config;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ public class RavenDB_22036 : RavenTestBase
     {
     }
     
-    [RavenFact(RavenTestCategory.Indexes)]
-    public void TestIfSideBySideIndexIsCreatedOnResetWithQueryParam()
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public void TestIfSideBySideIndexIsCreatedOnResetSideBySide(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             const string indexName = "Users/ByName";
             
@@ -29,30 +31,36 @@ public class RavenDB_22036 : RavenTestBase
                 Name = indexName
             }));
             
-            store.Maintenance.Send(new StopIndexingOperation());
+            store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
-            store.Maintenance.Send(new ResetIndexOperation(indexName, asSideBySide: true));
+            store.Maintenance.ForTesting(() => new ResetIndexOperation(indexName, indexResetMode: IndexResetMode.SideBySide)).ExecuteOnAll();
             
-            var database = GetDatabase(store.Database).Result;
+            store.Maintenance.ForTesting(() => new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}")).AssertAll((key, stats) =>
+            {
+                Assert.NotNull(stats);
+            });
             
-            var replacementIndexInstance = database.IndexStore.GetIndex($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}");
-
-            Assert.NotNull(replacementIndexInstance);
-
-            store.Maintenance.Send(new StartIndexingOperation());
+            store.Maintenance.ForTesting(() => new GetIndexNamesOperation(0, int.MaxValue)).AssertAll((key, stats) =>
+            {
+                Assert.Equal(2, stats.Length);
+            });
+            
+            store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
             
             Indexes.WaitForIndexing(store);
 
-            var indexesCount = database.IndexStore.GetIndexes().Count();
-            
-            Assert.Equal(1, indexesCount);
+            store.Maintenance.ForTesting(() => new GetIndexNamesOperation(0, int.MaxValue)).AssertAll((key, stats) =>
+            {
+                Assert.Equal(1, stats.Length);
+            });
         }
     }
     
-    [RavenFact(RavenTestCategory.Indexes)]
-    public void TestIfSideBySideIndexIsNotCreatedOnResetWithoutQueryParam()
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public void TestIfSideBySideIndexIsNotCreatedOnResetInPlace(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             const string indexName = "Users/ByName";
             
@@ -63,35 +71,36 @@ public class RavenDB_22036 : RavenTestBase
                 Name = indexName
             }));
             
-            store.Maintenance.Send(new StopIndexingOperation());
+            store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
-            store.Maintenance.Send(new ResetIndexOperation(indexName, asSideBySide: false));
+            store.Maintenance.ForTesting(() => new ResetIndexOperation(indexName, indexResetMode: IndexResetMode.InPlace)).ExecuteOnAll();
             
-            var database = GetDatabase(store.Database).Result;
+            store.Maintenance.ForTesting(() => new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}")).AssertAll((key, stats) =>
+            {
+                Assert.Null(stats);
+            });
             
-            var replacementIndexInstance = database.IndexStore.GetIndex($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}");
+            store.Maintenance.ForTesting(() => new GetIndexNamesOperation(0, int.MaxValue)).AssertAll((key, stats) =>
+            {
+                Assert.Equal(1, stats.Length);
+            });
 
-            Assert.Null(replacementIndexInstance);
-            
-            var indexesCount = database.IndexStore.GetIndexes().Count();
-            
-            Assert.Equal(1, indexesCount);
-
-            store.Maintenance.Send(new StartIndexingOperation());
+            store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
             
             Indexes.WaitForIndexing(store);
 
-            indexesCount = database.IndexStore.GetIndexes().Count();
-            
-            Assert.Equal(1, indexesCount);
+            store.Maintenance.ForTesting(() => new GetIndexNamesOperation(0, int.MaxValue)).AssertAll((key, stats) =>
+            {
+                Assert.Equal(1, stats.Length);
+            });
         }
     }
     
-    
-    [RavenFact(RavenTestCategory.Indexes)]
-    public void TestConsecutiveSideBySideResets()
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public void TestConsecutiveSideBySideResets(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             const string indexName = "Users/ByName";
             
@@ -102,41 +111,135 @@ public class RavenDB_22036 : RavenTestBase
                 Name = indexName
             }));
             
-            store.Maintenance.Send(new StopIndexingOperation());
-
-            store.Maintenance.Send(new ResetIndexOperation(indexName, asSideBySide: true));
+            store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
             
-            var database = GetDatabase(store.Database).Result;
+            store.Maintenance.ForTesting(() => new ResetIndexOperation(indexName, indexResetMode: IndexResetMode.SideBySide)).ExecuteOnAll();
             
-            var replacementIndexInstance = database.IndexStore.GetIndex($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}");
-
-            Assert.NotNull(replacementIndexInstance);
+            store.Maintenance.ForTesting(() => new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}")).AssertAll((key, stats) =>
+            {
+                Assert.NotNull(stats);
+            });
             
-            var indexesCount = database.IndexStore.GetIndexes().Count();
+            store.Maintenance.ForTesting(() => new GetIndexNamesOperation(0, int.MaxValue)).AssertAll((key, stats) =>
+            {
+                Assert.Equal(2, stats.Length);
+            });
             
-            Assert.Equal(2, indexesCount);
+            store.Maintenance.ForTesting(() => new ResetIndexOperation(indexName, indexResetMode: IndexResetMode.SideBySide)).ExecuteOnAll();
             
-            store.Maintenance.Send(new ResetIndexOperation(indexName, asSideBySide: true));
+            store.Maintenance.ForTesting(() => new GetIndexNamesOperation(0, int.MaxValue)).AssertAll((key, stats) =>
+            {
+                Assert.Equal(2, stats.Length);
+            });
             
-            replacementIndexInstance = database.IndexStore.GetIndex($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}");
-
-            Assert.NotNull(replacementIndexInstance);
-            
-            indexesCount = database.IndexStore.GetIndexes().Count();
-            
-            Assert.Equal(2, indexesCount);
-
-            store.Maintenance.Send(new StartIndexingOperation());
+            store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
             
             Indexes.WaitForIndexing(store);
             
-            replacementIndexInstance = database.IndexStore.GetIndex($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}");
+            store.Maintenance.ForTesting(() => new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}")).AssertAll((key, stats) =>
+            {
+                Assert.Null(stats);
+            });
             
-            Assert.Null(replacementIndexInstance);
+            store.Maintenance.ForTesting(() => new GetIndexNamesOperation(0, int.MaxValue)).AssertAll((key, stats) =>
+            {
+                Assert.Equal(1, stats.Length);
+            });
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public void TestResetIndexOperationWithoutIndexResetModeParam(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            const string indexName = "Users/ByName";
+
+            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+            {
+                Maps = { "from user in docs.Users select new { user.FirstName }" }, 
+                Type = IndexType.Map, 
+                Name = indexName
+            }));
             
-            indexesCount = database.IndexStore.GetIndexes().Count();
+            store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
             
-            Assert.Equal(1, indexesCount);
+            store.Maintenance.ForTesting(() => new ResetIndexOperation(indexName)).ExecuteOnAll();
+            
+            store.Maintenance.ForTesting(() => new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}")).AssertAll((key, stats) =>
+            {
+                Assert.Null(stats);
+            });
+            
+            store.Maintenance.ForTesting(() => new GetIndexNamesOperation(0, int.MaxValue)).AssertAll((key, stats) =>
+            {
+                Assert.Equal(1, stats.Length);
+            });
+            
+            store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
+            
+            Indexes.WaitForIndexing(store);
+            
+            store.Maintenance.ForTesting(() => new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}")).AssertAll((key, stats) =>
+            {
+                Assert.Null(stats);
+            });
+            
+            store.Maintenance.ForTesting(() => new GetIndexNamesOperation(0, int.MaxValue)).AssertAll((key, stats) =>
+            {
+                Assert.Equal(1, stats.Length);
+            });
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public void TestResetIndexOperationWithConfigurationOption(Options options)
+    {
+        options.ModifyDatabaseRecord += record =>
+        {
+            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.DefaultIndexResetMode)] = IndexResetMode.SideBySide.ToString();
+        };
+        
+        using (var store = GetDocumentStore(options))
+        {
+            const string indexName = "Users/ByName";
+
+            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+            {
+                Maps = { "from user in docs.Users select new { user.FirstName }" }, 
+                Type = IndexType.Map, 
+                Name = indexName
+            }));
+            
+            store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
+            
+            store.Maintenance.ForTesting(() => new ResetIndexOperation(indexName)).ExecuteOnAll();
+            
+            store.Maintenance.ForTesting(() => new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}")).AssertAll((key, stats) =>
+            {
+                Assert.NotNull(stats);
+            });
+            
+            store.Maintenance.ForTesting(() => new GetIndexNamesOperation(0, int.MaxValue)).AssertAll((key, stats) =>
+            {
+                Assert.Equal(2, stats.Length);
+            });
+            
+            store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
+            
+            Indexes.WaitForIndexing(store);
+            
+            store.Maintenance.ForTesting(() => new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}")).AssertAll((key, stats) =>
+            {
+                Assert.Null(stats);
+            });
+            
+            store.Maintenance.ForTesting(() => new GetIndexNamesOperation(0, int.MaxValue)).AssertAll((key, stats) =>
+            {
+                Assert.Equal(1, stats.Length);
+            });
         }
     }
 }
