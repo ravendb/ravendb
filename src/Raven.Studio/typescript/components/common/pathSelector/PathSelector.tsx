@@ -14,14 +14,14 @@ export interface PathSelectorProps<ParamsType extends unknown[] = unknown[]> {
     getPathDependencies: (path: string) => ParamsType;
     handleSelect: (path: string) => void;
     defaultPath?: string;
-    selectorButtonName?: string;
     selectorTitle?: string;
     placeholder?: string;
     disabled?: boolean;
+    buttonClassName?: string;
 }
 
 export default function PathSelector<ParamsType extends unknown[] = unknown[]>(props: PathSelectorProps<ParamsType>) {
-    const { handleSelect, getPaths, getPathDependencies, defaultPath, selectorButtonName, selectorTitle, disabled } =
+    const { handleSelect, getPaths, getPathDependencies, defaultPath, buttonClassName, selectorTitle, disabled } =
         props;
 
     const { value: isModalOpen, toggle: toggleIsModalOpen } = useBoolean(false);
@@ -40,10 +40,26 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
         toggleIsModalOpen();
     };
 
+    const separator = getSeparator(pathInput);
+    const pathParts = separator ? pathInput.split(separator) : [pathInput];
+
+    const setPathToDir = (dir: string) => {
+        const dirIndex = pathParts.indexOf(dir);
+        const newPath = pathParts.slice(0, dirIndex + 1).join(separator) + separator;
+
+        setPathInput(newPath);
+    };
+
     return (
         <>
-            <Button onClick={toggleIsModalOpen} disabled={disabled} title={selectorTitle || "Select path"}>
-                {selectorButtonName || "Select path"}
+            <Button
+                color="link"
+                onClick={toggleIsModalOpen}
+                disabled={disabled}
+                title={selectorTitle || "Select path"}
+                className={buttonClassName}
+            >
+                <Icon icon="folder" margin="m-0" />
             </Button>
             {isModalOpen && (
                 <Modal isOpen wrapClassName="bs5" zIndex="var(--zindex-modal-1)" centered fade>
@@ -57,8 +73,22 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
 
                         <div className="hstack">
                             <strong className="flex-grow">
-                                <span className="text-info">Computer </span>
-                                &gt; {pathInput}
+                                <Button className="btn-link text-info p-0 border-0" onClick={() => setPathInput("")}>
+                                    Computer
+                                </Button>
+                                <span className="mx-1">&gt;</span>
+                                {pathParts
+                                    .filter((x) => x)
+                                    .map((part) => (
+                                        <Button
+                                            key={part}
+                                            className="btn-link text-info p-0 border-0"
+                                            onClick={() => setPathToDir(part)}
+                                        >
+                                            {part}
+                                            {part.includes(separator) ? "" : separator}
+                                        </Button>
+                                    ))}
                             </strong>
                             {canGoBack && (
                                 <Button
@@ -96,10 +126,7 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
                             />
                         </FormGroup>
                     </ModalBody>
-                    <ModalFooter className="hstack gap-2">
-                        <Button className="me-auto" color="secondary" onClick={() => setPathInput(defaultPath || "")}>
-                            Reset to default
-                        </Button>
+                    <ModalFooter className="hstack gap-2 justify-content-end">
                         <Button color="secondary" onClick={toggleIsModalOpen}>
                             Cancel
                         </Button>
@@ -184,7 +211,11 @@ function formatPathInList(listItemPath: string, pathInput: string): string {
     const separator = getSeparator(pathInput);
     const pathParts = separator ? listItemPath.split(separator) : [listItemPath];
 
-    return pathParts.length === 1 || !pathParts[1] ? listItemPath : listItemPath.replace(pathInput, "");
+    if (pathParts.length === 1 || !pathParts[1]) {
+        return listItemPath;
+    }
+
+    return listItemPath.replace(pathInput, "").replace(separator, "");
 }
 
 function getParentPath(path: string): { canGoBack: boolean; parentDir: string } {

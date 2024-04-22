@@ -467,7 +467,7 @@ function FormInputGeneral<
                             <Button
                                 color="link-muted"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className={classNames("btn-preview position-absolute end-0 h-100", invalid && "me-3")}
+                                className={classNames("input-btn", invalid && "me-3")}
                             >
                                 {showPassword ? (
                                     <Icon icon="preview-off" title="Hide password" margin="m-0" />
@@ -554,6 +554,7 @@ export function FormPathSelector<
     const {
         field: { onChange, value: formValuePath },
         formState,
+        fieldState: { invalid, error },
     } = useController({
         name,
         control,
@@ -566,13 +567,15 @@ export function FormPathSelector<
         <div className="position-relative flex-grow-1">
             <div className="d-flex flex-grow-1">
                 <InputGroup>
-                    <FormInput
-                        type="text"
-                        className="rounded-0 rounded-start"
-                        control={control}
+                    <Input
                         name={name}
-                        disabled={disabled || formState.isSubmitting}
+                        type="text"
+                        onChange={(x) => onChange(x.currentTarget.value)}
+                        value={formValuePath == null ? "" : formValuePath}
+                        invalid={invalid}
+                        className="position-relative d-flex flex-grow-1"
                         placeholder={placeholder || "Enter path"}
+                        disabled={disabled || formState.isSubmitting}
                     />
                     <PathSelector
                         getPaths={getPaths}
@@ -581,9 +584,11 @@ export function FormPathSelector<
                         defaultPath={formValuePath}
                         selectorTitle={selectorTitle}
                         disabled={disabled || formState.isSubmitting}
+                        buttonClassName={classNames("input-btn", invalid && "me-3")}
                     />
                 </InputGroup>
             </div>
+            {error && <FormValidationMessage>{error.message}</FormValidationMessage>}
         </div>
     );
 }

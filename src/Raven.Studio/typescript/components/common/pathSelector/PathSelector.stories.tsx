@@ -28,7 +28,6 @@ export const PathSelectorStory: StoryObj<PathSelectorStoryArgs> = {
                 getPathDependencies={(x) => [x]}
                 handleSelect={() => null}
                 defaultPath={args.defaultPath}
-                selectorButtonName={args.selectorButtonName}
                 selectorTitle={args.selectorTitle}
                 placeholder={args.placeholder}
                 disabled={args.disabled}
@@ -38,7 +37,6 @@ export const PathSelectorStory: StoryObj<PathSelectorStoryArgs> = {
     args: {
         paths: ["C:\\Desktop", "C:\\temp"],
         defaultPath: "C:\\",
-        selectorButtonName: "Select path",
         selectorTitle: "Select path",
         placeholder: "Enter path",
         disabled: false,
