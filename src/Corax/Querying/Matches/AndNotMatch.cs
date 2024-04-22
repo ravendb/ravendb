@@ -27,11 +27,24 @@ namespace Corax.Querying.Matches
         public long Count => _totalResults;
 
         private readonly ByteStringContext _context;
-        internal bool _isAndWithBuffer;
-        internal long* _buffer;
-        internal int _bufferSize;
-        internal int _bufferIdx;              
-        internal IDisposable _bufferHandler;
+        
+        /// <summary>
+        /// Indicates that the buffer is used by the AndWith method.
+        /// </summary>
+        private bool _isAndWithBuffer;
+        
+        private IDisposable _bufferHandler;
+        private long* _buffer;
+        
+        /// <summary>
+        /// Capacity (long type) of buffer
+        /// </summary>
+        private int _bufferSize;
+        
+        /// <summary>
+        /// Count (long type) of currently used elements
+        /// </summary>
+        private int _bufferIdx;
 
         private bool _doNotSortResults;
 
@@ -93,7 +106,7 @@ namespace Corax.Querying.Matches
                     if (bufferUsedItems > _bufferSize * 3 / 4)
                     {
                         _token.ThrowIfCancellationRequested();
-                        UnlikelyGrowBuffer(bufferUsedItems);
+                        UnlikelyGrowFillBuffer(bufferUsedItems);
                         bufferState = new Span<long>(_buffer, _bufferSize).Slice(count);
                     }
 
@@ -170,34 +183,31 @@ namespace Corax.Querying.Matches
                 // continue executing until we run out of any potential inner match. 
             }
         }
-
         
-
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private void UnlikelyGrowBuffer(int currentlyUsed)
+        private void UnlikelyGrowFillBuffer(int currentlyUsed)
         {
             // Calculate the new size. 
-            int currentLength = _bufferSize;
-            int size;
-            if (currentLength > 16 * Size.Megabyte)
-            {
-                size = (int)(currentLength * 1.5);
-            }
-            else
-            {
-                size = currentLength * 2;
-            }
+            int currentSizeInBytes = _bufferSize * sizeof(long);
+            int newSizeInBytes = currentSizeInBytes > 16 * Size.Megabyte 
+                ? (int)(currentSizeInBytes * 1.5) 
+                : currentSizeInBytes * 2;
+            
+            //Adjust length to be N * sizeof(long)
+            newSizeInBytes -= newSizeInBytes % sizeof(long);
 
             // Allocate the new buffer
-            var bufferHandler = _context.Allocate(size * sizeof(long), out var buffer);
+            var bufferHandler = _context.Allocate(newSizeInBytes, out var newBuffer);
+            Debug.Assert(newBuffer.Length > _bufferSize * sizeof(long), "newBuffer.Length > _bufferSize * sizeof(long)");
 
             // Ensure we copy the content and then switch the buffers. 
-            new Span<long>(_buffer, currentlyUsed).CopyTo(new Span<long>(buffer.Ptr, size));
-            _bufferHandler.Dispose();
+            new Span<long>(_buffer, currentlyUsed).CopyTo(new Span<long>(newBuffer.Ptr, currentlyUsed));
 
-            _bufferSize = size;
-            _buffer = (long*)buffer.Ptr;
+            _bufferHandler.Dispose();
             _bufferHandler = bufferHandler;
+            
+            _bufferSize = newSizeInBytes / sizeof(long);
+            _buffer = (long*)newBuffer.Ptr;
         }
 
 
@@ -206,22 +216,19 @@ namespace Corax.Querying.Matches
         {
             // Calculate the new size. 
             int currentSizeInBytes = buffer.Length;
-            int sizeInBytes;
-            if (currentSizeInBytes > 16 * Size.Megabyte)
-            {
-                sizeInBytes = (int)(currentSizeInBytes * 1.5);
-            }
-            else
-            {
-                sizeInBytes = currentSizeInBytes * 2;
-            }
+            int newSizeInBytes = currentSizeInBytes > 16 * Size.Megabyte
+                ? (int)(currentSizeInBytes * 1.5)
+                : currentSizeInBytes * 2;
+            
+            //Adjust length to be N * sizeof(long)
+            newSizeInBytes -= newSizeInBytes % sizeof(long);
 
             // Allocate the new buffer based on the size the original buffer had in bytes.
-            var newBufferHandler = _context.Allocate(sizeInBytes * sizeof(long), out var newBuffer);
-
+            var newBufferHandler = _context.Allocate(newSizeInBytes, out var newBuffer);
+            Debug.Assert(newBuffer.Length > buffer.Length, "newBuffer.Length > buffer.Length");
+            
             // Ensure we copy the content and then switch the buffers. 
-            new Span<long>(buffer.Ptr, currentlyUsed).CopyTo(new Span<long>(newBuffer.Ptr, newBuffer.Length));
-
+            new Span<long>(buffer.Ptr, currentlyUsed).CopyTo(new Span<long>(newBuffer.Ptr, currentlyUsed));
             return (newBufferHandler, newBuffer);
         }
 
@@ -294,7 +301,11 @@ namespace Corax.Querying.Matches
                 _bufferHandler = scope;
                 _buffer = (long*)currentMatchesBuffer.Ptr;
                 _bufferSize = currentMatchesBuffer.Size;
-                _bufferIdx = totalResults;                
+                _bufferIdx = totalResults;
+                
+                //Since we evaluated whole query we exactly know how many items it returns.
+                _totalResults = _bufferIdx;
+                _confidence = QueryCountConfidence.High;
             }
 
             // If we dont have any result, no need to do anything. And with nothing will mean that there is nothing.
