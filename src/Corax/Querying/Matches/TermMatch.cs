@@ -525,7 +525,7 @@ namespace Corax.Querying.Matches
                         Debug.Assert((isSmallerInput ? largerPtr : smallerPtr) - blockStartPtr <= BlockSize);
                     }
 
-                    return (int)((ulong)dstPtr - (ulong)inputStartPtr) / sizeof(ulong);
+                    return (int)((ulong*)dstPtr - (ulong*)inputStartPtr);
                 }
             }
 
