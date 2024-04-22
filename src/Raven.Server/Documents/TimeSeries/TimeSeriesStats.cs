@@ -237,7 +237,7 @@ namespace Raven.Server.Documents.TimeSeries
                 if (previousCount == 0)
                     return false; // if current and previous are zero it means that this time-series was completely deleted
 
-                var readerOfFirstValue = _timeSeriesStorage.GetReader(context, slicer.DocId, slicer.Name, DateTime.MinValue, DateTime.MaxValue);
+                var readerOfFirstValue = _timeSeriesStorage.GetReader(context, slicer.DocId, slicer.Name, start, DateTime.MaxValue);
                 readerOfFirstValue.First();
                 var firstValueInCurrentSegment = readerOfFirstValue.ReadBaselineAsDateTime() == baseline;
 

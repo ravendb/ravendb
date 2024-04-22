@@ -14,6 +14,7 @@ using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
@@ -343,6 +344,51 @@ public partial class RavenTestBase
             WaitForValue(() => server.ServerStore.Observer != null, true);
 
             server.ServerStore.Observer.Suspended = true;
+        }
+
+        public async Task AssertNumberOfCommandsPerNode(long expectedNumberOfCommands, List<RavenServer> servers, string commandType, int timeout = 30_000, int interval = 1_000)
+        {
+            var numberOfCommandsPerNode = new Dictionary<string, long>();
+            var isExpectedNumberOfCommandsPerNode = await WaitForValueAsync(() =>
+                {
+                    numberOfCommandsPerNode = new Dictionary<string, long>();
+
+                    foreach (var server in servers)
+                    {
+                        var nodeTag = server.ServerStore.NodeTag;
+                        var numberOfCommands = GetRaftCommands(server, commandType).Count();
+
+                        numberOfCommandsPerNode.Add(nodeTag, numberOfCommands);
+                    }
+
+                    return Task.FromResult(numberOfCommandsPerNode.All(x => x.Value == expectedNumberOfCommands));
+                },
+                expectedVal: true,
+                timeout, interval);
+
+            Assert.True(isExpectedNumberOfCommandsPerNode, BuildErrorMessage());
+            
+            return;
+            string BuildErrorMessage()
+            {
+                var stringBuilder = new StringBuilder();
+
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    stringBuilder.AppendLine($"Expected number of commands per node: {expectedNumberOfCommands}. Actual number of commands per node: ");
+                    foreach ((string nodeTag, long numberOfCommands) in numberOfCommandsPerNode)
+                    {
+                        stringBuilder.AppendLine($"Node tag: '{nodeTag}' with actual number of commands: '{numberOfCommands}'. Commands:");
+
+                        var server = servers.Find(x => x.ServerStore.NodeTag == nodeTag);
+                        var raftCommands = GetRaftCommands(server).Select(djv => context.ReadObject(djv, "raftCommand").ToString()).ToArray();
+
+                        stringBuilder.AppendLine($"{string.Join($"{Environment.NewLine}\t", raftCommands)}");
+                    }
+                }
+
+                return stringBuilder.ToString();
+            }
         }
     }
 }
