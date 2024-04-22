@@ -69,6 +69,7 @@ artifacts/
 
 # DNX Studio
 src/Raven.Studio/junit.xml
+junit.xml
 src/Raven.Studio/node_modules/
 src/Raven.Studio/test.log
 src/Raven.Studio/wwwroot/App/**/*.js
