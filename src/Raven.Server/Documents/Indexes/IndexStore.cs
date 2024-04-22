@@ -1161,13 +1161,19 @@ namespace Raven.Server.Documents.Indexes
             return true;
         }
 
-        public Index ResetIndex(string name, bool sideBySide = false)
+        public Index ResetIndex(string name, IndexResetMode indexResetMode = IndexResetMode.InPlace)
         {
             var index = GetIndex(name);
+            
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(name);
 
-            return sideBySide ? ResetIndexSideBySideInternal(index) : ResetIndexInternal(index);
+            return indexResetMode switch
+            {
+                IndexResetMode.InPlace => ResetIndexInternal(index),
+                IndexResetMode.SideBySide => ResetIndexSideBySideInternal(index),
+                _ => throw new Exception($"Unknown {nameof(IndexResetMode)} parameter provided for index reset.")
+            };
         }
 
         public async Task DeleteIndex(string name, string raftRequestId)

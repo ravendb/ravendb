@@ -567,6 +567,12 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Corax.MaxAllocationsAtDictionaryTrainingInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public Size MaxAllocationsAtDictionaryTraining { get; protected set; }
+        
+        [Description("Default index reset mode.")]
+        [ConfigurationEntry("Indexing.DefaultIndexResetMode", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [DefaultValue(IndexResetMode.InPlace)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        public IndexResetMode DefaultIndexResetMode { get; set; }
 
         protected override void ValidateProperty(PropertyInfo property)
         {
