@@ -354,11 +354,14 @@ namespace SlowTests.Sharding.Backup
                 var dirs = Directory.GetDirectories(backupPath);
                 Assert.Equal(2, dirs.Length);
 
-                // should have one root folder for all shards 
-                Assert.Contains(store1.Database, dirs[0]);
-                Assert.DoesNotContain('$', dirs[0]);
+                var shardedBackupPath = dirs.First(x => x.Contains(store1.Database));
+                var nonShardedBackupPath = dirs.First(x => x.Contains(store2.Database));
 
-                var store1Backups = Directory.GetDirectories(Path.Combine(backupPath, store1.Database));
+                // should have one root folder for all shards 
+                Assert.Contains(store1.Database, shardedBackupPath);
+                Assert.DoesNotContain('$', nonShardedBackupPath);
+
+                var store1Backups = Directory.GetDirectories(Path.Combine(backupPath, store1.Database)).OrderBy(x => x).ToArray();
                 var store2Backup = Directory.GetDirectories(Path.Combine(backupPath, store2.Database));
 
                 Assert.Equal(3, store1Backups.Length); // one per shard
