@@ -199,7 +199,7 @@ public class RavenDB_22036 : RavenTestBase
     {
         options.ModifyDatabaseRecord += record =>
         {
-            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.DefaultIndexResetMode)] = IndexResetMode.SideBySide.ToString();
+            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.ResetMode)] = IndexResetMode.SideBySide.ToString();
         };
         
         using (var store = GetDocumentStore(options))

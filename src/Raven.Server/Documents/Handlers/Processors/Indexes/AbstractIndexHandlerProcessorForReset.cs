@@ -15,6 +15,8 @@ internal abstract class AbstractIndexHandlerProcessorForReset<TRequestHandler, T
     {
     }
     
+    private const string IndexResetModeQueryStringParamName = "mode";
+    
     protected override RavenCommand CreateCommandForNode(string nodeTag) => new ResetIndexOperation.ResetIndexCommand(GetName(), GetIndexResetMode(), nodeTag);
 
     protected string GetName()
@@ -24,7 +26,7 @@ internal abstract class AbstractIndexHandlerProcessorForReset<TRequestHandler, T
 
     private IndexResetMode? GetIndexResetMode()
     {
-        var indexResetModeQueryParam = RequestHandler.GetStringQueryString(nameof(IndexResetMode), false);
+        var indexResetModeQueryParam = RequestHandler.GetStringQueryString(IndexResetModeQueryStringParamName, false);
 
         if (indexResetModeQueryParam is null)
             return null;
