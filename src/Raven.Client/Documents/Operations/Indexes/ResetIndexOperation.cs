@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                 url = $"{node.Url}/databases/{node.Database}/indexes?name={Uri.EscapeDataString(_indexName)}";
 
                 if (_indexResetMode is not null)
-                    url += $"&indexResetMode={_indexResetMode.ToString()}";
+                    url += $"&mode={_indexResetMode.ToString()}";
 
                 return new HttpRequestMessage
                 {

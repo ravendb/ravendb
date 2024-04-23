@@ -628,8 +628,7 @@ namespace Raven.Client.Documents.Indexes
         DeploymentMode = 1 << 12,
         CompoundFields = 1 << 13,
         ArchivedDataProcessingBehavior = 1 << 14,
-        IndexResetMode = 1 << 15,
 
-        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies | DeploymentMode | CompoundFields | ArchivedDataProcessingBehavior | IndexResetMode,
+        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies | DeploymentMode | CompoundFields | ArchivedDataProcessingBehavior,
     }
 }

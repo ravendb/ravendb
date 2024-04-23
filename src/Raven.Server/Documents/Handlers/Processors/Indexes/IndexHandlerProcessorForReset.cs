@@ -13,6 +13,8 @@ internal sealed class IndexHandlerProcessorForReset : AbstractIndexHandlerProces
     public IndexHandlerProcessorForReset([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
+    
+    private const string IndexResetModeQueryStringParamName = "mode";
 
     protected override bool SupportsCurrentNode => true;
 
@@ -20,9 +22,9 @@ internal sealed class IndexHandlerProcessorForReset : AbstractIndexHandlerProces
     {
         var name = GetName();
 
-        var indexResetModeQueryParam = RequestHandler.GetStringQueryString(nameof(IndexResetMode), false);
+        var indexResetModeQueryParam = RequestHandler.GetStringQueryString(IndexResetModeQueryStringParamName, false);
 
-        var indexResetMode = RequestHandler.Database.Configuration.Indexing.DefaultIndexResetMode;
+        var indexResetMode = RequestHandler.Database.Configuration.Indexing.ResetMode;
 
         if (indexResetModeQueryParam is not null)
             indexResetMode = Enum.Parse<IndexResetMode>(indexResetModeQueryParam);
