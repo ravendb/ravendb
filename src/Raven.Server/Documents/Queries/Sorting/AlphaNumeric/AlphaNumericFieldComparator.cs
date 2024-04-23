@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
             {
                 CurrentSequenceStartPosition = GetStartPosition();
                 Span<char> characters = stackalloc char[4];
-                var (usedBytes, usedChars) = ReadCharacter(CurrentPositionInString, characters);
+                var (usedBytes, usedChars) = ReadCharacter(StringBufferOffset, characters);
                 _currentSequenceIsNumber =  usedChars == 1 && char.IsDigit(characters[0]);
                 NumberLength = 0;
 
@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
                     if (CurrentPositionInString < _stringLength)
                     {
-                        (usedBytes, usedChars) = ReadCharacter(CurrentPositionInString, characters);
+                        (usedBytes, usedChars) = ReadCharacter(StringBufferOffset, characters);
                         currentCharacterIsDigit = usedChars == 1 && char.IsDigit(characters[0]);
                     }
                     else
