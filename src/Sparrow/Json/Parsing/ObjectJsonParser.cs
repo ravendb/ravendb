@@ -8,6 +8,7 @@ using System.Linq;
 using Sparrow.Collections;
 using Sparrow.Extensions;
 using Sparrow.Utils;
+using static Sparrow.DisposableExceptions;
 
 namespace Sparrow.Json.Parsing
 {
@@ -219,7 +220,7 @@ namespace Sparrow.Json.Parsing
         }
     }
 
-    public sealed unsafe class ObjectJsonParser : IJsonParser
+    public sealed unsafe class ObjectJsonParser : IJsonParser, IDisposableQueryable
     {
         private readonly JsonParserState _state;
         private readonly JsonOperationContext _ctx;
@@ -253,8 +254,12 @@ namespace Sparrow.Json.Parsing
 
         public void Dispose()
         {
+            // We may not want to execute `.Dispose()` more than once in release, but we want to fail fast in debug if it happens.
+            ThrowIfDisposedOnDebug(this);
+
             if (_disposed)
                 return;
+            
             _disposed = true;
             if (_currentStateBuffer != null)
                 _ctx.ReturnMemory(_currentStateBuffer);
@@ -262,8 +267,7 @@ namespace Sparrow.Json.Parsing
 
         public bool Read()
         {
-            if (_disposed)
-                ThrowOnDisposed();
+            ThrowIfDisposed(this);
 
             if (_elements.Count == 0)
                 throw new EndOfStreamException();
@@ -692,5 +696,7 @@ namespace Sparrow.Json.Parsing
             var last = _elements.LastOrDefault();
             return last?.ToString() ?? string.Empty;
         }
+
+        bool IDisposableQueryable.IsDisposed => _disposed;
     }
 }

@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Diagnostics;
+
+#if NET6_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+#endif
 
 namespace Sparrow;
 
-public static class DisposableException
+internal static class DisposableExceptions
 {
     [Conditional("DEBUG")]
     public static void ThrowIfDisposedOnDebug<T>(
@@ -26,7 +29,7 @@ public static class DisposableException
 #endif
         string paramName = null) where T : IDisposableQueryable
     {
-        if (disposable.IsDisposed)
+        if (disposable?.IsDisposed ?? false)
         {
 #if !NET6_0_OR_GREATER
             paramName ??= disposable.GetType().Name;
@@ -35,6 +38,9 @@ public static class DisposableException
         }
     }
 
+#if NET6_0_OR_GREATER
+    [DoesNotReturn]
+#endif
     public static void Throw<T>(
         T disposable, string message = "The object has already been disposed.",
 #if NET6_0_OR_GREATER

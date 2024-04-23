@@ -2,13 +2,17 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Sparrow;
 using Sparrow.Server;
 using Voron.Data.Compression;
 using Voron.Impl;
 
+using static Sparrow.DisposableExceptions;
+using static Sparrow.PortableExceptions;
+
 namespace Voron.Data.BTrees
 {
-    public sealed unsafe class TreeIterator : IIterator
+    public sealed unsafe class TreeIterator : IIterator, IDisposableQueryable
     {
         private readonly Tree _tree;
         private readonly LowLevelTransaction _tx;
@@ -16,7 +20,9 @@ namespace Voron.Data.BTrees
 
         private TreeCursor _cursor;
         private TreePage _currentPage;
-        private bool _disposed;
+        
+        private bool _isDisposed;
+        bool IDisposableQueryable.IsDisposed => _isDisposed;
 
         private DecompressedLeafPage _decompressedPage;
 
@@ -36,19 +42,18 @@ namespace Voron.Data.BTrees
 
         public int GetCurrentDataSize()
         {
-            if (_disposed)
-                throw new ObjectDisposedException("TreeIterator " + _tree.Name);
+            ThrowIfDisposedOnDebug(this, "TreeIterator " + _tree.Name);
             return _tree.GetDataSize(Current);
         }
 
         public bool Seek(Slice key)
         {
-            if (_disposed)
-                throw new ObjectDisposedException("TreeIterator " + _tree.Name);
+            ThrowIfDisposedOnDebug(this, "TreeIterator " + _tree.Name);
 
-            TreeNodeHeader* node;
-            TreeCursorConstructor constructor;
-            _currentPage = _tree.FindPageFor(key, node: out node, cursor: out constructor, allowCompressed: _tree.IsLeafCompressionSupported);
+            _currentPage = _tree.FindPageFor(key, node: out TreeNodeHeader* node, 
+                cursor: out TreeCursorConstructor constructor,
+                allowCompressed: _tree.IsLeafCompressionSupported);
+            
             if (_currentPage.IsCompressed)
             {
                 DecompressedCurrentPage();
@@ -81,14 +86,12 @@ namespace Voron.Data.BTrees
         {
             get
             {
-                if (_disposed)
-                    throw new ObjectDisposedException("TreeIterator " + _tree.Name);
+                ThrowIfDisposedOnDebug(this, "TreeIterator " + _tree.Name);
 
-                if (_currentPage == null)
-                    throw new InvalidOperationException("No current page was set");
-
-                if (_currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
-                    throw new InvalidOperationException(string.Format("Current page is invalid. Search position ({0}) exceeds number of entries ({1}). Page: {2}.", _currentPage.LastSearchPosition, _currentPage.NumberOfEntries, _currentPage));
+                ThrowIfNull<InvalidOperationException>(_currentPage, "No current page was set");
+                ThrowIf<InvalidOperationException>(_currentPage.LastSearchPosition >= _currentPage.NumberOfEntries,
+                    $"Current page is invalid. Search position ({_currentPage.LastSearchPosition}) exceeds number of entries ({_currentPage.NumberOfEntries}). " +
+                    $"Page: {_currentPage}.");
 
                 return _currentKey;
             }
@@ -99,23 +102,21 @@ namespace Voron.Data.BTrees
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                if (_disposed)
-                    throw new ObjectDisposedException("TreeIterator " + _tree.Name);
+                ThrowIfDisposedOnDebug(this, "TreeIterator " + _tree.Name);
 
-                if (_currentPage == null)
-                    throw new InvalidOperationException("No current page was set");
-
-                if (_currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
-                    throw new InvalidOperationException(string.Format("Current page is invalid. Search position ({0}) exceeds number of entries ({1}). Page: {2}.", _currentPage.LastSearchPosition, _currentPage.NumberOfEntries, _currentPage));
-
+                ThrowIfNull<InvalidOperationException>(_currentPage, "No current page was set");
+                ThrowIf<InvalidOperationException>(_currentPage.LastSearchPosition >= _currentPage.NumberOfEntries,
+                    $"Current page is invalid. Search position ({_currentPage.LastSearchPosition}) exceeds number of entries ({_currentPage.NumberOfEntries}). " +
+                    $"Page: {_currentPage}.");
+                
                 return _currentPage.GetNode(_currentPage.LastSearchPosition);
             }
         }
 
         public bool MovePrev()
         {
-            if (_disposed)
-                throw new ObjectDisposedException("TreeIterator " + _tree.Name);
+            ThrowIfDisposedOnDebug(this, "TreeIterator " + _tree.Name);
+            
             while (true)
             {
                 _currentPage.LastSearchPosition--;
@@ -168,8 +169,7 @@ namespace Voron.Data.BTrees
 
         public bool MoveNext()
         {
-            if (_disposed)
-                throw new ObjectDisposedException("TreeIterator " + _tree.Name);
+            ThrowIfDisposedOnDebug(this, "TreeIterator " + _tree.Name);
 
             while (_currentPage != null)
             {
@@ -241,9 +241,13 @@ namespace Voron.Data.BTrees
 
         public void Dispose()
         {
-            if (_disposed)
+            // We may not want to execute `.Dispose()` more than once in release, but we want to fail fast in debug if it happens.
+            ThrowIfDisposedOnDebug(this);
+            if (_isDisposed)
                 return;
-            _disposed = true;
+            
+            _isDisposed = true;
+            
             if (RequiredPrefix.HasValue)
                 RequiredPrefix.Release(_tx.Allocator);
             if (MaxKey.HasValue)
@@ -252,6 +256,9 @@ namespace Voron.Data.BTrees
             _cursor?.Dispose();
             _decompressedPage?.Dispose();
             OnDisposal?.Invoke(this);
+
+            // We want most operations to fail even if we are only checking disposed on debug. 
+            _currentPage = null;
         }
 
 
@@ -311,8 +318,7 @@ namespace Voron.Data.BTrees
 
         public static unsafe bool ValidateCurrentKey<T>(this T self, LowLevelTransaction tx, TreeNodeHeader* node) where T : IIterator
         {
-            Slice currentKey;
-            using (TreeNodeHeader.ToSlicePtr(tx.Allocator, node, out currentKey))
+            using (TreeNodeHeader.ToSlicePtr(tx.Allocator, node, out Slice currentKey))
             {
                 if (self.RequiredPrefix.HasValue)
                 {

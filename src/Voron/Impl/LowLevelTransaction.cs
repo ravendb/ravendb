@@ -34,7 +34,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl
 {
-    public sealed unsafe class LowLevelTransaction : IPagerLevelTransactionState
+    public sealed unsafe class LowLevelTransaction : IPagerLevelTransactionState, IDisposableQueryable
     {
         public readonly AbstractPager DataPager;
         private readonly StorageEnvironment _env;
