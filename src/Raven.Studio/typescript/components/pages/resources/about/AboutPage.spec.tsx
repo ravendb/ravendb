@@ -107,7 +107,7 @@ describe("AboutPage", function () {
 
             expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
             expect(screen.queryByText(selectors.versions.usingLatest)).not.toBeInTheDocument();
-            expect(screen.queryByText(selectors.versions.whatsNew)).toBeInTheDocument();
+            expect(await screen.findByText(selectors.versions.whatsNew)).toBeInTheDocument();
 
             await fireClick(screen.queryByText(selectors.versions.whatsNew));
 
@@ -217,7 +217,7 @@ const selectors = {
     },
     versions: {
         usingLatest: /You are using the latest version/,
-        whatsNew: /What's New\?/,
+        whatsNew: /What's new\?/,
         updateInstructions: /Update instructions/,
         close: "Close",
         changelog: /Changelog/,

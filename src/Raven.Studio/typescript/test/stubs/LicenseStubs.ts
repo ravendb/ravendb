@@ -151,21 +151,21 @@ export class LicenseStubs {
             BuildCompatibilitiesForLatestMajorMinor: [
                 LicenseStubs.buildCompatibilityInfo("6.0.100"),
                 LicenseStubs.buildCompatibilityInfo("6.0.8"),
-                LicenseStubs.buildCompatibilityInfo("6.0.7"),
+                LicenseStubs.buildCompatibilityInfo("6.0.7", false),
             ],
             BuildCompatibilitiesForUserMajorMinor: [
                 LicenseStubs.buildCompatibilityInfo("6.0.5"),
-                LicenseStubs.buildCompatibilityInfo("6.0.0"),
+                LicenseStubs.buildCompatibilityInfo("6.0.0", false),
             ],
             TotalBuildsForLatestMajorMinor: 3,
             TotalBuildsForUserMajorMinor: 2,
         };
     }
 
-    private static buildCompatibilityInfo(fullVersion = "6.0.100"): BuildCompatibilityInfo {
+    private static buildCompatibilityInfo(fullVersion = "6.0.100", canChange: boolean = true): BuildCompatibilityInfo {
         return {
-            CanDowngradeFollowingUpgrade: true,
-            CanUpgrade: true,
+            CanDowngradeFollowingUpgrade: canChange,
+            CanUpgrade: canChange,
             ChangelogHtml: `<h3>Breaking changes</h3>
 <ul>
     <li><code>[Backups]</code> compression algorithm was changes from gzip/deflate to zstd, which might introduce some backward compatibility concerns. </li>

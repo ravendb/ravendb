@@ -28,13 +28,6 @@ export function SupportDetails(props: SupportDetailsProps) {
     const support = useAppSelector(licenseSelectors.support);
     const supportType = licenseModel.supportLabelProvider(license, support);
     const isPaidSupport = ["Professional", "Production", "Partial"].includes(supportType);
-    const requestSupportBtnHandler = () => {
-        {
-            isCloud
-                ? window.open(`https://cloud.ravendb.net/portal`, "_blank")
-                : window.open(`https://ravendb.net/support/supportrequest?licenseId=${licenseId}`, "_blank");
-        }
-    };
 
     const upgradeLink = isCloud ? aboutPageUrls.upgradeSupport.cloud : aboutPageUrls.upgradeSupport.onPremise;
 
@@ -169,7 +162,12 @@ export function SupportDetails(props: SupportDetailsProps) {
                                             <Button
                                                 className="rounded-pill"
                                                 color={isCloud ? "cloud" : "primary"}
-                                                onClick={() => requestSupportBtnHandler()}
+                                                href={
+                                                    isCloud
+                                                        ? aboutPageUrls.cloudPortal
+                                                        : aboutPageUrls.supportRequest(licenseId)
+                                                }
+                                                target="_blank"
                                             >
                                                 <Icon icon="notifications" /> Request support
                                             </Button>

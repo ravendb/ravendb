@@ -9,7 +9,6 @@ import {
 import { services } from "components/hooks/useServices";
 import { loadStatus } from "components/models/common";
 import { RootState } from "components/store";
-import database from "models/resources/database";
 
 export interface ConflictResolutionCollectionConfig {
     id: string;

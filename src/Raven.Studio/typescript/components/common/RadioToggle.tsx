@@ -2,6 +2,7 @@ import React, { ReactNode, useEffect } from "react";
 import classNames from "classnames";
 import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
+import "./Toggles.scss";
 
 export interface RadioToggleWithIconInputItem<T extends string | number | boolean = string> {
     label: string | ReactNode | ReactNode[];

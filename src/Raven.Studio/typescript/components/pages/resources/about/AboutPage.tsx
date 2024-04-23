@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useState } from "react";
+﻿import React, { useState } from "react";
 import { Badge, Card, Col, Row, TabContent, TabPane } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import "./AboutPage.scss";
@@ -30,13 +30,13 @@ export function AboutPage() {
     const [activeTab, setActiveTab] = useState<"license" | "support">("license");
     const [changeLogMode, setChangeLogMode] = useState<"whatsNew" | "changeLog" | "hidden">("hidden");
 
-    const refreshLatestVersion = useCallback(async () => {
+    const refreshLatestVersion = async () => {
         await asyncFetchLatestVersion.execute(true);
-    }, []);
+    };
 
-    const refreshLicenseServerConnectivity = useCallback(async () => {
+    const refreshLicenseServerConnectivity = async () => {
         await asyncCheckLicenseServerConnectivity.execute();
-    }, []);
+    };
 
     return (
         <div className="d-flex flex-column">

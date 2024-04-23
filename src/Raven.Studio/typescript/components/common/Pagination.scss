@@ -13,7 +13,9 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            transition: color 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms, background-color 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;
+            transition:
+                color 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms,
+                background-color 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;
             border-radius: sizes.$border-radius !important;
             &.nav-arrow-btn {
                 background: transparent;
@@ -24,7 +26,8 @@
                 i {
                     top: 1px;
                 }
-                &:hover, &:focus {
+                &:hover,
+                &:focus {
                     background-color: colors.$panel-bg-1-var;
                     color: colors.$text-color-var !important;
                 }

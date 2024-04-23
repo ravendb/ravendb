@@ -1,24 +1,25 @@
 ﻿import { Card, CardBody } from "reactstrap";
 import { Icon } from "components/common/Icon";
-import React, { MouseEventHandler } from "react";
+import React, { useState } from "react";
 import appUrl from "common/appUrl";
-import router from "plugins/router";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import registration from "viewmodels/shell/registration";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import app from "durandal/app";
-import createDatabase from "viewmodels/resources/createDatabase";
 import { withPreventDefault } from "components/utils/common";
+import CreateDatabase, {
+    CreateDatabaseMode,
+} from "components/pages/resources/databases/partials/create/CreateDatabase";
 
 export function PassiveState() {
     const isPassive = useAppSelector(clusterSelectors.isPassive);
     const licenseStatus = useAppSelector(licenseSelectors.status);
     const licenseRegistered = useAppSelector(licenseSelectors.licenseRegistered);
+    const [createDatabaseMode, setCreateDatabaseMode] = useState<CreateDatabaseMode>(null);
+
     const registerLicense = () => registration.showRegistrationDialog(licenseStatus, false, true);
     const newDatabase = () => {
-        const createDbView = new createDatabase("newDatabase");
-        app.showBootstrapDialog(createDbView);
+        setCreateDatabaseMode("regular");
     };
 
     if (!isPassive) {
@@ -55,6 +56,9 @@ export function PassiveState() {
                         (or add another node, resulting in both nodes being part of the cluster)
                     </li>
                 </ul>
+                {createDatabaseMode && (
+                    <CreateDatabase closeModal={() => setCreateDatabaseMode(null)} initialMode={createDatabaseMode} />
+                )}
             </CardBody>
         </Card>
     );
