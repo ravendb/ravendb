@@ -22,13 +22,6 @@ export function SupportSummary(props: SupportSummaryProps) {
     const uniqueId = useId("supportConnectivityException");
     const { asyncCheckLicenseServerConnectivity } = props;
     const isPaidSupport = ["Professional", "Production", "Partial"].includes(supportType);
-    const requestSupportBtnHandler = () => {
-        {
-            isCloud
-                ? window.open(`https://cloud.ravendb.net/portal`, "_blank")
-                : window.open(`https://ravendb.net/support/supportrequest?licenseId=${licenseId}`, "_blank");
-        }
-    };
 
     const hideSupportStatus =
         asyncCheckLicenseServerConnectivity.status === "error" ||
@@ -63,9 +56,10 @@ export function SupportSummary(props: SupportSummaryProps) {
                     <Col className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
                         {isPaidSupport && (
                             <Button
+                                href={isCloud ? aboutPageUrls.cloudPortal : aboutPageUrls.supportRequest(licenseId)}
+                                target="_blank"
                                 className="rounded-pill"
                                 color={isCloud ? "cloud" : "primary"}
-                                onClick={() => requestSupportBtnHandler()}
                             >
                                 <Icon icon="notifications" /> Request support
                             </Button>

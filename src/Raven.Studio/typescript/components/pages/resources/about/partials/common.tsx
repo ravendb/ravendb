@@ -35,7 +35,9 @@ export const aboutPageUrls = {
     getLicense: "https://ravendb.net/buy",
     supportTerms: "https://ravendb.net/terms",
     cloudSupportTerms: "https://cloud.ravendb.net/terms",
+    cloudPortal: "https://cloud.ravendb.net/portal",
     askCommunity: "https://ravendb.net/l/ITXUEA",
+    supportRequest: (licenseId: string) => "https://ravendb.net/support/supportrequest?licenseId=" + licenseId,
     social: {
         facebook: "https://www.facebook.com/profile.php?id=100063550929698",
         x: "https://twitter.com/ravendb",
