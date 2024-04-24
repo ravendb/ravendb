@@ -1,16 +1,7 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.ExceptionServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide;
-using Sparrow.Logging;
-using Sparrow.Server;
-using Sparrow.Utils;
-using static Raven.Server.Documents.DatabasesLandlord;
 
 namespace Raven.Server.Documents;
 
@@ -31,6 +22,8 @@ public class DatabaseRaftIndexNotifications : AbstractRaftIndexNotifications<Raf
 
     public override void NotifyListenersAbout(long index, Exception e)
     {
+        _clusterStateMachineLogIndexNotifications.NotifyListenersAbout(index, e);
+
         RecordNotification(new RaftIndexNotification
         {
             Index = index,
@@ -39,5 +32,4 @@ public class DatabaseRaftIndexNotifications : AbstractRaftIndexNotifications<Raf
 
         base.NotifyListenersAbout(index, e);
     }
-
 }
