@@ -256,8 +256,7 @@ namespace Raven.Server.Rachis
                                 continue;
                             }
 
-
-                            _engine.ForTestingPurposes?.BeforeCastingForRealElection();
+                            _engine.ForTestingPurposes?.ReleaseOnLeaderElect();
 
                             HandleVoteResult result;
                             using (context.OpenWriteTransaction())
