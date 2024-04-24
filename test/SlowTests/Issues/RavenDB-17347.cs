@@ -41,9 +41,9 @@ namespace SlowTests.Issues
 
             (var nodes, var leader) = await CreateRaftCluster(3, shouldRunInMemory: false, watcherCluster: true);
 
-            leader.ServerStore.Engine.ForTestingPurposes = new RachisConsensus.TestingStuff()
+            leader.ServerStore.Engine.ForTestingPurposes = new RachisConsensus.TestingStuff
             {
-                Mre = null
+                NodeTagsToDisconnect = new List<string>()
             };
 
             using var store = GetDocumentStore(new Options { RunInMemory = false, Server = leader, ReplicationFactor = 2 });

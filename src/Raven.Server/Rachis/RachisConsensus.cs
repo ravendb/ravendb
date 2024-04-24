@@ -111,7 +111,7 @@ namespace Raven.Server.Rachis
             if (_serverStore.Initialized == false)
                 throw new InvalidOperationException("Server store isn't initialized.");
 
-            if (ForTestingPurposes!=null && ForTestingPurposes.NodeTagsToDisconnect.Contains(tag))
+            if (ForTestingPurposes?.NodeTagsToDisconnect?.Contains(tag) == true)
             {
                 throw new InvalidOperationException($"Exception was thrown for disconnecting  node {tag} - For testing purposes.");
             }
@@ -765,36 +765,31 @@ namespace Raven.Server.Rachis
 
             internal LeaderLockDebug LeaderLock;
 
-            internal ManualResetEventSlim Mre = new ManualResetEventSlim(false);
+            internal ManualResetEventSlim HoldOnLeaderElect;
 
-            internal List<string> NodeTagsToDisconnect { get; set; } = new List<string>();
+            internal List<string> NodeTagsToDisconnect;
 
             public void OnLeaderElect()
             {
-                if (Mre == null)
+                if (HoldOnLeaderElect == null)
                     return;
 
-                Mre.Reset();
-                if (Mre.Wait(TimeSpan.FromSeconds(60)) == false)
+                HoldOnLeaderElect.Reset();
+                if (HoldOnLeaderElect.Wait(TimeSpan.FromSeconds(15)) == false)
                 {
                     throw new TimeoutException("Something is wrong, throwing to avoid hanging");
                 }
-                Mre.Reset();
+                HoldOnLeaderElect.Reset();
             }
 
-            public void BeforeCastingForRealElection()
+            public void ReleaseOnLeaderElect()
             {
-                Mre?.Set();
-            }
-
-            public void LeaderDispose()
-            {
-                Mre?.Set();
+                HoldOnLeaderElect?.Set();
             }
 
             public void BeforeNegotiatingWithFollower()
             {
-                if (Mre?.Wait(TimeSpan.FromSeconds(60)) == false)
+                if (HoldOnLeaderElect?.Wait(TimeSpan.FromSeconds(15)) == false)
                 {
                     throw new TimeoutException("Something is wrong, throwing to avoid hanging");
                 }
