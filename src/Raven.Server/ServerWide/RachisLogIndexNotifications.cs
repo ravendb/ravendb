@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Logging;
@@ -85,7 +82,7 @@ public class RachisLogIndexNotifications : AbstractRaftIndexNotifications<Recent
         return false;
     }
 
-    public void SetTaskCompleted(long index, Exception e)
+    private void SetTaskCompleted(long index, Exception e)
     {
         if (_tasksDictionary.TryGetValue(index, out var tcs))
         {
@@ -109,6 +106,12 @@ public class RachisLogIndexNotifications : AbstractRaftIndexNotifications<Recent
         }
 
         _tasksDictionary.TryRemove(index, out _);
+    }
+
+    public override void NotifyListenersAbout(long index, Exception e)
+    {
+        SetTaskCompleted(index, e);
+        base.NotifyListenersAbout(index, e);
     }
 
     public void AddTask(long index)

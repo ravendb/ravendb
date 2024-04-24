@@ -41,38 +41,53 @@ namespace RachisTests
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var leader = await CreateNetworkAndGetLeader(2);
             var follower = GetFollowers().Single();
-
-            leader.ForTestingPurposesOnly();
-            follower.ForTestingPurposesOnly();
-
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            
             DisconnectBiDirectionalFromNode(leader);
 
-            await leader.WaitForState(RachisState.Candidate, CancellationToken.None);
-            await follower.WaitForState(RachisState.Candidate, CancellationToken.None);
+            using (leader.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+            using (var tx = ctx.OpenWriteTransaction())
+            {
+                leader.SetNewStateInTx(ctx, RachisState.LeaderElect, null, leader.CurrentTerm, "append an extra entry so only me can be leader");
+                tx.Commit();
+            }
+            
+            var mre1 = new ManualResetEventSlim(false);
+            var mre2 = new ManualResetEventSlim(false);
 
-            var le1 = leader.WaitForState(RachisState.LeaderElect, CancellationToken.None);
-            var le2 = follower.WaitForState(RachisState.LeaderElect, CancellationToken.None);
+            leader.ForTestingPurposesOnly().HoldOnLeaderElect = mre1;
+            follower.ForTestingPurposesOnly().HoldOnLeaderElect = mre2;
+
+            await leader.WaitForState(RachisState.Candidate, cts.Token);
+            await follower.WaitForState(RachisState.Candidate, cts.Token);
+
+            var le1 = leader.WaitForState(RachisState.LeaderElect, cts.Token);
+            var le2 = follower.WaitForState(RachisState.LeaderElect, cts.Token);
 
             ReconnectBiDirectionalFromNode(leader);
+            
+            while (le1.IsCompleted == false && le2.IsCompleted == false)
+            {
+                mre1.Set();
+                mre2.Set();
+                await Task.Delay(100, cts.Token);
+            }
 
             await Task.WhenAny(le1, le2);
 
-            await leader.WaitForState(RachisState.Candidate, CancellationToken.None);
-            await follower.WaitForState(RachisState.Candidate, CancellationToken.None);
+            await leader.WaitForState(RachisState.Candidate, cts.Token);
+            await follower.WaitForState(RachisState.Candidate, cts.Token);
 
-
-            var mre1 = leader.ForTestingPurposesOnly().Mre;
-            leader.ForTestingPurposesOnly().Mre = null;
+            leader.ForTestingPurposesOnly().HoldOnLeaderElect = null;
             mre1.Set();
 
-            var mre2 = follower.ForTestingPurposesOnly().Mre;
-            follower.ForTestingPurposesOnly().Mre = null;
+            follower.ForTestingPurposesOnly().HoldOnLeaderElect = null;
             mre2.Set();
 
             var lastIndex = await IssueCommandsAndWaitForCommit(3, "test", 1);
 
-            var t1 = leader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
-            var t2 = follower.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
+            var t1 = leader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex, token: cts.Token);
+            var t2 = follower.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex, token: cts.Token);
             if (await Task.WhenAll(t1, t2).WaitWithoutExceptionAsync(5000) == false)
             {
                 throw new TimeoutException();
@@ -249,7 +264,6 @@ namespace RachisTests
             foreach (var follower in RachisConsensuses)
             {
                 follower.ForTestingPurposesOnly().CreateLeaderLock(flag);
-                follower.ForTestingPurposes.Mre = null;
             }
 
             firstLeader.CurrentLeader.StepDown(forceElection: false);

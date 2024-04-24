@@ -769,7 +769,7 @@ namespace Raven.Server.Rachis
                     if (_leaderLongRunningWork != null && _leaderLongRunningWork.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
                         _leaderLongRunningWork.Join(int.MaxValue);
 
-                    _engine.ForTestingPurposes?.LeaderDispose();
+                    _engine.ForTestingPurposes?.ReleaseOnLeaderElect();
 
                     var ae = new ExceptionAggregator("Could not properly dispose Leader");
                     foreach (var ambassador in _nonVoters)

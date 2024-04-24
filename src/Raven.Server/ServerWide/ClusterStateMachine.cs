@@ -1428,7 +1428,6 @@ namespace Raven.Server.ServerWide
                                 finally
                                 {
                                     _rachisLogIndexNotifications.NotifyListenersAbout(index, error);
-                                    _rachisLogIndexNotifications.SetTaskCompleted(index, error);
                                 }
                             }
                         });
@@ -1442,11 +1441,10 @@ namespace Raven.Server.ServerWide
             try
             {
                 _rachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                _rachisLogIndexNotifications.SetTaskCompleted(index, null);
             }
             catch (OperationCanceledException e)
             {
-                _rachisLogIndexNotifications.SetTaskCompleted(index, e);
+                _rachisLogIndexNotifications.NotifyListenersAbout(index, e);
             }
         }
 
@@ -2656,7 +2654,6 @@ namespace Raven.Server.ServerWide
                 finally
                 {
                     _rachisLogIndexNotifications.NotifyListenersAbout(index, error);
-                    _rachisLogIndexNotifications.SetTaskCompleted(index, error);
                 }
             });
         }

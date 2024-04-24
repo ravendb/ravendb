@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Nito.AsyncEx;
@@ -13,7 +10,7 @@ using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
-public class RavenDB_22217: RavenTestBase
+public class RavenDB_22217 : RavenTestBase
 {
     public RavenDB_22217(ITestOutputHelper output) : base(output)
     {
