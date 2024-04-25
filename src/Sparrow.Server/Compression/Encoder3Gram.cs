@@ -2,11 +2,14 @@ using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Server.Binary;
 using Sparrow.Server.Collections.Persistent;
+using static Sparrow.PortableExceptions;
 
 namespace Sparrow.Server.Compression
 {
@@ -319,7 +322,7 @@ namespace Sparrow.Server.Compression
         {
             return Decode(data.Length * 8, data, outputBuffer);
         }
-
+        
         [SkipLocalsInit]
         public int Decode(int bits, ReadOnlySpan<byte> data, Span<byte> outputBuffer)
         {
@@ -333,41 +336,42 @@ namespace Sparrow.Server.Compression
             int readerBitIdx = 0;
 
             byte* auxBuffer = stackalloc byte[4];
+            
             nuint offset = 0;
             while (readerBitIdx < bitStreamLength)
             {
                 readerBitIdx = tree.FindCommonPrefix(ref dataRef, bitStreamLength, readerBitIdx, out var idx);
-                if (readerBitIdx == -1)
-                    goto Fail;
 
-                var p = Unsafe.AddByteOffset(ref tableRef, (IntPtr) (idx * Unsafe.SizeOf<Interval3Gram>()));
+                ThrowIf<InvalidDataException>(readerBitIdx == -1, "Invalid data stream.");
+                ThrowIfOnDebug<InvalidDataException>(readerBitIdx > bitStreamLength);
+
+                var p = Unsafe.AddByteOffset(ref tableRef, idx * Unsafe.SizeOf<Interval3Gram>());
 
                 int prefixLength = p.PrefixLength;
+
+                ThrowIfOnDebug<ArgumentOutOfRangeException>(prefixLength is < 1 or > 3, $"{nameof(prefixLength)} must not be larger that 3 or smaller than 1");
+
                 *(uint*)auxBuffer = p.BufferAndLength;
-
-                if (prefixLength == 1)
+                switch (prefixLength)
                 {
-                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset), auxBuffer[0]);
+                    case 3:
+                        Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset + 2), auxBuffer[2]);
+                        goto case 2;
+                    case 2:
+                        Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset + 1), auxBuffer[1]);
+                        goto case 1;
+                    case 1:
+                        Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset), auxBuffer[0]);
+                        break;
+                    default:
+                        Throw<InvalidDataException>("Invalid data stream.");
+                        break;
                 }
-                else if (prefixLength == 2)
-                {
-                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset), auxBuffer[0]);
-                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset+1), auxBuffer[1]);
-                }
-                else
-                {
-                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset), auxBuffer[0]);
-                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset+1), auxBuffer[1]);
-                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset+2), auxBuffer[2]);
-                }
-
+                
                 offset += (nuint)prefixLength;
             }
 
             return (int)offset;
-
-            Fail:
-            throw new IOException("Invalid data stream.");
         }
 
         public int NumberOfEntries
