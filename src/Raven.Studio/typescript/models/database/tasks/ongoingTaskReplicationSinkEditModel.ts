@@ -51,7 +51,7 @@ class ongoingTaskReplicationSinkEditModel extends ongoingTaskEditModel {
         this.connectionStringName(dto.ConnectionStringName);
         this.manualChooseMentor(!!dto.MentorNode);
         this.pinMentorNode(dto.PinToMentorNode);
-        this.hubName(dto.HubDefinitionName);
+        this.hubName(dto.HubName);
 
         this.allowReplicationFromHubToSink(dto.Mode.includes("HubToSink"));
         this.allowReplicationFromSinkToHub(dto.Mode.includes("SinkToHub"));
@@ -110,7 +110,7 @@ class ongoingTaskReplicationSinkEditModel extends ongoingTaskEditModel {
         });
         
         this.validationGroup = ko.validatedObservable({
-            hubDefinitionName: this.hubName,
+            hubName: this.hubName,
             mentorNode: this.mentorNode,
             connectionStringName: this.connectionStringName
         });
@@ -124,7 +124,7 @@ class ongoingTaskReplicationSinkEditModel extends ongoingTaskEditModel {
             AccessName: "",
             AllowedHubToSinkPaths: null,
             AllowedSinkToHubPaths: null,
-            HubDefinitionName: "",
+            HubName: "",
             Mode: "HubToSink"
         } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink, serverCertificate);
     }
