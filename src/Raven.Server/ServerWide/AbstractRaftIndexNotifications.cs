@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
@@ -15,7 +14,7 @@ where TNotification : RaftIndexNotification
 {
     public long LastModifiedIndex;
     protected readonly ConcurrentQueue<ErrorHolder> _errors = new ConcurrentQueue<ErrorHolder>();
-    private readonly Queue<TNotification> _recentNotifications = new Queue<TNotification>();
+    private readonly ConcurrentQueue<TNotification> _recentNotifications = new ConcurrentQueue<TNotification>();
     private readonly AsyncManualResetEvent _notifiedListeners;
     private int _numberOfErrors;
 
