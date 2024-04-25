@@ -20,7 +20,7 @@ public struct FieldsCache
         _fieldsTree = fieldsTree;
     }
 
-    public long GetFieldRootPage(Slice name, Tree tree)
+    public long GetFieldRootPage(in Slice name, Tree tree)
     {
         _fieldNameToRootPage ??= new();
 
@@ -43,7 +43,7 @@ public struct FieldsCache
         return GetLookupRootPage(slice);
     }
     
-    public long GetLookupRootPage(Slice name)
+    public long GetLookupRootPage(in Slice name)
     {
         return _fieldsTree?.GetLookupRootPage(name) ?? -1;
     }

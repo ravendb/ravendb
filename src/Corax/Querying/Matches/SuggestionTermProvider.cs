@@ -152,7 +152,7 @@ namespace Corax.Querying.Matches
             }
         }
 
-        public static SuggestionTermProvider<TDistanceProvider> YieldSuggestions(Querying.IndexSearcher searcher, int fieldId, Slice term, IndexFieldBinding binding, TDistanceProvider distanceProvider, bool sortByPopularity, float distance, int take = -1)
+        public static SuggestionTermProvider<TDistanceProvider> YieldSuggestions(Querying.IndexSearcher searcher, int fieldId, in Slice term, IndexFieldBinding binding, TDistanceProvider distanceProvider, bool sortByPopularity, float distance, int take = -1)
         {
             return new SuggestionTermProvider<TDistanceProvider>(searcher, fieldId, term, binding, take, sortByPopularity, distance, distanceProvider);
         }       

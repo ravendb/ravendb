@@ -41,7 +41,7 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
     private double _yShapeCenter;
     
 
-    public SpatialMatch(Querying.IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, FieldMetadata field, IShape shape,
+    public SpatialMatch(Querying.IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, in FieldMetadata field, IShape shape,
         CompactTree tree,
         double errorInPercentage, Utils.Spatial.SpatialRelation spatialRelation, CancellationToken token)
     {

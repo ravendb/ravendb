@@ -19,7 +19,7 @@ public struct RegexTermProvider<TLookupIterator> : ITermProvider
 
     private CompactTree.Iterator<TLookupIterator> _iterator;
 
-    public RegexTermProvider(Querying.IndexSearcher searcher, CompactTree tree, FieldMetadata field, Regex regex)
+    public RegexTermProvider(Querying.IndexSearcher searcher, CompactTree tree, in FieldMetadata field, Regex regex)
     {
         _searcher = searcher;
         _regex = regex;

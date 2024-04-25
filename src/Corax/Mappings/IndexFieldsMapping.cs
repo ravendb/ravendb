@@ -45,7 +45,7 @@ public sealed class IndexFieldsMapping : IEnumerable<IndexFieldBinding>, IDispos
 
     public bool ContainsField(string fieldName) => _fieldsByString.ContainsKey(fieldName);
     
-    public bool TryGetByFieldName(Slice fieldName, out IndexFieldBinding binding) => _fields.TryGetValue(fieldName, out binding);
+    public bool TryGetByFieldName(in Slice fieldName, out IndexFieldBinding binding) => _fields.TryGetValue(fieldName, out binding);
 
     public bool TryGetByFieldId(int fieldId, out IndexFieldBinding binding) => _fieldsById.TryGetValue(fieldId, out binding);
 

@@ -18,7 +18,7 @@ namespace Corax.Querying.Matches.TermProviders
         private readonly FieldMetadata _field;
         private readonly FieldMetadata _exactField;
 
-        public InTermProvider(IndexSearcher searcher, FieldMetadata field, List<TTermsType> terms)
+        public InTermProvider(IndexSearcher searcher, in FieldMetadata field, List<TTermsType> terms)
         {
             _field = field;
             _exactField = field.ChangeAnalyzer(FieldIndexingMode.Exact);
