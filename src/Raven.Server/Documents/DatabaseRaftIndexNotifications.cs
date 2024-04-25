@@ -15,15 +15,22 @@ public class DatabaseRaftIndexNotifications : AbstractRaftIndexNotifications<Raf
         _clusterStateMachineLogIndexNotifications = clusterStateMachineLogIndexNotifications;
     }
 
-    public override Task<bool> WaitForTaskCompletion(long index, Lazy<Task> waitingTask)
+    public override async Task<bool> WaitForTaskCompletion(long index, Lazy<Task> waitingTask)
     {
-        return _clusterStateMachineLogIndexNotifications.WaitForTaskCompletion(index, waitingTask);
+        if (await _clusterStateMachineLogIndexNotifications.WaitForTaskCompletion(index, waitingTask) == false)
+            return false;
+
+        foreach (var error in _errors)
+        {
+            if (error.Index == index)
+                error.Exception.Throw(); // rethrow
+        }
+
+        return true;
     }
 
     public override void NotifyListenersAbout(long index, Exception e)
     {
-        _clusterStateMachineLogIndexNotifications.NotifyListenersAbout(index, e);
-
         RecordNotification(new RaftIndexNotification
         {
             Index = index,
