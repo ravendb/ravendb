@@ -9,7 +9,7 @@ class ongoingTaskReplicationSinkListModel extends ongoingTaskListModel {
     destinationURL = ko.observable<string>();
     connectionStringName = ko.observable<string>();
     topologyDiscoveryUrls = ko.observableArray<string>([]);
-    hubDefinitionName = ko.observable<string>();
+    hubName = ko.observable<string>();
 
     connectionStringDefined: KnockoutComputed<boolean>;
     
@@ -43,7 +43,7 @@ class ongoingTaskReplicationSinkListModel extends ongoingTaskListModel {
         this.destinationURL(dto.DestinationUrl || "N/A");
         this.connectionStringName(dto.ConnectionStringName);
         this.topologyDiscoveryUrls(dto.TopologyDiscoveryUrls);
-        this.hubDefinitionName(dto.HubDefinitionName);
+        this.hubName(dto.HubName);
     }
 
     toggleDetails() {
