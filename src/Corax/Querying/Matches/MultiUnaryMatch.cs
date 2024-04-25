@@ -7,6 +7,8 @@ using System.Runtime.InteropServices;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 using Corax.Utils;
+using Sparrow.Server;
+using Sparrow.Server.Utils.VxSort;
 using Voron;
 
 namespace Corax.Querying.Matches;
@@ -76,6 +78,8 @@ public unsafe struct MultiUnaryItem
 
     private MultiUnaryItem(FieldMetadata binding, DataType dataType, bool isBetween, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
     {
+        Debug.Assert(binding.FieldName.HasValue);
+        
         Unsafe.SkipInit(out DoubleValueLeft);
         Unsafe.SkipInit(out LongValueLeft);
         Unsafe.SkipInit(out SliceValueLeft);
@@ -95,9 +99,9 @@ public unsafe struct MultiUnaryItem
         SelectComparers(rightOperation, out _byteComparerRight, out _longComparerRight, out _doubleComparerRight, out _compareNullRight);
 
         void SelectComparers(UnaryMatchOperation operation, 
-            out delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, bool> byteComparerLeft,
-            out delegate*<long, long, bool> longComparerLeft,
-            out delegate*<double, double, bool> doubleComparerLeft,
+            out delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, bool> byteComparer,
+            out delegate*<long, long, bool> longComparer,
+            out delegate*<double, double, bool> doubleComparer,
             out delegate*<bool, bool> compareNull)
         {
             static bool AlwaysFalse(bool _) => false;
@@ -106,49 +110,53 @@ public unsafe struct MultiUnaryItem
             static bool FalseUnlessNull(bool isNull) => isNull;
             static bool TrueUnlessNull(bool isNull) => isNull == false;
 
+            static bool ThrowWhenUsed(bool isNull) =>
+                throw new InvalidOperationException("We do not have between operation however tried to compare right value. This indicates a bug.");
 
             switch (operation)
             {
                 case UnaryMatchOperation.LessThan:
-                    byteComparerLeft = &LessThanMatchComparer.Compare;
-                    longComparerLeft = &LessThanMatchComparer.Compare;
-                    doubleComparerLeft = &LessThanMatchComparer.Compare;
+                    byteComparer = &LessThanMatchComparer.Compare;
+                    longComparer = &LessThanMatchComparer.Compare;
+                    doubleComparer = &LessThanMatchComparer.Compare;
                     compareNull = &TrueUnlessNull;
                     break;
                 case UnaryMatchOperation.LessThanOrEqual:
-                    byteComparerLeft = &LessThanOrEqualMatchComparer.Compare;
-                    longComparerLeft = &LessThanOrEqualMatchComparer.Compare;
-                    doubleComparerLeft = &LessThanOrEqualMatchComparer.Compare;
+                    byteComparer = &LessThanOrEqualMatchComparer.Compare;
+                    longComparer = &LessThanOrEqualMatchComparer.Compare;
+                    doubleComparer = &LessThanOrEqualMatchComparer.Compare;
                     compareNull = &AlwaysTrue;
                     break;
                 case UnaryMatchOperation.GreaterThan:
-                    byteComparerLeft = &GreaterThanMatchComparer.Compare;
-                    longComparerLeft = &GreaterThanMatchComparer.Compare;
-                    doubleComparerLeft = &GreaterThanMatchComparer.Compare;
+                    byteComparer = &GreaterThanMatchComparer.Compare;
+                    longComparer = &GreaterThanMatchComparer.Compare;
+                    doubleComparer = &GreaterThanMatchComparer.Compare;
                     compareNull = &AlwaysFalse;
                     break;
                 case UnaryMatchOperation.GreaterThanOrEqual:
-                    byteComparerLeft = &GreaterThanOrEqualMatchComparer.Compare;
-                    longComparerLeft = &GreaterThanOrEqualMatchComparer.Compare;
-                    doubleComparerLeft = &GreaterThanOrEqualMatchComparer.Compare;
+                    byteComparer = &GreaterThanOrEqualMatchComparer.Compare;
+                    longComparer = &GreaterThanOrEqualMatchComparer.Compare;
+                    doubleComparer = &GreaterThanOrEqualMatchComparer.Compare;
                     compareNull = &FalseUnlessNull;
                     break;
                 case UnaryMatchOperation.NotEquals:
-                    byteComparerLeft = &NotEqualsMatchComparer.Compare;
-                    longComparerLeft = &NotEqualsMatchComparer.Compare;
-                    doubleComparerLeft = &NotEqualsMatchComparer.Compare;
+                    byteComparer = &NotEqualsMatchComparer.Compare;
+                    longComparer = &NotEqualsMatchComparer.Compare;
+                    doubleComparer = &NotEqualsMatchComparer.Compare;
                     compareNull = &TrueUnlessNull;
                     break;
                 case UnaryMatchOperation.Equals:
-                    byteComparerLeft = &EqualsMatchComparer.Compare;
-                    longComparerLeft = &EqualsMatchComparer.Compare;
-                    doubleComparerLeft = &EqualsMatchComparer.Compare;
+                    byteComparer = &EqualsMatchComparer.Compare;
+                    longComparer = &EqualsMatchComparer.Compare;
+                    doubleComparer = &EqualsMatchComparer.Compare;
                     compareNull = &FalseUnlessNull;
                     break;
-                case UnaryMatchOperation.Between:
-                case UnaryMatchOperation.NotBetween:
-                case UnaryMatchOperation.AllIn:
-                case UnaryMatchOperation.Unknown:
+                case UnaryMatchOperation.None:
+                    byteComparer = &EmptyComparer.Compare;
+                    longComparer = &EmptyComparer.Compare;
+                    doubleComparer = &EmptyComparer.Compare;
+                    compareNull = &ThrowWhenUsed;
+                    break;
                 default:
                     throw new Exception("Unsupported type of operation: " + operation);
             }
@@ -210,6 +218,11 @@ public unsafe struct MultiUnaryItem
         DoubleValueLeft = value;
     }
 
+    public MultiUnaryItem(FieldMetadata binding, Slice value, UnaryMatchOperation operation) : this(binding, DataType.Slice, false, operation, default)
+    {
+        SliceValueLeft = value;
+    }
+    
     public MultiUnaryItem(Querying.IndexSearcher searcher, FieldMetadata binding, string leftValue, string rightValue, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
         : this(binding, DataType.Slice, true, leftOperation, rightOperation)
     {
@@ -382,89 +395,115 @@ public unsafe struct MultiUnaryItem
 public struct MultiUnaryMatch<TInner> : IQueryMatch
     where TInner : IQueryMatch
 {
+    private long _count;
+    private QueryCountConfidence _confidence;
     private readonly Querying.IndexSearcher _searcher;
     private TInner _inner;
     private readonly MultiUnaryItem[] _comparers;
-
-    public MultiUnaryMatch(Querying.IndexSearcher searcher, TInner inner, MultiUnaryItem[] items)
+    private GrowableBuffer<Slowly> _growableBuffer;
+    public MultiUnaryMatch(Querying.IndexSearcher searcher, TInner inner, in MultiUnaryItem[] items)
     {
         _inner = inner;
         _searcher = searcher;
         _comparers = items;
-        Count = _inner.Count;
+        _count = _inner.Count;
+        _confidence = QueryCountConfidence.Low;
         IsBoosting = false;
     }
 
-    public long Count { get; }
-
+    public long Count => _count;
+    
     public SkipSortingResult AttemptToSkipSorting()
     {
         return _inner.AttemptToSkipSorting();
     }
 
-    public QueryCountConfidence Confidence => QueryCountConfidence.Low;
+    public QueryCountConfidence Confidence => _confidence;
     public bool IsBoosting { get; }
 
     public unsafe int Fill(Span<long> matches)
     {
-        var read = _inner.Fill(matches);
+        var workingBuffer = matches;
+        var matchesIdx = 0;
+        ref var inner = ref _inner;
+        var read = inner.Fill(workingBuffer);
+        
+        //When inner is empty we're done.
         if (read == 0)
             return 0;
         
-        var comparerFieldsRootPages =  _comparers.Length > 128 ? new long[_comparers.Length] : stackalloc long[_comparers.Length];
+        Page lastPage = default;
+        Span<long> comparerFieldsRootPages = _comparers.Length > 128 
+            ? new long[_comparers.Length] 
+            : stackalloc long[_comparers.Length];
+        Span<bool> comparerMatches = _comparers.Length > 128 
+            ? new bool[_comparers.Length] 
+            : stackalloc bool[_comparers.Length];
+        
+        Span<bool> allAccepted = _comparers.Length > 128 
+            ? new bool[_comparers.Length] 
+            : stackalloc bool[_comparers.Length];
+        allAccepted.Fill(true);
+        
         for (int i = 0; i < _comparers.Length; i++)
         {
             long fieldRoot = _searcher.FieldCache.GetLookupRootPage(_comparers[i].Binding.FieldName);
             ref var comparerFieldsRootPage = ref Unsafe.Add(ref MemoryMarshal.GetReference(comparerFieldsRootPages), i);
             comparerFieldsRootPage = fieldRoot;
         }
-
-        Page lastPage = default;
-
-        int currentIdx = 0;
-        Span<bool> comparerMatches = _comparers.Length > 128 ? new bool[_comparers.Length] : stackalloc bool[_comparers.Length];
-        Span<bool> allAccepted = _comparers.Length > 128 ? new bool[_comparers.Length] : stackalloc bool[_comparers.Length];
-        allAccepted.Fill(true);
         
-        for (int i = 0; i < read; ++i)
+        do
         {
-            comparerMatches.Fill(false);
-
-            int comparerId = 0;
-            for (; comparerId < _comparers.Length; ++comparerId)
+            int currentMatchesIdx = 0;
+            for (int docIdx = 0; docIdx < read; ++docIdx)
             {
-                ref var comparerMatched = ref Unsafe.Add(ref MemoryMarshal.GetReference(comparerMatches), comparerId);
-                ref var comparer = ref Unsafe.Add(ref MemoryMarshal.GetReference(_comparers.AsSpan()), comparerId);
-                var reader = _searcher.GetEntryTermsReader(matches[i], ref lastPage);
+                comparerMatches.Fill(false);
+                var reader = _searcher.GetEntryTermsReader(workingBuffer[docIdx], ref lastPage);
                 
-                while (reader.MoveNext())
+                for (int comparerId = 0; comparerId < _comparers.Length; ++comparerId)
                 {
-                    if(reader.FieldRootPage != Unsafe.Add(ref MemoryMarshal.GetReference(comparerFieldsRootPages), comparerId))
-                        continue;
-                    if (comparerMatched) 
-                        break;
+                    ref var comparerMatched = ref Unsafe.Add(ref MemoryMarshal.GetReference(comparerMatches), comparerId);
+                    ref var comparer = ref Unsafe.Add(ref MemoryMarshal.GetReference(_comparers.AsSpan()), comparerId);
+                    ref var currentFieldRootPage = ref Unsafe.Add(ref MemoryMarshal.GetReference(comparerFieldsRootPages), comparerId);
+                    comparerMatched = comparer.Mode == MultiUnaryItem.UnaryMode.All;
                     
-                    var result = IsAcceptedForIterator(comparer, in reader);
-                    if (result)
+                    reader.Reset();
+                    while (reader.FindNext(currentFieldRootPage))
                     {
-                        comparerMatched = true;
-                        break;
+                        var result = IsAcceptedForIterator(ref comparer, in reader);
+                        if (result && comparer.Mode == MultiUnaryItem.UnaryMode.Any)
+                        {
+                            comparerMatched = true;
+                            break;
+                        }
+
+                        if (comparer.Mode == MultiUnaryItem.UnaryMode.All && result == false)
+                            comparerMatched = false;
                     }
-                        
-                    if (_searcher.HasMultipleTermsInField(_comparers[comparerId].Binding) == false)
-                        goto NotMatch;
+                }
+
+                if (comparerMatches.SequenceCompareTo(allAccepted) == 0) // if field(s) doesn't exists that doesn't mean the document is valid for us.
+                {
+                    currentMatchesIdx++;
+                    matches[matchesIdx++] = workingBuffer[docIdx];
                 }
             }
             
-            if (comparerMatches.SequenceCompareTo(allAccepted) == 0) // if field(s) doesn't exists that doesn't mean the document is valid for us.
-                matches[currentIdx++] = matches[i];
+            _count += currentMatchesIdx;
+            workingBuffer = workingBuffer.Slice(currentMatchesIdx);
+
+            if (workingBuffer.Length == 0)
+                return matchesIdx;
             
-            NotMatch: ; // the ; so we have a label for the goto
-        }
+            read = inner.Fill(workingBuffer);
+        } while (read > 0);
 
-        return currentIdx;
+        if (read == 0)
+            _confidence = QueryCountConfidence.High;
+        
+        return matchesIdx;
 
-        bool IsAcceptedForIterator(MultiUnaryItem comparer, in EntryTermsReader iterator) => comparer.Type switch
+        bool IsAcceptedForIterator(ref MultiUnaryItem comparer, in EntryTermsReader iterator) => comparer.Type switch
         {
             MultiUnaryItem.DataType.Slice => comparer.CompareLiteral(iterator),
             MultiUnaryItem.DataType.Long => comparer.CompareNumerical(iterator), 

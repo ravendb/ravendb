@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax.Mappings;
 using Corax.Querying.Matches;
+using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.TermProviders;
 using Voron;
 using Voron.Data.Lookups;

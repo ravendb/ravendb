@@ -113,7 +113,7 @@ public partial class IndexSearcher
         {
             var termMatchesQuery = @operator switch
             {
-                Constants.Search.Operator.And => AllInQuery(field, termMatches.ToHashSet(SliceComparer.Instance), skipEmptyItems: true, token: cancellationToken),
+                Constants.Search.Operator.And => AllInQuery(field, termMatches.ToHashSet(SliceComparer.Instance), token: cancellationToken),
                 Constants.Search.Operator.Or => InQuery(field, termMatches, token: cancellationToken),
                 _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, null)
             };
@@ -290,7 +290,7 @@ public partial class IndexSearcher
         {
             var termMatchesQuery = @operator switch
             {
-                Constants.Search.Operator.And => AllInQuery(field, termMatches.ToHashSet(SliceComparer.Instance), skipEmptyItems: true, token: cancellationToken),
+                Constants.Search.Operator.And => AllInQuery(field, termMatches.ToHashSet(SliceComparer.Instance), token: cancellationToken),
                 Constants.Search.Operator.Or => InQuery(field, termMatches, token: cancellationToken),
                 _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, null)
             };

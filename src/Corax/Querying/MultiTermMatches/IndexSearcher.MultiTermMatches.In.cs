@@ -14,7 +14,6 @@ namespace Corax.Querying;
 
 public partial class IndexSearcher
 {
-    private static readonly Comparison<TermQueryItem> CompareTermQueryItemKeys = (item, queryItem) => item.Item.Compare(queryItem.Item);
     /// <summary>
     /// Test API only
     /// </summary>
@@ -99,24 +98,20 @@ public partial class IndexSearcher
         return MultiTermMatch.Create(new MultiTermMatch<InTermProvider<TTermType>>(this, field, _transaction.Allocator, new InTermProvider<TTermType>(this, field, inTerms), streamingEnabled: false, token: token));
     }
     
-    public IQueryMatch AllInQuery(in FieldMetadata field, HashSet<string> allInTerms, bool skipEmptyItems = false, in CancellationToken token = default) =>
-        AllInQuery<string>(field, allInTerms, skipEmptyItems, token);
-    
-    public IQueryMatch AllInQuery(in FieldMetadata field, HashSet<(string Term, bool Exact)> allInTerms, bool skipEmptyItems = false, in CancellationToken token = default) =>
-        AllInQuery<(string, bool)>(field, allInTerms, skipEmptyItems, token);
+    public IQueryMatch AllInQuery(in FieldMetadata field, HashSet<(string Term, bool Exact)> allInTerms, in CancellationToken token = default) =>
+        AllInQuery<(string, bool)>(field, allInTerms, token);
 
-    public IQueryMatch AllInQuery(in FieldMetadata field, HashSet<Slice> allInTerms, bool skipEmptyItems = false, in CancellationToken token = default) => AllInQuery<Slice>(field, allInTerms, skipEmptyItems, token);
+    public IQueryMatch AllInQuery(in FieldMetadata field, HashSet<Slice> allInTerms, in CancellationToken token = default) => AllInQuery<Slice>(field, allInTerms, token);
 
     //Unlike the In operation, this one requires us to check all entries in a given entry.
     //However, building a query with And can quickly lead to a Stackoverflow Exception.
     //In this case, when we get more conditions, we have to quit building the tree and manually check the entries with UnaryMatch.
-    private IQueryMatch AllInQuery<TTerm>(in FieldMetadata field, HashSet<TTerm> allInTerms, bool skipEmptyItems = false, in CancellationToken cancellationToken = default)
+    private IQueryMatch AllInQuery<TTerm>(in FieldMetadata field, HashSet<TTerm> allInTerms, in CancellationToken cancellationToken = default)
     {
-        if (typeof(TTerm) != typeof((string Term, bool Exact)) && typeof(TTerm) != typeof(Slice) && typeof(TTerm) != typeof(string))
-            throw new NotSupportedException($"Type {typeof(TTerm)} is not supported.");
+        Debug.Assert(typeof(TTerm) == typeof((string Term, bool Exact)) || typeof(TTerm) == typeof(Slice), 
+            "typeof(TTerm) == typeof((string Term, bool Exact)) || typeof(TTerm) == typeof(Slice)");
         
         const int maximumTermMatchesHandledAsTermMatches = 4;
-        
         var canUseUnaryMatch = field.HasBoost == false;
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
 
@@ -130,7 +125,7 @@ public partial class IndexSearcher
         //Since comparing lists is expensive, we will try to reduce the set of likely candidates as much as possible.
         //Therefore, we check the density of elements present in the tree.
         //In the future, this can be optimized by adding some values at which it makes sense to skip And and go directly into checking.
-        TermQueryItem[] queryTerms = new TermQueryItem[allInTerms.Count];
+        var queryTerms = new TermQueryItem[allInTerms.Count].AsSpan();
         var termsCount = 0;
         var llt = _transaction.LowLevelTransaction;
 
@@ -144,12 +139,12 @@ public partial class IndexSearcher
                     ? EncodeAndApplyAnalyzer(default, casted.Term) 
                     : EncodeAndApplyAnalyzer(field, casted.Term);
             }
-            else if (typeof(TTerm) == typeof(string))
-                itemSlice = EncodeAndApplyAnalyzer(field, (string)(object)item);
             else
+            {
                 itemSlice = (Slice)(object)item;
+            }
             
-            if (itemSlice.Size == 0 && skipEmptyItems)
+            if (itemSlice.Size == 0)
                 continue;
 
             var amount = NumberOfDocumentsUnderSpecificTerm(terms, itemSlice);
@@ -160,11 +155,10 @@ public partial class IndexSearcher
 
             var itemKey = llt.AcquireCompactKey();
             itemKey.Set(itemSlice.AsReadOnlySpan());
-            queryTerms[termsCount++] = new TermQueryItem(itemKey, amount);
+            queryTerms[termsCount++] = new TermQueryItem(itemKey, amount, itemSlice);
         }
         
-        
-        //UnaryMatch doesn't support boosting, when we wants to calculate ranking we've to build query like And(Term, And(...)).
+        //UnaryMatch doesn't support boosting, when we want to calculate ranking we've to build query like And(Term, And(...)).
         var termMatchCount = (canUseUnaryMatch, termsCount) switch
         {
             (false, _) => termsCount,
@@ -210,13 +204,23 @@ public partial class IndexSearcher
         //Just perform normal And.
         if (termsCount == termMatchCount)
             return MultiTermMatch.Create(binaryMatchOfTermMatches[0]);
+        
+        queryTerms = queryTerms.Slice(termMatchCount);
+        queryTerms.Sort(TermQueryItemComparison);
+        
+        var unaryMatchItems = new MultiUnaryItem[queryTerms.Length];
+        for (var i = 0; i < queryTerms.Length; ++i)
+            unaryMatchItems[i] = new MultiUnaryItem(field, queryTerms[i].Term, UnaryMatchOperation.Equals);
 
-
-        queryTerms = queryTerms[termMatchCount..];
-        queryTerms.AsSpan().Sort(CompareTermQueryItemKeys);
-        return UnaryQuery(binaryMatchOfTermMatches[0], field, queryTerms, UnaryMatchOperation.AllIn, -1, cancellationToken);
+        return CreateMultiUnaryMatch(binaryMatchOfTermMatches[0], unaryMatchItems);
     }
-    
+
+    //We want to have terms ascending order based on density since there is much higher probability of being declined by primitive.
+    private static int TermQueryItemComparison(TermQueryItem x, TermQueryItem y)
+    {
+        return x.Density.CompareTo(y.Density);
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public AndNotMatch NotInQuery<TInner>(FieldMetadata field, TInner inner, List<string> notInTerms) where TInner : IQueryMatch
     {
