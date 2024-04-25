@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Corax;
@@ -54,9 +55,8 @@ namespace FastTests.Corax
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
             using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            Slice.From(ctx, "3", out var three);
             var match0 = searcher.AllEntries();
-            var match1 = searcher.UnaryQuery(match0, _longItemFieldMetadata, three, UnaryMatchOperation.GreaterThan);
+            var match1 = searcher.CreateMultiUnaryMatch(match0, [(new MultiUnaryItem(searcher, _longItemFieldMetadata, "3", UnaryMatchOperation.GreaterThan))]);
             var expectedList = GetExpectedResult("3");
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
@@ -75,7 +75,7 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             Slice.From(ctx, "entries/0", out var id);
             var match0 = searcher.AllEntries();
-            var match1 = searcher.UnaryQuery(match0, searcher.FieldMetadataBuilder("Id", IndexId), id, UnaryMatchOperation.LessThan);
+            var match1 = searcher.CreateMultiUnaryMatch(match0, [(new MultiUnaryItem(searcher, searcher.FieldMetadataBuilder("Id", IndexId), "entries/0", UnaryMatchOperation.LessThan))]);
             var ids = new long[16];
             int read = match1.Fill(ids);
             Assert.Equal(0, read);
@@ -162,7 +162,7 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
 
             var match0 = searcher.AllEntries();
-            var match1 = searcher.UnaryQuery<AllEntriesMatch, long>(match0, _longItemFieldMetadata, 3, UnaryMatchOperation.GreaterThan);
+            var match1 = searcher.CreateMultiUnaryMatch(match0, new[] { new MultiUnaryItem(_longItemFieldMetadata, 3L, UnaryMatchOperation.GreaterThan) });
             var expectedList = _entries.Where(x => x.LongValue > 3).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
@@ -186,6 +186,62 @@ namespace FastTests.Corax
             var expectedList = _entries.Where(x => x.LongValue > 3 && x.DoubleValue < 20.5).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
+            outputList.Sort();
+            Assert.Equal(expectedList.Count, outputList.Count);
+            for (int i = 0; i < expectedList.Count; ++i)
+                Assert.Equal(expectedList[i], outputList[i]);
+        }
+        
+        [Fact]
+        public void MultiUnaryMatchWithMultipleInnerFillCalls()
+        {
+            _entries = new List<Entry>();
+            for (var idX = 0; idX < 32; ++idX)
+                _entries.Add(new Entry() {Id = $"entries/0", LongValue = idX + 1, DoubleValue = 0.0, TextualValue = "abc" });
+            
+            IndexEntries();
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            
+            var match0 = searcher.TermQuery(_textualItemFieldMetadata, "abc"); //should return list [1, n]
+            
+            var comparers = new MultiUnaryItem[] {new(_longItemFieldMetadata, 18, UnaryMatchOperation.GreaterThan)};
+            var match1 = searcher.CreateMultiUnaryMatch(match0, comparers);
+            
+            var expectedList = _entries.Where(x => x.LongValue > 18).Select(x => x.Id).ToList();
+            expectedList.Sort();
+            
+            //Batch size must be small, since we expect Fill to return at least 1 element in the first call, otherwise it may affect the correctness of the result.
+            var outputList = FetchFromCorax(ref match1, batchSize: 8);
+            outputList.Sort();
+            Assert.Equal(expectedList.Count, outputList.Count);
+            for (int i = 0; i < expectedList.Count; ++i)
+                Assert.Equal(expectedList[i], outputList[i]);
+        }
+        
+        [Fact]
+        public void MultiUnaryMatchAndWithMultipleCalls()
+        {
+            _entries = new List<Entry>();
+            for (var idX = 0; idX < 32; ++idX)
+                _entries.Add(new Entry() {Id = $"entries/0", LongValue = idX + 1, DoubleValue = 0.0, TextualValue = $"abc{idX}" });
+            
+            IndexEntries();
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+
+            var match0 = searcher.ExistsQuery(_textualItemFieldMetadata); //should return list [1, n]
+            var comparers = new MultiUnaryItem[] {new(_longItemFieldMetadata, 18, UnaryMatchOperation.GreaterThan)};
+            var match1 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), comparers);
+
+            var concated = searcher.And(match1, match0);
+            var expectedList = _entries.Where(x => x.LongValue > 18).Select(x => x.Id).ToList();
+            expectedList.Sort();
+            
+            //Batch size must be small, since we expect Fill to return at least 1 element in the first call, otherwise it may affect the correctness of the result.
+            var outputList = FetchFromCorax(ref concated, batchSize: 4);
             outputList.Sort();
             Assert.Equal(expectedList.Count, outputList.Count);
             for (int i = 0; i < expectedList.Count; ++i)
@@ -240,23 +296,28 @@ namespace FastTests.Corax
             Assert.True(first.SequenceEqual(second));
         }
 
-        private List<string> FetchFromCorax<TMatch>(ref TMatch match)
+        private List<string> FetchFromCorax<TMatch>(ref TMatch match, int batchSize = 256)
             where TMatch : IQueryMatch
         {
             using var indexSearcher = new IndexSearcher(Env, _knownFields);
 
             List<string> list = new();
-            Span<long> ids = stackalloc long[256];
+            Span<long> ids = stackalloc long[batchSize];
+            HashSet<long> test = new();
             int read = match.Fill(ids);
+            var it = 1;
             while (read != 0)
             {
                 for (int i = 0; i < read; ++i)
                 {
                     long id = ids[i];
                     list.Add(indexSearcher.TermsReaderFor(indexSearcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                    if (test.Add(id) == false)
+                        Debugger.Break();
                 }
 
                 read = match.Fill(ids);
+                it++;
             }
 
             return list;
@@ -318,27 +379,7 @@ namespace FastTests.Corax
                 _entries.Add(new Entry() {Id = $"entries/{i}", LongValue = i, DoubleValue = i * random.NextDouble(), TextualValue = i % 2 == 0 ? "abc" : "cde"});
             }
         }
-
-        private List<string> FetchFromCorax(ref UnaryMatch match)
-        {
-            using var indexSearcher = new IndexSearcher(Env, _knownFields);
-            List<string> list = new();
-            Span<long> ids = stackalloc long[256];
-            int read = match.Fill(ids);
-            while (read != 0)
-            {
-                for (int i = 0; i < read; ++i)
-                {
-                    long id = ids[i];
-                    list.Add(indexSearcher.TermsReaderFor(indexSearcher.GetFirstIndexedFiledName()).GetTermFor(id));
-                }
-
-                read = match.Fill(ids);
-            }
-
-            return list;
-        }
-
+        
         private List<string> GetExpectedResult(string input)
         {
             return _entries.Where(entry => entry.LongValue.ToString().CompareTo(input) == 1).Select(x => x.Id).ToList();

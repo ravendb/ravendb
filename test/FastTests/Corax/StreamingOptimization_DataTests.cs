@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Corax.Querying.Matches;
+using Corax.Querying.Matches.Meta;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Sparrow;

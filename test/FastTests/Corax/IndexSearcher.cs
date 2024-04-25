@@ -33,7 +33,6 @@ namespace FastTests.Corax
         public IndexSearcherTest(ITestOutputHelper output) : base(output)
         {
         }
-
         [Fact]
         public void CanDeleteDifferentLongAndDoubleInSingleEntry()
         {
@@ -786,7 +785,7 @@ namespace FastTests.Corax
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
 
             {
-                var match = searcher.AllInQuery(contentMetadata, new HashSet<string>() {"quo", "in"});
+                var match = searcher.AllInQuery(contentMetadata, new HashSet<(string Term, bool Exact)>() {("quo", false), ("in", false)});
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(2, match.Fill(ids));
@@ -826,7 +825,7 @@ namespace FastTests.Corax
                     "quae",
                     "dolor",
                     "qui"
-                });
+                }.Select(x => (x, false)).ToHashSet());
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(1, match.Fill(ids));
@@ -866,7 +865,7 @@ namespace FastTests.Corax
                     "quae",
                     "dolor",
                     "THIS_IS_SUPER_UNIQUE_VALUE"
-                });
+                }.Select(x => (x, false)).ToHashSet());
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(0, match.Fill(ids));
@@ -1079,7 +1078,7 @@ namespace FastTests.Corax
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
             {
                 var match1 = searcher.AllEntries();
-                var match2 = searcher.UnaryQuery(match1, contentMetadata, 25D, UnaryMatchOperation.LessThan);
+                var match2 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(contentMetadata, 25D, UnaryMatchOperation.LessThan)]);
 
                 int read = 0;
                 while ((read = match2.Fill(ids)) != 0)
@@ -1101,7 +1100,8 @@ namespace FastTests.Corax
 
             qids.Clear();
             {
-                var matchBetween = searcher.UnaryBetween(searcher.AllEntries(), contentMetadata, 100L, 200L);
+                var matchBetween = searcher.CreateMultiUnaryMatch(searcher.AllEntries(),
+                    [new(contentMetadata, 100L, 200L, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual)]);
                 var read = matchBetween.Fill(ids);
                 while (--read >= 0)
                 {
@@ -1113,26 +1113,6 @@ namespace FastTests.Corax
                 {
                     bool isIn = qids.Contains(indexSingleEntryDouble.Id);
                     if (indexSingleEntryDouble.Content is >= 100L and <= 200L)
-                        Assert.True(isIn);
-                    else
-                        Assert.False(isIn);
-                }
-            }
-
-            qids.Clear();
-            {
-                var matchBetween = searcher.UnaryBetween(searcher.AllEntries(), contentMetadata, 100L, 200L, isNegated: true);
-                var read = matchBetween.Fill(ids);
-                while (--read >= 0)
-                {
-                    long id = ids[read];
-                    qids.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
-                }
-
-                foreach (IndexSingleEntryDouble indexSingleEntryDouble in list)
-                {
-                    bool isIn = qids.Contains(indexSingleEntryDouble.Id);
-                    if (indexSingleEntryDouble.Content is < 100D or > 200D)
                         Assert.True(isIn);
                     else
                         Assert.False(isIn);
@@ -1158,7 +1138,8 @@ namespace FastTests.Corax
             {
                 //   var match1 = searcher.StartWithQuery("Id", "e");
                 var match1 = searcher.AllEntries();
-                var match = searcher.UnaryQuery(match1, contentMetadata, one, UnaryMatchOperation.GreaterThan);
+                var match = searcher.CreateMultiUnaryMatch(match1,
+                    [new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.GreaterThan)]);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(2, match.Fill(ids));
@@ -1167,7 +1148,8 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.UnaryQuery(match1, contentMetadata, one, UnaryMatchOperation.GreaterThanOrEqual);
+                var match = searcher.CreateMultiUnaryMatch(match1,
+                    [new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.GreaterThanOrEqual)]);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(3, match.Fill(ids));
@@ -1176,7 +1158,8 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.UnaryQuery(match1, contentMetadata, one, UnaryMatchOperation.LessThan);
+                var match = searcher.CreateMultiUnaryMatch(match1,
+                    [new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.LessThan)]);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(0, match.Fill(ids));
@@ -1184,7 +1167,8 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.UnaryQuery(match1, contentMetadata, one, UnaryMatchOperation.LessThanOrEqual);
+                var match = searcher.CreateMultiUnaryMatch(match1,
+                    [new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.LessThanOrEqual)]);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(1, match.Fill(ids));
@@ -1211,7 +1195,8 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.UnaryQuery(match1, contentMetadata, one, UnaryMatchOperation.Equals);
+                var match = searcher.CreateMultiUnaryMatch(match1,
+                    [new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.Equals)]);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(2, match.Fill(ids));
@@ -1220,7 +1205,8 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.UnaryQuery(match1, contentMetadata, one, UnaryMatchOperation.NotEquals);
+                var match = searcher.CreateMultiUnaryMatch(match1,
+                    [new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.NotEquals)]);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(1, match.Fill(ids));
@@ -1229,7 +1215,8 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.UnaryQuery(match1, contentMetadata, four, UnaryMatchOperation.Equals);
+                var match = searcher.CreateMultiUnaryMatch(match1,
+                    [new MultiUnaryItem(searcher, contentMetadata, "4", UnaryMatchOperation.Equals)]);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(0, match.Fill(ids));
@@ -1237,7 +1224,8 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.UnaryQuery(match1, contentMetadata, four, UnaryMatchOperation.NotEquals);
+                var match = searcher.CreateMultiUnaryMatch(match1,
+                    [new MultiUnaryItem(searcher, contentMetadata, "4", UnaryMatchOperation.NotEquals)]);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(3, match.Fill(ids));
@@ -1352,16 +1340,10 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
-
-            Slice.From(bsc, "0", out var zero);
-            Slice.From(bsc, "1", out var one);
-            Slice.From(bsc, "2", out var two);
-            Slice.From(bsc, "3", out var three);
-            Slice.From(bsc, "4", out var four);
-
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.UnaryBetween(match1, contentMetadata, one, two);
+                var match = searcher.CreateMultiUnaryMatch(match1,
+                    [new MultiUnaryItem(searcher, contentMetadata, "1", "2", UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual)]);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(2, match.Fill(ids));
@@ -1370,7 +1352,8 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.UnaryBetween(match1, contentMetadata, zero, three);
+                var match = searcher.CreateMultiUnaryMatch(match1,
+                    [new MultiUnaryItem(searcher, contentMetadata, "0", "3", UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual)]);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(3, match.Fill(ids));
@@ -1379,7 +1362,8 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.UnaryBetween(match1, contentMetadata, zero, zero);
+                var match = searcher.CreateMultiUnaryMatch(match1,
+                    [new MultiUnaryItem(searcher, contentMetadata, "0", "0", UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual)]);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(0, match.Fill(ids));
@@ -1387,7 +1371,8 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.UnaryBetween(match1, contentMetadata, one, one);
+                var match = searcher.CreateMultiUnaryMatch(match1,
+                    [new MultiUnaryItem(searcher, contentMetadata, "1", "1", UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual)]);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(1, match.Fill(ids));
@@ -1406,8 +1391,9 @@ namespace FastTests.Corax
 
             {
                 Span<long> ids = stackalloc long[128];
-                var match = searcher.UnaryBetween(searcher.AllEntries(), contentMetadata, 20L, 30L, UnaryMatchOperation.GreaterThanOrEqual,
-                    UnaryMatchOperation.LessThanOrEqual);
+                var match = searcher.CreateMultiUnaryMatch(searcher.AllEntries(),
+                    [new MultiUnaryItem(contentMetadata, 20L, 30L, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual)]);
+
                 Assert.Equal(entries.Count(i => i.Content is >= 20 and <= 30), read = match.Fill(ids));
                 for (int i = 0; i < read; ++i)
                     Check(ids[i], 20, 30, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual);
@@ -1415,7 +1401,8 @@ namespace FastTests.Corax
 
             {
                 Span<long> ids = stackalloc long[128];
-                var match = searcher.UnaryBetween(searcher.AllEntries(), contentMetadata, 20L, 30L, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual);
+                var match = searcher.CreateMultiUnaryMatch(searcher.AllEntries(),
+                    [new MultiUnaryItem(contentMetadata, 20L, 30L, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual)]);
                 Assert.Equal(entries.Count(i => i.Content is > 20 and <= 30), read = match.Fill(ids));
                 for (int i = 0; i < read; ++i)
                     Check(ids[i], 20, 30, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual);
@@ -1423,7 +1410,8 @@ namespace FastTests.Corax
 
             {
                 Span<long> ids = stackalloc long[128];
-                var match = searcher.UnaryBetween(searcher.AllEntries(), contentMetadata, 20L, 30L, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan);
+                var match = searcher.CreateMultiUnaryMatch(searcher.AllEntries(),
+                    [new MultiUnaryItem(contentMetadata, 20L, 30L, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan)]);
                 Assert.Equal(entries.Count(i => i.Content is >= 20 and < 30), read = match.Fill(ids));
                 for (int i = 0; i < read; ++i)
                     Check(ids[i], 20, 30, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan);
@@ -1431,7 +1419,8 @@ namespace FastTests.Corax
 
             {
                 Span<long> ids = stackalloc long[128];
-                var match = searcher.UnaryBetween(searcher.AllEntries(), contentMetadata, 20L, 30L, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan);
+                var match = searcher.CreateMultiUnaryMatch(searcher.AllEntries(),
+                    [new MultiUnaryItem(contentMetadata, 20L, 30L, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan)]);
                 Assert.Equal(entries.Count(i => i.Content is > 20 and < 30), read = match.Fill(ids));
                 for (int i = 0; i < read; ++i)
                     Check(ids[i], 20, 30, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan);
@@ -1455,63 +1444,7 @@ namespace FastTests.Corax
                     };
             }
         }
-
-        [Fact]
-        public void SimpleNotBetweenCompareStatement()
-        {
-            var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "3"};
-            var entry2 = new IndexSingleEntry {Id = "entry/2", Content = "2"};
-            var entry3 = new IndexSingleEntry {Id = "entry/3", Content = "1"};
-            var entry4 = new IndexSingleEntry {Id = "entry/4", Content = "4"};
-
-            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] {entry1, entry2, entry3, entry4}, CreateKnownFields(bsc));
-
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
-            Slice.From(bsc, "0", out var zero);
-            Slice.From(bsc, "1", out var one); //
-            Slice.From(bsc, "2", out var two); //
-            Slice.From(bsc, "3", out var three); //
-            Slice.From(bsc, "4", out var four); //
-            Slice.From(bsc, "5", out var five);
-
-            {
-                var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.UnaryBetween(match1, contentMetadata, two, three, true);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(2, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
-            }
-
-            {
-                var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.UnaryBetween(match1, contentMetadata, two, two, true);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(3, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
-            }
-
-            {
-                var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.UnaryBetween(match1, contentMetadata, one, four, true);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(0, match.Fill(ids));
-            }
-
-            {
-                var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.UnaryBetween(match1, contentMetadata, zero, three, true);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(1, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
-            }
-        }
-
+        
         [Theory]
         [InlineData(new object[] {1000, 8})]
         public void AndInStatementWithLowercaseAnalyzer(int setSize, int stackSize)
@@ -1526,9 +1459,9 @@ namespace FastTests.Corax
                     Id = $"entry/{i}",
                     Content = (i % 3) switch
                     {
-                        0 => new string[] {"road", "Lake", "mounTain"},
-                        1 => new string[] {"roAd", "mountain"},
-                        2 => new string[] {"sky", "space", "laKe"},
+                        0 => ["road", "Lake", "mounTain"],
+                        1 => ["roAd", "mountain"],
+                        2 => ["sky", "space", "laKe"],
                         _ => throw new InvalidDataException("This should not happen.")
                     }
                 };
@@ -1771,13 +1704,13 @@ namespace FastTests.Corax
                     Id = $"entry/{i}",
                     Content = (i % 7) switch
                     {
-                        0 => new string[] {"1"},
-                        1 => new string[] {"7"},
-                        2 => new string[] {"1", "2"},
-                        3 => new string[] {"1", "2", "3"},
-                        4 => new string[] {"1", "2", "3", "5"},
-                        5 => new string[] {"2", "5"},
-                        6 => new string[] {"2", "5", "7"},
+                        0 => ["1"],
+                        1 => ["7"],
+                        2 => ["1", "2"],
+                        3 => ["1", "2", "3"],
+                        4 => ["1", "2", "3", "5"],
+                        5 => ["2", "5"],
+                        6 => ["2", "5", "7"],
                         _ => throw new ArgumentOutOfRangeException()
                     }
                 };
@@ -1794,21 +1727,11 @@ namespace FastTests.Corax
             IndexEntries(bsc, entriesToIndex, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-
-            Slice.From(bsc, "1", out var one);
-            Slice.From(bsc, "2", out var two);
-            Slice.From(bsc, "3", out var three);
-            Slice.From(bsc, "5", out var five);
-            Slice.From(bsc, "7", out var seven);
-            Slice.From(bsc, "8", out var eight);
-            Slice.From(bsc, "9", out var nine);
-            Slice.From(bsc, "10", out var ten);
-
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
             {
-                var match0 = searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, eight, UnaryMatchOperation.NotEquals);
-                var match1 = searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, nine, UnaryMatchOperation.NotEquals);
-                var match2 = searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, ten, UnaryMatchOperation.NotEquals);
+                var match0 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "8", UnaryMatchOperation.NotEquals)]);
+                var match1 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "9", UnaryMatchOperation.NotEquals)]);
+                var match2 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "10", UnaryMatchOperation.NotEquals)]);
                 var firstOr = searcher.Or(match0, match1);
                 var finalOr = searcher.And(searcher.StartWithQuery("Id", "e"), searcher.Or(firstOr, match2));
 
@@ -1818,11 +1741,11 @@ namespace FastTests.Corax
             }
 
             {
-                var m0 = searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, one, UnaryMatchOperation.NotEquals);
-                var m1 = searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, two, UnaryMatchOperation.NotEquals);
-                var m2 = searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, three, UnaryMatchOperation.NotEquals);
-                var m3 = searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, five, UnaryMatchOperation.NotEquals);
-                var m4 = searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, seven, UnaryMatchOperation.NotEquals);
+                var m0 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.NotEquals)]);
+                var m1 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "2", UnaryMatchOperation.NotEquals)]);
+                var m2 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "3", UnaryMatchOperation.NotEquals)]);
+                var m3 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "5", UnaryMatchOperation.NotEquals)]);
+                var m4 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "7", UnaryMatchOperation.NotEquals)]);
 
                 Span<long> ids = stackalloc long[256];
                 var orResult = searcher.Or(m4, searcher.Or(m3, searcher.Or(m2, searcher.Or(m1, m0))));
@@ -1841,12 +1764,12 @@ namespace FastTests.Corax
             }
 
             {
-                var m0 = searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, one, UnaryMatchOperation.NotEquals);
-                var m1 = searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, two, UnaryMatchOperation.NotEquals);
-                var m2 = searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, three, UnaryMatchOperation.NotEquals);
-                var m3 = searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, five, UnaryMatchOperation.NotEquals);
-                var m4 = searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, seven, UnaryMatchOperation.NotEquals);
-
+                var m0 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.NotEquals)]);
+                var m1 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "2", UnaryMatchOperation.NotEquals)]);
+                var m2 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "3", UnaryMatchOperation.NotEquals)]);
+                var m3 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "5", UnaryMatchOperation.NotEquals)]);
+                var m4 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "7", UnaryMatchOperation.NotEquals)]);
+                
                 var result = searcher.And(searcher.StartWithQuery("Id", "e"), searcher.Or(m4, searcher.Or(m3, searcher.Or(m2, searcher.Or(m1, m0)))));
 
                 Span<long> ids = stackalloc long[256];
@@ -1957,14 +1880,11 @@ namespace FastTests.Corax
             IndexEntries(Allocator, entries.ToArray(), CreateKnownFields(Allocator));
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            Slice.From(bsc, "1", out var one);
-            Slice.From(bsc, "2", out var two);
-
             using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
             {
-                
-                var notOne = searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, one, UnaryMatchOperation.NotEquals);
+                var notOne = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), 
+                    new []{new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.NotEquals)});
                 Span<long> ids = stackalloc long[32];
                 var expected = entries.Count(x => x.Content.Contains("1") == false);
                 var result = notOne.Fill(ids);
@@ -1977,7 +1897,8 @@ namespace FastTests.Corax
                 Assert.Equal(3, result);
             }
             {
-                var notTwo = searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, two, UnaryMatchOperation.NotEquals);
+                var notTwo = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), 
+                    new []{new MultiUnaryItem(searcher, contentMetadata, "2", UnaryMatchOperation.NotEquals)});
                 Span<long> ids = stackalloc long[32];
                 var expected = entries.Count(x => x.Content.Contains("2") == false);
                 var result = notTwo.Fill(ids);

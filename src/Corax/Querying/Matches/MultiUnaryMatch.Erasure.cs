@@ -7,12 +7,12 @@ using Corax.Querying.Matches.Meta;
 namespace Corax.Querying.Matches
 {
     [DebuggerDisplay("{DebugView,nq}")]
-    public unsafe struct UnaryMatch : IQueryMatch
+    public unsafe struct MultiUnaryMatch : IQueryMatch
     {
         private readonly FunctionTable _functionTable;
         private IQueryMatch _inner;
         private CancellationToken _token;
-        internal UnaryMatch(IQueryMatch match, FunctionTable functionTable, CancellationToken token)
+        internal MultiUnaryMatch(IQueryMatch match, FunctionTable functionTable, CancellationToken token)
         {
             _inner = match;
             _functionTable = functionTable;
@@ -43,14 +43,14 @@ namespace Corax.Querying.Matches
 
         internal sealed class FunctionTable
         {
-            public readonly delegate*<ref UnaryMatch, Span<long>, int> FillFunc;
-            public readonly delegate*<ref UnaryMatch, Span<long>, int, int> AndWithFunc;
-            public readonly delegate*<ref UnaryMatch, long> CountFunc;
+            public readonly delegate*<ref MultiUnaryMatch, Span<long>, int> FillFunc;
+            public readonly delegate*<ref MultiUnaryMatch, Span<long>, int, int> AndWithFunc;
+            public readonly delegate*<ref MultiUnaryMatch, long> CountFunc;
 
             public FunctionTable(
-                delegate*<ref UnaryMatch, Span<long>, int> fillFunc,
-                delegate*<ref UnaryMatch, Span<long>, int, int> andWithFunc,
-                delegate*<ref UnaryMatch, long> countFunc)
+                delegate*<ref MultiUnaryMatch, Span<long>, int> fillFunc,
+                delegate*<ref MultiUnaryMatch, Span<long>, int, int> andWithFunc,
+                delegate*<ref MultiUnaryMatch, long> countFunc)
             {
                 FillFunc = fillFunc;
                 AndWithFunc = andWithFunc;
@@ -58,22 +58,22 @@ namespace Corax.Querying.Matches
             }
         }
 
-        private static class StaticFunctionCache<TInner, TValueType>
+        private static class StaticFunctionCache<TInner>
             where TInner : IQueryMatch
         {
             public static readonly FunctionTable FunctionTable;
 
             static StaticFunctionCache()
             {
-                static long CountFunc(ref UnaryMatch match)
+                static long CountFunc(ref MultiUnaryMatch match)
                 {
-                    return ((UnaryMatch<TInner, TValueType>)match._inner).Count;
+                    return ((MultiUnaryMatch<TInner>)match._inner).Count;
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                static int FillFunc(ref UnaryMatch match, Span<long> matches)
+                static int FillFunc(ref MultiUnaryMatch match, Span<long> matches)
                 {
-                    if (match._inner is UnaryMatch<TInner, TValueType> inner)
+                    if (match._inner is MultiUnaryMatch<TInner> inner)
                     {
                         var result = inner.Fill(matches);
                         match._inner = inner;
@@ -83,9 +83,9 @@ namespace Corax.Querying.Matches
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                static int AndWithFunc(ref UnaryMatch match, Span<long> buffer, int matches)
+                static int AndWithFunc(ref MultiUnaryMatch match, Span<long> buffer, int matches)
                 {
-                    if (match._inner is UnaryMatch<TInner, TValueType> inner)
+                    if (match._inner is MultiUnaryMatch<TInner> inner)
                     {
                         var result = inner.AndWith(buffer, matches);
                         match._inner = inner;
@@ -99,10 +99,10 @@ namespace Corax.Querying.Matches
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UnaryMatch Create<TInner, TValueType>(in UnaryMatch<TInner, TValueType> query, CancellationToken token)
+        public static MultiUnaryMatch Create<TInner>(in MultiUnaryMatch<TInner> query, CancellationToken token)
             where TInner : IQueryMatch
         {
-            return new UnaryMatch(query, StaticFunctionCache<TInner, TValueType>.FunctionTable, token);
+            return new MultiUnaryMatch(query, StaticFunctionCache<TInner>.FunctionTable, token);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
