@@ -58,7 +58,7 @@ public readonly struct OrderMetadata
 
     }
 
-    public OrderMetadata(FieldMetadata field, bool ascending, MatchCompareFieldType fieldType)
+    public OrderMetadata(in FieldMetadata field, bool ascending, MatchCompareFieldType fieldType)
     {
         Unsafe.SkipInit(out HasBoost);
         Unsafe.SkipInit(out Point);
@@ -71,7 +71,7 @@ public readonly struct OrderMetadata
         FieldType = fieldType;
     }
 
-    public OrderMetadata(FieldMetadata field, bool ascending, MatchCompareFieldType fieldType, IPoint point, double round, SpatialUnits units)
+    public OrderMetadata(in FieldMetadata field, bool ascending, MatchCompareFieldType fieldType, IPoint point, double round, SpatialUnits units)
     {
         Unsafe.SkipInit(out HasBoost);  
         Unsafe.SkipInit(out RandomSeed);

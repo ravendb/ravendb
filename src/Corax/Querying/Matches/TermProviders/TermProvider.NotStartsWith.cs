@@ -23,7 +23,7 @@ namespace Corax.Querying.Matches.TermProviders
         private CompactTree.Iterator<TLookupIterator> _iterator;
 
 
-        public NotStartsWithTermProvider(Querying.IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith, bool validatePostfixLen, CancellationToken token)
+        public NotStartsWithTermProvider(Querying.IndexSearcher searcher, CompactTree tree, in FieldMetadata field, CompactKey startWith, bool validatePostfixLen, CancellationToken token)
         {
             _searcher = searcher;
             _field = field;

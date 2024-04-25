@@ -15,7 +15,7 @@ public enum StringDistanceAlgorithm
 }
 public partial class IndexSearcher
 {
-    public IRawTermProvider Suggest(FieldMetadata field, string term, bool sortByPopularity, StringDistanceAlgorithm algorithm, 
+    public IRawTermProvider Suggest(in FieldMetadata field, string term, bool sortByPopularity, StringDistanceAlgorithm algorithm, 
         float accuracy = Suggestions.DefaultAccuracy,
         int take = Constants.IndexSearcher.TakeAll) => algorithm switch
     {
@@ -26,7 +26,7 @@ public partial class IndexSearcher
         _ => Suggest<LevenshteinDistance>(field, term, sortByPopularity, accuracy, take)
     };
 
-    private SuggestionTermProvider<TDistanceProvider> Suggest<TDistanceProvider>(FieldMetadata field, string term, bool sortByPopularity, float accuracy = Suggestions.DefaultAccuracy, int take = Constants.IndexSearcher.TakeAll)
+    private SuggestionTermProvider<TDistanceProvider> Suggest<TDistanceProvider>(in FieldMetadata field, string term, bool sortByPopularity, float accuracy = Suggestions.DefaultAccuracy, int take = Constants.IndexSearcher.TakeAll)
         where TDistanceProvider : IStringDistance
     {
         var termSlice = EncodeAndApplyAnalyzer(field, term);

@@ -27,7 +27,7 @@ public sealed class IndexFieldBinding
     public readonly FieldMetadata Metadata;
     private string _fieldNameForStatistics;
 
-    public IndexFieldBinding(int fieldId, Slice fieldName, Slice fieldNameLong, Slice fieldNameDouble, Slice fieldTermTotalSumField, bool isFieldBindingForWriter,
+    public IndexFieldBinding(int fieldId, in Slice fieldName, in Slice fieldNameLong, in Slice fieldNameDouble, in Slice fieldTermTotalSumField, bool isFieldBindingForWriter,
         Analyzer analyzer = null, bool hasSuggestions = false,
         FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal,
         bool shouldStore = false,

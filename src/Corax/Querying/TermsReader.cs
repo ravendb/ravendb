@@ -22,7 +22,7 @@ public unsafe struct TermsReader : IDisposable
     private Page _lastPage;
     private readonly long _dictionaryId;
 
-    public TermsReader(LowLevelTransaction llt, Tree entriesToTermsTree, Slice name)
+    public TermsReader(LowLevelTransaction llt, Tree entriesToTermsTree, in Slice name)
     {
         _llt = llt;
         _cacheScope = _llt.Allocator.Allocate(sizeof((long, UnmanagedSpan)) * CacheSize, out var bs);

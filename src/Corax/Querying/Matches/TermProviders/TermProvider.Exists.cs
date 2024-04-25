@@ -24,7 +24,7 @@ namespace Corax.Querying.Matches.TermProviders
         
         private CompactTree.Iterator<TLookupIterator> _iterator;
 
-        public ExistsTermProvider(Querying.IndexSearcher searcher, CompactTree tree, FieldMetadata field)
+        public ExistsTermProvider(Querying.IndexSearcher searcher, CompactTree tree, in FieldMetadata field)
         {
             _tree = tree;
             _field = field;

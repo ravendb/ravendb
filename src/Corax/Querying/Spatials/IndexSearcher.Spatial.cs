@@ -10,7 +10,7 @@ namespace Corax.Querying;
 
 public partial class IndexSearcher
 {
-    public IQueryMatch SpatialQuery(FieldMetadata field, double error, IShape shape, SpatialContext spatialContext, Utils.Spatial.SpatialRelation spatialRelation, bool isNegated = false, in CancellationToken token = default)
+    public IQueryMatch SpatialQuery(in FieldMetadata field, double error, IShape shape, SpatialContext spatialContext, Utils.Spatial.SpatialRelation spatialRelation, bool isNegated = false, in CancellationToken token = default)
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null)

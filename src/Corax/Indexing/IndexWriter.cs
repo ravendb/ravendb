@@ -277,7 +277,7 @@ namespace Corax.Indexing
         }
 
 
-        private IndexedField GetDynamicIndexedField(Slice fieldName)
+        private IndexedField GetDynamicIndexedField(in Slice fieldName)
         {
             //We have to use transaction context here for storing slices in _dynamicFieldsTerms since we may reset other
             //allocators during the document insertion.
@@ -374,7 +374,7 @@ namespace Corax.Indexing
 
         private int[] _suggestionsTermsLengths;
 
-        private void AddSuggestions(IndexedField field, Slice slice)
+        private void AddSuggestions(IndexedField field, in Slice slice)
         {
             _hasSuggestions = true;
             field.Suggestions ??= new Dictionary<Slice, int>();
@@ -815,7 +815,7 @@ namespace Corax.Indexing
         /// </summary>
         /// <param name="idInTree">Has frequency and container type inside idInTree.</param>
         /// <returns></returns>
-        private bool TryGetEntryTermId(Slice fieldName, ReadOnlySpan<byte> term, out long idInTree)
+        private bool TryGetEntryTermId(in Slice fieldName, ReadOnlySpan<byte> term, out long idInTree)
         {
             var fieldTree = _fieldsTree.CompactTreeFor(fieldName);
 
@@ -1249,7 +1249,7 @@ namespace Corax.Indexing
             }
 
             private long ProcessSingleEntry(ref EntriesModifications entries, ref CompactTree.CompactKeyLookup key,
-                bool isNullTerm, Slice term, long postListId, long termContainerId, int pageOffset, int storageLocation)
+                bool isNullTerm, in Slice term, long postListId, long termContainerId, int pageOffset, int storageLocation)
             {
                 UpdateEntriesForTerm(ref _entriesForTerm, in entries);
                 if (_indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
@@ -1614,7 +1614,7 @@ namespace Corax.Indexing
             _entriesForTermsAdditionsBuffer.Clear();
         }
 
-        private void InsertEntriesForTermBulk(Tree entriesToTermsTree, Slice name)
+        private void InsertEntriesForTermBulk(Tree entriesToTermsTree, in Slice name)
         {
             var entriesToTerms = entriesToTermsTree.LookupFor<Int64LookupKey>(name);
             if (_entriesForTermsRemovalsBuffer.Count > 0)

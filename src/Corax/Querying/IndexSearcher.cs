@@ -242,7 +242,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
-    public void ApplyAnalyzer(FieldMetadata binding, Analyzer analyzer, ReadOnlySpan<byte> originalTerm, out Slice value)
+    public void ApplyAnalyzer(in FieldMetadata binding, Analyzer analyzer, ReadOnlySpan<byte> originalTerm, out Slice value)
     {
         if (binding.FieldId == Constants.IndexWriter.DynamicField && binding.Mode is not (FieldIndexingMode.Exact or FieldIndexingMode.No))
         {
@@ -291,7 +291,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     }
 
     [SkipLocalsInit]
-    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(Slice originalTerm, int fieldId, out Slice value)
+    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(in Slice originalTerm, int fieldId, out Slice value)
     {
         return ApplyAnalyzer(originalTerm.AsSpan(), fieldId, out value);
     }
@@ -323,25 +323,25 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public AllEntriesMatch AllEntries() => new AllEntriesMatch(this, _transaction);
    public TermMatch EmptyMatch() => TermMatch.CreateEmpty(this, Allocator);
 
-   public long GetDictionaryIdFor(Slice field)
+   public long GetDictionaryIdFor(in Slice field)
    {
        var terms = _fieldsTree?.CompactTreeFor(field);
        return terms?.DictionaryId ?? -1;
    }
    
-    public long GetTermAmountInField(FieldMetadata field)
+    public long GetTermAmountInField(in FieldMetadata field)
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
 
         return terms?.NumberOfEntries ?? 0;
     }
 
-    public bool TryGetTermsOfField(FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)
+    public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)
     {
         return TryGetTermsOfField<Lookup<CompactKeyLookup>.ForwardIterator>(field, out existsTermProvider);
     }
 
-    public bool TryGetTermsOfField<TLookupIterator>(FieldMetadata field, out ExistsTermProvider<TLookupIterator> existsTermProvider)
+    public bool TryGetTermsOfField<TLookupIterator>(in FieldMetadata field, out ExistsTermProvider<TLookupIterator> existsTermProvider)
         where TLookupIterator : struct, ILookupIterator
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
@@ -383,7 +383,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return fieldsInIndex;
     }
 
-    public FieldIndexingMode GetFieldIndexingModeForDynamic(Slice name)
+    public FieldIndexingMode GetFieldIndexingModeForDynamic(in Slice name)
     {
         _persistedDynamicTreeAnalyzer ??= _transaction.ReadTree(Constants.IndexWriter.DynamicFieldsAnalyzersSlice);
         var readResult = _persistedDynamicTreeAnalyzer?.Read(name);
@@ -451,14 +451,14 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
     
-    public TermsReader TermsReaderFor(Slice name)
+    public TermsReader TermsReaderFor(in Slice name)
     {
         if (_entriesToTermsTree == null)
             return default;
         return new TermsReader(_transaction.LowLevelTransaction, _entriesToTermsTree, name);
     }
     
-    public SpatialReader SpatialReader(Slice name)
+    public SpatialReader SpatialReader(in Slice name)
     {
         _entriesToSpatialTree ??= _transaction.ReadTree(Constants.IndexWriter.EntriesToSpatialSlice);
 
@@ -468,7 +468,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return new SpatialReader(_transaction.LowLevelTransaction, _entriesToSpatialTree, name);
     }
  
-    public Lookup<Int64LookupKey> EntriesToTermsReader(Slice name)
+    public Lookup<Int64LookupKey> EntriesToTermsReader(in Slice name)
     {
         return _entriesToTermsTree?.LookupFor<Int64LookupKey>(name);
     }
@@ -492,6 +492,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return HasMultipleTermsInField(slice);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool HasMultipleTermsInField(in FieldMetadata fieldMetadata)
     {
         return HasMultipleTermsInField(fieldMetadata.FieldName);
@@ -499,7 +500,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     //TODO PERFORMANCE
     private Dictionary<Slice, bool> _hasMultipleTermsInFieldCache;
-    private bool HasMultipleTermsInField(Slice fieldName)
+    private bool HasMultipleTermsInField(in Slice fieldName)
     {
         if (_multipleTermsInField is null)
             return false;

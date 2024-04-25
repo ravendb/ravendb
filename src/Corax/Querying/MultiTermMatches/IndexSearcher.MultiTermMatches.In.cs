@@ -222,7 +222,7 @@ public partial class IndexSearcher
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public AndNotMatch NotInQuery<TInner>(FieldMetadata field, TInner inner, List<string> notInTerms) where TInner : IQueryMatch
+    public AndNotMatch NotInQuery<TInner>(in FieldMetadata field, TInner inner, List<string> notInTerms) where TInner : IQueryMatch
     {
         return AndNot(inner, MultiTermMatch.Create(new MultiTermMatch<InTermProvider<string>>(this, field, _transaction.Allocator, new InTermProvider<string>(this, field, notInTerms), streamingEnabled: false)));
     }

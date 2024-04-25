@@ -12,7 +12,7 @@ public readonly struct SpatialReader
 {
     private readonly FixedSizeTree _fst;
 
-    public SpatialReader(LowLevelTransaction llt, Tree entriesToSpatialTree, Slice name)
+    public SpatialReader(LowLevelTransaction llt, Tree entriesToSpatialTree, in Slice name)
     {
         _fst = entriesToSpatialTree.FixedTreeFor(name, sizeof(double) + sizeof(double));
     }

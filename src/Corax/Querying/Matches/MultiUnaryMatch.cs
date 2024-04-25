@@ -76,7 +76,7 @@ public unsafe struct MultiUnaryItem
     private readonly delegate*<bool,bool> _compareNullLeft, _compareNullRight;
     private readonly bool _leftIsNull, _rightIsNull;
 
-    private MultiUnaryItem(FieldMetadata binding, DataType dataType, bool isBetween, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
+    private MultiUnaryItem(in FieldMetadata binding, DataType dataType, bool isBetween, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
     {
         Debug.Assert(binding.FieldName.HasValue);
         
@@ -202,28 +202,28 @@ public unsafe struct MultiUnaryItem
             : leftResult;
     }
 
-    public MultiUnaryItem(Querying.IndexSearcher searcher, FieldMetadata binding, string value, UnaryMatchOperation operation) : this(binding, DataType.Slice, false, operation, default)
+    public MultiUnaryItem(Querying.IndexSearcher searcher, in FieldMetadata binding, string value, UnaryMatchOperation operation) : this(binding, DataType.Slice, false, operation, default)
     {
         _leftIsNull = value == null;
         SliceValueLeft = searcher.EncodeAndApplyAnalyzer(binding, value);
     }
 
-    public MultiUnaryItem(FieldMetadata binding, long value, UnaryMatchOperation operation) : this(binding, DataType.Long, false, operation, default)
+    public MultiUnaryItem(in FieldMetadata binding, long value, UnaryMatchOperation operation) : this(binding, DataType.Long, false, operation, default)
     {
         LongValueLeft = value;
     }
 
-    public MultiUnaryItem(FieldMetadata binding, double value, UnaryMatchOperation operation) : this(binding, DataType.Double, false, operation, default)
+    public MultiUnaryItem(in FieldMetadata binding, double value, UnaryMatchOperation operation) : this(binding, DataType.Double, false, operation, default)
     {
         DoubleValueLeft = value;
     }
 
-    public MultiUnaryItem(FieldMetadata binding, Slice value, UnaryMatchOperation operation) : this(binding, DataType.Slice, false, operation, default)
+    public MultiUnaryItem(in FieldMetadata binding, in Slice value, UnaryMatchOperation operation) : this(binding, DataType.Slice, false, operation, default)
     {
         SliceValueLeft = value;
     }
     
-    public MultiUnaryItem(Querying.IndexSearcher searcher, FieldMetadata binding, string leftValue, string rightValue, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
+    public MultiUnaryItem(Querying.IndexSearcher searcher, in FieldMetadata binding, string leftValue, string rightValue, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
         : this(binding, DataType.Slice, true, leftOperation, rightOperation)
     {
         _rightIsNull = rightValue == null;
@@ -233,14 +233,14 @@ public unsafe struct MultiUnaryItem
         SliceValueLeft = searcher.EncodeAndApplyAnalyzer(binding, leftValue);
     }
 
-    public MultiUnaryItem(FieldMetadata binding, long valueLeft, long valueRight, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation) : this(binding,
+    public MultiUnaryItem(in FieldMetadata binding, long valueLeft, long valueRight, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation) : this(binding,
         DataType.Long, true, leftOperation, rightOperation)
     {
         LongValueLeft = valueLeft;
         LongValueRight = valueRight;
     }
 
-    public MultiUnaryItem(FieldMetadata binding, double valueLeft, double valueRight, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation) : this(binding,
+    public MultiUnaryItem(in FieldMetadata binding, double valueLeft, double valueRight, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation) : this(binding,
         DataType.Double, true, leftOperation, rightOperation)
     {
         DoubleValueLeft = valueLeft;

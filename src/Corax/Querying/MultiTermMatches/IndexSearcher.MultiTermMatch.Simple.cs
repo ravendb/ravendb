@@ -18,7 +18,7 @@ public partial class IndexSearcher
     public MultiTermMatch StartWithQuery(string field, string startWith, bool isNegated = false, bool hasBoost = false, bool forward = true) => StartWithQuery(FieldMetadataBuilder(field, hasBoost: hasBoost), EncodeAndApplyAnalyzer(default, startWith), isNegated, forward);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch StartWithQuery(FieldMetadata field, string startWith, bool isNegated = false, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
+    public MultiTermMatch StartWithQuery(in FieldMetadata field, string startWith, bool isNegated = false, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
     {
         return (forward, isNegated) switch
         {
@@ -29,7 +29,7 @@ public partial class IndexSearcher
         };
     }
     
-    public MultiTermMatch StartWithQuery(FieldMetadata field, Slice startWith, bool isNegated = false, bool forward = true, bool streamingEnabled = false, bool validatePostfixLen = false,in CancellationToken token = default)
+    public MultiTermMatch StartWithQuery(in FieldMetadata field, in Slice startWith, bool isNegated = false, bool forward = true, bool streamingEnabled = false, bool validatePostfixLen = false,in CancellationToken token = default)
     {
         return (forward, isNegated) switch
         {
@@ -41,7 +41,7 @@ public partial class IndexSearcher
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch EndsWithQuery(FieldMetadata field, string endsWith, bool isNegated = false, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
+    public MultiTermMatch EndsWithQuery(in FieldMetadata field, string endsWith, bool isNegated = false, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
     {
         return (forward, isNegated) switch
         {
@@ -53,7 +53,7 @@ public partial class IndexSearcher
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch EndsWithQuery(FieldMetadata field, Slice endsWith, bool isNegated = false, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
+    public MultiTermMatch EndsWithQuery(in FieldMetadata field, in Slice endsWith, bool isNegated = false, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
     {
         return (forward, isNegated) switch
         {
@@ -64,10 +64,10 @@ public partial class IndexSearcher
         };
     }
     
-    public MultiTermMatch ContainsQuery(FieldMetadata field, string containsTerm, bool isNegated = false, bool forward = true, in CancellationToken token = default) => ContainsQuery(field, (Slice)EncodeAndApplyAnalyzer(field, containsTerm), isNegated, forward, token);
+    public MultiTermMatch ContainsQuery(in FieldMetadata field, string containsTerm, bool isNegated = false, bool forward = true, in CancellationToken token = default) => ContainsQuery(field, (Slice)EncodeAndApplyAnalyzer(field, containsTerm), isNegated, forward, token);
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch ContainsQuery(FieldMetadata field, Slice containsTerm, bool isNegated = false, bool forward = true, in CancellationToken token = default)
+    public MultiTermMatch ContainsQuery(in FieldMetadata field, in Slice containsTerm, bool isNegated = false, bool forward = true, in CancellationToken token = default)
     {
         return (forward, isNegated) switch
         {
@@ -79,14 +79,14 @@ public partial class IndexSearcher
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch ExistsQuery(FieldMetadata field, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
+    public MultiTermMatch ExistsQuery(in FieldMetadata field, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
     {
         return forward 
             ? MultiTermMatchBuilder<ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, default(Slice), streamingEnabled: streamingEnabled, token: token) 
             : MultiTermMatchBuilder<ExistsTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, default(Slice), streamingEnabled: streamingEnabled, token: token);
     }
 
-    public MultiTermMatch RegexQuery(FieldMetadata field, Regex regex, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
+    public MultiTermMatch RegexQuery(in FieldMetadata field, Regex regex, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null)
