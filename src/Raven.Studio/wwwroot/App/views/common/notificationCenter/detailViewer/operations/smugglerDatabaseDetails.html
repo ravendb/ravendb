@@ -59,7 +59,13 @@
                             <i class="icon-skip"></i> <span>Skipped</span>
                         </div>
                         <div class="status status-processing" data-bind="visible: stage === 'processing'">
-                            <span class="global-spinner spinner-sm"></span> <span data-bind="text: processingSpeedText"></span>
+                            <span class="global-spinner spinner-sm"></span>
+                            <span data-bind="visible: $root.getProcessingSpeed(name) == null">
+                                Processing
+                            </span>
+                            <span data-bind="visible: $root.getProcessingSpeed(name) != null">
+                                <span data-bind="text: $root.getProcessingSpeed(name)"></span> items/sec
+                            </span>
                         </div>
                         <div class="status status-waiting" data-bind="visible: stage === 'pending'">
                             <i class="icon-waiting"></i> <span>Pending</span>
