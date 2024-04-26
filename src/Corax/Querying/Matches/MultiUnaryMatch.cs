@@ -274,7 +274,7 @@ public unsafe struct MultiUnaryItem
     }
 
     private static class GreaterThanOrEqualMatchComparer
-    {        
+    {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
         {
@@ -294,7 +294,7 @@ public unsafe struct MultiUnaryItem
     }
 
     private static class LessThanMatchComparer
-    {        
+    {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
         {
@@ -314,7 +314,7 @@ public unsafe struct MultiUnaryItem
     }
 
     private static class LessThanOrEqualMatchComparer
-    {        
+    {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
         {
@@ -334,7 +334,7 @@ public unsafe struct MultiUnaryItem
     }
 
     private static class NotEqualsMatchComparer
-    {        
+    {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
         {
@@ -354,7 +354,7 @@ public unsafe struct MultiUnaryItem
     }
     
     private static class EqualsMatchComparer
-    {        
+    {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
         {
@@ -521,7 +521,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
         if (matchBuffer.IsInitialized == false)
         {
             matchBuffer.Init(_searcher.Allocator, _inner.Count);
-            while(_inner.Fill(matchBuffer.GetSpace()) is var read and > 0)
+            while(Fill(matchBuffer.GetSpace()) is var read and > 0)
                 matchBuffer.AddUsage(read);
             
             // If results are not natively sorted we do not have any guarantees about order. We've to sort it to perform AND.

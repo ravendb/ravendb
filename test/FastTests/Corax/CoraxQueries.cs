@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using Corax;
-using Corax.Querying;
 using Corax.Mappings;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
@@ -15,6 +13,7 @@ using Voron;
 using Xunit.Abstractions;
 using Xunit;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
 
@@ -31,7 +30,7 @@ namespace FastTests.Corax
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void GreaterThanQuery()
         {
             PrepareData();
@@ -48,7 +47,7 @@ namespace FastTests.Corax
                 Assert.Equal(expectedList[i], outputList[i]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void UnaryMatchWithSequential()
         {
             PrepareData();
@@ -66,7 +65,7 @@ namespace FastTests.Corax
                 Assert.Equal(expectedList[i], outputList[i]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void LexicographicalLessThan()
         {
             PrepareData(1);
@@ -81,7 +80,7 @@ namespace FastTests.Corax
             Assert.Equal(0, read);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void LexicographicalLessThanQuery()
         {
             PrepareData(1);
@@ -95,7 +94,7 @@ namespace FastTests.Corax
             Assert.Equal(0, read);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void BetweenQuery()
         {
             PrepareData();
@@ -115,7 +114,7 @@ namespace FastTests.Corax
                 Assert.Equal(expectedList[i], outputList[i]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void BetweenQueryNumeric()
         {
             PrepareData();
@@ -134,7 +133,7 @@ namespace FastTests.Corax
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void BetweenQueryNumericDouble()
         {
             PrepareData();
@@ -153,7 +152,7 @@ namespace FastTests.Corax
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void UnaryMatchWithNumerical()
         {
             PrepareData();
@@ -172,7 +171,7 @@ namespace FastTests.Corax
                 Assert.Equal(expectedList[i], outputList[i]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void MultiUnaryMatchWithNumerical()
         {
             PrepareData();
@@ -192,7 +191,7 @@ namespace FastTests.Corax
                 Assert.Equal(expectedList[i], outputList[i]);
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void MultiUnaryMatchWithMultipleInnerFillCalls()
         {
             _entries = new List<Entry>();
@@ -220,7 +219,7 @@ namespace FastTests.Corax
                 Assert.Equal(expectedList[i], outputList[i]);
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void MultiUnaryMatchAndWithMultipleCalls()
         {
             _entries = new List<Entry>();
@@ -236,19 +235,17 @@ namespace FastTests.Corax
             var comparers = new MultiUnaryItem[] {new(_longItemFieldMetadata, 18, UnaryMatchOperation.GreaterThan)};
             var match1 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), comparers);
 
-            var concated = searcher.And(match1, match0);
-            var expectedList = _entries.Where(x => x.LongValue > 18).Select(x => x.Id).ToList();
-            expectedList.Sort();
+            Span<long> ids = stackalloc long[16];
+            var totalResults = 0;
+            while (match0.Fill(ids) is var read and > 0)
+            {
+                totalResults += match1.AndWith(ids, read);
+            }
             
-            //Batch size must be small, since we expect Fill to return at least 1 element in the first call, otherwise it may affect the correctness of the result.
-            var outputList = FetchFromCorax(ref concated, batchSize: 4);
-            outputList.Sort();
-            Assert.Equal(expectedList.Count, outputList.Count);
-            for (int i = 0; i < expectedList.Count; ++i)
-                Assert.Equal(expectedList[i], outputList[i]);
+            Assert.Equal(_entries.Count(x => x.LongValue > 18), totalResults);
         }
-
-        [Fact]
+        
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void CanDoNumericalTermMatch()
         {
             _entries = new List<Entry>();
@@ -272,7 +269,7 @@ namespace FastTests.Corax
             Assert.Equal(1, match3.Fill(ids)); //match one doc
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void MultiTermMatchWithTermMatch()
         {
             PrepareData();
@@ -346,12 +343,10 @@ namespace FastTests.Corax
                 entryBuilder.Write(LongValueId, Encoding.UTF8.GetBytes(entry.LongValue.ToString()), entry.LongValue, entry.LongValue);
                 entryBuilder.Write(DoubleValueId, Encoding.UTF8.GetBytes(entry.DoubleValue.ToString()), (long)entry.DoubleValue, entry.DoubleValue);
                 entryBuilder.Write(TextualValueId, Encodings.Utf8.GetBytes(entry.TextualValue));
-
             }
 
             indexWriter.Commit();
         }
-
 
         private IndexFieldsMapping CreateKnownFields(ByteStringContext ctx)
         {
