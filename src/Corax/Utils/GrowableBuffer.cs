@@ -24,7 +24,9 @@ public readonly struct Slowly : IBufferGrowth
 
     public bool GrowingThresholdExceed(in int count, in int sizeInBytes)
     {
-        return sizeInBytes - (count * sizeof(long)) > (sizeInBytes >> 4); // 1/16 left
+        // 1/16 left
+        var amountOfLongs = (sizeInBytes / sizeof(long));
+        return (amountOfLongs - count) < amountOfLongs / 16;
     }
 
     public int GetInitialSize(in long initialSize)
@@ -74,8 +76,7 @@ public unsafe struct GrowableBuffer<TGrowth> : IDisposable
     {
         var newSize = _growthCalculator.GetNewSize(_buffer.Length);
         _context.Allocate(newSize, out ByteString newBuffer);
-        new Span<long>(_buffer._pointer, _count).CopyTo(new Span<long>(newBuffer._pointer, _count));
-        
+        new Span<long>(_buffer.Ptr, _count).CopyTo(new Span<long>(newBuffer.Ptr, _count));
         _context.Release(ref _buffer);
         _buffer = newBuffer;
     }
