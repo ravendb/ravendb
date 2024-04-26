@@ -20,7 +20,7 @@ namespace Corax.Querying.Matches
             return SkipSortingResult.ResultsNativelySorted;
         }
 
-        public AllEntriesMatch(Querying.IndexSearcher searcher, Transaction tx)
+        public AllEntriesMatch(IndexSearcher searcher, Transaction tx)
         {
             _count = searcher.NumberOfEntries;
             if (_count == 0)
