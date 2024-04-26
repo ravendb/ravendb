@@ -291,7 +291,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     }
 
     [SkipLocalsInit]
-    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(in Slice originalTerm, int fieldId, out Slice value)
+    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(Slice originalTerm, int fieldId, out Slice value)
     {
         return ApplyAnalyzer(originalTerm.AsSpan(), fieldId, out value);
     }
@@ -323,7 +323,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public AllEntriesMatch AllEntries() => new AllEntriesMatch(this, _transaction);
    public TermMatch EmptyMatch() => TermMatch.CreateEmpty(this, Allocator);
 
-   public long GetDictionaryIdFor(in Slice field)
+   public long GetDictionaryIdFor(Slice field)
    {
        var terms = _fieldsTree?.CompactTreeFor(field);
        return terms?.DictionaryId ?? -1;
@@ -383,7 +383,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return fieldsInIndex;
     }
 
-    public FieldIndexingMode GetFieldIndexingModeForDynamic(in Slice name)
+    public FieldIndexingMode GetFieldIndexingModeForDynamic(Slice name)
     {
         _persistedDynamicTreeAnalyzer ??= _transaction.ReadTree(Constants.IndexWriter.DynamicFieldsAnalyzersSlice);
         var readResult = _persistedDynamicTreeAnalyzer?.Read(name);
@@ -451,14 +451,14 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
     
-    public TermsReader TermsReaderFor(in Slice name)
+    public TermsReader TermsReaderFor(Slice name)
     {
         if (_entriesToTermsTree == null)
             return default;
         return new TermsReader(_transaction.LowLevelTransaction, _entriesToTermsTree, name);
     }
     
-    public SpatialReader SpatialReader(in Slice name)
+    public SpatialReader SpatialReader(Slice name)
     {
         _entriesToSpatialTree ??= _transaction.ReadTree(Constants.IndexWriter.EntriesToSpatialSlice);
 
@@ -468,7 +468,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return new SpatialReader(_transaction.LowLevelTransaction, _entriesToSpatialTree, name);
     }
  
-    public Lookup<Int64LookupKey> EntriesToTermsReader(in Slice name)
+    public Lookup<Int64LookupKey> EntriesToTermsReader(Slice name)
     {
         return _entriesToTermsTree?.LookupFor<Int64LookupKey>(name);
     }
@@ -500,7 +500,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     //TODO PERFORMANCE
     private Dictionary<Slice, bool> _hasMultipleTermsInFieldCache;
-    private bool HasMultipleTermsInField(in Slice fieldName)
+    private bool HasMultipleTermsInField(Slice fieldName)
     {
         if (_multipleTermsInField is null)
             return false;
@@ -572,7 +572,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
-    private long GetRootPageByFieldName(in Slice fieldName)
+    private long GetRootPageByFieldName(Slice fieldName)
     {
         var it = _fieldsTree.Iterate(false);
         var result = _fieldsTree.Read(fieldName);

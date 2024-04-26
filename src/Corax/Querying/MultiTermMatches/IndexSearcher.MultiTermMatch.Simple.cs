@@ -29,7 +29,7 @@ public partial class IndexSearcher
         };
     }
     
-    public MultiTermMatch StartWithQuery(in FieldMetadata field, in Slice startWith, bool isNegated = false, bool forward = true, bool streamingEnabled = false, bool validatePostfixLen = false,in CancellationToken token = default)
+    public MultiTermMatch StartWithQuery(in FieldMetadata field, Slice startWith, bool isNegated = false, bool forward = true, bool streamingEnabled = false, bool validatePostfixLen = false,in CancellationToken token = default)
     {
         return (forward, isNegated) switch
         {
@@ -53,7 +53,7 @@ public partial class IndexSearcher
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch EndsWithQuery(in FieldMetadata field, in Slice endsWith, bool isNegated = false, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
+    public MultiTermMatch EndsWithQuery(in FieldMetadata field, Slice endsWith, bool isNegated = false, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
     {
         return (forward, isNegated) switch
         {
@@ -67,7 +67,7 @@ public partial class IndexSearcher
     public MultiTermMatch ContainsQuery(in FieldMetadata field, string containsTerm, bool isNegated = false, bool forward = true, in CancellationToken token = default) => ContainsQuery(field, (Slice)EncodeAndApplyAnalyzer(field, containsTerm), isNegated, forward, token);
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch ContainsQuery(in FieldMetadata field, in Slice containsTerm, bool isNegated = false, bool forward = true, in CancellationToken token = default)
+    public MultiTermMatch ContainsQuery(in FieldMetadata field, Slice containsTerm, bool isNegated = false, bool forward = true, in CancellationToken token = default)
     {
         return (forward, isNegated) switch
         {

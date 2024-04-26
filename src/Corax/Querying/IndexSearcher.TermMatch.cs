@@ -23,7 +23,7 @@ public partial class IndexSearcher
     ///  Test API, should not be used anywhere else
     /// </summary>
     public TermMatch TermQuery(string field, string term, bool hasBoost = false) => TermQuery(FieldMetadataBuilder(field, hasBoost: hasBoost), term);
-    public TermMatch TermQuery(in Slice field, in Slice term, bool hasBoost = false) => TermQuery(FieldMetadata.Build(field, default, default, default, default, hasBoost: hasBoost), term);
+    public TermMatch TermQuery(Slice field, Slice term, bool hasBoost = false) => TermQuery(FieldMetadata.Build(field, default, default, default, default, hasBoost: hasBoost), term);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private long GetContainerIdOfNumericalTerm<TNumeric>(in FieldMetadata field, out FieldMetadata numericalField, TNumeric term)
@@ -59,11 +59,11 @@ public partial class IndexSearcher
             : TermQuery(numericalField, containerId, 1);
     }
     
-    public CompactTree GetTermsFor(in Slice name) =>_fieldsTree?.CompactTreeFor(name); 
+    public CompactTree GetTermsFor(Slice name) =>_fieldsTree?.CompactTreeFor(name); 
     
-    public Lookup<Int64LookupKey> GetLongTermsFor(in Slice name) =>_fieldsTree?.LookupFor<Int64LookupKey>(name);
+    public Lookup<Int64LookupKey> GetLongTermsFor(Slice name) =>_fieldsTree?.LookupFor<Int64LookupKey>(name);
     
-    public Lookup<DoubleLookupKey> GetDoubleTermsFor(in Slice name) =>_fieldsTree?.LookupFor<DoubleLookupKey>(name);
+    public Lookup<DoubleLookupKey> GetDoubleTermsFor(Slice name) =>_fieldsTree?.LookupFor<DoubleLookupKey>(name);
 
     public TermMatch TermQuery(in FieldMetadata field, string term, CompactTree termsTree = null)
     {
@@ -104,7 +104,7 @@ public partial class IndexSearcher
     }
     
     //Should be already analyzed...
-    public TermMatch TermQuery(in FieldMetadata field, in Slice term, CompactTree termsTree = null)
+    public TermMatch TermQuery(in FieldMetadata field, Slice term, CompactTree termsTree = null)
     {
         var terms = termsTree ?? _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null)
@@ -232,7 +232,7 @@ public partial class IndexSearcher
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal long NumberOfDocumentsUnderSpecificTerm(CompactTree tree, in Slice term)
+    internal long NumberOfDocumentsUnderSpecificTerm(CompactTree tree, Slice term)
     {
         return NumberOfDocumentsUnderSpecificTerm(tree, term.AsReadOnlySpan());
     }
