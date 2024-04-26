@@ -14,7 +14,7 @@ namespace Corax.Querying;
 
 public partial class IndexSearcher
 {
-    private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(in FieldMetadata field, in Slice term, bool streamingEnabled = false, bool validatePostfixLen = false, in CancellationToken token = default)
+    private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(in FieldMetadata field, Slice term, bool streamingEnabled = false, bool validatePostfixLen = false, in CancellationToken token = default)
         where TTermProvider : struct, ITermProvider
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
@@ -68,7 +68,7 @@ public partial class IndexSearcher
             streamingEnabled, token: token));
     }
 
-    private bool TryRewriteTermWhenPerformingBackwardStreaming<TTermProvider>(bool streamingEnabled, in Slice termSlice, out Slice termForSeek)
+    private bool TryRewriteTermWhenPerformingBackwardStreaming<TTermProvider>(bool streamingEnabled, Slice termSlice, out Slice termForSeek)
         where TTermProvider : struct, ITermProvider
     {
         var shouldRewrite = typeof(TTermProvider) == typeof(StartsWithTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>);

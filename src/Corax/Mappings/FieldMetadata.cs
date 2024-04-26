@@ -16,7 +16,7 @@ public readonly struct FieldMetadata
     public readonly Analyzer Analyzer;
     public readonly bool HasBoost;
 
-    private FieldMetadata(in Slice fieldName, in Slice termLengthSumName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost)
+    private FieldMetadata(Slice fieldName, Slice termLengthSumName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost)
     {
         TermLengthSumName = termLengthSumName;
         FieldName = fieldName;
@@ -65,7 +65,7 @@ public readonly struct FieldMetadata
         return new(fieldNameAsSlice, sumName, fieldId, mode, analyzer, hasBoost);
     }
 
-    public static FieldMetadata Build(in Slice fieldName, in Slice termLengthSumName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost = false) => new(fieldName, termLengthSumName, fieldId, mode, analyzer, hasBoost: hasBoost);
+    public static FieldMetadata Build(Slice fieldName, Slice termLengthSumName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost = false) => new(fieldName, termLengthSumName, fieldId, mode, analyzer, hasBoost: hasBoost);
 
     public FieldMetadata ChangeAnalyzer(FieldIndexingMode mode, Analyzer analyzer = null)
     {

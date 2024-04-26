@@ -30,7 +30,7 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
     private bool _shouldIncludeLastTerm;
     private long _endContainerId;
 
-    public TermRangeProvider(Querying.IndexSearcher indexSearcher, CompactTree tree, in FieldMetadata field, in Slice low, in Slice high)
+    public TermRangeProvider(Querying.IndexSearcher indexSearcher, CompactTree tree, in FieldMetadata field, Slice low, Slice high)
     {
         _indexSearcher = indexSearcher;
         _field = field;

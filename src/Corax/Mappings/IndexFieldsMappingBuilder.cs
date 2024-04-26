@@ -50,7 +50,7 @@ public sealed class IndexFieldsMappingBuilder : IDisposable
         return AddBinding(_fields.Count, slice, analyzer, hasSuggestion, fieldIndexingMode, shouldStore, hasSpatial);
     }
 
-    public IndexFieldsMappingBuilder AddBindingToEnd(in Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false,
+    public IndexFieldsMappingBuilder AddBindingToEnd(Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false,
         FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool shouldStore = false,  bool hasSpatial = false) =>
         AddBinding(_fields.Count, fieldName, analyzer, hasSuggestion, fieldIndexingMode, shouldStore,  hasSpatial);
 
@@ -79,7 +79,7 @@ public sealed class IndexFieldsMappingBuilder : IDisposable
         return AddBinding(fieldId, slice, analyzer, hasSuggestion, fieldIndexingMode, shouldStore , hasSpatial);
     }
     
-    public IndexFieldsMappingBuilder AddBinding(int fieldId, in Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false,
+    public IndexFieldsMappingBuilder AddBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false,
         FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool shouldStore = false, bool hasSpatial = false)
     {
         if (_fieldsById.TryGetValue(fieldId, out var storedAnalyzer) == false)
@@ -102,22 +102,22 @@ public sealed class IndexFieldsMappingBuilder : IDisposable
         return this;
     }
 
-    internal static void GetFieldNameForLongs(ByteStringContext context, in Slice fieldName, out Slice fieldNameForLongs)
+    internal static void GetFieldNameForLongs(ByteStringContext context, Slice fieldName, out Slice fieldNameForLongs)
     {
         GetFieldNameWithPostfix(context, fieldName, LongSuffix, out fieldNameForLongs);
     }
 
-    internal static void GetFieldNameForDoubles(ByteStringContext context, in Slice fieldName, out Slice fieldNameForDoubles)
+    internal static void GetFieldNameForDoubles(ByteStringContext context, Slice fieldName, out Slice fieldNameForDoubles)
     {
         GetFieldNameWithPostfix(context, fieldName, DoubleSuffix, out fieldNameForDoubles);
     }
 
-    internal static void GetFieldForTotalSum(ByteStringContext context, in Slice fieldName, out Slice fieldForTotalSum)
+    internal static void GetFieldForTotalSum(ByteStringContext context, Slice fieldName, out Slice fieldForTotalSum)
     {
         GetFieldNameWithPostfix(context, fieldName, TermTotalSumField, out fieldForTotalSum);
     }
     
-    private static unsafe void GetFieldNameWithPostfix(ByteStringContext context, in Slice fieldName, short postfix, out Slice fieldWithPostfix)
+    private static unsafe void GetFieldNameWithPostfix(ByteStringContext context, Slice fieldName, short postfix, out Slice fieldWithPostfix)
     {
         context.Allocate(fieldName.Size + sizeof(short), out ByteString output);
         fieldName.Content.CopyTo(output.Ptr);

@@ -50,7 +50,7 @@ internal sealed class IndexedField
     {
     }
 
-    public IndexedField(int id, in Slice name, in Slice nameLong, in Slice nameDouble, in Slice nameTotalLengthOfTerms, Analyzer analyzer,
+    public IndexedField(int id, Slice name, Slice nameLong, Slice nameDouble, Slice nameTotalLengthOfTerms, Analyzer analyzer,
         FieldIndexingMode fieldIndexingMode, bool hasSuggestions, bool shouldStore,  string nameForStatistics = null, long fieldRootPage = -1, long termsVectorFieldRootPage = -1)
     {
         Name = name;

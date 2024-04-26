@@ -217,7 +217,7 @@ public unsafe struct MultiUnaryItem
         DoubleValueLeft = value;
     }
 
-    public MultiUnaryItem(in FieldMetadata binding, in Slice value, UnaryMatchOperation operation) : this(binding, DataType.Slice, false, operation, default)
+    public MultiUnaryItem(in FieldMetadata binding, Slice value, UnaryMatchOperation operation) : this(binding, DataType.Slice, false, operation, default)
     {
         SliceValueLeft = value;
     }
