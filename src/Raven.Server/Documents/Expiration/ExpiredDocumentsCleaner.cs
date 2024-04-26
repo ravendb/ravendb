@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Expiration
     {
         public ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var expired = new Dictionary<Slice, List<(Slice LowerId, string Id)>>();
+            var expired = new Dictionary<Slice, List<(Slice LowerId, string Id)>>(SliceComparer.Instance);
             foreach (var item in Expired)
             {
                 expired[item.Key] = item.Value;
