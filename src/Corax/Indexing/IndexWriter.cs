@@ -377,7 +377,7 @@ namespace Corax.Indexing
         private void AddSuggestions(IndexedField field, Slice slice)
         {
             _hasSuggestions = true;
-            field.Suggestions ??= new Dictionary<Slice, int>();
+            field.Suggestions ??= new Dictionary<Slice, int>(SliceComparer.Instance);
 
             if (_suggestionsTermsLengths == null || _suggestionsTermsLengths.Length < slice.Size)
                 _suggestionsTermsLengths = new int[Math.Max(2 * slice.Size, 32)];
