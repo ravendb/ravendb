@@ -1,0 +1,10 @@
+@use "Content/scss/bs5variables";
+.select-index-errors-dropdown {
+    .dropdown-checkbox-group {
+        min-width: 260px;
+    }
+
+    &.show .select-index-errors-toggle {
+        background-color: bs5variables.$panel-bg-1-var !important;
+    }
+}
