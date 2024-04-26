@@ -76,7 +76,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                 return null;
             }
 
-            var toProcess = new Dictionary<Slice, List<(Slice LowerId, string Id)>>();
+            var toProcess = new Dictionary<Slice, List<(Slice LowerId, string Id)>>(SliceComparer.Instance);
             duration = Stopwatch.StartNew();
 
             do

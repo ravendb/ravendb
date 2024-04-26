@@ -51,7 +51,7 @@ internal class ArchiveDocumentsCommandDto: IReplayableCommandDto<DocumentsOperat
 {
     public ArchiveDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
     {
-        var toArchive = new Dictionary<Slice, List<(Slice LowerId, string Id)>>();
+        var toArchive = new Dictionary<Slice, List<(Slice LowerId, string Id)>>(SliceComparer.Instance);
         foreach (var item in ToArchive)
         {
             toArchive[item.Key] = item.Value;
