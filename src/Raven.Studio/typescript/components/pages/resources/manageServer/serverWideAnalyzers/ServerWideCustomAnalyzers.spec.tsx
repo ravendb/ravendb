@@ -1,38 +1,36 @@
+import { rtlRender } from "test/rtlTestUtils";
+import * as Stories from "./ServerWideCustomAnalyzers.stories";
+import { composeStories } from "@storybook/testing-react";
 import React from "react";
-import { commonSelectors, rtlRender } from "test/rtlTestUtils";
-import ServerWideCustomAnalyzers from "./ServerWideCustomAnalyzers";
-import { mockServices } from "test/mocks/services/MockServices";
-import { ManageServerStubs } from "test/stubs/ManageServerStubs";
-import { todo } from "common/developmentHelper";
 
-todo("Limits", "Damian", "Test community limits");
+const { ServerWideCustomAnalyzersStory } = composeStories(Stories);
+
+const selectors = {
+    licenseBadge: /Professional +/,
+    saveButton: /Save changes/,
+    emptyList: /No server-wide custom analyzers have been defined/,
+};
 
 describe("ServerWideCustomAnalyzers", () => {
-    it("can render loading error", async () => {
-        const { manageServerService } = mockServices;
-        manageServerService.withThrowingGetServerWideCustomAnalyzers();
+    it("can render when feature is not in license", async () => {
+        const { screen, waitForLoad } = rtlRender(
+            <ServerWideCustomAnalyzersStory hasServerWideCustomAnalyzers={false} />
+        );
+        await waitForLoad();
 
-        const { screen } = rtlRender(<ServerWideCustomAnalyzers />);
-
-        expect(await screen.findByText(commonSelectors.loadingError)).toBeInTheDocument();
+        expect(screen.queryByText(selectors.licenseBadge)).toBeInTheDocument();
+        expect(screen.queryByText(selectors.emptyList)).toBeInTheDocument();
     });
 
-    it("can render empty view", async () => {
-        const { manageServerService } = mockServices;
-        manageServerService.withServerWideCustomAnalyzers([]);
+    it("can render when feature is in license", async () => {
+        const { screen, waitForLoad, fireClick } = rtlRender(
+            <ServerWideCustomAnalyzersStory hasServerWideCustomAnalyzers />
+        );
+        await waitForLoad();
 
-        const { screen } = rtlRender(<ServerWideCustomAnalyzers />);
+        expect(screen.queryByText(selectors.licenseBadge)).not.toBeInTheDocument();
 
-        expect(await screen.findByText(/No server-wide custom analyzers have been defined/)).toBeInTheDocument();
-    });
-
-    it("can render analyzers list", async () => {
-        const { manageServerService } = mockServices;
-        manageServerService.withServerWideCustomAnalyzers();
-
-        const { screen } = rtlRender(<ServerWideCustomAnalyzers />);
-
-        const existingName = ManageServerStubs.serverWideCustomAnalyzers()[0].Name;
-        expect(await screen.findByText(existingName)).toBeInTheDocument();
+        await fireClick(screen.getAllByClassName("icon-edit")[0]);
+        expect(screen.queryByText(selectors.saveButton)).toBeInTheDocument();
     });
 });

@@ -1,38 +1,39 @@
 ﻿import React from "react";
-import { Meta } from "@storybook/react";
-import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
-import ServerWideCustomAnalyzers from "./ServerWideCustomAnalyzers";
+import { Meta, StoryObj } from "@storybook/react";
+import { withStorybookContexts, withBootstrap5, withForceRerender } from "test/storybookTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
+import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 import { mockStore } from "test/mocks/store/MockStore";
+import ServerWideCustomAnalyzers from "components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzers";
 
 export default {
     title: "Pages/ManageServer/Server-Wide Analyzers",
-    component: ServerWideCustomAnalyzers,
-    decorators: [withStorybookContexts, withBootstrap5],
-} satisfies Meta<typeof ServerWideCustomAnalyzers>;
+    decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
+} satisfies Meta;
 
-function commonInit() {
-    const { manageServerService } = mockServices;
-
-    manageServerService.withServerWideCustomAnalyzers();
+interface DefaultServerWideCustomAnalyzersProps {
+    isEmpty: boolean;
+    hasServerWideCustomAnalyzers: boolean;
 }
 
-export function NoLimits() {
-    commonInit();
+export const ServerWideCustomAnalyzersStory: StoryObj<DefaultServerWideCustomAnalyzersProps> = {
+    name: "Server-Wide Analyzers",
+    render: (props: DefaultServerWideCustomAnalyzersProps) => {
+        const { manageServerService } = mockServices;
 
-    const { license } = mockStore;
-    license.with_License();
+        manageServerService.withServerWideCustomAnalyzers(
+            props.isEmpty ? [] : ManageServerStubs.serverWideCustomAnalyzers()
+        );
 
-    return <ServerWideCustomAnalyzers />;
-}
+        const { license } = mockStore;
+        license.with_LicenseLimited({
+            HasServerWideAnalyzers: props.hasServerWideCustomAnalyzers,
+        });
 
-export function LicenseLimits() {
-    commonInit();
-
-    const { license } = mockStore;
-    license.with_LicenseLimited({
-        HasServerWideAnalyzers: false,
-    });
-
-    return <ServerWideCustomAnalyzers />;
-}
+        return <ServerWideCustomAnalyzers />;
+    },
+    args: {
+        isEmpty: false,
+        hasServerWideCustomAnalyzers: true,
+    },
+};
