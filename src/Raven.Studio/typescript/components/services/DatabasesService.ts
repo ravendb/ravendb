@@ -69,6 +69,7 @@ import saveUnusedDatabaseIDsCommand = require("commands/database/settings/saveUn
 import { createDatabaseCommand } from "commands/resources/createDatabaseCommand";
 import { restoreDatabaseFromBackupCommand } from "commands/resources/restoreDatabaseFromBackupCommand";
 import distributeSecretCommand = require("commands/database/secrets/distributeSecretCommand");
+import saveCustomAnalyzerCommand from "commands/database/settings/saveCustomAnalyzerCommand";
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -201,6 +202,10 @@ export default class DatabasesService {
 
     async deleteCustomAnalyzer(databaseName: string, name: string) {
         return new deleteCustomAnalyzerCommand(databaseName, name).execute();
+    }
+
+    async saveCustomAnalyzer(...args: ConstructorParameters<typeof saveCustomAnalyzerCommand>) {
+        return new saveCustomAnalyzerCommand(...args).execute();
     }
 
     async getCustomSorters(databaseName: string) {
