@@ -96,7 +96,7 @@ function BumpVersion ($projectDir, $versionPrefix, $buildType, $dryRun = $False)
     $repo = @{
         "Owner"  = "ravendb"
         "Name"   = "ravendb"
-        "Branch" = "v5.4"
+        "Branch" = "release/v5.4"
     }
 
     $remoteFilePath = 'src/CommonAssemblyInfo.cs'
