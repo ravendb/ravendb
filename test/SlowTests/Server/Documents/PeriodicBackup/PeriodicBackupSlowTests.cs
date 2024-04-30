@@ -2260,7 +2260,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var response = await client.SendAsync(request);
 
                 Assert.False(config.ValidateDestinations(out var message));
-                var exception = await Assert.ThrowsAnyAsync<Exception>(async () => await ExceptionDispatcher.Throw(context, response, wrapException: true));
+                var exception = await Assert.ThrowsAnyAsync<Exception>(async () => await ExceptionDispatcher.Throw(context, response, RequestExecutor.CommandUnsuccessfulResponseBehavior.WrapException));
                 Assert.Contains(message, exception.Message);
             }
         }

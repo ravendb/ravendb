@@ -47,32 +47,3 @@ internal abstract class
     protected abstract Task ValidateUnusedIdsOnAllNodesAsync(HashSet<string> unusedIds,
         string databaseName, CancellationToken token);
 }
-
-internal class ValidateUnusedIdsCommand : RavenCommand
-{
-    public override bool IsReadRequest { get; }
-    private readonly Parameters _parameters;
-
-    internal ValidateUnusedIdsCommand(Parameters parameters)
-    {
-        _parameters = parameters;
-    }
-
-    public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-    {
-        url = $"{node.Url}/databases/{node.Database}/validate-unused-ids";
-
-        return new HttpRequestMessage
-        {
-            Method = HttpMethod.Get,
-            Content = new BlittableJsonContent(
-                async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx))
-                    .ConfigureAwait(false), DocumentConventions.Default)
-        };
-    }
-
-    internal sealed class Parameters
-    {
-        public HashSet<string> DatabaseIds { get; set; }
-    }
-}

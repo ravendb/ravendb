@@ -32,6 +32,7 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Handlers.Processors.Stats;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Operations;

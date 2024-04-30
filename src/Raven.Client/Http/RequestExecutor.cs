@@ -140,7 +140,7 @@ namespace Raven.Client.Http
 
         private bool _includePromotables;
 
-        private bool _wrapException = true;
+        private CommandUnsuccessfulResponseBehavior _commandUnsuccessfulResponseBehavior = CommandUnsuccessfulResponseBehavior.WrapException;
 
         public TimeSpan? DefaultTimeout
         {
@@ -385,7 +385,7 @@ namespace Raven.Client.Http
         {
             var executor = Create(initialUrls, databaseName, certificate, conventions, usePrivateUrls: usePrivateUrls, includePromotables);
             executor._disableClientConfigurationUpdates = true;
-            executor._wrapException = false;
+            executor._commandUnsuccessfulResponseBehavior = CommandUnsuccessfulResponseBehavior.None;
             return executor;
         }
 
@@ -1625,7 +1625,7 @@ namespace Raven.Client.Http
                     return true;
 
                 default:
-                    return await command.ResponseBehavior.TryHandleUnsuccessfulResponseAsync(context, command, response, _wrapException).ConfigureAwait(false);
+                    return await command.ResponseBehavior.TryHandleUnsuccessfulResponseAsync(context, command, response, _commandUnsuccessfulResponseBehavior).ConfigureAwait(false);
             }
         }
 
@@ -1744,6 +1744,12 @@ namespace Raven.Client.Http
             public int Index;
             public ServerNode Node;
             public IDisposable ReturnContext;
+        }
+
+        public enum CommandUnsuccessfulResponseBehavior
+        {
+            None,
+            WrapException
         }
 
         internal async Task<TResult> Broadcast<TResult>(RavenCommand<TResult> command, SessionInfo sessionInfo, CancellationToken token)

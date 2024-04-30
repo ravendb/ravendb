@@ -74,7 +74,7 @@ namespace Raven.Client.Exceptions
             return exception;
         }
 
-        public static async Task Throw(JsonOperationContext context, HttpResponseMessage response, bool wrapException)
+        public static async Task Throw(JsonOperationContext context, HttpResponseMessage response, RequestExecutor.CommandUnsuccessfulResponseBehavior unsuccessfulResponseBehavior)
         {
             if (response == null)
                 throw new ArgumentNullException(nameof(response));
@@ -110,7 +110,8 @@ namespace Raven.Client.Exceptions
                     throw RavenException.Generic(schema.Error, json);
                 }
 
-                if (wrapException && typeof(RavenException).IsAssignableFrom(type) == false)
+                if (unsuccessfulResponseBehavior == RequestExecutor.CommandUnsuccessfulResponseBehavior.WrapException && 
+                    typeof(RavenException).IsAssignableFrom(type) == false)
                     throw new RavenException(schema.Error, exception);
 
                 FillException(exception, json);
