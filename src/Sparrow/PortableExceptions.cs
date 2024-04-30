@@ -334,6 +334,36 @@ namespace Sparrow
             ThrowIf<T>(condition, message, paramName);
         }
 
+        public static void ThrowIfNot<T>(
+            bool condition,
+            string message = null,
+#if NET6_0_OR_GREATER
+            [CallerArgumentExpression(nameof(condition))]
+#endif
+            string paramName = null) where T : Exception
+        {
+            if (condition == false)
+            {
+#if NET6_0_OR_GREATER
+                Throw<T>(paramName, message);
+#else
+                Throw<T>(message);
+#endif
+            }
+        }
+
+        [Conditional("DEBUG")]
+        public static void ThrowIfNotOnDebug<T>(
+            bool condition,
+            string message = null,
+#if NET6_0_OR_GREATER
+            [CallerArgumentExpression(nameof(condition))]
+#endif
+            string paramName = null) where T : Exception
+        {
+            ThrowIfNot<T>(condition, message, paramName);
+        }
+
 #if NET6_0_OR_GREATER
         [DoesNotReturn]
 #endif
