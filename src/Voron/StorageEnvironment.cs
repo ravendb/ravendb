@@ -912,6 +912,8 @@ namespace Voron
         public event Action<LowLevelTransaction> AfterCommitWhenNewTransactionsPrevented;
         internal void TransactionAfterCommit(LowLevelTransaction tx)
         {
+            tx._forTestingPurposes?.ActionToCallOnTransactionAfterCommit?.Invoke();
+
             if (ActiveTransactions.Contains(tx) == false)
             {
                 if (tx.Committed && tx.FlushedToJournal)
