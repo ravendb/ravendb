@@ -151,8 +151,7 @@ public partial class IndexSearcher
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
-        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
-        if (terms == null)
+        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var terms) == false)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
         
         return forward == true
@@ -170,12 +169,11 @@ public partial class IndexSearcher
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
-        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
-        if (terms == null)
+        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out _) == false)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
         field = field.GetNumericFieldMetadata<long>(Allocator);
-        var set = _fieldsTree?.LookupFor<Int64LookupKey>(field.FieldName);
+        var set = _fieldsTree.LookupFor<Int64LookupKey>(field.FieldName);
 
         return forward 
             ? MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<Lookup<Int64LookupKey>.ForwardIterator, TLow, THigh, Int64LookupKey>>(this, field, _transaction.Allocator, new TermNumericRangeProvider<Lookup<Int64LookupKey>.ForwardIterator, TLow, THigh, Int64LookupKey>(this, set, field, low, high), streamingEnabled, maxNumberOfTerms,  token: token)) 
@@ -186,13 +184,12 @@ public partial class IndexSearcher
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
-        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
-        if (terms == null)
+        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out _) == false)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
- 
         
         field = field.GetNumericFieldMetadata<double>(Allocator);
-        var set = _fieldsTree?.LookupFor<DoubleLookupKey>(field.FieldName); 
+        
+        var set = _fieldsTree.LookupFor<DoubleLookupKey>(field.FieldName); 
         return forward
             ? MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<Lookup<DoubleLookupKey>.ForwardIterator, TLow, THigh, DoubleLookupKey>>(this, field,
                 _transaction.Allocator, new TermNumericRangeProvider<Lookup<DoubleLookupKey>.ForwardIterator, TLow, THigh, DoubleLookupKey>(this, set, field, low, high), streamingEnabled, maxNumberOfTerms, token: token))

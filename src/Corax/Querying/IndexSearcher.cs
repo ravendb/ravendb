@@ -98,8 +98,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
         _multipleTermsInField = _transaction.ReadTree(Constants.IndexWriter.MultipleTermsInField);
-        _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
-        _dictionaryId = CompactTree.GetDictionaryId(_transaction.LowLevelTransaction);
+        _transaction.TryGetLookupFor(Constants.IndexWriter.EntryIdToLocationSlice, out _entryIdToLocation);
+        _dictionaryId = GetDictionaryId(_transaction.LowLevelTransaction);
         FieldCache = new FieldsCache(_transaction, _fieldsTree);
     }
 
@@ -212,7 +212,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     //Function used to generate Slice from query parameters.
     //We cannot dispose them before the whole query is executed because they are an integral part of IQueryMatch.
     //We know that the Slices are automatically disposed when the transaction is closed so we don't need to track them.
+#if !DEBUG
     [SkipLocalsInit]
+#endif
     public Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, string term)
     {
         if (term is null)
@@ -325,15 +327,18 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
    public long GetDictionaryIdFor(Slice field)
    {
-       var terms = _fieldsTree?.CompactTreeFor(field);
-       return terms?.DictionaryId ?? -1;
+       if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field, out var terms) == false)
+            return -1;
+
+       return terms.DictionaryId;
    }
    
     public long GetTermAmountInField(in FieldMetadata field)
     {
-        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
-
-        return terms?.NumberOfEntries ?? 0;
+        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var terms) == false)
+            return 0;
+        
+        return terms.NumberOfEntries;
     }
 
     public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)
@@ -344,14 +349,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public bool TryGetTermsOfField<TLookupIterator>(in FieldMetadata field, out ExistsTermProvider<TLookupIterator> existsTermProvider)
         where TLookupIterator : struct, ILookupIterator
     {
-        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
-
-        if (terms == null)
+        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var terms) == false)
         {
             existsTermProvider = default;
             return false;
         }
-
+        
         existsTermProvider = new ExistsTermProvider<TLookupIterator>(this, terms, field);
         return true;
     }

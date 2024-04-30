@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Sparrow;
 using Sparrow.Server;
 using Voron;
@@ -22,14 +23,16 @@ public unsafe struct TermsReader : IDisposable
     private Page _lastPage;
     private readonly long _dictionaryId;
 
-    public TermsReader(LowLevelTransaction llt, Tree entriesToTermsTree, Slice name)
+    public TermsReader([NotNull] LowLevelTransaction llt, [NotNull] Tree entriesToTermsTree, Slice name)
     {
         _llt = llt;
         _cacheScope = _llt.Allocator.Allocate(sizeof((long, UnmanagedSpan)) * CacheSize, out var bs);
         bs.Clear();
         _lastPage = new();
         _cache = ((long, UnmanagedSpan)*)bs.Ptr;
-        _lookup = entriesToTermsTree.LookupFor<Int64LookupKey>(name);
+        
+        entriesToTermsTree.TryGetLookupFor(name, out _lookup);
+        
         _xKeyScope = new CompactKeyCacheScope(_llt);
         _yKeyScope = new CompactKeyCacheScope(_llt);
         _dictionaryId = CompactTree.GetDictionaryId(llt);
