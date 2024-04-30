@@ -104,7 +104,7 @@ export function ChangeLogModal(props: ChangelogModalProps) {
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <Icon icon="cancel" color="danger" /> Can't downgrade
+                                                        <Icon icon="cancel" color="danger" /> Can&apos;t downgrade
                                                     </>
                                                 )}
                                             </div>
