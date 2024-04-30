@@ -44,7 +44,7 @@ namespace Sparrow
         {
             ThrowIfNull(argument, paramName);
         }
-
+        
         public static void ThrowIfNotNull(
 #if NET6_0_OR_GREATER              
             [NotNull]
@@ -78,7 +78,7 @@ namespace Sparrow
         {
             ThrowIfNotNull(argument, paramName);
         }
-
+        
         public static void ThrowIfNull<T>(
 #if NET6_0_OR_GREATER
             [NotNull]
@@ -99,7 +99,7 @@ namespace Sparrow
 #endif
             }
         }
-
+        
         [Conditional("DEBUG")]
         public static void ThrowIfNullOnDebug<T>(
 #if NET6_0_OR_GREATER
@@ -150,6 +150,88 @@ namespace Sparrow
             ThrowIfNotNull<T>(argument, message, paramName);
         }
 
+        public static unsafe void ThrowIfNull(
+#if NET6_0_OR_GREATER
+    [NotNull]
+#endif
+            void* argument,
+#if NET6_0_OR_GREATER
+    [CallerArgumentExpression(nameof(argument))]
+#endif
+            string paramName = null)
+        {
+            if (argument == null)
+            {
+#if NET6_0_OR_GREATER
+                Throw(paramName);
+#else
+                Throw();
+#endif
+            }
+        }
+
+        [Conditional("DEBUG")]
+        public static unsafe void ThrowIfNullOnDebug(
+#if NET6_0_OR_GREATER
+            [NotNull]
+#endif
+            void* argument,
+#if NET6_0_OR_GREATER
+            [CallerArgumentExpression(nameof(argument))]
+#endif
+            string paramName = null)
+        {
+            ThrowIfNull(argument, paramName);
+        }
+
+        public static unsafe void ThrowIfNotNull(
+#if NET6_0_OR_GREATER
+            [NotNull]
+#endif
+            void* argument,
+#if NET6_0_OR_GREATER
+            [CallerArgumentExpression(nameof(argument))]
+#endif
+            string paramName = null)
+        {
+            if (argument != null)
+            {
+#if NET6_0_OR_GREATER
+                Throw(paramName);
+#else
+                Throw();
+#endif
+            }
+        }
+
+        [Conditional("DEBUG")]
+        public static unsafe void ThrowIfNotNullOnDebug(
+#if NET6_0_OR_GREATER
+            [NotNull]
+#endif
+            void* argument,
+#if NET6_0_OR_GREATER
+            [CallerArgumentExpression(nameof(argument))]
+#endif
+            string paramName = null)
+        {
+            ThrowIfNotNull(argument, paramName);
+        }
+
+        [Conditional("DEBUG")]
+        public static unsafe void ThrowIfNullOnDebug<T>(
+#if NET6_0_OR_GREATER
+            [NotNull]
+#endif
+            void* argument,
+#if NET6_0_OR_GREATER
+            [CallerArgumentExpression(nameof(argument))]
+#endif
+            string paramName = null) where T : Exception
+        {
+            ThrowIfNull<T>(argument, paramName);
+        }
+        
         public static unsafe void ThrowIfNull<T>(
 #if NET6_0_OR_GREATER
             [NotNull]

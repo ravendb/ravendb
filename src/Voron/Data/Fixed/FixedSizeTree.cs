@@ -18,6 +18,8 @@ using Voron.Data.Tables;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
+using static Sparrow.PortableExceptions;
+using static Voron.VoronExceptions;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Fixed
@@ -274,7 +276,7 @@ namespace Voron.Data.Fixed
 
         public DirectAddScope DirectAdd(TVal key, out bool isNew, out byte* ptr)
         {
-            VoronExceptions.ThrowIfReadOnly(_tx, "Cannot add a value in a read only transaction");
+            ThrowIfReadOnly(_tx, "Cannot add a value in a read only transaction");
 
             _changes++;
 
@@ -535,8 +537,7 @@ namespace Voron.Data.Fixed
                 newPage.NumberOfEntries = 0;
 
                 TVal separatorKey;
-                FixedSizeTreeHeader.Large* largePtr;
-                using (ModifyLargeHeader(out largePtr))
+                using (ModifyLargeHeader(out FixedSizeTreeHeader.Large* largePtr))
                 {
                     largePtr->PageCount++;
 
@@ -682,8 +683,7 @@ namespace Voron.Data.Fixed
                     }
                 }
 
-                byte* newData;
-                using (_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Embedded) + newSize, out newData))
+                using (_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Embedded) + newSize, out byte* newData))
                 {
                     var header = (FixedSizeTreeHeader.Embedded*)newData;
                     header->ValueSize = _valSize;
@@ -754,8 +754,7 @@ namespace Voron.Data.Fixed
         private byte* AddNewEntry(TVal key)
         {
             // new, just create it & go
-            byte* ptr;
-            using (_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Embedded) + _entrySize, out ptr))
+            using (_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Embedded) + _entrySize, out byte* ptr))
             {
                 var header = (FixedSizeTreeHeader.Embedded*)ptr;
                 header->RootObjectType = RootObjectType.EmbeddedFixedSizeTree;
@@ -829,8 +828,8 @@ namespace Voron.Data.Fixed
                         {
                             for (int j= p.NumberOfEntries - 1; j >= 0; j--)
                             {
-                                var chhildNumber = p.GetEntry(j)->PageNumber;
-                                stack.Push(GetReadOnlyPage(chhildNumber));
+                                var childNumber = p.GetEntry(j)->PageNumber;
+                                stack.Push(GetReadOnlyPage(childNumber));
                             }
                         }
                     }
@@ -845,7 +844,6 @@ namespace Voron.Data.Fixed
 
         public bool Contains(TVal key)
         {
-            byte* dataStart;
             switch (Type)
             {
                 case null:
@@ -853,7 +851,7 @@ namespace Voron.Data.Fixed
                 case RootObjectType.EmbeddedFixedSizeTree:
                     var embeddedPtr = _parent.DirectRead(_treeName);
                     var header = (FixedSizeTreeHeader.Embedded*)embeddedPtr;
-                    dataStart = embeddedPtr + sizeof(FixedSizeTreeHeader.Embedded);
+                    byte* dataStart = embeddedPtr + sizeof(FixedSizeTreeHeader.Embedded);
                     BinarySearch(dataStart, header->NumberOfEntries, key, _entrySize);
                     return _lastMatch == 0;
                 case RootObjectType.FixedSizeTree:
@@ -865,6 +863,7 @@ namespace Voron.Data.Fixed
                         BinarySearch(page, key);
                         if (page.LastMatch < 0 && page.LastSearchPosition > 0)
                             page.LastSearchPosition--;
+                        
                         var childPageNumber = page.GetEntry(page.LastSearchPosition)->PageNumber;
                         page = GetReadOnlyPage(childPageNumber);
                     }
@@ -879,7 +878,7 @@ namespace Voron.Data.Fixed
 
         public DeletionResult Delete(TVal key)
         {
-            VoronExceptions.ThrowIfReadOnly(_tx, "Cannot delete a value in a read only transaction");
+            ThrowIfReadOnly(_tx, "Cannot delete a value in a read only transaction");
 
             _changes++;
             switch (Type)
@@ -891,10 +890,10 @@ namespace Voron.Data.Fixed
                     return RemoveEmbeddedEntry(key);
                 case RootObjectType.FixedSizeTree:
                     return RemoveLargeEntry(key);
-                default:
-                    throw new ArgumentOutOfRangeException(Type?.ToString());
             }
 
+            Throw<ArgumentOutOfRangeException>(Type?.ToString());
+            return default;
         }
 
         public struct DeletionResult
@@ -905,11 +904,10 @@ namespace Voron.Data.Fixed
 
         public DeletionResult DeleteRange(TVal start, TVal end)
         {
-            VoronExceptions.ThrowIfReadOnly(_tx, "Cannot delete a range in a read only transaction");
+            ThrowIfReadOnly(_tx, "Cannot delete a range in a read only transaction");
+            ThrowIf<InvalidOperationException>(start > end, "Start range cannot be greater than the end of the range");
 
             _changes++;
-            if (start > end)
-                throw new InvalidOperationException("Start range cannot be greater than the end of the range");
 
             long entriesDeleted;
             switch (Type)
@@ -967,8 +965,7 @@ namespace Voron.Data.Fixed
 
                 int newDataSize = sizeof(FixedSizeTreeHeader.Embedded) + ((startingEntryCount - entriesDeleted) * _entrySize);
 
-                byte* newData;
-                using (_parent.DirectAdd(_treeName, newDataSize, out newData))
+                using (_parent.DirectAdd(_treeName, newDataSize, out byte* newData))
                 {
                     Memory.Copy(newData, tmpPtr, newDataSize);
 
@@ -993,12 +990,10 @@ namespace Voron.Data.Fixed
              * - We need special handling for the end node and for the start node only.
              */
             long entriesDeleted = 0;
-            FixedSizeTreePage<TVal> page;
-            FixedSizeTreeHeader.Large* largeHeader;
 
             while (true)
             {
-                page = FindPageFor(start);
+                FixedSizeTreePage<TVal> page = FindPageFor(start);
                 if (page.LastMatch > 0)
                     page.LastSearchPosition++;
                 if (page.LastSearchPosition < page.NumberOfEntries)
@@ -1019,8 +1014,7 @@ namespace Voron.Data.Fixed
 
                 entriesDeleted += nextPage.NumberOfEntries;
 
-
-                using (ModifyLargeHeader(out largeHeader))
+                using (ModifyLargeHeader(out FixedSizeTreeHeader.Large* largeHeader))
                 {
                     largeHeader->NumberOfEntries -= nextPage.NumberOfEntries;
                 }
@@ -1037,9 +1031,10 @@ namespace Voron.Data.Fixed
                    Type == RootObjectType.FixedSizeTree // we may revert to embedded by the deletions, or remove entirely
             )
             {
-                page = FindPageFor(start);
+                FixedSizeTreePage<TVal> page = FindPageFor(start);
                 if (page.LastMatch > 0)
                     page.LastSearchPosition++;
+                
                 if (page.LastSearchPosition < page.NumberOfEntries)
                 {
                     var key = page.GetKey(page.LastSearchPosition);
@@ -1059,7 +1054,7 @@ namespace Voron.Data.Fixed
             }
             if (Type == RootObjectType.EmbeddedFixedSizeTree)
             {
-                // we converted to embeded in the delete, but might still have some range there
+                // we converted to embedded during delete, but might still have some range there
                 return entriesDeleted + DeleteRangeEmbedded(start, end);
             }
 
@@ -1122,8 +1117,7 @@ namespace Voron.Data.Fixed
 
             page.NumberOfEntries -= (ushort)entriesDeleted;
 
-            FixedSizeTreeHeader.Large* largeHeader;
-            using (ModifyLargeHeader(out largeHeader))
+            using (ModifyLargeHeader(out FixedSizeTreeHeader.Large* largeHeader))
                 largeHeader->NumberOfEntries -= (ushort)entriesDeleted;
 
             if (page.NumberOfEntries == 0)
@@ -1179,8 +1173,7 @@ namespace Voron.Data.Fixed
             if (page.LastMatch != 0)
                 return new DeletionResult();
 
-            FixedSizeTreeHeader.Large* largeHeader;
-            using (ModifyLargeHeader(out largeHeader))
+            using (ModifyLargeHeader(out FixedSizeTreeHeader.Large* largeHeader))
             {
                 largeHeader->NumberOfEntries--;
             }
@@ -1297,7 +1290,7 @@ namespace Voron.Data.Fixed
                     page.NumberOfEntries += siblingPage.NumberOfEntries;
                     // we need to set the leftmost key in the entries we
                     // moved to the key of the page we are going to remove
-                    // to avoid smallest being injected into the sibling
+                    // to avoid the smallest being injected into the sibling
                     // page, see RavenDB-9916
                     if (page.IsBranch)
                     {
@@ -1604,9 +1597,9 @@ namespace Voron.Data.Fixed
                         return ((FixedSizeTreeHeader.Embedded*)header)->NumberOfEntries;
                     case RootObjectType.FixedSizeTree:
                         return ((FixedSizeTreeHeader.Large*)header)->NumberOfEntries;
-                    default:
-                        throw new ArgumentOutOfRangeException(Type?.ToString());
                 }
+
+                throw new ArgumentOutOfRangeException(Type?.ToString());
             }
         }
 
@@ -1626,9 +1619,9 @@ namespace Voron.Data.Fixed
                         return 1;
                     case RootObjectType.FixedSizeTree:
                         return ((FixedSizeTreeHeader.Large*)header)->PageCount;
-                    default:
-                        throw new ArgumentOutOfRangeException(Type?.ToString());
                 }
+
+                throw new ArgumentOutOfRangeException(Type?.ToString());
             }
         }
 
@@ -1651,9 +1644,9 @@ namespace Voron.Data.Fixed
                         return 0;
                     case RootObjectType.FixedSizeTree:
                         return ((FixedSizeTreeHeader.Large*)header)->Depth;
-                    default:
-                        throw new ArgumentOutOfRangeException(Type?.ToString());
                 }
+                
+                throw new ArgumentOutOfRangeException(Type?.ToString());
             }
         }
 
