@@ -12,5 +12,5 @@ internal abstract class AbstractCommandResponseBehavior
 
     public abstract ValueTask<bool> TryHandleConflictAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpResponseMessage response);
 
-    public abstract ValueTask<bool> TryHandleUnsuccessfulResponseAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpResponseMessage response, bool wrapException);
+    public abstract ValueTask<bool> TryHandleUnsuccessfulResponseAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpResponseMessage response, RequestExecutor.CommandUnsuccessfulResponseBehavior unsuccessfulResponseBehavior);
 }

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Http;
+using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Handlers.Processors.Stats;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
