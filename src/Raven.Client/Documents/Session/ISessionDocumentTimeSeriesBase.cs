@@ -83,7 +83,7 @@ namespace Raven.Client.Documents.Session
         /// For more information on the Time Series Delete operation, see: <inheritdoc cref="DocumentationUrls.Session.TimeSeries.DeleteOperation"/>.
         /// </remarks>
         /// <param name="from">The date and time from which to start deleting time series entries (inclusive). If not specified, the deletion will start from the earliest possible date and time (DateTime.MinValue).</param>
-        /// <param name="to">The date and time indicating the end of the range for deleting time series entries (exclusive). If not specified, the deletion will continue until the latest possible date and time (DateTime.MaxValue).</param>
+        /// <param name="to">The date and time indicating the end of the range for deleting time series entries (inclusive). If not specified, the deletion will continue until the latest possible date and time (DateTime.MaxValue).</param>
         void Delete(DateTime? from = null, DateTime? to = null);
 
         /// <inheritdoc cref="Delete"/>
