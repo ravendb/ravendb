@@ -307,7 +307,10 @@ namespace Sparrow.Logging
 
             // If compression for log files is enabled, we apply retention rules to logs inside the compressLoggingThread
             if (Compressing == false)
+            {
+                Array.Sort(allLogFiles);
                 ApplyRetentionRulesToLogs(allLogFiles);
+            }
 
             fileStream = SafeFileStream.Create(filePath, FileMode.Append, FileAccess.Write, FileShare.Read, 32 * 1024, false);
             fileStream.Write(_headerRow, 0, _headerRow.Length);
