@@ -758,7 +758,7 @@ namespace SlowTests.Server
 
                 var task = Task.Run(() => { store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result)); });
 
-                var operation = new Operation(store.Commands().RequestExecutor, () => store.Changes(), store.Conventions, command.Result);
+                var operation = new Operation(store.Commands().RequestExecutor, () => store.Changes(store.Database, Server.ServerStore.NodeTag), store.Conventions, command.Result, Server.ServerStore.NodeTag);
                 var operationProgresses = new List<IOperationProgress>();
                 operation.OnProgressChanged += p => operationProgresses.Add(p);
 
