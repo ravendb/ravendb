@@ -622,18 +622,12 @@ update {{
                            ReplicationFactor = 3
                        }))
                 {
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        await session.StoreAsync(new User(), "users/1");
-                        await session.SaveChangesAsync();
-                    }
-
                     for (int i = 0; i < 2; i++)
                     {
                         (string DataDirectory, string Url, string NodeTag) result = default;
 
                         //set up node-specific tracking
-                        using IDatabaseChanges changes = store.Changes(store.Database, "A");
+                        using IDatabaseChanges changes = store.Changes(store.Database, leader.ServerStore.NodeTag);
 
                         var list = new BlockingCollection<DocumentChange>();
                         
