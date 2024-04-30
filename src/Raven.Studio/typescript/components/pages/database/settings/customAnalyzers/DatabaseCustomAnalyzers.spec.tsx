@@ -11,7 +11,7 @@ const selectors = {
     previewButtonClass: "icon-preview",
 };
 
-describe("ServerWideCustomAnalyzers", () => {
+describe("DatabaseCustomAnalyzers", () => {
     it("can render empty list", async () => {
         const { screen, waitForLoad } = rtlRender(<DatabaseCustomAnalyzersStory isEmpty={true} />);
         await waitForLoad();

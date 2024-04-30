@@ -10,7 +10,6 @@ import getServerWideCustomSortersCommand = require("commands/serverWide/sorters/
 import deleteServerWideCustomSorterCommand = require("commands/serverWide/sorters/deleteServerWideCustomSorterCommand");
 import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testPeriodicBackupCredentialsCommand");
 import saveServerWideCustomSorterCommand = require("commands/serverWide/sorters/saveServerWideCustomSorterCommand");
-import saveCustomAnalyzerCommand from "commands/database/settings/saveCustomAnalyzerCommand";
 import saveServerWideCustomAnalyzerCommand from "commands/serverWide/analyzers/saveServerWideCustomAnalyzerCommand";
 
 export default class ManageServerService {
