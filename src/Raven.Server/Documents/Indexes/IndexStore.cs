@@ -1521,6 +1521,9 @@ namespace Raven.Server.Documents.Indexes
 
         private Index ResetIndexSideBySideInternal(Index index)
         {
+            if (index.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix))
+                throw new InvalidOperationException($"Index {index.Name} is already a side-by-side running index.");
+            
             try
             {
                 var definitionClone = new IndexDefinition();
