@@ -59,21 +59,24 @@ public partial class IndexSearcher
             : TermQuery(numericalField, containerId, 1);
     }
     
-    public CompactTree GetTermsFor(Slice name) =>_fieldsTree?.CompactTreeFor(name); 
+    public CompactTree GetTermsFor(Slice name) => _fieldsTree.CompactTreeFor(name); 
     
-    public Lookup<Int64LookupKey> GetLongTermsFor(Slice name) =>_fieldsTree?.LookupFor<Int64LookupKey>(name);
+    public Lookup<Int64LookupKey> GetLongTermsFor(Slice name) =>_fieldsTree.LookupFor<Int64LookupKey>(name);
     
-    public Lookup<DoubleLookupKey> GetDoubleTermsFor(Slice name) =>_fieldsTree?.LookupFor<DoubleLookupKey>(name);
+    public Lookup<DoubleLookupKey> GetDoubleTermsFor(Slice name) =>_fieldsTree.LookupFor<DoubleLookupKey>(name);
 
     public TermMatch TermQuery(in FieldMetadata field, string term, CompactTree termsTree = null)
     {
-        var terms = termsTree ?? _fieldsTree?.CompactTreeFor(field.FieldName);
-        if (terms == null && term != null)
+        if (termsTree == null)
         {
-            // If either the term or the field does not exist the request will be empty. 
-            return TermMatch.CreateEmpty(this, Allocator);
+            // If either the term or the fields tree does not exist the request will be empty. 
+            if (_fieldsTree == null)
+                return TermMatch.CreateEmpty(this, Allocator);
+
+            if (_fieldsTree.TryGetCompactTreeFor(field.FieldName, out termsTree) == false)
+                return TermMatch.CreateEmpty(this, Allocator);
         }
-        
+
         if (term is null || ReferenceEquals(term, Constants.ProjectionNullValue))
         {
             return TryGetPostingListForNull(field, out var postingListId) 
@@ -100,17 +103,20 @@ public partial class IndexSearcher
 
         return termKey is null 
             ? TermMatch.CreateEmpty(this, Allocator) 
-            : TermQuery(field, termKey, terms);
+            : TermQuery(field, termKey, termsTree);
     }
     
     //Should be already analyzed...
     public TermMatch TermQuery(in FieldMetadata field, Slice term, CompactTree termsTree = null)
     {
-        var terms = termsTree ?? _fieldsTree?.CompactTreeFor(field.FieldName);
-        if (terms == null)
+        if (termsTree == null)
         {
-            // If either the term or the field does not exist the request will be empty. 
-            return TermMatch.CreateEmpty(this, Allocator);
+            // If either the term or the fields tree does not exist the request will be empty. 
+            if (_fieldsTree == null)
+                return TermMatch.CreateEmpty(this, Allocator);
+
+            if (_fieldsTree.TryGetCompactTreeFor(field.FieldName, out termsTree) == false)
+                return TermMatch.CreateEmpty(this, Allocator);
         }
 
         CompactKey termKey;
@@ -124,7 +130,7 @@ public partial class IndexSearcher
             termKey = null;
         }
 
-        return TermQuery(field, termKey, terms);
+        return TermQuery(field, termKey, termsTree);
     }
 
     public TermMatch TermQuery(in FieldMetadata field, CompactKey term, CompactTree tree)
@@ -210,8 +216,11 @@ public partial class IndexSearcher
     
     private long NumberOfDocumentsUnderSpecificTerm(in FieldMetadata binding, string term)
     {
-        var terms = _fieldsTree?.CompactTreeFor(binding.FieldName);
-        if (terms == null && term != null)
+        if (_fieldsTree == null)
+            return 0;
+
+        var exist = _fieldsTree.TryGetCompactTreeFor(binding.FieldName, out var terms);
+        if (exist == false && term != null)
             return 0;
         
         if (term is null || ReferenceEquals(term, Constants.ProjectionNullValue))

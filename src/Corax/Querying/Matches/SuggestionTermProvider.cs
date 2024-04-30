@@ -169,8 +169,7 @@ namespace Corax.Querying.Matches
 
             // We initialize the iterator and store it in the stack memory.
             Slice.From(allocator, $"{Constants.IndexWriter.SuggestionsTreePrefix}{_fieldId}", out var treeName);
-            var tree = _searcher.Transaction.CompactTreeFor(treeName);
-            if (tree == null)
+            if (_searcher.Transaction.TryGetCompactTreeFor(treeName, out var tree) == false)
                 goto NoResults;
 
             var iter = tree.Iterate();

@@ -29,9 +29,8 @@ public partial class IndexSearcher
             throw new NotSupportedException($"Type {typeof(TTermType)} is not supported.");
         
         var exactField = field.ChangeAnalyzer(FieldIndexingMode.Exact);
-        
-        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
-        if (terms == null)
+
+        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var terms) == false)
         {
             // If either the term or the field does not exist the request will be empty. 
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
@@ -114,9 +113,7 @@ public partial class IndexSearcher
         
         const int maximumTermMatchesHandledAsTermMatches = 4;
         var canUseUnaryMatch = field.HasBoost == false;
-        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
-
-        if (terms == null)
+        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var terms) == false)
         {
             // If either the term or the field does not exist the request will be empty. 
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);

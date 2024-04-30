@@ -397,7 +397,7 @@ namespace Sparrow
 #if NET6_0_OR_GREATER
         [DoesNotReturn]
 #endif
-        public static void Throw<T>(string message)
+        public static T Throw<T>(string message) where T : Exception
         {
             if (typeof(T) == typeof(ArgumentException))
                 throw new ArgumentException(message);
@@ -417,7 +417,7 @@ namespace Sparrow
         }
 
         [Conditional("DEBUG")]
-        public static void ThrowOnDebug<T>(string message)
+        public static void ThrowOnDebug<T>(string message) where T : Exception
         {
             Throw<T>(message);
         }
