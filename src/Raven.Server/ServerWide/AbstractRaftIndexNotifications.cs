@@ -30,11 +30,10 @@ where TNotification : RaftIndexNotification
 
     public async Task WaitForIndexNotification(long index, CancellationToken token)
     {
-        Task<bool> waitAsync;
         while (true)
         {
             // first get the task, then wait on it
-            waitAsync = _notifiedListeners.WaitAsync(token);
+            var waitAsync = _notifiedListeners.WaitAsync(token);
 
             if (index <= Interlocked.Read(ref LastModifiedIndex))
                 break;
@@ -50,10 +49,14 @@ where TNotification : RaftIndexNotification
             }
         }
 
-        if (await WaitForTaskCompletion(index, new Lazy<Task>(waitAsync)))
-            return;
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using (token.Register(() => tcs.TrySetResult()))
+        {
+            if (await WaitForTaskCompletion(index, new Lazy<Task>(tcs.Task)))
+                return;
 
-        ThrowCanceledException(index, LastModifiedIndex, isExecution: true);
+            ThrowCanceledException(index, LastModifiedIndex, isExecution: true);
+        }
     }
 
     public async Task WaitForIndexNotification(long index, TimeSpan timeout)
