@@ -35,6 +35,12 @@ public partial class RavenTestBase
             return _parent.Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
         }
 
+        public Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(string node, string database)
+        {
+            var server = _parent.Servers.Single(s => s.ServerStore.NodeTag == node);
+            return server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+        }
+
         public Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(RavenServer server, IDocumentStore store, string database = null)
         {
             return server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);

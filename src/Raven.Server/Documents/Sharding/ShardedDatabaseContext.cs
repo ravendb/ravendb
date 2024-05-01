@@ -249,6 +249,8 @@ namespace Raven.Server.Documents.Sharding
 
             exceptionAggregator.Execute(() => SubscriptionsStorage.Dispose());
 
+            Operations.Dispose(exceptionAggregator);
+
             exceptionAggregator.Execute(() => _databaseShutdown.Dispose());
 
             exceptionAggregator.Execute(() => NotificationCenter.Dispose());

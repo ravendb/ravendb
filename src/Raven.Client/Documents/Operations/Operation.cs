@@ -7,6 +7,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Changes;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -110,7 +111,9 @@ namespace Raven.Client.Documents.Operations
                     var observable = changes.ForOperationId(_id);
                     _subscription = observable.Subscribe(this);
                     await observable.EnsureSubscribedNow().ConfigureAwait(false);
-                    changes.ConnectionStatusChanged += OnConnectionStatusChanged;
+
+                    if (_requestExecutor.ForTestingPurposes?.WaitBeforeFetchOperationStatus != null)
+                        await _requestExecutor.ForTestingPurposes.WaitBeforeFetchOperationStatus.WaitAsync().ConfigureAwait(false);
 
                     // We start the operation before we subscribe,
                     // so if we subscribe after the operation was already completed we will miss the notification for it. 
@@ -129,23 +132,6 @@ namespace Raven.Client.Documents.Operations
                     break;
                 default:
                     throw new NotSupportedException($"Invalid operation fetch status mode: '{StatusFetchMode}'");
-            }
-        }
-
-        private void OnConnectionStatusChanged(object sender, EventArgs e)
-        {
-            AsyncHelpers.RunSync(OnConnectionStatusChangedAsync);
-        }
-
-        private async Task OnConnectionStatusChangedAsync()
-        {
-            try
-            {
-                await FetchOperationStatus().ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                await StopProcessingUnderLock(e).ConfigureAwait(false);
             }
         }
 
@@ -173,7 +159,6 @@ namespace Raven.Client.Documents.Operations
         {
             if (StatusFetchMode == OperationStatusFetchMode.ChangesApi)
             {
-                _changes().ConnectionStatusChanged -= OnConnectionStatusChanged;
                 _subscription?.Dispose();
                 _subscription = null;
             }

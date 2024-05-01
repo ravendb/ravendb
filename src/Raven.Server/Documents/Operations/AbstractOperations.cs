@@ -173,7 +173,7 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
 
     public abstract long GetNextOperationId();
 
-    public void Dispose(ExceptionAggregator exceptionAggregator)
+    public virtual void Dispose(ExceptionAggregator exceptionAggregator)
     {
         foreach (var active in Active.Values)
         {

@@ -30,7 +30,7 @@ public class RavenDB_16709 : RavenTestBase
             await commands.RequestExecutor.ExecuteAsync(getOperationIdCommand, commands.Context);
             var operationId = getOperationIdCommand.Result;
             await commands.ExecuteAsync(new CsvImportCommand(stream, null, operationId));
-            var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
+            var operation = new Operation(commands.RequestExecutor, () => store.Changes(store.Database, Server.ServerStore.NodeTag), store.Conventions, operationId, Server.ServerStore.NodeTag);
             await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
             //Assert
