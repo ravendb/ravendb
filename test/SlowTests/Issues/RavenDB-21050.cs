@@ -48,11 +48,18 @@ public class RavenDB_21050 : RavenTestBase
                 session.Delete(id);
                 await session.SaveChangesAsync();
             }
-
+            
             var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
             await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
-            var restoreConfig = new RestoreBackupConfiguration { BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = destination.Database };
+            var path = Directory.GetDirectories(backupPath).First();
+            if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+            {
+                int shardNumber = await Sharding.GetShardNumberForAsync(source, id);
+                path = Directory.GetDirectories(backupPath).First(p => p.Contains($"${shardNumber}"));
+            }
+
+            var restoreConfig = new RestoreBackupConfiguration { BackupLocation = path, DatabaseName = destination.Database };
             using (Backup.RestoreDatabase(destination, restoreConfig))
             {
                 using (var session = destination.OpenAsyncSession())
@@ -62,6 +69,60 @@ public class RavenDB_21050 : RavenTestBase
                 }
             }
 
+        }
+    }
+
+
+    [RavenTheory(RavenTestCategory.BackupExportImport)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ClusterWideTransaction_Restore_FromShardedToSharded(bool delete)
+    {
+        var backupPath = NewDataPath(suffix: "BackupFolder");
+        const string id = "TestObjs/0";
+
+        using (var source = Sharding.GetDocumentStore())
+        using (var destination = new DocumentStore { Urls = new[] { Server.WebUrl }, Database = $"restored_{source.Database}" }.Initialize())
+        {
+            var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 */12 * *" };
+            var backupTaskId = (await source.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+
+            using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                await session.StoreAsync(new TestObj(), id);
+                await session.SaveChangesAsync();
+            }
+
+            var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+            await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+
+            if (delete)
+            {
+                using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+            }
+
+            var paths = Directory.GetDirectories(backupPath);
+
+            using (Backup.RestoreDatabase(destination, new RestoreBackupConfiguration
+                   {
+                       DatabaseName = destination.Database,
+                       ShardRestoreSettings = Sharding.Backup.GenerateShardRestoreSettings(paths, await Sharding.GetShardingConfigurationAsync(source))
+                   }))
+            using (var session = destination.OpenAsyncSession())
+            {
+                var shouldBeDeleted = await session.LoadAsync<TestObj>(id);
+                if (delete)
+                    Assert.Null(shouldBeDeleted);
+                else
+                    Assert.NotNull(shouldBeDeleted);
+            }
 
         }
     }
