@@ -15,6 +15,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Nito.AsyncEx;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Configuration;
@@ -2544,6 +2545,8 @@ namespace Raven.Client.Http
             internal Action DelayRequest;
 
             internal Action<GetDatabaseTopologyCommand> SetCommandTimeout;
+
+            internal AsyncManualResetEvent WaitBeforeFetchOperationStatus;
         }
     }
 }

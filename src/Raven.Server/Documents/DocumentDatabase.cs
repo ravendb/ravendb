@@ -2098,6 +2098,8 @@ namespace Raven.Server.Documents
 
             internal Action<PathSetting> ActionToCallOnGetTempPath;
 
+            internal AsyncManualResetEvent DelayQueryByPatch;
+
             internal bool EnableWritesToTheWrongShard = false;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)

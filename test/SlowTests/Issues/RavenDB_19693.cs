@@ -30,7 +30,7 @@ public class RavenDB_19693 : RavenTestBase
             var token = new OperationCancelToken(database.DatabaseShutdown, CancellationToken.None);
             _ = database.Operations.AddLocalOperation(operationId, OperationType.DumpRawIndexData, "Test Operation", detailedDescription: null, onProgress => DoWorkAsync(onProgress, TimeSpan.FromSeconds(2), token.Token), token);
 
-            var operation = new Operation(store.GetRequestExecutor(), () => store.Changes(), store.Conventions, operationId);
+            var operation = new Operation(store.GetRequestExecutor(), () => store.Changes(store.Database, Server.ServerStore.NodeTag), store.Conventions, operationId, Server.ServerStore.NodeTag);
 
             using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(10)))
                 await Assert.ThrowsAsync<TimeoutException>(() => operation.WaitForCompletionAsync(cts.Token));
@@ -50,7 +50,7 @@ public class RavenDB_19693 : RavenTestBase
             var token = new OperationCancelToken(database.DatabaseShutdown, CancellationToken.None);
             _ = database.Operations.AddLocalOperation(operationId, OperationType.DumpRawIndexData, "Test Operation", detailedDescription: null, onProgress => DoWorkAsync(onProgress, TimeSpan.FromSeconds(5), token.Token), token);
 
-            var operation = new Operation(store.GetRequestExecutor(), () => store.Changes(), store.Conventions, operationId);
+            var operation = new Operation(store.GetRequestExecutor(), () => store.Changes(store.Database, Server.ServerStore.NodeTag), store.Conventions, operationId, Server.ServerStore.NodeTag);
 
             await operation.KillAsync();
 

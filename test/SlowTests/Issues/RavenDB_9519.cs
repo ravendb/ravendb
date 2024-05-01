@@ -57,7 +57,7 @@ namespace SlowTests.Issues
 
                         await commands.ExecuteAsync(csvImportCommand);
 
-                        var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
+                        var operation = new Operation(commands.RequestExecutor, () => store.Changes(store.Database, Server.ServerStore.NodeTag), store.Conventions, operationId, Server.ServerStore.NodeTag);
 
                         await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                     }
@@ -116,7 +116,7 @@ namespace SlowTests.Issues
 
                         await commands.ExecuteAsync(csvImportCommand);
 
-                        var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
+                        var operation = new Operation(commands.RequestExecutor, () => store.Changes(store.Database, Server.ServerStore.NodeTag), store.Conventions, operationId, Server.ServerStore.NodeTag);
 
                         await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                     }
@@ -165,7 +165,7 @@ namespace SlowTests.Issues
                     var exception = await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () =>
                     {
                         await commands.ExecuteAsync(csvImportCommand);
-                        var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
+                        var operation = new Operation(commands.RequestExecutor, () => store.Changes(store.Database, Server.ServerStore.NodeTag), store.Conventions, operationId, Server.ServerStore.NodeTag);
                         await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                     });
 
