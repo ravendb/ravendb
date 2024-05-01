@@ -176,7 +176,6 @@ namespace Raven.Server.Documents.Indexes
                             catch (OperationCanceledException e)
                             {
                                 AddToIndexesToDelete(index);
-
                                 _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
                                 return;
                             }

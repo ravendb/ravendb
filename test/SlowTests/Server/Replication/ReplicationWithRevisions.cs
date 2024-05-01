@@ -8,6 +8,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -142,11 +143,17 @@ namespace SlowTests.Server.Replication
                     MinimumRevisionsToKeep = 3,
                 }));
 
-                var rachisLogIndexNotifications = options.DatabaseMode == RavenDatabaseMode.Single ?
-                    (await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(storeB.Database)).RachisLogIndexNotifications :
-                    Sharding.GetOrchestrator(storeB.Database).RachisLogIndexNotifications;
-                await rachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, TimeSpan.FromSeconds(10));
-
+                if (options.DatabaseMode == RavenDatabaseMode.Single)
+                {
+                    var rachisLogIndexNotifications = (await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(storeB.Database)).RachisLogIndexNotifications;
+                    await rachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, TimeSpan.FromSeconds(10));
+                }
+                else
+                {
+                    var rachisLogIndexNotifications = Sharding.GetOrchestrator(storeB.Database).RachisLogIndexNotifications;
+                    await rachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, TimeSpan.FromSeconds(10));
+                }
+                
                 using (var session = storeB.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order");
@@ -210,10 +217,16 @@ namespace SlowTests.Server.Replication
                     Disabled = true
                 }));
 
-                var rachisLogIndexNotifications = options.DatabaseMode == RavenDatabaseMode.Single ?
-                    (await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(storeB.Database)).RachisLogIndexNotifications :
-                    Sharding.GetOrchestrator(storeB.Database).RachisLogIndexNotifications;
-                await rachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, TimeSpan.FromSeconds(10));
+                if (options.DatabaseMode == RavenDatabaseMode.Single)
+                {
+                    var rachisLogIndexNotifications = (await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(storeB.Database)).RachisLogIndexNotifications;
+                    await rachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, TimeSpan.FromSeconds(10));
+                }
+                else
+                {
+                    var rachisLogIndexNotifications = Sharding.GetOrchestrator(storeB.Database).RachisLogIndexNotifications;
+                    await rachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, TimeSpan.FromSeconds(10));
+                }
 
                 using (var session = storeB.OpenAsyncSession())
                 {

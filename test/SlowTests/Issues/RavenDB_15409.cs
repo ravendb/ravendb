@@ -4,76 +4,43 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
-using Sparrow.Json;
-using Sparrow.Logging;
 using Tests.Infrastructure;
-using Tests.Infrastructure.Utils;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_15409 : ClusterTestBase
     {
-        [Fact]
-        public async Task DoNotCallUpdateLicenseLimitsCommandOnEveryLeaderChange()
+        public RavenDB_15409(ITestOutputHelper output) : base(output)
         {
-            using var socket = new DummyWebSocket();
-
-            var (servers, leader) = await CreateRaftCluster(3);
-            var _ = LoggingSource.Instance.Register(socket, new LoggingSource.WebSocketContext(), CancellationToken.None);
-
-            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(9, TimeSpan.FromSeconds(15));
-            var expected = new HashSet<long>();
-            foreach (var server in servers)
-            {
-                expected.Add(Cluster.GetRaftCommands(server, nameof(UpdateLicenseLimitsCommand)).Count());
-            }
-
-            if (expected.Count != 1)
-            {
-                using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                {
-                    var massageBuilder = new StringBuilder();
-                    foreach (var server in servers)
-                    {
-                        var serverRaftCommands = Cluster.GetRaftCommands(server).Select(c => ctx.ReadObject(c, "raftCommand").ToString());
-
-                        massageBuilder
-                            .AppendFormat("**** Node {0} ****", server.ServerStore.NodeTag).AppendLine()
-                            .AppendLine(string.Join('\n', serverRaftCommands));
-                    }
-
-                    massageBuilder.Append(await socket.CloseAndGetLogsAsync());
-                    Assert.Fail(massageBuilder.ToString());
-                }
-            }
-            Assert.Single(expected);
-
-            for (int i = 0; i < 10; i++)
-            {
-                await ActionWithLeader(l =>
-                {
-                    l.ServerStore.Engine.CurrentLeader.StepDown();
-                    return l.ServerStore.Engine.WaitForLeaderChange(l.ServerStore.ServerShutdown);
-                });
-            }
-
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
-            {
-                await RavenTestHelper.AssertAllAsync(async () => await socket.CloseAndGetLogsAsync(), servers.Select(s => (Action)(() =>
-                {
-                    var actual = Cluster.GetRaftCommands(s, nameof(UpdateLicenseLimitsCommand)).Count();
-                    Assert.True(expected.Single() == actual, 
-                        $"{s.ServerStore.NodeTag} expect {expected.Single()} actual {actual} " +
-                                $" {string.Join($"{Environment.NewLine}\t", Cluster.GetRaftCommands(s).Select(c => ctx.ReadObject(c, "raftCommand").ToString()))}");
-                })).ToArray());
-            }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
+        public async Task DoNotCallUpdateLicenseLimitsCommandOnEveryLeaderChange()
+        {
+            const int numberOfNodes = 3;
+            (List<RavenServer> servers, _) = await CreateRaftCluster(numberOfNodes);
+
+            // Verifying that each node in the cluster has issued the same number of `UpdateLicenseLimitsCommand` commands,
+            // as each node is expected to independently send its own details.
+            await Cluster.AssertNumberOfCommandsPerNode(expectedNumberOfCommands: numberOfNodes, servers, nameof(UpdateLicenseLimitsCommand));
+
+            // 10 leader changes
+            for (int i = 0; i < 10; i++)
+                await ActionWithLeader(leader =>
+                {
+                    leader.ServerStore.Engine.CurrentLeader.StepDown();
+                    return leader.ServerStore.Engine.WaitForLeaderChange(leader.ServerStore.ServerShutdown);
+                });
+
+            // Nothing should have changed
+            await Cluster.AssertNumberOfCommandsPerNode(expectedNumberOfCommands: numberOfNodes, servers, nameof(UpdateLicenseLimitsCommand));
+        }
+
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task CanWaitForTopologyModification()
         {
             var (servers, leader) = await CreateRaftCluster(3);
@@ -82,10 +49,6 @@ namespace SlowTests.Issues
             // demote node to watcher
             await leader.ServerStore.Engine.ModifyTopologyAsync(follower.ServerStore.NodeTag, follower.WebUrl, Leader.TopologyModification.NonVoter);
             await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(10, TimeSpan.FromSeconds(15));
-        }
-
-        public RavenDB_15409(ITestOutputHelper output) : base(output)
-        {
         }
     }
 }
