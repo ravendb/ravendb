@@ -28,8 +28,7 @@ public sealed class ShardedClusterTransactionRequestProcessor : AbstractClusterT
 
     public override Task WaitForDatabaseCompletion(Task<HashSet<string>> onDatabaseCompletionTask, long index, ClusterTransactionOptions options, CancellationToken token)
     {
-        var op = new ShardedWaitForIndexNotificationOperation(RequestHandler, index);
-        return RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op, token);
+        return RequestHandler.DatabaseContext.Cluster.WaitForExecutionOnShardsAsync(index, token).AsTask();
     }
 
     protected override ClusterTransactionCommand CreateClusterTransactionCommand(
