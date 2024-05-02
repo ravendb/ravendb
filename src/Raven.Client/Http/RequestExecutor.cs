@@ -2453,6 +2453,8 @@ namespace Raven.Client.Http
             internal Action DelayRequest;
 
             internal Action<GetDatabaseTopologyCommand> SetCommandTimeout;
+
+            public ManualResetEventSlim WaitBeforeFetchOperationStatus;
         }
     }
 }

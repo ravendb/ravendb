@@ -7,6 +7,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Changes;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -115,15 +116,19 @@ namespace Raven.Client.Documents.Operations
                         var observable = changes.ForOperationId(_id);
                         _subscription = observable.Subscribe(this);
                         await observable.EnsureSubscribedNow().ConfigureAwait(false);
-                        
+
+                        if (_requestExecutor.ForTestingPurposes?.WaitBeforeFetchOperationStatus != null)
+                            _requestExecutor.ForTestingPurposes.WaitBeforeFetchOperationStatus.Wait();
+
                         // We start the operation before we subscribe,
                         // so if we subscribe after the operation was already completed we will miss the notification for it. 
                         await FetchOperationStatus().ConfigureAwait(false);
                     }
-                    catch
+                    catch(DatabaseDoesNotExistException)
                     {
-                        // If the websocket connection failed, we need to remove it from the dictionary
+                        // If the websocket connection failed fatally, we need to remove it from the dictionary
                         // so we won't attempt to reuse it in the next call to the same node
+                        // DatabaseDoesNotExistException is the only exception that should cause the websocket to stop trying to reconnect in DoWork
                         changes?.Dispose();
                         throw;
                     }
