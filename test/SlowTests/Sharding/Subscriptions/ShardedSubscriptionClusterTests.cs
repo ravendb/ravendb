@@ -22,7 +22,7 @@ namespace SlowTests.Sharding.Subscriptions
         {
         }
 
-        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(3000);
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
 
         [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions | RavenTestCategory.Cluster)]
         public async Task CanRunShardedSubscriptionInCluster()
@@ -171,29 +171,26 @@ namespace SlowTests.Sharding.Subscriptions
 
                 var mre = new AsyncManualResetEvent();
                 var mre2 = new AsyncManualResetEvent();
-                List<string> results = new List<string>();
+                HashSet<string> results = new HashSet<string>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)))
                 {
-                    var c = 0;
                     var t = subscription.Run(x =>
                     {
                         foreach (var item in x.Items)
                         {
-                            c++;
                             results.Add(item.Id);
                         }
 
-                        if (c == expectedIds.Count)
+                        if (results.Count == expectedIds.Count)
                             mre.Set();
 
-                        if (c == expectedIds.Count + expectedIds2.Count)
+                        if (results.Count == expectedIds.Count + expectedIds2.Count)
                             mre2.Set();
                     });
 
                     Assert.True(await mre.WaitAsync(_reasonableWaitTime),$"error: {t.Exception}");
 
                     Assert.All(expectedIds, s => Assert.Contains(s, results));
-                    results.Clear();
 
                     var dispsoedNode = nodes.FirstOrDefault(x => x.ServerStore.NodeTag == disposed.First());
                     Assert.NotNull(dispsoedNode);
