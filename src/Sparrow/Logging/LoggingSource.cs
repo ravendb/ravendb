@@ -192,14 +192,16 @@ namespace Sparrow.Logging
 
         public void SetupLogMode(LogMode logMode, string path, TimeSpan retentionTime, long retentionSize, bool compress)
         {
+            if (_loggingThread?.ManagedThreadId == Thread.CurrentThread.ManagedThreadId)
+            {
+                Task.Run(() => SetupLogMode(logMode, path, retentionTime, retentionSize, compress));
+                return;
+            }
+
             lock (this)
             {
                 var copyLoggingThread = _loggingThread;
-                if (copyLoggingThread?.ManagedThreadId == Thread.CurrentThread.ManagedThreadId)
-                {
-                    Task.Run(() => SetupLogMode(logMode, path, retentionTime, retentionSize, compress));
-                    return;
-                }
+                
                 (bool info, bool operation) old = (_isInfoEnabled, _isOperationsEnabled);
                 (_isInfoEnabled, _isOperationsEnabled) = CalculateIsLogEnabled(logMode);
                 if (_isInfoEnabled == old.info && _isOperationsEnabled == old.operation && LogMode == logMode && path == _path && retentionTime == RetentionTime && compress == Compressing)
@@ -610,7 +612,6 @@ namespace Sparrow.Logging
             try
             {
                 Interlocked.Increment(ref _generation);
-                var threadStatesToRemove = new FastStack<WeakReference<LocalThreadWriterState>>();
                 while (_keepLogging)
                 {
                     try
