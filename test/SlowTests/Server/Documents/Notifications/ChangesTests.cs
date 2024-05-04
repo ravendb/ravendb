@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -280,6 +281,71 @@ namespace SlowTests.Server.Documents.Notifications
             }
         }
 
+        [Fact]
+        public async Task CacheIsUpdatedAfterChangesApiReconnection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var database = await GetDatabase(Server, store.Database);
+                var count = 0;
+                database.ForTestingPurposesOnly().OnNextMessageChangesApi = (djv, webSocket) =>
+                {
+                    var nameValue = djv.Properties.FirstOrDefault(x => x.Name == "Type");
+                    if (nameValue.Name == null || (string)nameValue.Value != nameof(AggressiveCacheChange))
+                        return;
+
+                    if (++count == 1)
+                    {
+                        webSocket.Abort();
+                    }
+                };
+
+                const string oldName = "Grisha";
+                const string newName = "Grisha Kotler";
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = oldName
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (await store.AggressivelyCacheForAsync(TimeSpan.MaxValue))
+                using (var session = store.OpenAsyncSession())
+                {
+                    var loaded = await session.LoadAsync<User>("users/1");
+                    Assert.Equal(oldName, loaded.Name);
+                }
+
+                using (var updateStore = new DocumentStore
+                {
+                    Urls = store.Urls,
+                    Database = store.Database
+                }.Initialize())
+                {
+                    using (var session = updateStore.OpenAsyncSession())
+                    {
+                        var loaded = await session.LoadAsync<User>("users/1");
+                        loaded.Name = newName;
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                var value = await WaitForValueAsync(async () =>
+                {
+                    using (await store.AggressivelyCacheForAsync(TimeSpan.MaxValue))
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var loaded = await session.LoadAsync<User>("users/1");
+                        return loaded.Name;
+                    }
+                }, newName);
+
+                Assert.Equal(newName, value);
+            }
+        }
+
         private class UsersIndex : AbstractIndexCreationTask<User>
         {
             public override string IndexName => "Users/All";
@@ -302,10 +368,7 @@ namespace SlowTests.Server.Documents.Notifications
                 Map = users =>
                     from user in users
                     select new { user.Name, user.LastName, user.Age, user.AddressId, user.Id };
-
-
             }
         }
-        
     }
 }
