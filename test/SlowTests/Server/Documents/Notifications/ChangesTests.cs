@@ -318,18 +318,11 @@ namespace SlowTests.Server.Documents.Notifications
                     Assert.Equal(oldName, loaded.Name);
                 }
 
-                using (var updateStore = new DocumentStore
+                using (var session = store.OpenAsyncSession())
                 {
-                    Urls = store.Urls,
-                    Database = store.Database
-                }.Initialize())
-                {
-                    using (var session = updateStore.OpenAsyncSession())
-                    {
-                        var loaded = await session.LoadAsync<User>("users/1");
-                        loaded.Name = newName;
-                        await session.SaveChangesAsync();
-                    }
+                    var loaded = await session.LoadAsync<User>("users/1");
+                    loaded.Name = newName;
+                    await session.SaveChangesAsync();
                 }
 
                 var value = await WaitForValueAsync(async () =>
