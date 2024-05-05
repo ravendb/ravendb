@@ -21,12 +21,12 @@ using Voron;
 namespace Raven.Server.Documents.Handlers.Processors.Stats;
 
 internal abstract class
-    AbstractStatsHandlerProcessorForGetValidateUnusedIds<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler,
+    AbstractStatsHandlerProcessorForPostValidateUnusedIds<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler,
         TOperationContext>
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractStatsHandlerProcessorForGetValidateUnusedIds([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+    protected AbstractStatsHandlerProcessorForPostValidateUnusedIds([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
