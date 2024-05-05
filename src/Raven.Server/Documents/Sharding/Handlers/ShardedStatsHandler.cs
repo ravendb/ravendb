@@ -56,10 +56,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
-        [RavenShardedAction("/databases/*/validate-unused-ids", "GET")]
+        [RavenShardedAction("/databases/*/admin/validate-unused-ids", "POST")]
         public async Task ValidateUnusedIds()
         {
-            using (var processor = new ShardedStatsHandlerProcessorForGetValidateUnusedIds(this))
+            using (var processor = new ShardedStatsHandlerProcessorForPostValidateUnusedIds(this))
                 await processor.ExecuteAsync();
         }
     }

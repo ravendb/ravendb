@@ -26,11 +26,11 @@ internal sealed class ValidateUnusedIdsCommand : RavenCommand
 
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
     {
-        url = $"{node.Url}/databases/{node.Database}/validate-unused-ids";
+        url = $"{node.Url}/databases/{node.Database}/admin/validate-unused-ids";
 
         return new HttpRequestMessage
         {
-            Method = HttpMethod.Get,
+            Method = HttpMethod.Post,
             Content = new BlittableJsonContent(
                 async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx))
                     .ConfigureAwait(false), DocumentConventions.Default)

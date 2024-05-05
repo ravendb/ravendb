@@ -12,11 +12,11 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Stats;
 
-internal class StatsHandlerProcessorForGetValidateUnusedIds : AbstractStatsHandlerProcessorForGetValidateUnusedIds<DatabaseRequestHandler,
+internal class StatsHandlerProcessorForPostValidateUnusedIds : AbstractStatsHandlerProcessorForPostValidateUnusedIds<DatabaseRequestHandler,
     DocumentsOperationContext>
 {
 
-    public StatsHandlerProcessorForGetValidateUnusedIds([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+    public StatsHandlerProcessorForPostValidateUnusedIds([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

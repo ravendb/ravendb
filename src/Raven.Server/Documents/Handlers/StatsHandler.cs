@@ -58,10 +58,10 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        [RavenAction("/databases/*/validate-unused-ids", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/validate-unused-ids", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ValidateUnusedIds()
         {
-            using (var processor = new StatsHandlerProcessorForGetValidateUnusedIds(this))
+            using (var processor = new StatsHandlerProcessorForPostValidateUnusedIds(this))
                 await processor.ExecuteAsync();
         }
     }

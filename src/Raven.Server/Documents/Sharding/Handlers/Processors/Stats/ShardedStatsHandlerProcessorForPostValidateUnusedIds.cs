@@ -15,10 +15,10 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Stats;
 
-internal class ShardedStatsHandlerProcessorForGetValidateUnusedIds : AbstractStatsHandlerProcessorForGetValidateUnusedIds<ShardedDatabaseRequestHandler,
+internal class ShardedStatsHandlerProcessorForPostValidateUnusedIds : AbstractStatsHandlerProcessorForPostValidateUnusedIds<ShardedDatabaseRequestHandler,
     TransactionOperationContext>
 {
-    public ShardedStatsHandlerProcessorForGetValidateUnusedIds([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
+    public ShardedStatsHandlerProcessorForPostValidateUnusedIds([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
