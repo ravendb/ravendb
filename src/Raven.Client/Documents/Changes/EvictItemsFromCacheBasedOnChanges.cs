@@ -14,7 +14,6 @@ namespace Raven.Client.Documents.Changes
 {
     internal class EvictItemsFromCacheBasedOnChanges : IObserver<DocumentChange>, IObserver<IndexChange>, IObserver<AggressiveCacheChange>, IDisposable
     {
-        private readonly string _databaseName;
         private readonly DatabaseChanges _changes;
         private IDisposable _documentsSubscription;
         private IDisposable _indexesSubscription;
@@ -24,7 +23,6 @@ namespace Raven.Client.Documents.Changes
 
         public EvictItemsFromCacheBasedOnChanges(DocumentStore store, string databaseName)
         {
-            _databaseName = databaseName;
             _requestExecutor = store.GetRequestExecutor(databaseName);
             _changes = new AggressiveCacheDatabaseChanges(_requestExecutor, databaseName);
             _taskConnected = EnsureConnectedInternalAsync();
