@@ -599,6 +599,8 @@ namespace Raven.Server.Documents
                                 if (value == null || _disposeToken.IsCancellationRequested)
                                     break;
 
+                                _documentDatabase.ForTestingPurposes?.OnNextMessageChangesApi?.Invoke(value, _webSocket);
+
                                 if (first == false)
                                     writer.WriteComma();
 

@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Changes
         {
             _databaseName = databaseName;
             _requestExecutor = store.GetRequestExecutor(databaseName);
-            _changes = new DatabaseChanges(_requestExecutor, databaseName, onDispose: null, nodeTag: null);
+            _changes = new AggressiveCacheDatabaseChanges(_requestExecutor, databaseName);
             _taskConnected = EnsureConnectedInternalAsync();
         }
 
@@ -81,6 +81,8 @@ namespace Raven.Client.Documents.Changes
 
         public void OnError(Exception error)
         {
+            // any error means that the changes connection was disconnected, and we must invalidate the cache
+            Interlocked.Increment(ref _requestExecutor.Cache.Generation);
         }
 
         public void OnCompleted()

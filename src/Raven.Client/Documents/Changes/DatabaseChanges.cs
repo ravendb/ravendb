@@ -584,10 +584,12 @@ namespace Raven.Client.Documents.Changes
                 }
                 catch (Exception e)
                 {
-                    //We don't report this error since we can automatically recover from it and we can't
-                    // recover from the OnError accessing the faulty WebSocket.
+                    // we don't report this error since we can automatically recover from it,
+                    // and we can't recover from the OnError accessing the faulty WebSocket.
                     try
                     {
+                        NotifyAboutReconnection(e);
+
                         if (wasConnected)
                             ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 
@@ -608,7 +610,7 @@ namespace Raven.Client.Documents.Changes
                         }
                         catch (Exception)
                         {
-                            //We don't want to stop observe for changes if server down. we will wait for one to be up
+                            // we don't want to stop observing for changes if the server is down. we will wait for it to be up.
                         }
 
                         if (ReconnectClient() == false)
@@ -817,7 +819,11 @@ namespace Raven.Client.Documents.Changes
             }
         }
 
-        private void NotifyAboutError(Exception e)
+        internal virtual void NotifyAboutReconnection(Exception e)
+        {
+        }
+
+        internal void NotifyAboutError(Exception e)
         {
             if (_cts.Token.IsCancellationRequested)
                 return;
