@@ -281,7 +281,7 @@ namespace SlowTests.Server.Documents.Notifications
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CacheIsUpdatedAfterChangesApiReconnection()
         {
             using (var store = GetDocumentStore())
