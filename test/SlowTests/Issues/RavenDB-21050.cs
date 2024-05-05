@@ -73,7 +73,7 @@ public class RavenDB_21050 : RavenTestBase
     }
 
 
-    [RavenTheory(RavenTestCategory.BackupExportImport)]
+    [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task ClusterWideTransaction_Restore_FromShardedToSharded(bool delete)
