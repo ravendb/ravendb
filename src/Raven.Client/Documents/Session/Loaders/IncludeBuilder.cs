@@ -77,7 +77,7 @@ namespace Raven.Client.Documents.Session.Loaders
     }
 
     /// <summary>
-    /// The server is instructed to pre-load referenced documents concurrently with retrieving the time series data.<br/>
+    /// The server is instructed to include time series data when retrieving documents.<br/>
     /// The time series results are added to the session unit of work, and subsequent requests to load them are served directly from the session cache,
     /// without requiring any additional requests to the server.
     /// </summary>
