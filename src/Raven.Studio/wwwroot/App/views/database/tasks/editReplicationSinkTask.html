@@ -54,7 +54,7 @@
                         <div class="form-group margin-bottom margin-bottom-xs">
                             <label class="control-label">&nbsp;</label>
                             <div class="toggle" data-placement="right" data-toggle="tooltip" title="Toggle on to set a responsible node for the task" data-animation="true">
-                                <input id="manualMentorNode" type="checkbox" data-bind="checked: manualChooseMentor" />
+                                <input id="manualMentorNode" type="checkbox" data-bind="checked: manualChooseMentor, disable: $root.possibleMentors().length === 0" />
                                 <label for="manualMentorNode">Set responsible node</label>
                             </div>
                         </div>

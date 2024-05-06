@@ -98,7 +98,7 @@
                     <div class="col-sm-4 col-sm-offset-4 col-lg-offset-2">
                         <div class="toggle">
                             <div class="toggle" data-placement="right" data-toggle="tooltip" title="Toggle on to set a responsible node for the task" data-animation="true">
-                                <input id="responsibleNode" type="checkbox" data-bind="checked: manualChooseMentor">
+                                <input id="responsibleNode" type="checkbox" data-bind="checked: manualChooseMentor, disable: $root.possibleMentors().length === 0">
                                 <label for="responsibleNode">Set responsible node</label>
                             </div>
                         </div>
