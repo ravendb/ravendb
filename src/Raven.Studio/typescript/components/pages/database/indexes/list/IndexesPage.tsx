@@ -250,11 +250,11 @@ export function IndexesPage(props: IndexesPageProps) {
             {bulkOperationConfirm && (
                 <BulkIndexOperationConfirm {...bulkOperationConfirm} toggle={() => setBulkOperationConfirm(null)} />
             )}
-            {resetIndexData.indexName && (
+            {resetIndexData.confirmData && (
                 <ConfirmResetIndex
-                    indexName={resetIndexData.indexName}
-                    toggle={() => resetIndexData.setIndexName(null)}
-                    onConfirm={(x) => resetIndexData.onConfirm(x)}
+                    {...resetIndexData.confirmData}
+                    closeConfirm={resetIndexData.closeConfirm}
+                    onConfirm={resetIndexData.onConfirm}
                     allActionContexts={allActionContexts}
                 />
             )}

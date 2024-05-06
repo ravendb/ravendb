@@ -51,10 +51,11 @@ export interface IndexPanelProps {
     disableIndexing: () => Promise<void>;
     pauseIndexing: () => Promise<void>;
     deleteIndex: () => Promise<void>;
-    resetIndex: () => void;
+    resetIndex: (mode?: Raven.Client.Documents.Indexes.IndexResetMode) => void;
     openFaulty: (location: databaseLocationSpecifier) => Promise<void>;
     selected: boolean;
     hasReplacement?: boolean;
+    isReplacement?: boolean;
     toggleSelection: () => void;
     ref?: any;
 }
@@ -88,7 +89,7 @@ function getLockColor(index: IndexSharedInfo) {
 }
 
 export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTMLDivElement>) {
-    const { index, selected, toggleSelection, hasReplacement, globalIndexingStatus } = props;
+    const { index, selected, toggleSelection, hasReplacement, globalIndexingStatus, resetIndex } = props;
 
     const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.hasDatabaseWriteAccess());
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -175,8 +176,6 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
     const openFaulty = async (location: databaseLocationSpecifier) => {
         await props.openFaulty(location);
     };
-
-    const resetIndex = () => props.resetIndex();
 
     const { forCurrentDatabase: urls } = useAppUrls();
     const queryUrl = urls.query(index.name)();
@@ -365,16 +364,13 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         {isFaulty && (
                             <Button onClick={() => openFaulty(index.nodesInfo[0].location)}>Open faulty index</Button>
                         )}
-
                         {hasDatabaseWriteAccess && (
-                            <ButtonGroup>
-                                <Button color="warning" onClick={resetIndex} title="Reset index (rebuild)">
-                                    <Icon icon="reset-index" margin="m-0" />
-                                </Button>
+                            <>
+                                <ResetButton resetIndex={resetIndex} isReplacement={isReplacement} />
                                 <Button color="danger" onClick={deleteIndex} title="Delete the index">
                                     <Icon icon="trash" margin="m-0" />
                                 </Button>
-                            </ButtonGroup>
+                            </>
                         )}
                     </RichPanelActions>
                 </RichPanelHeader>
@@ -544,3 +540,33 @@ function InlineDetails(props: InlineDetailsProps) {
 }
 
 const indexUniqueId = (index: IndexSharedInfo) => "index_" + index.name;
+
+interface ResetButtonProps {
+    resetIndex: (mode?: Raven.Client.Documents.Indexes.IndexResetMode) => void;
+    isReplacement?: boolean;
+}
+
+function ResetButton({ resetIndex, isReplacement }: ResetButtonProps) {
+    return (
+        <UncontrolledDropdown group>
+            <Button color="warning" onClick={() => resetIndex()} title="Reset index (rebuild)">
+                <Icon icon="reset-index" margin="m-0" />
+            </Button>
+            {!isReplacement && (
+                <>
+                    <DropdownToggle className="dropdown-toggle" color="warning" />
+                    <DropdownMenu end>
+                        <DropdownItem onClick={() => resetIndex("InPlace")} title="Reset index in place">
+                            <Icon icon="reset-index" addon="arrow-down" />
+                            Reset in place
+                        </DropdownItem>
+                        <DropdownItem onClick={() => resetIndex("SideBySide")} title="Reset index side by side">
+                            <Icon icon="reset-index" addon="swap" />
+                            Reset side by side
+                        </DropdownItem>
+                    </DropdownMenu>
+                </>
+            )}
+        </UncontrolledDropdown>
+    );
+}

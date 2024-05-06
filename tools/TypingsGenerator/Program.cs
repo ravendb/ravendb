@@ -326,6 +326,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexOptimizeResult));
             scripter.AddType(typeof(TestIndexParameters));
             scripter.AddType(typeof(TestIndexResult));
+            scripter.AddType(typeof(IndexResetMode));
 
             // cluster
             scripter.AddType(typeof(ClusterTopology));
