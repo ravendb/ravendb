@@ -21,7 +21,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             using (var store = GetDocumentStore())
             using (GetElasticClient(out var client))
             {
-                client.Indices.Create(OrdersIndexName, c => c
+                await client.Indices.CreateAsync(OrdersIndexName, c => c
                     .Mappings(m => m
                         .Properties<object>(p => p
                             .MatchOnlyText("Id"))));

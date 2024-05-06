@@ -37,7 +37,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         };
 
         [RequiresElasticSearchRetryFact]
-        public void SimpleScript()
+        public async Task SimpleScript()
         {
             using (var store = GetDocumentStore())
             using (GetElasticClient(out var client))
@@ -59,8 +59,8 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCount = client.Count<object>(descriptor => descriptor.Indices(Indices.Index(OrdersIndexName)));
-                var orderLinesCount = client.Count<object>(descriptor => descriptor.Indices(Indices.Index(OrderLinesIndexName)));
+                var ordersCount = await client.CountAsync<object>(descriptor => descriptor.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCount = await client.CountAsync<object>(descriptor => descriptor.Indices(Indices.Index(OrderLinesIndexName)));
 
                 Assert.Equal(1, ordersCount.Count);
                 Assert.Equal(2, orderLinesCount.Count);
@@ -76,8 +76,8 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCountAfterDelete = client.Count<object>(descriptor => descriptor.Indices(Indices.Index(OrdersIndexName)));
-                var orderLinesCountAfterDelete = client.Count<object>(descriptor => descriptor.Indices(Indices.Index(OrderLinesIndexName)));
+                var ordersCountAfterDelete = await client.CountAsync<object>(descriptor => descriptor.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCountAfterDelete = await client.CountAsync<object>(descriptor => descriptor.Indices(Indices.Index(OrderLinesIndexName)));
 
                 Assert.True(ordersCount.IsValidResponse);
                 Assert.True(orderLinesCount.IsValidResponse);
@@ -88,7 +88,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         }
 
         [RequiresElasticSearchRetryFact]
-        public void SimpleScriptWithManyDocuments()
+        public async Task SimpleScriptWithManyDocuments()
         {
             using (var store = GetDocumentStore())
             using (GetElasticClient(out var client))
@@ -121,8 +121,8 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCount = client.Count<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
-                var orderLinesCount = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
+                var ordersCount = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCount = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
                 
                 Assert.Equal(numberOfOrders, ordersCount.Count);
                 Assert.Equal(numberOfOrders * numberOfLinesPerOrder, orderLinesCount.Count);
@@ -141,8 +141,8 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
-                var orderLinesCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
+                var ordersCountAfterDelete = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCountAfterDelete = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
 
                 Assert.Equal(0, ordersCountAfterDelete.Count);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);
@@ -196,7 +196,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         }
 
         [RequiresElasticSearchRetryFact]
-        public void Can_get_document_id()
+        public async Task Can_get_document_id()
         {
             using (var store = GetDocumentStore())
             using (GetElasticClient(out var client))
@@ -219,10 +219,10 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                client.Indices.Refresh(OrdersIndexName);
-                client.Indices.Refresh(OrderLinesIndexName);
+                await client.Indices.RefreshAsync(OrdersIndexName);
+                await client.Indices.RefreshAsync(OrderLinesIndexName);
 
-                var orderResponse = client.Search<object>(d => d
+                var orderResponse = await client.SearchAsync<object>(d => d
                     .Index(OrdersIndexName)
                     .Query(q => q
                         .Term(p => p
@@ -231,7 +231,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                     )
                 );
 
-                var orderLineResponse = client.Search<object>(d => d
+                var orderLineResponse = await client.SearchAsync<object>(d => d
                     .Index(OrderLinesIndexName)
                     .Query(q => q
                         .Term(p => p
@@ -261,12 +261,12 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                client.Indices.Refresh(OrdersIndexName);
-                client.Indices.Refresh(OrderLinesIndexName);
+                await client.Indices.RefreshAsync(OrdersIndexName);
+                await client.Indices.RefreshAsync(OrderLinesIndexName);
 
 
-                var ordersCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
-                var orderLinesCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
+                var ordersCountAfterDelete = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCountAfterDelete = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
 
                 Assert.Equal(0, ordersCountAfterDelete.Count);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);
@@ -274,7 +274,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         }
 
         [RequiresElasticSearchRetryFact]
-        public void Can_Update_To_Be_No_Items_In_Child_TTable()
+        public async Task Can_Update_To_Be_No_Items_In_Child_TTable()
         {
             using (var store = GetDocumentStore())
             using (GetElasticClient(out var client))
@@ -296,11 +296,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                client.Indices.Refresh(OrdersIndexName);
-                client.Indices.Refresh(OrderLinesIndexName);
+                await client.Indices.RefreshAsync(OrdersIndexName);
+                await client.Indices.RefreshAsync(OrderLinesIndexName);
 
-                var ordersCount = client.Count<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
-                var orderLinesCount = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
+                var ordersCount = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCount = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
 
                 Assert.Equal(1, ordersCount.Count);
                 Assert.Equal(2, orderLinesCount.Count);
@@ -316,11 +316,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                client.Indices.Refresh(OrdersIndexName);
-                client.Indices.Refresh(OrderLinesIndexName);
+                await client.Indices.RefreshAsync(OrdersIndexName);
+                await client.Indices.RefreshAsync(OrderLinesIndexName);
 
-                var ordersCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
-                var orderLinesCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
+                var ordersCountAfterDelete = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCountAfterDelete = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
 
                 Assert.Equal(1, ordersCountAfterDelete.Count);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);
@@ -328,7 +328,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         }
 
         [RequiresElasticSearchRetryFact]
-        public void Update_of_disassembled_document()
+        public async Task Update_of_disassembled_document()
         {
             using (var store = GetDocumentStore())
             using (GetElasticClient(out var client))
@@ -350,9 +350,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                client.Indices.Refresh(OrdersIndexName);
+                await client.Indices.RefreshAsync(OrdersIndexName);
 
-                var orderResponse = client.Search<object>(d => d
+                var orderResponse = await client.SearchAsync<object>(d => d
                     .Index(OrdersIndexName)
                     .Query(q => q
                         .Term(p => p
@@ -387,9 +387,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(2), store.Database, config);
 
-                client.Indices.Refresh(OrdersIndexName);
+                await client.Indices.RefreshAsync(OrdersIndexName);
 
-                var orderResponse1 = client.Search<object>(d => d
+                var orderResponse1 = await client.SearchAsync<object>(d => d
                     .Index(OrdersIndexName)
                     .Query(q => q
                         .Term(p => p
@@ -410,7 +410,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         }
 
         [RequiresElasticSearchRetryFact]
-        public void Docs_from_two_collections_loaded_to_single_one()
+        public async Task Docs_from_two_collections_loaded_to_single_one()
         {
             using (var store = GetDocumentStore())
             using (GetElasticClient(out var client))
@@ -429,9 +429,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                client.Indices.Refresh(UsersIndexName);
+                await client.Indices.RefreshAsync(UsersIndexName);
 
-                var userResponse1 = client.Search<object>(d => d
+                var userResponse1 = await client.SearchAsync<object>(d => d
                     .Index(UsersIndexName)
                     .Query(q => q
                         .Term(p => p
@@ -446,9 +446,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 Assert.NotNull(userObject1);
                 Assert.Equal("Joe Doe", ((JsonElement)userObject1).GetProperty("Name").ToString());
 
-                client.Indices.Refresh(UsersIndexName);
+                await client.Indices.RefreshAsync(UsersIndexName);
 
-                var userResponse2 = client.Search<object>(d => d
+                var userResponse2 = await client.SearchAsync<object>(d => d
                     .Index(UsersIndexName)
                     .Query(q => q
                         .Term(p => p
@@ -477,9 +477,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                client.Indices.Refresh(UsersIndexName);
+                await client.Indices.RefreshAsync(UsersIndexName);
 
-                var userResponse3 = client.Search<object>(d => d
+                var userResponse3 = await client.SearchAsync<object>(d => d
                     .Index(UsersIndexName)
                     .Query(q => q
                         .Term(p => p
@@ -493,9 +493,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 Assert.NotNull(userObject3);
                 Assert.Equal("Doe Joe", ((JsonElement)userObject3).GetProperty("Name").ToString());
 
-                client.Indices.Refresh(UsersIndexName);
+                await client.Indices.RefreshAsync(UsersIndexName);
 
-                var userResponse4 = client.Search<object>(d => d
+                var userResponse4 = await client.SearchAsync<object>(d => d
                     .Index(UsersIndexName)
                     .Query(q => q
                         .Term(p => p
@@ -513,7 +513,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         }
 
         [RequiresElasticSearchRetryFact]
-        public void Can_load_to_specific_collection_when_applying_to_all_docs()
+        public async Task Can_load_to_specific_collection_when_applying_to_all_docs()
         {
             using (var src = GetDocumentStore())
             using (GetElasticClient(out var client))
@@ -534,7 +534,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), src.Database, config);
 
-                var userResponse = client.Search<object>(d => d
+                var userResponse = await client.SearchAsync<object>(d => d
                     .Index(UsersIndexName)
                     .Query(q => q
                         .Term(p => p
@@ -548,7 +548,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         }
 
         [RequiresElasticSearchRetryFact]
-        public void Should_delete_existing_document_when_filtered_by_script()
+        public async Task Should_delete_existing_document_when_filtered_by_script()
         {
             using (var src = GetDocumentStore())
             using (GetElasticClient(out var client))
@@ -569,7 +569,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), src.Database, config);
 
-                var userResponse = client.Search<object>(d => d
+                var userResponse = await client.SearchAsync<object>(d => d
                     .Index(UsersIndexName)
                     .Query(q => q
                         .Term(p => p
@@ -591,7 +591,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), src.Database, config);
 
-                userResponse = client.Search<object>(d => d
+                userResponse = await client.SearchAsync<object>(d => d
                     .Index("users")
                     .Query(q => q
                         .Term(p => p
@@ -645,7 +645,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         }
 
         [RequiresElasticSearchRetryFact]
-        public void Etl_from_encrypted_to_non_encrypted_db_will_work()
+        public async Task Etl_from_encrypted_to_non_encrypted_db_will_work()
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -714,7 +714,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), src.Database, config);
 
-                var userResponse1 = client.Search<object>(d => d
+                var userResponse1 = await client.SearchAsync<object>(d => d
                     .Index(UsersIndexName)
                     .Query(q => q
                         .Term(p => p

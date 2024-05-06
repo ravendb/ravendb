@@ -1535,7 +1535,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
         }
 
         [RequiresElasticSearchRetryFact]
-        public void ElasticEtl_SimpleScript()
+        public async Task ElasticEtl_SimpleScript()
         {
             using (var store = Sharding.GetDocumentStore())
             using (GetElasticClient(out var client))
@@ -1570,8 +1570,8 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 EnsureNonStaleElasticResults(client);
 
-                var ordersCount = client.Count<object>(c => c.Indices(Indices.Index(OrderIndexName)));
-                var orderLinesCount = client.Count<object>(c => c.Indices(OrderLinesIndexName));
+                var ordersCount = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderIndexName)));
+                var orderLinesCount = await client.CountAsync<object>(c => c.Indices(OrderLinesIndexName));
 
                 Assert.Equal(1, ordersCount.Count);
                 Assert.Equal(2, orderLinesCount.Count);
@@ -1589,8 +1589,8 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 EnsureNonStaleElasticResults(client);
 
-                var ordersCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrderIndexName)));
-                var orderLinesCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
+                var ordersCountAfterDelete = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderIndexName)));
+                var orderLinesCountAfterDelete = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
 
                 Assert.Equal(0, ordersCountAfterDelete.Count);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);
@@ -2261,20 +2261,20 @@ loadToAddresses(this.Address);
         {
             var localClient = client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value });
 
-            CleanupIndexes(localClient);
+            AsyncHelpers.RunSync(() =>CleanupIndexes(localClient));
 
             return new DisposableAction(() =>
             {
-                CleanupIndexes(localClient);
+                AsyncHelpers.RunSync(() => CleanupIndexes(localClient));
             });
         }
 
-        private static void CleanupIndexes(ElasticsearchClient client)
+        private static async Task CleanupIndexes(ElasticsearchClient client)
         {
-            var indices = client.Indices.Get(new GetIndexRequestDescriptor(Indices.All));
+            var indices = await client.Indices.GetAsync(new GetIndexRequestDescriptor(Indices.All));
             foreach (var indexName in indices.Indices.Keys)
             {
-                var response = client.Indices.Delete(Indices.Index(indexName));
+                var response = await client.Indices.DeleteAsync(Indices.Index(indexName));
 
                 if (response.IsValidResponse)
                     continue;

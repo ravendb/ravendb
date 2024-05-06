@@ -44,7 +44,7 @@ loadTo" + OrdersIndexName + @"(orderData);
 ";
 
         [RequiresElasticSearchRetryFact]
-        public void CanOmitDocumentIdPropertyInJsonPassedToLoadTo()
+        public async Task CanOmitDocumentIdPropertyInJsonPassedToLoadTo()
         {
             using (var store = GetDocumentStore())
             using (GetElasticClient(out var client))
@@ -68,8 +68,8 @@ loadTo" + OrdersIndexName + @"(orderData);
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCount = client.Count<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
-                var orderLinesCount = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
+                var ordersCount = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCount = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
 
                 Assert.True(ordersCount.IsValidResponse);
                 Assert.True(orderLinesCount.IsValidResponse);
@@ -88,8 +88,8 @@ loadTo" + OrdersIndexName + @"(orderData);
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
-                var orderLinesCountAfterDelete = client.Count<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
+                var ordersCountAfterDelete = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
+                var orderLinesCountAfterDelete = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
 
                 Assert.True(ordersCount.IsValidResponse);
                 Assert.True(orderLinesCount.IsValidResponse);

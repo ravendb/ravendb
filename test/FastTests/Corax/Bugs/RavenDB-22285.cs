@@ -47,7 +47,6 @@ public class RavenDB_22285 : StorageTest
         using (var indexSearcher = new IndexSearcher(Env, mapping))
         {
             var termsReader =  indexSearcher.TermsReaderFor(nameof(Id));
-            Page p = default;
             var exists = indexSearcher.ExistsQuery(mapping.GetByFieldId(Content).Metadata);
             var termMatch = indexSearcher.TermQuery(mapping.GetByFieldId(Content2).Metadata, "common0");
             var buffer = new long[512];
