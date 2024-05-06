@@ -14,7 +14,7 @@ namespace Raven.Embedded
         {
             var sb = new StringBuilder();
 
-            Task<string>? readLineTask = null;
+            Task<string?>? readLineTask = null;
             while (true)
             {
                 readLineTask ??= output.ReadLineAsync();

@@ -12,6 +12,7 @@ using Elastic.Transport.Products.Elasticsearch;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Enumerators;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Stats;
@@ -134,7 +135,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                         count++;
                     }
                     
-                    var bulkIndexResponse = _client.Bulk(bulkRequestDescriptor);
+                    var bulkIndexResponse = AsyncHelpers.RunSync(() => _client.BulkAsync(bulkRequestDescriptor));
                     
                     foreach (BlittableJsonReaderObject blittable in toDispose)
                     {
@@ -192,14 +193,14 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 idsToDelete.Add(FieldValue.String(lowerCasedId));
             }
 
-            var deleteResponse = _client.DeleteByQuery<string>(Indices.Index(indexName), d => d
+            var deleteResponse = AsyncHelpers.RunSync(() => _client.DeleteByQueryAsync<string>(Indices.Index(indexName), d => d
                 .Refresh()
                 .Query(q => q
                     .Terms(p => p
                         .Field(index.DocumentIdProperty)
                         .Terms(new TermsQueryField(idsToDelete)))
                 )
-            );
+            ));
 
             if (deleteResponse.IsValidResponse == false)
             {
@@ -216,7 +217,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         {
             if (_existingIndexes.Contains(indexName) == false)
             {
-                var indexResponse = _client.Indices.Get(new GetIndexRequestDescriptor(Indices.Index(indexName)));
+                var indexResponse = AsyncHelpers.RunSync(() => _client.Indices.GetAsync(new GetIndexRequestDescriptor(Indices.Index(indexName))));
 
                 if (indexResponse.Indices.TryGetValue(indexName, out var state))
                 {
@@ -243,10 +244,10 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
         private void CreateDefaultIndex(string indexName, ElasticSearchIndexWithRecords index)
         {
-            var response = _client.Indices.Create(indexName, c => c
+            var response = AsyncHelpers.RunSync(() => _client.Indices.CreateAsync(indexName, c => c
                 .Mappings(m => m
                     .Properties<KeywordPropertyDescriptor<object>>(p => p
-                        .Keyword(index.DocumentIdProperty))));
+                        .Keyword(index.DocumentIdProperty)))));
 
             // The request made it to the server but something went wrong in ElasticSearch (query parsing exception, non-existent index, etc)
             if (response.TryGetElasticsearchServerError(out var elasticsearchServerError))

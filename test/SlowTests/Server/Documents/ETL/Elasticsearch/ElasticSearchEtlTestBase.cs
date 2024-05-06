@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
 using Elastic.Clients.Elasticsearch;
 using Raven.Client.Documents;
@@ -104,22 +105,22 @@ loadToOrders" + IndexSuffix + @"(orderData);";
                 ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString {Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value},
                     useCustomBlittableSerializer: false);
             
-            CleanupIndexes(localClient);
+            AsyncHelpers.RunSync(() => CleanupIndexes(localClient));
 
             return new DisposableAction(() =>
             {
-                CleanupIndexes(localClient);
+                AsyncHelpers.RunSync(() => CleanupIndexes(localClient));
             });
         }
 
-        private void CleanupIndexes(ElasticsearchClient client)
+        private async Task CleanupIndexes(ElasticsearchClient client)
         {
             if (_definedIndexes.Count <= 0)
                 return;
 
             foreach (var indexName in _definedIndexes)
             {
-                var response = client.Indices.Delete(Indices.Index(indexName.ToLower()));
+                var response = await client.Indices.DeleteAsync(Indices.Index(indexName.ToLower()));
 
                 if (response.IsValidResponse)
                     continue;

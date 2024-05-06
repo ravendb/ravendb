@@ -1,6 +1,7 @@
 ﻿using System;
 using Elastic.Clients.Elasticsearch;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 
 namespace Tests.Infrastructure.ConnectionString
@@ -72,7 +73,7 @@ namespace Tests.Infrastructure.ConnectionString
                 {
                     var client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = nodes }, requestTimeout: TimeSpan.FromSeconds(1), pingTimeout: TimeSpan.FromSeconds(1));
 
-                    response = client.Ping();
+                    response = AsyncHelpers.RunSync(() => client.PingAsync());
 
                     return response.IsValidResponse;
                 }
