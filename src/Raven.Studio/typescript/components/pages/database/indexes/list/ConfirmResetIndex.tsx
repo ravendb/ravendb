@@ -9,29 +9,30 @@ import ActionContextUtils from "components/utils/actionContextUtils";
 
 interface ConfirmResetIndexProps {
     indexName: string;
-    toggle: () => void;
     allActionContexts: DatabaseActionContexts[];
+    mode?: Raven.Client.Documents.Indexes.IndexResetMode;
+    closeConfirm: () => void;
     onConfirm: (contexts: DatabaseActionContexts[]) => void;
 }
 
 export function ConfirmResetIndex(props: ConfirmResetIndexProps) {
-    const { toggle, indexName, allActionContexts, onConfirm } = props;
+    const { indexName, mode, allActionContexts, onConfirm, closeConfirm } = props;
 
     const [selectedActionContexts, setSelectedActionContexts] = useState<DatabaseActionContexts[]>(allActionContexts);
 
     const onSubmit = () => {
         onConfirm(selectedActionContexts);
-        toggle();
+        closeConfirm();
     };
 
     return (
-        <Modal isOpen toggle={toggle} wrapClassName="bs5" centered contentClassName="modal-border bulge-warning">
+        <Modal isOpen toggle={closeConfirm} wrapClassName="bs5" centered contentClassName="modal-border bulge-warning">
             <ModalBody className="vstack gap-4 position-relative">
                 <div className="text-center">
                     <Icon icon="index" color="warning" addon="reset-index" className="fs-1" margin="m-0" />
                 </div>
                 <div className="position-absolute m-2 end-0 top-0">
-                    <Button close onClick={toggle} />
+                    <Button close onClick={closeConfirm} />
                 </div>
                 <div className="text-center lead">
                     You&apos;re about to <span className="text-warning">reset</span> following index
@@ -52,6 +53,13 @@ export function ConfirmResetIndex(props: ConfirmResetIndexProps) {
                     <br />
                     <small>All items matched by the index definition will be re-indexed.</small>
                 </Alert>
+                {mode && (
+                    <Alert color="info">
+                        <strong>Reset mode: </strong>
+                        {mode === "InPlace" && <span>In place</span>}
+                        {mode === "SideBySide" && <span>Side by side</span>}
+                    </Alert>
+                )}
                 {ActionContextUtils.showContextSelector(allActionContexts) && (
                     <div>
                         <h4>Select context</h4>
@@ -64,7 +72,7 @@ export function ConfirmResetIndex(props: ConfirmResetIndexProps) {
                 )}
             </ModalBody>
             <ModalFooter>
-                <Button color="link" onClick={toggle} className="link-muted">
+                <Button color="link" onClick={closeConfirm} className="link-muted">
                     Cancel
                 </Button>
                 <Button

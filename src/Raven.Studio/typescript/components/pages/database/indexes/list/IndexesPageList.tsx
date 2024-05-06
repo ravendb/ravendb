@@ -56,7 +56,9 @@ export default function IndexesPageList({
                             setPriority={(p) => setIndexPriority(index, p)}
                             setLockMode={(l) => setIndexLockMode(index, l)}
                             globalIndexingStatus={globalIndexingStatus}
-                            resetIndex={() => resetIndexData.setIndexName(index.name)}
+                            resetIndex={(mode?: Raven.Client.Documents.Indexes.IndexResetMode) =>
+                                resetIndexData.openConfirm(index.name, mode)
+                            }
                             openFaulty={(location: databaseLocationSpecifier) => openFaulty(index, location)}
                             startIndexing={() => startIndexes([index])}
                             disableIndexing={() => disableIndexes([index])}
@@ -90,10 +92,11 @@ export default function IndexesPageList({
                         )}
                         {replacement && (
                             <IndexPanel
+                                isReplacement={true}
                                 setPriority={(p) => setIndexPriority(replacement, p)}
                                 setLockMode={(l) => setIndexLockMode(replacement, l)}
                                 globalIndexingStatus={globalIndexingStatus}
-                                resetIndex={() => resetIndexData.setIndexName(replacement.name)}
+                                resetIndex={() => resetIndexData.openConfirm(replacement.name, "InPlace")}
                                 openFaulty={(location: databaseLocationSpecifier) => openFaulty(replacement, location)}
                                 startIndexing={() => startIndexes([replacement])}
                                 disableIndexing={() => disableIndexes([replacement])}
