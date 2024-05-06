@@ -1038,7 +1038,7 @@ namespace Raven.Server.Documents
                 listOfIds.Add(slice);
             }
 
-            return GetDocuments(context, listOfIds, start, take);
+            return GetDocuments<TDocument>(context, listOfIds, start, take);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1049,7 +1049,7 @@ namespace Raven.Server.Documents
             where TDocument : Document, new()
         {
             // we'll fetch all documents and do the filtering here since we must check the collection name
-            foreach (var doc in GetDocuments<TDocument>(context, ids, start, int.MaxValue, totalCount))
+            foreach (var doc in GetDocuments<TDocument>(context, ids, start, int.MaxValue))
             {
                 if (collection == Constants.Documents.Collections.AllDocumentsCollection)
                 {

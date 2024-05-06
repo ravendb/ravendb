@@ -35,7 +35,8 @@ namespace Raven.Server.Documents.Queries.Results
 {
     public abstract class QueryResultRetrieverCommon
     {
-        public static readonly int LoadedDocumentsCacheSize = 16 * 1024;
+        public const int LoadedDocumentsCacheSize = 16 * 1024;
+        public const int NoLoadedDocumentsCacheSize = 32;
 
         public static readonly Lucene.Net.Search.ScoreDoc ZeroScore = new Lucene.Net.Search.ScoreDoc(-1, 0f);
 
@@ -149,10 +150,13 @@ namespace Raven.Server.Documents.Queries.Results
             DocumentFields = query?.DocumentFields ?? DocumentFields.All;
 
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
-
+            
+            var cacheSize = query?.Metadata.HasIncludeOrLoad ?? false
+                ? LoadedDocumentsCacheSize
+                : NoLoadedDocumentsCacheSize;
             _loadedDocumentCache = typeof(TDocument) == typeof(QueriedDocument) && DocumentContext != null
-                ? (LruDictionary<string, TDocument>)(object)(new QueriedDocumentCache(DocumentContext, LoadedDocumentsCacheSize))
-                : new LruDictionary<string, TDocument>(LoadedDocumentsCacheSize);
+                ? (LruDictionary<string, TDocument>)(object)(new QueriedDocumentCache(DocumentContext, cacheSize))
+                : new LruDictionary<string, TDocument>(cacheSize);
         }
 
 
