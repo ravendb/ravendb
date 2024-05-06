@@ -361,7 +361,6 @@ namespace Raven.Server.Documents.Queries
                 
                 if (_fieldsToFetch.IsProjection)
                 {
-                    RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase.ZeroScore, null);
                     var result = _resultsRetriever.GetProjectionFromDocument(_inner.Current, ref retrieverInput, _fieldsToFetch, _context, _token);
                     if (result.List != null)
                     {
@@ -464,7 +463,7 @@ namespace Raven.Server.Documents.Queries
                     _totalResultsCalculated = true;
                 }
             }
-
+            
             private void Initialize(out bool processedAllDocuments)
             {
                 _initialized = true;
@@ -474,56 +473,8 @@ namespace Raven.Server.Documents.Queries
                 
                 if (start == 0)
                 {
-                    var count = 0;
-                    foreach (var document in _documents.GetDocumentsFrom<QueriedDocument>(_context, _collection, 0, start, _query.PageSize))
-                    {
-                        count++;
-                        RetrieverInput retrieverInput = new(null, QueryResultRetrieverCommon.ZeroScore, null);
-                        if (_fieldsToFetch.IsProjection)
-                        {
-                            var result = _resultsRetriever.GetProjectionFromDocument(document, ref retrieverInput, _fieldsToFetch, _context, _token);
-                            if (result.Document != null)
-                            {
-                                if (IsStartingPoint(result.Document))
-                                    break;
-                            }
-                            else if (result.List != null)
-                            {
-                                bool match = false;
-                                foreach (Document item in result.List)
-                                {
-                                    if (IsStartingPoint(item))
-                                    {
-                                        match = true;
-                                        break;
-                                    }
-                                }
-
-                                if (match)
-                                    break;
-                            }
-                        }
-                        else
-                        {
-                            if (IsStartingPoint(_inner.Current))
-                            {
-                                break;
-                            }
-                        }
-
-                        bool IsStartingPoint(Document d)
-                        {
-                            return d.Data.Count > 0 && _alreadySeenProjections.Add(d.DataHash) && _alreadySeenProjections.Count == _query.Start;
-                        }
-                    }
-
-                    if (_alreadySeenProjections.Count == _query.Start)
-                        break;
-
-                    if (count < _query.PageSize)
-                        break;
-
-                    start += count;
+                    _inner = GetDocuments(out _totalResultsCalculated, start).GetEnumerator();
+                    return;
                 }
 
                 if (_query.SkipDuplicateChecking)
@@ -561,7 +512,6 @@ namespace Raven.Server.Documents.Queries
                         if (document != null)
                         {
                             document.Dispose();
-                            _context.Transaction.ForgetAbout(document);
                         }
                     }
                 }
@@ -580,7 +530,7 @@ namespace Raven.Server.Documents.Queries
                 if (count < _query.Start)
                     processedAllDocuments = true;
             }
-
+            
             public void Reset()
             {
                 throw new NotSupportedException();
