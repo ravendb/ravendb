@@ -745,7 +745,7 @@ namespace Sparrow.Server.LowMemory
 
             return new DirtyMemoryState
             {
-                IsHighDirty = totalScratchMemory > 
+                IsHighDirty = totalScratchMemory >
                               TotalPhysicalMemory * LowMemoryNotification.Instance.TemporaryDirtyMemoryAllowedPercentage,
                 TotalDirty = totalScratchMemory
             };
