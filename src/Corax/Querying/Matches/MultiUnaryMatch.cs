@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 using Corax.Utils;
+using Sparrow.Server.Utils;
 using Sparrow.Server.Utils.VxSort;
 using Voron;
 
@@ -26,9 +27,9 @@ public unsafe struct MultiUnaryItem
     {
         return Type switch
         {
-            DataType.Double => DoubleValueRight.ToString(CultureInfo.InvariantCulture),
-            DataType.Long => LongValueRight.ToString(CultureInfo.InvariantCulture),
-            DataType.Slice => SliceValueRight.ToString(),
+            DataType.Double => _doubleValueRight.ToString(CultureInfo.InvariantCulture),
+            DataType.Long => _longValueRight.ToString(CultureInfo.InvariantCulture),
+            DataType.Slice => _sliceValueRight.ToString(),
             _ => throw new ArgumentOutOfRangeException(Type.ToString())
         };
     }
@@ -37,22 +38,23 @@ public unsafe struct MultiUnaryItem
     {
         return Type switch
         {
-            DataType.Double => DoubleValueLeft.ToString(CultureInfo.InvariantCulture),
-            DataType.Long => LongValueLeft.ToString(CultureInfo.InvariantCulture),
-            DataType.Slice => SliceValueLeft.ToString(),
+            DataType.Double => _doubleValueLeft.ToString(CultureInfo.InvariantCulture),
+            DataType.Long => _longValueLeft.ToString(CultureInfo.InvariantCulture),
+            DataType.Slice => _sliceValueLeft.ToString(),
             _ => throw new ArgumentOutOfRangeException(Type.ToString())
         };
     }
-    internal Slice SliceValueLeft;
-    internal long LongValueLeft;
-    internal double DoubleValueLeft;
-    internal Slice SliceValueRight;
-    internal long LongValueRight;
-    internal double DoubleValueRight;
-    internal bool IsBetween;
-    internal UnaryMatchOperation LeftSideOperation;
-    internal UnaryMatchOperation RightSideOperation;
-    public UnaryMode Mode;
+
+    private Slice _sliceValueLeft;
+    private readonly long _longValueLeft;
+    private readonly double _doubleValueLeft;
+    private Slice _sliceValueRight;
+    private readonly long _longValueRight;
+    private readonly double _doubleValueRight;
+    internal readonly bool _isBetween;
+    internal readonly UnaryMatchOperation _leftSideOperation;
+    internal readonly UnaryMatchOperation _rightSideOperation;
+    public readonly UnaryMode Mode;
 
     
     public enum UnaryMode
@@ -79,20 +81,20 @@ public unsafe struct MultiUnaryItem
     {
         Debug.Assert(binding.FieldName.HasValue);
         
-        Unsafe.SkipInit(out DoubleValueLeft);
-        Unsafe.SkipInit(out LongValueLeft);
-        Unsafe.SkipInit(out SliceValueLeft);
-        Unsafe.SkipInit(out DoubleValueRight);
-        Unsafe.SkipInit(out LongValueRight);
-        Unsafe.SkipInit(out SliceValueRight);
+        Unsafe.SkipInit(out _doubleValueLeft);
+        Unsafe.SkipInit(out _longValueLeft);
+        Unsafe.SkipInit(out _sliceValueLeft);
+        Unsafe.SkipInit(out _doubleValueRight);
+        Unsafe.SkipInit(out _longValueRight);
+        Unsafe.SkipInit(out _sliceValueRight);
 
         Mode = leftOperation == UnaryMatchOperation.NotEquals || rightOperation == UnaryMatchOperation.NotEquals ? UnaryMode.All : UnaryMode.Any;
         
         Binding = binding;
         Type = dataType;
-        IsBetween = isBetween;
-        LeftSideOperation = leftOperation;
-        RightSideOperation = rightOperation;
+        _isBetween = isBetween;
+        _leftSideOperation = leftOperation;
+        _rightSideOperation = rightOperation;
 
         SelectComparers(leftOperation, out _byteComparerLeft, out _longComparerLeft, out _doubleComparerLeft, out _compareNullLeft);
         SelectComparers(rightOperation, out _byteComparerRight, out _longComparerRight, out _doubleComparerRight, out _compareNullRight);
@@ -168,20 +170,20 @@ public unsafe struct MultiUnaryItem
         if (it.IsNull)
         {
             return _compareNullLeft(_leftIsNull) && 
-                   (IsBetween == false || _compareNullRight(_rightIsNull));
+                   (_isBetween == false || _compareNullRight(_rightIsNull));
         }
         bool leftResult;
         if (Type == DataType.Long)
         {
-            leftResult = _longComparerLeft(LongValueLeft, it.CurrentLong);
-            if (IsBetween)
-                return leftResult & _longComparerRight(LongValueRight, it.CurrentLong);
+            leftResult = _longComparerLeft(_longValueLeft, it.CurrentLong);
+            if (_isBetween)
+                return leftResult & _longComparerRight(_longValueRight, it.CurrentLong);
             return leftResult;
         }
 
-        leftResult = _doubleComparerLeft(DoubleValueLeft, it.CurrentDouble);
-        if (IsBetween)
-            return leftResult & _doubleComparerRight(DoubleValueRight, it.CurrentDouble);
+        leftResult = _doubleComparerLeft(_doubleValueLeft, it.CurrentDouble);
+        if (_isBetween)
+            return leftResult & _doubleComparerRight(_doubleValueRight, it.CurrentDouble);
         return leftResult;
     }
 
@@ -191,35 +193,35 @@ public unsafe struct MultiUnaryItem
         if (it.IsNull)
         {
             return _compareNullLeft(_leftIsNull) && 
-                   (IsBetween == false || _compareNullRight(_rightIsNull));
+                   (_isBetween == false || _compareNullRight(_rightIsNull));
         }
         
         ReadOnlySpan<byte> value = it.Current.Decoded();
-        var leftResult = _byteComparerLeft(SliceValueLeft.AsSpan(), value);
-        return IsBetween
-            ? leftResult & _byteComparerRight(SliceValueRight.AsSpan(), value)
+        var leftResult = _byteComparerLeft(_sliceValueLeft.AsSpan(), value);
+        return _isBetween
+            ? leftResult & _byteComparerRight(_sliceValueRight.AsSpan(), value)
             : leftResult;
     }
 
     public MultiUnaryItem(IndexSearcher searcher, in FieldMetadata binding, string value, UnaryMatchOperation operation) : this(binding, DataType.Slice, false, operation, default)
     {
         _leftIsNull = value == null;
-        SliceValueLeft = searcher.EncodeAndApplyAnalyzer(binding, value);
+        _sliceValueLeft = searcher.EncodeAndApplyAnalyzer(binding, value);
     }
 
     public MultiUnaryItem(in FieldMetadata binding, long value, UnaryMatchOperation operation) : this(binding, DataType.Long, false, operation, default)
     {
-        LongValueLeft = value;
+        _longValueLeft = value;
     }
 
     public MultiUnaryItem(in FieldMetadata binding, double value, UnaryMatchOperation operation) : this(binding, DataType.Double, false, operation, default)
     {
-        DoubleValueLeft = value;
+        _doubleValueLeft = value;
     }
 
     public MultiUnaryItem(in FieldMetadata binding, Slice value, UnaryMatchOperation operation) : this(binding, DataType.Slice, false, operation, default)
     {
-        SliceValueLeft = value;
+        _sliceValueLeft = value;
     }
     
     public MultiUnaryItem(IndexSearcher searcher, in FieldMetadata binding, string leftValue, string rightValue, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
@@ -228,22 +230,22 @@ public unsafe struct MultiUnaryItem
         _rightIsNull = rightValue == null;
         _leftIsNull = leftValue == null;
 
-        SliceValueRight = searcher.EncodeAndApplyAnalyzer(binding, rightValue);
-        SliceValueLeft = searcher.EncodeAndApplyAnalyzer(binding, leftValue);
+        _sliceValueRight = searcher.EncodeAndApplyAnalyzer(binding, rightValue);
+        _sliceValueLeft = searcher.EncodeAndApplyAnalyzer(binding, leftValue);
     }
 
     public MultiUnaryItem(in FieldMetadata binding, long valueLeft, long valueRight, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation) : this(binding,
         DataType.Long, true, leftOperation, rightOperation)
     {
-        LongValueLeft = valueLeft;
-        LongValueRight = valueRight;
+        _longValueLeft = valueLeft;
+        _longValueRight = valueRight;
     }
 
     public MultiUnaryItem(in FieldMetadata binding, double valueLeft, double valueRight, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation) : this(binding,
         DataType.Double, true, leftOperation, rightOperation)
     {
-        DoubleValueLeft = valueLeft;
-        DoubleValueRight = valueRight;
+        _doubleValueLeft = valueLeft;
+        _doubleValueRight = valueRight;
     }
 
     public enum DataType
@@ -399,7 +401,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
     private readonly IndexSearcher _searcher;
     private TInner _inner;
     private readonly MultiUnaryItem[] _comparers;
-    private GrowableBuffer<Slowly> _growableBuffer;
+    private GrowableBuffer<Progressive> _growableBuffer;
     public MultiUnaryMatch(IndexSearcher searcher, TInner inner, in MultiUnaryItem[] items)
     {
         _inner = inner;
@@ -468,7 +470,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
                             MultiUnaryItem.DataType.Slice => comparer.CompareLiteral(reader),
                             MultiUnaryItem.DataType.Long => comparer.CompareNumerical(reader), 
                             MultiUnaryItem.DataType.Double => comparer.CompareNumerical(reader),
-                            _ => ThrowUnknownComparer(comparer)
+                            _ => throw new ArgumentOutOfRangeException(comparer.Type.ToString())
                         };
                         
                         if (comparer.Mode == MultiUnaryItem.UnaryMode.All && cmpResult == false)
@@ -509,12 +511,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
         
         return matchesIdx;
     }
-
-    private static bool ThrowUnknownComparer(in MultiUnaryItem comparer)
-    {
-        throw new ArgumentOutOfRangeException(comparer.Type.ToString());
-    }
-
+    
     public int AndWith(Span<long> buffer, int matches)
     {
         ref var matchBuffer = ref _growableBuffer;
@@ -555,13 +552,13 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
             MultiUnaryItem comparer = _comparers[index];
             var prefix = Constants.QueryInspectionNode.Comparer + index + "_";
             parameters.Add(prefix + Constants.QueryInspectionNode.FieldType, comparer.Type.ToString());
-            parameters.Add(prefix + Constants.QueryInspectionNode.Operation, comparer.LeftSideOperation.ToString());
-            parameters.Add(prefix + (comparer.IsBetween ? Constants.QueryInspectionNode.Term : Constants.QueryInspectionNode.LowValue), comparer.LeftAsString());
+            parameters.Add(prefix + Constants.QueryInspectionNode.Operation, comparer._leftSideOperation.ToString());
+            parameters.Add(prefix + (comparer._isBetween ? Constants.QueryInspectionNode.Term : Constants.QueryInspectionNode.LowValue), comparer.LeftAsString());
             
-            if (comparer.IsBetween)
+            if (comparer._isBetween)
             {
                 parameters.Add(prefix + Constants.QueryInspectionNode.HighValue, comparer.RightAsString());
-                parameters.Add(prefix + Constants.QueryInspectionNode.Operation, comparer.RightSideOperation.ToString());
+                parameters.Add(prefix + Constants.QueryInspectionNode.Operation, comparer._rightSideOperation.ToString());
             }
         }
 

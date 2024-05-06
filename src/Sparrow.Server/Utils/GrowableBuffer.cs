@@ -1,16 +1,15 @@
 ﻿using System;
-using Sparrow.Server;
-namespace Corax.Utils;
+
+namespace Sparrow.Server.Utils;
 
 public interface IBufferGrowth
 {
     public int GetInitialSize(in long initialSize);
     public int GetNewSize(in int currentSizeInBytes);
-
     public bool GrowingThresholdExceed(in int count, in int sizeInBytes);
 }
 
-public readonly struct Slowly : IBufferGrowth
+public readonly struct Progressive : IBufferGrowth
 {
     public int GetNewSize(in int currentSizeInBytes)
     {
@@ -64,11 +63,13 @@ public unsafe struct GrowableBuffer<TGrowth> : IDisposable
     }
 
     public void AddUsage(in int count) => _count += count;
+
+    public void Truncate(in int newCount) => _count = newCount;
     
     public void Init(ByteStringContext context, in long initialSize)
     {
         _context = context;
-        _context.Allocate(_growthCalculator.GetInitialSize(initialSize), out _buffer);
+        _context.Allocate(_growthCalculator.GetInitialSize(initialSize * sizeof(long)), out _buffer);
         IsInitialized = true;
     }
 

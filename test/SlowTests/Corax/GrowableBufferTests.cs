@@ -1,8 +1,6 @@
 ﻿using System;
-using Corax.Utils;
-using FastTests.Voron;
-using Raven.Client;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
@@ -22,7 +20,7 @@ public class GrowableBufferTests : NoDisposalNoOutputNeeded
     public void CanExtendAndNotLooseAnything(int size)
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-        using var growableBuffer = new GrowableBuffer<Slowly>();
+        using var growableBuffer = new GrowableBuffer<Progressive>();
         growableBuffer.Init(bsc, 16);
         var count = 0;
         var random = new Random(15235);
