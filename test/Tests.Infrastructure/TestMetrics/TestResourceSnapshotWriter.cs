@@ -97,7 +97,6 @@ namespace Tests.Infrastructure.TestMetrics
                 AvailableMemoryInMb = memoryInfo.AvailableMemory.GetValue(SizeUnit.Megabytes),
                 CurrentCommitChargeInMb = memoryInfo.CurrentCommitCharge.GetValue(SizeUnit.Megabytes),
                 SharedCleanMemoryInMb = memoryInfo.SharedCleanMemory.GetValue(SizeUnit.Megabytes),
-                TotalScratchDirtyMemory = MemoryInformation.GetDirtyMemoryState().TotalDirty.GetValue(SizeUnit.Megabytes),
                 CurrentIpv4Connections = tcpConnections.CurrentIpv4,
                 CurrentIpv6Connections = tcpConnections.CurrentIpv6
             };
@@ -140,8 +139,6 @@ namespace Tests.Infrastructure.TestMetrics
             public long CurrentCommitChargeInMb { get; set; }
             
             public long SharedCleanMemoryInMb { get; set; }
-            
-            public long TotalScratchDirtyMemory { get; set; }
             
             public long TotalScratchAllocatedMemory { get; set; }
             

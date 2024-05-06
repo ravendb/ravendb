@@ -538,7 +538,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string EncryptionBuffersPool { get; set; }
             public string EncryptionLockedMemory { get; set; }
             public string MemoryMapped { get; set; }
-            public string ScratchDirtyMemory { get; set; }
             public bool IsHighDirty { get; set; }
             public string DirtyMemory { get; set; }
             public string AvailableMemory { get; set; }
