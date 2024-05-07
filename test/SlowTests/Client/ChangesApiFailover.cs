@@ -348,7 +348,7 @@ update {{
                 }
             }
         }
-        //TODO stav: switch the mre to something that doesn't block the thread
+        
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
         public async Task ChangesApiMonitoringMultipleShouldNotFailAllWhenOneFailsOnFetch()
         {
@@ -389,7 +389,7 @@ update {{
                     database.ForTestingPurposesOnly().DelayQueryByPatch = delayQueryByPatch;
 
                     var re = store.GetRequestExecutor();
-                    var delayFetchOperationStatus = new ManualResetEventSlim();
+                    var delayFetchOperationStatus = new Nito.AsyncEx.AsyncManualResetEvent();
                     re.ForTestingPurposesOnly().WaitBeforeFetchOperationStatus = delayFetchOperationStatus;
 
                     var op = await store.Operations.SendAsync(patch, token: cts.Token);
