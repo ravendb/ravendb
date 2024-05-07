@@ -118,17 +118,18 @@ namespace Raven.Client.Documents.Operations
                         await observable.EnsureSubscribedNow().ConfigureAwait(false);
 
                         if (_requestExecutor.ForTestingPurposes?.WaitBeforeFetchOperationStatus != null)
-                            _requestExecutor.ForTestingPurposes.WaitBeforeFetchOperationStatus.Wait();
+                            await _requestExecutor.ForTestingPurposes.WaitBeforeFetchOperationStatus.WaitAsync().ConfigureAwait(false);
 
                         // We start the operation before we subscribe,
                         // so if we subscribe after the operation was already completed we will miss the notification for it. 
                         await FetchOperationStatus().ConfigureAwait(false);
                     }
-                    catch(DatabaseDoesNotExistException)
+                    catch (DatabaseDoesNotExistException)
                     {
                         // If the websocket connection failed fatally, we need to remove it from the dictionary
                         // so we won't attempt to reuse it in the next call to the same node
                         // DatabaseDoesNotExistException is the only exception that should cause the websocket to stop trying to reconnect in DoWork
+                        // Note that disposing changes disposes the entire connection to the node and will disrupt the rest of the monitoring tasks in changes api that use it
                         changes?.Dispose();
                         throw;
                     }
