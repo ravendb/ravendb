@@ -1700,6 +1700,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 target = search.Arguments[0];
             }
 
+            // This has to be set in order to have correct parentheses
+            // when using both search and where clause, e.g.
+            // where (Category = $p0 or Category = $p1) and search(Name, $p2)
+            _chainedWhere = true;
+            
             VisitExpression(target);
 
             if (expressions.Count > 1)
