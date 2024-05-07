@@ -54,7 +54,7 @@ public static class LetsEncryptSetupUtils
                 try
                 {
                     var content = new StringContent(serializeObject, Encoding.UTF8, "application/json");
-                    var response = await ApiHttpClient.Instance.PostAsync($"/api/v1/dns-n-cert/claim", content, CancellationToken.None).ConfigureAwait(false);
+                    var response = await ApiHttpClient.Instance.PostAsync($"/api/v1/dns-n-cert/claim", content, token).ConfigureAwait(false);
                     response.EnsureSuccessStatusCode();
                     progress?.AddInfo($"Successfully claimed this domain: {setupInfo.Domain}.");
                 }
@@ -67,7 +67,7 @@ public static class LetsEncryptSetupUtils
                     Challenge = challengeResult.Challenge,
                     SetupInfo = setupInfo,
                     Progress = progress,
-                    Token = CancellationToken.None,
+                    Token = token,
                     RegisterTcpDnsRecords = registerTcpDnsRecords
                 });
                 progress?.AddInfo($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
@@ -92,8 +92,7 @@ public static class LetsEncryptSetupUtils
                 SetupInfo = setupInfo,
                 Client = acmeClient,
                 ChallengeResult = challengeResult,
-                Token = CancellationToken.None
-                
+                Token = token
             });
 
             progress.Processed++;
