@@ -35,6 +35,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
     public async Task Should_Create_Secured_Cluster_Generating_Self_Singed_Cert_And_Setup_Zip_File_From_Rvn_Three_Nodes()
     {
         DoNotReuseServerAndUseStagingLetsEncrypt();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
 
         var license = Environment.GetEnvironmentVariable("RAVEN_LICENSE");
         Assert.True(license != null, nameof(license) + " != null");
@@ -72,7 +73,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             {
                 Output.WriteLine(tuple.Exception.Message);
             }
-        }), CancellationToken.None);
+        }), cts.Token);
 
 
         var settingsJsonObject = SetupManager.ExtractCertificatesAndSettingsJsonFromZip(zipBytes, "A",
@@ -220,6 +221,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
     public async Task Should_Create_Secured_Cluster_Generating_Self_Singed_Cert_And_Setup_Zip_File_From_Rvn_One_Node()
     {
         DoNotReuseServerAndUseStagingLetsEncrypt();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
 
         var license = Environment.GetEnvironmentVariable("RAVEN_LICENSE");
         Assert.True(license != null, nameof(license) + " != null");
@@ -256,7 +258,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             {
                 Output.WriteLine(tuple.Exception.Message);
             }
-        }), CancellationToken.None);
+        }), cts.Token);
 
 
         var settingsJsonObject = SetupManager.ExtractCertificatesAndSettingsJsonFromZip(zipBytes, "A",
@@ -324,6 +326,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
     public async Task Should_Create_Secured_Cluster_From_Rvn_Using_Lets_Encrypt_Mode_One_Node()
     {
         DoNotReuseServerAndUseStagingLetsEncrypt();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
 
         var license = Environment.GetEnvironmentVariable("RAVEN_LICENSE");
         Assert.True(license != null, nameof(license) + " != null");
@@ -333,7 +336,6 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         const string rootDomain = "development.run";
         const string publicTcpServerUrl1 = $"tcp://a.{domain}.{rootDomain}:38879";
         const string tcpServerUrl1 = "tcp://127.0.0.1:38879";
-
 
         var setupInfo = new SetupInfo
         {
@@ -369,7 +371,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         },
             false,
             StagingAcmeClientUrl,
-            CancellationToken.None);
+            cts.Token);
 
         X509Certificate2 serverCert;
         X509Certificate2 clientCert;
@@ -454,6 +456,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
     public async Task Should_Create_Secured_Cluster_From_Rvn_Using_Lets_Encrypt_Mode_Three_Nodes()
     {
         DoNotReuseServerAndUseStagingLetsEncrypt();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
 
         var license = Environment.GetEnvironmentVariable("RAVEN_LICENSE");
         Assert.True(license != null, nameof(license) + " != null");
@@ -506,7 +509,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         },
             false,
             StagingAcmeClientUrl,
-            CancellationToken.None);
+            cts.Token);
 
         X509Certificate2 serverCert;
         X509Certificate2 clientCert;
