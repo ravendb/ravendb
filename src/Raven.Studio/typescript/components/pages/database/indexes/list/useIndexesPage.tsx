@@ -46,13 +46,13 @@ type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
     | Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged;
 
-export interface ResetIndexData {
+export interface ResetIndexesData {
     confirmData: {
-        indexName: string;
+        indexNames: string[];
         mode?: Raven.Client.Documents.Indexes.IndexResetMode;
     };
     onConfirm: (contexts: DatabaseActionContexts[]) => Promise<void>;
-    openConfirm: (indexName: string, mode?: Raven.Client.Documents.Indexes.IndexResetMode) => void;
+    openConfirm: (indexNames: string[], mode?: Raven.Client.Documents.Indexes.IndexResetMode) => void;
     closeConfirm: () => void;
 }
 
@@ -81,17 +81,17 @@ export function useIndexesPage(stale: boolean) {
     const eventsCollector = useEventsCollector();
     const { databaseChangesApi, serverNotifications } = useChanges();
 
-    const [resetIndexConfirmData, setResetIndexConfirmData] = useState<ResetIndexData["confirmData"]>(null);
+    const [resetIndexesConfirmData, setResetIndexesConfirmData] = useState<ResetIndexesData["confirmData"]>(null);
 
-    const openResetIndexConfirm = (indexName: string, mode?: Raven.Client.Documents.Indexes.IndexResetMode) => {
-        setResetIndexConfirmData({
-            indexName,
+    const openResetIndexConfirm = (indexNames: string[], mode?: Raven.Client.Documents.Indexes.IndexResetMode) => {
+        setResetIndexesConfirmData({
+            indexNames,
             mode,
         });
     };
 
     const closeResetIndexConfirm = () => {
-        setResetIndexConfirmData(null);
+        setResetIndexesConfirmData(null);
     };
 
     const confirm = useConfirm();
@@ -569,33 +569,35 @@ export function useIndexesPage(stale: boolean) {
         const resetRequests: Promise<void>[] = [];
         setResettingIndex(true);
 
-        const indexName = resetIndexConfirmData.indexName;
+        for (const indexName of resetIndexesConfirmData.indexNames) {
+            try {
+                for (const { nodeTag, shardNumbers } of contexts) {
+                    const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
 
-        try {
-            for (const { nodeTag, shardNumbers } of contexts) {
-                const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
-
-                for (const location of locations) {
-                    resetRequests.push(
-                        indexesService.resetIndex(indexName, db.name, resetIndexConfirmData.mode, location).then(() => {
-                            dispatch({
-                                type: "ResetIndex",
-                                indexName: indexName,
-                                location,
-                            });
-                        })
-                    );
+                    for (const location of locations) {
+                        resetRequests.push(
+                            indexesService
+                                .resetIndex(indexName, db.name, resetIndexesConfirmData.mode, location)
+                                .then(() => {
+                                    dispatch({
+                                        type: "ResetIndex",
+                                        indexName: indexName,
+                                        location,
+                                    });
+                                })
+                        );
+                    }
                 }
+
+                await Promise.all(resetRequests);
+                messagePublisher.reportSuccess("Index " + indexName + " restarted successfully.");
+            } finally {
+                // wait a bit and trigger refresh
+                await delay(1_000);
+
+                throttledRefresh.current();
+                setResettingIndex(false);
             }
-
-            await Promise.all(resetRequests);
-            messagePublisher.reportSuccess("Index " + indexName + " restarted successfully.");
-        } finally {
-            // wait a bit and trigger refresh
-            await delay(1_000);
-
-            throttledRefresh.current();
-            setResettingIndex(false);
         }
     };
 
@@ -741,11 +743,11 @@ export function useIndexesPage(stale: boolean) {
         setIndexLockMode,
         toggleSelection,
         resetIndexData: {
-            confirmData: resetIndexConfirmData,
+            confirmData: resetIndexesConfirmData,
             onConfirm: onResetIndexConfirm,
             closeConfirm: closeResetIndexConfirm,
             openConfirm: openResetIndexConfirm,
-        } satisfies ResetIndexData,
+        } satisfies ResetIndexesData,
         swapSideBySideData: {
             indexName: swapSideBySideConfirmIndexName,
             setIndexName: setSwapSideBySideConfirmIndexName,

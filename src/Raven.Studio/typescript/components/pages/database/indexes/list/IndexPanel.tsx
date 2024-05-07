@@ -41,6 +41,7 @@ import { Icon } from "components/common/Icon";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import ResetIndexesButton from "components/pages/database/indexes/list/partials/ResetIndexesButton";
 
 export interface IndexPanelProps {
     index: IndexSharedInfo;
@@ -55,7 +56,6 @@ export interface IndexPanelProps {
     openFaulty: (location: databaseLocationSpecifier) => Promise<void>;
     selected: boolean;
     hasReplacement?: boolean;
-    isReplacement?: boolean;
     toggleSelection: () => void;
     ref?: any;
 }
@@ -366,7 +366,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         )}
                         {hasDatabaseWriteAccess && (
                             <>
-                                <ResetButton resetIndex={resetIndex} isReplacement={isReplacement} />
+                                <ResetIndexesButton resetIndex={resetIndex} isDropdownVisible={!isReplacement} />
                                 <Button color="danger" onClick={deleteIndex} title="Delete the index">
                                     <Icon icon="trash" margin="m-0" />
                                 </Button>
@@ -540,33 +540,3 @@ function InlineDetails(props: InlineDetailsProps) {
 }
 
 const indexUniqueId = (index: IndexSharedInfo) => "index_" + index.name;
-
-interface ResetButtonProps {
-    resetIndex: (mode?: Raven.Client.Documents.Indexes.IndexResetMode) => void;
-    isReplacement?: boolean;
-}
-
-function ResetButton({ resetIndex, isReplacement }: ResetButtonProps) {
-    return (
-        <UncontrolledDropdown group>
-            <Button color="warning" onClick={() => resetIndex()} title="Reset index (rebuild)">
-                <Icon icon="reset-index" margin="m-0" />
-            </Button>
-            {!isReplacement && (
-                <>
-                    <DropdownToggle className="dropdown-toggle" color="warning" />
-                    <DropdownMenu end>
-                        <DropdownItem onClick={() => resetIndex("InPlace")} title="Reset index in place">
-                            <Icon icon="reset-index" addon="arrow-down" />
-                            Reset in place
-                        </DropdownItem>
-                        <DropdownItem onClick={() => resetIndex("SideBySide")} title="Reset index side by side">
-                            <Icon icon="reset-index" addon="swap" />
-                            Reset side by side
-                        </DropdownItem>
-                    </DropdownMenu>
-                </>
-            )}
-        </UncontrolledDropdown>
-    );
-}
