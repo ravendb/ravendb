@@ -1,30 +1,18 @@
 using System;
 using System.Collections.Generic;
-using Sparrow.Server;
 using Voron;
 using Voron.Data.PostingLists;
 using Voron.Global;
-using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Voron.PostingLists
 {
-    public unsafe class PostingListLeafPageTests : NoDisposalNeeded
+    public unsafe class PostingListLeafPageTests : StorageTest
     {
-        private readonly Transaction _tx;
-        private readonly StorageEnvironment _env;
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope _releaseStr;
-        private readonly byte* _pagePtr;
-        private readonly LowLevelTransaction _llt;
 
         public PostingListLeafPageTests(ITestOutputHelper output) : base(output)
-        {
-            _env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly());
-            _tx = _env.WriteTransaction();
-            _llt = _tx.LowLevelTransaction;
-            _releaseStr = _tx.Allocator.Allocate(Constants.Storage.PageSize, out var bs);
-            _pagePtr = bs.Ptr;
+        {   
         }
         
         [Theory]
@@ -35,6 +23,11 @@ namespace FastTests.Voron.PostingLists
         [InlineData(4096 + 257)] // with compressed x 16 (so will recompress) 
         public void CanAddAndRead(int size)
         {
+            using var _tx = Env.WriteTransaction();
+            var _llt = _tx.LowLevelTransaction;
+            using var _ = _tx.Allocator.Allocate(Constants.Storage.PageSize, out var bs);
+            var _pagePtr = bs.Ptr;
+
             var leaf = new PostingListLeafPage(new Page(_pagePtr));
             PostingListLeafPage.InitLeaf(leaf.Header);
             var list = new List<long>();
@@ -71,6 +64,11 @@ namespace FastTests.Voron.PostingLists
         [InlineData(4096 + 257)] // with compressed x 16 (so will recompress) 
         public void CanAddAndRemove(int size)
         {
+            using var _tx = Env.WriteTransaction();
+            var _llt = _tx.LowLevelTransaction;
+            using var _ = _tx.Allocator.Allocate(Constants.Storage.PageSize, out var bs);
+            var _pagePtr = bs.Ptr;
+
             var leaf = new PostingListLeafPage(new Page(_pagePtr));
             PostingListLeafPage.InitLeaf(leaf.Header);
             var buf = new int[] {12, 18};
@@ -118,6 +116,11 @@ namespace FastTests.Voron.PostingLists
         [InlineData(4096 + 257)] // with compressed x 16 (so will recompress) 
         public void CanHandleDuplicateValues(int size)
         {
+            using var _tx = Env.WriteTransaction();
+            var _llt = _tx.LowLevelTransaction;
+            using var _ = _tx.Allocator.Allocate(Constants.Storage.PageSize, out var bs);
+            var _pagePtr = bs.Ptr;
+
             var leaf = new PostingListLeafPage(new Page(_pagePtr));
             PostingListLeafPage.InitLeaf(leaf.Header);
             var list = new List<long>();
@@ -153,20 +156,6 @@ namespace FastTests.Voron.PostingLists
             }
 
             Assert.Equal(list, leaf.GetDebugOutput());
-        }
-
-        public override void Dispose()
-        {
-            try
-            {
-                _releaseStr.Dispose();
-                _tx?.Dispose();
-                _env?.Dispose();
-            }
-            finally
-            {
-                base.Dispose();
-            }
         }
     }
 }
