@@ -47,8 +47,8 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                     var privateCompanies = session.Query<Company>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Type == Company.CompanyType.Private).ToList();
 
                     Assert.Equal(2, privateCompanies.Count);
-                    Assert.Equal("companies/1", privateCompanies[0].Id);
-                    Assert.Equal("companies/3", privateCompanies[1].Id);
+                    Assert.Contains("companies/1", privateCompanies.Select(x => x.Id));
+                    Assert.Contains("companies/3", privateCompanies.Select(x => x.Id));
                 }
             }
         }
@@ -164,8 +164,8 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                     var orders = session.Query<Order>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Lines.Any(y => y.ProductName == "Keyboard")).ToList();
 
                     Assert.Equal(2, orders.Count);
-                    Assert.Equal("orders/1", orders[0].Id);
-                    Assert.Equal("orders/3", orders[1].Id);
+                    Assert.Contains("orders/1", orders.Select(x => x.Id));
+                    Assert.Contains("orders/3", orders.Select(x => x.Id));
 
                     orders = session.Query<Order>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Lines.Any(y => y.PricePerUnit >= 10)).ToList();
 
