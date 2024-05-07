@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Nito.AsyncEx;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
@@ -108,32 +109,18 @@ namespace Raven.Client.Documents.Operations
             {
                 case OperationStatusFetchMode.ChangesApi:
 
-                    IDatabaseChanges changes = null;
-                    try
-                    {
-                        changes = _changes();
-                        await changes.EnsureConnectedNow().ConfigureAwait(false);
-                        var observable = changes.ForOperationId(_id);
-                        _subscription = observable.Subscribe(this);
-                        await observable.EnsureSubscribedNow().ConfigureAwait(false);
+                    var changes = await _changes().EnsureConnectedNow().ConfigureAwait(false);
+                    var observable = changes.ForOperationId(_id);
+                    _subscription = observable.Subscribe(this);
+                    await observable.EnsureSubscribedNow().ConfigureAwait(false);
 
-                        if (_requestExecutor.ForTestingPurposes?.WaitBeforeFetchOperationStatus != null)
-                            await _requestExecutor.ForTestingPurposes.WaitBeforeFetchOperationStatus.WaitAsync().ConfigureAwait(false);
+                    if (_requestExecutor.ForTestingPurposes?.WaitBeforeFetchOperationStatus != null)
+                        await _requestExecutor.ForTestingPurposes.WaitBeforeFetchOperationStatus.WaitAsync().ConfigureAwait(false);
 
-                        // We start the operation before we subscribe,
-                        // so if we subscribe after the operation was already completed we will miss the notification for it. 
-                        await FetchOperationStatus().ConfigureAwait(false);
-                    }
-                    catch (DatabaseDoesNotExistException)
-                    {
-                        // If the websocket connection failed fatally, we need to remove it from the dictionary
-                        // so we won't attempt to reuse it in the next call to the same node
-                        // DatabaseDoesNotExistException is the only exception that should cause the websocket to stop trying to reconnect in DoWork
-                        // Note that disposing changes disposes the entire connection to the node and will disrupt the rest of the monitoring tasks in changes api that use it
-                        changes?.Dispose();
-                        throw;
-                    }
-
+                    // We start the operation before we subscribe,
+                    // so if we subscribe after the operation was already completed we will miss the notification for it. 
+                    await FetchOperationStatus().ConfigureAwait(false);
+                    
                     break;
                 case OperationStatusFetchMode.Polling:
                     while (_isProcessing)
