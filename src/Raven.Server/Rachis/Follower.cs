@@ -484,7 +484,7 @@ namespace Raven.Server.Rachis
             {
                 KeepAliveAndExecuteAction(() =>
                 {
-                    onFullSnapshotInstalledTask = ReadAndCommitSnapshot(context, snapshot, cts.Token);
+                    onFullSnapshotInstalledTask = ReadAndCommitSnapshot(snapshot, cts.Token);
                 }, cts, "ReadAndCommitSnapshot");
             }
 
@@ -555,10 +555,11 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private Task ReadAndCommitSnapshot(ClusterOperationContext context, InstallSnapshot snapshot, CancellationToken token)
+        private Task ReadAndCommitSnapshot(InstallSnapshot snapshot, CancellationToken token)
         {
             Task onFullSnapshotInstalledTask = null;
 
+            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenWriteTransaction())
             {
                 var lastTerm = _engine.GetTermFor(context, snapshot.LastIncludedIndex);

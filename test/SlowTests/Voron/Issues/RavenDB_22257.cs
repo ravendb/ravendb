@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron;
@@ -36,15 +37,33 @@ public class RavenDB_22257 : StorageTest
             {
                 txw1.ForTestingPurposesOnly().CallOnTransactionAfterCommit(() =>
                 {
+                    /*
                     // here we pretend to be running as of a different thread
-
                     txw1.Dispose(); // dispose of the already running transaction will release the write transaction lock, so we'll be able to create a new write transaction
+                    */
 
-                    txw2 = Env.NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.ReadWrite);
+                    InvalidOperationException ex = null;
 
-                    txw2.ModifyPage(0);
+                    Thread newTransactionThread = new Thread(() =>
+                    {
+                        ex = Assert.Throws<InvalidOperationException>(() =>
+                        {
+                            txw1.Dispose(); // this is supposed to throw because we're attempting to dispose write tx from a different thread
+
+                            txw2 = Env.NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.ReadWrite);
+
+                            txw2.ModifyPage(0);
+                        });
+                    });
+
+                    newTransactionThread.Start();
+
+                    newTransactionThread.Join();
+
+                    Assert.StartsWith("Dispose of the transaction must be called from the same thread that created it. Transaction 2 (Flags: ReadWrite) was created by", ex.Message);
                 });
 
+                /* 
                 // both commits below will fail BUT they managed to write to the journal file already
 
                 var notFoundInActiveTransactionsEx = Assert.Throws<InvalidOperationException>(txw1.Commit);
@@ -54,6 +73,11 @@ public class RavenDB_22257 : StorageTest
                 var duplicatedKeyEx = Assert.Throws<ArgumentException>(txw2.Commit);
 
                 Assert.Equal("An item with the same key has already been added. Key: 2 (Parameter 'key')", duplicatedKeyEx.Message);
+                */
+
+                txw1.Commit();
+
+                Assert.Null(txw2);
             }
             finally
             {
@@ -61,7 +85,9 @@ public class RavenDB_22257 : StorageTest
             }
         }
 
+        /*
         // during the recovery will encounter two committed transactions with the same ID
+        */
 
         RestartDatabase();
 
