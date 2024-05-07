@@ -7,16 +7,16 @@ import {
 } from "components/common/MultipleDatabaseLocationSelector";
 import ActionContextUtils from "components/utils/actionContextUtils";
 
-interface ConfirmResetIndexProps {
-    indexName: string;
+interface ConfirmResetIndexesProps {
+    indexNames: string[];
     allActionContexts: DatabaseActionContexts[];
     mode?: Raven.Client.Documents.Indexes.IndexResetMode;
     closeConfirm: () => void;
     onConfirm: (contexts: DatabaseActionContexts[]) => void;
 }
 
-export function ConfirmResetIndex(props: ConfirmResetIndexProps) {
-    const { indexName, mode, allActionContexts, onConfirm, closeConfirm } = props;
+export function ConfirmResetIndexes(props: ConfirmResetIndexesProps) {
+    const { indexNames, mode, allActionContexts, onConfirm, closeConfirm } = props;
 
     const [selectedActionContexts, setSelectedActionContexts] = useState<DatabaseActionContexts[]>(allActionContexts);
 
@@ -35,12 +35,14 @@ export function ConfirmResetIndex(props: ConfirmResetIndexProps) {
                     <Button close onClick={closeConfirm} />
                 </div>
                 <div className="text-center lead">
-                    You&apos;re about to <span className="text-warning">reset</span> following index
+                    You&apos;re about to <span className="text-warning">reset</span> following{" "}
+                    {indexNames.length === 1 ? "index" : `indexs`}
                 </div>
-                <span className="d-flex align-items-center word-break bg-faded-primary py-1 px-3 w-fit-content rounded-pill mx-auto">
-                    <Icon icon="index" />
-                    {indexName}
-                </span>
+                <ul className="overflow-auto" style={{ maxHeight: "200px" }}>
+                    {indexNames.map((indexName) => (
+                        <li key={indexName}>{indexName}</li>
+                    ))}
+                </ul>
                 <Alert color="warning">
                     <small>
                         <strong>Reset</strong> will remove all existing indexed data
