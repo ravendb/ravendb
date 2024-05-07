@@ -6,6 +6,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -63,9 +64,13 @@ namespace RachisTests
             var leader = await CreateNetworkAndGetLeader(1);
             var mre = new AsyncManualResetEvent();
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var currentThread = NativeMemory.CurrentThreadStats.ManagedThreadId;
 
             leader.Timeout.Start(() =>
             {
+                if (currentThread == NativeMemory.CurrentThreadStats.ManagedThreadId)
+                    throw new InvalidOperationException("Can't use same thread as the xUnit test");
+
                 mre.Set();
                 try
                 {
