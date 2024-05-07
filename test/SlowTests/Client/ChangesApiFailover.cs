@@ -526,10 +526,12 @@ update {{
                 }
             }
         }
-
+        
         [RavenFact(RavenTestCategory.ClientApi)]
-        public async Task ChangesApiShouldCleanupFaultyConnectionAfterDispose_TrackingSpecificNode()
+        public async Task ChangesApiShouldCleanupFaultyConnectionByItself_TrackingSpecificNode()
         {
+            // Notice the only possible faulty connection while writing this test is a DatabaseDoesNotExistException in DoWork
+
             using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
             {
                 var (_, leader) = await CreateRaftCluster(3, leaderIndex: 0, shouldRunInMemory: false);
@@ -545,7 +547,7 @@ update {{
                         (string DataDirectory, string Url, string NodeTag) result = default;
 
                         //set up node-specific tracking
-                        using IDatabaseChanges changes = store.Changes(store.Database, leader.ServerStore.NodeTag);
+                        IDatabaseChanges changes = store.Changes(store.Database, leader.ServerStore.NodeTag);
 
                         var list = new BlockingCollection<DocumentChange>();
 
@@ -573,7 +575,6 @@ update {{
                         // first run, fail the websocket entirely
                         if (i == 0)
                         {
-
                             //bring down server
                             result = await DisposeServerAndWaitForFinishOfDisposalAsync(leader);
 
@@ -595,9 +596,9 @@ update {{
                             });
                             Servers.Add(server);
 
-                            //connection is now faulty and will be broken when we try to access
-                            var changes2 = store.Changes(store.Database, "A");
-                            await Assert.ThrowsAsync<WebSocketException>(async () => await changes2.EnsureConnectedNow().WithCancellation(cts.Token));
+                            // connection should have been disposed and removed from the dictionary
+                            // let's access the same entry in the dictionary to make sure the old one got removed and that we aren't using a faulted connection
+                            // In the next loop ->
                         }
                     }
                 }
