@@ -353,8 +353,11 @@ namespace Sparrow.Server
         {
             EnsureIsNotBadPointer();
 
-            ThrowIf<ArgumentOutOfRangeException>(_pointer->Size < newSize || newSize < 0, $"{nameof(newSize)} must be within the existing string limit.");
-
+            if (_pointer->Size < newSize || newSize < 0)
+            {
+                Throw<ArgumentOutOfRangeException>( $"{nameof(newSize)} must be within the existing string limit.");
+            }
+            
             _pointer->Length = newSize;
         }
 

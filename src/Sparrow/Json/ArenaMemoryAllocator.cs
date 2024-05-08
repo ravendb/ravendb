@@ -119,7 +119,9 @@ namespace Sparrow.Json
 
             ThrowIfNull<InvalidOperationException>(_ptrStart, "Attempt to allocate from reset arena without calling renew");
             ThrowIf<ArgumentOutOfRangeException>(size < 0, "Size cannot be negative");
-            ThrowIf<ArgumentOutOfRangeException>(size > MaxArenaSize, $"Requested size {size} while maximum size is {MaxArenaSize}");
+            
+            if (size > MaxArenaSize)
+                Throw<ArgumentOutOfRangeException>($"Requested size {size} while maximum size is {MaxArenaSize}");
             
 #if MEM_GUARD
             return new AllocatedMemoryData
@@ -158,7 +160,7 @@ namespace Sparrow.Json
         private void GrowArena(int requestedSize)
         {
             ThrowIf<ArgumentOutOfRangeException>(requestedSize > MaxArenaSize, 
-                $"Requested arena resize to {requestedSize} while current size is {_allocated} and maximum size is {MaxArenaSize}");
+                () => $"Requested arena resize to {requestedSize} while current size is {_allocated} and maximum size is {MaxArenaSize}");
             
             long newSize = GetPreferredSize(requestedSize);
             if (newSize > MaxArenaSize)
