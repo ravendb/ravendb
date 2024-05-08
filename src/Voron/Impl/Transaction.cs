@@ -470,10 +470,10 @@ namespace Voron.Impl
                 Throw<InvalidOperationException>($"Cannot create a tree with reserved name: {toName}");
 
             var existingTree = ReadTree(toName);
-            ThrowIfNotNull<ArgumentException>(existingTree,$"Cannot rename a tree with the name of an existing tree: {toName}");
+            ThrowIfNotNull<ArgumentException>(existingTree,() => $"Cannot rename a tree with the name of an existing tree: {toName}");
 
             Tree fromTree = ReadTree(fromName);
-            ThrowIfNull<ArgumentException>(fromTree, $"Tree {fromName} does not exists");
+            ThrowIfNull<ArgumentException>(fromTree, () => $"Tree {fromName} does not exists");
 
             _lowLevelTransaction.RootObjects.Delete(fromName);
 
