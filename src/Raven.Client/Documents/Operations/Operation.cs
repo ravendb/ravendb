@@ -338,29 +338,43 @@ namespace Raven.Client.Documents.Operations
             {
                 var result = await InitializeResult().ConfigureAwait(false);
 
-                _ = Task.Factory.StartNew(Initialize);
+                var initTask = Task.Factory.StartNew(Initialize);
 
                 try
                 {
+                    try
+                    {
 #if NET6_0_OR_GREATER
-                    await result.WaitAsync(token).ConfigureAwait(false);
-                    await _afterOperationCompleted.WaitAsync(token).ConfigureAwait(false);
+                        await result.WaitAsync(token).ConfigureAwait(false);
+                        await _afterOperationCompleted.WaitAsync(token).ConfigureAwait(false);
 #else
-                    await result.WithCancellation(token).ConfigureAwait(false);
-                    await _afterOperationCompleted.WithCancellation(token).ConfigureAwait(false);
+                        await result.WithCancellation(token).ConfigureAwait(false);
+                        await _afterOperationCompleted.WithCancellation(token).ConfigureAwait(false);
 #endif
-                }
-                catch (TaskCanceledException e) when (token.IsCancellationRequested)
-                {
-                    await StopProcessingUnderLock().ConfigureAwait(false);
-                    throw new TimeoutException($"Did not get a reply for operation '{_id}'.", e);
-                }
-                catch (Exception ex)
-                {
-                    await StopProcessingUnderLock(ex).ConfigureAwait(false);
-                }
+                    }
+                    catch (TaskCanceledException e) when (token.IsCancellationRequested)
+                    {
+                        await StopProcessingUnderLock().ConfigureAwait(false);
+                        throw new TimeoutException($"Did not get a reply for operation '{_id}'.", e);
+                    }
+                    catch (Exception ex)
+                    {
+                        await StopProcessingUnderLock(ex).ConfigureAwait(false);
+                    }
 
-                return (TResult)await result.ConfigureAwait(false); // already done waiting but in failure we want the exception itself and not AggregateException 
+                    return (TResult)await result.ConfigureAwait(false); // already done waiting but in failure we want the exception itself and not AggregateException 
+                }
+                finally
+                {
+                    try
+                    {
+                        await initTask.ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
+                }
             }
         }
 

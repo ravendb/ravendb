@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Platform;
@@ -952,6 +953,9 @@ namespace Voron.Impl
             if (_txState.HasFlag(TxState.Disposed))
                 return;
 
+            if (Flags == TransactionFlags.ReadWrite && NativeMemory.CurrentThreadStats != CurrentTransactionHolder)
+                ThrowDisposeOfTxMustBeCalledOnTheSameThreadThatCreatedIt();
+
             try
             {
                 if (!Committed && !RolledBack && Flags == TransactionFlags.ReadWrite)
@@ -1354,6 +1358,12 @@ namespace Voron.Impl
             throw new InvalidOperationException("Cannot commit already committed transaction.");
         }
 
+        private void ThrowDisposeOfTxMustBeCalledOnTheSameThreadThatCreatedIt()
+        {
+            throw new InvalidOperationException($"Dispose of the transaction must be called from the same thread that created it. " +
+                                                $"Transaction {Id} (Flags: {Flags}) was created by {CurrentTransactionHolder.Name}, thread Id: {CurrentTransactionHolder.ManagedThreadId}. " +
+                                                $"The dispose was called from {NativeMemory.CurrentThreadStats.Name}, thread Id: {NativeMemory.CurrentThreadStats.ManagedThreadId}");
+        }
 
         public void Rollback()
         {
@@ -1630,6 +1640,7 @@ namespace Voron.Impl
             internal Action ActionToCallDuringEnsurePagerStateReference;
             internal Action ActionToCallJustBeforeWritingToJournal;
             internal Action ActionToCallDuringBeginAsyncCommitAndStartNewTransaction;
+            internal Action ActionToCallOnTransactionAfterCommit;
 
             public TestingStuff(LowLevelTransaction tx)
             {
@@ -1661,6 +1672,13 @@ namespace Voron.Impl
                 ActionToCallDuringBeginAsyncCommitAndStartNewTransaction = action;
 
                 return new DisposableAction(() => ActionToCallDuringBeginAsyncCommitAndStartNewTransaction = null);
+            }
+
+            internal IDisposable CallOnTransactionAfterCommit(Action action)
+            {
+                ActionToCallOnTransactionAfterCommit = action;
+
+                return new DisposableAction(() => ActionToCallOnTransactionAfterCommit = null);
             }
 
             internal HashSet<PagerState> GetPagerStates()
