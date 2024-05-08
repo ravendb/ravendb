@@ -123,6 +123,8 @@ namespace Voron
                 throw new EndOfStreamException();
             
             var val = *(long*) (Base + _pos);
+            
+            _pos += sizeof(long);
 
             return Bits.SwapBytes(val);
         }
