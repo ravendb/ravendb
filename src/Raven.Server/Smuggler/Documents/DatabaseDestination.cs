@@ -2404,7 +2404,7 @@ namespace Raven.Server.Smuggler.Documents
                 await HandleBatchOfTimeSeriesIfNecessaryAsync();
             }
 
-            public async ValueTask WriteTimeSeriesDeletedRangeAsync(TimeSeriesDeletedRangeItem deletedRange)
+            public async ValueTask WriteDeletedRangeAsync(TimeSeriesDeletedRangeItem deletedRange)
             {
                 AddToBatch(deletedRange);
                 await HandleBatchOfTimeSeriesIfNecessaryAsync();

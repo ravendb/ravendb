@@ -1142,7 +1142,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            public async ValueTask WriteTimeSeriesDeletedRangeAsync(TimeSeriesDeletedRangeItem deletedRangeItem)
+            public async ValueTask WriteDeletedRangeAsync(TimeSeriesDeletedRangeItem deletedRangeItem)
             {
                 using (deletedRangeItem)
                 {
@@ -1170,11 +1170,11 @@ namespace Raven.Server.Smuggler.Documents
                     Writer.WriteComma();
 
                     Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItem.From));
-                    Writer.WriteDateTime(deletedRangeItem.From, true);
+                    Writer.WriteDateTime(deletedRangeItem.From, isUtc: true);
                     Writer.WriteComma();
 
                     Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItem.To));
-                    Writer.WriteDateTime(deletedRangeItem.To, true);
+                    Writer.WriteDateTime(deletedRangeItem.To, isUtc: true);
 
                     Writer.WriteEndObject();
 

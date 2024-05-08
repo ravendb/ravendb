@@ -110,6 +110,7 @@ namespace Raven.Server.Smuggler.Documents
             DocId?.Dispose();
             Name?.Dispose();
             Collection?.Dispose();
+            ChangeVector?.Dispose();
         }
     }
 }
