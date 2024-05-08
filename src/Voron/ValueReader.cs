@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow;
@@ -124,6 +124,7 @@ namespace Voron
                 throw new EndOfStreamException();
             
             var val = *(long*) (_val + _pos);
+            _pos += sizeof(long);
 
             return Bits.SwapBytes(val);
         }
