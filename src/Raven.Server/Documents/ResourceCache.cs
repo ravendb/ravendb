@@ -72,8 +72,23 @@ namespace Raven.Server.Documents
             if (_caseInsensitive.TryGetValue(resourceName, out resourceTask) == false)
                 return false;
 
+            _forTestingPurposes?.OnUnlikelyTryGet?.Invoke();
+
             lock (this)
             {
+                if (_caseInsensitive.TryGetValue(resourceName, out var resourceTaskUnderLock) == false)
+                {
+                    // database was deleted
+                    return false;
+                }
+
+                if (resourceTask != resourceTaskUnderLock)
+                {
+                    // we have a case in sensitive match, but it is not the same instance
+                    resourceTask = resourceTaskUnderLock;
+                    return true;
+                }
+
                 //we have a case insensitive match, let us optimize that
                 if (_mappings.TryGetValue(resourceName, out ConcurrentSet<StringSegment> mappingsForResource))
                 {
@@ -271,6 +286,7 @@ namespace Raven.Server.Documents
             }
 
             internal Action<ResourceCache<TResource>> OnRemoveLockAndReturnDispose;
+            internal Action OnUnlikelyTryGet;
 
             public Task<TResource> Replace(string databaseName, Task<TResource> task)
             {
