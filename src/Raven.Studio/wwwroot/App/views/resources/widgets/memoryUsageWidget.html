@@ -36,6 +36,10 @@
                                 <div class="details-item-name">Unmanaged Allocations</div>
                                 <div class="details-item-value" data-bind="text: sizeFormatter(unmanagedAllocations())"></div>
                             </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Lucene Unmanaged Allocations</div>
+                                <div class="details-item-value" data-bind="text: sizeFormatter(luceneUnmanagedAllocations())"></div>
+                            </div>
                             <div class="details-item" data-bind="visible: showEncryptionBuffers">
                                 <div class="details-item-name">Encryption Buffers in Use</div>
                                 <div class="details-item-value" data-bind="text: sizeFormatter(encryptionBuffersInUse())"></div>
