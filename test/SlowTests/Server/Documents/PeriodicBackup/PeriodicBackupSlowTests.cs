@@ -28,6 +28,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Http;
+using Raven.Client.Http.Behaviors;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -2260,7 +2261,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var response = await client.SendAsync(request);
 
                 Assert.False(config.ValidateDestinations(out var message));
-                var exception = await Assert.ThrowsAnyAsync<Exception>(async () => await ExceptionDispatcher.Throw(context, response, RequestExecutor.CommandUnsuccessfulResponseBehavior.WrapException));
+                var exception = await Assert.ThrowsAnyAsync<Exception>(async () => await ExceptionDispatcher.Throw(context, response, AbstractCommandResponseBehavior.CommandUnsuccessfulResponseBehavior.WrapException));
                 Assert.Contains(message, exception.Message);
             }
         }

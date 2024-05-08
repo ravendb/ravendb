@@ -24,6 +24,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Routing;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
+using Raven.Client.Http.Behaviors;
 using Raven.Client.Properties;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.Util;
@@ -140,7 +141,7 @@ namespace Raven.Client.Http
 
         private bool _includePromotables;
 
-        private CommandUnsuccessfulResponseBehavior _commandUnsuccessfulResponseBehavior = CommandUnsuccessfulResponseBehavior.WrapException;
+        private AbstractCommandResponseBehavior.CommandUnsuccessfulResponseBehavior _commandUnsuccessfulResponseBehavior = AbstractCommandResponseBehavior.CommandUnsuccessfulResponseBehavior.WrapException;
 
         public TimeSpan? DefaultTimeout
         {
@@ -385,7 +386,7 @@ namespace Raven.Client.Http
         {
             var executor = Create(initialUrls, databaseName, certificate, conventions, usePrivateUrls: usePrivateUrls, includePromotables);
             executor._disableClientConfigurationUpdates = true;
-            executor._commandUnsuccessfulResponseBehavior = CommandUnsuccessfulResponseBehavior.None;
+            executor._commandUnsuccessfulResponseBehavior = AbstractCommandResponseBehavior.CommandUnsuccessfulResponseBehavior.None;
             return executor;
         }
 
@@ -1744,12 +1745,6 @@ namespace Raven.Client.Http
             public int Index;
             public ServerNode Node;
             public IDisposable ReturnContext;
-        }
-
-        public enum CommandUnsuccessfulResponseBehavior
-        {
-            None,
-            WrapException
         }
 
         internal async Task<TResult> Broadcast<TResult>(RavenCommand<TResult> command, SessionInfo sessionInfo, CancellationToken token)
