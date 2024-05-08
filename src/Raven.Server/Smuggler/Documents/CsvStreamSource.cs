@@ -446,7 +446,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IAsyncEnumerable<TimeSeriesDeletedRangeItem> GetTimeSeriesDeletedRangesAsync(ITimeSeriesActions action, List<string> collectionsToExport)
         {
-            throw new NotImplementedException();
+            return AsyncEnumerable.Empty<TimeSeriesDeletedRangeItem>();
         }
 
         public void Dispose()

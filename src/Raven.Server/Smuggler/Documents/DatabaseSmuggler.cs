@@ -1249,7 +1249,7 @@ namespace Raven.Server.Smuggler.Documents
                         AddInfoToSmugglerResult(result, $"Time Series deleted ranges entries {result.TimeSeriesDeletedRanges}");
 
                     if (ShouldSkip(deletedRange, _patcher) == false)
-                        await actions.WriteTimeSeriesDeletedRangeAsync(deletedRange);
+                        await actions.WriteDeletedRangeAsync(deletedRange);
                     
                     else
                         result.TimeSeriesDeletedRanges.SkippedCount++;

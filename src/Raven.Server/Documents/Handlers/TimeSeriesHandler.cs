@@ -1213,7 +1213,6 @@ namespace Raven.Server.Documents.Handlers
 
                 foreach (var (docId, items) in _deletedRanges)
                 {
-                    //var collectionName = _database.DocumentsStorage.ExtractCollectionName(context, items[0].Collection);
                     foreach (var item in items)
                     {
                         using (item)
@@ -1278,11 +1277,10 @@ namespace Raven.Server.Documents.Handlers
             public bool AddToDeletedRanges(TimeSeriesDeletedRangeItem item)
             {
                 bool newItem = false;
-                //TimeSeriesValuesSegment.ParseTimeSeriesKey(item.Key.Buffer, item.Size, _context, out var docId, out _);
 
                 if (_deletedRanges.TryGetValue(item.DocId, out var deletedRangesList) == false)
                 {
-                    _deletedRanges[item.DocId] = deletedRangesList = new List<TimeSeriesDeletedRangeItem>();
+                    _deletedRanges[item.DocId] = deletedRangesList = [];
                     newItem = true;
                 }
 
