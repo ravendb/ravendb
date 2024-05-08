@@ -4082,6 +4082,82 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task deleted_ranges_should_be_processed_before_timeseries()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            const string id = "users/1";
+
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.UtcNow;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "fitzchak" }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "heartrate");
+                    for (int i = 0; i < 10; i++)
+                    {
+                        tsf.Append(baseline.AddHours(i), i);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // delete the document to create a timeseries deleted range 
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // recreate the document and time series, and append a new entry to the series
+                    // importing the deleted range should not delete this new entry
+
+                    await session.StoreAsync(new User { Name = "aviv" }, id);
+                    session.TimeSeriesFor(id, "heartrate").Append(baseline.AddYears(1), 100);
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Equal(1, ts.Length);
+                }
+
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+
+                Assert.True(WaitForValue(() =>
+                {
+                    var dir = Directory.GetDirectories(backupPath).First();
+                    var files = Directory.GetFiles(dir);
+                    return files.Length == 2;
+                }, expectedVal: true));
+            }
+
+            using (var store = GetDocumentStore())
+            {
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(),
+                    Directory.GetDirectories(backupPath).First());
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    Assert.Equal("aviv", user.Name);
+
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Equal(1, ts.Length);
+                    Assert.Equal(100, ts[0].Value);
+                }
+            }
+        }
+
         private static string GetBackupPath(IDocumentStore store, long backTaskId, bool incremental = true)
         {
             var status = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(backTaskId)).Status;

@@ -205,7 +205,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public ITimeSeriesActions TimeSeriesDeletedRanges()
         {
-            throw new NotImplementedException();
+            return new StreamTimeSeriesActions(_writer, _context, nameof(DatabaseItemType.TimeSeriesDeletedRanges));
         }
 
         public IIndexActions Indexes()
@@ -1148,6 +1148,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     if (First == false)
                         Writer.WriteComma();
+
                     First = false;
 
                     Writer.WriteStartObject();
@@ -1162,12 +1163,15 @@ namespace Raven.Server.Smuggler.Documents
 
                     Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItem.Collection));
                     Writer.WriteString(deletedRangeItem.Collection);
+                    Writer.WriteComma();
 
                     Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItem.ChangeVector));
                     Writer.WriteString(deletedRangeItem.ChangeVector);
+                    Writer.WriteComma();
 
                     Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItem.From));
                     Writer.WriteDateTime(deletedRangeItem.From, true);
+                    Writer.WriteComma();
 
                     Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItem.To));
                     Writer.WriteDateTime(deletedRangeItem.To, true);
