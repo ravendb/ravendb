@@ -57,9 +57,14 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.CompareExchangeTombstones,
             DatabaseItemType.CounterGroups,
             DatabaseItemType.Subscriptions,
+
+
+            DatabaseItemType.TimeSeriesDeletedRanges,
+
+
             DatabaseItemType.TimeSeries,
             DatabaseItemType.ReplicationHubCertificates,
-            DatabaseItemType.TimeSeriesDeletedRanges,
+            //DatabaseItemType.TimeSeriesDeletedRanges,
             DatabaseItemType.None
         };
 

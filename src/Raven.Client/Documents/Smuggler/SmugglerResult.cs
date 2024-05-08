@@ -183,6 +183,7 @@ namespace Raven.Client.Documents.Smuggler
                 Subscriptions = _result?.Subscriptions;
                 TimeSeries = _result?.TimeSeries;
                 ReplicationHubCertificates = _result?.ReplicationHubCertificates;
+                TimeSeriesDeletedRanges = _result?.TimeSeriesDeletedRanges;
             }
 
             private string Message { get; set; }
@@ -213,6 +214,9 @@ namespace Raven.Client.Documents.Smuggler
 
             if (TimeSeries.LastEtag > lastEtag)
                 lastEtag = TimeSeries.LastEtag;
+
+            if (TimeSeriesDeletedRanges.LastEtag > lastEtag)
+                lastEtag = TimeSeriesDeletedRanges.LastEtag;
 
             return lastEtag;
         }
