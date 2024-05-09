@@ -4,11 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -336,6 +337,104 @@ namespace SlowTests.Server.Documents.Notifications
                 }, newName);
 
                 Assert.Equal(newName, value);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task CacheIsUpdatedAfterInitialFailure()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var newDatabaseName = store.Database + Guid.NewGuid();
+                const string oldName = "Grisha";
+                const string newName = "Grisha Kotler";
+
+                await Assert.ThrowsAsync<DatabaseDoesNotExistException>(async () =>
+                {
+                    using (await store.AggressivelyCacheForAsync(TimeSpan.MaxValue, database: newDatabaseName))
+                    {
+                    }
+                });
+
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDatabaseName)));
+
+                using (var session = store.OpenAsyncSession(newDatabaseName))
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = oldName
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (await store.AggressivelyCacheForAsync(TimeSpan.MaxValue, database: newDatabaseName))
+                using (var session = store.OpenAsyncSession(newDatabaseName))
+                {
+                    var loaded = await session.LoadAsync<User>("users/1");
+                    Assert.Equal(oldName, loaded.Name);
+                }
+
+                using (var session = store.OpenAsyncSession(newDatabaseName))
+                {
+                    var loaded = await session.LoadAsync<User>("users/1");
+                    loaded.Name = newName;
+                    await session.SaveChangesAsync();
+                }
+
+                var value = await WaitForValueAsync(async () =>
+                {
+                    using (await store.AggressivelyCacheForAsync(TimeSpan.MaxValue, database: newDatabaseName))
+                    using (var session = store.OpenAsyncSession(newDatabaseName))
+                    {
+                        var loaded = await session.LoadAsync<User>("users/1");
+                        return loaded.Name;
+                    }
+                }, newName);
+
+                Assert.Equal(newName, value);
+
+                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(newDatabaseName, hardDelete: true));
+
+                var exception = await WaitForValueAsync(async () =>
+                {
+                    try
+                    {
+                        using (await store.AggressivelyCacheForAsync(TimeSpan.MaxValue, database: newDatabaseName))
+                        {
+                        }
+
+                        return false;
+                    }
+                    catch (DatabaseDoesNotExistException)
+                    {
+                        return true;
+                    }
+                }, true);
+
+                Assert.True(exception);
+
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDatabaseName)));
+
+                using (var session = store.OpenAsyncSession(newDatabaseName))
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = oldName
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                value = await WaitForValueAsync(async () =>
+                {
+                    using (await store.AggressivelyCacheForAsync(TimeSpan.MaxValue, database: newDatabaseName))
+                    using (var session = store.OpenAsyncSession(newDatabaseName))
+                    {
+                        var loaded = await session.LoadAsync<User>("users/1");
+                        return loaded.Name;
+                    }
+                }, oldName);
+
+                Assert.Equal(oldName, value);
             }
         }
 
