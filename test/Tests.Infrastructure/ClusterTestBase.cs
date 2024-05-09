@@ -1172,43 +1172,55 @@ namespace Tests.Infrastructure
 
         internal async Task GetClusterDebugLogsAsync(StringBuilder sb)
         {
-            (ClusterObserverLogEntry[] List, long Iteration) logs;
-            List<DynamicJsonValue> historyLogs = null;
-            DynamicJsonValue inMemoryDebug = null;
-            List<string> prevStates = null;
-            logs.List = null;
+            NodeDebugInfo debugInfo = null;
             await ActionWithLeader((l) =>
             {
-                logs = l.ServerStore.Observer.ReadDecisionsForDatabase();
-                prevStates = l.ServerStore.Engine.PrevStates.Select(s => s.ToString()).ToList();
-
-                using (l.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    historyLogs = l.ServerStore.Engine.LogHistory.GetHistoryLogs(context).ToList();
-                    inMemoryDebug = l.ServerStore.Engine.InMemoryDebug.ToJson();
-                }
-
+                debugInfo = GetDebugInfoForNode(l);
                 return Task.CompletedTask;
             });
 
-            if (prevStates != null)
+            AppendDebugInfo(sb, debugInfo);
+        }
+
+        internal static void GetDebugLogsForNode(RavenServer node, StringBuilder sb) => AppendDebugInfo(sb, GetDebugInfoForNode(node));
+
+        private static NodeDebugInfo GetDebugInfoForNode(RavenServer node)
+        {
+            var debugInfo = new NodeDebugInfo
+            {
+                ClusterObserverLogs = node.ServerStore.Observer?.ReadDecisionsForDatabase().List, 
+                PrevStates = node.ServerStore.Engine.PrevStates.Select(s => s.ToString()).ToList()
+            };
+
+            using (node.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                debugInfo.HistoryLogs = node.ServerStore.Engine.LogHistory.GetHistoryLogs(context).ToList();
+                debugInfo.InMemoryDebug = node.ServerStore.Engine.InMemoryDebug.ToJson();
+            }
+
+            return debugInfo;
+        }
+
+        private static void AppendDebugInfo(StringBuilder sb, NodeDebugInfo debugInfo)
+        {
+            if (debugInfo.PrevStates != null)
             {
                 sb.AppendLine($"{Environment.NewLine}States:{Environment.NewLine}-----------------------");
-                foreach (var state in prevStates)
+                foreach (var state in debugInfo.PrevStates)
                 {
                     sb.AppendLine($"{state}{Environment.NewLine}");
                 }
                 sb.AppendLine();
             }
 
-            if (historyLogs != null)
+            if (debugInfo.HistoryLogs != null)
             {
                 sb.AppendLine($"HistoryLogs:{Environment.NewLine}-----------------------");
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     var c = 0;
-                    foreach (var log in historyLogs)
+                    foreach (var log in debugInfo.HistoryLogs)
                     {
                         var json = context.ReadObject(log, nameof(log) + $"{c++}");
                         sb.AppendLine(json.ToString());
@@ -1217,13 +1229,13 @@ namespace Tests.Infrastructure
                 sb.AppendLine();
             }
 
-            if (logs.List.Length > 0)
+            if (debugInfo.ClusterObserverLogs?.Length > 0)
             {
                 sb.AppendLine($"Cluster Observer Log Entries:{Environment.NewLine}-----------------------");
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     var c = 0;
-                    foreach (var log in logs.List)
+                    foreach (var log in debugInfo.ClusterObserverLogs)
                     {
                         var json = context.ReadObject(log.ToJson(), nameof(log) + $"{c++}");
                         sb.AppendLine(json.ToString());
@@ -1231,16 +1243,28 @@ namespace Tests.Infrastructure
                 }
             }
 
-            if (inMemoryDebug != null)
+            if (debugInfo.InMemoryDebug != null)
             {
                 sb.AppendLine($"RachisDebug:{Environment.NewLine}-----------------------");
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var json = context.ReadObject(inMemoryDebug, nameof(inMemoryDebug));
+                    var json = context.ReadObject(debugInfo.InMemoryDebug, nameof(NodeDebugInfo.InMemoryDebug));
                     sb.AppendLine(json.ToString());
                 }
             }
         }
+
+        private class NodeDebugInfo
+        {
+            public ClusterObserverLogEntry[] ClusterObserverLogs;
+
+            public List<DynamicJsonValue> HistoryLogs;
+
+            public DynamicJsonValue InMemoryDebug;
+
+            public List<string> PrevStates;
+        }
+
 
         public override void Dispose()
         {
