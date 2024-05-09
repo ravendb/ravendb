@@ -509,8 +509,8 @@ update {{
                     database.ForTestingPurposesOnly().DelayQueryByPatch = delayQueryByPatch;
 
                     var re = store.GetRequestExecutor();
-                    var delayFetchOperationStatus = new Nito.AsyncEx.AsyncManualResetEvent();
-                    re.ForTestingPurposesOnly().WaitBeforeFetchOperationStatus = delayFetchOperationStatus;
+                    var delayFetchOperationStatus = new AsyncManualResetEvent();
+                    re.ForTestingPurposesOnly().WaitBeforeFetchOperationStatus = delayFetchOperationStatus.WaitAsync(cts.Token);
 
                     var op = await store.Operations.SendAsync(patch, token: cts.Token);
 
