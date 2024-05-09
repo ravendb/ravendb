@@ -11,7 +11,7 @@
         </div>
         <div class="flex-separator"></div>
         <small title="Go to the RavenDB identities documentation">
-            <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/CN81C4/' + clientVersion() }"><i class="icon-link"></i>Identities tutorial</a>
+            <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/KOVX2N/' + clientVersion() }"><i class="icon-link"></i>Identities tutorial</a>
         </small>
     </div>
     <div class="flex-horizontal flex-stretch-items content-margin identities-grid">
@@ -33,30 +33,41 @@
                                 <label for="prefix" class="control-label">Prefix</label>
                                 <div class="flex-grow">
                                     <input type="text" class="form-control" data-bind="textInput: prefix, disable: !$root.isNewIdentity()"
-                                           id="prefix" placeholder="Enter the Document ID Prefix">
+                                           id="prefix" placeholder="Enter the collection for which to set an identity value, e.g. 'orders'">
                                 </div>
                             </div>
                             <div class="margin-top" data-bind="validationElement: value">
                                 <label for="value" class="control-label">Value</label>
                                 <div class="flex-grow">
                                     <input type="number" min="0" class="form-control" data-bind="numericInput: value"
-                                           id="value" placeholder="Enter identity value">
+                                           id="value" placeholder="Enter a number that will be the latest identity value for this collection">
                                 </div>
                             </div>
                         </div>
-                        <div class="form-group margin-top" data-bind="if: validationGroup.isValid()">
-                            <label class="control-label">&nbsp;</label>
-                            <div class="flex-vertical flex-grow">
-                                <div class="text-info bg-info padding padding-sm flex-horizontal">
-                                    <div class="flex-start"><i class="icon-info"></i></div>
-                                    <div data-bind="html: nextDocumentText"></div>
+                        <div data-bind="if: validationGroup.isValid()">
+                            <div class="form-group margin-top-lg" >
+                                <label class="control-label">&nbsp;</label>
+                                <div class="flex-vertical flex-grow">
+                                    <div class="text-info bg-info padding padding-sm">
+                                        <div data-bind="html: textForEditIdentity"></div>
+                                    </div>
+                                    <div class="margin-top" data-bind="if: warnAboutSmallerValue">
+                                        <div class="text-warning bg-warning padding padding-xs">
+                                            <small>
+                                                <i class="icon-warning"></i>
+                                                <span>New value is smaller than current. Please verify documents with higher identity value do not exist.</span>
+                                            </small>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="margin-top-sm" data-bind="if: warnAboutSmallerValue">
-                                    <div class="text-warning bg-warning padding padding-sm">
-                                        <small>
-                                        <i class="icon-warning"></i>
-                                        <span>New value is smaller than current. Please verify documents with higher identity value do not exist.</span>
-                                        </small>
+                            </div>
+                        </div>
+                        <div data-bind="if: $root.isNewIdentity() && !validationGroup.isValid()">
+                            <div class="form-group margin-top-lg" >
+                                <label class="control-label">&nbsp;</label>
+                                <div class="flex-vertical flex-grow">
+                                    <div class="text-info bg-info padding padding-sm">
+                                        <div data-bind="html: textForNewIdentity"></div>
                                     </div>
                                 </div>
                             </div>

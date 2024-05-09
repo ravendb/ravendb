@@ -114,7 +114,9 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                     string indexName = index.IndexName.ToLower();
     
                     EnsureIndexExistsAndValidateIfNeeded(indexName, index);
-    
+
+                    CancellationToken.ThrowIfCancellationRequested();
+
                     if (index.InsertOnlyMode == false)
                         count += DeleteByQueryOnIndexIdProperty(index);
     

@@ -29,7 +29,6 @@ namespace Sparrow.LowMemory
         public Size AvailableMemory;
         public Size AvailableMemoryForProcessing;
         public Size SharedCleanMemory;
-        public Size TotalScratchDirtyMemory;
 
         public Size TotalSwapSize;
         public Size TotalSwapUsage;

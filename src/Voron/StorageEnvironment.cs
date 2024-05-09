@@ -926,6 +926,8 @@ namespace Voron
 
         internal void TransactionAfterCommit(LowLevelTransaction tx)
         {
+            tx._forTestingPurposes?.ActionToCallOnTransactionAfterCommit?.Invoke();
+
             if (ActiveTransactions.Contains(tx) == false)
             {
                 if (tx.Committed && tx.FlushedToJournal)
