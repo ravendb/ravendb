@@ -614,7 +614,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public void Initialize()
+        public void Initialize_Phase_1()
         {
             Configuration.CheckDirectoryPermissions();
 
@@ -833,7 +833,6 @@ namespace Raven.Server.ServerWide
             if (Configuration.Queries.MaxClauseCount != null)
                 BooleanQuery.MaxClauseCount = Configuration.Queries.MaxClauseCount.Value;
 
-            var clusterChanges = new ClusterChanges();
             ContextPool = new TransactionContextPool(_env, Configuration.Memory.MaxContextSizeToKeep);
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
@@ -856,7 +855,11 @@ namespace Raven.Server.ServerWide
             }
 
             CheckSwapOrPageFileAndRaiseNotification();
+        }
 
+        public void Initialize_Phase_2()
+        {
+            var clusterChanges = new ClusterChanges();
             _sharding = new ShardingStore(this);
             _engine = new RachisConsensus<ClusterStateMachine>(this);
 

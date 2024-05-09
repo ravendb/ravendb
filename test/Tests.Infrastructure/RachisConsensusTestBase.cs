@@ -246,7 +246,8 @@ namespace Tests.Infrastructure
 #if DEBUG
             serverStore.EnableCaptureWriteTransactionStackTrace = EnableCaptureWriteTransactionStackTrace;
 #endif
-            serverStore.Initialize();
+            serverStore.Initialize_Phase_1();
+            serverStore.Initialize_Phase_2();
             var rachis = new RachisConsensus<CountingStateMachine>(serverStore, seed);
             var storageEnvironment = new StorageEnvironment(server);
             rachis.Initialize(storageEnvironment, configuration, new ClusterChanges(), configuration.Core.ServerUrls[0], new SystemTime(), out _, CancellationToken.None);

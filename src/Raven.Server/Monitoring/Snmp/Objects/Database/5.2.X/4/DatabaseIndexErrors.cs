@@ -4,15 +4,17 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Diagnostics.Metrics;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
+using Raven.Server.Monitoring.OpenTelemetry;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class DatabaseIndexErrors : DatabaseIndexScalarObjectBase<Integer32>
+    public sealed class DatabaseIndexErrors : DatabaseIndexScalarObjectBase<Integer32>, ITaggedMetricInstrument<int>
     {
-        public DatabaseIndexErrors(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex)
-            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.Errors)
+        public DatabaseIndexErrors(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex, string nodeTag = null)
+            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.Errors, nodeTag)
         {
         }
 
@@ -20,6 +22,14 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
         {
             var index = GetIndex(database);
             return new Integer32((int)index.GetErrorCount());
+        }
+
+        public Measurement<int> GetCurrentValue()
+        {
+            if (TryGetIndex(out var index))
+                return new Measurement<int>((int)index.GetErrorCount(), MeasurementTags);
+
+            return default;
         }
     }
 }

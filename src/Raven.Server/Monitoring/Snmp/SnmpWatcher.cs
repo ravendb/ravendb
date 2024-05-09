@@ -89,9 +89,9 @@ namespace Raven.Server.Monitoring.Snmp
         }
 
         public void Execute()
-        {
+        { 
             if (_server.Configuration.Monitoring.Snmp.Enabled == false)
-                return;
+                 return;
 
             _locker.Wait();
 

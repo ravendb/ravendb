@@ -1605,6 +1605,12 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.ReadOnlyCertificates, details);
         }
 
+        public bool CanUseOpenTelemetryMonitoring(bool withNotification)
+        {
+            //todo logic
+            return true;
+        }
+
         public bool CanUseSnmpMonitoring(bool withNotification)
         {
             if (IsValid(out _) == false)

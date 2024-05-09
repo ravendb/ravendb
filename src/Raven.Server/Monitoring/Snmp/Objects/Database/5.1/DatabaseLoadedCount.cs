@@ -1,9 +1,10 @@
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
+using Raven.Server.Monitoring.OpenTelemetry;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class DatabaseLoadedCount : ScalarObjectBase<Integer32>
+    public sealed class DatabaseLoadedCount : ScalarObjectBase<Integer32>, IMetricInstrument<int>
     {
         private readonly DatabasesLandlord _landlord;
 
@@ -15,12 +16,12 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 
         protected override Integer32 GetData()
         {
-            return new Integer32(GetCount(_landlord));
+            return new Integer32(GetCurrentValue());
         }
-
-        private static int GetCount(DatabasesLandlord landlord)
+        
+        public int GetCurrentValue()
         {
-            return landlord.DatabasesCache.Count;
+            return _landlord.DatabasesCache.Count;
         }
     }
 }

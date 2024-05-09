@@ -26,6 +26,10 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using OpenTelemetry;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Replication;
@@ -74,6 +78,8 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using DateTime = System.DateTime;
+using OpenTelemetry.Trace;
+using Raven.Server.Monitoring.OpenTelemetry;
 
 namespace Raven.Server
 {
@@ -194,7 +200,16 @@ namespace Raven.Server
             sp.Restart();
             ListenToPipes().IgnoreUnobservedExceptions();
             Router = new RequestRouter(RouteScanner.AllRoutes, this);
-
+            try
+            {
+                ServerStore.Initialize_Phase_1();
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Could not open the server store", e);
+                throw;
+            }
             try
             {
                 ListenEndpoints = GetServerAddressesAndPort();
@@ -204,7 +219,6 @@ namespace Raven.Server
                     options.AddServerHeader = false;
 
                     options.AllowSynchronousIO = Configuration.Http.AllowSynchronousIo;
-
                     options.Limits.MaxRequestLineSize = (int)Configuration.Http.MaxRequestLineSize.GetValue(SizeUnit.Bytes);
                     options.Limits.MaxRequestBodySize = null; // no limit!
                     options.Limits.MinResponseDataRate = null; // no limit!
@@ -260,6 +274,8 @@ namespace Raven.Server
                     .UseShutdownTimeout(TimeSpan.FromSeconds(1))
                     .ConfigureServices(services =>
                     {
+                        ConfigureOpenTelemetry(services);
+
                         if (Configuration.Http.UseResponseCompression)
                         {
                             services.Configure<ResponseCompressionOptions>(options =>
@@ -349,7 +365,7 @@ namespace Raven.Server
 
                 try
                 {
-                    ServerStore.Initialize();
+                    ServerStore.Initialize_Phase_2();
                 }
                 catch (Exception e)
                 {
@@ -362,7 +378,8 @@ namespace Raven.Server
 
                 StartSnmp();
                 StartPostgresServer();
-
+                StartOpenTelemetry();
+                
                 if (Configuration.Server.CpuCreditsBase != null ||
                     Configuration.Server.CpuCreditsMax != null ||
                     Configuration.Server.CpuCreditsExhaustionFailoverThreshold != null ||
@@ -409,6 +426,61 @@ namespace Raven.Server
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations("Could not start server", e);
                 throw;
+            }
+        }
+
+        private bool TryReadNodeTag(out string nodeTag)
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+                nodeTag = RachisConsensus.ReadNodeTag(context);
+
+            if (nodeTag == RachisConsensus.InitialTag)
+                return false; // first run, let allow server to exchange all necesarry data through rachis and then start opentelemetry
+
+            return true;
+        }
+
+        private void StartOpenTelemetry()
+        {
+            MetricsBase.NodeTag = nodeTag;
+            MetricsManager = new MetricsManager(ServerStore.Server, nodeTag); 
+            MetricsManager.Execute();
+        }
+
+        private void ConfigureOpenTelemetry(IServiceCollection services)
+        {
+            if (TryReadNodeTag(out var nodeTag) == false)
+                return;
+            
+            
+            var openTelemetryConfiguration = Configuration.Monitoring.OpenTelemetry;
+            if (openTelemetryConfiguration.Enabled == false)
+                return;
+
+            var openTelemetryBuilder = services.AddOpenTelemetry();
+            
+            if (openTelemetryConfiguration.OltpExporter)
+                openTelemetryBuilder.UseOtlpExporter();
+
+            
+
+            if (openTelemetryConfiguration.MetricsEnabled)
+                openTelemetryBuilder.WithMetrics(ConfigureMetrics);
+            
+            void ConfigureMetrics(MeterProviderBuilder builder)
+            {
+                builder.SetResourceBuilder(
+                    ResourceBuilder.CreateDefault()
+                        .AddService("server", "ravendb", serviceInstanceId: nodeTag));
+                builder.AddAspNetCoreInstrumentation();
+                builder.AddRuntimeInstrumentation();
+                builder.AddMeter(Constants.ServerWideMeterName);
+                builder.AddMeter(Constants.ServerWideDatabasesMeterName);
+                builder.AddMeter(Constants.DatabaseStorageMeter);
+                builder.AddMeter(Constants.IndexMeter);
+               
+                //builder.AddConsoleExporter();
             }
         }
 
@@ -2443,6 +2515,7 @@ namespace Raven.Server
 
         private TcpListenerStatus _tcpListenerStatus;
         public SnmpWatcher SnmpWatcher;
+        public MetricsManager MetricsManager;
         public PgServer PostgresServer;
         private Timer _refreshClusterCertificate;
         private HttpsConnectionMiddleware _httpsConnectionMiddleware;
