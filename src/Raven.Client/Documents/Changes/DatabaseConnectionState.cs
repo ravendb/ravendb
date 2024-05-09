@@ -100,8 +100,9 @@ namespace Raven.Client.Documents.Changes
 
         public void Dispose()
         {
-            if(_connected?.Exception == null)
+            if (_connected?.Exception == null)
                 Set(Task.FromException(new ObjectDisposedException(nameof(DatabaseConnectionState))));
+
             OnDocumentChangeNotification = null;
             OnCounterChangeNotification = null;
             OnTimeSeriesChangeNotification = null;

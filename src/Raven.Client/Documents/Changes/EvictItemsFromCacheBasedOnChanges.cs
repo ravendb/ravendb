@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Changes
         public EvictItemsFromCacheBasedOnChanges(DocumentStore store, string databaseName)
         {
             _requestExecutor = store.GetRequestExecutor(databaseName);
-            _changes = new AggressiveCacheDatabaseChanges(_requestExecutor, databaseName);
+            _changes = new AggressiveCacheDatabaseChanges(_requestExecutor, databaseName, onDispose: () => store._aggressiveCacheChanges.TryRemove(databaseName, out _));
             _taskConnected = EnsureConnectedInternalAsync();
         }
 

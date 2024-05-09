@@ -5,7 +5,7 @@ namespace Raven.Client.Documents.Changes;
 
 internal class AggressiveCacheDatabaseChanges : DatabaseChanges
 {
-    internal AggressiveCacheDatabaseChanges(RequestExecutor requestExecutor, string databaseName) : base(requestExecutor, databaseName, onDispose: null, nodeTag: null)
+    internal AggressiveCacheDatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose) : base(requestExecutor, databaseName, onDispose: onDispose, nodeTag: null)
     {
     }
 
