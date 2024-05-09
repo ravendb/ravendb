@@ -311,7 +311,7 @@ public partial class RavenTestBase
             return null;
         }
 
-        public async ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync(DocumentStore store, string database = null, DatabaseRecord record = null, List<RavenServer> servers = null)
+        public async ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync(IDocumentStore store, string database = null, DatabaseRecord record = null, List<RavenServer> servers = null)
         {
             var shardingConfiguration = record != null ? record.Sharding : await GetShardingConfigurationAsync(store, database);
             DatabaseStatistics combined = new DatabaseStatistics();
