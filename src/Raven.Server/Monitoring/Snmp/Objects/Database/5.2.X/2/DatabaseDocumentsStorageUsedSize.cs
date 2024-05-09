@@ -1,19 +1,34 @@
+using System.Diagnostics.Metrics;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
+using Raven.Server.Monitoring.OpenTelemetry;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class DatabaseDocumentsStorageUsedSize : DatabaseScalarObjectBase<Gauge32>
+    public sealed class DatabaseDocumentsStorageUsedSize : DatabaseScalarObjectBase<Gauge32>, ITaggedMetricInstrument<long>
     {
-        public DatabaseDocumentsStorageUsedSize(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, SnmpOids.Databases.DocumentsStorageUsedSize, index)
+        public DatabaseDocumentsStorageUsedSize(string databaseName, DatabasesLandlord landlord, int index, string nodeTag = null)
+            : base(databaseName, landlord, SnmpOids.Databases.DocumentsStorageUsedSize, index, nodeTag)
         {
         }
 
         protected override Gauge32 GetData(DocumentDatabase database)
         {
+            return new Gauge32(GetDocumentsStorageUsedSize(database));
+        }
+
+        private long GetDocumentsStorageUsedSize(DocumentDatabase database)
+        {
             var stats = database.DocumentsStorage.Environment.Stats();
-            return new Gauge32(stats.UsedDataFileSizeInBytes / 1024L / 1024L);
+            return stats.UsedDataFileSizeInBytes / 1024L / 1024L;
+        }
+
+        public Measurement<long> GetCurrentValue()
+        {
+            if (TryGetDatabase(out var db))
+                return new(GetDocumentsStorageUsedSize(db), MeasurementTags);
+
+            return new(default, MeasurementTags);
         }
     }
 }

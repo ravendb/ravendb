@@ -30,15 +30,17 @@ namespace Raven.Server.Config.Categories
         public MonitoringConfiguration()
         {
             Snmp = new SnmpConfiguration();
+            OpenTelemetry = new OpenTelemetryConfiguration();
         }
 
         public SnmpConfiguration Snmp { get; }
+        public OpenTelemetryConfiguration OpenTelemetry { get; }
 
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {
             base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
             Snmp.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
-
+            OpenTelemetry.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
             Initialized = true;
         }
 
@@ -119,6 +121,77 @@ namespace Raven.Server.Config.Categories
             [DefaultValue(false)]
             [ConfigurationEntry("Monitoring.Snmp.DisableTimeWindowChecks", ConfigurationEntryScope.ServerWideOnly)]
             public bool DisableTimeWindowChecks { get; set; }
+        }
+
+        [ConfigurationCategory(ConfigurationCategoryType.Monitoring)]
+        public sealed class OpenTelemetryConfiguration : ConfigurationCategory
+        {
+            [Description("Indicates if OpenTelemetry is enabled or not. Default: false")]
+            [DefaultValue(true)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool Enabled { get; set; }
+            
+            [Description("Indicates if server-wide OpenTelemetry is enabled or not. Default: true")]
+            [DefaultValue(true)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWideEnabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool ServerWideEnabled { get; set; }
+            
+            [Description("Indicates if server-wide OpenTelemetry is enabled or not. Default: true")]
+            [DefaultValue(true)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.DatabaseWideEnabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool DatabaseWideEnabled { get; set; }
+            
+            [Description("Indicates if OpenTelemetry traces are enabled or not. Default: true")]
+            [DefaultValue(true)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.Traces.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool TracingEnabled { get; set; }
+            
+            [Description("Indicates if OpenTelemetry metrices are enabled or not. Default: true")]
+            [DefaultValue(true)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.Metrics.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool MetricsEnabled { get; set; }
+            
+            [Description("Indicates if AspNetCoreInstrumentation traces are enabled or not. Default: true")]
+            [DefaultValue(true)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.Traces.AspNetCoreInstrumentation", ConfigurationEntryScope.ServerWideOnly)]
+            public bool AspNetCoreInstrumentationTracesEnabled { get; set; }
+            
+            [Description("Indicates if AspNetCoreInstrumentation traces are enabled or not. Default: true")]
+            [DefaultValue(true)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.Metrics.AspNetCoreInstrumentation", ConfigurationEntryScope.ServerWideOnly)]
+            public bool AspNetCoreInstrumentationMetricsEnabled { get; set; }
+            
+            [Description("Prometheus URL address")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.PrometheusUrl", ConfigurationEntryScope.ServerWideOnly)]
+            public string PrometheusUrl { get; set; }
+            
+            [Description("Indicates if should use OpenTelementry protocol.")]
+            [DefaultValue(true)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.OpenTelemetryProtocolEnabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool OltpExporter { get; set; }
+            
+            [Description("List of server instruments to expose. Values must be semicolon separated. Default: null (all)")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.SeverInstruments", ConfigurationEntryScope.ServerWideOnly)]
+            public string[] ServerInstruments { get; set; }
+            
+            [Description("List of database instruments to expose. Values must be semicolon separated. Default: null (all)")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.DatabaseInstruments", ConfigurationEntryScope.ServerWideOnly)]
+            public string[] DatabaseInstruments { get; set; }
+            
+            [Description("List of database instruments to expose. Values must be semicolon separated. Default: null (all)")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.IndexInstruments", ConfigurationEntryScope.ServerWideOnly)]
+            public string[] IndexInstruments { get; set; }
+            
+            
+            
+            [Description("List of database names to share metrics. Default: null (all)")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.DatabaseNamesToShare", ConfigurationEntryScope.ServerWideOnly)]
+            public string[] DatabaseNamesToShare { get; set; }
         }
     }
 }

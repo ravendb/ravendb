@@ -1,12 +1,14 @@
+using System.Diagnostics.Metrics;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
+using Raven.Server.Monitoring.OpenTelemetry;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class DatabaseIndexState : DatabaseIndexScalarObjectBase<OctetString>
+    public sealed class DatabaseIndexState : DatabaseIndexScalarObjectBase<OctetString>, ITaggedMetricInstrument<byte>
     {
-        public DatabaseIndexState(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex)
-            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.State)
+        public DatabaseIndexState(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex, string nodeTag = null)
+            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.State, nodeTag)
         {
         }
 
@@ -14,6 +16,16 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
         {
             var index = GetIndex(database);
             return new OctetString(index.State.ToString());
+        }
+
+        public Measurement<byte> GetCurrentValue()
+        {
+            if (TryGetIndex(out var index))
+            {
+                return new((byte)index.State, MeasurementTags);
+            }
+
+            return default;
         }
     }
 }
