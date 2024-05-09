@@ -60,7 +60,8 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
                 DirtyMemory = dirtyMemoryState.TotalDirty.GetValue(SizeUnit.Bytes),
                 AvailableMemory = memoryInfo.AvailableMemory.GetValue(SizeUnit.Bytes),
                 AvailableMemoryForProcessing = memoryInfo.AvailableMemoryForProcessing.GetValue(SizeUnit.Bytes),
-                TotalSwapUsage = memoryInfo.TotalSwapUsage.GetValue(SizeUnit.Bytes)
+                TotalSwapUsage = memoryInfo.TotalSwapUsage.GetValue(SizeUnit.Bytes),
+                LuceneUnmanagedAllocations = NativeMemory.TotalLuceneUnmanagedAllocationsForSorting
             };
         }
     }
