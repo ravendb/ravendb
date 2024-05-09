@@ -2,13 +2,11 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Nito.AsyncEx;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Changes;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -114,8 +112,8 @@ namespace Raven.Client.Documents.Operations
                     _subscription = observable.Subscribe(this);
                     await observable.EnsureSubscribedNow().ConfigureAwait(false);
 
-                    if (_requestExecutor.ForTestingPurposes?.WaitBeforeFetchOperationStatus != null)
-                        await _requestExecutor.ForTestingPurposes.WaitBeforeFetchOperationStatus.WaitAsync().ConfigureAwait(false);
+                    if (_requestExecutor.ForTestingPurposes?.BeforeFetchOperationStatus != null)
+                        await _requestExecutor.ForTestingPurposes.BeforeFetchOperationStatus.ConfigureAwait(false);
 
                     // We start the operation before we subscribe,
                     // so if we subscribe after the operation was already completed we will miss the notification for it. 
