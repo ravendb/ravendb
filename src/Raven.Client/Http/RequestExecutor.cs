@@ -2465,7 +2465,7 @@ namespace Raven.Client.Http
 
             internal Action<GetDatabaseTopologyCommand> SetCommandTimeout;
 
-            internal AsyncManualResetEvent WaitBeforeFetchOperationStatus;
+            internal Task BeforeFetchOperationStatus;
         }
     }
 }
