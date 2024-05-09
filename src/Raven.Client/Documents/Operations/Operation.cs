@@ -113,7 +113,7 @@ namespace Raven.Client.Documents.Operations
                     await observable.EnsureSubscribedNow().ConfigureAwait(false);
 
                     if (_requestExecutor.ForTestingPurposes?.WaitBeforeFetchOperationStatus != null)
-                        await _requestExecutor.ForTestingPurposes.WaitBeforeFetchOperationStatus.WaitAsync().ConfigureAwait(false);
+                        await _requestExecutor.ForTestingPurposes.WaitBeforeFetchOperationStatus.ConfigureAwait(false);
 
                     // We start the operation before we subscribe,
                     // so if we subscribe after the operation was already completed we will miss the notification for it. 
