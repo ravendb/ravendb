@@ -861,43 +861,7 @@ loadToOrders(partitionBy(key),
             await GetClusterDebugLogsAsync(sb);
 
             sb.AppendLine().AppendLine($"Debug logs for removed node '{node.ServerStore.NodeTag}':");
-
-            var prevStates = node.ServerStore.Engine.PrevStates;
-            sb.AppendLine($"{Environment.NewLine}States:{Environment.NewLine}-----------------------");
-            foreach (var state in prevStates)
-            {
-                sb.AppendLine($"{state}{Environment.NewLine}");
-            }
-            sb.AppendLine();
-
-            using (node.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterOperationContext))
-            using (clusterOperationContext.OpenReadTransaction())
-            {
-                var historyLogs = node.ServerStore.Engine.LogHistory.GetHistoryLogs(clusterOperationContext);
-                sb.AppendLine($"HistoryLogs:{Environment.NewLine}-----------------------");
-
-                using (var context = JsonOperationContext.ShortTermSingleUse())
-                {
-                    var c = 0;
-                    foreach (var log in historyLogs)
-                    {
-                        var json = context.ReadObject(log, nameof(log) + $"{c++}");
-                        sb.AppendLine(json.ToString());
-                    }
-                }
-                sb.AppendLine();
-
-                var inMemoryDebug = node.ServerStore.Engine.InMemoryDebug.ToJson();
-                if (inMemoryDebug != null)
-                {
-                    sb.AppendLine($"RachisDebug:{Environment.NewLine}-----------------------");
-                    using (var context = JsonOperationContext.ShortTermSingleUse())
-                    {
-                        var json = context.ReadObject(inMemoryDebug, nameof(inMemoryDebug));
-                        sb.AppendLine(json.ToString());
-                    }
-                }
-            }
+            GetDebugLogsForNode(node, sb);
 
             return sb.ToString();
         }
