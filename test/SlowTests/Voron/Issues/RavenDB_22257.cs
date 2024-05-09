@@ -21,8 +21,11 @@ public class RavenDB_22257 : StorageTest
 
         options.ManualFlushing = true;
     }
-
+#if DEBUG
     [RavenFact(RavenTestCategory.Voron)]
+#else
+    [RavenFact(RavenTestCategory.Voron, Skip = "This test relies on Debug only check - LowLevelTransaction.EnsureDisposeOfWriteTxIsOnTheSameThreadThatCreatedIt()")]
+#endif
     public void MustNotAllowToHaveTwoWriteTransactionsConcurrently()
     {
         RequireFileBasedPager();
@@ -48,7 +51,7 @@ public class RavenDB_22257 : StorageTest
                     {
                         ex = Assert.Throws<InvalidOperationException>(() =>
                         {
-                            txw1.Dispose(); // this is supposed to throw because we're attempting to dispose write tx from a different thread
+                            txw1.Dispose(); // this is supposed to throw in Debug because we're attempting to dispose write tx from a different thread
 
                             txw2 = Env.NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.ReadWrite);
 
@@ -60,7 +63,7 @@ public class RavenDB_22257 : StorageTest
 
                     newTransactionThread.Join();
 
-                    Assert.StartsWith("Dispose of the transaction must be called from the same thread that created it. Transaction 2 (Flags: ReadWrite) was created by", ex.Message);
+                    Assert.StartsWith("Dispose of the write transaction must be called from the same thread that created it. Transaction 2 (Flags: ReadWrite) was created by", ex.Message);
                 });
 
                 /* 

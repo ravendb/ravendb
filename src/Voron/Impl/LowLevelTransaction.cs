@@ -935,8 +935,7 @@ namespace Voron.Impl
             if (_txState.HasFlag(TxState.Disposed))
                 return;
 
-            if (Flags == TransactionFlags.ReadWrite && NativeMemory.CurrentThreadStats != CurrentTransactionHolder)
-                ThrowDisposeOfTxMustBeCalledOnTheSameThreadThatCreatedIt();
+            EnsureDisposeOfWriteTxIsOnTheSameThreadThatCreatedIt();
 
             try
             {
@@ -1326,11 +1325,16 @@ namespace Voron.Impl
             throw new InvalidOperationException("Cannot commit already committed transaction.");
         }
 
-        private void ThrowDisposeOfTxMustBeCalledOnTheSameThreadThatCreatedIt()
+        [Conditional("DEBUG")]
+        private void EnsureDisposeOfWriteTxIsOnTheSameThreadThatCreatedIt()
         {
-            throw new InvalidOperationException($"Dispose of the transaction must be called from the same thread that created it. " +
-                                                $"Transaction {Id} (Flags: {Flags}) was created by {CurrentTransactionHolder.Name}, thread Id: {CurrentTransactionHolder.ManagedThreadId}. " +
-                                                $"The dispose was called from {NativeMemory.CurrentThreadStats.Name}, thread Id: {NativeMemory.CurrentThreadStats.ManagedThreadId}");
+            if (Flags == TransactionFlags.ReadWrite && NativeMemory.CurrentThreadStats != CurrentTransactionHolder)
+            {
+                throw new InvalidOperationException($"Dispose of the write transaction must be called from the same thread that created it. " +
+                                                    $"Transaction {Id} (Flags: {Flags}) was created by {CurrentTransactionHolder.Name}, thread Id: {CurrentTransactionHolder.ManagedThreadId}. " +
+                                                    $"The dispose was called from {NativeMemory.CurrentThreadStats.Name}, thread Id: {NativeMemory.CurrentThreadStats.ManagedThreadId}. " +
+                                                    $"Do you have any await call in the scope of the write transaction?");
+            }
         }
 
         public void Rollback()
