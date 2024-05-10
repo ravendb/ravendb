@@ -121,7 +121,7 @@ namespace Voron.Benchmark.BTree
                         {
                             var reader = tree.Read(key).Reader;
 
-                            while (reader.Read(buffer, 0, buffer.Length) != 0) { }
+                            while (reader.Read(buffer, buffer.Length) != 0) { }
                         }
 
                         tx.Commit();
@@ -154,7 +154,7 @@ namespace Voron.Benchmark.BTree
                         {
                             var reader = tree.Read(key).Reader;
 
-                            while (reader.Read(buffer, 0, buffer.Length) != 0) { }
+                            while (reader.Read(buffer, buffer.Length) != 0) { }
                         }
 
                         tx.Commit();

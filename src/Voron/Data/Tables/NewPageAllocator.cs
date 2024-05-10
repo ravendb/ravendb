@@ -71,7 +71,7 @@ namespace Voron.Data.Tables
             {
                 if (slice.HasValue)
                 {
-                    _numberOfPagesToAllocate = slice.CreateReader().ReadLittleEndianInt32();
+                    _numberOfPagesToAllocate = slice.CreateReader().Read<int>();
                 }
             }
         }
@@ -108,7 +108,7 @@ namespace Voron.Data.Tables
             {
                 using (fixedSizeTreeSize.Read(0, out var slice))
                 {
-                    _numberOfPagesToAllocate = slice.CreateReader().ReadLittleEndianInt32();
+                    _numberOfPagesToAllocate = slice.CreateReader().Read<int>();
                 }
             }
 

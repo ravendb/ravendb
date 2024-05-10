@@ -1,14 +1,15 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
 using Sparrow.Utils;
+using static Sparrow.PortableExceptions;
 
 namespace Voron
 {
-    public unsafe struct ValueReader(byte* val, int len)
+    public unsafe struct ValueReader(byte* val, int len) 
     {
         [ThreadStatic]
         private static byte[] _tmpBuf;
@@ -19,6 +20,11 @@ namespace Voron
 
         private int _pos = 0;
         private readonly int _len = len;
+
+        public int Current
+        {
+            get => _pos;
+        }
 
         public byte* Base { get; } = val;
 
@@ -35,15 +41,26 @@ namespace Voron
             return new UnmanagedMemoryStream(Base, _len, _len, FileAccess.Read);
         }
 
-        public int Read(byte[] buffer, int offset, int count)
-        {
-            fixed (byte* b = buffer)
-                return Read(b + offset, count);
-        }
-
         public void Skip(int size)
         {
             _pos += size;
+        }
+
+        public int Read(Span<byte> buffer, int offset, int count)
+        {
+            return Read(buffer.Slice(offset), count);
+        }
+
+        public int Read(Span<byte> buffer, int count)
+        {
+            count = Math.Min(count, _len - _pos);
+            if (count <= 0)
+                return 0;
+            
+            Unsafe.CopyBlock(ref buffer[0], ref Unsafe.AsRef<byte>(Base + _pos), (uint)count);
+            _pos += count;
+            
+            return count;
         }
 
         public int Read(byte* buffer, int count)
@@ -57,78 +74,37 @@ namespace Voron
             return count;
         }
 
-        public int ReadLittleEndianInt32()
+        public T Read<T>() where T : unmanaged
         {
-            if (_len - _pos < sizeof (int))
-                throw new EndOfStreamException();
-            var val = *(int*) (Base + _pos);
+            ThrowIf<EndOfStreamException>(_len - _pos < Unsafe.SizeOf<T>());
 
-            _pos += sizeof (int);
-
+            var val = *(T*)(Base + _pos);
+            _pos += Unsafe.SizeOf<T>();
             return val;
         }
 
-        public T ReadStructure<T>()
-            where T : unmanaged
+        public T ReadBigEndian<T>() where T : unmanaged
         {
-            if (_len - _pos < sizeof (int))
-                throw new EndOfStreamException();
-            var val = *(T*) (Base + _pos);
-
-            _pos += sizeof (T);
-
-            return val;
-        }
-
-
-
-        public long ReadLittleEndianInt64()
-        {
-            if (_len - _pos < sizeof (long))
-                throw new EndOfStreamException();
-            var val = *(long*) (Base + _pos);
-
-            _pos += sizeof (long);
-
-            return val;
-        }
-
-        public int ReadBigEndianInt32()
-        {
-            if (_len - _pos < sizeof (int))
-                throw new EndOfStreamException();
-
-            int val = *(int*) (Base + _pos);
-
-            _pos += sizeof (int);
-
-            return Bits.SwapBytes(val);
-        }
-
-        public byte ReadByte()
-        {
-            if (_len - _pos < sizeof(byte))
-                throw new EndOfStreamException();
-
-            byte val = *(Base + _pos);
-
-            _pos += sizeof(byte);
-
-            return val;
-        }
-
-        public long ReadBigEndianInt64()
-        {
-            if (_len - _pos < sizeof (long))
-                throw new EndOfStreamException();
+            ThrowIf<EndOfStreamException>(_len - _pos < Unsafe.SizeOf<T>());
             
-            var val = *(long*) (Base + _pos);
+            var val = *(T*)(Base + _pos);
+            _pos += Unsafe.SizeOf<T>();
+            
+            if (typeof(T) == typeof(long))
+            {
+                return (T)(object)Bits.SwapBytes((long)(object)val);
+            }
+            if (typeof(T) == typeof(int))
+            {
+                return (T)(object)Bits.SwapBytes((int)(object)val);
+            }
+            if (typeof(T) == typeof(byte))
+            {
+                return val;
+            }
 
-            _pos += sizeof(long);
-
-            return Bits.SwapBytes(val);
+            throw new NotSupportedException($"Type '{typeof(T).Name}' is not supported.");
         }
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte[] EnsureTempBuffer(int size)
@@ -164,7 +140,7 @@ namespace Voron
         {
             int size = Math.Min(length, _len - _pos);
             var buffer = EnsureTempBuffer(length);
-            var used = Read(buffer, 0, size);
+            var used = Read(buffer, size);
             return new ArraySegment<byte>(buffer, 0, used);
         }
 
@@ -173,7 +149,7 @@ namespace Voron
             var buffer = new byte[4096];
             while (true)
             {
-                int read = Read(buffer, 0, buffer.Length);
+                int read = Read(buffer, buffer.Length);
                 if (read == 0)
                     return;
 

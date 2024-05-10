@@ -169,7 +169,7 @@ namespace Voron.Data.Tables
 
                     do
                     {
-                        long id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+                        long id = it.CreateReaderForCurrent().Read<long>();
                         var size = table.GetSize(id);
 
                         if (size > 32 * 1024)
@@ -365,7 +365,7 @@ namespace Voron.Data.Tables
 
                     do
                     {
-                        var dicId = it.CurrentKey.CreateReader().ReadBigEndianInt32();
+                        var dicId = it.CurrentKey.CreateReader().ReadBigEndian<int>();
                         var entry = zip.CreateEntry($"{dicId:D8}.dic",
                             obj.Environment.Options.Encryption.IsEnabled ? CompressionLevel.NoCompression : CompressionLevel.Optimal);
 

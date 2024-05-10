@@ -503,7 +503,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             var buffer = new byte[16];
             Debug.Assert(dbId != null);
             // ReSharper disable once PossibleNullReferenceException
-            var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
+            var dbIdBytes = dbId.Reader.Read(buffer, 16);
             if (dbIdBytes != 16)
                 VoronUnrecoverableErrorException.Raise(step.WriteTx.LowLevelTransaction,
                     "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
@@ -697,7 +697,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                     while (true)
                     {
-                        long id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+                        long id = it.CreateReaderForCurrent().Read<long>();
 
                         if (shouldSkip != null)
                         {

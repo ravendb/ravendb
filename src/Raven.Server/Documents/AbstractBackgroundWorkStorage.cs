@@ -75,7 +75,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 
             do
             {
-                var entryTicks = it.CurrentKey.CreateReader().ReadBigEndianInt64();
+                var entryTicks = it.CurrentKey.CreateReader().ReadBigEndian<long>();
                 if (entryTicks > currentTicks)
                     break;
 

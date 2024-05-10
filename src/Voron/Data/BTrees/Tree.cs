@@ -220,9 +220,8 @@ namespace Voron.Data.BTrees
             
             long currentValue = 0;
 
-            var read = Read(key);
-            if (read != null)
-                currentValue = *(long*)read.Reader.Base;
+            if (TryRead(key, out var reader))
+                currentValue = *(long*)reader.Base;
 
             var value = currentValue + delta;
             using (DirectAdd(key, sizeof(long), out byte* ptr))
@@ -236,11 +235,11 @@ namespace Voron.Data.BTrees
         /// </summary>
         public long? ReadInt64(Slice key)
         {
-            var read = Read(key);
-            if (read == null)
+            if (TryRead(key, out var reader) == false)
                 return null;
-            Debug.Assert(read.Reader.Length == sizeof(long));
-            return *(long*)read.Reader.Base;
+
+            Debug.Assert(reader.Length == sizeof(long));
+            return *(long*)reader.Base;
         }
 
         /// <summary>
@@ -248,11 +247,11 @@ namespace Voron.Data.BTrees
         /// </summary>
         public int? ReadInt32(Slice key)
         {
-            var read = Read(key);
-            if (read == null) 
+            if (TryRead(key, out var reader) == false)
                 return null;
-            Debug.Assert(read.Reader.Length == sizeof(int));
-            return *(int*)read.Reader.Base;
+
+            Debug.Assert(reader.Length == sizeof(int));
+            return *(int*)reader.Base;
 
         }
         
@@ -262,11 +261,11 @@ namespace Voron.Data.BTrees
         public T? ReadStructure<T>(Slice key)
             where T : unmanaged
         {
-            var read = Read(key);
-            if (read == null) 
+            if (TryRead(key, out var reader) == false)
                 return null;
-            Debug.Assert(read.Reader.Length == sizeof(T));
-            return *(T*)read.Reader.Base;
+
+            Debug.Assert(reader.Length == sizeof(T));
+            return *(T*)reader.Base;
 
         }
 
@@ -1098,6 +1097,22 @@ namespace Voron.Data.BTrees
                 return null;
 
             return new ReadResult(GetValueReaderFromHeader(node));
+        }
+
+        public bool TryRead(Slice key, out ValueReader reader)
+        {
+            ThrowIfDisposedOnDebug(_llt);
+
+            var p = FindPageFor(key, out TreeNodeHeader* node);
+
+            if (p.LastMatch != 0)
+            {
+                Unsafe.SkipInit(out reader);
+                return false;
+            }
+
+            reader = GetValueReaderFromHeader(node);
+            return true;
         }
 
         public bool Exists(Slice key)
