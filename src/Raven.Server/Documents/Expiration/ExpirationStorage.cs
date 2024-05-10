@@ -164,6 +164,7 @@ namespace Raven.Server.Documents.Expiration
 
                                         expiredDocs.Add((clonedId, document.Id));
                                         totalCount++;
+                                        options.Context.Transaction.ForgetAbout(document);
                                     }
                                 }
                                 catch (DocumentConflictException)
