@@ -120,6 +120,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 
                                     docsToProcess.Add((clonedId, document.Id));
                                     totalCount++;
+                                    options.Context.Transaction.ForgetAbout(document);
                                 }
                             }
                             catch (DocumentConflictException)
