@@ -1,17 +1,14 @@
-﻿using System.Collections.Generic;
+﻿#if NET8_0
+using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
-using Xunit.Abstractions;
 
-namespace SlowTests.Server.Integrations.PostgreSQL
+namespace EmbeddedTests.Server.Integrations.PostgreSQL
 {
     public class RavenDB_19470 : PostgreSqlIntegrationTestBase
     {
-        public RavenDB_19470(ITestOutputHelper output) : base(output)
-        {
-        }
         private List<string> GetColumnNames(DataTable dataTable)
         {
             return dataTable.Columns
@@ -27,13 +24,11 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             const string secondField = "LastName";
             string query = $"from Employees select {firstField}, {secondField}";
 
-            DoNotReuseServer(EnablePostgresSqlSettings);
-
             using (var store = GetDocumentStore())
             {
-                Samples.CreateNorthwindDatabase(store);
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
-                var result = await Act(store, query, Server, prepareExecute: true);
+                var result = await Act(store, query, prepareExecute: true);
 
                 Assert.NotNull(result);
                 Assert.NotEmpty(result.Columns);
@@ -45,3 +40,4 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         }
     }
 }
+#endif
