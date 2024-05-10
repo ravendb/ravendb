@@ -86,20 +86,25 @@ namespace Raven.Server.Utils
                 return false;
             }
 
-            if (knownCertChain.ChainElements.Count != userChain.ChainElements.Count)
+            // client certificates (leafs) Public Key pinning hashes must match
+            if (userCertificate.GetPublicKeyPinningHash() != knownCertificate.GetPublicKeyPinningHash())
                 return false;
 
-            for (var i = 0; i < knownCertChain.ChainElements.Count; i++)
+            // support self-signed certs
+            if (knownCertChain.ChainElements.Count == 1 && userChain.ChainElements.Count == 1)
+                return true;
+            
+            for (var i = knownCertChain.ChainElements.Count - 1; i > 0; i--)
             {
-                // We walk the chain and compare the user certificate vs one of the existing certificate with same pinning hash
-                var currentElementPinningHash = userChain.ChainElements[i].Certificate.GetPublicKeyPinningHash();
-                if (currentElementPinningHash != knownCertChain.ChainElements[i].Certificate.GetPublicKeyPinningHash())
+                var knownPinningHash = knownCertChain.ChainElements[i].Certificate.GetPublicKeyPinningHash();
+                for (int j = userChain.ChainElements.Count - 1; j > 0; j--)
                 {
-                    return false;
+                    if (knownPinningHash == userChain.ChainElements[j].Certificate.GetPublicKeyPinningHash())
+                        return true;
                 }
             }
 
-            return true;
+            return false;
         }
 
         public class CertificateHolder : IDisposable
