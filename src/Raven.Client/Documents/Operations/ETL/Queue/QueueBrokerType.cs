@@ -4,5 +4,6 @@ public enum QueueBrokerType
 {
     None,
     Kafka,
-    RabbitMq
+    RabbitMq,
+    AzureQueueStorage
 }

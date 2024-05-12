@@ -34,6 +34,10 @@
 @rabbitmq-etl-color-dark: darken(@rabbitmq-etl-color, 10%);
 @rabbitmq-etl-color-light: lighten(@rabbitmq-etl-color, 5%);
 
+@azure-queue-storage-etl-color: @color-4-2;
+@azure-queue-storage-etl-color-dark: darken(@azure-queue-storage-etl-color, 10%);
+@azure-queue-storage-etl-color-light: lighten(@azure-queue-storage-etl-color, 5%);
+
 @kafka-sink-color: @color-3;
 @kafka-sink-color-dark: darken(@kafka-sink-color, 10%);
 @kafka-sink-color-light: lighten(@kafka-sink-color, 3%);
@@ -77,7 +81,7 @@
 }
 
 .destinationModal {
-    .external-replication, .sql-etl, .olap-etl, .elastic-etl, .ravendb-etl, .periodic-backup, .subscription, .pull-replication-hub, .pull-replication-sink, .kafka-etl, .rabbitmq-etl, .kafka-sink, .rabbitmq-sink {
+    .external-replication, .sql-etl, .olap-etl, .elastic-etl, .ravendb-etl, .periodic-backup, .subscription, .pull-replication-hub, .pull-replication-sink, .kafka-etl, .azure-queue-storage-etl, .rabbitmq-etl, .kafka-sink, .rabbitmq-sink {
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
@@ -129,6 +133,10 @@
 
     .rabbitmq-etl {
         .bigbtn-variant (@rabbitmq-etl-color, @rabbitmq-etl-color-dark);
+    }
+
+    .azure-queue-storage-etl {
+        .bigbtn-variant (@azure-queue-storage-etl-color, @azure-queue-storage-etl-color-dark);
     }
 
     .kafka-sink {
@@ -300,6 +308,14 @@
             background-color: @rabbitmq-etl-color;
         }
 
+        .azure-queue-storage-etl {
+            color: @azure-queue-storage-etl-color;
+        }
+
+        .task-azure-queue-storage-etl {
+            background-color: @azure-queue-storage-etl-color;
+        }
+
         .kafka-sink {
             color: @kafka-sink-color;
         }
@@ -382,6 +398,10 @@
         }
 
         &.rabbitmq-etl {
+            .name-variant (@brand-info, @brand-info-light);
+        }
+
+        &.azure-queue-storage-etl {
             .name-variant (@brand-info, @brand-info-light);
         }
         
@@ -737,7 +757,7 @@
     }
 }
 
-.edit-kafka-etl-task, .edit-rabbitmq-etl-task, .edit-kafka-sink-task, .edit-rabbitmq-sink-task {
+.edit-kafka-etl-task, .edit-rabbitmq-etl-task, .edit-azure-queue-storage-etl-task, .edit-kafka-sink-task, .edit-rabbitmq-sink-task {
 
     overflow-x: hidden;
 

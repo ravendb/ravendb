@@ -52,5 +52,17 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("ETL.Queue.Kafka.InitTransactionsTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting KafkaInitTransactionsTimeout { get; set; }
+        
+        [Description("Lifespan of a message in the queue")]
+        [DefaultValue(604800)] // 7 days (Azure default)
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("ETL.Queue.AzureQueueStorage.TimeToLiveInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting AzureQueueStorageTimeToLive{ get; set; }
+        
+        [Description("How long a message is hidden after being retrieved but not deleted")]
+        [DefaultValue(0)] // azure default
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("ETL.Queue.AzureQueueStorage.VisibilityTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting AzureQueueStorageVisibilityTimeout{ get; set; }
     }
 }

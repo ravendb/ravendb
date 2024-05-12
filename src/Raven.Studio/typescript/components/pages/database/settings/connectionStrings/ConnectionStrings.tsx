@@ -110,7 +110,8 @@ const allStudioEtlTypes = exhaustiveStringTuple<StudioEtlType>()(
     "Olap",
     "ElasticSearch",
     "Kafka",
-    "RabbitMQ"
+    "RabbitMQ",
+    "AzureQueueStorage"
 );
 
 const addNewButtonId = "add-new-connection-string";

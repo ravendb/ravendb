@@ -515,6 +515,7 @@ export class DatabasesStubs {
                         ConnectionOptions: {},
                     },
                     RabbitMqConnectionSettings: null,
+                    AzureQueueStorageConnectionSettings: null,
                 },
                 "rabbitmq-name": {
                     Type: "Queue",
@@ -523,6 +524,19 @@ export class DatabasesStubs {
                     KafkaConnectionSettings: null,
                     RabbitMqConnectionSettings: {
                         ConnectionString: "some-connection-string",
+                    },
+                    AzureQueueStorageConnectionSettings: null,
+                },
+                "azure-queue-storage-name": {
+                    Type: "Queue",
+                    Name: "azure-queue-storage-name",
+                    BrokerType: "AzureQueueStorage",
+                    KafkaConnectionSettings: null,
+                    RabbitMqConnectionSettings: null,
+                    AzureQueueStorageConnectionSettings: {
+                        ConnectionString: "some-connection-string",
+                        EntraId: null,
+                        Passwordless: null,
                     },
                 },
             },

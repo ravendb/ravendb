@@ -20,5 +20,12 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
             using (var processor = new QueueEtlHandlerProcessorForTestRabbitMqConnection<DatabaseRequestHandler, DocumentsOperationContext>(this))
                 await processor.ExecuteAsync();
         }
+        
+        [RavenAction("/databases/*/admin/etl/queue/azurequeuestorage/test-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task GetTestAzureQueueStorageConnectionResult()
+        {
+            using (var processor = new QueueEtlHandlerProcessorForTestAzureQueueStorageConnection<DatabaseRequestHandler, DocumentsOperationContext>(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

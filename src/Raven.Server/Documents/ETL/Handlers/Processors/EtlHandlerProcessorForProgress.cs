@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Server.Documents.ETL.Providers.Queue.AzureQueueStorage;
 using Raven.Server.Documents.ETL.Providers.Queue.Kafka;
 using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
 using Raven.Server.Documents.ETL.Stats;
@@ -37,6 +38,7 @@ internal sealed class EtlHandlerProcessorForProgress : AbstractEtlHandlerProcess
                 {
                     RabbitMqEtl => QueueBrokerType.RabbitMq,
                     KafkaEtl => QueueBrokerType.Kafka,
+                    AzureQueueStorageEtl => QueueBrokerType.AzureQueueStorage,
                     _ => null
                 }
             }).ToArray();

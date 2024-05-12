@@ -1739,6 +1739,8 @@ class ongoingTasksStats extends shardViewModelBase {
                 return "Kafka ETL";
             case "RabbitMQ":
                 return "RabbitMQ ETL";
+            case "AzureQueueStorage":
+                return "Azure Queue Storage";
             case "SubscriptionConnection":
                 return "Subscription";
             case "SubscriptionBatch":
@@ -2031,7 +2033,13 @@ class ongoingTasksStats extends shardViewModelBase {
             const isReplication = type === "OutgoingPull" || type === "OutgoingExternal" || type === "OutgoingInternal" ||
                                   type === "IncomingPull" || type === "IncomingExternal" || type === "IncomingInternal";
             
-            const isEtl = type === "Raven" || type === "Sql" || type === "Olap" || type === "ElasticSearch" || "Kafka" || "RabbitMQ";
+            const isEtl = type === "Raven" || 
+                type === "Sql" || 
+                type === "Olap" || 
+                type === "ElasticSearch" || 
+                type === "Kafka" || 
+                type === "AzureQueueStorage" ||
+                type === "RabbitMQ";
             
             const isSubscription = type === "SubscriptionConnection" || type === "SubscriptionBatch" || type === "AggregatedBatchesInfo";
             const isRootItem = context.rootStats.Details === context.item;
@@ -2095,8 +2103,9 @@ class ongoingTasksStats extends shardViewModelBase {
                     case "Sql":
                     case "Olap":
                     case "ElasticSearch":
+                    case "AzureQueueStorage":
                     case "Kafka":
-                    case "RabbitMQ": {
+                    case "RabbitMQ": { 
                         const elementWithData = context.rootStats as EtlPerformanceBaseWithCache;
                         
                         if (elementWithData.HasTransformErrors) {

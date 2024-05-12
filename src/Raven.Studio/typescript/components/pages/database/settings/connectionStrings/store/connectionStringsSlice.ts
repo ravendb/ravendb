@@ -9,6 +9,7 @@ import {
     mapKafkaConnectionsFromDto,
     mapOlapConnectionsFromDto,
     mapRabbitMqConnectionsFromDto,
+    mapAzureQueueStorageConnectionsFromDto,
     mapRavenConnectionsFromDto,
     mapSqlConnectionsFromDto,
 } from "./connectionStringsMapsFromDto";
@@ -32,6 +33,7 @@ const initialState: ConnectionStringsState = {
         ElasticSearch: [],
         Kafka: [],
         RabbitMQ: [],
+        AzureQueueStorage: [],
     },
     urlParameters: {
         name: null,
@@ -40,7 +42,7 @@ const initialState: ConnectionStringsState = {
     initialEditConnection: null,
 };
 
-type StudioEtlType = "Raven" | "Sql" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ";
+type StudioEtlType = "Raven" | "Sql" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ" | "AzureQueueStorage";
 
 export const connectionStringsSlice = createSlice({
     name: "connectionStrings",
@@ -105,6 +107,11 @@ export const connectionStringsSlice = createSlice({
                     ongoingTasks
                 );
                 connections.RabbitMQ = mapRabbitMqConnectionsFromDto(
+                    connectionStringsDto.QueueConnectionStrings,
+                    ongoingTasks
+                );
+
+                connections.AzureQueueStorage = mapAzureQueueStorageConnectionsFromDto(
                     connectionStringsDto.QueueConnectionStrings,
                     ongoingTasks
                 );

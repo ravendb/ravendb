@@ -156,6 +156,15 @@
     <PackageReference Include="AWSSDK.Glacier" Version="3.7.300.103" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.309.2" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.20.0" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.302.16" />
+    <PackageReference Include="AWSSDK.Glacier" Version="3.7.300.55" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.305.31" />    
+    <PackageReference Include="Azure.Identity" Version="1.10.4" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.303.13" />
+    <PackageReference Include="AWSSDK.Glacier" Version="3.7.300.73" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.307.14" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.19.1" />
+    <PackageReference Include="Azure.Storage.Queues" Version="12.17.1" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.7.1" />
     <PackageReference Include="CloudNative.CloudEvents" Version="2.7.1" />
     <PackageReference Include="CloudNative.CloudEvents.Amqp" Version="2.7.1" />

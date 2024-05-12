@@ -39,7 +39,7 @@
                     </div>
                     <div class="toggle">
                         <input type="checkbox" data-bind="checked: includeQueueEtls, attr: { id: 'includeQueueEtls_' + instanceCounter }">
-                        <label data-bind="attr: { for: 'includeQueueEtls_' + instanceCounter }" class="margin-right margin-right-sm">Queue ETLs (Kafaka & RabbitMQ)</label>
+                        <label data-bind="attr: { for: 'includeQueueEtls_' + instanceCounter }" class="margin-right margin-right-sm">Queue ETLs (Kafka, RabbitMQ, Azure Queue Storage)</label>
                         <a class="js-warning-queue-etl" tabindex="0" data-bind="visible: includeQueueEtls() && !includeQueueConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
                     </div>
                     <div class="toggle">
@@ -122,7 +122,7 @@
                     </div>
                     <div class="toggle">
                         <input type="checkbox" data-bind="checked: includeQueueConnectionStrings, attr: { id: 'includeQueueConnectionStrings_' + instanceCounter }">
-                        <label data-bind="attr: { for: 'includeQueueConnectionStrings_' + instanceCounter }" class="margin-right margin-right-sm">Queue Connection Strings (Kafka & RabbitMQ)</label>
+                        <label data-bind="attr: { for: 'includeQueueConnectionStrings_' + instanceCounter }" class="margin-right margin-right-sm">Queue Connection Strings (Kafka, RabbitMQ, Azure Queue Storage)</label>
                     </div>
                 </div>
             </div>

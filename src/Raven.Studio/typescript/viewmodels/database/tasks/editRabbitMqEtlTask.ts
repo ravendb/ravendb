@@ -372,7 +372,7 @@ class editRabbitMqEtlTask extends viewModelBase {
                 });
         } else {
             // Existing connection string
-            getConnectionStringInfoCommand.forKafkaEtl(this.activeDatabase(), this.editedRabbitMqEtl().connectionStringName())
+            getConnectionStringInfoCommand.forRabbitMqEtl(this.activeDatabase(), this.editedRabbitMqEtl().connectionStringName())
                 .execute()
                 .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                     new connectionStringRabbitMqEtlModel(result.QueueConnectionStrings[this.editedRabbitMqEtl().connectionStringName()], true, [])
