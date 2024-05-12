@@ -37,6 +37,10 @@
                                 <div class="details-item-value" data-bind="text: sizeFormatter(unmanagedAllocations())"></div>
                             </div>
                             <div class="details-item">
+                                <div class="details-item-name">Lucene Term Cache Allocations</div>
+                                <div class="details-item-value" data-bind="text: sizeFormatter(luceneManagedTermCacheAllocations())"></div>
+                            </div>
+                            <div class="details-item">
                                 <div class="details-item-name">Lucene Unmanaged Allocations</div>
                                 <div class="details-item-value" data-bind="text: sizeFormatter(luceneUnmanagedAllocations())"></div>
                             </div>
