@@ -153,6 +153,14 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
         new leafMenuItem({
+            route: 'databases/tasks/editAzureQueueStorageEtlTask',
+            moduleId: require('viewmodels/database/tasks/editAzureQueueStorageEtlTask'),
+            title: 'Azure Queue Storage ETL Task',
+            nav: false,
+            dynamicHash: appUrls.editAzureQueueStorageEtlTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
+        }),
+        new leafMenuItem({
             route: 'databases/tasks/editKafkaSinkTask',
             moduleId: require('viewmodels/database/tasks/editKafkaSinkTask'),
             title: 'Kafka Sink Task',

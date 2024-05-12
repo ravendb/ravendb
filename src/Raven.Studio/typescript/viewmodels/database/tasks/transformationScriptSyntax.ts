@@ -59,6 +59,9 @@ class transformationScriptSyntax extends dialogViewModelBase {
             case "RabbitMQ":
                 sampleText = transformationScriptSyntax.rabbitMqEtlSampleText;
                 break;
+            case "AzureQueueStorage":
+                sampleText = transformationScriptSyntax.azureQueueStorageEtlSampleText;
+                break;
             default:
                 genUtils.assertUnreachable(type, "Unknown studioEtlType: " + type);
         }
@@ -202,9 +205,20 @@ loadToOrders(orderData, "routingKey", {  // load to the 'Orders' Exchange with o
     Source: '/registrations/direct-signup'
 });`;
     
+    static readonly azureQueueStorageEtlSampleText =
+        `${transformationScriptSyntax.queueEtlBaseSampleText}
+
+loadToOrders(orderData, {  // load to the 'Orders' Topic with optional params
+    Id: id(this),
+    PartitionKey: id(this),
+    Type: 'com.github.users',
+    Source: '/registrations/direct-signup'
+});`;
+    
     kafkaEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.kafkaEtlSampleText);
     
     rabbitMqEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.rabbitMqEtlSampleText);
+    azureQueueStorageEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.azureQueueStorageEtlSampleText);
     
     static readonly olapEtlSamplePartitionText =
 `var orderDate = new Date(this.OrderedAt);

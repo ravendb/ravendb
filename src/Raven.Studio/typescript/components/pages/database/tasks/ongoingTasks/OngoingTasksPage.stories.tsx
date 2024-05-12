@@ -19,6 +19,7 @@ import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.Ongoin
 import OngoingTaskReplication = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication;
 import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
 import { mockStore } from "test/mocks/store/MockStore";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
     title: "Pages/Database/Tasks/Ongoing tasks",
@@ -407,6 +408,47 @@ export const RabbitEtlCompleted = boundCopy(RabbitEtlTemplate, {
 });
 
 export const RabbitEtlEmptyScript = boundCopy(RabbitEtlTemplate, {
+    completed: true,
+    emptyScript: true,
+});
+
+export const AzureQueueStorageEtlTemplate = (args: {
+    disabled?: boolean;
+    completed?: boolean;
+    emptyScript?: boolean;
+    customizeTask?: (x: OngoingTaskQueueEtlListView) => void;
+}) => {
+    const db = DatabasesStubs.shardedDatabase();
+
+    commonInit();
+
+    const { tasksService } = mockServices;
+
+    tasksService.withGetTasks((x) => {
+        const etl = TasksStubs.getAzureQueueStorageEtl();
+        if (args.disabled) {
+            etl.TaskState = "Disabled";
+        }
+        args.customizeTask?.(etl);
+        x.OngoingTasks = [etl];
+        x.PullReplications = [];
+        x.SubscriptionsCount = 0;
+    });
+
+    mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
+
+    return <OngoingTasksPage {...forceStoryRerender()} />;
+};
+
+export const AzureQueueStorageEtlDisabled = boundCopy(AzureQueueStorageEtlTemplate, {
+    disabled: true,
+});
+
+export const AzureQueueStorageEtlCompleted = boundCopy(AzureQueueStorageEtlTemplate, {
+    completed: true,
+});
+
+export const AzureQueueStorageEtlEmptyScript = boundCopy(AzureQueueStorageEtlTemplate, {
     completed: true,
     emptyScript: true,
 });

@@ -7,15 +7,17 @@ import connectionStringOlapEtlModel = require("models/database/settings/connecti
 import connectionStringElasticSearchEtlModel = require("models/database/settings/connectionStringElasticSearchEtlModel");
 import connectionStringKafkaModel from "models/database/settings/connectionStringKafkaModel";
 import connectionStringRabbitMqModel from "models/database/settings/connectionStringRabbitMqModel";
+import connectionStringAzureQueueStorageModel from "models/database/settings/connectionStringAzureQueueStorageModel";
 
 class saveConnectionStringCommand_OLD extends commandBase {
 
-    constructor(private db: database, private connectionString: connectionStringRavenEtlModel         |
-                                                                connectionStringSqlEtlModel           |
-                                                                connectionStringOlapEtlModel          |
-                                                                connectionStringElasticSearchEtlModel |
-                                                                connectionStringKafkaModel         |
-                                                                connectionStringRabbitMqModel) {
+    constructor(private db: database, private connectionString: connectionStringRavenEtlModel |
+        connectionStringSqlEtlModel |
+        connectionStringOlapEtlModel |
+        connectionStringElasticSearchEtlModel |
+        connectionStringKafkaModel |
+        connectionStringRabbitMqModel |
+        connectionStringAzureQueueStorageModel) {
         super();
     }
  

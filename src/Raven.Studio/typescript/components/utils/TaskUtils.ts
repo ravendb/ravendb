@@ -14,6 +14,8 @@ export default class TaskUtils {
                     return "KafkaQueueEtl";
                 case "RabbitMq":
                     return "RabbitQueueEtl";
+                case "AzureQueueStorage":
+                    return "AzureQueueStorageQueueEtl";
                 case "None":
                     throw new Error("Expected non-null BrokerType");
                 default:
@@ -28,6 +30,8 @@ export default class TaskUtils {
                     return "KafkaQueueSink";
                 case "RabbitMq":
                     return "RabbitQueueSink";
+                case "AzureQueueStorage":
+                    throw new Error("Not yet supported");
                 case "None":
                     throw new Error("Expected non-null BrokerType");
                 default:
@@ -42,6 +46,7 @@ export default class TaskUtils {
         switch (type) {
             case "Kafka":
             case "RabbitMQ":
+            case "AzureQueueStorage":
                 return "Queue";
             default:
                 return type;
@@ -56,6 +61,8 @@ export default class TaskUtils {
                 return "KafkaQueueSink";
             case "RabbitMq":
                 return "RabbitQueueSink";
+            case "AzureQueueStorage":
+                throw new Error("Not yet supported");
             case "None":
                 return null;
             default:
@@ -64,7 +71,7 @@ export default class TaskUtils {
     }
 
     static studioTaskTypeToTaskType(type: StudioTaskType): OngoingTaskType {
-        if (type === "KafkaQueueEtl" || type === "RabbitQueueEtl") {
+        if (type === "KafkaQueueEtl" || type === "RabbitQueueEtl" || type === "AzureQueueStorageQueueEtl") {
             return "QueueEtl";
         }
 
@@ -82,6 +89,8 @@ export default class TaskUtils {
                     return "Kafka";
                 case "RabbitMq":
                     return "RabbitMQ";
+                case "AzureQueueStorage":
+                    return "AzureQueueStorage";
             }
         }
 
@@ -136,6 +145,8 @@ export default class TaskUtils {
                 return "Kafka";
             case "RabbitMQ":
                 return "RabbitMQ";
+            case "AzureQueueStorage":
+                return "Azure Queue Storage";
             default:
                 assertUnreachable(etlType);
         }

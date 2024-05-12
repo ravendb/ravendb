@@ -18,6 +18,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.Queue;
+using Raven.Server.Documents.ETL.Providers.Queue.AzureQueueStorage;
 using Raven.Server.Documents.ETL.Providers.Queue.Kafka;
 using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
 using Raven.Server.Documents.ETL.Providers.Raven;
@@ -646,6 +647,29 @@ namespace Raven.Server.Documents.ETL
 
                             break;
                         }
+                    case AzureQueueStorageEtl azureQueueStorageEtl:
+                    {
+                        QueueEtlConfiguration existing = null;
+
+                        foreach (var config in myQueueEtl)
+                        {
+                            var diff = azureQueueStorageEtl.Configuration.Compare(config);
+
+                            if (diff == EtlConfigurationCompareDifferences.None)
+                            {
+                                existing = config;
+                                break;
+                            }
+                        }
+
+                        if (existing != null)
+                        {
+                            toRemove.Remove(processesPerConfig.Key);
+                            myQueueEtl.Remove(existing);
+                        }
+
+                        break;
+                    }
                     case ElasticSearchEtl elasticSearchEtl:
                         {
                             ElasticSearchEtlConfiguration existing = null;
@@ -793,6 +817,13 @@ namespace Raven.Server.Documents.ETL
 
                 if (existing != null)
                     differences = rabbitMqEtl.Configuration.Compare(existing, transformationDiffs);
+            }
+            else if (process is AzureQueueStorageEtl azureQueueStorageEtl)
+            {
+                var existing = myQueueEtl.FirstOrDefault(x => x.Name.Equals(azureQueueStorageEtl.ConfigurationName, StringComparison.OrdinalIgnoreCase));
+
+                if (existing != null)
+                    differences = azureQueueStorageEtl.Configuration.Compare(existing, transformationDiffs);
             }
             else
             {

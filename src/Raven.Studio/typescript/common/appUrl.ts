@@ -49,6 +49,7 @@ class appUrl {
         editElasticSearchEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditElasticSearchEtl(appUrl.currentDatabase(), taskId)),
         editKafkaEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditKafkaEtl(appUrl.currentDatabase(), taskId)),
         editRabbitMqEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditRabbitMqEtl(appUrl.currentDatabase(), taskId)),
+        editAzureQueueStorageEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditAzureQueueStorageEtl(appUrl.currentDatabase(), taskId)),
         editKafkaSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditKafkaSink(appUrl.currentDatabase(), taskId)),
         editRabbitMqSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditRabbitMqSink(appUrl.currentDatabase(), taskId)),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
@@ -72,6 +73,7 @@ class appUrl {
         editElasticSearchEtlTaskUrl: ko.pureComputed(() => appUrl.forEditElasticSearchEtl(appUrl.currentDatabase())),
         editKafkaEtlTaskUrl: ko.pureComputed(() => appUrl.forEditKafkaEtl(appUrl.currentDatabase())),
         editRabbitMqEtlTaskUrl: ko.pureComputed(() => appUrl.forEditRabbitMqEtl(appUrl.currentDatabase())),
+        editAzureQueueStorageEtlTaskUrl: ko.pureComputed(() => appUrl.forEditAzureQueueStorageEtl(appUrl.currentDatabase())),
         editKafkaSinkTaskUrl: ko.pureComputed(() => appUrl.forEditKafkaSink(appUrl.currentDatabase())),
         editRabbitMqSinkTaskUrl: ko.pureComputed(() => appUrl.forEditRabbitMqSink(appUrl.currentDatabase())),
         csvImportUrl: ko.pureComputed(() => appUrl.forCsvImport(appUrl.currentDatabase())),
@@ -637,6 +639,12 @@ class appUrl {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editRabbitMqEtlTask?" + databasePart + taskPart;
+    }
+
+    static forEditAzureQueueStorageEtl(db: database | string, taskId?: number): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const taskPart = taskId ? "&taskId=" + taskId : "";
+        return "#databases/tasks/editAzureQueueStorageEtlTask?" + databasePart + taskPart;
     }
 
     static forEditKafkaSink(db: database | string, taskId?: number): string {

@@ -158,7 +158,8 @@ class connectionStringKafkaModel extends connectionStringModel {
                 ConnectionOptions: null,
             },
             
-            RabbitMqConnectionSettings: null
+            RabbitMqConnectionSettings: null,
+            AzureQueueStorageConnectionSettings: null,
         }, true, []);
     }
     
@@ -174,7 +175,8 @@ class connectionStringKafkaModel extends connectionStringModel {
                 ConnectionOptions: this.connectionOptionsToDto()
             },
             
-            RabbitMqConnectionSettings: null
+            RabbitMqConnectionSettings: null,
+            AzureQueueStorageConnectionSettings: null,
         };
     }
 

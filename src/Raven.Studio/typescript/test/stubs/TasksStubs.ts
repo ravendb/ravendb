@@ -34,6 +34,7 @@ export class TasksStubs {
                 TasksStubs.getPeriodicBackupListItem(),
                 TasksStubs.getKafkaEtl(),
                 TasksStubs.getRabbitEtl(),
+                TasksStubs.getAzureQueueStorageEtl(),
                 TasksStubs.getKafkaSink(),
                 TasksStubs.getRabbitSink(),
                 TasksStubs.getReplicationSink(),
@@ -55,6 +56,7 @@ export class TasksStubs {
                 TasksStubs.getElasticsearchProgress(),
                 TasksStubs.getKafkaProgress(),
                 TasksStubs.getRabbitProgress(),
+                TasksStubs.getAzureQueueStorageProgress(),
             ],
         };
     }
@@ -152,6 +154,11 @@ export class TasksStubs {
 
     static getRabbitProgress(): EtlTaskProgress {
         const taskName = TasksStubs.getRabbitEtl().TaskName;
+        return TasksStubs.getEtlProgress(taskName, "Queue");
+    }
+
+    static getAzureQueueStorageProgress(): EtlTaskProgress {
+        const taskName = TasksStubs.getAzureQueueStorageEtl().TaskName;
         return TasksStubs.getEtlProgress(taskName, "Queue");
     }
 
@@ -295,6 +302,24 @@ export class TasksStubs {
             MentorNode: null,
             Url: "localhost:6006",
             BrokerType: "RabbitMq",
+            PinToMentorNode: false,
+            Configuration: null,
+        };
+    }
+
+    static getAzureQueueStorageEtl(): OngoingTaskQueueEtl {
+        return {
+            TaskName: "AzureQueueStorageTask",
+            TaskId: 304,
+            TaskType: "QueueEtl",
+            ConnectionStringName: "AQS-CS",
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
+            TaskState: "Enabled",
+            Error: null,
+            TaskConnectionStatus: "Active",
+            MentorNode: null,
+            Url: "localhost:6056",
+            BrokerType: "AzureQueueStorage",
             PinToMentorNode: false,
             Configuration: null,
         };

@@ -10,10 +10,6 @@ import { SharedStubs } from "test/stubs/SharedStubs";
 export default {
     title: "Pages/Database/Settings",
     decorators: [withStorybookContexts, withBootstrap5],
-    argTypes: {
-        licenseType: licenseArgType,
-        databaseAccess: databaseAccessArgType,
-    },
 } satisfies Meta;
 
 interface DefaultConnectionStringsProps {
@@ -83,6 +79,10 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
         hasElasticSearchEtl: true,
         hasQueueEtl: true,
     },
+    argTypes: {
+        licenseType: licenseArgType,
+        databaseAccess: databaseAccessArgType,
+    },
 };
 
 function mockTestResults(isSuccess: boolean) {
@@ -93,6 +93,7 @@ function mockTestResults(isSuccess: boolean) {
         tasksService.withTestSqlConnectionString();
         tasksService.withTestKafkaServerConnection();
         tasksService.withTestRabbitMqServerConnection();
+        tasksService.withTestAzureQueueStorageServerConnection();
         tasksService.withTestElasticSearchNodeConnection();
         manageServerService.withTestPeriodicBackupCredentials();
     } else {
@@ -100,6 +101,7 @@ function mockTestResults(isSuccess: boolean) {
         tasksService.withTestSqlConnectionString(SharedStubs.nodeConnectionTestErrorResult());
         tasksService.withTestKafkaServerConnection(SharedStubs.nodeConnectionTestErrorResult());
         tasksService.withTestRabbitMqServerConnection(SharedStubs.nodeConnectionTestErrorResult());
+        tasksService.withTestAzureQueueStorageServerConnection(SharedStubs.nodeConnectionTestErrorResult());
         tasksService.withTestElasticSearchNodeConnection(SharedStubs.nodeConnectionTestErrorResult());
         manageServerService.withTestPeriodicBackupCredentials(SharedStubs.nodeConnectionTestErrorResult());
     }

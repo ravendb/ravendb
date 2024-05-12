@@ -4,6 +4,7 @@ import { OngoingTasksState, ongoingTasksReducer, ongoingTasksReducerInitializer 
 import appUrl from "common/appUrl";
 import { ExternalReplicationPanel } from "./panels/ExternalReplicationPanel";
 import {
+    OngoingTaskAzureQueueStorageEtlInfo,
     OngoingTaskElasticSearchEtlInfo,
     OngoingTaskExternalReplicationInfo,
     OngoingTaskInfo,
@@ -59,6 +60,7 @@ import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
+import { AzureQueueStorageEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/AzureQueueStorageEtlPanel";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
 
@@ -153,6 +155,7 @@ export function OngoingTasksPage() {
         olapEtls,
         kafkaEtls,
         rabbitMqEtls,
+        azureQueueStorageEtls,
         kafkaSinks,
         rabbitMqSinks,
         elasticSearchEtls,
@@ -376,8 +379,8 @@ export function OngoingTasksPage() {
                                     <li>
                                         A few examples are: <br />
                                         Executing a periodic backup of the database, replicating to another RavenDB
-                                        instance, or transferring data to external frameworks such as Kafaka, RabbitMQ,
-                                        etc.
+                                        instance, or transferring data to external frameworks such as Kafka, RabbitMQ,
+                                        Azure Queue Storage etc.
                                     </li>
                                     <li className="margin-top-xxs">
                                         Click the &quot;Add a Database Task&quot; button to view all available tasks and
@@ -530,6 +533,25 @@ export function OngoingTasksPage() {
 
                             {rabbitMqEtls.map((x) => (
                                 <RabbitMqEtlPanel
+                                    {...sharedPanelProps}
+                                    key={taskKey(x.shared)}
+                                    data={x}
+                                    onToggleDetails={startTrackingProgress}
+                                    showItemPreview={showItemPreview}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    {azureQueueStorageEtls.length > 0 && (
+                        <div key="azure-queue-storage-etls">
+                            <HrHeader className="azure-queue-storage-etl" count={azureQueueStorageEtls.length}>
+                                <Icon icon="azure-queue-storage-etl" />
+                                AZURE QUEUE STORAGE ETL
+                            </HrHeader>
+
+                            {azureQueueStorageEtls.map((x) => (
+                                <AzureQueueStorageEtlPanel
                                     {...sharedPanelProps}
                                     key={taskKey(x.shared)}
                                     data={x}
@@ -787,6 +809,9 @@ function getFilteredTasks(state: OngoingTasksState, filter: OngoingTasksFilterCr
         rabbitMqEtls: filteredTasks.filter(
             (x) => x.shared.taskType === "RabbitQueueEtl"
         ) as OngoingTaskRabbitMqEtlInfo[],
+        azureQueueStorageEtls: filteredTasks.filter(
+            (x) => x.shared.taskType === "AzureQueueStorageQueueEtl"
+        ) as OngoingTaskAzureQueueStorageEtlInfo[],
         kafkaSinks: filteredTasks.filter((x) => x.shared.taskType === "KafkaQueueSink") as OngoingTaskKafkaSinkInfo[],
         rabbitMqSinks: filteredTasks.filter(
             (x) => x.shared.taskType === "RabbitQueueSink"

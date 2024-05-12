@@ -108,6 +108,7 @@ export default function ElasticSearchConnectionString({
                     name="name"
                     type="text"
                     placeholder="Enter a name for the connection string"
+                    disabled={!isForNewConnection}
                     autoComplete="off"
                 />
             </div>

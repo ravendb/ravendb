@@ -1,6 +1,7 @@
 ﻿import { Reducer } from "react";
 import {
     OngoingEtlTaskNodeInfo,
+    OngoingTaskAzureQueueStorageEtlSharedInfo,
     OngoingTaskElasticSearchEtlSharedInfo,
     OngoingTaskExternalReplicationSharedInfo,
     OngoingTaskHubDefinitionInfo,
@@ -212,6 +213,15 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 case "RabbitMq": {
                     // noinspection UnnecessaryLocalVariableJS
                     const result: OngoingTaskRabbitMqEtlSharedInfo = {
+                        ...commonProps,
+                        connectionStringName: incoming.ConnectionStringName,
+                        url: incoming.Url,
+                    };
+                    return result;
+                }
+                case "AzureQueueStorage": {
+                    // noinspection UnnecessaryLocalVariableJS
+                    const result: OngoingTaskAzureQueueStorageEtlSharedInfo = {
                         ...commonProps,
                         connectionStringName: incoming.ConnectionStringName,
                         url: incoming.Url,

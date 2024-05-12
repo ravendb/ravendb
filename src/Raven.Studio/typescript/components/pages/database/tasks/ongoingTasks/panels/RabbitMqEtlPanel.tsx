@@ -31,7 +31,6 @@ type RabbitMqEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskRabbitMqEtlInf
 function Details(props: RabbitMqEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
     const { appUrl } = useAppUrls();
-
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const connectionStringsUrl = appUrl.forConnectionStrings(
         databaseName,

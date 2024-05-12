@@ -1,0 +1,64 @@
+<div class="form-group" data-bind="validationElement: connectionStringName">
+    <label class="control-label">Name<i class="required"></i></label>
+    <div class="flex-grow">
+        <input class="form-control" data-bind="textInput: connectionStringName, enable: isNew, attr: { 'title': isNew() ? 'Enter any name of your choice for this connection string' : '' }"
+               placeholder="Enter a name for the connection string" />
+    </div>
+</div>
+<div class="form-group">
+    <label class="control-label">Authentication</label>
+    <div class="flex-grow">
+        <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown" aria-expanded="false">
+            <span data-bind="text: formatAuthenticationType(authenticationType())"></span>
+            <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu">
+            <li><a href="#" data-bind="click: _.partial(authenticationType, 'connectionString')"><span data-bind="text: formatAuthenticationType('connectionString')"></span></a></li>
+            <li><a href="#" data-bind="click: _.partial(authenticationType, 'entraId')"><span data-bind="text: formatAuthenticationType('entraId')"></span></a></li>
+            <li><a href="#" data-bind="click: _.partial(authenticationType, 'passwordless')"><span data-bind="text: formatAuthenticationType('passwordless')"></span></a></li>
+        </ul>
+    </div>
+</div>
+<div data-bind="visible: authenticationType() === 'connectionString', with: connectionStringModel">
+    <div class="form-group" data-bind="validationElement: connectionString">
+        <label class="control-label">Connection string<i class="required"></i></label>
+        <div class="flex-grow">
+            <textarea class="form-control" rows="2" data-bind="textInput: connectionString" placeholder="Enter connection string for Azure Queue Storage"></textarea>
+        </div>
+    </div>
+</div>
+<div data-bind="visible: authenticationType() === 'entraId', with: entraIdModel">
+    <div class="form-group" data-bind="validationElement: clientId">
+        <label class="control-label">Client ID<i class="required"></i></label>
+        <div class="flex-grow">
+            <input class="form-control" rows="2" data-bind="textInput: clientId" />
+        </div>
+    </div>
+    <div class="form-group" data-bind="validationElement: clientSecret">
+        <label class="control-label">Client Secret<i class="required"></i></label>
+        <div class="flex-grow">
+            <input class="form-control" rows="2" data-bind="textInput: clientSecret" />
+        </div>
+    </div>
+    <div class="form-group" data-bind="validationElement: storageAccountName">
+        <label class="control-label">Storage Account Name<i class="required"></i></label>
+        <div class="flex-grow">
+            <input class="form-control" rows="2" data-bind="textInput: storageAccountName" />
+        </div>
+    </div>
+    <div class="form-group" data-bind="validationElement: tenantId">
+        <label class="control-label">Tenant ID<i class="required"></i></label>
+        <div class="flex-grow">
+            <input class="form-control" rows="2" data-bind="textInput: tenantId" />
+        </div>
+    </div>
+</div>
+
+<div data-bind="visible: authenticationType() === 'passwordless', with: passwordlessModel">
+    <div class="form-group" data-bind="validationElement: storageAccountName">
+        <label class="control-label">Storage Account Name<i class="required"></i></label>
+        <div class="flex-grow">
+            <input class="form-control" rows="2" data-bind="textInput: storageAccountName" />
+        </div>
+    </div>
+</div>

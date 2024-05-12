@@ -50,6 +50,7 @@ class icomoonHelpers {
         "kafka-sink": 0xf131,
         "rabbitmq-sink": 0xf132,
         "preview": 0xf133,
+        "azure-queue-storage-etl": 0xf134,
         "corax-include-null-match": 0xf140,
         "corax-fallback": 0xf141,
         "corax-all-entries-match": 0xf142,

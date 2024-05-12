@@ -85,6 +85,14 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         );
     }
 
+    withTestAzureQueueStorageServerConnection(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
+        return this.mockResolvedValue(
+            this.mocks.testAzureQueueStorageServerConnection,
+            dto,
+            SharedStubs.nodeConnectionTestSuccessResult()
+        );
+    }
+
     withTestElasticSearchNodeConnection(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
         return this.mockResolvedValue(
             this.mocks.testElasticSearchNodeConnection,
