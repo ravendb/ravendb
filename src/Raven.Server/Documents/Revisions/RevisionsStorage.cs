@@ -37,6 +37,7 @@ using static Raven.Server.Documents.Schemas.Revisions;
 using static Voron.Data.Tables.Table;
 using Constants = Raven.Client.Constants;
 using Size = Sparrow.Size;
+using Transaction = Voron.Impl.Transaction;
 
 namespace Raven.Server.Documents.Revisions
 {
@@ -86,7 +87,12 @@ namespace Raven.Server.Documents.Revisions
 
         public Table EnsureRevisionTableCreated(Transaction tx, CollectionName collection)
         {
-            var revisionsSchema = _database.DocumentsCompression.CompressRevisions ?
+            return EnsureRevisionTableCreated(tx, collection, out _);
+        }
+
+        public Table EnsureRevisionTableCreated(Transaction tx, CollectionName collection, out TableSchema revisionsSchema)
+        {
+            revisionsSchema = _database.DocumentsCompression.CompressRevisions ?
                 CompressedRevisionsSchema :
                 RevisionsSchema;
 
@@ -1168,6 +1174,33 @@ namespace Raven.Server.Documents.Revisions
             return conflictCount;
         }
 
+        public IEnumerable<Document> GetRevisionsInReverseEtagOrder(DocumentsOperationContext context, int skip, int take)
+        {
+            return GetRevisionsInReverseEtagOrderInternal(context,
+                table: new Table(RevisionsSchema, context.Transaction.InnerTransaction),
+                index: RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], skip, take);
+        }
+
+        public IEnumerable<Document> GetRevisionsInReverseEtagOrderForCollection(DocumentsOperationContext context, string collection, int skip, int take)
+        {
+            var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
+            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName, out var revisionsSchema);
+            return GetRevisionsInReverseEtagOrderInternal(context, table, index: revisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], skip, take);
+        }
+
+        private IEnumerable<Document> GetRevisionsInReverseEtagOrderInternal(DocumentsOperationContext context, Table table, TableSchema.FixedSizeKeyIndexDef index, int skip, int take)
+        {
+            int i = 0;
+            foreach (var tvh in table.SeekBackwardFromLast(index, skip))
+            {
+                var tvr = tvh.Reader;
+                var revision = TableValueToRevision(context, ref tvr, DocumentFields.Id | DocumentFields.ChangeVector);
+                yield return revision;
+
+                if (++i >= take)
+                    yield break;
+            }
+        }
 
         private IEnumerable<Document> GetAllRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice,
             long? maxDeletesUponUpdate, 
@@ -1210,6 +1243,27 @@ namespace Raven.Server.Documents.Revisions
                 if (ended)
                     break;
             }
+        }
+
+        public string GetLastRevisionChangeVector(DocumentsOperationContext context)
+        {
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var tvr = table.ReadLast(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice]);
+            if (tvr == null)
+                return null;
+
+            return TableValueToChangeVector(context, (int)RevisionsTable.ChangeVector, ref tvr.Reader);
+        }
+
+        public string GetLastRevisionChangeVectorForCollection(DocumentsOperationContext context, string collection)
+        {
+            var table = GetExistingTable(context.Transaction.InnerTransaction, new CollectionName(collection));
+            if (table == null)
+                return null;
+            var tvr = table.ReadLast(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice]);
+            if (tvr == null)
+                return null;
+            return TableValueToChangeVector(context, (int)RevisionsTable.ChangeVector, ref tvr.Reader);
         }
 
         internal static void CreateRevisionTombstoneKeySlice(DocumentsOperationContext context, string documentId, string changeVector, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
@@ -2745,5 +2799,18 @@ namespace Raven.Server.Documents.Revisions
             return table.GetNumberOfEntriesFor(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice]);
         }
 
+        public long GetNumberOfRevisionDocumentsForCollection(DocumentsOperationContext context, string collection)
+        {
+            var table = GetExistingTable(context.Transaction.InnerTransaction, new CollectionName(collection));
+            if (table == null)
+                return 0;
+            return table.GetNumberOfEntriesFor(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice]);
+        }
+
+        private Table GetExistingTable(Transaction tx, CollectionName collection)
+        {
+            string tableName = collection.GetTableName(CollectionTableType.Revisions);
+            return tx.OpenTable(RevisionsSchema, tableName);
+        }
     }
 }
