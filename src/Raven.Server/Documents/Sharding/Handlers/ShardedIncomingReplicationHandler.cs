@@ -434,6 +434,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             _lastSentEtagPerDestination.Clear();
             _lastSentEtagPerDestination = null;
+            _documentInfoHelper.Dispose();
 
             base.DisposeInternal();
         }
