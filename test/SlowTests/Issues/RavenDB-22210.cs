@@ -1,14 +1,20 @@
 ﻿using System.Security.Cryptography.X509Certificates;
+using FastTests;
 using Raven.Server.Config.Categories;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_22210
+public class RavenDB_22210 : RavenTestBase
 {
+    public RavenDB_22210(ITestOutputHelper output) : base(output)
+    {
+    }
+
     [RavenFact(RavenTestCategory.Certificates)]
     public void RenewedWithDifferentIntermediate_CanAccess()
     {
