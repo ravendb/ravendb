@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Elastic.Clients.Elasticsearch;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
@@ -14,17 +12,12 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers.Processors.Revisions;
-using Raven.Server.Documents.Schemas;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Streaming;
-using Raven.Server.Documents.Sharding.Streaming.Comparers;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Server.Web.Studio.Processors;
 using Sparrow.Json;
 using static Raven.Server.Documents.Sharding.ShardedDatabaseContext.ShardedStreaming;
@@ -109,13 +102,15 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
         writer.WriteEndArray();
     }
 
-    protected override async ValueTask InitializeAsync(TransactionOperationContext context, CancellationToken token)
+    protected override async Task InitializeAsync(TransactionOperationContext context, CancellationToken token)
     {
+        await base.InitializeAsync(context, token);
+
         _continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(context);
 
         var expectedEtag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
 
-        var op = new ShardedRevisionsCollectionPreviewOperation(RequestHandler, _collection, expectedEtag, _continuationToken);
+        var op = new ShardedRevisionsCollectionPreviewOperation(RequestHandler, Collection, expectedEtag, _continuationToken);
         var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op, token);
         if (result.StatusCode != (int)HttpStatusCode.NotModified)
             _combinedReadState = await result.Result.InitializeAsync(RequestHandler.DatabaseContext, RequestHandler.AbortRequestToken);

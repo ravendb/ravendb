@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Schemas;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Studio.Processors;
 using Sparrow.Json;
@@ -24,16 +20,16 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
     {
     }
 
-    protected override ValueTask InitializeAsync(DocumentsOperationContext context, CancellationToken token)
+    protected override async Task InitializeAsync(DocumentsOperationContext context, CancellationToken token)
     {
+        await base.InitializeAsync(context, token);
+
         _start = RequestHandler.GetStart();
         _pageSize = RequestHandler.GetPageSize();
 
-        _totalResults = string.IsNullOrEmpty(_collection)
+        _totalResults = string.IsNullOrEmpty(Collection)
             ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context)
-            : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocumentsForCollection(context, _collection);
-
-        return ValueTask.CompletedTask;
+            : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocumentsForCollection(context, Collection);
     }
 
     protected override IDisposable OpenReadTransaction(DocumentsOperationContext context)
@@ -43,9 +39,9 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
 
     protected override Task WriteItems(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer)
     {
-        var revisions = string.IsNullOrEmpty(_collection)
+        var revisions = string.IsNullOrEmpty(Collection)
             ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsInReverseEtagOrder(context, _start, _pageSize)
-            : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsInReverseEtagOrderForCollection(context, _collection, _start, _pageSize);
+            : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsInReverseEtagOrderForCollection(context, Collection, _start, _pageSize);
 
         writer.WriteStartArray();
 
@@ -96,9 +92,9 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
         string changeVector;
         etag = null;
 
-        changeVector = string.IsNullOrEmpty(_collection)
+        changeVector = string.IsNullOrEmpty(Collection)
             ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetLastRevisionChangeVector(context)
-            : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetLastRevisionChangeVectorForCollection(context, _collection);
+            : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetLastRevisionChangeVectorForCollection(context, Collection);
 
         if (changeVector != null)
             etag = $"{changeVector}/{_totalResults}";
