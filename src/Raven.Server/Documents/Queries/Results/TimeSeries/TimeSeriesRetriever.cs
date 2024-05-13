@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 {
     public abstract class TimeSeriesRetrieverBase
     {
-        public class TimeSeriesStreamingRetrieverResult
+        public sealed class TimeSeriesStreamingRetrieverResult
         {
             public IEnumerable<DynamicJsonValue> Stream;
             public DynamicJsonValue Metadata;
@@ -948,12 +948,6 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                 AddNames(result);
 
             return _context.ReadObject(result, "timeseries/value");
-        }
-
-        public sealed class TimeSeriesStreamingRetrieverResult
-        {
-            public IEnumerable<DynamicJsonValue> Stream;
-            public DynamicJsonValue Metadata;
         }
 
         public TimeSeriesStreamingRetrieverResult PrepareForStreaming(IEnumerable<DynamicJsonValue> array, bool addProjectionToResult, bool fromStudio)
