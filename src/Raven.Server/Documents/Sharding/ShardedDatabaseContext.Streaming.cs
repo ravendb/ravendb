@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Sharding
                     if (x.Item.TryGet(nameof(Document.LastModified), out DateTime xLastModified) == false)
                         throw new InvalidOperationException($"Revision does not contain 'LastModified' field.");
 
-                    if (x.Item.TryGet(nameof(Document.LastModified), out DateTime yLastModified) == false)
+                    if (y.Item.TryGet(nameof(Document.LastModified), out DateTime yLastModified) == false)
                         throw new InvalidOperationException($"Revision does not contain 'LastModified' field.");
 
                     return yLastModified.CompareTo(xLastModified);
