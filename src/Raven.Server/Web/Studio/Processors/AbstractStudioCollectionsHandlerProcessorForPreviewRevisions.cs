@@ -5,36 +5,40 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Amqp.Listener;
-using Elastic.Clients.Elasticsearch;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Operations.Revisions;
+using Microsoft.AspNetCore.Http;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
-using Raven.Server.Json;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio.Processors;
 
-internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevisions<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevisions<TRequestHandler, TOperationContext> : IDisposable
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected string _collection;
+    protected readonly TRequestHandler RequestHandler;
 
-    public AbstractStudioCollectionsHandlerProcessorForPreviewRevisions([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+    protected readonly HttpContext HttpContext;
+
+    protected readonly JsonContextPoolBase<TOperationContext> ContextPool;
+
+    protected string Collection;
+
+    public AbstractStudioCollectionsHandlerProcessorForPreviewRevisions([NotNull] TRequestHandler requestHandler)
     {
+        RequestHandler = requestHandler ?? throw new ArgumentNullException(nameof(requestHandler));
+        HttpContext = requestHandler.HttpContext;
+        ContextPool = RequestHandler.ContextPool;
     }
 
-    public override async ValueTask ExecuteAsync()
+    public async ValueTask ExecuteAsync()
     {
         using (ContextPool.AllocateOperationContext(out TOperationContext context))
         using (OpenReadTransaction(context))
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
-            _collection = RequestHandler.GetStringQueryString("collection", required: false);
+            Collection = RequestHandler.GetStringQueryString("collection", required: false);
 
             if (NotModified(context, out var etag))
             {
@@ -69,10 +73,26 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
 
     protected abstract IDisposable OpenReadTransaction(TOperationContext context);
 
+    protected abstract ValueTask<long> GetTotalCountAsync();
+
+    protected abstract bool NotModified(TOperationContext context, out string etag);
+
     protected abstract Task WriteItems(TOperationContext context, AsyncBlittableJsonTextWriter writer);
 
     protected virtual void WriteAdditionalField(TOperationContext context, AsyncBlittableJsonTextWriter writer)
     {
+    }
+
+    protected virtual Task InitializeAsync(TOperationContext context, CancellationToken token)
+    {
+        Collection = RequestHandler.GetStringQueryString("collection", required: false);
+
+        return Task.CompletedTask;
+    }
+
+    public virtual void Dispose()
+    {
+        GC.SuppressFinalize(this);
     }
 
     protected sealed class PreviewRevisionsResult
@@ -80,11 +100,5 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
         public List<Document> Results;
         public long TotalResults;
     }
-
-    protected abstract ValueTask<long> GetTotalCountAsync();
-
-    protected abstract ValueTask InitializeAsync(TOperationContext context, CancellationToken token);
-
-    protected abstract bool NotModified(TOperationContext context, out string etag);
 }
 
