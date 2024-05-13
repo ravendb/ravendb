@@ -95,6 +95,8 @@ namespace Raven.Server.Utils
             if (knownCertChain.ChainElements.Count == 1 && userChain.ChainElements.Count == 1)
                 return true;
             
+            // compare issuers pinning hashes starting from top of the chain (CA) since it's least likely to change
+            // chain may have additional elements due to cross-signing, that's why we compare every issuer with each other
             for (var i = knownCertChain.ChainElements.Count - 1; i > 0; i--)
             {
                 var knownPinningHash = knownCertChain.ChainElements[i].Certificate.GetPublicKeyPinningHash();
