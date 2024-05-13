@@ -15,9 +15,15 @@ public class RavenDB_22210
         var certificates = GenerateAndRenewWithDifferentIntermediate();
         PopulateCaStore(certificates.ca, certificates.intermediate, certificates.intermediate2);
 
-        Assert.True(CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration()));
-
-        CleanupCaStore(certificates.ca, certificates.intermediate, certificates.intermediate2);
+        try
+        {
+            var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration());
+            Assert.True(result);
+        }
+        finally
+        {
+            CleanupCaStore(certificates.ca, certificates.intermediate, certificates.intermediate2);
+        }
     }
 
     [RavenFact(RavenTestCategory.Certificates)]
@@ -26,9 +32,15 @@ public class RavenDB_22210
         var certificates = GenerateAndRenewWithTheSameIntermediate();
         PopulateCaStore(certificates.ca, certificates.intermediate);
 
-        Assert.True(CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration()));
-
-        CleanupCaStore(certificates.ca, certificates.intermediate);
+        try
+        {
+            var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration());
+            Assert.True(result);
+        }
+        finally
+        {
+            CleanupCaStore(certificates.ca, certificates.intermediate);
+        }
     }
 
     [RavenFact(RavenTestCategory.Certificates)]
@@ -36,7 +48,8 @@ public class RavenDB_22210
     {
         var certificates = GenerateAndRenewSelfSigned();
 
-        Assert.True(CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration()));
+        var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration());
+        Assert.True(result);
     }
 
     [RavenFact(RavenTestCategory.Certificates)]
@@ -44,10 +57,15 @@ public class RavenDB_22210
     {
         var certificates = GenerateAndRenewWithDifferentChain();
         PopulateCaStore(certificates.ca, certificates.intermediate, certificates.intermediate2);
-
-        Assert.False(CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration()));
-
-        CleanupCaStore(certificates.ca, certificates.intermediate, certificates.intermediate2);
+        try
+        {
+            var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration());
+            Assert.False(result);
+        }
+        finally
+        {
+            CleanupCaStore(certificates.ca, certificates.intermediate, certificates.intermediate2);
+        }
     }
 
     private static (X509Certificate2 ca, X509Certificate2 intermediate, X509Certificate2 intermediate2, X509Certificate2 client, X509Certificate2 clientRenewed)
