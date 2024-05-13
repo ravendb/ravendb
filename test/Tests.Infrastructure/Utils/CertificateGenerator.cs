@@ -10,7 +10,7 @@ using Org.BouncyCastle.X509;
 
 namespace Tests.Infrastructure.Utils;
 
-public class CertificateGenerator
+public static class CertificateGenerator
 {
     public static X509Certificate2 GenerateRootCACertificate(string subjectName, int yearsValid, AsymmetricCipherKeyPair keyPair)
     {
