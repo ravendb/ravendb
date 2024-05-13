@@ -686,6 +686,9 @@ namespace Voron.Impl
             if (_cachedDecompressedBuffersByStorageId == null)
                 return;
 
+            if (storageId == Constants.Compression.NonReturnableStorageId)
+                return;
+         
             if (_cachedDecompressedBuffersByStorageId.Remove(storageId, out var t))
             {
                 Allocator.Release(ref t);
