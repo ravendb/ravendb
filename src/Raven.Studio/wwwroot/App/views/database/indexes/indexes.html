@@ -215,12 +215,12 @@
                         <span>Search Engine:&nbsp;</span><strong data-bind="text: searchEngineType"></strong>
                     </div>
                 </div>
-                <div class="flex-horizontal clear-left index-info nospacing">
+                <div class="flex-horizontal clear-left index-info nospacing" data-bind="visible: referencedCollections().length">
                     <div class="index-type-icon" data-placement="right" data-toggle="tooltip" data-animation="true" data-html="true" data-bind="">
                         <i class="icon-referenced-collections"></i>
                     </div>
                     <div class="index-type">
-                        <span>Referenced Collections:&nbsp;</span><strong data-bind="">Collection 1, Collection 2, Collection 3 <span data-bind="">and more</span></strong>
+                        <span>Referenced Collections:&nbsp;</span><strong data-bind="text: referencedCollections().join(', ')"></strong>
                     </div>
                 </div>
             </div>
