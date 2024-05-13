@@ -304,9 +304,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     numberOfReduceTrees++;
 
-                    if (aggregatedTree == null)
-                        aggregatedTree = new TreeReport();
-
+                    aggregatedTree ??= new TreeReport();
                     aggregatedTree.AllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
                     aggregatedTree.BranchPages += treeReport.BranchPages;
                     aggregatedTree.Density = calculateExactSizes ? aggregatedTree.Density + treeReport.Density : -1;
