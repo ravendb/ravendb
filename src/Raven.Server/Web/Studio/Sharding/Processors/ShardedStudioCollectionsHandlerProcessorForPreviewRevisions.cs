@@ -4,8 +4,9 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using Amazon.Runtime.Internal.Endpoints.StandardLibrary;
+using Elastic.Clients.Elasticsearch;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
@@ -14,6 +15,8 @@ using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors.Revisions;
+using Raven.Server.Documents.Schemas;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
@@ -21,8 +24,10 @@ using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Streaming;
 using Raven.Server.Documents.Sharding.Streaming.Comparers;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web.Studio.Processors;
 using Sparrow.Json;
+using static Raven.Server.Documents.Sharding.ShardedDatabaseContext.ShardedStreaming;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors;
 
@@ -37,26 +42,81 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
     {
     }
 
-    protected override IAsyncEnumerable<Document> GetRevisionsAsync(TransactionOperationContext context)
+    protected override async Task WriteItems(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer)
     {
-        return RequestHandler.DatabaseContext.Streaming.PagedShardedStream(
+        var shardItems = RequestHandler.DatabaseContext.Streaming.PagedShardedStream<BlittableJsonReaderObject>(
             _combinedReadState,
             "Results",
-            ShardResultConverter.BlittableToRevisionConverter,
-            StreamDocumentByLastModifiedComparer.Instance,
-            _continuationToken).Select(s => s.Item); ;
+            x => x,
+            RevisionLastModifiedComparer.Instance,
+            _continuationToken);
+
+        writer.WriteStartArray();
+
+        var first = true;
+        await foreach (var item in shardItems)
+        {
+            if (first)
+                first = false;
+            else
+                writer.WriteComma();
+
+            var json = item.Item;
+
+            if (json.TryGet(nameof(Document.Id), out string id) == false)
+                throw new InvalidOperationException("Revision does not contain 'Id' field.");
+
+            if (json.TryGet(nameof(Document.ChangeVector), out string changeVector) == false)
+                throw new InvalidOperationException($"Revision of \"{id}\" does not contain 'ChangeVector' field.");
+
+            if (json.TryGet(nameof(Document.Etag), out int etag) == false)
+                throw new InvalidOperationException($"Revision of \"{id}\" and change vector '{changeVector}' does not contain 'Etag' field.");
+
+            if (json.TryGet(nameof(Document.LastModified), out DateTime lastModified) == false)
+                throw new InvalidOperationException($"Revision of \"{id}\" and change vector '{changeVector}' does not contain 'LastModified' field.");
+
+            if (json.TryGet(nameof(Document.Flags), out DocumentFlags flags) == false)
+                throw new InvalidOperationException($"Revision of \"{id}\" and change vector '{changeVector}' does not contain 'Flags' field.");
+
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(Document.Id));
+            writer.WriteString(id);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(Document.Etag));
+            writer.WriteInteger(etag);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(Document.LastModified));
+            writer.WriteDateTime(lastModified, isUtc: true);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(Document.ChangeVector));
+            writer.WriteString(changeVector);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(Document.Flags));
+            writer.WriteString(flags.ToString());
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(ShardStreamItem<BlittableJsonReaderObject>.ShardNumber));
+            writer.WriteInteger(item.ShardNumber);
+
+            writer.WriteEndObject();
+        }
+
+        writer.WriteEndArray();
     }
 
-    protected override async ValueTask InitializeAsync(TransactionOperationContext context1)
+    protected override async ValueTask InitializeAsync(TransactionOperationContext context, CancellationToken token)
     {
-        await base.InitializeAsync(context1);
-        using (RequestHandler.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            _continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(context);
+        _continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(context);
 
         var expectedEtag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
 
         var op = new ShardedRevisionsCollectionPreviewOperation(RequestHandler, _collection, expectedEtag, _continuationToken);
-        var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
+        var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op, token);
         if (result.StatusCode != (int)HttpStatusCode.NotModified)
             _combinedReadState = await result.Result.InitializeAsync(RequestHandler.DatabaseContext, RequestHandler.AbortRequestToken);
         _combinedHttpEtag = result.CombinedEtag;
