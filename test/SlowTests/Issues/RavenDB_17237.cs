@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
+using xRetry;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RetryFact]
         public async Task MustNotDisableThrottlingTimerOnUpdatingIndexDefinitionOfThrottledIndex()
         {
             using (var store = GetDocumentStore(new Options()
