@@ -18,6 +18,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.DataArchival;
@@ -243,18 +244,13 @@ namespace SlowTests.Server.Documents.DataArchival
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task ArchiveDocsWithMaxItemsToProcessConfiguredShouldWork(Options options, bool compressed)
         {
-            using (var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStore(options))
             {
-                ModifyDatabaseRecord = record =>
+                if (compressed)
                 {
-                    if (compressed)
-                    {
-                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
-                    }
-                },
-                DatabaseMode = options.DatabaseMode,
-            }))
-            {
+                    var documentsCompression = new DocumentsCompressionConfiguration(true, true);
+                    store.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(documentsCompression));
+                }
                 // Insert documents with ArchiveAt before activating the archival
                 var archiveDateTime = SystemTime.UtcNow.AddMinutes(5);
                 for (int i = 0; i < 10; i++)

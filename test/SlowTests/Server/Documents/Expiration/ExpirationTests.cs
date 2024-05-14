@@ -19,6 +19,7 @@ using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.Expiration;
@@ -379,17 +380,14 @@ namespace SlowTests.Server.Documents.Expiration
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanPostAndGetDocumentsExpiration(Options options, bool compressed)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDatabaseRecord = record =>
             {
-                ModifyDatabaseRecord = record =>
+                if (compressed)
                 {
-                    if (compressed)
-                    {
-                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
-                    }
-                },
-                DatabaseMode = options.DatabaseMode,
-            }))
+                    record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                }
+            };
+            using (var store = GetDocumentStore(options))
             {
                 var exConfig = new ExpirationConfiguration
                 {
@@ -535,12 +533,19 @@ namespace SlowTests.Server.Documents.Expiration
         }
 
         [RavenTheory(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Configuration)]
-        [RavenData(10, DatabaseMode = RavenDatabaseMode.All)]
-        [RavenData(5, DatabaseMode = RavenDatabaseMode.All)]
-        public async Task ExpirationWithMaxItemsToProcessConfiguredShouldWork(Options options, int batchSize)
+        [RavenData(10, true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(10, false, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(5, true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(5, false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ExpirationWithMaxItemsToProcessConfiguredShouldWork(Options options, int batchSize, bool compressed)
         {
             using (var store = GetDocumentStore(options))
             {
+                if (compressed)
+                {
+                    var documentsCompression = new DocumentsCompressionConfiguration(true, true);
+                    store.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(documentsCompression));
+                }
                 // Insert documents with expiration before activating the expiration
                 var expires = SystemTime.UtcNow.AddMinutes(5);
                 for (int i = 0; i < 10; i++)
@@ -585,11 +590,17 @@ namespace SlowTests.Server.Documents.Expiration
         }
 
         [RavenTheory(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Configuration)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task RefreshWithMaxItemsToProcessConfiguredShouldWork(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RefreshWithMaxItemsToProcessConfiguredShouldWork(Options options, bool compressed)
         {
             using (var store = GetDocumentStore(options))
             {
+                if (compressed)
+                {
+                    var documentsCompression = new DocumentsCompressionConfiguration(true, true);
+                    store.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(documentsCompression));
+                }
                 // Insert documents with refresh before activating the refresh
                 var refresh = SystemTime.UtcNow.AddMinutes(5);
                 for (int i = 0; i < 10; i++)
