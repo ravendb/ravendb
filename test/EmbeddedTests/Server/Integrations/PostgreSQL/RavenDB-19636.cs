@@ -1,17 +1,14 @@
-﻿using System;
+﻿#if NET8_0
+using System;
 using System.Threading.Tasks;
 using Xunit;
-using Xunit.Abstractions;
 
-namespace SlowTests.Server.Integrations.PostgreSQL
+namespace EmbeddedTests.Server.Integrations.PostgreSQL
 {
     public class RavenDB_19636 : PostgreSqlIntegrationTestBase
     {
-        public RavenDB_19636(ITestOutputHelper output) : base(output)
-        {
-        }
 
-        private class Order
+        private new class Order
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -22,8 +19,6 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         public async Task CanLoadCorrectlyWhenFirstRowHasNullValueInColumn()
         {
             string query = $"from Orders order by id()";
-
-            DoNotReuseServer(EnablePostgresSqlSettings);
 
             using (var store = GetDocumentStore())
             {
@@ -54,7 +49,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                     session.SaveChanges();
                 }
 
-                var result = await Act(store, query, Server);
+                var result = await Act(store, query);
                 
                 Assert.Equal(result.Rows[0].ItemArray[0], "orders/1");
                 Assert.Equal(result.Rows[0].ItemArray[1], DBNull.Value);
@@ -71,3 +66,4 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         }
     }
 }
+#endif

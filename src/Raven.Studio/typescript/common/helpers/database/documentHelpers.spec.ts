@@ -1,7 +1,62 @@
 import document = require("models/database/documents/document");
 import documentHelpers from "common/helpers/database/documentHelpers";
 
+function assertFindRelatedDocumentMatch(fieldValue: string) {
+    const doc1: any = document.empty();
+    doc1.addressId = fieldValue;
+
+    const candidates = documentHelpers.findRelatedDocumentsCandidates(doc1);
+    expect(candidates)
+        .toHaveLength(1);
+    expect(candidates)
+        .toContain(fieldValue);
+}
+
+function assertFindRelatedDocumentDoesMatch(fieldValue: any) {
+    const doc1: any = document.empty();
+    doc1.addressId = fieldValue;
+
+    const candidates = documentHelpers.findRelatedDocumentsCandidates(doc1);
+    expect(candidates)
+        .toHaveLength(0);
+}
+
 describe("documentHelpers", function () {
+    
+    describe("findRelatedDocumentsCandidates", function () {
+        it("can find related document by collectionName/number", () => {
+            assertFindRelatedDocumentMatch("Addresses/1");
+        });
+
+        it("can find related document by collectionName/number-TAG", () => {
+            assertFindRelatedDocumentMatch("Addresses/1-A");
+        });
+
+        it("can find related document by collectionName/GUID-with-dashes", () => {
+            assertFindRelatedDocumentMatch("Addresses/4b5934f9-e937-4690-abcb-17b9681cdf35");
+        });
+
+        it("can find related document by collectionName/GUID-without-dashes", () => {
+            assertFindRelatedDocumentMatch("Addresses/4b5934f9e9374690abcb17b9681cdf35");
+        });
+
+        it("can find related document by GUID-with-dashes", () => {
+            assertFindRelatedDocumentMatch("4b5934f9-e937-4690-abcb-17b9681cdf35");
+        });
+
+        it("can find related document by GUID-without-dashes", () => {
+            assertFindRelatedDocumentMatch("4b5934f9e9374690abcb17b9681cdf35");
+        });
+        
+        it("doesn't find candidate in regular string", () => {
+            assertFindRelatedDocumentDoesMatch("John");
+        })
+
+        it("doesn't find candidate in regular number", () => {
+            assertFindRelatedDocumentDoesMatch(56);
+        })
+    });
+    
 
     it('should find intersection on simple documents', () => {
         const doc1: any = document.empty();

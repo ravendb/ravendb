@@ -19,6 +19,7 @@ class memoryUsage extends historyAwareNodeStats<Raven.Server.Dashboard.Cluster.N
     systemCommitLimit = this.dataExtractor(x => x.SystemCommitLimit);
     totalSwapUsage = this.dataExtractor(x => x.TotalSwapUsage);
     totalSwap = this.dataExtractor(x => x.PhysicalMemory != null && x.SystemCommitLimit != null ? x.SystemCommitLimit - x.PhysicalMemory : undefined);
+    luceneManagedTermCacheAllocations = this.dataExtractor(x => x.LuceneManagedTermCacheAllocations);
     luceneUnmanagedAllocations = this.dataExtractor(x => x.LuceneUnmanagedAllocations);
 
     workingSetFormatted: KnockoutComputed<[string, string]>;

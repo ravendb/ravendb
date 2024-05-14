@@ -8,6 +8,8 @@ import messagePublisher = require("common/messagePublisher");
 import forceLicenseUpdateCommand = require("commands/licensing/forceLicenseUpdateCommand");
 import renewLicenseCommand = require("commands/licensing/renewLicenseCommand");
 import getServerCertificateSetupModeCommand = require("commands/auth/getServerCertificateSetupModeCommand");
+import popoverUtils from "common/popoverUtils";
+import getConnectivityToLicenseServerCommand from "commands/licensing/getConnectivityToLicenseServerCommand";
 
 class licenseKeyModel {
 
@@ -54,6 +56,9 @@ class registration extends dialogViewModelBase {
     
     static readonly licenseDialogSelector = "#licenseModal";
 
+    connectedToLicenseServer = ko.observable<boolean>();
+    connectionException = ko.observable<string>();
+
     licenseExpired = ko.observable<boolean>(false);
     licenseType = ko.observable<Raven.Server.Commercial.LicenseType>();
     licenseId = ko.observable<string>();
@@ -81,7 +86,8 @@ class registration extends dialogViewModelBase {
     spinners = {
         forceLicenseUpdate: ko.observable<boolean>(false),
         activateLicense: ko.observable<boolean>(false),
-        renewLicense: ko.observable<boolean>(false)      
+        renewLicense: ko.observable<boolean>(false),
+        checkConnectionToLicenseServer: ko.observable<boolean>(false)
     };
 
     constructor(licenseStatus: LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean, renewNonExpiredLicense = false) {
@@ -146,16 +152,47 @@ class registration extends dialogViewModelBase {
         }))
     }
 
-    activate() {
+    checkConnectionToLicenseServer() {
+        this.spinners.checkConnectionToLicenseServer(true);
+        return new getConnectivityToLicenseServerCommand()
+            .execute()
+            .done((connectionResult: Raven.Server.Web.Studio.LicenseHandler.ConnectivityToLicenseServer) => {
+                this.connectedToLicenseServer(connectionResult.StatusCode === "OK");
+                this.connectionException(connectionResult.Exception || "");
+            })
+            .always(() => this.spinners.checkConnectionToLicenseServer(false));
+    }
+    
+    getServerCertificateSetupMode() {
         return new getServerCertificateSetupModeCommand()
             .execute()
             .done((setupMode: Raven.Server.Commercial.SetupMode) => {
                 if (setupMode === "LetsEncrypt") {
                     this.letsEncryptMode(true);
                 }
-             });
+            });
+    }
+
+
+    activate() {
+        return $.when<any>(
+            this.getServerCertificateSetupMode(), 
+            this.checkConnectionToLicenseServer()
+        );
     }
     
+    compositionComplete(view?: any, parent?: any) {
+        super.compositionComplete(view, parent);
+
+        popoverUtils.longWithHover($(".not-connected"),
+            {
+                content:
+                    `<small><small>Unable to reach the RavenDB License Server at <code>api.ravendb.net</code><br>
+                     ${this.connectionException()}</small></small>`,
+                placement: "top"
+            });
+    }
+
     static showRegistrationDialogIfNeeded(license: LicenseStatus, skipIfNoLicense = false) {
         switch (license.Type) {
             case "Invalid":
