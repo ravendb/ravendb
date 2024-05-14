@@ -50,19 +50,6 @@ else
     fi
 fi
 
-echo -n "Add mscordaccore.so to ldconfig..."
-if [[ ! -f "$LIB_MSCORDACCORE_SO" ]]; then
-    echo "$LIB_MSCORDACCORE_SO file does not exist. Exiting..."
-    exit 4
-fi
-
-mkdir -p $LIB_MSCORDACCORE_DIR
-chown root:root $LIB_MSCORDACCORE_DIR
-cp "$LIB_MSCORDACCORE_SO" "$LIB_MSCORDACCORE_DIR"
-echo "$LIB_MSCORDACCORE_DIR" > "$LD_SO_CONF_DIR/ravendb.conf"
-ldconfig
-echo "DONE"
-
 binList=("$CREATEDUMP_PATH" "$RAVEN_DEBUG_PATH")
 for binFilePath in "${binList[@]}"
 do

@@ -34,9 +34,9 @@ function BuildServer ( $srcDir, $outDir, $target) {
 
     $commandArgs += '/p:SourceLinkCreate=true'
     
-    #if ($target -and $global:isPublishBundlingEnabled) {
-    #    $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true'
-    #}
+    if ($target -and $global:isPublishBundlingEnabled) {
+        $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:Client_IncludeZstd=false'
+    }
 
     write-host -ForegroundColor Cyan "Publish server: $command $commandArgs"
     Invoke-Expression -Command "$command $commandArgs"
@@ -121,7 +121,7 @@ function ShouldBuildStudio( $studioOutDir, $dontRebuildStudio, $dontBuildStudio 
     return $true
 }
 
-function BuildTool ( $toolName, $srcDir, $outDir, $target, $trim ) {
+function BuildTool ( $toolName, $srcDir, $outDir, $target ) {
     write-host "Building $toolName for $($target.Name)..."
     $command = "dotnet" 
     $commandArgs = @( "publish" )
@@ -141,9 +141,9 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $trim ) {
 
     $commandArgs += "/p:SourceLinkCreate=true"
     
-    #if ($target -and $global:isPublishBundlingEnabled) {
-    #    $commandArgs += "/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:PublishTrimmed=$trim"
-    #}
+    if ($target -and $global:isPublishBundlingEnabled) {
+        $commandArgs += "/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:Client_IncludeZstd=false"
+    }
 
     write-host -ForegroundColor Cyan "Publish ${toolName}: $command $commandArgs"
     Invoke-Expression -Command "$command $commandArgs"
