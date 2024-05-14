@@ -84,8 +84,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             {
                 do
                 {
-                    ProcessObject(iterator.Current, propertyAsString, field, indexingScope, documentToProcess,
-                        out shouldSaveAsBlittable, out value, out actualValue, out innerShouldSkip);
+                    ProcessObject(iterator.Current, propertyAsString, field, out shouldSaveAsBlittable, out value, out actualValue, out innerShouldSkip);
                     if (shouldSaveAsBlittable)
 {                        ProcessAsJson(actualValue, field, documentToProcess, out innerShouldSkip);}
                     hasFields |= innerShouldSkip == false;
@@ -95,7 +94,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             }
             else
             {
-                ProcessObject(propertyDescriptor.Value, propertyAsString, field, indexingScope, documentToProcess,
+                ProcessObject(propertyDescriptor.Value, propertyAsString, field,
                     out shouldSaveAsBlittable, out value, out actualValue, out innerShouldSkip);
                 if (shouldSaveAsBlittable)
                     ProcessAsJson(actualValue, field, documentToProcess, out innerShouldSkip);
@@ -156,8 +155,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             return value.IsObject() && value.IsArray() == false;
         }
 
-        void ProcessObject(JsValue valueToInsert, in string propertyAsString, IndexField field, 
-            CurrentIndexingScope indexingScope, ObjectInstance documentToProcess, out bool shouldProcessAsBlittable, out object value, out JsValue actualValue, out bool shouldSkip)
+        void ProcessObject(JsValue valueToInsert, in string propertyAsString, IndexField field, out bool shouldProcessAsBlittable, out object value, out JsValue actualValue, out bool shouldSkip)
         {
             shouldSkip = false;
             value = null;

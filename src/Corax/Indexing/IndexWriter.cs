@@ -6,7 +6,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics;
 using System.Text;
 using Corax.Analyzers;
 using Corax.Mappings;
@@ -18,7 +17,6 @@ using Sparrow.Compression;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
-using Sparrow.Server.Binary;
 using Sparrow.Server.Utils;
 using Sparrow.Server.Utils.VxSort;
 using Sparrow.Threading;
@@ -44,7 +42,7 @@ namespace Corax.Indexing
         private readonly HashSet<Slice> _indexedEntries = new(SliceComparer.Instance);
         private List<(long EntryId, float Boost)> _boostedDocs;
         private readonly IndexFieldsMapping _fieldsMapping;
-        private readonly bool _phraseQuerySupport;
+        private readonly SupportedFeatures _supportedFeatures;
         private FixedSizeTree _documentBoost;
         private Tree _indexMetadata;
         private Tree _persistedDynamicFieldsAnalyzers;
@@ -84,12 +82,12 @@ namespace Corax.Indexing
         // to explicitly provide the index writer with opening semantics and also every new
         // writer becomes essentially a unit of work which makes reusing assets tracking more explicit.
 
-        private IndexWriter(IndexFieldsMapping fieldsMapping, bool phraseQuerySupport)
+        private IndexWriter(IndexFieldsMapping fieldsMapping, SupportedFeatures supportedFeatures)
         {
             _indexDebugDumper = new IndexOperationsDumper(fieldsMapping);
             _builder = new IndexEntryBuilder(this);
             _fieldsMapping = fieldsMapping;
-            _phraseQuerySupport = phraseQuerySupport;
+            _supportedFeatures = supportedFeatures ?? new(); // if not explicitly set - all features are available
             _encodingBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize);
             _tokensBufferHandler = Analyzer.TokensPool.Rent(fieldsMapping.MaximumTokenSize);
             _utf8ConverterBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize * 10);
@@ -98,7 +96,7 @@ namespace Corax.Indexing
             _knownFieldsTerms = new IndexedField[bufferSize];
             for (int i = 0; i < bufferSize; ++i)
             {
-                _knownFieldsTerms[i] = new IndexedField(fieldsMapping.GetByFieldId(i));
+                _knownFieldsTerms[i] = new IndexedField(fieldsMapping.GetByFieldId(i), _supportedFeatures);
             }
 
             _entriesAlreadyAdded = new HashSet<long>();
@@ -106,7 +104,7 @@ namespace Corax.Indexing
             _removalsForTerm = new List<long>();
         }
 
-        public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping, bool phraseQuerySupport = true) : this(fieldsMapping, phraseQuerySupport)
+        public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping, in SupportedFeatures supportedFeatures = default) : this(fieldsMapping, supportedFeatures)
         {
             TransactionPersistentContext transactionPersistentContext = new(true);
             _transaction = environment.WriteTransaction(transactionPersistentContext);
@@ -115,7 +113,7 @@ namespace Corax.Indexing
             Init();
         }
         
-        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping, bool phraseQuerySupport = true) : this(fieldsMapping, phraseQuerySupport)
+        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping, in SupportedFeatures supportedFeatures = default) : this(fieldsMapping, supportedFeatures)
         {
             _transaction = tx;
 
@@ -163,7 +161,7 @@ namespace Corax.Indexing
         private void InitializeFieldRootPageForTermsVector(IndexedField field)
         {
             Debug.Assert(field.FieldIndexingMode is FieldIndexingMode.Search, "field.FieldIndexingMode is FieldIndexingMode.Search");
-            Debug.Assert(_phraseQuerySupport, "_phraseQuerySupport");
+            Debug.Assert(_supportedFeatures.PhraseQuery, "_phraseQuerySupport");
             
             if (field.TermsVectorFieldRootPage == -1)
             {
@@ -302,7 +300,7 @@ namespace Corax.Indexing
             {
                 indexedField = new IndexedField(Constants.IndexWriter.DynamicField, binding.FieldName, binding.FieldNameLong,
                     binding.FieldNameDouble, binding.FieldTermTotalSumField, binding.Analyzer,
-                    binding.FieldIndexingMode, binding.HasSuggestions, binding.ShouldStore);
+                    binding.FieldIndexingMode, binding.HasSuggestions, binding.ShouldStore, _supportedFeatures);
 
                 if (persistedAnalyzer != null)
                 {
@@ -349,7 +347,7 @@ namespace Corax.Indexing
                 IndexFieldsMappingBuilder.GetFieldNameForLongs(context, clonedFieldName, out var fieldNameLong);
                 IndexFieldsMappingBuilder.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
                 IndexFieldsMappingBuilder.GetFieldForTotalSum(context, clonedFieldName, out var nameSum);
-                var field = new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, analyzer, mode, false, false);
+                var field = new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, analyzer, mode, hasSuggestions: false, shouldStore: false, _supportedFeatures);
                 _dynamicFieldsTerms[clonedFieldName] = field;
                 return field;
             }
@@ -2061,7 +2059,7 @@ namespace Corax.Indexing
             }
         }
 
-        private bool FieldSupportsPhraseQuery(in IndexedField field) => _phraseQuerySupport && field.FieldIndexingMode is FieldIndexingMode.Search;
+        private bool FieldSupportsPhraseQuery(in IndexedField field) => _supportedFeatures.PhraseQuery && field.FieldIndexingMode is FieldIndexingMode.Search;
         
         public void Dispose()
         {
