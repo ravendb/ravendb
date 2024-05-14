@@ -1996,31 +1996,38 @@ namespace Raven.Client.Http
         {
             if (response != null)
             {
-                var stream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
-                var ms = new MemoryStream(); // todo: have a pool of those
-                await stream.CopyToAsync(ms).ConfigureAwait(false);
-                try
+                using (var stream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false))
+                using (var ms = new MemoryStream()) // todo: have a pool of those
                 {
-                    ms.Position = 0;
-                    using (var responseJson = await context.ReadForMemoryAsync(ms, "RequestExecutor/HandleServerDown/ReadResponseContent").ConfigureAwait(false))
+                    await stream.CopyToAsync(ms).ConfigureAwait(false);
+                    try
                     {
-                        return ExceptionDispatcher.Get(responseJson, response.StatusCode, e);
+                        ms.Position = 0;
+                        using (var responseJson = await context.ReadForMemoryAsync(ms, "RequestExecutor/HandleServerDown/ReadResponseContent").ConfigureAwait(false))
+                        {
+                            return ExceptionDispatcher.Get(responseJson, response.StatusCode, e);
+                        }
+                    }
+                    catch
+                    {
+                        using (var streamReader = new StreamReader(ms))
+                        {
+                            // we failed to parse the error
+                            ms.Position = 0;
+                            return ExceptionDispatcher.Get(
+                                new ExceptionDispatcher.ExceptionSchema
+                                {
+                                    Url = request.RequestUri.ToString(),
+                                    Message = "Got unrecognized response from the server",
+                                    Error = await streamReader.ReadToEndAsync().ConfigureAwait(false),
+                                    Type = "Unparsable Server Response"
+                                }, response.StatusCode, e);
+                        }
                     }
                 }
-                catch
-                {
-                    // we failed to parse the error
-                    ms.Position = 0;
-                    return ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
-                    {
-                        Url = request.RequestUri.ToString(),
-                        Message = "Got unrecognized response from the server",
-                        Error = await new StreamReader(ms).ReadToEndAsync().ConfigureAwait(false),
-                        Type = "Unparseable Server Response"
-                    }, response.StatusCode, e);
-                }
             }
-            //this would be connections that didn't have response, such as "couldn't connect to remote server"
+
+            // this would be connections that didn't have response, such as "couldn't connect to remote server"
             return ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
             {
                 Url = request.RequestUri.ToString(),
