@@ -361,16 +361,15 @@ namespace SlowTests.Server.Documents.Expiration
         [RavenData(5, false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task ExpirationWithMaxItemsToProcessConfiguredShouldWork(Options options, int batchSize, bool compressed)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDatabaseRecord = record =>
             {
-                ModifyDatabaseRecord = record =>
+                if (compressed)
                 {
-                    if (compressed)
-                    {
-                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
-                    }
+                    record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                 }
-            }))
+            };
+            
+            using (var store = GetDocumentStore(options))
             {
                 // Insert documents with expiration before activating the expiration
                 var expires = SystemTime.UtcNow.AddMinutes(5);
@@ -419,16 +418,15 @@ namespace SlowTests.Server.Documents.Expiration
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task RefreshWithMaxItemsToProcessConfiguredShouldWork(Options options, bool compressed)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDatabaseRecord = record =>
             {
-                ModifyDatabaseRecord = record =>
+                if (compressed)
                 {
-                    if (compressed)
-                    {
-                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
-                    }
+                    record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                 }
-            }))
+            };
+            
+            using (var store = GetDocumentStore(options))
             {
                 // Insert documents with refresh before activating the refresh
                 var refresh = SystemTime.UtcNow.AddMinutes(5);
