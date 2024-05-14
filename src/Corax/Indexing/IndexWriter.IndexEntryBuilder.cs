@@ -57,7 +57,8 @@ public partial class IndexWriter
                 RegisterEmptyOrNull(field, StoredFieldType.Null);
             }
 
-            ExactInsert(field, Constants.NullValueSlice);
+            if (field.ShouldIndex)
+                ExactInsert(field, Constants.NullValueSlice);
         }
 
         private IndexedField GetField(int fieldId, string path)
@@ -132,6 +133,8 @@ public partial class IndexWriter
 
         ref EntriesModifications ExactInsert(IndexedField field, ReadOnlySpan<byte> value)
         {
+            Debug.Assert(field.FieldIndexingMode != FieldIndexingMode.No, "field.FieldIndexingMode != FieldIndexingMode.No");
+            
             ByteStringContext<ByteStringMemoryCache>.InternalScope? scope = CreateNormalizedTerm(_parent._entriesAllocator, value, out var slice);
 
             // We are gonna try to get the reference if it exists, but we wont try to do the addition here, because to store in the
@@ -153,7 +156,7 @@ public partial class IndexWriter
             term.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex, freq: 1);
 
             // Creates a mapping for PhraseQuery
-            if (_parent.FieldSupportsPhraseQuery(field))
+            if (field.SupportedFeatures.PhraseQuery)
             {
                 // We're aligning our EntryToTerms list to have exactly _termPerEntryIndex items.
                 // For most use cases, we will append only one element for each document, but we may be in a situation when the difference between sizes is bigger than 1.
@@ -168,10 +171,10 @@ public partial class IndexWriter
                     for (var i = field.EntryToTerms.Count; i <= _termPerEntryIndex; i++)
                     {
                         var nativeList = new NativeList<int>();
-	
+                        
                         if (i == _termPerEntryIndex)
                             nativeList.Initialize(_parent._entriesAllocator, 1);
-	   
+                        
                         field.EntryToTerms.AddByRefUnsafe() = nativeList;
                     }
                 }
@@ -249,7 +252,8 @@ public partial class IndexWriter
                     RegisterTerm(field, value, StoredFieldType.Term);
                 }
 
-                Insert(field, value);
+                if (field.ShouldIndex)
+                    Insert(field, value);
             }
             else
             {
@@ -258,7 +262,8 @@ public partial class IndexWriter
                     RegisterEmptyOrNull(field, StoredFieldType.Empty);
                 }
 
-                ExactInsert(field, Constants.EmptyStringSlice);
+                if (field.ShouldIndex)
+                    ExactInsert(field, Constants.EmptyStringSlice);
             }
         }
 
@@ -285,15 +290,23 @@ public partial class IndexWriter
                 RegisterTerm(field, value, StoredFieldType.Tuple | StoredFieldType.Term);
             }
 
-            ref var term = ref ExactInsert(field, value);
-            term.Long = longValue;
-            term.Double = dblValue;
-            NumericInsert(field, longValue, dblValue);
+
+            if (field.ShouldIndex)
+            {
+                ref var term = ref ExactInsert(field, value);
+                term.Long = longValue;
+                term.Double = dblValue;
+                NumericInsert(field, longValue, dblValue);
+            }
         }
 
         public void WriteSpatial(int fieldId, string path, CoraxSpatialPointEntry entry)
         {
             var field = GetField(fieldId, path);
+
+            if (field.ShouldIndex == false)
+                throw new InvalidOperationException($"Your spatial field '{field.Name}' has 'Indexing' set to 'No'. Spatial fields cannot be stored, so this field is useless because it cannot be searched or retrieved."); 
+            
             RecordSpatialPointForEntry(field, (entry.Latitude, entry.Longitude));
 
             var maxLen = Encoding.UTF8.GetMaxByteCount(entry.Geohash.Length);

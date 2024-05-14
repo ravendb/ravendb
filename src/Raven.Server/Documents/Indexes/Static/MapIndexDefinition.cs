@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     var name = $"compound({string.Join(",",field)})";
                     var indexField = IndexField.Create(name, new IndexFieldOptions(), allFields, idX++);
-                    indexField.Indexing = FieldIndexing.No; // handled separately
+                    indexField.Indexing = FieldIndexing.Default; // handled separately
                     result.Add(indexField);
                 }
             }
