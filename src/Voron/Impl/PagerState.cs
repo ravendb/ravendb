@@ -26,7 +26,7 @@ namespace Voron.Impl
 
             public override string ToString()
             {
-                return $"{nameof(BaseAddress)}: {new IntPtr(BaseAddress).ToString("x")} - {new IntPtr(BaseAddress + Size).ToString("x")} {nameof(Size)}: {Size}";
+                return $"{nameof(BaseAddress)}: {new IntPtr(BaseAddress):x} - {new IntPtr(BaseAddress + Size):x} {nameof(Size)}: {Size}";
             }
         }
 

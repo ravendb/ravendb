@@ -2,14 +2,10 @@
 
 namespace Voron.Util.PFor;
 
-public struct MaskEntries : ISimdTransform
+public readonly struct MaskEntries(uint mask) : ISimdTransform
 {
-    private readonly Vector256<uint> _mask;
+    private readonly Vector256<uint> _mask = Vector256.Create(mask);
 
-    public MaskEntries(uint mask)
-    {
-        _mask = Vector256.Create(mask);
-    }
     public Vector256<uint> Decode(Vector256<uint> curr, ref Vector256<uint> prev)
     {
         return curr;

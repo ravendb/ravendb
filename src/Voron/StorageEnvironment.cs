@@ -906,18 +906,11 @@ namespace Voron
             return false;
         }
 
-        public struct ExitWriteLock : IDisposable
+        public readonly struct ExitWriteLock(ReaderWriterLockSlim rwls) : IDisposable
         {
-            private readonly ReaderWriterLockSlim _rwls;
-
-            public ExitWriteLock(ReaderWriterLockSlim rwls)
-            {
-                _rwls = rwls;
-            }
-
             public void Dispose()
             {
-                _rwls?.ExitWriteLock();
+                rwls?.ExitWriteLock();
             }
         }
 

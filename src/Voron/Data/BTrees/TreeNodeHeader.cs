@@ -41,12 +41,6 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ReadOnlySpan<byte> ToReadOnlySpan(TreeNodeHeader* node, ByteStringType type)
-        {
-            return new ReadOnlySpan<byte>((byte*)node + Constants.Tree.NodeHeaderSize, node->KeySize);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.InternalScope ToSlice(ByteStringContext context, TreeNodeHeader* node, ByteStringType type, out Slice str)
         {
             var scope = context.From((byte*)node + Constants.Tree.NodeHeaderSize, node->KeySize, type | (ByteStringType) SliceOptions.Key, out ByteString byteString);
@@ -82,18 +76,6 @@ namespace Voron.Data.BTrees
                 return new ValueReader(overFlowPage.Pointer + Constants.Tree.PageHeaderSize, overFlowPage.OverflowSize);
             }
             return new ValueReader((byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize, node->DataSize);
-        }
-
-        public static ByteStringContext.ExternalScope GetData(LowLevelTransaction tx, TreeNodeHeader* node, out Slice slice)
-        {
-            if (node->Flags == (TreeNodeFlags.PageRef))
-            {
-                var overFlowPage = tx.GetPage(node->PageNumber);
-                if (overFlowPage.OverflowSize > ushort.MaxValue)
-                    throw new InvalidOperationException("Cannot convert big data to a slice, too big");
-                return Slice.External(tx.Allocator, overFlowPage.Pointer + Constants.Tree.PageHeaderSize, (ushort)overFlowPage.OverflowSize, out slice);
-            }
-            return Slice.External(tx.Allocator, (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize, (ushort) node->DataSize, out slice);
         }
 
         public static ReadOnlySpan<byte> GetKeyAsSpan(TreeNodeHeader* node)

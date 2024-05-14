@@ -202,7 +202,7 @@ namespace Voron.Impl
             {
                 CopyPagerStatesFromPreviousTx(previous);
 
-                _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
+                _pageLocator = transactionPersistentContext.AllocatePageLocator();
 
                 _scratchPagerStates = previous._scratchPagerStates;
 
@@ -301,7 +301,7 @@ namespace Voron.Impl
 
                 _state = previous._state.Clone();
 
-                _pageLocator = PersistentContext.AllocatePageLocator(this);
+                _pageLocator = PersistentContext.AllocatePageLocator();
                 InitializeRoots();
                 InitTransactionHeader();
             }
@@ -372,7 +372,7 @@ namespace Voron.Impl
                     EnsurePagerStateReference(ref pagerState);
                 }
 
-                _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
+                _pageLocator = transactionPersistentContext.AllocatePageLocator();
 
                 switch (flags)
                 {
