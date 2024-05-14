@@ -28,6 +28,12 @@ function CreateToolsPackage( $projectDir, $releaseDir, $packOpts ) {
 
     LayoutToolsPackage $packageDir $projectDir $packOpts
 
+    $toolsDir = [io.path]::combine($packageDir, "Tools")
+    $runtimeConfigFileName = [io.path]::combine($toolsDir, "Raven.Server.runtimeconfig.json")
+    $settingFileName = [io.path]::combine($toolsDir, "settings.default.json")
+    Remove-Item -ErrorAction SilentlyContinue $runtimeConfigFileName
+    Remove-Item -ErrorAction SilentlyContinue $settingFileName
+
     $releaseArchiveFile = GetRavenArchiveFileName $packOpts.VersionInfo.Version $target "Tools"
     $releaseArchivePath = [io.path]::combine($releaseDir, $releaseArchiveFile)
     if ($target.IsUnix) {
