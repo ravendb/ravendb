@@ -648,11 +648,6 @@ namespace Raven.Server.Documents
             using (Slice.External(context.Allocator, (byte*)&index, sizeof(long), out Slice indexSlice))
                 tree.Add(LastCompletedClusterTransactionIndexSlice, indexSlice);
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string startAfterId,
-            long start, long take, string collection, Reference<long> skippedResults, DocumentFields fields = DocumentFields.All, CancellationToken token = default)
-            => GetDocumentsStartingWith(context, idPrefix, startAfterId, start, take, collection, skippedResults, fields, token);
         
         public IEnumerable<TDocument> GetDocumentsStartingWith<TDocument>(DocumentsOperationContext context, string idPrefix, string startAfterId,
             long start, long take, string collection, Reference<long> skippedResults, DocumentFields fields = DocumentFields.All, CancellationToken token = default)

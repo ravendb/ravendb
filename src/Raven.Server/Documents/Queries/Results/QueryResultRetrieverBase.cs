@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Queries.Results
     public abstract class QueryResultRetrieverBase<TDocument> : QueryResultRetrieverCommon, IQueryResultRetriever<TDocument>
     where TDocument : Document, new()
     {
-        private const string CurrentRootDocumentMarker = "@root-doc";
+        private readonly string _currentRootDocumentMarker = string.Empty;
         private readonly ScriptRunnerCache _scriptRunnerCache;
         protected readonly IndexQueryServerSide _query;
         private readonly JsonOperationContext _context;
@@ -992,7 +992,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
             else
             {
-                _loadedDocumentIds.Add(document.Id ?? CurrentRootDocumentMarker); // null source alias is the root doc
+                _loadedDocumentIds.Add(document.Id ?? _currentRootDocumentMarker); // null source alias is the root doc
                 _loadedDocumentsByAliasName.Clear();
             }
 
@@ -1015,7 +1015,7 @@ namespace Raven.Server.Documents.Queries.Results
                     continue;
 
                 string lowerDocId = docId.ToLowerInvariant();
-                var doc = lowerDocId == CurrentRootDocumentMarker ? document : LoadDocument(document, lowerDocId, ref retrieverInput);
+                var doc = lowerDocId == _currentRootDocumentMarker ? document : LoadDocument(document, lowerDocId, ref retrieverInput);
                 if (doc == null)
                     continue;
 
