@@ -14,6 +14,7 @@
     <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
     <EnablePreviewFeatures>True</EnablePreviewFeatures>
     <GenerateRequiresPreviewFeaturesAttribute>True</GenerateRequiresPreviewFeaturesAttribute>
+    <PublishTrimmed>True</PublishTrimmed>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\src\Raven.Server\Commercial\CompleteClusterConfigurationResult.cs" Link="Server\Commercial\CompleteClusterConfigurationResult.cs" />
