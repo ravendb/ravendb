@@ -54,6 +54,7 @@ namespace Raven.Server.Documents.Refresh
                         // the issue when the conflict is resolved
                     }
                 }
+                context.Transaction.ForgetAbout(doc); 
             }
         }
 

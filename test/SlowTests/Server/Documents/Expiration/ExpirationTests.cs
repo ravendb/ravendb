@@ -50,8 +50,10 @@ namespace SlowTests.Server.Documents.Expiration
             await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
         }
 
-        [Fact]
-        public async Task CanAddEntityWithExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry()
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData([true])]
+        [InlineData([false])]
+        public async Task CanAddEntityWithExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(bool compressed)
         {
             var utcFormats = new Dictionary<string, DateTimeKind>
             {
@@ -67,7 +69,16 @@ namespace SlowTests.Server.Documents.Expiration
 
             foreach (var dateTimeFormat in utcFormats)
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseRecord = record =>
+                    {
+                        if (compressed)
+                        {
+                            record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                        }
+                    }
+                }))
                 {
                     await SetupExpiration(store);
 
@@ -113,14 +124,25 @@ namespace SlowTests.Server.Documents.Expiration
             }
         }
 
-        [Theory]
-        [InlineData(10)]
-        [InlineData(100)]
-        public async Task CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(int count)
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData(true, 10)]
+        [InlineData(false, 10)]
+        [InlineData(true, 100)]
+        [InlineData(false, 100)]
+        public async Task CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(bool compressed, int count)
         {
             var company = new { Name = "Company Name" };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                }
+            }))
             {
                 await SetupExpiration(store);
 
@@ -159,10 +181,21 @@ namespace SlowTests.Server.Documents.Expiration
             }
         }
 
-        [Fact]
-        public async Task CanAddEntityWithExpiry_BeforeActivatingExpirtaion_WillNotBeAbleToReadItAfterExpiry()
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData([true])]
+        [InlineData([false])]
+        public async Task CanAddEntityWithExpiry_BeforeActivatingExpirtaion_WillNotBeAbleToReadItAfterExpiry(bool compressed)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                }
+            }))
             {
                 // Insert document with expiration before activating the expiration
                 var company = new Company { Name = "Company Name" };
@@ -191,10 +224,21 @@ namespace SlowTests.Server.Documents.Expiration
             }
         }
 
-        [Fact]
-        public async Task CanSetupExpirationAndRefresh()
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData([true])]
+        [InlineData([false])]
+        public async Task CanSetupExpirationAndRefresh(bool compressed)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                }
+            }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -232,10 +276,21 @@ namespace SlowTests.Server.Documents.Expiration
             }
         }
         
-        [Fact]
-        public async Task CanRefreshFromClusterTransaction()
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData([true])]
+        [InlineData([false])]
+        public async Task CanRefreshFromClusterTransaction(bool compressed)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                }
+            }))
             {
                 var database = await GetDatabase(store.Database);
 
@@ -275,10 +330,21 @@ namespace SlowTests.Server.Documents.Expiration
             }
         }
 
-        [Fact]
-        public async Task ThrowsIfUsingWrongExpiresOrRefresh()
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData([true])]
+        [InlineData([false])]
+        public async Task ThrowsIfUsingWrongExpiresOrRefresh(bool compressed)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                }
+            }))
             {
                 var expires = SystemTime.UtcNow.AddMinutes(5);
                 
@@ -309,10 +375,21 @@ namespace SlowTests.Server.Documents.Expiration
         }
 
         [RavenTheory(RavenTestCategory.ExpirationRefresh)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task CanPostAndGetDocumentsExpiration(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanPostAndGetDocumentsExpiration(Options options, bool compressed)
         {
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                },
+                DatabaseMode = options.DatabaseMode,
+            }))
             {
                 var exConfig = new ExpirationConfiguration
                 {
@@ -331,8 +408,10 @@ namespace SlowTests.Server.Documents.Expiration
             }
         }
 
-        [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Sharding)]
-        public async Task ShouldDeleteExpiredDocumentsForSharding()
+        [RavenTheory(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Sharding)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task ShouldDeleteExpiredDocumentsForSharding(bool compressed)
         {
             var utcFormats = new Dictionary<string, DateTimeKind>
             {
@@ -360,7 +439,14 @@ namespace SlowTests.Server.Documents.Expiration
             {
                 Server = cluster.Leader,
                 CreateDatabase = false,
-                ModifyDatabaseName = _ => database2
+                ModifyDatabaseName = _ => database2,
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                },
             }))
             {
                 foreach (var dateTimeFormat in utcFormats)
