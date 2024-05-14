@@ -15,7 +15,7 @@ public class RavenDB_19033 : NoDisposalNeeded
     {
     }
 
-    private class MyDb : IDisposable
+    internal class MyDb : IDisposable
     {
         public static List<MyDb> RunningDatabases = new List<MyDb>();
 

@@ -1,4 +1,5 @@
-﻿namespace Raven.Server.Documents.Sharding.Queries;
+﻿
+namespace Raven.Server.Documents.Sharding.Queries;
 
 public static class ShardedQueryResultDocumentExtensions
 {
