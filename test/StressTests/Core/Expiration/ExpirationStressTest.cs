@@ -25,7 +25,7 @@ namespace StressTests.Core.Expiration
         {
             using (var expiration = new ExpirationTests(Output))
             {
-                await expiration.CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(count);
+                await expiration.CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(false, count);
             }
         }
     }

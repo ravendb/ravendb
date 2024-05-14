@@ -44,10 +44,21 @@ namespace SlowTests.Server.Documents.DataArchival
             await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config);
         }
 
-        [Fact]
-        public async Task CanSetupDataArchival()
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task CanSetupDataArchival(bool compressed)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                }
+            }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -84,13 +95,24 @@ namespace SlowTests.Server.Documents.DataArchival
             }
         }
 
-        [Fact]
-        public async Task WillArchiveAllDocumentsToBeArchivedInSingleRun_EvenWhenMoreThanBatchSize()
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task WillArchiveAllDocumentsToBeArchivedInSingleRun_EvenWhenMoreThanBatchSize(bool compressed)
         {
             DataArchivist.BatchSize = 32;
             const int count = 3200;
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                }
+            }))
             {
                 await SetupDataArchival(store);
 
@@ -147,11 +169,31 @@ namespace SlowTests.Server.Documents.DataArchival
             }
         }
 
-        [Fact]
-        public async Task ShouldImportTask()
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task ShouldImportTask(bool compressed)
         {
-            using (var srcStore = GetDocumentStore())
-            using (var dstStore = GetDocumentStore())
+            using (var srcStore = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                }
+            }))
+            using (var dstStore = GetDocumentStore(new Options 
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                }
+            }))
             {
                 await SetupDataArchival(srcStore);
 
@@ -167,10 +209,21 @@ namespace SlowTests.Server.Documents.DataArchival
             }
         }
 
-        [Fact]
-        public async Task ThrowsIfUsingWrongArchiveAtDateTimeFormat()
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task ThrowsIfUsingWrongArchiveAtDateTimeFormat(bool compressed)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options 
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                }
+            }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -186,10 +239,21 @@ namespace SlowTests.Server.Documents.DataArchival
         }
 
         [RavenTheory(RavenTestCategory.Configuration)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task ArchiveDocsWithMaxItemsToProcessConfiguredShouldWork(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ArchiveDocsWithMaxItemsToProcessConfiguredShouldWork(Options options, bool compressed)
         {
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                },
+                DatabaseMode = options.DatabaseMode,
+            }))
             {
                 // Insert documents with ArchiveAt before activating the archival
                 var archiveDateTime = SystemTime.UtcNow.AddMinutes(5);
