@@ -37,7 +37,7 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
         return context.OpenReadTransaction();
     }
 
-    protected override Task WriteItems(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer)
+    protected override Task WriteItemsAsync(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer)
     {
         var revisions = string.IsNullOrEmpty(Collection)
             ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsInReverseEtagOrder(context, _start, _pageSize)
