@@ -115,7 +115,7 @@ namespace Voron.Benchmark.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexFieldsMapping fields = CreateFieldsMapping(bsc);
 
-            using (var writer = new IndexWriter(env, fields))
+            using (var writer = new IndexWriter(env, fields, SupportedFeatures.All))
             {
                 {
                     using var builder = writer.Index("Arava");

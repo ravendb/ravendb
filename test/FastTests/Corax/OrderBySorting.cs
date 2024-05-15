@@ -89,7 +89,7 @@ namespace FastTests.Corax
             using var knownFields = CreateKnownFields(bsc);
 
             {
-                using var indexWriter = new IndexWriter(Env, knownFields);
+                using var indexWriter = new IndexWriter(Env, knownFields, SupportedFeatures.All);
                 foreach (var entry in longList)
                 {
                     using var builder = indexWriter.Index(entry.Id);

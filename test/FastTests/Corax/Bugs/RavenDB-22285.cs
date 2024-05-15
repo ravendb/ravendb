@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Corax;
 using Corax.Analyzers;
 using Corax.Indexing;
 using Corax.Mappings;
@@ -29,7 +30,7 @@ public class RavenDB_22285 : StorageTest
         using var mapping = CreateKnownFields(allocator);
         var descendingSortedTerm = Enumerable.Range(0, 26).Select(i => new[] { (byte)('z' - i) }).ToList();
         var database = new List<Dto>();
-        using (var indexWriter = new IndexWriter(Env, mapping))
+        using (var indexWriter = new IndexWriter(Env, mapping, SupportedFeatures.All))
         {
             for (var idX = 0; idX < 2096; ++idX)
             {

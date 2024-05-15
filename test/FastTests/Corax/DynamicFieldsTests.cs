@@ -37,7 +37,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         builder.AddBinding(0, "Id");
         using var knownFields = builder.Build();
         long entryId;
-        using (var indexWriter = new IndexWriter(Env, knownFields))
+        using (var indexWriter = new IndexWriter(Env, knownFields, SupportedFeatures.All))
         {
             indexWriter.UpdateDynamicFieldsMapping(IndexFieldsMappingBuilder.CreateForWriter(true)
                 .AddBinding(Constants.IndexWriter.DynamicField, fieldName, shouldStore:true)
@@ -79,7 +79,7 @@ public unsafe class DynamicFieldsTests : StorageTest
             .AddBinding(1, dSlice)
             .Build();
 
-        using (var indexer = new IndexWriter(Env, knownFields))
+        using (var indexer = new IndexWriter(Env, knownFields, SupportedFeatures.All))
         {
             using (var writer = indexer.Index("elements/1"))
             {
@@ -153,7 +153,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         var fields = builder.Build();
 
 
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var entry = writer.Update("users/1"u8))
             {
@@ -165,7 +165,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         }
 
 
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             writer.TryDeleteEntry("users/1");
             writer.Commit();
@@ -192,7 +192,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         var fields = builder.Build();
 
 
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var entry = writer.Update("users/1"u8))
             {
@@ -206,7 +206,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         }
 
 
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             writer.TryDeleteEntry("users/1");
             writer.Commit();
@@ -234,7 +234,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         var fields = builder.Build();
 
 
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var entry = writer.Update("users/1"u8))
             {
@@ -246,7 +246,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         }
 
 
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             writer.TryDeleteEntry("users/1");
             writer.Commit();
@@ -273,7 +273,7 @@ public unsafe class DynamicFieldsTests : StorageTest
             .AddBinding(1, dSlice);
         var fields = builder.Build();
 
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var entry = writer.Index("users/1"))
             {
@@ -285,7 +285,7 @@ public unsafe class DynamicFieldsTests : StorageTest
             writer.Commit();
         }
 
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var entry = writer.Update("users/1"u8))
             {
@@ -297,7 +297,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         }
 
 
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var entry = writer.Update("users/1"u8))
             {
@@ -331,7 +331,7 @@ public unsafe class DynamicFieldsTests : StorageTest
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using IndexFieldsMapping fields = PrepareSpatial(bsc);
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var builder = writer.Index(IdString))
             {
@@ -359,7 +359,7 @@ public unsafe class DynamicFieldsTests : StorageTest
             }
         }
 
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             writer.TryDeleteEntry(IdString);
             writer.Commit();
@@ -395,7 +395,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         using IndexFieldsMapping fields = PrepareSpatial(bsc);
         
         long entryId;
-        using (var indexWriter = new IndexWriter(Env, fields))
+        using (var indexWriter = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var writer = indexWriter.Index("items/1"))
             {
@@ -449,7 +449,7 @@ public unsafe class DynamicFieldsTests : StorageTest
             .AddBinding(1, dSlice);
         var fields = builder.Build();
 
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var entryBuilder = writer.Index("users/1"))
             {
@@ -460,7 +460,7 @@ public unsafe class DynamicFieldsTests : StorageTest
             writer.Commit();
         }
         
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var entryBuilder = writer.Update("users/1"u8))
             {
@@ -479,7 +479,7 @@ public unsafe class DynamicFieldsTests : StorageTest
             Assert.Equal(1, read);
         }
         
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             writer.TryDeleteEntry("users/1");
             writer.Commit();
@@ -505,7 +505,7 @@ public unsafe class DynamicFieldsTests : StorageTest
             .AddBinding(1, dSlice);
         var fields = builder.Build();
 
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var entryBuilder = writer.Update("users/1"u8))
             {
@@ -517,7 +517,7 @@ public unsafe class DynamicFieldsTests : StorageTest
             writer.Commit();
         }
         
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var entryBuilder = writer.Update("users/1"u8))
             {
@@ -536,7 +536,7 @@ public unsafe class DynamicFieldsTests : StorageTest
             Assert.Equal(1, read);
         }
      
-        using (var writer = new IndexWriter(Env, fields))
+        using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var entry = writer.Update("users/1"u8))
             {

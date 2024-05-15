@@ -181,7 +181,7 @@ public class RankingFunctionTests : StorageTest
     
     private void IndexEntries(IEnumerable<EntryData> entries)
     {
-        using var indexWriter = new IndexWriter(Env, _mapping);
+        using var indexWriter = new IndexWriter(Env, _mapping, SupportedFeatures.All);
         
         foreach (var dto in entries)
         {

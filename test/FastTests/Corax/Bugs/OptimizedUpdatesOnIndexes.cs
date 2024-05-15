@@ -22,7 +22,7 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
     {
         using var fields = CreateKnownFields(Allocator);
         long oldId; 
-        using (var indexWriter = new IndexWriter(Env, fields))
+        using (var indexWriter = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var entry = indexWriter.Update("cars/1"u8))
             {
@@ -45,7 +45,7 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
         }
 
         long newId;
-        using (var indexWriter = new IndexWriter(Env, fields))
+        using (var indexWriter = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var entry = indexWriter.Update("cars/1"u8))
             {

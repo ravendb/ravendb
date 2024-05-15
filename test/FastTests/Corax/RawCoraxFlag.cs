@@ -49,7 +49,7 @@ public class RawCoraxFlag : StorageTest
         using var blittable2 = ctx.ReadObject(json2, "foo");
         {
             
-            using var writer = new IndexWriter(Env, _analyzers);
+            using var writer = new IndexWriter(Env, _analyzers, SupportedFeatures.All);
             writer.UpdateDynamicFieldsMapping(IndexFieldsMappingBuilder.CreateForWriter(true)
                 .AddDynamicBinding(dynamicSlice,FieldIndexingMode.No, true)
                 .Build());
@@ -83,7 +83,7 @@ public class RawCoraxFlag : StorageTest
         }
 
         //Delete part
-        using (var indexWriter = new IndexWriter(Env, _analyzers))
+        using (var indexWriter = new IndexWriter(Env, _analyzers, SupportedFeatures.All))
         {
             indexWriter.TryDeleteEntry("1");
             indexWriter.Commit();
@@ -107,7 +107,7 @@ public class RawCoraxFlag : StorageTest
         _analyzers = CreateKnownFields(_bsc, true, shouldStore: true);
 
         {
-            using var writer = new IndexWriter(Env, _analyzers);
+            using var writer = new IndexWriter(Env, _analyzers, SupportedFeatures.All);
 
             using (var builder = writer.Index("us/1"u8))
             {
@@ -143,7 +143,7 @@ public class RawCoraxFlag : StorageTest
         _analyzers = CreateKnownFields(_bsc, true, shouldStore: true);
 
         {
-            using var writer = new IndexWriter(Env, _analyzers);
+            using var writer = new IndexWriter(Env, _analyzers, SupportedFeatures.All);
 
             using (var builder = writer.Index("us/1"u8))
             {
@@ -195,7 +195,7 @@ public class RawCoraxFlag : StorageTest
         using var blittable2 = ctx.ReadObject(json2, "foo");
         {
             
-            using var writer = new IndexWriter(Env, _analyzers);
+            using var writer = new IndexWriter(Env, _analyzers, SupportedFeatures.All);
 
             foreach (var (id, item) in new[] {("1", blittable1), ("2", blittable2)})
             {
@@ -232,7 +232,7 @@ public class RawCoraxFlag : StorageTest
         }
         
         //Delete part
-        using (var indexWriter = new IndexWriter(Env, _analyzers))
+        using (var indexWriter = new IndexWriter(Env, _analyzers, SupportedFeatures.All))
         {
             indexWriter.TryDeleteEntry("1");
             indexWriter.Commit();

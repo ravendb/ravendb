@@ -319,7 +319,7 @@ namespace FastTests.Corax
             
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             using var knownFields = CreateKnownFields(bsc);
-            using (var indexWriter = new IndexWriter(Env, knownFields))
+            using (var indexWriter = new IndexWriter(Env, knownFields, SupportedFeatures.All))
             {
                 indexWriter.TryDeleteEntry("list/1");
                 indexWriter.Commit();
@@ -387,7 +387,7 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             using var knownFields = CreateKnownFields(bsc);
 
-            using var indexWriter = new IndexWriter(Env, knownFields);
+            using var indexWriter = new IndexWriter(Env, knownFields, SupportedFeatures.All);
 
             foreach (var entry in longList)
             {
