@@ -721,7 +721,7 @@ namespace Raven.Server.Smuggler.Documents
 
                             try
                             {
-                                await actions.WriteAutoIndexAsync(autoMapIndexDefinition, IndexType.AutoMap, _options.AuthorizationStatus);
+                                await actions.WriteIndexAsync(autoMapIndexDefinition, IndexType.AutoMap, _options.AuthorizationStatus);
                             }
                             catch (Exception e)
                             {
@@ -734,7 +734,7 @@ namespace Raven.Server.Smuggler.Documents
                             var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)index.IndexDefinition;
                             try
                             {
-                                await actions.WriteAutoIndexAsync(autoMapReduceIndexDefinition, IndexType.AutoMapReduce, _options.AuthorizationStatus);
+                                await actions.WriteIndexAsync(autoMapReduceIndexDefinition, IndexType.AutoMapReduce, _options.AuthorizationStatus);
                             }
                             catch (Exception e)
                             {

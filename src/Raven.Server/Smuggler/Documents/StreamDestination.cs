@@ -1034,7 +1034,7 @@ namespace Raven.Server.Smuggler.Documents
                 _context = context;
             }
 
-            public async ValueTask WriteAutoIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType, AuthorizationStatus authorizationStatus)
+            public async ValueTask WriteIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType, AuthorizationStatus authorizationStatus)
             {
                 if (First == false)
                     Writer.WriteComma();
