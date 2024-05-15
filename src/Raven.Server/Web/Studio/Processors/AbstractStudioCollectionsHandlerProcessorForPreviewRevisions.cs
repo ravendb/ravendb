@@ -1,38 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Microsoft.AspNetCore.Http;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio.Processors;
 
-internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevisions<TRequestHandler, TOperationContext> : IDisposable
+internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevisions<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler>
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected readonly TRequestHandler RequestHandler;
-
-    protected readonly HttpContext HttpContext;
 
     protected readonly JsonContextPoolBase<TOperationContext> ContextPool;
 
     protected string Collection;
 
-    public AbstractStudioCollectionsHandlerProcessorForPreviewRevisions([NotNull] TRequestHandler requestHandler)
+    protected AbstractStudioCollectionsHandlerProcessorForPreviewRevisions([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
-        RequestHandler = requestHandler ?? throw new ArgumentNullException(nameof(requestHandler));
-        HttpContext = requestHandler.HttpContext;
         ContextPool = RequestHandler.ContextPool;
     }
 
-    public async ValueTask ExecuteAsync()
+    public override async ValueTask ExecuteAsync()
     {
         using (ContextPool.AllocateOperationContext(out TOperationContext context))
         using (OpenReadTransaction(context))
@@ -84,11 +76,6 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
         Collection = RequestHandler.GetStringQueryString("collection", required: false);
 
         return Task.CompletedTask;
-    }
-
-    public virtual void Dispose()
-    {
-        GC.SuppressFinalize(this);
     }
 
     protected sealed class PreviewRevisionsResult
