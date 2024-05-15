@@ -100,6 +100,10 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
         }
 
         writer.WriteEndArray();
+
+        writer.WriteComma();
+        writer.WritePropertyName(ContinuationToken.PropertyName);
+        writer.WriteString(_continuationToken.ToBase64(context));
     }
 
     protected override async Task InitializeAsync(TransactionOperationContext context, CancellationToken token)
@@ -117,17 +121,7 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
         _combinedHttpEtag = result.CombinedEtag;
     }
 
-    protected override IDisposable OpenReadTransaction(TransactionOperationContext context)
-    {
-        return context.OpenReadTransaction();
-    }
-
-    protected override void WriteAdditionalField(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer)
-    {
-        writer.WriteComma();
-        writer.WritePropertyName(ContinuationToken.PropertyName);
-        writer.WriteString(_continuationToken.ToBase64(context));
-    }
+    protected override IDisposable OpenReadTransaction(TransactionOperationContext context) => null;
 
     protected override async ValueTask<long> GetTotalCountAsync()
     {
