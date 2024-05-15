@@ -911,7 +911,7 @@ public class DataArchivalIndexingTests : RavenTestBase
 
     [RavenTheory(RavenTestCategory.TimeSeries)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    public async void DataArchivalWontAffectIndexingDocumentsTimeSeries(Options options)
+    public async Task DataArchivalWontAffectIndexingDocumentsTimeSeries(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
