@@ -256,10 +256,66 @@ namespace Micro.Benchmark.Benchmarks
             {
                 try
                 {
-                    ThrowIfInterpolated(location == i,  $"We are constructing this based on the i value = {i}");
+                    ThrowIfInterpolated(location == i, $"We are constructing this based on the i value = {i}");
                 }
                 catch { }
             }
         }
+
+
+        public static void ThrowIfInterpolatedEfficient(
+            bool condition,
+            [InterpolatedStringHandlerArgument(nameof(condition))]
+            ThrowInterpolatedStringEfficientHandler message,
+            [CallerArgumentExpression(nameof(condition))]
+            string paramName = null)
+        {
+            if (condition)
+            {
+                throw new InvalidOperationException(message.GetFormattedText());
+            }
+        }
+        
+        [InterpolatedStringHandler]
+        public readonly ref struct ThrowInterpolatedStringEfficientHandler
+        {
+            private readonly StringBuilder? _builder;
+
+            public ThrowInterpolatedStringEfficientHandler(int literalLength, int formattedCount, bool condition, out bool isEnabled)
+            {
+                isEnabled = condition;
+                _builder = condition ? new StringBuilder(literalLength + formattedCount * 2 + 1) : null;
+            }
+
+            public void AppendLiteral(string s)
+            {
+                _builder!.Append(s);
+            }
+
+            public void AppendFormatted<T>(T t)
+            {
+                _builder!.Append(t);
+            }
+
+            internal string? GetFormattedText()
+            {
+                return _builder!.ToString();
+            }
+        }
+
+        [Benchmark]
+        public void PortableIfInterpolatedEfficient()
+        {
+
+            for (int i = 0; i < 1000; i++)
+            {
+                try
+                {
+                    ThrowIfInterpolatedEfficient(location == i, $"We are constructing this based on the i value = {i}");
+                }
+                catch { }
+            }
+        }
+
     }
 }
