@@ -254,13 +254,17 @@ namespace Raven.Client.Documents.Session
             if (shardedBatchOptions != null)
                 _saveChangesOptions = new BatchOptions { ShardedOptions = shardedBatchOptions };
 
+            var extensions = new List<JavascriptConversionExtension>()
+            {
+                 JavascriptConversionExtensions.LinqMethodsSupport.Instance,
+                 JavascriptConversionExtensions.NullableSupport.Instance,
+            };
+            if (!documentStore.Conventions.SaveEnumsAsIntegers)
+               extensions.Add(new EnumConversionExtension(EnumOptions.UseStrings));
             _javascriptCompilationOptions = new Lazy<JavascriptCompilationOptions>(() => new JavascriptCompilationOptions(
                 flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
-                extensions:
-                [
-                    JavascriptConversionExtensions.LinqMethodsSupport.Instance,
-                    JavascriptConversionExtensions.NullableSupport.Instance
-                ])
+                extensions
+                )
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(RequestExecutor.Conventions)
             });
