@@ -32,7 +32,7 @@ public class DataArchivalSmugglerTests : RavenTestBase
     }
 
     [Fact]
-    public async void CanFilterOutArchivedDataFromExportAndImport()
+    public async Task CanFilterOutArchivedDataFromExportAndImport()
     {
         using (var store = GetDocumentStore())
         {
