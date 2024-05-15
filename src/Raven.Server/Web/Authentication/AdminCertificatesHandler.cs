@@ -231,7 +231,7 @@ namespace Raven.Server.Web.Authentication
                         : string.Empty;
 
                     LogAuditFor("Certificates",
-                        $"Add new certificate '{certificate?.Thumbprint}'. Security Clearance: {certificate?.SecurityClearance}. Permissions:{permissions}.");
+                        $"Add new certificate {certificate?.Name} ['{certificate?.Thumbprint}']. Security Clearance: {certificate?.SecurityClearance}. Permissions:{permissions}.");
                 }
                 
                 try
