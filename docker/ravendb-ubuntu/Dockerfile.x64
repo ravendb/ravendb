@@ -27,12 +27,14 @@ RUN apt install /opt/ravendb.deb -y \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
-USER ravendb:ravendb
-
 COPY server-utils.sh cert-utils.sh run-raven.sh healthcheck.sh link-legacy-datadir.sh /usr/lib/ravendb/scripts/
 COPY settings.json /etc/ravendb
+RUN chown root:${RAVEN_USER_ID} /etc/ravendb/settings.json && chmod 660 /etc/ravendb/settings.json
+
+USER ravendb:ravendb
 
 HEALTHCHECK --start-period=60s CMD /usr/lib/ravendb/scripts/healthcheck.sh
 VOLUME /var/lib/ravendb/data /etc/ravendb
 WORKDIR /usr/lib/ravendb
+
 CMD [ "/bin/bash", "/usr/lib/ravendb/scripts/run-raven.sh" ]
