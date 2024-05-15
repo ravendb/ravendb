@@ -78,7 +78,7 @@ namespace Raven.Client.Documents.Changes
             ConnectionStatusChanged += OnConnectionStatusChanged;
 
             _task = DoWork(nodeTag);
-            _task.ContinueWith(_ => Dispose());
+            _ = _task.ContinueWith(_ => Dispose());
         }
 
         public static ClientWebSocket CreateClientWebSocket(RequestExecutor requestExecutor)
