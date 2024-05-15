@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Server.Config.Settings;
-using Raven.Server.Monitoring.Snmp;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -16,13 +15,6 @@ namespace Raven.Server.Web.Authentication;
 
 public class TwoFactorAuthenticationHandler : ServerRequestHandler
 {
-    private readonly Logger _auditLogger;
-
-    public TwoFactorAuthenticationHandler()
-    {
-        _auditLogger = LoggingSource.AuditLog.GetLogger(nameof(TwoFactorAuthenticationHandler), "Audit");
-    }
-
     [RavenAction("/authentication/2fa/configuration", "GET", AuthorizationStatus.UnauthenticatedClients)]
     public async Task TotpConfiguration()
     {
@@ -100,9 +92,9 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
         {
             var period = TimeSpan.FromMinutes(sessionDuration);
             
-            if (_auditLogger.IsInfoEnabled)
+            if (LoggingSource.AuditLog.IsInfoEnabled)
             {
-                _auditLogger.Info($"Connection from {HttpContext.Connection.RemoteIpAddress} with new certificate '{clientCert.Subject} ({clientCert.Thumbprint})' successfully authenticated with two factor auth for {period}. Has limits: {hasLimits}]");
+                LogAuditFor(nameof(TwoFactorAuthenticationHandler), $"successfully authenticated with two factor auth for {period}. Has limits: {hasLimits}");
             }
 
             string expectedCookieValue = null;
@@ -145,12 +137,11 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
 
     private async Task ReplyWith(TransactionOperationContext ctx, string err, HttpStatusCode httpStatusCode)
     {
-        if (_auditLogger.IsInfoEnabled)
+        if (LoggingSource.AuditLog.IsInfoEnabled)
         {
-            var clientCert = GetCurrentCertificate();
-            _auditLogger.Info(
-                $"Two factor auth failure from IP: {HttpContext.Connection.RemoteIpAddress}  with cert: '{clientCert?.Thumbprint ?? "None"}/{clientCert?.Subject ?? "None"}' because: {err}");
+            LogAuditFor(nameof(TwoFactorAuthenticationHandler), $"Two factor auth failure, because: {err}");
         }
+
         HttpContext.Response.StatusCode = (int)httpStatusCode;
         await using (var writer = new AsyncBlittableJsonTextWriter(ctx, ResponseBodyStream()))
         {

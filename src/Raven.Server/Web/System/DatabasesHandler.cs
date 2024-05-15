@@ -116,12 +116,9 @@ namespace Raven.Server.Web.System
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    var clientCert = GetCurrentCertificate();
-
-                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
-                    auditLog.Info($"Database \'{dbName}\' topology is being modified by {clientCert?.Subject} ({clientCert?.Thumbprint})," +
-                                  $"Old topology: {databaseRecord.Topology} " +
-                                  $"New topology: {databaseTopology}.");
+                    LogAuditFor("DbMgmt", $"Database '{dbName}' topology is being modified " +
+                                          $"Old topology: {databaseRecord.Topology} " +
+                                          $"New topology: {databaseTopology}.");
                 }
 
                 // Validate Topology

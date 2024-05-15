@@ -199,10 +199,7 @@ namespace Raven.Server.Web.System
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    var clientCert = GetCurrentCertificate();
-
-                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
-                    auditLog.Info($"Database {databaseRecord.DatabaseName} PUT by {clientCert?.Subject} ({clientCert?.Thumbprint})");
+                    LogAuditFor("DbMgmt", $"Database '{databaseRecord.DatabaseName}' PUT");
                 }
 
                 if (ServerStore.LicenseManager.LicenseStatus.HasDocumentsCompression && databaseRecord.DocumentsCompression == null)
@@ -681,7 +678,14 @@ namespace Raven.Server.Web.System
             if (database == null)
                 DatabaseDoesNotExistException.Throw(databaseName);
 
-            await database.PeriodicBackupRunner.DelayAsync(id, delay.Value, GetCurrentCertificate());
+            var delayUntil = DateTime.UtcNow.AddTicks(delay.Value.Ticks);
+            await database.PeriodicBackupRunner.DelayAsync(id, delayUntil);
+
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                LogAuditFor(databaseName, $"Backup task with task id '{id}' was delayed until '{delayUntil}' UTC");
+            }
+
 
             NoContentStatus();
         }
@@ -704,10 +708,7 @@ namespace Raven.Server.Web.System
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    clientCertificate = GetCurrentCertificate();
-
-                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
-                    auditLog.Info($"Attempt to delete [{string.Join(", ", parameters.DatabaseNames)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())}) by {clientCertificate?.Subject} ({clientCertificate?.Thumbprint})");
+                    LogAuditFor("DbMgmt", $"Attempt to delete [{string.Join(", ", parameters.DatabaseNames)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())})");
                 }
 
                 using (context.OpenReadTransaction())
@@ -770,10 +771,7 @@ namespace Raven.Server.Web.System
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    var clientCert = GetCurrentCertificate();
-
-                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
-                    auditLog.Info($"Delete [{string.Join(", ", databasesToDelete)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())}) by {clientCert?.Subject} ({clientCert?.Thumbprint})");
+                    LogAuditFor("DbMgmt", $"Delete [{string.Join(", ", databasesToDelete)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())})");
                 }
 
                 long index = -1;
