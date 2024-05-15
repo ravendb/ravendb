@@ -1,11 +1,9 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents.Handlers.Processors.SampleData;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Collections;
-using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -23,19 +21,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.SampleData
         {
             var operationId = RequestHandler.DatabaseContext.Operations.GetNextOperationId();
             var record = RequestHandler.DatabaseContext.DatabaseRecord;
-            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-            var options = new DatabaseSmugglerOptionsServerSide
-            {
-                OperateOnTypes = operateOnTypes,
-                SkipRevisionCreation = true
-
-            };
-            options.AuthorizationStatus = AuthorizationStatus.ValidUser;
-            if (feature != null)
-                options.AuthorizationStatus = feature.CanAccess(RequestHandler.DatabaseName, requireAdmin: true, requireWrite: false)
-                    ? AuthorizationStatus.DatabaseAdmin
-                    : AuthorizationStatus.ValidUser;
-
+            
             using (var source = new OrchestratorStreamSource(sampleDataStream, context, RequestHandler.DatabaseName, RequestHandler.DatabaseContext.ShardCount))
             {
                 var smuggler = new ShardedDatabaseSmuggler(
@@ -44,7 +30,11 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.SampleData
                     context,
                     record,
                     RequestHandler.ServerStore,
-                    options,
+                    options: new DatabaseSmugglerOptionsServerSide
+                    {
+                        OperateOnTypes = operateOnTypes,
+                        SkipRevisionCreation = true
+                    },
                     result: null);
 
                 await smuggler.ExecuteAsync();

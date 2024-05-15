@@ -80,9 +80,9 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface IIndexActions : IAsyncDisposable
     {
-        ValueTask WriteAutoIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType, AuthorizationStatus authorizationStatus);
+        ValueTask WriteIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType);
 
-        ValueTask WriteIndexAsync(IndexDefinition indexDefinition, AuthorizationStatus authorizationStatus);
+        ValueTask WriteIndexAsync(IndexDefinition indexDefinition);
     }
 
     public interface ICounterActions : INewDocumentActions

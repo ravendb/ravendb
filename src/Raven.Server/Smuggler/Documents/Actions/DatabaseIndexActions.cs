@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Elastic.Clients.Elasticsearch;
 using JetBrains.Annotations;
-using Org.BouncyCastle.Security.Certificates;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Routing;
 using Raven.Server.Smuggler.Documents.Data;
 
 namespace Raven.Server.Smuggler.Documents.Actions;
@@ -30,15 +26,8 @@ public sealed class DatabaseIndexActions : IIndexActions
             _batch = _controller.CreateIndexBatch();
     }
 
-    public async ValueTask WriteAutoIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType, AuthorizationStatus authorizationStatus)
+    public async ValueTask WriteIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType)
     {
-        if (_configuration.Security.AuthenticationEnabled &&
-            authorizationStatus == AuthorizationStatus.ValidUser)
-        {
-            throw new CertificateException(
-                $"Could not import '{indexDefinition.Name}' index: Your existing certificate lacks the necessary permissions to create indexes.");
-        }
-
         if (_batch != null)
         {
             await _batch.AddIndexAsync(indexDefinition, _source, _time.GetUtcNow(), RaftIdGenerator.DontCareId, _configuration.Indexing.HistoryRevisionsNumber);
@@ -49,17 +38,8 @@ public sealed class DatabaseIndexActions : IIndexActions
         await _controller.CreateIndexAsync(indexDefinition, RaftIdGenerator.DontCareId);
     }
 
-    public async ValueTask WriteIndexAsync(IndexDefinition indexDefinition, AuthorizationStatus authorizationStatus)
+    public async ValueTask WriteIndexAsync(IndexDefinition indexDefinition)
     {
-        if (_configuration.Security.AuthenticationEnabled &&
-            authorizationStatus == AuthorizationStatus.ValidUser &&
-            (indexDefinition.Type == IndexType.Map ||
-             indexDefinition.Type == IndexType.MapReduce))
-        {
-            throw new CertificateException(
-                $"Could not import '{indexDefinition.Name}' index: Your existing certificate lacks the necessary permissions to create indexes.");
-        }
-
         if (_batch != null)
         {
             await _batch.AddIndexAsync(indexDefinition, _source, _time.GetUtcNow(), RaftIdGenerator.DontCareId, _configuration.Indexing.HistoryRevisionsNumber);

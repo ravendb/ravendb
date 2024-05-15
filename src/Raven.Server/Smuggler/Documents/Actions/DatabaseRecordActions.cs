@@ -58,7 +58,6 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
             return;
 
         var configuration = DatabasesLandlord.CreateDatabaseConfiguration(_server, _name, databaseRecord.Settings);
-        var authenticationEnabled = _server.Configuration.Security.AuthenticationEnabled;
 
         if (databaseRecord.ConflictSolverConfig != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ConflictSolverConfig))
         {
@@ -91,32 +90,25 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
 
         if (databaseRecord.PeriodicBackups.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.PeriodicBackups))
         {
-            if (authenticationEnabled && CanAccess(authorizationStatus) == false)
-            {
-                result.AddError("Import of periodic backup was skipped due to insufficient permissions on your current certificate.");
-                result.DatabaseRecord.ErroredCount++;
-            }
-            else
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info("Configuring periodic backups configuration from smuggler");
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring periodic backups configuration from smuggler");
 
-                foreach (var backupConfig in databaseRecord.PeriodicBackups)
+            foreach (var backupConfig in databaseRecord.PeriodicBackups)
+            {
+                _currentDatabaseRecord?.PeriodicBackups.ForEach(x =>
                 {
-                    _currentDatabaseRecord?.PeriodicBackups.ForEach(x =>
+                    if (x.Name.Equals(backupConfig.Name, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (x.Name.Equals(backupConfig.Name, StringComparison.OrdinalIgnoreCase))
-                        {
-                            tasks.Add(_server.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.Backup, _name, RaftIdGenerator.DontCareId)));
-                        }
-                    });
+                        tasks.Add(_server.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.Backup, _name, RaftIdGenerator.DontCareId)));
+                    }
+                });
 
-                    backupConfig.TaskId = 0;
-                    backupConfig.Disabled = true;
-                    tasks.Add(_server.SendToLeaderAsync(new UpdatePeriodicBackupCommand(backupConfig, _name, RaftIdGenerator.DontCareId)));
-                }
-                result.DatabaseRecord.PeriodicBackupsUpdated = true;
+                backupConfig.TaskId = 0;
+                backupConfig.Disabled = true;
+                tasks.Add(_server.SendToLeaderAsync(new UpdatePeriodicBackupCommand(backupConfig, _name, RaftIdGenerator.DontCareId)));
             }
+
+            result.DatabaseRecord.PeriodicBackupsUpdated = true;
         }
 
         if (databaseRecord.SinkPullReplications.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SinkPullReplications))
@@ -321,36 +313,28 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
 
         if (databaseRecord.Revisions != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Revisions))
         {
-            if (authenticationEnabled && CanAccess(authorizationStatus) == false)
-            {
-                result.AddError("Import of Revision configuration was skipped due to insufficient permissions on your current certificate.");
-                result.DatabaseRecord.ErroredCount++;
-            }
-            else
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info("Configuring revisions from smuggler");
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring revisions from smuggler");
 
-                if (_currentDatabaseRecord?.Revisions != null)
+            if (_currentDatabaseRecord?.Revisions != null)
+            {
+                foreach (var collection in _currentDatabaseRecord.Revisions.Collections)
                 {
-                    foreach (var collection in _currentDatabaseRecord.Revisions.Collections)
+                    if (databaseRecord.Revisions.Collections.TryGetValue(collection.Key, out var collectionConfiguration) == false)
                     {
-                        if (databaseRecord.Revisions.Collections.TryGetValue(collection.Key, out var collectionConfiguration) == false)
-                        {
-                            databaseRecord.Revisions.Collections.Add(collection.Key, collection.Value);
-                        }
-                        else
-                        {
-                            if (collectionConfiguration.Equals(collection.Value) == false)
-                                result.AddWarning($"Revisions configuration of collection '{collection.Key}' already exist on the destination Database Record. " +
-                                                  "Configuring this revisions from smuggler was skipped, even though the configuration differed from the configuration in the target database record");
-                        }
+                        databaseRecord.Revisions.Collections.Add(collection.Key, collection.Value);
+                    }
+                    else
+                    {
+                        if (collectionConfiguration.Equals(collection.Value) == false)
+                            result.AddWarning($"Revisions configuration of collection '{collection.Key}' already exist on the destination Database Record. " +
+                                              "Configuring this revisions from smuggler was skipped, even though the configuration differed from the configuration in the target database record");
                     }
                 }
-
-                tasks.Add(_server.SendToLeaderAsync(new EditRevisionsConfigurationCommand(databaseRecord.Revisions, _name, RaftIdGenerator.DontCareId)));
-                result.DatabaseRecord.RevisionsConfigurationUpdated = true;
             }
+
+            tasks.Add(_server.SendToLeaderAsync(new EditRevisionsConfigurationCommand(databaseRecord.Revisions, _name, RaftIdGenerator.DontCareId)));
+            result.DatabaseRecord.RevisionsConfigurationUpdated = true;
         }
 
         if (databaseRecord.RevisionsForConflicts != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Revisions))
@@ -362,19 +346,11 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
 
         if (databaseRecord.Expiration != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Expiration))
         {
-            if (authenticationEnabled && CanAccess(authorizationStatus) == false)
-            {
-                result.AddError("Import of Expiration was skipped due to insufficient permissions on your current certificate.");
-                result.DatabaseRecord.ErroredCount++;
-            }
-            else
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info("Configuring expiration from smuggler");
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring expiration from smuggler");
 
-                tasks.Add(_server.SendToLeaderAsync(new EditExpirationCommand(databaseRecord.Expiration, _name, RaftIdGenerator.DontCareId)));
-                result.DatabaseRecord.ExpirationConfigurationUpdated = true;
-            }
+            tasks.Add(_server.SendToLeaderAsync(new EditExpirationCommand(databaseRecord.Expiration, _name, RaftIdGenerator.DontCareId)));
+            result.DatabaseRecord.ExpirationConfigurationUpdated = true;
         }
 
         if (databaseRecord.Refresh != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Refresh))
@@ -385,6 +361,7 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
             tasks.Add(_server.SendToLeaderAsync(new EditRefreshCommand(databaseRecord.Refresh, _name, RaftIdGenerator.DontCareId)));
             result.DatabaseRecord.RefreshConfigurationUpdated = true;
         }
+        
         
         if (databaseRecord.DataArchival != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.DataArchival))
         {
@@ -397,23 +374,15 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
 
         if (databaseRecord.RavenConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RavenConnectionStrings))
         {
-            if (authenticationEnabled && CanAccess(authorizationStatus) == false)
-            {
-                result.AddError("Import of Raven Connection Strings was skipped due to insufficient permissions on your current certificate.");
-                result.DatabaseRecord.ErroredCount++;
-            }
-            else
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info("Configuring Raven connection strings configuration from smuggler");
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring Raven connection strings configuration from smuggler");
 
-                foreach (var connectionString in databaseRecord.RavenConnectionStrings)
-                {
-                    tasks.Add(_server.SendToLeaderAsync(new PutRavenConnectionStringCommand(connectionString.Value, _name, RaftIdGenerator.DontCareId)));
-                }
-
-                result.DatabaseRecord.RavenConnectionStringsUpdated = true;
+            foreach (var connectionString in databaseRecord.RavenConnectionStrings)
+            {
+                tasks.Add(_server.SendToLeaderAsync(new PutRavenConnectionStringCommand(connectionString.Value, _name, RaftIdGenerator.DontCareId)));
             }
+
+            result.DatabaseRecord.RavenConnectionStringsUpdated = true;
         }
 
         if (databaseRecord.SqlConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SqlConnectionStrings))
@@ -431,19 +400,11 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
 
         if (databaseRecord.Client != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Client))
         {
-            if (authenticationEnabled && CanAccess(authorizationStatus) == false)
-            {
-                result.AddError("Import of Client Configuration was skipped due to insufficient permissions on your current certificate.");
-                result.DatabaseRecord.ErroredCount++;
-            }
-            else
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info("Configuring client configuration from smuggler");
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring client configuration from smuggler");
 
-                tasks.Add(_server.SendToLeaderAsync(new EditDatabaseClientConfigurationCommand(databaseRecord.Client, _name, RaftIdGenerator.DontCareId)));
-                result.DatabaseRecord.ClientConfigurationUpdated = true;
-            }
+            tasks.Add(_server.SendToLeaderAsync(new EditDatabaseClientConfigurationCommand(databaseRecord.Client, _name, RaftIdGenerator.DontCareId)));
+            result.DatabaseRecord.ClientConfigurationUpdated = true;
         }
 
         if (databaseRecord.Integrations?.PostgreSql != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.PostgreSQLIntegration))
@@ -644,13 +605,6 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
         }
 
         tasks.Clear();
-    }
-
-    private static bool CanAccess(AuthorizationStatus authorizationStatus)
-    {
-        return authorizationStatus == AuthorizationStatus.ClusterAdmin ||
-               authorizationStatus == AuthorizationStatus.Operator ||
-               authorizationStatus == AuthorizationStatus.DatabaseAdmin;
     }
 
     public ValueTask DisposeAsync()
