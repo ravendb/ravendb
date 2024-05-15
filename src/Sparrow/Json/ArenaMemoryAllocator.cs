@@ -160,7 +160,7 @@ namespace Sparrow.Json
         private void GrowArena(int requestedSize)
         {
             ThrowIf<ArgumentOutOfRangeException>(requestedSize > MaxArenaSize, 
-                () => $"Requested arena resize to {requestedSize} while current size is {_allocated} and maximum size is {MaxArenaSize}");
+                $"Requested arena resize to {requestedSize} while current size is {_allocated} and maximum size is {MaxArenaSize}");
             
             long newSize = GetPreferredSize(requestedSize);
             if (newSize > MaxArenaSize)

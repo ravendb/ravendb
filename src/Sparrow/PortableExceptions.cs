@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 #if NET6_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
@@ -11,10 +12,121 @@ namespace Sparrow
 {
     internal class PortableExceptions
     {
-        // In order to differ the allocation of interpolations we need to do it through a delegate.
+
+#if NET6_0_OR_GREATER         
+        // In order to defer the allocation of interpolations we need to do it through a InterpolatedStringHandler.
         // More details in the following issue: https://github.com/dotnet/runtime/issues/101996
         // We could remove all the API when this is solved at the JIT level. 
-        internal delegate string ThrowMessage();
+
+        [InterpolatedStringHandler]
+        public readonly ref struct ConditionalThrowInterpolatedStringHandler
+        {
+            private readonly StringBuilder? _builder;
+
+            public ConditionalThrowInterpolatedStringHandler(int literalLength, int formattedCount, bool condition, out bool isEnabled)
+            {
+                isEnabled = condition;
+                _builder = condition ? new StringBuilder(literalLength + formattedCount * 2 + 1) : null;
+            }
+
+            public void AppendLiteral(string s)
+            {
+                _builder!.Append(s);
+            }
+
+            public void AppendFormatted<T>(T t)
+            {
+                _builder!.Append(t);
+            }
+
+            internal string? GetFormattedText()
+            {
+                return _builder!.ToString();
+            }
+        }
+
+        [InterpolatedStringHandler]
+        public readonly ref struct NotConditionalThrowInterpolatedStringHandler
+        {
+            private readonly StringBuilder? _builder;
+
+            public NotConditionalThrowInterpolatedStringHandler(int literalLength, int formattedCount, bool condition, out bool isEnabled)
+            {
+                isEnabled = condition == false;
+                _builder = condition == false ? new StringBuilder(literalLength + formattedCount * 2 + 1) : null;
+            }
+
+            public void AppendLiteral(string s)
+            {
+                _builder!.Append(s);
+            }
+
+            public void AppendFormatted<T>(T t)
+            {
+                _builder!.Append(t);
+            }
+
+            internal string? GetFormattedText()
+            {
+                return _builder!.ToString();
+            }
+        }
+
+        [InterpolatedStringHandler]
+        public readonly ref struct NullThrowInterpolatedStringHandler
+        {
+            private readonly StringBuilder? _builder;
+
+            public NullThrowInterpolatedStringHandler(int literalLength, int formattedCount, object condition, out bool isEnabled)
+            {
+                isEnabled = condition == null;
+                _builder = condition == null ? new StringBuilder(literalLength + formattedCount * 2 + 1) : null;
+            }
+
+            public void AppendLiteral(string s)
+            {
+                _builder!.Append(s);
+            }
+
+            public void AppendFormatted<T>(T t)
+            {
+                _builder!.Append(t);
+            }
+
+            internal string? GetFormattedText()
+            {
+                return _builder!.ToString();
+            }
+        }
+
+        [InterpolatedStringHandler]
+        public readonly ref struct NotNullThrowInterpolatedStringHandler
+        {
+            private readonly StringBuilder? _builder;
+
+            public NotNullThrowInterpolatedStringHandler(int literalLength, int formattedCount, object condition, out bool isEnabled)
+            {
+                isEnabled = condition != null;
+                _builder = condition != null ? new StringBuilder(literalLength + formattedCount * 2 + 1) : null;
+            }
+
+            public void AppendLiteral(string s)
+            {
+                _builder!.Append(s);
+            }
+
+            public void AppendFormatted<T>(T t)
+            {
+                _builder!.Append(t);
+            }
+
+            internal string? GetFormattedText()
+            {
+                return _builder!.ToString();
+            }
+        }
+
+#endif        
 
 #if NETCOREAPP2_0_OR_GREATER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -117,26 +229,22 @@ namespace Sparrow
             }
         }
 
+
+#if NET6_0_OR_GREATER         
         public static void ThrowIfNull<T>(
-#if NET6_0_OR_GREATER
             [NotNull]
-#endif
             object argument,
-            ThrowMessage message,
-#if NET6_0_OR_GREATER
+            [InterpolatedStringHandlerArgument(nameof(argument))]
+            NullThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(argument))]
-#endif
             string paramName = null) where T : Exception
         {
             if (argument == null)
             {
-#if NET6_0_OR_GREATER
-                Throw<T>(paramName, message());
-#else
-                Throw<T>(message());
-#endif
+                Throw<T>(paramName, message.GetFormattedText());
             }
         }
+#endif
 
 #if NETCOREAPP2_0_OR_GREATER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -179,29 +287,22 @@ namespace Sparrow
             }
         }
 
-#if NETCOREAPP2_0_OR_GREATER
+#if NET6_0_OR_GREATER 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
         public static void ThrowIfNotNull<T>(
-#if NET6_0_OR_GREATER
             [NotNull]
-#endif
             object argument,
-            ThrowMessage message,
-#if NET6_0_OR_GREATER
+            [InterpolatedStringHandlerArgument(nameof(argument))]
+            NotNullThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(argument))]
-#endif
             string paramName = null) where T : Exception
         {
             if (argument != null)
             {
-#if NET6_0_OR_GREATER
-                Throw<T>(paramName, message());
-#else
-                Throw<T>(message());
-#endif
+                Throw<T>(paramName, message.GetFormattedText());
             }
         }
+#endif
 
 #if NETCOREAPP2_0_OR_GREATER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -221,23 +322,20 @@ namespace Sparrow
             ThrowIfNotNull<T>(argument, message, paramName);
         }
 
-#if NETCOREAPP2_0_OR_GREATER
+#if NET6_0_OR_GREATER         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
         [Conditional("DEBUG")]
         public static void ThrowIfNotNullOnDebug<T>(
-#if NET6_0_OR_GREATER
             [NotNull]
-#endif
             object argument,
-            ThrowMessage message,
-#if NET6_0_OR_GREATER
+            [InterpolatedStringHandlerArgument(nameof(argument))]
+            NotNullThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(argument))]
-#endif
             string paramName = null) where T : Exception
         {
             ThrowIfNotNull<T>(argument, message, paramName);
         }
+#endif
 
 #if NETCOREAPP2_0_OR_GREATER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -361,29 +459,23 @@ namespace Sparrow
         }
 
 
-#if NETCOREAPP2_0_OR_GREATER
+#if NET6_0_OR_GREATER 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
         public static unsafe void ThrowIfNull<T>(
-#if NET6_0_OR_GREATER
+
             [NotNull]
-#endif
             void* argument,
-            ThrowMessage message,
-#if NET6_0_OR_GREATER
+            [InterpolatedStringHandlerArgument(nameof(argument))]
+            NullThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(argument))]
-#endif
             string paramName = null) where T : Exception
         {
             if (argument == null)
             {
-#if NET6_0_OR_GREATER
-                Throw<T>(paramName, message());
-#else
-                Throw<T>(message());
-#endif
+                Throw<T>(paramName, message.GetFormattedText());
             }
         }
+#endif
 
 #if NETCOREAPP2_0_OR_GREATER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -403,24 +495,21 @@ namespace Sparrow
             ThrowIfNull<T>(argument, message, paramName);
         }
 
-#if NETCOREAPP2_0_OR_GREATER
+#if NET6_0_OR_GREATER         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
         [Conditional("DEBUG")]
         public static unsafe void ThrowIfNullOnDebug<T>(
-#if NET6_0_OR_GREATER
             [NotNull]
-#endif
             void* argument,
-            ThrowMessage message,
-#if NET6_0_OR_GREATER
+            [InterpolatedStringHandlerArgument(nameof(argument))]
+            NullThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(argument))]
-#endif
             string paramName = null) where T : Exception
         {
-            ThrowIfNull<T>(argument, message(), paramName);
+            ThrowIfNull<T>(argument, message.GetFormattedText(), paramName);
         }
-
+#endif
+        
 #if NETCOREAPP2_0_OR_GREATER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
@@ -445,29 +534,22 @@ namespace Sparrow
             }
         }
 
-#if NETCOREAPP2_0_OR_GREATER
+#if NET6_0_OR_GREATER 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
         public static unsafe void ThrowIfNotNull<T>(
-#if NET6_0_OR_GREATER
             [NotNull]
-#endif
             void* argument,
-            ThrowMessage message,
-#if NET6_0_OR_GREATER
+            [InterpolatedStringHandlerArgument(nameof(argument))]
+            NotNullThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(argument))]
-#endif
             string paramName = null) where T : Exception
         {
             if (argument != null)
             {
-#if NET6_0_OR_GREATER
-                Throw<T>(paramName, message());
-#else
-                Throw<T>(message());
-#endif
+                Throw<T>(paramName, message.GetFormattedText());
             }
         }
+#endif
 
 #if NETCOREAPP2_0_OR_GREATER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -487,23 +569,20 @@ namespace Sparrow
             ThrowIfNotNull<T>(argument, message, paramName);
         }
 
-#if NETCOREAPP2_0_OR_GREATER
+#if NET6_0_OR_GREATER 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
         [Conditional("DEBUG")]
         public static unsafe void ThrowIfNotNullOnDebug<T>(
-#if NET6_0_OR_GREATER
             [NotNull]
-#endif
             void* argument,
-            ThrowMessage message,
-#if NET6_0_OR_GREATER
+            [InterpolatedStringHandlerArgument(nameof(argument))]
+            NotNullThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(argument))]
-#endif
             string paramName = null) where T : Exception
         {
             ThrowIfNotNull<T>(argument, message, paramName);
         }
+#endif
 
 #if NETCOREAPP2_0_OR_GREATER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -526,27 +605,22 @@ namespace Sparrow
             }
         }
 
-#if NETCOREAPP2_0_OR_GREATER
+#if NET6_0_OR_GREATER 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
         public static void ThrowIf<T>(
             bool condition,
-            ThrowMessage message,
-#if NET6_0_OR_GREATER
+            [InterpolatedStringHandlerArgument(nameof(condition))]
+            ConditionalThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(condition))]
-#endif
             string paramName = null) where T : Exception
         {
             if (condition)
             {
-#if NET6_0_OR_GREATER
-                Throw<T>(paramName, message());
-#else
-                Throw<T>(message());
-#endif
+                Throw<T>(paramName, message.GetFormattedText());
             }
         }
-
+#endif
+        
 #if NETCOREAPP2_0_OR_GREATER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
@@ -562,20 +636,19 @@ namespace Sparrow
             ThrowIf<T>(condition, message, paramName);
         }
 
-#if NETCOREAPP2_0_OR_GREATER
+#if NET6_0_OR_GREATER 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
         [Conditional("DEBUG")]
         public static void ThrowIfOnDebug<T>(
             bool condition,
-            ThrowMessage message,
-#if NET6_0_OR_GREATER
+            [InterpolatedStringHandlerArgument(nameof(condition))]
+            ConditionalThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(condition))]
-#endif
             string paramName = null) where T : Exception
         {
             ThrowIf<T>(condition, message, paramName);
         }
+#endif
 
 #if NETCOREAPP2_0_OR_GREATER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -598,27 +671,22 @@ namespace Sparrow
             }
         }
 
-#if NETCOREAPP2_0_OR_GREATER
+#if NET6_0_OR_GREATER 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
         public static void ThrowIfNot<T>(
             bool condition,
-            ThrowMessage message,
-#if NET6_0_OR_GREATER
+            [InterpolatedStringHandlerArgument(nameof(condition))]
+            NotConditionalThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(condition))]
-#endif
             string paramName = null) where T : Exception
         {
             if (condition == false)
             {
-#if NET6_0_OR_GREATER
-                Throw<T>(paramName, message());
-#else
-                Throw<T>(message());
-#endif
+                Throw<T>(paramName, message.GetFormattedText());
             }
         }
-
+#endif
+        
 #if NETCOREAPP2_0_OR_GREATER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
@@ -634,21 +702,20 @@ namespace Sparrow
             ThrowIfNot<T>(condition, message, paramName);
         }
 
-#if NETCOREAPP2_0_OR_GREATER
+#if NET6_0_OR_GREATER 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
         [Conditional("DEBUG")]
         public static void ThrowIfNotOnDebug<T>(
             bool condition,
-            ThrowMessage message,
-#if NET6_0_OR_GREATER
+            [InterpolatedStringHandlerArgument(nameof(condition))]
+            NotConditionalThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(condition))]
-#endif
             string paramName = null) where T : Exception
         {
             ThrowIfNot<T>(condition, message, paramName);
         }
-
+#endif
+        
 #if NETCOREAPP2_0_OR_GREATER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
