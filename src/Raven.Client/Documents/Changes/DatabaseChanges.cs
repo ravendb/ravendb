@@ -198,9 +198,6 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<OperationStatusChange> ForOperationId(long operationId)
         {
-            if (string.IsNullOrEmpty(_nodeTag))
-                ThrowOperationsNodeTagNeeded();
-
             var counter = GetOrAddConnectionState("operations/" + operationId, "watch-operation", "unwatch-operation", operationId.ToString());
 
             var taskedObservable = new ChangesObservable<OperationStatusChange, DatabaseConnectionState>(
@@ -212,9 +209,6 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<OperationStatusChange> ForAllOperations()
         {
-            if (string.IsNullOrEmpty(_nodeTag))
-                ThrowOperationsNodeTagNeeded();
-
             var counter = GetOrAddConnectionState("all-operations", "watch-operations", "unwatch-operations", null);
 
             var taskedObservable = new ChangesObservable<OperationStatusChange, DatabaseConnectionState>(
@@ -222,11 +216,6 @@ namespace Raven.Client.Documents.Changes
                 notification => true);
 
             return taskedObservable;
-        }
-
-        private void ThrowOperationsNodeTagNeeded()
-        {
-            throw new InvalidOperationException("Changes API must be provided a node tag in order to track node-specific operations.");
         }
 
         public IChangesObservable<IndexChange> ForAllIndexes()
