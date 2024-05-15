@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using Corax;
 using Corax.Mappings;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
@@ -334,7 +335,7 @@ namespace FastTests.Corax
             _knownFields.TryGetByFieldId(TextualValueId, out binding);
             _textualItemFieldMetadata = binding.Metadata;
             
-            using var indexWriter = new IndexWriter(Env, _knownFields);
+            using var indexWriter = new IndexWriter(Env, _knownFields, SupportedFeatures.All);
 
             foreach (var entry in _entries)
             {

@@ -39,7 +39,7 @@ namespace FastTests.Corax
             var entry1 = new IndexSingleEntry() {Id = "e/1", Content = "2023-08-02T12:01:34.2111452"};
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             var knownFields = CreateKnownFields(bsc);
-            using (var indexWriter = new IndexWriter(Env, knownFields))
+            using (var indexWriter = new IndexWriter(Env, knownFields, SupportedFeatures.All))
             {
                 using (var builder = indexWriter.Index(entry1.Id))
                 {
@@ -53,7 +53,7 @@ namespace FastTests.Corax
                 indexWriter.Commit();
             }
 
-            using (var indexWriter = new IndexWriter(Env, knownFields))
+            using (var indexWriter = new IndexWriter(Env, knownFields, SupportedFeatures.All))
             {
                 Assert.True(indexWriter.TryDeleteEntry("e/1"));
                 indexWriter.Commit();
@@ -1973,7 +1973,7 @@ namespace FastTests.Corax
 
         private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexEntry> list, IndexFieldsMapping mapping)
         {
-            using var indexWriter = new IndexWriter(Env, mapping);
+            using var indexWriter = new IndexWriter(Env, mapping, SupportedFeatures.All);
 
             foreach (var entry in list)
             {
@@ -2002,7 +2002,7 @@ namespace FastTests.Corax
 
         private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexSingleEntry> list, IndexFieldsMapping mapping)
         {
-            using var indexWriter = new IndexWriter(Env, mapping);
+            using var indexWriter = new IndexWriter(Env, mapping, SupportedFeatures.All);
 
             foreach (var entry in list)
             {
@@ -2021,7 +2021,7 @@ namespace FastTests.Corax
             var knownFields = CreateKnownFields(bsc);
 
             {
-                using var indexWriter = new IndexWriter(Env, knownFields);
+                using var indexWriter = new IndexWriter(Env, knownFields, SupportedFeatures.All);
 
                 foreach (var entry in list)
                 {

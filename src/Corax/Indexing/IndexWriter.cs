@@ -87,7 +87,7 @@ namespace Corax.Indexing
             _indexDebugDumper = new IndexOperationsDumper(fieldsMapping);
             _builder = new IndexEntryBuilder(this);
             _fieldsMapping = fieldsMapping;
-            _supportedFeatures = supportedFeatures ?? new(); // if not explicitly set - all features are available
+            _supportedFeatures = supportedFeatures; // if not explicitly set - all features are available
             _encodingBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize);
             _tokensBufferHandler = Analyzer.TokensPool.Rent(fieldsMapping.MaximumTokenSize);
             _utf8ConverterBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize * 10);
@@ -104,7 +104,7 @@ namespace Corax.Indexing
             _removalsForTerm = new List<long>();
         }
 
-        public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping, in SupportedFeatures supportedFeatures = default) : this(fieldsMapping, supportedFeatures)
+        public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping, SupportedFeatures supportedFeatures) : this(fieldsMapping, supportedFeatures)
         {
             TransactionPersistentContext transactionPersistentContext = new(true);
             _transaction = environment.WriteTransaction(transactionPersistentContext);
@@ -113,7 +113,7 @@ namespace Corax.Indexing
             Init();
         }
         
-        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping, in SupportedFeatures supportedFeatures = default) : this(fieldsMapping, supportedFeatures)
+        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping, SupportedFeatures supportedFeatures) : this(fieldsMapping, supportedFeatures)
         {
             _transaction = tx;
 

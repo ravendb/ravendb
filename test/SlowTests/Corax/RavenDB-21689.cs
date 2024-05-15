@@ -38,7 +38,7 @@ public class RavenDB_21689 : StorageTest
     {
         const int docsSize = 64 * 1000;
         
-        using (var indexWriter = new IndexWriter(Env, _fieldsMapping))
+        using (var indexWriter = new IndexWriter(Env, _fieldsMapping, SupportedFeatures.All))
         {
             for (var docIdx = 0; docIdx < docsSize; ++docIdx)
             {

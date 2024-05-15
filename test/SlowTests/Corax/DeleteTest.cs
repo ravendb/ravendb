@@ -58,7 +58,7 @@ public class DeleteTest : StorageTest
             previousIds.AddRange(ids.Slice(0, read).ToArray());
         }
 
-        using (var indexWriter = new IndexWriter(Env, _analyzers))
+        using (var indexWriter = new IndexWriter(Env, _analyzers, SupportedFeatures.All))
         {
             indexWriter.TryDeleteEntry("list/9");
             indexWriter.Commit();
@@ -155,7 +155,7 @@ public class DeleteTest : StorageTest
 
     private void IndexEntries(IndexFieldsMapping knownFields)
     {
-        using var indexWriter = new IndexWriter(Env, knownFields);
+        using var indexWriter = new IndexWriter(Env, knownFields, SupportedFeatures.All);
 
         foreach (var entry in _longList)
         {

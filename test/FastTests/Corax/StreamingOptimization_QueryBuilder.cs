@@ -556,7 +556,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             TransactionPersistentContext transactionPersistentContext = new(true);
             using (var transaction = Env.WriteTransaction(transactionPersistentContext))
             {
-                using (var indexWriter = new IndexWriter(transaction, mapping))
+                using (var indexWriter = new IndexWriter(transaction, mapping, SupportedFeatures.All))
                 {
                     const string someValue = "3.14";
                     

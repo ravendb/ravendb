@@ -1,18 +1,9 @@
 ﻿namespace Corax;
 
-public class SupportedFeatures
+public class SupportedFeatures(bool isPhraseQuerySupported, bool isStoreOnlySupported)
 {
-    public readonly bool PhraseQuery = true;
-    public readonly bool StoreOnly = true;
-
-    public SupportedFeatures(bool isPhraseQuerySupported, bool isStoreOnlySupported)
-    {
-        PhraseQuery = isPhraseQuerySupported;
-        StoreOnly = isStoreOnlySupported;
-    }
+    public static readonly SupportedFeatures All = new (true, true);
     
-    public SupportedFeatures()
-    {
-        // all is supported
-    }
+    public readonly bool PhraseQuery = isPhraseQuerySupported;
+    public readonly bool StoreOnly = isStoreOnlySupported;
 }

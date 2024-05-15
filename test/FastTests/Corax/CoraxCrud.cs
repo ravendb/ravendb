@@ -27,7 +27,7 @@ public class CoraxCrud: StorageTest
     {
         var fields = CreateKnownFields(Allocator);
         Span<long> ids = stackalloc long[1024];
-        using (var indexWriter = new IndexWriter(Env, fields))
+        using (var indexWriter = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var builder = indexWriter.Index("users/1"u8))
             {
@@ -51,7 +51,7 @@ public class CoraxCrud: StorageTest
     {
         var fields = CreateKnownFields(Allocator);
         Span<long> ids = stackalloc long[1024];
-        using (var indexWriter = new IndexWriter(Env, fields))
+        using (var indexWriter = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var builder = indexWriter.Index("users/1"u8))
             {
@@ -80,7 +80,7 @@ public class CoraxCrud: StorageTest
     {
         var fields = CreateKnownFields(Allocator);
         Span<long> ids = stackalloc long[1024];
-        using (var indexWriter = new IndexWriter(Env, fields))
+        using (var indexWriter = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var builder = indexWriter.Index("users/1"u8))
             {
@@ -90,7 +90,7 @@ public class CoraxCrud: StorageTest
             indexWriter.Commit();
         }
         
-        using (var indexWriter = new IndexWriter(Env, fields))
+        using (var indexWriter = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var builder = indexWriter.Update("users/1"u8))
             {
@@ -125,7 +125,7 @@ public class CoraxCrud: StorageTest
     {
         var fields = CreateKnownFields(Allocator);
         Span<long> ids = stackalloc long[1024];
-        using (var indexWriter = new IndexWriter(Env, fields))
+        using (var indexWriter = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var builder = indexWriter.Index("users/1"u8))
             {
@@ -135,7 +135,7 @@ public class CoraxCrud: StorageTest
             indexWriter.Commit();
         }
         
-        using (var indexWriter = new IndexWriter(Env, fields))
+        using (var indexWriter = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
             using (var builder = indexWriter.Update("users/1"u8))
             {
