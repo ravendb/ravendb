@@ -2266,7 +2266,7 @@ namespace Raven.Server
 
             if (tcpAuditLog != null)
                 tcpAuditLog.Info(
-                    $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName}.");
+                    $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName ?? "Server"}.");
             return header;
         }
 

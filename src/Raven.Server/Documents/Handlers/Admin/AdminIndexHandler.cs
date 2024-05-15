@@ -70,21 +70,18 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var indexDefinition = JsonDeserializationServer.IndexDefinition(indexToAdd);
                     indexDefinition.Name = indexDefinition.Name?.Trim();
 
-                    var ip = IsLocalRequest(HttpContext) ? Environment.MachineName : HttpContext.Connection.RemoteIpAddress.ToString();
-
                     var clientCert = GetCurrentCertificate();
                     
                     string source;
 
                     if (clientCert != null)
-                        source = $"{ip} | {clientCert.Subject} [{clientCert.Thumbprint}]";
+                        source = $"{RequestIp} | {clientCert.Subject} [{clientCert.Thumbprint}]";
                     else
-                        source = $"{ip}";
+                        source = $"{RequestIp}";
                     
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
-                        var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
-                        auditLog.Info($"Index {indexDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {indexToAdd} from {ip} at {DateTime.UtcNow}");
+                        LogAuditFor(Database.Name, $"Index {indexDefinition.Name} PUT with definition: {indexToAdd}");
                     }
 
                     if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
@@ -162,23 +159,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options);
                 await smuggler.ExecuteAsync();
             }
-        }
-
-        public static bool IsLocalRequest(HttpContext context)
-        {
-            if (context.Connection.RemoteIpAddress == null && context.Connection.LocalIpAddress == null)
-            {
-                return true;
-            }
-            if (context.Connection.RemoteIpAddress.Equals(context.Connection.LocalIpAddress))
-            {
-                return true;
-            }
-            if (IPAddress.IsLoopback(context.Connection.RemoteIpAddress))
-            {
-                return true;
-            }
-            return false;
         }
 
         [RavenAction("/databases/*/admin/indexes/stop", "POST", AuthorizationStatus.DatabaseAdmin)]
