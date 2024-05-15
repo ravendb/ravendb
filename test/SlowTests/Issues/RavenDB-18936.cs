@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -85,6 +86,12 @@ public class RavenDB_18936 : RavenTestBase
         Indexes.WaitForIndexing(store);
         
         AssertTerm(store, index.IndexName, "name", new []{"john"});
+
+        {
+            using var session = store.OpenSession();
+            var result = session.Advanced.DocumentQuery<Item, CreateFieldInsideArrayJavaScript>().SelectFields<string>("name").First();
+            Assert.Equal("John", result);
+        }
         
         WaitForUserToContinueTheTest(store);
     }
@@ -141,7 +148,7 @@ public class RavenDB_18936 : RavenTestBase
             {
                 @"map('Items', function (p) {
 return {
-_: [ createField('name', 'john', { indexing: 'Exact', storage: false, termVector: null }) ]
+_: [ createField('name', 'John', { indexing: 'Default', storage: true, termVector: null }) ]
 };
 })",
             };

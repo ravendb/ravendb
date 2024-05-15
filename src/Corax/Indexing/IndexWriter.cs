@@ -280,9 +280,7 @@ namespace Corax.Indexing
             //We have to use transaction context here for storing slices in _dynamicFieldsTerms since we may reset other
             //allocators during the document insertion.
             var context = _transaction.LowLevelTransaction.Allocator;
-            if (_fieldsMapping.TryGetByFieldName(fieldName, out var indexFieldBinding))
-                return _knownFieldsTerms[indexFieldBinding.FieldId];
-
+            
             _dynamicFieldsTerms ??= new(SliceComparer.Instance);
             if (_dynamicFieldsTerms.TryGetValue(fieldName, out var indexedField))
                 return indexedField;
