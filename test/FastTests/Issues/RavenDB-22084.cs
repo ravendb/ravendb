@@ -16,45 +16,94 @@ namespace FastTests.Issues
         [Fact]
         public void StoreOnDictionaryWithEnumKeyShouldWork()
         {
-            using (var store = GetDocumentStore())
-            {
-                string id;
-                using (var session = store.OpenSession())
-                {
-                    var entity = Machine.Create();
-                    session.Store(entity);
-                    session.SaveChanges();
-                    id = session.Advanced.GetDocumentId(entity);
-                }
+            using var store = GetDocumentStore();
 
-                var storedJson = GetRawJson(store, id);
-                Assert.Equal("""{"Checks":{"Engine":"Good","Gears":"Good"}}""", storedJson);
+            string id;
+            using (var session = store.OpenSession())
+            {
+                var entity = Machine.Create();
+                session.Store(entity);
+                session.SaveChanges();
+                id = session.Advanced.GetDocumentId(entity);
             }
+
+            var storedJson = GetRawJson(store, id);
+            Assert.Equal("""{"Checks":{"Engine":"Good","Gears":"Good"}}""", storedJson);
+        }
+
+        [Fact]
+        public void StoreOnDictionaryWithEnumKeyAndSaveEnumsAsIntegersShouldWork()
+        {
+            using var store = GetDocumentStore(new()
+            {
+                ModifyDocumentStore = store =>
+                {
+                    store.Conventions.SaveEnumsAsIntegers = true;
+                },
+            });
+
+            string id;
+            using (var session = store.OpenSession())
+            {
+                var entity = Machine.Create();
+                session.Store(entity);
+                session.SaveChanges();
+                id = session.Advanced.GetDocumentId(entity);
+            }
+
+            var storedJson = GetRawJson(store, id);
+            Assert.Equal("""{"Checks":{"Engine":1,"Gears":1}}""", storedJson);
         }
 
         [Fact]
         public void PatchOnDictionaryWithEnumKeyShouldWork()
         {
-            using (var store = GetDocumentStore())
+            using var store = GetDocumentStore();
+
+            string id;
+            using (var session = store.OpenSession())
             {
-                string id;
-                using (var session = store.OpenSession())
-                {
-                    var entity = Machine.Create();
-                    session.Store(entity);
-                    session.SaveChanges();
-                    id = session.Advanced.GetDocumentId(entity);
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    session.Advanced.Patch<Machine, Status>(id, x => x.Checks[Type.Engine], Status.Bad);
-                    session.SaveChanges();
-                }
-
-                var patchedJson = GetRawJson(store, id);
-                Assert.Equal("""{"Checks":{"Engine":"Bad","Gears":"Good"}}""", patchedJson);
+                var entity = Machine.Create();
+                session.Store(entity);
+                session.SaveChanges();
+                id = session.Advanced.GetDocumentId(entity);
             }
+
+            using (var session = store.OpenSession())
+            {
+                session.Advanced.Patch<Machine, Status>(id, x => x.Checks[Parts.Engine], Status.Bad);
+                session.SaveChanges();
+            }
+
+            var patchedJson = GetRawJson(store, id);
+            Assert.Equal("""{"Checks":{"Engine":"Bad","Gears":"Good"}}""", patchedJson);
+        }
+
+        [Fact]
+        public void PatchOnDictionaryWithEnumKeyAndSaveEnumsAsIntegersShouldWork()
+        {
+            using var store = GetDocumentStore(new()
+            {
+                ModifyDocumentStore = store => store.Conventions.SaveEnumsAsIntegers = true,
+            });
+
+            string id;
+            using (var session = store.OpenSession())
+            {
+                var entity = Machine.Create();
+                session.Store(entity);
+                session.SaveChanges();
+                id = session.Advanced.GetDocumentId(entity);
+            }
+
+            using (var session = store.OpenSession())
+            {
+                session.Advanced.Patch<Machine, Status>(id, x => x.Checks[Parts.Engine], Status.Bad);
+                session.SaveChanges();
+            }
+
+            var patchedJson = GetRawJson(store, id);
+            Assert.Equal("""{"Checks":{"Engine":2,"Gears":1}}""", patchedJson);
         }
 
         private string GetRawJson(DocumentStore store, string id)
@@ -72,15 +121,15 @@ namespace FastTests.Issues
             {
                 Checks = new()
                 {
-                    { Type.Engine, Status.Good },
-                    { Type.Gears, Status.Good },
+                    { Parts.Engine, Status.Good },
+                    { Parts.Gears, Status.Good },
                 },
             };
 
-            public Dictionary<Type, Status> Checks { get; set; }
+            public Dictionary<Parts, Status> Checks { get; set; }
         }
 
-        public enum Type
+        public enum Parts
         {
             Engine = 42,
             Gears = 102,
