@@ -1,20 +1,15 @@
-﻿using System;
+﻿#if NET8_0
+using System;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
-using Orders;
 using Raven.Client.Documents;
 using Xunit;
-using Xunit.Abstractions;
 
-namespace SlowTests.Server.Integrations.PostgreSQL
+namespace EmbeddedTests.Server.Integrations.PostgreSQL
 {
     public class RavenDB_17433 : PostgreSqlIntegrationTestBase
     {
-        public RavenDB_17433(ITestOutputHelper output) : base(output)
-        {
-        }
-
         [Fact]
         public async Task QueryWithSingleReplaceShouldWork()
         {
@@ -38,13 +33,11 @@ from
 ) ""_""
 limit 1000";
 
-            DoNotReuseServer(EnablePostgresSqlSettings);
-
             using (var store = GetDocumentStore())
             {
-                Samples.CreateNorthwindDatabase(store);
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
-                var result = await Act(store, queryWithSingleReplace, Server);
+                var result = await Act(store, queryWithSingleReplace);
 
                 DataRowCollection rows = result.Rows;
 
@@ -104,13 +97,11 @@ from
 ) ""_""
 limit 1000";
 
-            DoNotReuseServer(EnablePostgresSqlSettings);
-
             using (var store = GetDocumentStore())
             {
-                Samples.CreateNorthwindDatabase(store);
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
-                var result2 = await Act(store, queryWithMultipleNestedReplaces, Server);
+                var result2 = await Act(store, queryWithMultipleNestedReplaces);
 
                 DataRowCollection rows2 = result2.Rows;
 
@@ -158,15 +149,13 @@ from
 where ""_"".""FirstName"" = 'Anne' and ""_"".""FirstName"" is not null
 limit 1000";
 
-            DoNotReuseServer(EnablePostgresSqlSettings);
-
             using (var store = GetDocumentStore())
             {
-                Samples.CreateNorthwindDatabase(store);
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
                 // queryWithSingleReplace
 
-                var result = await Act(store, queryWithSingleWhereCondition, Server);
+                var result = await Act(store, queryWithSingleWhereCondition);
 
                 DataRowCollection rows = result.Rows;
 
@@ -200,15 +189,13 @@ from
 where ""_"".""FirstName"" = 'Anne' and ""_"".""FirstName"" is not null
 limit 1000";
 
-            DoNotReuseServer(EnablePostgresSqlSettings);
-
             using (var store = GetDocumentStore())
             {
-                Samples.CreateNorthwindDatabase(store);
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
                 // queryWithSingleReplace
 
-                var result = await Act(store, queryWithSingleWhereCondition, Server);
+                var result = await Act(store, queryWithSingleWhereCondition);
 
                 DataRowCollection rows = result.Rows;
 
@@ -230,15 +217,13 @@ from
 where ""_"".""LastName"" = 'Dodsworth' and ""_"".""LastName"" is not null
 limit 1000";
 
-            DoNotReuseServer(EnablePostgresSqlSettings);
-
             using (var store = GetDocumentStore())
             {
-                Samples.CreateNorthwindDatabase(store);
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
                 // queryWithSingleReplace
 
-                var result = await Act(store, queryWithSingleWhereCondition, Server);
+                var result = await Act(store, queryWithSingleWhereCondition);
 
                 DataRowCollection rows = result.Rows;
 
@@ -269,15 +254,13 @@ from
 where ((""_"".""FirstName"" <> 'Anne' or ""_"".""FirstName"" is null) and (""_"".""FirstName"" <> 'Janet' or ""_"".""FirstName"" is null)) and (""_"".""Title"" = 'Inside Sales Coordinator' and ""_"".""Title"" is not null or ""_"".""Title"" = 'Vice President, Sales' and ""_"".""Title"" is not null)
 limit 1000";
 
-            DoNotReuseServer(EnablePostgresSqlSettings);
-
             using (var store = GetDocumentStore())
             {
-                Samples.CreateNorthwindDatabase(store);
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
                 // queryWithSingleReplace
 
-                var result = await Act(store, query, Server);
+                var result = await Act(store, query);
 
                 DataRowCollection rows = result.Rows;
 
@@ -308,15 +291,13 @@ from
 where ""_"".""HiredAt"" = timestamp '1994-11-15 00:00:00' and ""_"".""HiredAt"" is not null
 limit 1000";
 
-            DoNotReuseServer(EnablePostgresSqlSettings);
-
             using (var store = GetDocumentStore())
             {
-                Samples.CreateNorthwindDatabase(store);
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
                 // queryWithSingleReplace
 
-                var result = await Act(store, query, Server);
+                var result = await Act(store, query);
 
                 DataRowCollection rows = result.Rows;
 
@@ -345,11 +326,9 @@ from
 where ""_"".""OrderedAt"" >= timestamp '1995-10-10 00:00:00' and ""_"".""OrderedAt"" < timestamp '1997-10-10 00:00:00'
 limit 1000";
 
-            DoNotReuseServer(EnablePostgresSqlSettings);
-
             using (var store = GetDocumentStore())
             {
-                Samples.CreateNorthwindDatabase(store);
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -357,7 +336,7 @@ limit 1000";
                         .Query<Order>().Where(x => x.OrderedAt > new DateTime(1995, 10, 10) && x.OrderedAt < new DateTime(1997, 10, 10))
                         .ToListAsync();
 
-                    var result = await Act(store, query, Server);
+                    var result = await Act(store, query);
 
                     DataRowCollection rows = result.Rows;
 
@@ -440,15 +419,13 @@ from
 ) ""_""
 limit 1000";
 
-            DoNotReuseServer(EnablePostgresSqlSettings);
-
             using (var store = GetDocumentStore())
             {
-                Samples.CreateNorthwindDatabase(store);
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
                 // queryWithSingleReplace
 
-                var result = await Act(store, query, Server);
+                var result = await Act(store, query);
 
                 DataRowCollection rows = result.Rows;
 
@@ -504,15 +481,13 @@ from
 where (""_"".""FirstName"" <> 'Anne' or ""_"".""FirstName"" is null) and (""_"".""FirstName"" <> 'Nancy' or ""_"".""FirstName"" is null)
 limit 1000";
 
-            DoNotReuseServer(EnablePostgresSqlSettings);
-
             using (var store = GetDocumentStore())
             {
-                Samples.CreateNorthwindDatabase(store);
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
                 // queryWithSingleReplace
 
-                var result = await Act(store, queryWithSingleWhereCondition, Server);
+                var result = await Act(store, queryWithSingleWhereCondition);
 
                 DataRowCollection rows = result.Rows;
 
@@ -521,3 +496,4 @@ limit 1000";
         }
     }
 }
+#endif

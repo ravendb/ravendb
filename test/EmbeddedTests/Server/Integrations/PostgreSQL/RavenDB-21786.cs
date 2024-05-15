@@ -1,25 +1,19 @@
-﻿using System.Threading.Tasks;
+﻿#if NET8_0
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Raven.Client.Documents;
 using Xunit;
-using Xunit.Abstractions;
 
-namespace SlowTests.Server.Integrations.PostgreSQL;
+namespace EmbeddedTests.Server.Integrations.PostgreSQL;
 
 public class RavenDB_21786 : PostgreSqlIntegrationTestBase
 {
-    public RavenDB_21786(ITestOutputHelper output) : base(output)
-    {
-    }
-    
     [Fact]
     public async Task SkipsGettingUncheckedPropertyValue_ForDocument_WhichDoesNotHaveTheProperty()
     {
         const string collectionName = "Members";
         const string query = $"from {collectionName}";
-
-        DoNotReuseServer(EnablePostgresSqlSettings);
 
         using (var store = GetDocumentStore())
         {
@@ -56,7 +50,7 @@ public class RavenDB_21786 : PostgreSqlIntegrationTestBase
                     .Query<Member>()
                     .ToListAsync();
 
-                var result = await Act(store, query, Server);
+                var result = await Act(store, query);
 
                 Assert.NotNull(result);
                 Assert.NotEmpty(result.Rows);
@@ -71,3 +65,4 @@ public class RavenDB_21786 : PostgreSqlIntegrationTestBase
         public string Surname { get; set; }
     }
 }
+#endif

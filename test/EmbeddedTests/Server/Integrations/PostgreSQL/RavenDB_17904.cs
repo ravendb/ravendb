@@ -1,23 +1,17 @@
-﻿using System;
+﻿#if NET8_0
+using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Xunit;
-using Xunit.Abstractions;
 
-namespace SlowTests.Server.Integrations.PostgreSQL;
+namespace EmbeddedTests.Server.Integrations.PostgreSQL;
 
 public class RavenDB_17904 : PostgreSqlIntegrationTestBase
 {
-    public RavenDB_17904(ITestOutputHelper output) : base(output)
-    {
-    }
-
     [Fact]
     public async Task CanCovertDateTimeOffsetCorrectlyInPostgres()
     {
         const string query = "from Calculations";
-
-        DoNotReuseServer(EnablePostgresSqlSettings);
 
         using (var store = GetDocumentStore())
         {
@@ -37,7 +31,7 @@ public class RavenDB_17904 : PostgreSqlIntegrationTestBase
                     .Query<Calculation>()
                     .ToListAsync();
 
-                var result = await Act(store, query, Server);
+                var result = await Act(store, query);
 
                 Assert.NotNull(result);
                 Assert.NotEmpty(result.Rows);
@@ -51,3 +45,4 @@ public class RavenDB_17904 : PostgreSqlIntegrationTestBase
         public DateTimeOffset CreatedAt { get; set; }
     }
 }
+#endif
