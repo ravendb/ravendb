@@ -152,19 +152,19 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Core" Version="3.7.303.13" />
-    <PackageReference Include="AWSSDK.Glacier" Version="3.7.300.73" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.307.14" />
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.19.1" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.304.1" />
+    <PackageReference Include="AWSSDK.Glacier" Version="3.7.300.91" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.308" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.20.0" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.7.1" />
     <PackageReference Include="CloudNative.CloudEvents" Version="2.7.1" />
     <PackageReference Include="CloudNative.CloudEvents.Amqp" Version="2.7.1" />
     <PackageReference Include="CloudNative.CloudEvents.Kafka" Version="2.7.1" />
-    <PackageReference Include="Confluent.Kafka" Version="2.3.0" />
-    <PackageReference Include="CsvHelper" Version="31.0.3" />
+    <PackageReference Include="Confluent.Kafka" Version="2.4.0" />
+    <PackageReference Include="CsvHelper" Version="32.0.3" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
-    <PackageReference Include="FluentFTP" Version="49.0.2" />
-    <PackageReference Include="Elastic.Clients.Elasticsearch" Version="8.13.5" />
+    <PackageReference Include="FluentFTP" Version="50.0.1" />
+    <PackageReference Include="Elastic.Clients.Elasticsearch" Version="8.13.12" />
     <PackageReference Include="JetBrains.Annotations" Version="2023.3.0">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
@@ -172,14 +172,14 @@
     <PackageReference Include="Google.Api.Gax.Rest" Version="4.8.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="4.10.0" />
     <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
-    <PackageReference Include="librdkafka.redist" Version="2.3.0" />
+    <PackageReference Include="librdkafka.redist" Version="2.4.0" />
     <PackageReference Include="Lucene.Net" Version="3.0.60010" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.60010" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.9.2" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.9.2" />
-    <PackageReference Include="MySqlConnector" Version="2.3.6" />
+    <PackageReference Include="MySqlConnector" Version="2.3.7" />
     <PackageReference Include="NCrontab.Advanced" Version="1.3.28" />
     <PackageReference Include="Npgsql" Version="8.0.3" />
     <PackageReference Include="NuGet.Commands" Version="6.9.1" Alias="NGC" />
@@ -187,7 +187,7 @@
     <PackageReference Include="NuGet.Resolver" Version="6.9.1" />
     <PackageReference Include="NuGet.PackageManagement" Version="6.9.1" />
     <PackageReference Include="NuGet.Protocol" Version="6.9.1" />
-    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.130" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.4.0" />
     <PackageReference Include="Parquet.Net" Version="4.23.5" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
     <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
@@ -199,7 +199,7 @@
     <PackageReference Include="System.Linq.Async" Version="6.0.1" />
     <PackageReference Include="System.Reflection.Metadata" Version="8.0.0" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
-    <PackageReference Include="ZstdSharp.Port" Version="0.7.6" />
+    <PackageReference Include="ZstdSharp.Port" Version="0.8.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Properties\Settings\settings_posix.json">
