@@ -115,7 +115,7 @@ namespace FastTests.Issues
             return json.Substring(12, json.IndexOf(",\"@metadata") - 12) + "}";
         }
 
-        public class Machine
+        private class Machine
         {
             public static Machine Create() => new()
             {
@@ -129,13 +129,13 @@ namespace FastTests.Issues
             public Dictionary<Parts, Status> Checks { get; set; }
         }
 
-        public enum Parts
+        private enum Parts
         {
             Engine = 42,
             Gears = 102,
         }
 
-        public enum Status
+        private enum Status
         {
             None,
             Good,
