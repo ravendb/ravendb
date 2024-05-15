@@ -185,6 +185,10 @@ namespace Raven.Client.Documents.Session
             var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
 
             var valueToUse = AddTypeNameToValueIfNeeded(path.Body.Type, value);
+            if (DocumentStore.Conventions.SaveEnumsAsIntegers && value is Enum)
+            {
+                valueToUse = Convert.ToInt32(value);
+            }
 
             var patchRequest = new PatchRequest { Script = $"this.{pathScript} = args.val_{_valsCount};", Values = { [$"val_{_valsCount}"] = valueToUse } };
 
