@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -18,7 +19,6 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
@@ -89,7 +89,6 @@ namespace Raven.Server.Smuggler.Documents
                 var currentType = await _source.GetNextTypeAsync();
                 while (currentType != DatabaseItemType.None)
                 {
-
                     await ProcessTypeAsync(currentType, result, buildType, ensureStepsProcessed);
 
                     currentType = await _source.GetNextTypeAsync();
@@ -721,7 +720,7 @@ namespace Raven.Server.Smuggler.Documents
 
                             try
                             {
-                                await actions.WriteIndexAsync(autoMapIndexDefinition, IndexType.AutoMap, _options.AuthorizationStatus);
+                                await actions.WriteIndexAsync(autoMapIndexDefinition, IndexType.AutoMap);
                             }
                             catch (Exception e)
                             {
@@ -734,7 +733,7 @@ namespace Raven.Server.Smuggler.Documents
                             var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)index.IndexDefinition;
                             try
                             {
-                                await actions.WriteIndexAsync(autoMapReduceIndexDefinition, IndexType.AutoMapReduce, _options.AuthorizationStatus);
+                                await actions.WriteIndexAsync(autoMapReduceIndexDefinition, IndexType.AutoMapReduce);
                             }
                             catch (Exception e)
                             {
@@ -1222,7 +1221,7 @@ namespace Raven.Server.Smuggler.Documents
                         indexDefinitionField.Value.Analyzer = null;
                 }
 
-                await actions.WriteIndexAsync(indexDefinition, _options.AuthorizationStatus);
+                await actions.WriteIndexAsync(indexDefinition);
             }
             catch (Exception e)
             {
