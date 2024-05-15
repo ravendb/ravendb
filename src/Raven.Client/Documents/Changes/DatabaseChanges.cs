@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -198,6 +197,8 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<OperationStatusChange> ForOperationId(long operationId)
         {
+            Debug.Assert(string.IsNullOrEmpty(_nodeTag) == false, "Changes API must be provided a node tag in order to track node-specific operations.");
+
             var counter = GetOrAddConnectionState("operations/" + operationId, "watch-operation", "unwatch-operation", operationId.ToString());
 
             var taskedObservable = new ChangesObservable<OperationStatusChange, DatabaseConnectionState>(
@@ -209,6 +210,8 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<OperationStatusChange> ForAllOperations()
         {
+            Debug.Assert(string.IsNullOrEmpty(_nodeTag) == false, "Changes API must be provided a node tag in order to track node-specific operations.");
+
             var counter = GetOrAddConnectionState("all-operations", "watch-operations", "unwatch-operations", null);
 
             var taskedObservable = new ChangesObservable<OperationStatusChange, DatabaseConnectionState>(
