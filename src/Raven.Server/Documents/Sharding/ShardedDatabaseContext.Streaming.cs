@@ -215,13 +215,18 @@ namespace Raven.Server.Documents.Sharding
             {
                 public override int Compare(ShardStreamItem<BlittableJsonReaderObject> x, ShardStreamItem<BlittableJsonReaderObject> y)
                 {
-                    if (x.Item.TryGet(nameof(Document.LastModified), out DateTime xLastModified) == false)
-                        throw new InvalidOperationException($"Revision does not contain 'LastModified' field.");
-
-                    if (y.Item.TryGet(nameof(Document.LastModified), out DateTime yLastModified) == false)
-                        throw new InvalidOperationException($"Revision does not contain 'LastModified' field.");
+                    var xLastModified = GetLatModified(x);
+                    var yLastModified = GetLatModified(y);
 
                     return yLastModified.CompareTo(xLastModified);
+                }
+
+                private DateTime GetLatModified(ShardStreamItem<BlittableJsonReaderObject> x)
+                {
+                    if (x.Item.TryGet(nameof(Document.LastModified), out DateTime lastModified) == false)
+                        throw new InvalidOperationException($"Revision does not contain 'LastModified' field.");
+
+                    return lastModified;
                 }
 
                 public static RevisionLastModifiedComparer Instance = new();
