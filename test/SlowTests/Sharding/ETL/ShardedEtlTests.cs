@@ -1568,7 +1568,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                EnsureNonStaleElasticResults(client);
+                await EnsureNonStaleElasticResultsAsync(client);
 
                 var ordersCount = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderIndexName)));
                 var orderLinesCount = await client.CountAsync<object>(c => c.Indices(OrderLinesIndexName));
@@ -1587,7 +1587,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                EnsureNonStaleElasticResults(client);
+                await EnsureNonStaleElasticResultsAsync(client);
 
                 var ordersCountAfterDelete = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderIndexName)));
                 var orderLinesCountAfterDelete = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
@@ -1635,7 +1635,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 var ordersCount = await WaitForValueAsync(async () =>
                 {
-                    EnsureNonStaleElasticResults(client);
+                    await EnsureNonStaleElasticResultsAsync(client);
                     return (await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderIndexName)))).Count;
                 }, expectedVal: numberOfOrders, timeout: 60_000);
 
@@ -1643,7 +1643,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 var orderLinesCount = await WaitForValueAsync(async () =>
                 {
-                    EnsureNonStaleElasticResults(client);
+                    await EnsureNonStaleElasticResultsAsync(client);
                     return (await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)))).Count;
                 }, expectedVal: numberOfOrders * numberOfLinesPerOrder, timeout: 60_000);
 
@@ -1661,7 +1661,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 var ordersCountAfterDelete = await WaitForValueAsync(async () =>
                 {
-                    EnsureNonStaleElasticResults(client);
+                    await EnsureNonStaleElasticResultsAsync(client);
                     return (await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderIndexName)))).Count;
                 }, expectedVal: 0, timeout: 60_000);
 
@@ -1669,7 +1669,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 var orderLinesCountAfterDelete = await WaitForValueAsync(async () =>
                 {
-                    EnsureNonStaleElasticResults(client);
+                    await EnsureNonStaleElasticResultsAsync(client);
                     return (await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)))).Count;
                 }, expectedVal: 0, timeout: 60_000);
 
@@ -2261,7 +2261,7 @@ loadToAddresses(this.Address);
         {
             var localClient = client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value });
 
-            AsyncHelpers.RunSync(() =>CleanupIndexes(localClient));
+            AsyncHelpers.RunSync(() => CleanupIndexes(localClient));
 
             return new DisposableAction(() =>
             {
@@ -2286,9 +2286,9 @@ loadToAddresses(this.Address);
             }
         }
 
-        private static void EnsureNonStaleElasticResults(ElasticsearchClient client)
+        private static Task EnsureNonStaleElasticResultsAsync(ElasticsearchClient client)
         {
-            client.Indices.Refresh(new RefreshRequest(Indices.All));
+            return client.Indices.RefreshAsync(new RefreshRequest(Indices.All));
         }
 
         private async Task<string> AddDebugInfoOnFailure(IDocumentStore store, int expected, long actual)
