@@ -26,6 +26,10 @@ class document implements documentBase {
         }
     }
 
+    getValue(propertyName: string): unknown {
+        return (this as Record<string, unknown>)[propertyName];
+    }
+
     getCollection() {
         return this.__metadata.collection || "@empty";
     }
