@@ -779,10 +779,10 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Encryption in transit",
-                community: { value: "TLS 1.2 & X.509" },
-                professional: { value: "TLS 1.2 & X.509" },
-                enterprise: { value: "TLS 1.2 & X.509" },
-                developer: { value: "TLS 1.2 & X.509" },
+                community: { value: "TLS 1.3 & X.509" },
+                professional: { value: "TLS 1.3 & X.509" },
+                enterprise: { value: "TLS 1.3 & X.509" },
+                developer: { value: "TLS 1.3 & X.509" },
                 fieldInLicense: null,
             },
             {
