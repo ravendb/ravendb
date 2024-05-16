@@ -30,18 +30,18 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
             var cmd = new ShardedGetRevisionsByChangeVectorsOperation(HttpContext, changeVectors.ToArray(), metadataOnly, context, etag);
             var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(cmd, token);
 
+            if (result.StatusCode == (int)HttpStatusCode.NotModified)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                return;
+            }
+
             if (result.Result == null && changeVectors.Count == 1)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return;
             }
 
-            if (result.StatusCode == (int)HttpStatusCode.NotModified)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                return;
-            }
-            
             if (string.IsNullOrEmpty(result.CombinedEtag) == false)
                 HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + result.CombinedEtag + "\"";
 
