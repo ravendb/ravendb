@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
@@ -46,18 +45,15 @@ internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler
                 var indexDefinition = JsonDeserializationServer.IndexDefinition(indexToAdd);
                 indexDefinition.Name = indexDefinition.Name?.Trim();
 
-                var ip = IsLocalRequest(HttpContext) ? Environment.MachineName : HttpContext.Connection.RemoteIpAddress.ToString();
-
                 var clientCert = RequestHandler.GetCurrentCertificate();
 
                 string source = clientCert != null
-                    ? $"{ip} | {clientCert.Subject} [{clientCert.Thumbprint}]"
-                    : $"{ip}";
+                    ? $"{RequestHandler.RequestIp} | {clientCert.Subject} [{clientCert.Thumbprint}]"
+                    : $"{RequestHandler.RequestIp}";
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    var auditLog = LoggingSource.AuditLog.GetLogger(RequestHandler.DatabaseName, "Audit");
-                    auditLog.Info($"Index {indexDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {indexToAdd} from {ip} at {DateTime.UtcNow}");
+                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, $"Index {indexDefinition.Name} PUT with definition: {indexToAdd}");
                 }
 
                 if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
@@ -98,22 +94,5 @@ internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler
                 writer.WritePutIndexResponse(context, createdIndexes);
             }
         }
-    }
-
-    private static bool IsLocalRequest(HttpContext context)
-    {
-        if (context.Connection.RemoteIpAddress == null && context.Connection.LocalIpAddress == null)
-        {
-            return true;
-        }
-        if (context.Connection.RemoteIpAddress.Equals(context.Connection.LocalIpAddress))
-        {
-            return true;
-        }
-        if (IPAddress.IsLoopback(context.Connection.RemoteIpAddress))
-        {
-            return true;
-        }
-        return false;
     }
 }

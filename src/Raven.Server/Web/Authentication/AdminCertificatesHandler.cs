@@ -223,13 +223,11 @@ namespace Raven.Server.Web.Authentication
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    var clientCertificate = GetCurrentCertificate();
-                    var auditLog = LoggingSource.AuditLog.GetLogger("Certificates", "Audit");
                     var permissions = certificate?.Permissions != null
                         ? Environment.NewLine + string.Join(Environment.NewLine, certificate.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))
                         : string.Empty;
-                    auditLog.Info($"Add new certificate '{certificate?.Thumbprint}'. Security Clearance: {certificate?.SecurityClearance}. Permissions:{permissions}." +
-                                  $"{Environment.NewLine}IP: '{HttpContext.Connection.RemoteIpAddress}'. Certificate: {clientCertificate?.Subject} ({clientCertificate?.Thumbprint})");
+                    LogAuditFor("Certificates",
+                        $"Add new certificate {certificate?.Name} ['{certificate?.Thumbprint}']. Security Clearance: {certificate?.SecurityClearance}. Permissions:{permissions}.");
                 }
 
                 try
@@ -408,9 +406,7 @@ namespace Raven.Server.Web.Authentication
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    var clientCertificate = GetCurrentCertificate();
-                    var auditLog = LoggingSource.AuditLog.GetLogger("Certificates", "Audit");
-                    auditLog.Info($"Delete certificate '{thumbprint}'. IP: '{HttpContext.Connection.RemoteIpAddress}'. Certificate: {clientCertificate?.Subject} ({clientCertificate?.Thumbprint})");
+                    LogAuditFor("Certificates", $"Delete certificate '{thumbprint}'.");
                 }
 
                 await DeleteInternal(keysToDelete, GetRaftRequestIdFromQuery());

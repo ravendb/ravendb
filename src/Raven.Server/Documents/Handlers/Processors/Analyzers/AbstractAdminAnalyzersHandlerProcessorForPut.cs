@@ -36,10 +36,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Analyzers
 
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
-                        var clientCert = RequestHandler.GetCurrentCertificate();
-
-                        var auditLog = LoggingSource.AuditLog.GetLogger(databaseName, "Audit");
-                        auditLog.Info($"Analyzer {analyzerDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {analyzerToAdd}");
+                        RequestHandler.LogAuditFor(databaseName, $"Analyzer '{analyzerDefinition.Name}' PUT with definition: {analyzerToAdd}");
                     }
 
                     analyzerDefinition.Validate();
