@@ -582,6 +582,7 @@ namespace FastTests.Sparrow
         [Theory]
         [MemberData("RandomSeed")]
         [InlineData(7157)]
+        [InlineData(50407)]
         public void VerifyCorrectDecodingWithNulls(int randomSeed)
         {
             State state = new(64000);

@@ -2091,6 +2091,9 @@ namespace Raven.Client.Http
 
             if (certificate != null)
             {
+                if (httpMessageHandler.ClientCertificates == null)
+                    throw new NotSupportedException($"{typeof(HttpClientHandler)} does not support {nameof(httpMessageHandler.ClientCertificates)}. Setting the UseNativeHttpHandler property in project settings to false may solve the issue.");
+
                 httpMessageHandler.ClientCertificates.Add(certificate);
                 try
                 {
