@@ -10,7 +10,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Voron;
 using Voron.Impl;
 
@@ -22,14 +21,11 @@ namespace Raven.Server.Documents.Expiration
         private const string DocumentsByRefresh = "DocumentsByRefresh";
 
         private readonly DocumentDatabase _database;
-        private readonly DocumentsStorage _documentsStorage;
-        private readonly Logger _logger;
+        private static readonly Size MaxTransactionSize = new(16, SizeUnit.Megabytes);
 
         public ExpirationStorage(DocumentDatabase database, Transaction tx)
         {
             _database = database;
-            _documentsStorage = _database.DocumentsStorage;
-            _logger = LoggingSource.Instance.GetLogger<ExpirationStorage>(database.Name);
 
             tx.CreateTree(DocumentsByExpiration);
             tx.CreateTree(DocumentsByRefresh);
@@ -281,6 +277,9 @@ namespace Raven.Server.Documents.Expiration
                     }
 
                     expirationTree.MultiDelete(pair.Key, ids.LowerId);
+
+                    if (context.Transaction.InnerTransaction.LowLevelTransaction.TransactionSize > MaxTransactionSize)
+                        return deletionCount;
                 }
             }
 
@@ -335,6 +334,9 @@ namespace Raven.Server.Documents.Expiration
                     }
 
                     refreshTree.MultiDelete(pair.Key, ids.LowerId);
+
+                    if (context.Transaction.InnerTransaction.LowLevelTransaction.TransactionSize > MaxTransactionSize)
+                        return refreshCount;
                 }
             }
 
