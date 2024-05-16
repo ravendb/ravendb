@@ -378,8 +378,8 @@ $mark-bg: var(--faded-primary) !default;
 // Customizes the `.table` component with basic values, each used across all table variations.
 
 // scss-docs-start table-variables
-$table-cell-padding-y: 0.5rem !default;
-$table-cell-padding-x: 0.5rem !default;
+$table-cell-padding-y: $gutter-xxs !default;
+$table-cell-padding-x: $gutter-xs !default;
 $table-cell-padding-y-sm: 0.25rem !default;
 $table-cell-padding-x-sm: 0.25rem !default;
 
