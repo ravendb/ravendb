@@ -31,10 +31,7 @@ namespace Raven.Server.Web.System.Sorters
 
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
-                        var clientCert = GetCurrentCertificate();
-
-                        var auditLog = LoggingSource.AuditLog.GetLogger("Server", "Audit");
-                        auditLog.Info($"Sorter {sorterDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {sorterToAdd}");
+                        LogAuditFor("Server", $"Sorter {sorterDefinition.Name} PUT with definition: {sorterToAdd}");
                     }
 
                     sorterDefinition.Validate();
@@ -64,10 +61,7 @@ namespace Raven.Server.Web.System.Sorters
 
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
-                var clientCert = GetCurrentCertificate();
-
-                var auditLog = LoggingSource.AuditLog.GetLogger("Server", "Audit");
-                auditLog.Info($"Sorter {name} DELETE by {clientCert?.Subject} {clientCert?.Thumbprint}");
+                LogAuditFor("Server", $"Sorter {name} DELETE");
             }
 
             var command = new DeleteServerWideSorterCommand(name, GetRaftRequestIdFromQuery());

@@ -31,10 +31,7 @@ namespace Raven.Server.Web.System.Analyzers
 
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
-                        var clientCert = GetCurrentCertificate();
-
-                        var auditLog = LoggingSource.AuditLog.GetLogger("Server", "Audit");
-                        auditLog.Info($"Analyzer {analyzerDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {analyzerToAdd}");
+                        LogAuditFor("Server", $"Analyzer {analyzerDefinition.Name} PUT with definition: {analyzerToAdd}");
                     }
 
                     analyzerDefinition.Validate();
@@ -64,10 +61,7 @@ namespace Raven.Server.Web.System.Analyzers
 
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
-                var clientCert = GetCurrentCertificate();
-
-                var auditLog = LoggingSource.AuditLog.GetLogger("Server", "Audit");
-                auditLog.Info($"Analyzer {name} DELETE by {clientCert?.Subject} {clientCert?.Thumbprint}");
+                LogAuditFor("Server", $"Analyzer {name} DELETE");
             }
 
             var command = new DeleteServerWideAnalyzerCommand(name, GetRaftRequestIdFromQuery());
