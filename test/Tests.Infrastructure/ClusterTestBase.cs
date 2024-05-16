@@ -134,11 +134,11 @@ namespace Tests.Infrastructure
             Assert.NotNull(await WaitForDocumentToReplicateAsync<object>(dst, id, 15 * 1000));
         }
 
-        protected async Task<T> WaitForDocumentToReplicateAsync<T>(IDocumentStore store, string id, int timeout)
+        protected async Task<T> WaitForDocumentToReplicateAsync<T>(IDocumentStore store, string id, TimeSpan timeout)
             where T : class
         {
             var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds <= timeout)
+            while (sw.Elapsed <= timeout)
             {
                 using (var session = store.OpenAsyncSession(store.Database))
                 {
@@ -151,6 +151,12 @@ namespace Tests.Infrastructure
             }
 
             return null;
+        }
+
+        protected Task<T> WaitForDocumentToReplicateAsync<T>(IDocumentStore store, string id, int timeoutInMs)
+            where T : class
+        {
+            return WaitForDocumentToReplicateAsync<T>(store, id, TimeSpan.FromMilliseconds(timeoutInMs));
         }
 
         protected T WaitForDocumentToReplicate<T>(IDocumentStore store, string id, int timeout)
