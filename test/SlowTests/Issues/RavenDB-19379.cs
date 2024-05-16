@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
-using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
@@ -19,8 +17,6 @@ namespace SlowTests.Issues
 {
     public class RavenDB_19379 : ClusterTestBase
     {
-        private static readonly TimeSpan defaultTimeout = TimeSpan.Zero;
-
         public RavenDB_19379(ITestOutputHelper output) : base(output)
         {
         }
@@ -68,40 +64,26 @@ namespace SlowTests.Issues
             var cs = new Dictionary<string, string>(DefaultClusterSettings);
             cs[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = nodeToDispose_url;
 
-            var revivedServer = GetNewServer(new ServerCreationOptions
+            using var revivedServer = GetNewServer(new ServerCreationOptions
             {
                 DeletePrevious = false,
                 RunInMemory = false,
                 DataDirectory = result.DataDirectory,
                 CustomSettings = cs
             });
-
-            var doc = await WaitForDocToReplicateAsync<User>(revivedServer, nodeToDispose_url, store.Database, "Users/1-A");
+            using var revivedStore = new DocumentStore()
+            {
+                Urls = new[] { nodeToDispose_url }, 
+                Database = store.Database, 
+                Conventions = new DocumentConventions()
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+            var doc = await WaitForDocumentToReplicateAsync<User>(revivedStore, "Users/1-A", TimeSpan.FromSeconds(15));
             Assert.NotNull(doc);
 
             await WaitAndAssertMembers(store, nodeTags, TimeSpan.FromSeconds(10));
-        }
-
-
-        private async Task<T> WaitForDocToReplicateAsync<T>(RavenServer server, string url, string database, string id, int timeout = 15_000_000) where T : class
-        {
-            using var revivedStore = new DocumentStore()
-            {
-                Urls = new[] { url }, Database = database, Conventions = new DocumentConventions() { DisableTopologyUpdates = true }
-            }.Initialize();
-
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds <= timeout)
-            {
-                using (var session = revivedStore.OpenAsyncSession(database))
-                {
-                    var doc = await session.LoadAsync<T>(id);
-                    if (doc != null)
-                        return doc;
-                }
-            }
-            sw.Stop();
-            return null;
         }
         
         private async Task WaitAndAssertRehabs(DocumentStore store, List<string> expectedRehabs, TimeSpan timeout)
