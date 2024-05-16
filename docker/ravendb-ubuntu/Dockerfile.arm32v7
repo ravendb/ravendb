@@ -28,8 +28,7 @@ RUN apt install /opt/ravendb.deb -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY server-utils.sh cert-utils.sh run-raven.sh healthcheck.sh link-legacy-datadir.sh /usr/lib/ravendb/scripts/
-COPY settings.json /etc/ravendb
-RUN chown root:${RAVEN_USER_ID} /etc/ravendb/settings.json && chmod 660 /etc/ravendb/settings.json
+COPY --chown=root:${RAVEN_USER_ID} --chmod=660 settings.json /etc/ravendb
 
 USER ravendb:ravendb
 
