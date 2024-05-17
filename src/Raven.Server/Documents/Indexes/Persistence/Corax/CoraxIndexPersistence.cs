@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 public sealed class CoraxIndexPersistence : IndexPersistenceBase
 {
+    private const bool DisableDictionaryTraining = false; // [DEBUG ONLY]: disable training.
     private readonly Logger _logger;
     private readonly CoraxDocumentConverterBase _converter;
     public CoraxIndexPersistence(Index index, IIndexReadOperationFactory indexReadOperationFactory) : base(index, indexReadOperationFactory)
@@ -153,7 +154,7 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
 
             var llt = tx.InnerTransaction.LowLevelTransaction;
 
-            if (PersistentDictionary.TryCreate(llt, enumerator, out var _) == false)
+            if (DisableDictionaryTraining || PersistentDictionary.TryCreate(llt, enumerator, out var _) == false)
                 PersistentDictionary.CreateDefault(llt);
 
             tx.Commit();

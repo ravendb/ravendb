@@ -470,7 +470,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return result;
         }
         
-        protected IEnumerable<AbstractField> LuceneCreateField(CurrentIndexingScope scope, string name, object value, CreateFieldOptions options)
+        private IEnumerable<AbstractField> LuceneCreateField(CurrentIndexingScope scope, string name, object value, CreateFieldOptions options)
         {
             // IMPORTANT: Do not delete this method, it is used by the indexes code when using CreateField
 
@@ -712,7 +712,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return Convert.ToDouble(value);
         }
 
-        private struct StaticIndexLuceneDocumentWrapper : ILuceneDocumentWrapper
+        internal struct StaticIndexLuceneDocumentWrapper : ILuceneDocumentWrapper
         {
             private readonly List<AbstractField> _fields;
 
