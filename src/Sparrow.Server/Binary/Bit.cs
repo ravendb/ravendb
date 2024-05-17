@@ -1,14 +1,9 @@
 ﻿namespace Sparrow.Server.Binary
 {
-    public readonly struct Bit
+    public readonly struct Bit(byte value)
     {
-        public readonly byte Value;
+        public readonly byte Value = (byte) (value & 1);
 
         public bool IsSet => Value == 1;
-
-        public Bit(byte value)
-        {
-            Value = (byte) (value & 1);
-        }
     }
 }

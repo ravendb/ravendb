@@ -173,23 +173,6 @@ namespace Voron.Data.BTrees
             }
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        public FixedSizeTree<TVal> FixedSizeTree<TVal>(Tree fieldsTree, Slice fieldName, byte valSize = 0)
-            where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
-        {
-            if (typeof(TVal) == typeof(long))
-            {
-                return (FixedSizeTree<TVal>)(object)fieldsTree.FixedTreeFor(fieldName, valSize);
-            }
-
-            if (typeof(TVal) == typeof(double))
-            {
-                return (FixedSizeTree<TVal>)(object)fieldsTree.FixedTreeForDouble(fieldName, valSize);
-            }
-
-            throw new NotSupportedException();
-        }
-
         public long GetLookupRootPage(Slice name)
         {
             if (TryRead(name, out var reader) == false)
