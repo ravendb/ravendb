@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -42,14 +43,16 @@ public sealed class QueriedDocumentCache : LruDictionary<string, QueriedDocument
         {
             if (valueTuple.Value is null)
                 continue;
-            
-#if DEBUG
-            Debug.Assert(valueTuple.Value.CanDispose);
-#endif
 
+#if DEBUG
+            if (valueTuple.Value.CanDispose == false)
+            {
+                throw new InvalidOperationException($"Document '{valueTuple.Value.Id}' should be disposable but it still has hanging reference (RefCount: {valueTuple.Value.RefCount}). This indicates a bug.");
+            }
+#endif
             Release(valueTuple.Value);
         }
-        
+
         Cache.Clear();
         List.Clear();
     }

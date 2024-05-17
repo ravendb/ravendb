@@ -193,7 +193,10 @@ namespace Raven.Server.Documents.Queries.Results
 
         public virtual void ClearCache()
         {
-            _loadedDocumentCache.Clear();
+            ReleaseDocumentsFromPreviousProjection();
+            _loadedDocumentsByAliasName?.Clear();
+            _loadedDocumentIds?.Clear();
+            _loadedDocumentCache?.Clear();
         }
 
         private TDocument DirectGetInternal(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
@@ -964,19 +967,7 @@ namespace Raven.Server.Documents.Queries.Results
                 _loadedDocumentsByAliasName = new Dictionary<string, TDocument>();
             }
 
-            if (_loadedDocumentCache.IsTrackingSupported && _loadedDocumentIds != null)
-            {
-                foreach (var loadedDocId in _loadedDocumentIds)
-                {
-                    if (string.IsNullOrEmpty(loadedDocId))
-                        continue;
-                    
-                    if (_loadedDocumentCache.TryGetValue(loadedDocId.ToLowerInvariant(), out var doc))
-                        doc?.Dispose();
-                }
-            }
-            
-            _loadedDocumentIds.Clear();
+            ReleaseDocumentsFromPreviousProjection();
 
             //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cache this for the duration of the query
             
@@ -1122,6 +1113,23 @@ namespace Raven.Server.Documents.Queries.Results
             }
             value = null;
             return false;
+        }
+
+        private void ReleaseDocumentsFromPreviousProjection()
+        {
+            if (_loadedDocumentCache.IsTrackingSupported && _loadedDocumentIds != null)
+            {
+                foreach (var loadedDocId in _loadedDocumentIds)
+                {
+                    if (string.IsNullOrEmpty(loadedDocId))
+                        continue;
+
+                    if (_loadedDocumentCache.TryGetValue(loadedDocId.ToLowerInvariant(), out var doc))
+                        doc?.Dispose();
+                }
+            }
+            
+            _loadedDocumentIds?.Clear();
         }
 
         protected object GetFunctionValue(FieldsToFetch.FieldToFetch fieldToFetch, string documentId, object[] args, CancellationToken token)
