@@ -150,6 +150,28 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target ) {
     CheckLastExitCode
 }
 
+function BuildDebug ( $srcDir, $outDir, $target ) {
+    BuildTool debug $srcDir $outDir $target
+
+    if ($target -and $global:isPublishBundlingEnabled) {
+        # workaround for https://github.com/microsoft/perfview/issues/2035
+        
+        $output = [io.path]::combine($outDir, "debug");
+        $amd64 = [io.path]::combine($output, "amd64");
+        $arm64 = [io.path]::combine($output, "arm64");
+        $x86 = [io.path]::combine($output, "x86");
+
+        Write-Host "Removing $amd64"
+        Remove-Item $amd64 -ErrorAction SilentlyContinue -Recurse
+
+        Write-Host "Removing $arm64"
+        Remove-Item $arm64 -ErrorAction SilentlyContinue -Recurse
+
+        Write-Host "Removing $x86"
+        Remove-Item $x86 -ErrorAction SilentlyContinue -Recurse
+    }
+}
+
 function BuildEmbedded ( $srcDir, $outDir, $framework) {
     write-host "Building Embedded..."
     & dotnet build /p:GenerateDocumentationFile=true --no-incremental `
