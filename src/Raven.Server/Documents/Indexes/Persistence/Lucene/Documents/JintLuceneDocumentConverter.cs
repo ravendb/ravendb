@@ -37,6 +37,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private readonly IndexFieldOptions _allFields;
 
         private readonly bool _ticksSupport;
+        private readonly bool _dynamicFieldsDynamicAnalyzer;
 
         protected JintLuceneDocumentConverterBase(Index index, IndexDefinition indexDefinition, int numberOfBaseFields = 1, string keyFieldName = null,
             bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
@@ -47,6 +48,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             Debug.Assert(index.Type.IsJavaScript());
 
             _ticksSupport = IndexDefinitionBaseServerSide.IndexVersion.IsTimeTicksInJavaScriptIndexesSupported(index.Definition.Version);
+            _dynamicFieldsDynamicAnalyzer = index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.JavaScriptProperlyHandleDynamicFieldsIndexFields;
         }
         
         protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext,
@@ -55,6 +57,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (!(document is ObjectInstance documentToProcess))
                 return 0;
 
+            var currentIndexingScope = CurrentIndexingScope.Current;
+            
             int newFields = 0;
             if (key != null)
             {
@@ -98,7 +102,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 if (_fields.TryGetValue(propertyAsString, out var field) == false)
                     field = _fields[propertyAsString] = IndexField.Create(propertyAsString, new IndexFieldOptions(), _allFields);
-                var isDynamicFieldEnumerable = IsDynamicFieldEnumerable(propertyDescriptor.Value, propertyAsString, field, out var iterator);
+                var isDynamicFieldEnumerable = IsDynamicFieldEnumerable(propertyDescriptor.Value, propertyAsString, ref field, out var iterator);
+                
                 bool shouldSaveAsBlittable;
                 object value;
                 float? propertyBoost;
@@ -109,7 +114,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 {
                     do
                     {
-                        ProcessObject(iterator.Current, propertyAsString, field, out shouldSaveAsBlittable, out value, out propertyBoost, out var innerNumberOfCreatedFields,
+                        ProcessObject(iterator.Current, propertyAsString, ref field, isDynamicFieldsEnumeratorScope: true, out shouldSaveAsBlittable, out value, out propertyBoost, out var innerNumberOfCreatedFields,
                             out actualValue);
                         numberOfCreatedFields += innerNumberOfCreatedFields;
 
@@ -125,7 +130,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
                 else
                 {
-                    ProcessObject(propertyDescriptor.Value, propertyAsString, field, out shouldSaveAsBlittable, out value, out propertyBoost, out numberOfCreatedFields, out actualValue);
+                    ProcessObject(propertyDescriptor.Value, propertyAsString, ref field,  isDynamicFieldsEnumeratorScope: false, out shouldSaveAsBlittable, out value, out propertyBoost, out numberOfCreatedFields, out actualValue);
                     if (shouldSaveAsBlittable)
                         numberOfCreatedFields += ProcessAsJson(actualValue, field, propertyBoost);
                     if (value is IDisposable toDispose)
@@ -141,7 +146,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             return newFields;
 
-            void ProcessObject(JsValue valueToInsert, in string propertyAsString, IndexField field, out bool shouldProcessAsBlittable, out object value, out float? propertyBoost, out int numberOfCreatedFields, out JsValue actualValue)
+            void ProcessObject(JsValue valueToInsert, in string propertyAsString, ref IndexField field, bool isDynamicFieldsEnumeratorScope, out bool shouldProcessAsBlittable,
+                out object value, out float? propertyBoost, out int numberOfCreatedFields, out JsValue actualValue)
             {
                 value = null;
                 propertyBoost = null;
@@ -158,9 +164,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                     if (isObject)
                     {
-                        //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name
-                        //so we must use field.Name and not property from this point on.
-                        var val = TryDetectDynamicFieldCreation(propertyAsString, actualValue.AsObject(), field);
+                        //In case TryDetectDynamicFieldCreation finds a dynamic field it will replace `field` reference to the new IndexField object.
+                        var val = TryDetectDynamicFieldCreation(propertyAsString, actualValue.AsObject(), ref field);
                         if (val != null)
                         {
                             if (val.IsObject() && val.AsObject().TryGetValue(JavaScriptFieldName.SpatialPropertyName, out _))
@@ -171,7 +176,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                             {
                                 value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, canTryJsStringToDateConversion: _ticksSupport, engine: documentToProcess.Engine,
                                     context: indexContext);
-                                numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, sourceDocument, out _);
+
+                                //We've to wrap dynamic fields to avoid fields cache (and value override), solves: RavenDB_15983
+                                //Also backward compatibility for older indexes.
+                                numberOfCreatedFields = isDynamicFieldsEnumeratorScope && _dynamicFieldsDynamicAnalyzer
+                                    ? GetRegularFields(instance, field, LuceneCreateField(currentIndexingScope, field, CreateValueForIndexing(value, propertyBoost)), indexContext, sourceDocument, out _) 
+                                    : GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, sourceDocument, out _);
 
                                 newFields += numberOfCreatedFields;
 
@@ -241,7 +251,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 return GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, sourceDocument, out _);
             }
 
-            bool IsDynamicFieldEnumerable(JsValue propertyDescriptorValue, string propertyAsString, IndexField field, out IEnumerator<JsValue> iterator)
+            bool IsDynamicFieldEnumerable(JsValue propertyDescriptorValue, string propertyAsString, ref IndexField field, out IEnumerator<JsValue> iterator)
             {
                 iterator = Enumerable.Empty<JsValue>().GetEnumerator();
 
@@ -254,7 +264,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 var valueAsObject = iterator.Current.AsObject();
 
-                return TryDetectDynamicFieldCreation(propertyAsString, valueAsObject, field) is not null
+                return TryDetectDynamicFieldCreation(propertyAsString, valueAsObject, ref field) is not null
                        || valueAsObject.HasOwnProperty(JavaScriptFieldName.SpatialPropertyName);
                 }
 
@@ -305,7 +315,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return true;
         }
 
-        private static JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, IndexField field)
+        private JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, ref IndexField field)
         {
             //We have a field creation here _ = {"$value":val, "$name","$options":{...}}
             if (!valueAsObject.HasOwnProperty(JavaScriptFieldName.ValuePropertyName))
@@ -313,17 +323,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             var value = valueAsObject.GetOwnProperty(JavaScriptFieldName.ValuePropertyName).Value;
             PropertyDescriptor nameProperty = valueAsObject.GetOwnProperty(JavaScriptFieldName.NamePropertyName);
+
+            string fieldName;
+            FieldIndexing? fieldIndexing = null;
+            FieldStorage? fieldStorage = null;
+            FieldTermVector? termVector = null;
+            
             if (nameProperty != null)
             {
                 var fieldNameObj = nameProperty.Value;
                 if (fieldNameObj.IsString() == false)
                     throw new ArgumentException($"Dynamic field {property} is expected to have a string {JavaScriptFieldName.NamePropertyName} property but got {fieldNameObj}");
 
-                field.Name = fieldNameObj.AsString();
+                fieldName = fieldNameObj.AsString();
             }
             else
             {
-                field.Name = property;
+                fieldName = property;
             }
 
             if (valueAsObject.HasOwnProperty(JavaScriptFieldName.OptionsPropertyName))
@@ -346,7 +362,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     var propertyNameAsString = propertyName.AsString();
                     if (string.Equals(propertyNameAsString, nameof(CreateFieldOptions.Indexing), StringComparison.OrdinalIgnoreCase))
                     {
-                        field.Indexing = GetEnum<FieldIndexing>(optionValue, propertyNameAsString);
+                        fieldIndexing = GetEnum<FieldIndexing>(optionValue, propertyNameAsString);
 
                         continue;
                     }
@@ -354,22 +370,37 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     if (string.Equals(propertyNameAsString, nameof(CreateFieldOptions.Storage), StringComparison.OrdinalIgnoreCase))
                     {
                         if (optionValue.IsBoolean())
-                            field.Storage = optionValue.AsBoolean()
+                            fieldStorage = optionValue.AsBoolean()
                                 ? FieldStorage.Yes
                                 : FieldStorage.No;
                         else
-                            field.Storage = GetEnum<FieldStorage>(optionValue, propertyNameAsString);
+                            fieldStorage = GetEnum<FieldStorage>(optionValue, propertyNameAsString);
 
                         continue;
                     }
 
                     if (string.Equals(propertyNameAsString, nameof(CreateFieldOptions.TermVector), StringComparison.OrdinalIgnoreCase))
                     {
-                        field.TermVector = GetEnum<FieldTermVector>(optionValue, propertyNameAsString);
+                        termVector = GetEnum<FieldTermVector>(optionValue, propertyNameAsString);
 
                         continue;
                     }
                 }
+            }
+
+            field = IndexField.Create(fieldName, 
+                new IndexFieldOptions()
+                {
+                    Indexing = fieldIndexing, 
+                    Storage = fieldStorage, 
+                    TermVector = termVector
+                }, _allFields);
+
+            if (_dynamicFieldsDynamicAnalyzer)
+            {
+                //This will get analyzer from dynamic field configuration.
+                CurrentIndexingScope.Current.DynamicFields ??= new();
+                CurrentIndexingScope.Current.DynamicFields[fieldName] = field;
             }
 
             return value;
@@ -386,6 +417,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 return (TEnum)enumValue;
             }
+        }
+        
+        private static IEnumerable<AbstractField> LuceneCreateField(CurrentIndexingScope scope, IndexField field, object value)
+        {
+            scope.DynamicFields ??= new Dictionary<string, IndexField>();
+            scope.DynamicFields[field.Name] = field;
+            scope.CreateFieldConverter ??= new LuceneDocumentConverter(scope.Index, new IndexField[] { });
+
+            using var i = scope.CreateFieldConverter.NestedField(scope.CreatedFieldsCount);
+            scope.IncrementDynamicFields();
+            var result = new List<AbstractField>();
+            scope.CreateFieldConverter.GetRegularFields(new AbstractStaticIndexBase.StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext, scope?.Source, out _);
+            return result;
         }
     }
 }

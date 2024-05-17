@@ -175,12 +175,13 @@ namespace Raven.Server.Documents.Indexes
             public const long TimeTicksSupportInJavaScriptIndexes_60 = 60_001; // RavenDB-19625
 
             public const long PhraseQuerySupportInCoraxIndexes = 60_002;
-            public const long StoreOnlySupportInCoraxIndexes = 60_003;
+            public const long StoreOnlySupportInCoraxIndexes = 60_003; // RavenDB-22369
+            public const long JavaScriptProperlyHandleDynamicFieldsIndexFields = 60_004; //RavenDB-22363
 
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = StoreOnlySupportInCoraxIndexes;
+            public const long CurrentVersion = JavaScriptProperlyHandleDynamicFieldsIndexFields;
 
             public static bool IsTimeTicksInJavaScriptIndexesSupported(long indexVersion)
             {

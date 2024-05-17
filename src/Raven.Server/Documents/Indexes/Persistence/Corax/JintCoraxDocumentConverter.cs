@@ -341,9 +341,9 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         }
         else
         {
-            #if DEBUG
+#if DEBUG
             throw new InvalidOperationException($"{nameof(nameProperty)} should not be a null.");
-            #endif
+#endif
             fieldName = property;
         }
 
