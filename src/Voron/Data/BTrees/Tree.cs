@@ -34,14 +34,11 @@ namespace Voron.Data.BTrees
         private string _allocationStacktrace;
 #endif
 
-        private readonly TreeMutableState _state;
-
         private static readonly ObjectPool<RecentlyFoundTreePages> FoundPagesPool = new(() => new RecentlyFoundTreePages(), 128);
 
         private RecentlyFoundTreePages _recentlyFoundPages;
 
         private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
-        private Dictionary<Slice, FixedSizeTree<double>> _fixedSizeTreesForDouble;
 
         private SliceSmallSet<IPrepareForCommit> _prepareLocator;
 
@@ -50,7 +47,7 @@ namespace Voron.Data.BTrees
 
         public Slice Name { get; private set; }
 
-        public TreeMutableState State => _state;
+        public TreeMutableState State { get; }
 
         private readonly LowLevelTransaction _llt;
         private readonly Transaction _tx;
@@ -73,7 +70,7 @@ namespace Voron.Data.BTrees
             }
 
             _recentlyFoundPages = FoundPagesPool.Allocate();
-            _state = new TreeMutableState(llt, in header);
+            State = new TreeMutableState(llt, in header);
 
             llt.RegisterDisposable(new TreeDisposable(this));
         }
@@ -92,7 +89,7 @@ namespace Voron.Data.BTrees
             }
 
             _recentlyFoundPages = FoundPagesPool.Allocate();
-            _state = new TreeMutableState(llt);
+            State = new TreeMutableState(llt);
 
             llt.RegisterDisposable(new TreeDisposable(this));
         }
@@ -103,7 +100,7 @@ namespace Voron.Data.BTrees
             Name = name;
 
             _recentlyFoundPages = FoundPagesPool.Allocate();
-            _state = state;
+            State = state;
 
             llt.RegisterDisposable(new TreeDisposable(this));
         }
@@ -1484,6 +1481,8 @@ namespace Voron.Data.BTrees
                 }
 
                 _fixedSizeTrees[fixedTree.Name] = fixedTree;
+
+                _llt.RegisterDisposable(fixedTree);
             }
 
             // RavenDB-22261: It may happen that the FixedSizeTree requested does not exist, and if it does not
@@ -1492,25 +1491,6 @@ namespace Voron.Data.BTrees
             Debug.Assert(fixedTree.NumberOfEntries == 0 || 
                          fixedTree.Type == RootObjectType.EmbeddedFixedSizeTree || 
                          State.Header.Flags.HasFlag(TreeFlags.FixedSizeTrees));
-
-            return fixedTree;
-        }
-
-        public FixedSizeTree<double> FixedTreeForDouble(Slice key, byte valSize = 0)
-        {
-            _fixedSizeTreesForDouble ??= new Dictionary<Slice, FixedSizeTree<double>>(SliceComparer.Instance);
-
-            if (_fixedSizeTreesForDouble.TryGetValue(key, out var fixedTree) == false)
-            {
-                fixedTree = new FixedSizeTree<double>(_llt, this, key, valSize);
-                _fixedSizeTreesForDouble[fixedTree.Name] = fixedTree;
-            }
-
-            // RavenDB-22261: It may happen that the FixedSizeTree requested does not exist, and if it does not
-            // it would still return an instance. This is a workaround because the check in debug is correct.
-            // https://issues.hibernatingrhinos.com/issue/RavenDB-22261/Inconsistency-in-Tree-external-API
-            Debug.Assert(fixedTree.NumberOfEntries == 0 || State.Header.Flags.HasFlag(TreeFlags.FixedSizeTrees));
-
 
             return fixedTree;
         }
@@ -1538,7 +1518,6 @@ namespace Voron.Data.BTrees
                 }
             }
             _fixedSizeTrees.Remove(key);
-            _fixedSizeTreesForDouble?.Remove(key);
             Delete(key);
 
             return numberOfEntries;
