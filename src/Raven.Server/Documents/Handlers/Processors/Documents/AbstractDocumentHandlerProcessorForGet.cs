@@ -71,7 +71,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
         if (_method == HttpMethod.Get)
         {
-            // no-op
+            // no-op - this was parses via QueryStringParameters few lines up
         }
         else if (_method == HttpMethod.Post)
             parameters.Ids = await GetIdsFromRequestBodyAsync(context, RequestHandler);
@@ -504,7 +504,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         public string StartAfterId { get; set; }
     }
 
-    public sealed class QueryStringParameters : AbstractQueryStringParameters
+    protected sealed class QueryStringParameters : AbstractQueryStringParameters
     {
         public bool MetadataOnly;
 
