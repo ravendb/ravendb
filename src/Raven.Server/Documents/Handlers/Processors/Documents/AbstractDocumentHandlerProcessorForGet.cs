@@ -454,7 +454,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
         for (int i = 0; i < array.Length; i++)
         {
-            var id = array.GetStringByIndex(i); // TODO [ppekrol]
+            var id = array.GetStringByIndex(i);
             idsAsStrings.Add(id.AsMemory());
         }
 
