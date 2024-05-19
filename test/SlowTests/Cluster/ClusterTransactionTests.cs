@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -20,13 +21,13 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -1393,20 +1394,15 @@ namespace SlowTests.Cluster
 
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
-                    var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(GetAtomicGuardKey("users/1")));
+                    var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(ClusterWideTransactionHelper.GetAtomicGuardKey("users/1")));
                     Assert.Contains($"'rvn-atomic/users/1' is an atomic guard and you cannot load it via the session", ex.Message);
                 }
 
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
-                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(GetAtomicGuardKey("users/2"), "foo");
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(ClusterWideTransactionHelper.GetAtomicGuardKey("users/2"), "foo");
                     var ex = await Assert.ThrowsAsync<CompareExchangeInvalidKeyException>(() => session.SaveChangesAsync());
                     Assert.Contains($"You cannot manipulate the atomic guard 'rvn-atomic/users/2' via the cluster-wide session", ex.Message);
-                }
-
-                string GetAtomicGuardKey(string id)
-                {
-                    return $"{Constants.CompareExchange.RvnAtomicPrefix}{id}";
                 }
             }
         }
@@ -1473,13 +1469,16 @@ namespace SlowTests.Cluster
             }
         }
 
-        public class TestCommand : TransactionOperationsMerger.MergedTransactionCommand
+        private class TestCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly ManualResetEvent _manualResetEvent;
             private readonly TimeSpan _timeout;
 
             public TestCommand(ManualResetEvent manualResetEvent, TimeSpan timeout)
             {
+                if (Debugger.IsAttached)
+                    timeout *= 10;
+                
                 _manualResetEvent = manualResetEvent;
                 _timeout = timeout;
             }
@@ -1496,8 +1495,7 @@ namespace SlowTests.Cluster
                 throw new NotImplementedException();
             }
         }
-
-
+        
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [InlineData(true)]
         [InlineData(false)]
@@ -1506,43 +1504,486 @@ namespace SlowTests.Cluster
             const string id = "testObjs/1";
             using var store = GetDocumentStore();
 
-            var database = await GetDatabase(store.Database);
-
             if (clusterTrxBefore)
             {
                 using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
-                await session.StoreAsync(new User());
+                await session.StoreAsync(new TestObj());
                 await session.SaveChangesAsync();
             }
 
-            var mre = new ManualResetEvent(false);
+            using var mre = new ManualResetEvent(false);
             try
             {
+                var database = await GetDatabase(store.Database);
+                var longCommandTask = database.TxMerger.Enqueue(new TestCommand(mre, TimeSpan.FromSeconds(15)));
+
+                var halfProcessedTask = Task.Run(async () =>
+                {
+                    using var session = store.OpenAsyncSession(new SessionOptions
+                    {
+                        TransactionMode = TransactionMode.ClusterWide
+                    });
+                    {
+                        await session.StoreAsync(new TestObj{Prop = "new 1"}, id);
+                        await session.SaveChangesAsync();
+                    }
+                });
                 using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
-                using var session2 = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
 
-                await session.StoreAsync(new TestObj { Prop = $"new 1", Id = id });
-                var testCommandTask = database.TxMerger.Enqueue(new TestCommand(mre, TimeSpan.FromSeconds(5)));
-                var saveChangesTask = session.SaveChangesAsync();
-
+                await Task.Delay(10);
                 //The origin issue occured if a cluster operation was made between the compare exchange operation to database operation
                 await store.ExecuteIndexAsync(new TestIndex("TestIndex"));
-                var testObj = await session2.LoadAsync<TestObj>(id);
-                if (testObj == null)
-                {
-                    testObj = new TestObj{ Prop = $"new 2", Id = id };
-                    await session2.StoreAsync(testObj);
-                    await Assert.ThrowsAnyAsync<Exception>(async () => await session2.SaveChangesAsync());
-                }
+                await store.ExecuteIndexAsync(new TestIndex("TestIndex2"));
+                
+                //Load can potentially also load the atomic guard and use it to generate the document change vector
+                Assert.Null(await session.LoadAsync<TestObj>(id));
+                await session.StoreAsync(new TestObj{ Prop = "new 2", Id = id });
+                Task shouldFailTask = session.SaveChangesAsync();
+                await Assert.ThrowsAnyAsync<ClusterTransactionConcurrencyException>( () => shouldFailTask);
 
                 mre.Set();
-                await testCommandTask;
-                await saveChangesTask;
+                await longCommandTask;
+                await halfProcessedTask;
             }
             finally
             {
                 mre.Set();
             }
         }
+        
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task LoadAndIncludeClusterTrxCmpxchg_WhenCmpxchgIsFromLastClusterTransactionWithNoDatabaseCommand_ShouldGetCmpxchg()
+        {
+            const string cmpxchgId = "cmpxchg/0";
+            const string id = "testObjs/1";
+
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true}))
+            {
+                await session.StoreAsync(new TestObj{Prop = cmpxchgId }, id);
+                await session.SaveChangesAsync();
+            }
+            
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true}))
+            {
+                session.Advanced.ClusterTransaction.CreateCompareExchangeValue(cmpxchgId, "some-value");
+                await session.SaveChangesAsync();
+            }
+            
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true}))
+            {
+                await session.LoadAsync<TestObj>(id, i => i.IncludeCompareExchangeValue(x => x.Prop));
+                var numberOfRequests = session.Advanced.NumberOfRequests;
+                var value = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(cmpxchgId);
+                Assert.NotNull(value);
+                Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+            }
+        }
+        
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task QueryAndIncludeClusterTrxCmpxchg_WhenDocumentsCommandsDidntFinished_ShouldNotReturnNull()
+        {
+            const string id1 = "testObjs/0";
+            const string id2 = "testObjs/1";
+            using var store = GetDocumentStore();
+            await store.ExecuteIndexAsync(new TestIndex("TestIndex"));
+
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new TestObj(), id1);
+                await session.SaveChangesAsync();
+            }
+            Indexes.WaitForIndexing(store);
+            
+            using var mre = new ManualResetEvent(false);
+            try
+            {
+                var database = await GetDatabase(store.Database);
+                var testCommandTask = database.TxMerger.Enqueue(new TestCommand(mre, TimeSpan.FromSeconds(15)));
+                
+                var halfProcessedTask = Task.Run(async () =>
+                {
+                    using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                    await session.StoreAsync(new TestObj { Prop = $"new 1", Id = id2 });
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(id1, "somevalue");
+                    await session.SaveChangesAsync();
+                });
+                
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                
+                await Task.Delay(10);
+                //The origin issue occured if a cluster operation was made between the compare exchange operation to database operation
+                await store.ExecuteIndexAsync(new TestIndex("TestIndex2"));
+                await store.ExecuteIndexAsync(new TestIndex("TestIndex3"));
+
+                _ = await session.Advanced
+                    .AsyncRawQuery<TestObj>(
+                        @"
+declare function incl(c) {
+    includes.cmpxchg($ce);
+    return c;
+}
+from index 'TestIndex' as c
+select incl(c)"
+                    )
+                    .AddParameter("ce", id1)
+                    .ToListAsync();
+                
+                var numberOfRequests = session.Advanced.NumberOfRequests;
+                Assert.NotNull(await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<object>(id1));
+                Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+                
+                mre.Set();
+                await testCommandTask;
+                await halfProcessedTask;
+            }
+            finally
+            {
+                mre.Set();
+            }
+        }
+        
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task QueryIndexAndIncludeClusterTrxCmpxchg_WhenModifiedButDocumentsCommandsDidntFinished_ShouldNotBeNull()
+        {
+            const string id1 = "testObjs/0";
+            const string id2 = "testObjs/1";
+            using var store = GetDocumentStore();
+            await store.ExecuteIndexAsync(new TestIndex("TestIndex"));
+
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true}))
+            {
+                await session.StoreAsync(new TestObj(), id1);
+                session.Advanced.ClusterTransaction.CreateCompareExchangeValue(id1, "some-value");
+                await session.SaveChangesAsync();
+            }
+            Indexes.WaitForIndexing(store);
+            
+            using var mre = new ManualResetEvent(false);
+            try
+            {
+                var database = await GetDatabase(store.Database);
+                var testCommandTask = database.TxMerger.Enqueue(new TestCommand(mre, TimeSpan.FromSeconds(15)));
+
+                var halfProcessedTask = Task.Run(async () =>
+                {
+                    using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true });
+                    var cmpxchg = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(id1);
+                    cmpxchg.Value = "changed-value";
+                    await session.StoreAsync(new TestObj { Prop = $"new 1", Id = id2 });
+                    await session.SaveChangesAsync();
+                });
+                
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true });
+                
+                await Task.Delay(10);
+                //The origin issue occured if a cluster operation was made between the compare exchange operation to database operation
+                await store.ExecuteIndexAsync(new TestIndex("TestIndex2"));
+                await store.ExecuteIndexAsync(new TestIndex("TestIndex3"));
+
+                _ = await session.Advanced
+                    .AsyncRawQuery<TestObj>(
+                        @"
+declare function incl(c) {
+    includes.cmpxchg($ce);
+    return c;
+}
+from index 'TestIndex' as c
+select incl(c)"
+                    )
+                    .AddParameter("ce", id1)
+                    .ToListAsync();
+                
+                var numberOfRequests = session.Advanced.NumberOfRequests;
+                var compareExchangeValueAsync = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<object>(id1);
+                Assert.NotNull(compareExchangeValueAsync);
+                Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+                
+                mre.Set();
+                await testCommandTask;
+                await halfProcessedTask;
+            }
+            finally
+            {
+                mre.Set();
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task QueryAndIncludeClusterTrxCmpxchg_WhenModifiedButDocumentsCommandsDidntFinished_ShouldNotBeNull()
+        {
+            const string id1 = "testObjs/0";
+            const string id2 = "testObjs/1";
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true}))
+            {
+                await session.StoreAsync(new TestObj(), id1);
+                session.Advanced.ClusterTransaction.CreateCompareExchangeValue(id1, "some-value");
+                await session.SaveChangesAsync();
+            }
+            
+            using var mre = new ManualResetEvent(false);
+            try
+            {
+                var database = await GetDatabase(store.Database);
+                var testCommandTask = database.TxMerger.Enqueue(new TestCommand(mre, TimeSpan.FromSeconds(15)));
+
+                var halfProcessedTask = Task.Run(async () =>
+                {
+                    using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true });
+                    var cmpxchg = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(id1);
+                    cmpxchg.Value = "changed-value";
+                    await session.StoreAsync(new TestObj { Prop = $"new 1", Id = id2 });
+                    await session.SaveChangesAsync();
+                });
+                
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true });
+                
+                await Task.Delay(10);
+                //The origin issue occured if a cluster operation was made between the compare exchange operation to database operation
+                await store.ExecuteIndexAsync(new TestIndex("TestIndex"));
+                await store.ExecuteIndexAsync(new TestIndex("TestIndex2"));
+
+                _ = await session.Advanced
+                    .AsyncRawQuery<TestObj>(
+                        @"
+declare function incl(c) {
+    includes.cmpxchg($ce);
+    return c;
+}
+from TestObjs as c
+select incl(c)"
+                    )
+                    .AddParameter("ce", id1)
+                    .ToListAsync();
+                
+                var numberOfRequests = session.Advanced.NumberOfRequests;
+                var compareExchangeValueAsync = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<object>(id1);
+                Assert.NotNull(compareExchangeValueAsync);
+                Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+                
+                mre.Set();
+                await testCommandTask;
+                await halfProcessedTask;
+            }
+            finally
+            {
+                mre.Set();
+            }
+        }
+        
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task QueryIncludeCmpxchg_WhenEmpty_ShouldNotCreateAdditionalRequest()
+        {
+            const string notExistCmpxchgId = "not-exist";
+            using var store = GetDocumentStore(); 
+            await store.ExecuteIndexAsync(new TestIndex("TestIndex"));
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                await session.StoreAsync(new TestObj());
+                await session.SaveChangesAsync();
+            }
+            Indexes.WaitForIndexing(store);
+            
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                _ = await session.Advanced
+                    .AsyncRawQuery<TestObj>(
+                        @"
+declare function incl(c) {
+    includes.cmpxchg($ce);
+    return c;
+}
+from index 'TestIndex' as c
+select incl(c)"
+                    )
+                    .AddParameter("ce", notExistCmpxchgId)
+                    .ToListAsync();
+                
+                var numberOfRequests = session.Advanced.NumberOfRequests;
+                var cmpxchg = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<object>(notExistCmpxchgId);
+                Assert.Null(cmpxchg);
+                Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+            }
+        }
+        
+        [RavenFact(RavenTestCategory.CompareExchange | RavenTestCategory.ClusterTransactions)]
+        public void LoadIncludeCmpxchg_WhenGet_ShouldNotTriggerAdditionalRequest()
+        {
+            const string docId = "testObjs/0";
+            const string cmpxchgId = "cmpxchg/0";
+
+            using (var store = GetDocumentStore())
+            {                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new TestObj{Prop = cmpxchgId}, docId);
+                    session.SaveChanges();
+                    
+                    var test = store.Operations.Send(
+                        new PutCompareExchangeValueOperation<string>(cmpxchgId, "some content", 0));
+                    Assert.Equal(true, test.Successful);
+                }
+
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    _ = session.Load<TestObj>(docId,
+                        includes => includes.IncludeCompareExchangeValue(x => x.Prop));
+                    
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    _ = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>(cmpxchgId);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+        
+        [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
+        public async Task LoadClusterWideSession_WhenDeletedWithoutClusterWideSessionAndClusterWideTransactionInProcess_ShouldNotReturnAtomicGuard()
+        {
+            using var store = GetDocumentStore();
+            using var store2 = new DocumentStore{Urls = store.Urls, Database = store.Database}.Initialize();
+
+            const string id = "foo/bar";
+            using (var session = store.OpenAsyncSession(new SessionOptions
+                   {
+                       TransactionMode = TransactionMode.ClusterWide
+                   }))
+            {
+                await session.StoreAsync(new TestObj(), id);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Delete(id);
+                await session.SaveChangesAsync();
+            }
+
+            using var mre = new ManualResetEvent(false);
+            try
+            {
+                var database = await GetDatabase(store.Database);
+                var testCommandTask = database.TxMerger.Enqueue(new TestCommand(mre, TimeSpan.FromSeconds(15)));
+
+                var halfProcessedTask = Task.Run(async () =>
+                {
+                    using var session = store.OpenAsyncSession(new SessionOptions
+                    {
+                        TransactionMode = TransactionMode.ClusterWide
+                    });
+                    {
+                        Assert.Null(await session.LoadAsync<TestObj>(id));
+                        await session.StoreAsync(new TestObj(), id);
+
+                        await session.SaveChangesAsync();
+                    }
+                });
+                using var session2 = store2.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                });
+
+                await Task.Delay(10);
+                //The origin issue occured if a cluster operation was made between the compare exchange operation to database operation
+                await store.ExecuteIndexAsync(new TestIndex("TestIndex1"));
+                await store.ExecuteIndexAsync(new TestIndex("TestIndex2"));
+
+                Assert.Null(await session2.LoadAsync<TestObj>(id));
+                await session2.StoreAsync(new TestObj(), id);
+                var shouldFailTask = session2.SaveChangesAsync();
+                await Assert.ThrowsAnyAsync<ClusterTransactionConcurrencyException>(() => shouldFailTask);
+
+                mre.Set();
+                await testCommandTask;
+                await halfProcessedTask;
+            }
+            finally
+            {
+                mre.Set();
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task DatabaseRequest_WhenHasLastClusterTransaction_ShouldWaitForIndex(bool withClusterTrxBefore)
+        {
+            var cmpXchgKey = "cmpXchgKey";
+
+            var server = GetNewServer();
+            using var store = GetDocumentStore(new Options{Server = server});
+            using var store2 = new DocumentStore{Urls = store.Urls, Database = store.Database}.Initialize();
+
+            if (withClusterTrxBefore)
+            {
+                using var session = store2.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                await session.StoreAsync(new TestObj());
+                await session.SaveChangesAsync();
+            }
+            
+            using  (var session = store2.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                session.Advanced.ClusterTransaction.CreateCompareExchangeValue(cmpXchgKey, "some-value");
+                await session.SaveChangesAsync();
+            }
+
+            var database = await GetDatabase(server, store.Database);
+            var index = database.ClusterWideTransactionIndexWaiter.LastIndex + 5;
+            
+            store.SetLastTransactionIndex(store.Database, index);
+
+            var tcs = new CancellationTokenSource();
+            var shouldBeCompletedWhenReachIndexTask = Task.Run(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                await session.LoadAsync<TestObj>("testObjs/0", tcs.Token);
+                Console.WriteLine();
+            });
+            
+            while(true)
+            {
+                using var session = store2.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide});
+                
+                var cmpXchg = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(cmpXchgKey);
+                cmpXchg.Value = Guid.NewGuid().ToString();
+                await session.SaveChangesAsync();
+                if(cmpXchg?.Index >= index)
+                    break;
+                await Task.Delay(100);
+                Assert.False(shouldBeCompletedWhenReachIndexTask.IsCompleted);
+            }
+
+            tcs.CancelAfter(TimeSpan.FromSeconds(10));
+            await shouldBeCompletedWhenReachIndexTask;
+        }
+        
+        [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
+        public async Task DatabaseRequest_WhenWaitForIndexAndClusterTransactionHasError_ShouldThrow()
+        {
+            const string id = "testObjs/0";
+            
+            using var store = GetDocumentStore();
+            var database = await GetDatabase(store.Database);
+
+            store.SetLastTransactionIndex(store.Database, long.MaxValue);
+            
+            using var session = store.OpenAsyncSession();
+            var t = session.LoadAsync<TestObj>(id);
+            database.ClusterWideTransactionIndexWaiter.NotifyListenersAboutError(new TestException());
+            var exception = await Assert.ThrowsAnyAsync<RavenException>(() => t);
+            const string expected = "System.AggregateException: One or more errors occurred. (Exception of type 'SlowTests.Cluster.ClusterTransactionTests+TestException' was thrown.)";
+            Assert.StartsWith(expected, exception.Message);
+        }
+
+        private class TestException : Exception 
+        {
+            
+        }
+        
     }
 }

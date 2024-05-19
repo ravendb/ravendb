@@ -20,7 +20,7 @@ public class DatabaseRaftIndexNotifications : AbstractRaftIndexNotifications<Raf
         if (await _clusterStateMachineLogIndexNotifications.WaitForTaskCompletion(index, waitingTask) == false)
             return false;
 
-        foreach (var error in _errors)
+        foreach (var error in Errors)
         {
             if (error.Index == index)
                 error.Exception.Throw(); // rethrow

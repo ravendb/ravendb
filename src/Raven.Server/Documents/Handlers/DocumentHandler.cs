@@ -11,7 +11,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
@@ -24,8 +23,8 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
-using Raven.Client.Exceptions;
 using Raven.Client.Http;
+using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Revisions;
@@ -33,7 +32,6 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
@@ -229,7 +227,7 @@ namespace Raven.Server.Documents.Handlers
             GetCompareExchangeValueQueryString(Database, clusterWideTx, out var includeCompareExchangeValues);
 
             // we have to read this _before_ we open the transaction
-            long lastModifiedIndex = Database.LastCompletedClusterTransactionIndex;
+            long lastModifiedIndex = Database.ClusterWideTransactionIndexWaiter.LastIndex;
 
             using (context.OpenReadTransaction())
             using (includeCompareExchangeValues)
@@ -247,7 +245,7 @@ namespace Raven.Server.Documents.Handlers
                         if (clusterWideTx)
                         {
                             Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
-                            includeCompareExchangeValues.AddDocument(ClusterTransactionCommand.GetAtomicGuardKey(id));
+                            includeCompareExchangeValues.AddDocument(ClusterWideTransactionHelper.GetAtomicGuardKey(id));
                             continue;
                         }
                         if (ids.Count == 1)
@@ -265,7 +263,7 @@ namespace Raven.Server.Documents.Handlers
                             changeVector.Contains(Database.ClusterTransactionId) == false)
                         {
                             Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
-                            if (includeCompareExchangeValues.TryGetAtomicGuard(ClusterTransactionCommand.GetAtomicGuardKey(id), lastModifiedIndex, out var guardIndex, out _))
+                            if (includeCompareExchangeValues.TryGetCompareExchange(ClusterWideTransactionHelper.GetAtomicGuardKey(id), lastModifiedIndex, out var guardIndex, out _))
                             {
                                 var (isValid, cv) = ChangeVectorUtils.TryUpdateChangeVector(ChangeVectorParser.TrxnTag, Database.ClusterTransactionId, guardIndex, changeVector);
                                 Debug.Assert(isValid, "ChangeVector didn't have ClusterTransactionId tag but now does?!");
@@ -527,7 +525,8 @@ namespace Raven.Server.Documents.Handlers
                     {
                         foreach (var (k,v) in compareExchangeValues)
                         {
-                            v.ChangeVector = ChangeVectorUtils.NewChangeVector(ChangeVectorParser.TrxnTag,v.Index,Database.ClusterTransactionId);
+                            if (v.Index >= 0)
+                                v.ChangeVector = ChangeVectorUtils.NewChangeVector(ChangeVectorParser.TrxnTag,v.Index,Database.ClusterTransactionId);
                         }
                     }
                     await writer.WriteCompareExchangeValuesAsync(compareExchangeValues, Database.DatabaseShutdown);

@@ -51,7 +51,6 @@ using Sparrow.Server;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
-using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
@@ -192,6 +191,7 @@ namespace Raven.Server.Documents
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
                 
                 RachisLogIndexNotifications = new DatabaseRaftIndexNotifications(_serverStore.Engine.StateMachine._rachisLogIndexNotifications, DatabaseShutdown);
+                ClusterWideTransactionIndexWaiter = new IndexWaiter(DatabaseShutdown);
                 CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, environmentPath, e, stacktrace) =>
                 {
                     serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId, environmentPath, stacktrace);
@@ -381,7 +381,7 @@ namespace Raven.Server.Documents
                 using (ctx.OpenReadTransaction())
                 {
                     var lastCompletedClusterTransactionIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(ctx.Transaction.InnerTransaction);
-                    Interlocked.Exchange(ref LastCompletedClusterTransactionIndex, lastCompletedClusterTransactionIndex);
+                    ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(lastCompletedClusterTransactionIndex);
                 }
 
                 _ = Task.Run(async () =>
@@ -461,14 +461,8 @@ namespace Raven.Server.Documents
         private readonly ManualResetEventSlim _hasClusterTransaction;
         public readonly DatabaseMetricCacher MetricCacher;
 
-        public void NotifyOnPendingClusterTransaction(long index, DatabasesLandlord.ClusterDatabaseChangeType changeType)
+        public void NotifyOnPendingClusterTransaction()
         {
-            if (changeType == DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted)
-            {
-                RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
-                return;
-            }
-
             _hasClusterTransaction.Set();
         }
 
@@ -476,7 +470,7 @@ namespace Raven.Server.Documents
         private long _lastCompletedClusterTransaction;
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
 
-        public long LastCompletedClusterTransactionIndex;
+        public readonly IndexWaiter ClusterWideTransactionIndexWaiter;
         public bool IsEncrypted => MasterKey != null;
 
         private PoolOfThreads.LongRunningWork _clusterTransactionsThread;
@@ -521,9 +515,10 @@ namespace Raven.Server.Documents
                     {
                         var batchSize = Configuration.Cluster.MaxClusterTransactionsBatchSize;
                         var executed = ExecuteClusterTransaction(context, batchSize);
-                        if (executed.Count == batchSize)
+                        if (executed.Count != 0)
                         {
-                            // we might have more to execute
+                            // We might have more to execute if we read full batch
+                            // If we didn't read full batch we may want to update the last completed index for new cluster wide transaction with no database command so we need to open a new read transaction 
                             _hasClusterTransaction.Set();
                         }
                     }
@@ -542,7 +537,7 @@ namespace Raven.Server.Documents
         {
             var batch = new List<ClusterTransactionCommand.SingleClusterDatabaseCommand>(
                 ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, 
-                    lastCompletedClusterTransactionIndex: LastCompletedClusterTransactionIndex, take: batchSize));
+                    lastCompletedClusterTransactionIndex: ClusterWideTransactionIndexWaiter.LastIndex, take: batchSize));
             
             ServerStore.ForTestingPurposes?.BeforeExecuteClusterTransactionBatch?.Invoke(Name, batch);
 
@@ -553,14 +548,11 @@ namespace Raven.Server.Documents
                 //_nextClusterCommand refers to each individual put/delete while batch size refers to number of transaction (each contains multiple commands)
                 _logger.Info($"Read {batch.Count:#,#;;0} cluster transaction commands - fromCount: {_nextClusterCommand}, take: {batchSize}");
             }
-
+            
             if (batch.Count == 0)
             {
                 var index = _serverStore.Cluster.GetLastCompareExchangeIndexForDatabase(context, Name);
-
-                if (RachisLogIndexNotifications.LastModifiedIndex != index)
-                    RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
-
+                ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(index);
                 return batch;
             }
 
@@ -586,10 +578,13 @@ namespace Raven.Server.Documents
                     return batch;
                 }
 
+                long maxIndex = 0;
                 foreach (var command in batch)
                 {
                     OnClusterTransactionCompletion(command, mergedCommands);
+                    maxIndex = command.Index;
                 }
+                ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(maxIndex);
             }
             catch
             {
@@ -629,6 +624,7 @@ namespace Raven.Server.Documents
                 {
                     TxMerger.EnqueueSync(mergedCommand);
                     OnClusterTransactionCompletion(command, mergedCommand);
+                    ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(command.Index);
 
                     _clusterTransactionDelayOnFailure = 1000;
                     command.Processed = true;
@@ -652,6 +648,11 @@ namespace Raven.Server.Documents
 
                     return;
                 }
+                catch (Exception e)
+                {
+                    ClusterWideTransactionIndexWaiter.NotifyListenersAboutError(e);
+                    throw;
+                }
             }
         }
 
@@ -661,8 +662,6 @@ namespace Raven.Server.Documents
             {
                 var index = command.Index;
                 var options = mergedCommands.Options[index];
-
-                ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
 
                 ClusterTransactionWaiter.TrySetResult(options.TaskId, index, mergedCommands.ModifiedCollections);
 
