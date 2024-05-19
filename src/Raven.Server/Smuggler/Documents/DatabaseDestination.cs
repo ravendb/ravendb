@@ -656,7 +656,7 @@ namespace Raven.Server.Smuggler.Documents
                     _clusterTransactionCommandsSize.Set(0, SizeUnit.Bytes);
                 }
 
-                if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
+                if (ClusterWideTransactionHelper.IsAtomicGuardKey(key, out var docId))
                 {
                     value?.Dispose();
 

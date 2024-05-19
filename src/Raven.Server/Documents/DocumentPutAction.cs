@@ -13,11 +13,11 @@ using Voron.Data.Tables;
 using System.Linq;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Util;
 using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 
 namespace Raven.Server.Documents
 {
@@ -79,13 +79,13 @@ namespace Raven.Server.Documents
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext clusterContext))
                 using (clusterContext.OpenReadTransaction())
                 {
-                    var guardId = CompareExchangeKey.GetStorageKey(_parent._documentDatabase.Name, ClusterTransactionCommand.GetAtomicGuardKey(id));
+                    var guardId = CompareExchangeKey.GetStorageKey(_parent._documentDatabase.Name, ClusterWideTransactionHelper.GetAtomicGuardKey(id));
                     var (indexFromCluster, val) = _serverStore.Cluster.GetCompareExchangeValue(clusterContext, guardId);
                     if (indexFromChangeVector != indexFromCluster)
                     {
                         throw new ConcurrencyException(
                             $"Cannot PUT document '{id}' because its change vector's cluster transaction index is set to {indexFromChangeVector} " +
-                            $"but the compare exchange guard ('{ClusterTransactionCommand.GetAtomicGuardKey(id)}') is {(val == null ? "missing" : $"set to {indexFromCluster}")}")
+                            $"but the compare exchange guard ('{ClusterWideTransactionHelper.GetAtomicGuardKey(id)}') is {(val == null ? "missing" : $"set to {indexFromCluster}")}")
                         {
                             Id = id
                         };

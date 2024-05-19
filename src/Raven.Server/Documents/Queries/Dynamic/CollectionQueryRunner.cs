@@ -151,7 +151,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var scannedResults = new Reference<int>();
                 IEnumerator<Document> enumerator;
 
-                var lastRaftId = Database.RachisLogIndexNotifications.LastModifiedIndex;
                 if (pulseReadingTransaction == false)
                 {
                     var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents,
@@ -245,7 +244,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     includeDocumentsCommand.Fill(resultToFill.Includes);
 
-                    includeCompareExchangeValuesCommand.Materialize(lastRaftId);
+                    includeCompareExchangeValuesCommand.Materialize(null);
                 }
 
                 if (includeCompareExchangeValuesCommand != null)

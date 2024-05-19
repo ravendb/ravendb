@@ -3304,7 +3304,6 @@ namespace Raven.Server.Documents.Indexes
                                         token.Token);
                                 }
 
-                                long lastRaftId = DocumentDatabase.RachisLogIndexNotifications.LastModifiedIndex;
                                 try
                                 {
                                     var enumerator = documents.GetEnumerator();
@@ -3366,7 +3365,7 @@ namespace Raven.Server.Documents.Indexes
                                 using (fillScope?.Start())
                                 {
                                     includeDocumentsCommand.Fill(resultToFill.Includes);
-                                    includeCompareExchangeValuesCommand?.Materialize(lastRaftId);
+                                    includeCompareExchangeValuesCommand?.Materialize(null);
                                 }
 
                                 if (includeCountersCommand != null)
