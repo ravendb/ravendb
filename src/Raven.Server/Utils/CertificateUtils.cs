@@ -37,6 +37,27 @@ namespace Raven.Server.Utils
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(CertificateUtils).FullName);
 
+        private static string GetCertificateName(X509Certificate2 certificate)
+        {
+            if (certificate == null)
+                return string.Empty;
+
+            return string.IsNullOrEmpty(certificate.FriendlyName) == false ? certificate.FriendlyName : certificate.Subject;
+        }
+
+        private static string GenerateCertificateChainDebugLog(X509Chain chain)
+        {
+            var stringBuilder = new StringBuilder();
+            stringBuilder.AppendLine("Certificate Chain (from leaf to CA) (name - pinning hash):");
+            foreach (var element in chain.ChainElements)
+            {
+                var certificate = element.Certificate;
+                stringBuilder.AppendLine($"{GetCertificateName(certificate)} - {certificate.GetPublicKeyPinningHash()}");
+            }
+
+            return stringBuilder.ToString();
+        }
+
         internal static bool CertHasKnownIssuer(X509Certificate2 userCertificate, X509Certificate2 knownCertificate, SecurityConfiguration securityConfiguration, List<string> explanations = null)
         {
             X509Certificate2 issuerCertificate = null;
@@ -51,14 +72,15 @@ namespace Raven.Server.Utils
             // in order to do that properly it needs to be able to verify the chain by download the certificates
             //knownCertChain.ChainPolicy.DisableCertificateDownloads = true;
 
-            explanations?.Add($"Try building client certificate chain - {userCertificate.FriendlyName}.");
+            explanations?.Add($"Try building client certificate chain - {GetCertificateName(userCertificate)}.");
             try
             {
                 userChain.Build(userCertificate);
             }
             catch (Exception e)
             {
-                var message = $"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}', failed to build the chain.";
+                var message = $"Cannot validate new client certificate '{GetCertificateName(userCertificate)} - ({userCertificate.Thumbprint})'," +
+                              $" failed to build the chain.";
                 explanations?.Add(message);
                 if (Logger.IsInfoEnabled) 
                     Logger.Info(message, e);
@@ -82,14 +104,15 @@ namespace Raven.Server.Utils
                 return false;
             }
 
-            explanations?.Add($"Try building know certificate chain - {knownCertificate.FriendlyName}.");
+            explanations?.Add($"Try building know certificate chain - {GetCertificateName(knownCertificate)}.");
             try
             {
                 knownCertChain.Build(knownCertificate);
             }
             catch (Exception e)
             {
-                var message = $"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}'. Found a known certificate '{knownCertificate.Thumbprint}' with the same hash but failed to build its chain.";
+                var message = $"Cannot validate new client certificate '{GetCertificateName(userCertificate)} {userCertificate.Thumbprint}'." +
+                              $" Found a known certificate '{knownCertificate.Thumbprint}' with the same hash but failed to build its chain.";
                 explanations?.Add(message);
                 if (Logger.IsInfoEnabled) 
                     Logger.Info(message, e);
@@ -97,6 +120,9 @@ namespace Raven.Server.Utils
                 return false;
             }
 
+            explanations?.Add("Comparing certificates (leafs):\n" +
+                              $"Client certificate - {GetCertificateName(userCertificate)} - {userCertificate.GetPublicKeyPinningHash()}\n" +
+                              $"Known certificate - {GetCertificateName(knownCertificate)} - {knownCertificate.GetPublicKeyPinningHash()}");
             // client certificates (leafs) Public Key pinning hashes must match
             if (userCertificate.GetPublicKeyPinningHash() != knownCertificate.GetPublicKeyPinningHash())
             {
@@ -111,6 +137,13 @@ namespace Raven.Server.Utils
                 return true;
             }
 
+            if (explanations != null)
+            {
+                explanations.Add("Comparing issuers pinning hashes of client certificate and known certificate.");
+                explanations.Add($"Client certificate chain info:\n{GenerateCertificateChainDebugLog(userChain)}");
+                explanations.Add($"Known certificate chain info:\n{GenerateCertificateChainDebugLog(knownCertChain)}");
+            }
+            
             // compare issuers pinning hashes starting from top of the chain (CA) since it's least likely to change
             // chain may have additional elements due to cross-signing, that's why we compare every issuer with each other
             for (var i = knownCertChain.ChainElements.Count - 1; i > 0; i--)
