@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using System.Text;
+using System.Linq;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Xunit;
 using Xunit.Abstractions;
@@ -28,7 +29,14 @@ namespace FastTests.Issues
             }
 
             var storedJson = GetRawJson(store, id);
-            Assert.Equal("""{"Checks":{"Engine":"Good","Gears":"Good"}}""", storedJson);
+            Assert.Equal("""
+                {
+                  "Checks": {
+                    "Engine": "Good",
+                    "Gears": "Good"
+                  }
+                }
+                """, storedJson);
         }
 
         [Fact]
@@ -52,7 +60,14 @@ namespace FastTests.Issues
             }
 
             var storedJson = GetRawJson(store, id);
-            Assert.Equal("""{"Checks":{"Engine":1,"Gears":1}}""", storedJson);
+            Assert.Equal("""
+                {
+                  "Checks": {
+                    "Engine": 1,
+                    "Gears": 1
+                  }
+                }
+                """, storedJson);
         }
 
         [Fact]
@@ -76,7 +91,14 @@ namespace FastTests.Issues
             }
 
             var patchedJson = GetRawJson(store, id);
-            Assert.Equal("""{"Checks":{"Engine":"Bad","Gears":"Good"}}""", patchedJson);
+            Assert.Equal("""
+                {
+                  "Checks": {
+                    "Engine": "Bad",
+                    "Gears": "Good"
+                  }
+                }
+                """, patchedJson);
         }
 
         [Fact]
@@ -103,7 +125,14 @@ namespace FastTests.Issues
             }
 
             var patchedJson = GetRawJson(store, id);
-            Assert.Equal("""{"Checks":{"Engine":2,"Gears":1}}""", patchedJson);
+            Assert.Equal("""
+                {
+                  "Checks": {
+                    "Engine": 2,
+                    "Gears": 1
+                  }
+                }
+                """, patchedJson);
         }
 
         private string GetRawJson(DocumentStore store, string id)
@@ -111,8 +140,12 @@ namespace FastTests.Issues
             using var session = store.OpenSession();
             using var stream = new MemoryStream();
             session.Advanced.LoadIntoStream([id], stream);
-            var json = Encoding.UTF8.GetString(stream.ToArray());
-            return json.Substring(12, json.IndexOf(",\"@metadata") - 12) + "}";
+            stream.Position = 0;
+            var response = JObject.Load(new Newtonsoft.Json.JsonTextReader(new StreamReader(stream)));
+            var results = response.GetValue("Results") as JArray;
+            var single = results.Single() as JObject;
+            single.Remove("@metadata");
+            return single.ToString();
         }
 
         private class Machine
