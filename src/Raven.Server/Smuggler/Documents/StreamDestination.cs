@@ -1142,7 +1142,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            public async ValueTask WriteDeletedRangeAsync(TimeSeriesDeletedRangeItem deletedRangeItem)
+            public async ValueTask WriteTimeSeriesDeletedRangeAsync(TimeSeriesDeletedRangeItem deletedRangeItem)
             {
                 using (deletedRangeItem)
                 {

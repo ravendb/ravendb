@@ -127,7 +127,7 @@ namespace Raven.Server.Smuggler.Documents.Data
     {
         ValueTask WriteTimeSeriesAsync(TimeSeriesItem ts);
 
-        ValueTask WriteDeletedRangeAsync(TimeSeriesDeletedRangeItem deletedRange);
+        ValueTask WriteTimeSeriesDeletedRangeAsync(TimeSeriesDeletedRangeItem deletedRange);
 
 
         void RegisterForDisposal(IDisposable data);

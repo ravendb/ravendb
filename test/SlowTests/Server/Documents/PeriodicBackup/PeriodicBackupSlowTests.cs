@@ -4013,7 +4013,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
         public async Task can_backup_and_restore_with_deleted_timeseries_ranges()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -4082,7 +4082,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
         public async Task deleted_ranges_should_be_processed_before_timeseries()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
