@@ -42,7 +42,7 @@ internal sealed class IndexedField
     public long FieldRootPage;
     public long TermsVectorFieldRootPage;
     public bool FieldSupportsPhraseQuery => SupportedFeatures.PhraseQuery && FieldIndexingMode is FieldIndexingMode.Search;
-
+    
     public override string ToString()
     {
         return Name.ToString() + " Id: " + Id;

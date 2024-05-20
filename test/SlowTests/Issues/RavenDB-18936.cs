@@ -69,7 +69,13 @@ public class RavenDB_18936 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    public void CanCreateDynamicFieldFromArray(Options options)
+    public void CanCreateDynamicFieldFromArray(Options options) => CanCreateDynamicFieldFromArrayBase<CreateFieldInsideArrayJavaScript>(options);
+    
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CanCreateDynamicFieldFromArrayCsharp(Options options) => CanCreateDynamicFieldFromArrayBase<CreateFieldInsideArrayCSharp>(options);
+    
+    private void CanCreateDynamicFieldFromArrayBase<TIndex>(Options options) where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore(options);
         {
@@ -81,15 +87,14 @@ public class RavenDB_18936 : RavenTestBase
             session.SaveChanges();
         }
 
-        var index = new CreateFieldInsideArrayJavaScript();
+        var index = new TIndex();
         index.Execute(store);
         Indexes.WaitForIndexing(store);
-        
         AssertTerm(store, index.IndexName, "name", new []{"john"});
 
         {
             using var session = store.OpenSession();
-            var result = session.Advanced.DocumentQuery<Item, CreateFieldInsideArrayJavaScript>().SelectFields<string>("name").First();
+            var result = session.Advanced.DocumentQuery<Item, TIndex>().SelectFields<string>("name").First();
             Assert.Equal("John", result);
         }
         
@@ -137,6 +142,14 @@ public class RavenDB_18936 : RavenTestBase
     };
 })"
             };
+        }
+    }
+    
+    private class CreateFieldInsideArrayCSharp : AbstractIndexCreationTask<Item> 
+    {
+        public CreateFieldInsideArrayCSharp()
+        {
+            Map = items => items.Select(x => new { _ = new object[] { CreateField("name", "John", new CreateFieldOptions(){Indexing = FieldIndexing.Default, Storage = FieldStorage.Yes, TermVector = null}) } });
         }
     }
     
