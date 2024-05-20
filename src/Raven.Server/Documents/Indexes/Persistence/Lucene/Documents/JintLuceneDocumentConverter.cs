@@ -179,8 +179,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                                 //We've to wrap dynamic fields to avoid fields cache (and value override), solves: RavenDB_15983
                                 //Also backward compatibility for older indexes.
+                                //nestedArray: it makes no sense to write `_IsArray` for the main field here, since the underlying fields are written under other fields anyway.
                                 numberOfCreatedFields = isDynamicFieldsEnumeratorScope && _dynamicFieldsDynamicAnalyzer
-                                    ? GetRegularFields(instance, field, LuceneCreateField(currentIndexingScope, field, CreateValueForIndexing(value, propertyBoost)), indexContext, sourceDocument, out _) 
+                                    ? GetRegularFields(instance, field, LuceneCreateField(currentIndexingScope, field, CreateValueForIndexing(value, propertyBoost)), indexContext, sourceDocument, out _, nestedArray: true) 
                                     : GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, sourceDocument, out _);
 
                                 newFields += numberOfCreatedFields;
