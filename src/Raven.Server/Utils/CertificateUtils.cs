@@ -37,7 +37,7 @@ namespace Raven.Server.Utils
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(CertificateUtils).FullName);
 
-        internal static bool CertHasKnownIssuer(X509Certificate2 userCertificate, X509Certificate2 knownCertificate, SecurityConfiguration securityConfiguration)
+        internal static bool CertHasKnownIssuer(X509Certificate2 userCertificate, X509Certificate2 knownCertificate, SecurityConfiguration securityConfiguration, List<string> explanations = null)
         {
             X509Certificate2 issuerCertificate = null;
 
@@ -51,14 +51,18 @@ namespace Raven.Server.Utils
             // in order to do that properly it needs to be able to verify the chain by download the certificates
             //knownCertChain.ChainPolicy.DisableCertificateDownloads = true;
 
+            explanations?.Add($"Try building client certificate chain - {userCertificate.FriendlyName}.");
             try
             {
                 userChain.Build(userCertificate);
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}', failed to build the chain.", e);
+                var message = $"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}', failed to build the chain.";
+                explanations?.Add(message);
+                if (Logger.IsInfoEnabled) 
+                    Logger.Info(message, e);
+
                 return false;
             }
 
@@ -70,30 +74,43 @@ namespace Raven.Server.Utils
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Cannot extract pinning hash from the client certificate's issuer '{issuerCertificate?.FriendlyName} {issuerCertificate?.Thumbprint}'.", e);
+                var message = $"Cannot extract pinning hash from the client certificate's issuer '{issuerCertificate?.FriendlyName} {issuerCertificate?.Thumbprint}'.";
+                explanations?.Add(message);
+                if (Logger.IsInfoEnabled) 
+                    Logger.Info(message, e);
+
                 return false;
             }
 
+            explanations?.Add($"Try building know certificate chain - {knownCertificate.FriendlyName}.");
             try
             {
                 knownCertChain.Build(knownCertificate);
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}'. Found a known certificate '{knownCertificate.Thumbprint}' with the same hash but failed to build its chain.", e);
+                var message = $"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}'. Found a known certificate '{knownCertificate.Thumbprint}' with the same hash but failed to build its chain.";
+                explanations?.Add(message);
+                if (Logger.IsInfoEnabled) 
+                    Logger.Info(message, e);
+
                 return false;
             }
 
             // client certificates (leafs) Public Key pinning hashes must match
             if (userCertificate.GetPublicKeyPinningHash() != knownCertificate.GetPublicKeyPinningHash())
+            {
+                explanations?.Add("Client Certificate Public Key pinning hashes does not match");
                 return false;
+            }
 
             // support self-signed certs
             if (knownCertChain.ChainElements.Count == 1 && userChain.ChainElements.Count == 1)
+            {
+                explanations?.Add("Client certificate and known certificate are self-signed and have matching public key pinning hashes.");
                 return true;
-            
+            }
+
             // compare issuers pinning hashes starting from top of the chain (CA) since it's least likely to change
             // chain may have additional elements due to cross-signing, that's why we compare every issuer with each other
             for (var i = knownCertChain.ChainElements.Count - 1; i > 0; i--)
@@ -102,10 +119,14 @@ namespace Raven.Server.Utils
                 for (int j = userChain.ChainElements.Count - 1; j > 0; j--)
                 {
                     if (knownPinningHash == userChain.ChainElements[j].Certificate.GetPublicKeyPinningHash())
+                    {
+                        explanations?.Add($"Client certificate has issuer with matching public key pinning hash - {userChain.ChainElements[j].Certificate.FriendlyName}");
                         return true;
+                    }
                 }
             }
 
+            explanations?.Add("None of the issuers Public Key pinning hashes match.");
             return false;
         }
 
