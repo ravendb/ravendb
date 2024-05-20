@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.Queue;
@@ -61,31 +62,27 @@ public sealed class AzureQueueStorageConnectionSettings
     
     private string GetUrlFromConnectionString(string connectionString)
     {
-        var parts = connectionString.Split(';')
-            .Select(p => p.Split('='))
-            .ToDictionary(p => p[0], p => p.Length > 1 ? p[1] : "");
-        
-        parts.TryGetValue("DefaultEndpointsProtocol", out string protocol);
+        var protocol = SqlConnectionStringParser.GetConnectionStringValue(connectionString, ["DefaultEndpointsProtocol"]);
         if (string.IsNullOrWhiteSpace(protocol))
         {
-            HandleConnectionStringError("Protocol not found in the connection string");
+            ThrowConnectionStringError("Protocol not found in the connection string");
         }
 
         if (protocol.Equals("http"))
         {
-            parts.TryGetValue("QueueEndpoint", out string queueEndpoint);
+            var queueEndpoint = SqlConnectionStringParser.GetConnectionStringValue(connectionString, ["QueueEndpoint"]);
             if (string.IsNullOrWhiteSpace(queueEndpoint))
             {
-                HandleConnectionStringError("Queue endpoint not found in the connection string");
+                ThrowConnectionStringError("Queue endpoint not found in the connection string");
             }
 
             return queueEndpoint;
         }
 
-        parts.TryGetValue("AccountName", out string accountName);
+        var accountName = SqlConnectionStringParser.GetConnectionStringValue(connectionString, ["AccountName"]);
         if (string.IsNullOrWhiteSpace(accountName))
         {
-            HandleConnectionStringError("Storage account name not found in the connection string");
+            ThrowConnectionStringError("Storage account name not found in the connection string");
         }
         
         return $"https://{accountName}.queue.core.windows.net/";
@@ -107,7 +104,7 @@ public sealed class AzureQueueStorageConnectionSettings
         return storageAccountName;
     }
     
-    private void HandleConnectionStringError(string message)
+    private void ThrowConnectionStringError(string message)
     {
         throw new ArgumentException(message, nameof(ConnectionString));
     }
@@ -144,10 +141,10 @@ public sealed class EntraId
 
     public bool IsValid()
     {
-        return !string.IsNullOrWhiteSpace(StorageAccountName) &&
-               !string.IsNullOrWhiteSpace(TenantId) &&
-               !string.IsNullOrWhiteSpace(ClientId) &&
-               !string.IsNullOrWhiteSpace(ClientSecret);
+        return string.IsNullOrWhiteSpace(StorageAccountName) == false &&
+               string.IsNullOrWhiteSpace(TenantId) == false &&
+               string.IsNullOrWhiteSpace(ClientId) == false &&
+               string.IsNullOrWhiteSpace(ClientSecret) == false;
     }
 }
 
@@ -158,6 +155,6 @@ public sealed class Passwordless
 
     public bool IsValid()
     {
-        return !string.IsNullOrWhiteSpace(StorageAccountName);
+        return string.IsNullOrWhiteSpace(StorageAccountName) == false;
     }
 }

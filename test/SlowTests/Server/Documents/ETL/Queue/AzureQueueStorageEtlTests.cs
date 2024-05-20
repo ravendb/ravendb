@@ -420,6 +420,52 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
             Assert.Empty(record.QueueEtls);
         }
     }
+    
+    [RavenFact(RavenTestCategory.Etl, AzureQueueStorageRequired = true)]
+    public void ProperUrlFromHttpConnectionString()
+    {
+        var config = new QueueEtlConfiguration
+        {
+            Name = "test",
+            ConnectionStringName = "test",
+            BrokerType = QueueBrokerType.AzureQueueStorage,
+            Transforms = { new Transformation { Name = "test", Collections = { "Orders" }, Script = @"" } }
+        };
+
+        config.Initialize(new QueueConnectionString
+        {
+            Name = "Foo",
+            BrokerType = QueueBrokerType.AzureQueueStorage,
+            AzureQueueStorageConnectionSettings =
+                new AzureQueueStorageConnectionSettings { ConnectionString = "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;QueueEndpoint=http://127.0.0.1:10001/devstoreaccount1;" }
+        });
+
+        var storageUrl = config.Connection.AzureQueueStorageConnectionSettings.GetStorageUrl();
+        Assert.Equal(storageUrl, "http://127.0.0.1:10001/devstoreaccount1");
+    }
+    
+    [RavenFact(RavenTestCategory.Etl, AzureQueueStorageRequired = true)]
+    public void ProperUrlFromHttpsConnectionString()
+    {
+        var config = new QueueEtlConfiguration
+        {
+            Name = "test",
+            ConnectionStringName = "test",
+            BrokerType = QueueBrokerType.AzureQueueStorage,
+            Transforms = { new Transformation { Name = "test", Collections = { "Orders" }, Script = @"" } }
+        };
+
+        config.Initialize(new QueueConnectionString
+        {
+            Name = "Foo",
+            BrokerType = QueueBrokerType.AzureQueueStorage,
+            AzureQueueStorageConnectionSettings =
+                new AzureQueueStorageConnectionSettings { ConnectionString = "DefaultEndpointsProtocol=https;AccountName=myexamplestorage;AccountKey=myaccountkey;EndpointSuffix=core.windows.net" }
+        });
+
+        var storageUrl = config.Connection.AzureQueueStorageConnectionSettings.GetStorageUrl();
+        Assert.Equal(storageUrl, "https://myexamplestorage.queue.core.windows.net/");
+    }
 
     private class Order
     {
