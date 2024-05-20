@@ -47,6 +47,8 @@ namespace Raven.Server.Smuggler.Documents.Data
         IReplicationHubCertificateActions ReplicationHubCertificates();
 
         ITimeSeriesActions TimeSeries();
+
+        ITimeSeriesActions TimeSeriesDeletedRanges();
     }
 
     public interface IDocumentActions : INewDocumentActions, IAsyncDisposable
@@ -124,7 +126,10 @@ namespace Raven.Server.Smuggler.Documents.Data
     public interface ITimeSeriesActions : IAsyncDisposable, INewItemActions
     {
         ValueTask WriteTimeSeriesAsync(TimeSeriesItem ts);
-        
+
+        ValueTask WriteTimeSeriesDeletedRangeAsync(TimeSeriesDeletedRangeItem ts);
+
+
         void RegisterForDisposal(IDisposable data);
 
         void RegisterForReturnToTheContext(AllocatedMemoryData data);

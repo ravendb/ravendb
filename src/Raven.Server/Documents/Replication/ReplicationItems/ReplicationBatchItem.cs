@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 case ReplicationItemType.TimeSeriesSegment:
                     return new TimeSeriesReplicationItem { Type = type, Reader = reader };
                 case ReplicationItemType.DeletedTimeSeriesRange:
-                    return new TimeSeriesDeletedRangeItem { Type = type, Reader = reader };
+                    return new TimeSeriesDeletedRangeReplicationItem { Type = type, Reader = reader };
                 default:
                     throw new ArgumentOutOfRangeException(type.ToString());
             }

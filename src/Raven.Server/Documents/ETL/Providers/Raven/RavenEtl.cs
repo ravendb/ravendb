@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             return new TimeSeriesToRavenEtlItems(timeSeries, collection);
         }
-        protected override IEnumerator<RavenEtlItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
+        protected override IEnumerator<RavenEtlItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeReplicationItem> timeSeries, string collection)
         {
             return new TimeSeriesDeletedRangeToRavenEtlItems(timeSeries, collection);
         }

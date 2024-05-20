@@ -262,6 +262,10 @@ namespace Raven.Server.Smuggler.Documents
                     counts = await ProcessTimeSeriesAsync(result);
                     break;
 
+                case DatabaseItemType.TimeSeriesDeletedRanges:
+                    counts = await ProcessTimeSeriesDeletedRangesAsync(result);
+                    break;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -1225,6 +1229,51 @@ namespace Raven.Server.Smuggler.Documents
                 return patcher != null && patcher.ShouldSkip(ts.DocId);
             }
         }
+
+        protected virtual async Task<SmugglerProgressBase.Counts> ProcessTimeSeriesDeletedRangesAsync(SmugglerResult result)
+        {
+            result.TimeSeriesDeletedRanges.Start();
+
+            await using (var actions = _destination.TimeSeries())
+            {
+                var isFullBackup = _source.GetSourceType() == SmugglerSourceType.FullExport;
+                await foreach (var deletedRange in _source.GetTimeSeriesDeletedRangesAsync(actions, _options.Collections))
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.TimeSeriesDeletedRanges.ReadCount++;
+                   // result.TimeSeriesDeletedRanges.SizeInBytes += deletedRange.Size;
+
+                    if (result.TimeSeriesDeletedRanges.ReadCount % 1000 == 0)
+                        AddInfoToSmugglerResult(result, $"Time Series deleted ranges entries {result.TimeSeriesDeletedRanges}");
+
+                    await actions.WriteTimeSeriesDeletedRangeAsync(deletedRange);
+
+
+                    /*
+                    var shouldSkip = ShouldSkip(ts, _patcher, isFullBackup);
+
+                    if (shouldSkip == false)
+                        await actions.WriteTimeSeriesAsync(ts);
+                    else
+                    {
+                        result.TimeSeriesDeletedRanges.SkippedCount++;
+                    }*/
+
+                    result.TimeSeriesDeletedRanges.LastEtag = deletedRange.Etag;
+                }
+            }
+
+            return result.TimeSeries;
+
+            static bool ShouldSkip(TimeSeriesItem ts, SmugglerPatcher patcher, bool isFullBackup)
+            {
+                if (isFullBackup && ts.Segment.NumberOfLiveEntries == 0)
+                    return true;
+
+                return patcher != null && patcher.ShouldSkip(ts.DocId);
+            }
+        }
+
 
         private static void SkipDocument(DocumentItem item, SmugglerProgressBase.CountsWithSkippedCountAndLastEtagAndAttachments counts)
         {

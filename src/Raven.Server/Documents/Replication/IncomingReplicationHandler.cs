@@ -1219,7 +1219,7 @@ namespace Raven.Server.Documents.Replication
 
                                 break;
 
-                            case TimeSeriesDeletedRangeItem deletedRange:
+                            case TimeSeriesDeletedRangeReplicationItem deletedRange:
                                 tss = database.DocumentsStorage.TimeSeriesStorage;
 
                                 TimeSeriesValuesSegment.ParseTimeSeriesKey(deletedRange.Key, context, out docId, out name);

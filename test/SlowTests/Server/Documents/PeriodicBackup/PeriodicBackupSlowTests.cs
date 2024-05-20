@@ -4013,6 +4013,75 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task can_backup_and_restore_with_deleted_timeseries_ranges()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            const string id = "users/1";
+
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.UtcNow;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "fitzchak" }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "heartrate");
+                    for (int i = 0; i < 10; i++)
+                    {
+                        tsf.Append(baseline.AddHours(i), i);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "aviv" }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Null(ts);
+                }
+
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+
+                Assert.True(WaitForValue(() =>
+                {
+                    var dir = Directory.GetDirectories(backupPath).First();
+                    var files = Directory.GetFiles(dir);
+                    return files.Length == 2;
+                }, expectedVal: true));
+            }
+
+            using (var store = GetDocumentStore())
+            {
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(),
+                    Directory.GetDirectories(backupPath).First());
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    Assert.Equal("aviv", user.Name);
+
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Null(ts); // fails, we get 10 entries
+                }
+            }
+        }
+
         private static string GetBackupPath(IDocumentStore store, long backTaskId, bool incremental = true)
         {
             var status = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(backTaskId)).Status;
