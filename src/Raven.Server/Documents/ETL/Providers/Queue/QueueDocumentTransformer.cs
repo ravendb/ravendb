@@ -190,4 +190,57 @@ where TSelf : QueueItem
             return false;
         }
     }
+    
+    protected abstract void LoadToFunction(string name, ScriptRunnerResult result, CloudEventAttributes cloudEventAttributes);
+
+    protected JsValue LoadToFunctionTranslatorWithAttributesInternal(string name, ObjectInstance obj, ObjectInstance attributes)
+    {
+        var result = new ScriptRunnerResult(DocumentScript, obj);
+
+        CloudEventAttributes cloudEventAttributes = null;
+
+        if (attributes != null)
+            cloudEventAttributes = GetCloudEventAttributes(attributes);
+
+        LoadToFunction(name, result, cloudEventAttributes);
+
+        return result.Instance;
+    }
+    
+    protected JsValue LoadToFunctionTranslatorWithAttributes(JsValue self, JsValue[] args)
+    {
+        var methodSignature = "loadTo(name, obj, attributes)";
+
+        if (args.Length != 2 && args.Length != 3)
+            ThrowInvalidScriptMethodCall($"{methodSignature} must be called with 2 or 3 parameters");
+
+        if (args[0].IsString() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
+
+        if (args[1].IsObject() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be an object");
+
+        if (args.Length == 3 && args[2].IsObject() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} third argument must be an object");
+
+        return LoadToFunctionTranslatorWithAttributesInternal(args[0].AsString(), args[1].AsObject(),
+            args.Length == 3 ? args[2].AsObject() : null);
+    }
+
+    protected JsValue LoadToFunctionTranslatorWithAttributes(string name, JsValue[] args)
+    {
+        var methodSignature = $"loadTo{name}(obj, attributes)";
+
+        if (args.Length != 1 && args.Length != 2)
+            ThrowInvalidScriptMethodCall($"{methodSignature} must be called with with 1 or 2 parameters");
+
+        if (args[0].IsObject() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} argument 'obj' must be an object");
+
+        if (args.Length == 2 && args[1].IsObject() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} argument 'attributes' must be an object");
+
+        return LoadToFunctionTranslatorWithAttributesInternal(name, args[0].AsObject(),
+            args.Length == 2 ? args[1].AsObject() : null);
+    }
 }
