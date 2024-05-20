@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void StoreOnDictionaryWithEnumKeyShouldWork()
         {
             using var store = GetDocumentStore();
@@ -39,7 +40,7 @@ namespace FastTests.Issues
                 """, storedJson);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void StoreOnDictionaryWithEnumKeyAndSaveEnumsAsIntegersShouldWork()
         {
             using var store = GetDocumentStore(new()
@@ -70,7 +71,7 @@ namespace FastTests.Issues
                 """, storedJson);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void PatchOnDictionaryWithEnumKeyShouldWork()
         {
             using var store = GetDocumentStore();
@@ -101,7 +102,7 @@ namespace FastTests.Issues
                 """, patchedJson);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void PatchOnDictionaryWithEnumKeyAndSaveEnumsAsIntegersShouldWork()
         {
             using var store = GetDocumentStore(new()
