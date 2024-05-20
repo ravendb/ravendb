@@ -604,9 +604,10 @@ namespace Raven.Server.Smuggler.Documents
             return _type;
         }
 
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        public async IAsyncEnumerable<TimeSeriesDeletedRangeItem> GetTimeSeriesDeletedRangesAsync(ITimeSeriesActions action, List<string> collectionsToExport)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+        public IAsyncEnumerable<TimeSeriesDeletedRangeItem> GetTimeSeriesDeletedRangesAsync(ITimeSeriesActions action, List<string> collectionsToExport) =>
+            GetTimeSeriesDeletedRanges(collectionsToExport).ToAsyncEnumerable();
+
+        private IEnumerable<TimeSeriesDeletedRangeItem> GetTimeSeriesDeletedRanges(IEnumerable<string> collectionsToExport)
         {
             Debug.Assert(_context != null);
 
@@ -620,9 +621,9 @@ namespace Raven.Server.Smuggler.Documents
                 state =>
                 {
                     if (state.StartEtagByCollection.Count != 0)
-                        return GetDeletedRangesFromCollections(_context, state);
+                        return GetTimeSeriesDeletedRangesFromCollections(_context, state);
 
-                    return GetAllDeletedRanges(_context, state.StartEtag);
+                    return GetAlTimeSeriesDeletedRanges(_context, state.StartEtag);
                 }, initialState);
 
             while (enumerator.MoveNext())
@@ -632,7 +633,7 @@ namespace Raven.Server.Smuggler.Documents
         }
 
 
-        private static IEnumerable<TimeSeriesDeletedRangeItem> GetAllDeletedRanges(DocumentsOperationContext context, long startEtag)
+        private static IEnumerable<TimeSeriesDeletedRangeItem> GetAlTimeSeriesDeletedRanges(DocumentsOperationContext context, long startEtag)
         {
             var database = context.DocumentDatabase;
             foreach (var deletedRange in database.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(context, startEtag))
@@ -655,7 +656,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private static IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFromCollections(DocumentsOperationContext context, TimeSeriesDeletedRangeIterationState state)
+        private static IEnumerable<TimeSeriesDeletedRangeItem> GetTimeSeriesDeletedRangesFromCollections(DocumentsOperationContext context, TimeSeriesDeletedRangeIterationState state)
         {
             var database = context.DocumentDatabase;
             var collections = state.StartEtagByCollection.Keys.ToList();

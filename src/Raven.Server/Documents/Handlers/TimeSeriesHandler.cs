@@ -1198,11 +1198,11 @@ namespace Raven.Server.Documents.Handlers
             public SmugglerTimeSeriesBatchCommand(DocumentDatabase database)
             {
                 _database = database;
-                _dictionary = new Dictionary<string, List<TimeSeriesItem>>();
+                _dictionary = new Dictionary<string, List<TimeSeriesItem>>(StringComparer.OrdinalIgnoreCase);
                 _toDispose = new();
                 _toReturn = new();
                 _releaseContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
-                _deletedRanges = new Dictionary<string, List<TimeSeriesDeletedRangeItem>>();
+                _deletedRanges = new Dictionary<string, List<TimeSeriesDeletedRangeItem>>(StringComparer.OrdinalIgnoreCase);
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
