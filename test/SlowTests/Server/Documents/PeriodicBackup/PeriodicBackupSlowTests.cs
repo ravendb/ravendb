@@ -4013,13 +4013,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
-        public async Task can_backup_and_restore_with_deleted_timeseries_ranges()
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task can_backup_and_restore_with_deleted_timeseries_ranges(Options options)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             const string id = "users/1";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.UtcNow;
                 using (var session = store.OpenAsyncSession())
@@ -4066,7 +4067,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, expectedVal: true));
             }
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(),
                     Directory.GetDirectories(backupPath).First());
@@ -4082,13 +4083,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
-        public async Task deleted_ranges_should_be_processed_before_timeseries()
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task deleted_ranges_should_be_processed_before_timeseries(Options options)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             const string id = "users/1";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.UtcNow;
                 using (var session = store.OpenAsyncSession())
@@ -4141,7 +4143,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, expectedVal: true));
             }
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(),
                     Directory.GetDirectories(backupPath).First());
