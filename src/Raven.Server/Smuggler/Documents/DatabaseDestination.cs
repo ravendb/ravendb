@@ -169,6 +169,11 @@ namespace Raven.Server.Smuggler.Documents
             return new TimeSeriesActions(_database);
         }
 
+        public ITimeSeriesActions TimeSeriesDeletedRanges()
+        {
+            throw new NotImplementedException();
+        }
+
         public IIndexActions Indexes()
         {
             return new DatabaseIndexActions(_database);
@@ -2384,6 +2389,11 @@ namespace Raven.Server.Smuggler.Documents
             {
                 AddToBatch(ts);
                 await HandleBatchOfTimeSeriesIfNecessaryAsync();
+            }
+
+            public ValueTask WriteTimeSeriesDeletedRangeAsync(TimeSeriesDeletedRangeItem ts)
+            {
+                throw new NotImplementedException();
             }
 
             public void RegisterForDisposal(IDisposable data)

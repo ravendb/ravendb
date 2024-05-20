@@ -57,6 +57,9 @@ namespace Raven.Server.Smuggler.Documents.Data
         Task<long> SkipTypeAsync(DatabaseItemType type, Action<long> onSkipped, CancellationToken token);
 
         SmugglerSourceType GetSourceType();
+
+        IAsyncEnumerable<TimeSeriesDeletedRangeItem> GetTimeSeriesDeletedRangesAsync(ITimeSeriesActions action, List<string> collectionsToExport);
+
     }
 
     public enum SmugglerSourceType

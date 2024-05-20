@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using Nest;
 using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Documents.TimeSeries;
@@ -15,7 +14,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
 {
-    public class TimeSeriesDeletedRangeItem : ReplicationBatchItem
+    public class TimeSeriesDeletedRangeReplicationItem : ReplicationBatchItem
     {
         public Slice Key;
         public LazyStringValue Collection;
@@ -94,7 +93,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         protected override ReplicationBatchItem CloneInternal(JsonOperationContext context, ByteStringContext allocator)
         {
-            return new TimeSeriesDeletedRangeItem
+            return new TimeSeriesDeletedRangeReplicationItem
             {
                 Collection = Collection.Clone(context),
                 From = From,

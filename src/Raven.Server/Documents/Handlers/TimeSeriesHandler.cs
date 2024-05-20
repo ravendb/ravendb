@@ -1178,7 +1178,9 @@ namespace Raven.Server.Documents.Handlers
             private readonly DocumentDatabase _database;
 
             private readonly Dictionary<string, List<TimeSeriesItem>> _dictionary;
-            
+
+            private readonly Dictionary<string, List<TimeSeriesDeletedRangeItem>> _deletedRanges;
+
             private readonly DocumentsOperationContext _context;
 
             public DocumentsOperationContext Context => _context;
@@ -1200,6 +1202,7 @@ namespace Raven.Server.Documents.Handlers
                 _toDispose = new();
                 _toReturn = new();
                 _releaseContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
+                _deletedRanges = new Dictionary<string, List<TimeSeriesDeletedRangeItem>>();
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -1207,6 +1210,28 @@ namespace Raven.Server.Documents.Handlers
                 var tss = _database.DocumentsStorage.TimeSeriesStorage;
 
                 var changes = 0L;
+
+                foreach (var (docId, items) in _deletedRanges)
+                {
+                    //var collectionName = _database.DocumentsStorage.ExtractCollectionName(context, items[0].Collection);
+                    foreach (var item in items)
+                    {
+                        using (item)
+                        {
+                            var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
+                            {
+                                DocumentId = docId,
+                                Collection = item.Collection,
+                                Name = item.Name,
+                                From = item.From,
+                                To = item.To
+                            };
+                            tss.DeleteTimestampRange(context, deletionRangeRequest, remoteChangeVector: null, updateMetadata: false);
+                        }
+                    }
+
+                    changes += items.Count;
+                }
 
                 foreach (var (docId, items) in _dictionary)
                 {
@@ -1247,6 +1272,21 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 itemsList.Add(item);
+                return newItem;
+            }
+
+            public bool AddToDeletedRanges(TimeSeriesDeletedRangeItem item)
+            {
+                bool newItem = false;
+                //TimeSeriesValuesSegment.ParseTimeSeriesKey(item.Key.Buffer, item.Size, _context, out var docId, out _);
+
+                if (_deletedRanges.TryGetValue(item.DocId, out var deletedRangesList) == false)
+                {
+                    _deletedRanges[item.DocId] = deletedRangesList = new List<TimeSeriesDeletedRangeItem>();
+                    newItem = true;
+                }
+
+                deletedRangesList.Add(item);
                 return newItem;
             }
 

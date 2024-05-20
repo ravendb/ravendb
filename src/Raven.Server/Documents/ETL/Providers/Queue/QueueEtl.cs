@@ -97,7 +97,7 @@ public abstract class QueueEtl<T> : EtlProcess<QueueItem, QueueWithItems<T>, Que
     }
 
     protected override IEnumerator<QueueItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context,
-        IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
+        IEnumerator<TimeSeriesDeletedRangeReplicationItem> timeSeries, string collection)
     {
         throw new NotSupportedException("Time series aren't supported by Queue ETL");
     }

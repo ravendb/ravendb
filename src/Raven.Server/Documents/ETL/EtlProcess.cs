@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract IEnumerator<TExtracted> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection);
 
-        protected abstract IEnumerator<TExtracted> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection);
+        protected abstract IEnumerator<TExtracted> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeReplicationItem> timeSeries, string collection);
 
         protected abstract bool ShouldTrackAttachmentTombstones();
 

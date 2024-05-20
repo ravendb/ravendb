@@ -612,7 +612,7 @@ namespace Raven.Server.Documents.Replication
                     LazyStringValue name;
                     switch (item)
                     {
-                        case TimeSeriesDeletedRangeItem timeSeriesDeletedRangeItem:
+                        case TimeSeriesDeletedRangeReplicationItem timeSeriesDeletedRangeItem:
                             TimeSeriesValuesSegment.ParseTimeSeriesKey(timeSeriesDeletedRangeItem.Key, context, out _, out name);
                             break;
                         case TimeSeriesReplicationItem timeSeriesReplicationItem:

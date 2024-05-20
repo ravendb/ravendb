@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Replication
                 CounterReplicationItem c => "Counter for " + c.Id,
                 DocumentReplicationItem d => "Document " + d.Id,
                 RevisionTombstoneReplicationItem r => "Revision for: " + r.Id,
-                TimeSeriesDeletedRangeItem td => "Time Series deletion range for: " + GetDocumentId(td.Key),
+                TimeSeriesDeletedRangeReplicationItem td => "Time Series deletion range for: " + GetDocumentId(td.Key),
                 TimeSeriesReplicationItem t => "Time Series for: " + GetDocumentId(t.Key),
                 _ => throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}")
             };

@@ -1056,6 +1056,11 @@ namespace Raven.Server.Smuggler.Documents
             return SmugglerSourceType.Import;
         }
 
+        public IAsyncEnumerable<TimeSeriesDeletedRangeItem> GetTimeSeriesDeletedRangesAsync(ITimeSeriesActions action, List<string> collectionsToExport)
+        {
+            throw new NotImplementedException();
+        }
+
         public IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToOperate, INewDocumentActions actions)
         {
             return ReadDocumentsAsync(collectionsToOperate, actions);
@@ -1993,6 +1998,9 @@ namespace Raven.Server.Smuggler.Documents
 
             if (type.Equals("AttachmentsDeletions", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.LegacyAttachmentDeletions;
+
+            if (type.Equals(nameof(DatabaseItemType.TimeSeriesDeletedRanges), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.TimeSeriesDeletedRanges;
 
             return DatabaseItemType.Unknown;
         }

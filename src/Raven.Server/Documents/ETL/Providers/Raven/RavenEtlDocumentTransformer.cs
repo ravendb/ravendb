@@ -417,9 +417,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private readonly struct TimeSeriesModifications
         {
             public readonly IEnumerable<SingleResult> ToAdd;
-            public readonly IEnumerable<TimeSeriesDeletedRangeItem> ToDelete;
+            public readonly IEnumerable<TimeSeriesDeletedRangeReplicationItem> ToDelete;
 
-            public TimeSeriesModifications(IEnumerable<SingleResult> toAdd, IEnumerable<TimeSeriesDeletedRangeItem> toDelete)
+            public TimeSeriesModifications(IEnumerable<SingleResult> toAdd, IEnumerable<TimeSeriesDeletedRangeReplicationItem> toDelete)
             {
                 ToAdd = toAdd;
                 ToDelete = toDelete;
@@ -491,7 +491,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
         }
         
-        private void HandleSingleTimeSeriesDeletedRangeItem(TimeSeriesDeletedRangeItem item, string loadBehaviorFunction)
+        private void HandleSingleTimeSeriesDeletedRangeItem(TimeSeriesDeletedRangeReplicationItem item, string loadBehaviorFunction)
         {
             TimeSeriesValuesSegment.ParseTimeSeriesKey(item.Key, Context, out var docId, out var name);
 

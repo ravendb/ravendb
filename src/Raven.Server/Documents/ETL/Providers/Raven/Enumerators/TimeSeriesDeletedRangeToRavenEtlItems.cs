@@ -6,10 +6,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
 {
     public class TimeSeriesDeletedRangeToRavenEtlItems : IEnumerator<RavenEtlItem>
     {
-        private readonly IEnumerator<TimeSeriesDeletedRangeItem> _timeSeries;
+        private readonly IEnumerator<TimeSeriesDeletedRangeReplicationItem> _timeSeries;
         private readonly string _collection;
 
-        public TimeSeriesDeletedRangeToRavenEtlItems(IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
+        public TimeSeriesDeletedRangeToRavenEtlItems(IEnumerator<TimeSeriesDeletedRangeReplicationItem> timeSeries, string collection)
         {
             _timeSeries = timeSeries;
             _collection = collection;
