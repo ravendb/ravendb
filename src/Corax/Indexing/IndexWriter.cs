@@ -1750,8 +1750,7 @@ namespace Corax.Indexing
             
             return EntryIdEncodings.Encode(termIdInTree, 0, TermIdMask.SmallPostingList);
         }
-
-
+        
         private AddEntriesToTermResult AddEntriesToTermResultSingleValue(Span<byte> tmpBuf, long idInTree, ref EntriesModifications entries, out long termId)
         {
             entries.AssertPreparationIsNotFinished();
