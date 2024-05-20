@@ -63,6 +63,7 @@ public sealed class AzureQueueStorageEtl : QueueEtl<AzureQueueStorageItem>
 
             foreach (AzureQueueStorageItem queueItem in queue.Items)
             {
+                CancellationToken.ThrowIfCancellationRequested();
                 string base64CloudEvent = CreateBase64CloudEvent(queueItem);
 
                 TimeSpan? timeToLive = Database.Configuration.Etl.AzureQueueStorageTimeToLive.AsTimeSpan;
