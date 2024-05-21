@@ -517,6 +517,11 @@ namespace Raven.Client.Documents.Changes
             }
         }
 
+        public class OnReconnect : EventArgs
+        {
+            public static OnReconnect Instance = new OnReconnect();
+        }
+
         private async Task DoWork(string nodeTag)
         {
             try
@@ -568,9 +573,8 @@ namespace Raven.Client.Documents.Changes
                             counter.Value.Set(counter.Value.OnConnect());
                         }
 
-                        ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+                        ConnectionStatusChanged?.Invoke(this, OnReconnect.Instance);
                     }
-
                     await ProcessChanges().ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (_cts.Token.IsCancellationRequested)
