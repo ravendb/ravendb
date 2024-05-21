@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
@@ -27,9 +26,9 @@ using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
-using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Data;
@@ -69,12 +68,12 @@ namespace Raven.Server.Smuggler.Documents
         private readonly DatabaseSmugglerOptionsServerSide _options;
         protected readonly ByteStringContext _allocator;
         
-        public StreamSource(Stream stream, JsonOperationContext context, string databaseName, DatabaseSmugglerOptionsServerSide options = null)
+        public StreamSource(Stream stream, JsonOperationContext context, string databaseName, DatabaseSmugglerOptionsServerSide options)
         {
             _peepingTomStream = new PeepingTomStream(stream, context);
             _context = context;
             _log = LoggingSource.Instance.GetLogger<StreamSource>(databaseName);
-            _options = options ?? new DatabaseSmugglerOptionsServerSide();
+            _options = options;
             _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         }
 

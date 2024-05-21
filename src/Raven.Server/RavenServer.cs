@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
@@ -1613,6 +1614,37 @@ namespace Raven.Server
                     return _status;
                 }
                 set => _status = value;
+            }
+
+            public AuthorizationStatus GetAuthorizationStatus(string databaseName)
+            {
+                switch (Status)
+                {
+                    case AuthenticationStatus.ClusterAdmin:
+                        return AuthorizationStatus.ClusterAdmin;
+                    case AuthenticationStatus.Operator:
+                        return AuthorizationStatus.Operator;
+                    case AuthenticationStatus.Allowed:
+                        if (AuthorizedDatabases.TryGetValue(databaseName, out var databaseAccess))
+                        {
+                            if (databaseAccess == DatabaseAccess.Admin)
+                                return AuthorizationStatus.DatabaseAdmin;
+                            if (databaseAccess == DatabaseAccess.Read)
+                                return AuthorizationStatus.RestrictedAccess;
+                        }
+                        return AuthorizationStatus.ValidUser;
+                    case AuthenticationStatus.None:
+                    case AuthenticationStatus.NoCertificateProvided:
+                    case AuthenticationStatus.UnfamiliarCertificate:
+                    case AuthenticationStatus.UnfamiliarIssuer:
+                    case AuthenticationStatus.Expired:
+                    case AuthenticationStatus.NotYetValid:
+                    case AuthenticationStatus.TwoFactorAuthNotProvided:
+                    case AuthenticationStatus.TwoFactorAuthFromInvalidLimit:
+                        return AuthorizationStatus.UnauthenticatedClients;
+                    default:
+                        throw new ArgumentOutOfRangeException("Unknown authenticationStatus status: " + Status);
+                }
             }
 
             private void ThrowException()

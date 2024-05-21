@@ -27,7 +27,6 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Migration;
-using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -47,6 +46,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
+using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
@@ -56,7 +56,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
-using Sparrow.Utils;
 using Voron;
 using Voron.Util.Settings;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
@@ -1210,7 +1209,8 @@ namespace Raven.Server.Web.System
                     throw new ArgumentException("Url cannot be null or empty");
 
                 var migrator = new Migrator(migrationConfigurationJson, ServerStore);
-                await migrator.MigrateDatabases(migrationConfigurationJson.Databases);
+
+                await migrator.MigrateDatabases(migrationConfigurationJson.Databases, AuthorizationStatus.Operator);
 
                 NoContentStatus();
             }
@@ -1353,13 +1353,16 @@ namespace Raven.Server.Web.System
 
                                 result.AddInfo("Starting the import phase of the migration");
                                 onProgress(overallProgress);
+                                var options = new DatabaseSmugglerOptionsServerSide(GetAuthorizationStatusForSmuggler(databaseName));
                                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                                 await using (var reader = File.OpenRead(configuration.OutputFilePath))
                                 await using (var stream = await BackupUtils.GetDecompressionStreamAsync(reader))
-                                using (var source = new StreamSource(stream, context, database.Name))
+                                using (var source = new StreamSource(stream, context, database.Name, options))
                                 {
                                     var destination = database.Smuggler.CreateDestination();
-                                    var smuggler = database.Smuggler.Create(source, destination, context, result: result, onProgress: onProgress, token: token.Token);
+                                    var smuggler = database.Smuggler.Create(source, destination, context,
+                                        options,
+                                        result: result, onProgress: onProgress, token: token.Token);
 
                                     await smuggler.ExecuteAsync();
                                 }

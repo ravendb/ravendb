@@ -576,9 +576,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                         Configuration.BackupType == BackupType.Snapshot && _isFullBackup == false)
                     {
                         // smuggler backup
-                        var options = new DatabaseSmugglerOptionsServerSide
+                        var options = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus.DatabaseAdmin)
                         {
-                            AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                             IncludeArtificial = true, // we want to include artificial in backup
                             IncludeArchived = true // wa want also to include archived documents in backup
                         };

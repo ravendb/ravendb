@@ -21,6 +21,7 @@ using Raven.Server.Smuggler.Migration.ApiKey;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Json;
+using Raven.Server.Routing;
 
 namespace Raven.Server.Smuggler.Migration
 {
@@ -166,7 +167,7 @@ namespace Raven.Server.Smuggler.Migration
             }
         }
 
-        public async Task MigrateDatabases(List<DatabaseMigrationSettings> databases)
+        public async Task MigrateDatabases(List<DatabaseMigrationSettings> databases, AuthorizationStatus authorizationStatus)
         {
             await UpdateBuildInfoIfNeeded();
 
@@ -214,7 +215,7 @@ namespace Raven.Server.Smuggler.Migration
                     continue;
                 }
 
-                StartMigratingSingleDatabase(databaseToMigrate, database);
+                StartMigratingSingleDatabase(databaseToMigrate, database, authorizationStatus);
             }
         }
 
@@ -252,7 +253,7 @@ namespace Raven.Server.Smuggler.Migration
             }
         }
 
-        public long StartMigratingSingleDatabase(DatabaseMigrationSettings settings, DocumentDatabase database)
+        public long StartMigratingSingleDatabase(DatabaseMigrationSettings settings, DocumentDatabase database, AuthorizationStatus authorizationStatus)
         {
             var operationId = database.Operations.GetNextOperationId();
             var cancelToken = new OperationCancelToken(database.DatabaseShutdown, CancellationToken.None);
@@ -309,17 +310,17 @@ namespace Raven.Server.Smuggler.Migration
                             switch (_buildMajorVersion)
                             {
                                 case MajorVersion.V2:
-                                    migrator = new Migrator_V2(options, parameters);
+                                    migrator = new Migrator_V2(options, parameters, authorizationStatus);
                                     break;
                                 case MajorVersion.V30:
                                 case MajorVersion.V35:
-                                    migrator = new Migrator_V3(options, parameters, _buildMajorVersion, _buildVersion);
+                                    migrator = new Migrator_V3(options, parameters, _buildMajorVersion, _buildVersion, authorizationStatus);
                                     break;
                                 case MajorVersion.V4:
                                 case MajorVersion.V5:
                                 case MajorVersion.V6:
                                 case MajorVersion.GreaterThanCurrent:
-                                    migrator = new Importer(options, parameters, _buildVersion);
+                                    migrator = new Importer(options, parameters, _buildVersion, authorizationStatus);
                                     break;
                                 default:
                                     throw new ArgumentOutOfRangeException(nameof(_buildMajorVersion), _buildMajorVersion, null);

@@ -1,6 +1,9 @@
 ﻿using System.Text;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Routing;
+using static Raven.Server.RavenServer;
 
 namespace Raven.Server.Web
 {
@@ -27,6 +30,12 @@ namespace Raven.Server.Web
                 sb.AppendLine().Append(indexQuery.QueryParameters);
 
             AddStringToHttpContext(sb.ToString(), type);
+        }
+
+        public AuthorizationStatus GetAuthorizationStatusForSmuggler(string databaseName)
+        {
+            var authenticateConnection = HttpContext.Features.Get<IHttpAuthenticationFeature>() as AuthenticateConnection;
+            return authenticateConnection?.GetAuthorizationStatus(databaseName) ?? AuthorizationStatus.DatabaseAdmin;
         }
     }
 }

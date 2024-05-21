@@ -49,14 +49,14 @@ namespace Raven.Server.Smuggler.Documents
             ISmugglerDestination destination,
             SystemTime time,
             JsonOperationContext context,
-            DatabaseSmugglerOptionsServerSide options = null,
+            DatabaseSmugglerOptionsServerSide options,
             SmugglerResult result = null,
             Action<IOperationProgress> onProgress = null,
             CancellationToken token = default)
         {
             _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
             _source = source;
-            _options = options ?? new DatabaseSmugglerOptionsServerSide();
+            _options = options;
             _result = result;
             _token = token;
             _context = context;

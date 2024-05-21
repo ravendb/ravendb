@@ -274,9 +274,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             var destination = database.Smuggler.CreateDestination();
 
-            var smugglerOptions = new DatabaseSmugglerOptionsServerSide
+            var smugglerOptions = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus.DatabaseAdmin)
             {
-                AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                 OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities | DatabaseItemType.Subscriptions,
                 SkipRevisionCreation = true
             };
@@ -296,7 +295,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 await using (var inputStream = GetSnapshotInputStream(input, database.Name))
                 await using (var uncompressed = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
                 {
-                    var source = new StreamSource(uncompressed, context, database.Name);
+                    var source = new StreamSource(uncompressed, context, database.Name, smugglerOptions);
 
                     var smuggler = database.Smuggler.CreateForRestore(databaseRecord: null, source, destination, context, smugglerOptions, result: null, onProgress,
                         OperationCancelToken.Token);

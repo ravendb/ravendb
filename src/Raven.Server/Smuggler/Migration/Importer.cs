@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -16,6 +15,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -29,7 +29,7 @@ namespace Raven.Server.Smuggler.Migration
     {
         private readonly int _buildVersion;
 
-        public Importer(MigratorOptions options, MigratorParameters parameters, int buildVersion) : base(options, parameters)
+        public Importer(MigratorOptions options, MigratorParameters parameters, int buildVersion, AuthorizationStatus authorizationStatus) : base(options, parameters, authorizationStatus)
         {
             _buildVersion = buildVersion;
         }
@@ -43,6 +43,7 @@ namespace Raven.Server.Smuggler.Migration
             await MigrateDatabase(operationId, importInfo);
 
             await SaveLastState(operationId, importInfo);
+
         }
 
         private async Task SaveLastState(long operationId, ImportInfo previousImportInfo)
@@ -132,10 +133,11 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task MigrateDatabase(long operationId, ImportInfo importInfo)
         {
+
             var startDocumentEtag = importInfo?.LastEtag ?? 0;
             var startRaftIndex = importInfo?.LastRaftIndex ?? 0;
             var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/smuggler/export?operationId={operationId}&startEtag={startDocumentEtag}&startRaftIndex={startRaftIndex}";
-            var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
+            var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus)
             {
                 OperateOnTypes = Options.OperateOnTypes,
                 RemoveAnalyzers = Options.RemoveAnalyzers
@@ -172,18 +174,18 @@ namespace Raven.Server.Smuggler.Migration
                                                     $"error: {responseString}");
             }
 
+            var options = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus)
+            {
+                TransformScript = Options.TransformScript,
+                OperateOnTypes = Options.OperateOnTypes,
+                OperateOnDatabaseRecordTypes = Options.OperateOnDatabaseRecordTypes
+            };
             await using (var responseStream = await response.Content.ReadAsStreamAsync())
             await using (var stream = await BackupUtils.GetDecompressionStreamAsync(responseStream))
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(stream, context, Parameters.Database.Name))
+            using (var source = new StreamSource(stream, context, Parameters.Database.Name, options))
             {
                 var destination = Parameters.Database.Smuggler.CreateDestination();
-                var options = new DatabaseSmugglerOptionsServerSide
-                {
-                    TransformScript = Options.TransformScript,
-                    OperateOnTypes = Options.OperateOnTypes,
-                    OperateOnDatabaseRecordTypes = Options.OperateOnDatabaseRecordTypes
-                };
 
                 var smuggler = Parameters.Database.Smuggler.Create(source, destination, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 

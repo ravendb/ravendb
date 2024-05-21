@@ -20,6 +20,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Documents;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -179,10 +180,10 @@ namespace SlowTests
 
                     using (DocumentDatabase database = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName2).Result)
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (var source = new StreamSource(stream, context, database.Name))
+                    using (var source = new StreamSource(stream, context, database.Name, new DatabaseSmugglerOptionsServerSide(AuthorizationStatus.ValidUser)))
                     {
                         var destination = database.Smuggler.CreateDestination();
-                        var smuggler = database.Smuggler.Create(source, destination, context, new DatabaseSmugglerOptionsServerSide());
+                        var smuggler = database.Smuggler.Create(source, destination, context, new DatabaseSmugglerOptionsServerSide(AuthorizationStatus.ValidUser));
                         var result = await smuggler.ExecuteAsync().WithCancellation(cts.Token);
 
                         Assert.Equal(5, result.DatabaseRecord.ErroredCount);
@@ -245,6 +246,108 @@ namespace SlowTests
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation(operateOnTypes: DatabaseSmugglerOptions.DefaultOperateOnTypes));
                 var indexDefinitions = store.Maintenance.Send(new GetIndexesOperation(0, 10));
                 Assert.Equal(0, indexDefinitions.Length);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Certificates | RavenTestCategory.BackupExportImport)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanImportRestrictedFeaturesWithAdminCertificate(Options options)
+        {
+            DoNotReuseServer();
+
+            var file = Path.GetTempFileName();
+            var dbName = GetDatabaseName();
+            var dbName2 = dbName + "1";
+            var certificates = Certificates.SetupServerAuthentication(serverUrl: null);
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var clientCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            {
+                [dbName] = DatabaseAccess.Admin
+            });
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate3.Value, new Dictionary<string, DatabaseAccess>
+            {
+                [dbName2] = DatabaseAccess.Admin
+            });
+            IndexDefinition input = await InitInfoAndExport(adminCert, clientCert, dbName, file);
+
+            using (var store = GetDocumentStore(new Options()
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert,
+                ModifyDatabaseName = _ => dbName2
+            }))
+            {
+                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                var output = await store
+                    .Maintenance
+                    .SendAsync(new GetIndexOperation(input.Name));
+
+                Assert.NotNull(output);
+
+                DatabaseRecord record;
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    record = Server.ServerStore.Cluster.ReadDatabase(context, store.Database);
+                }
+                Assert.True(record.RavenConnectionStrings.ContainsKey("RavenConnectionString"));
+                Assert.NotNull(record.Expiration);
+                Assert.True(record.PeriodicBackups.Count > 0);
+                Assert.NotNull(record.Client);
+                Assert.NotNull(record.Revisions);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Certificates | RavenTestCategory.BackupExportImport)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanImportRestrictedFeaturesWithOperator(Options options)
+        {
+            DoNotReuseServer();
+
+            var file = Path.GetTempFileName();
+            var dbName = GetDatabaseName();
+            var dbName2 = dbName + "1";
+            var certificates = Certificates.SetupServerAuthentication(serverUrl: null);
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var clientCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            {
+                [dbName] = DatabaseAccess.Admin
+            });
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate3.Value, new Dictionary<string, DatabaseAccess>
+            {
+                [dbName2] = DatabaseAccess.Read
+            }, SecurityClearance.Operator);
+            IndexDefinition input = await InitInfoAndExport(adminCert, clientCert, dbName, file);
+
+            using (var store = GetDocumentStore(new Options()
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert,
+                ModifyDatabaseName = _ => dbName2
+            }))
+            {
+                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                var output = await store
+                    .Maintenance
+                    .SendAsync(new GetIndexOperation(input.Name));
+
+                Assert.NotNull(output);
+
+                DatabaseRecord record;
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    record = Server.ServerStore.Cluster.ReadDatabase(context, store.Database);
+                }
+                Assert.True(record.RavenConnectionStrings.ContainsKey("RavenConnectionString"));
+                Assert.NotNull(record.Expiration);
+                Assert.True(record.PeriodicBackups.Count > 0);
+                Assert.NotNull(record.Client);
+                Assert.NotNull(record.Revisions);
             }
         }
     }

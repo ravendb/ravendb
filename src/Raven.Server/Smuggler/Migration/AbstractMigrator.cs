@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers;
 using Sparrow.Json;
+using Raven.Server.Routing;
 
 namespace Raven.Server.Smuggler.Migration
 {
@@ -8,11 +9,13 @@ namespace Raven.Server.Smuggler.Migration
     {
         protected readonly MigratorOptions Options;
         protected readonly MigratorParameters Parameters;
+        protected readonly AuthorizationStatus AuthorizationStatus;
 
-        protected AbstractMigrator(MigratorOptions options, MigratorParameters parameters)
+        protected AbstractMigrator(MigratorOptions options, MigratorParameters parameters, AuthorizationStatus authorizationStatus)
         {
             Options = options;
             Parameters = parameters;
+            AuthorizationStatus = authorizationStatus;
         }
 
         public abstract Task Execute();

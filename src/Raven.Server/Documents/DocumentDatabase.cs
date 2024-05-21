@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -29,7 +28,6 @@ using Raven.Server.Dashboard;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers.Batches.Commands;
-using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
@@ -43,11 +41,9 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger;
-using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -1418,9 +1414,8 @@ namespace Raven.Server.Documents
                         using (DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                         {
                             var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource, compressionAlgorithm.ToExportCompressionAlgorithm(), compressionLevel);
-                            var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
+                            var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus.DatabaseAdmin)
                             {
-                                AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                                 OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities
                             };
 

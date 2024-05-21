@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -29,7 +30,7 @@ namespace SlowTests.Issues
             {
                 using (var database = CreateDocumentDatabase())
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (var source = new StreamSource(stream, context, database.Name))
+                using (var source = new StreamSource(stream, context, database.Name, new DatabaseSmugglerOptionsServerSide(AuthorizationStatus.DatabaseAdmin)))
                 {
                     var editRevisions = new EditRevisionsConfigurationCommand(new RevisionsConfiguration
                     {
@@ -47,7 +48,7 @@ namespace SlowTests.Issues
 
                     var destination = database.Smuggler.CreateDestination();
 
-                    var smuggler = await (database.Smuggler.Create(source, destination, context, new DatabaseSmugglerOptionsServerSide
+                    var smuggler = await (database.Smuggler.Create(source, destination, context, new DatabaseSmugglerOptionsServerSide(AuthorizationStatus.DatabaseAdmin)
                     {
                         OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Attachments |
                                          DatabaseItemType.Indexes,
