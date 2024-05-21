@@ -15,7 +15,7 @@ public sealed class OrchestratorStreamSource : StreamSource
 {
     private readonly int _numberOfShards;
 
-    public OrchestratorStreamSource(Stream stream, JsonOperationContext context, string databaseName, int numberOfShards, DatabaseSmugglerOptionsServerSide options = null) : base(stream, context, databaseName, options)
+    public OrchestratorStreamSource(Stream stream, JsonOperationContext context, string databaseName, int numberOfShards, DatabaseSmugglerOptionsServerSide options) : base(stream, context, databaseName, options)
     {
         Mode = BlittableJsonDocumentBuilder.UsageMode.None;
         _numberOfShards = numberOfShards;

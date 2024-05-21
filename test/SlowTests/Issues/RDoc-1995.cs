@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
+using Raven.Server.Routing;
 using Raven.Server.Smuggler.Migration;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
@@ -186,6 +187,7 @@ namespace SlowTests.Issues
 
             await migrate.UpdateBuildInfoIfNeeded();
             var database = await Databases.GetDocumentDatabaseInstanceFor(store2);
+
             var operationId =
                 migrate.StartMigratingSingleDatabase(
                     new DatabaseMigrationSettings
@@ -193,7 +195,7 @@ namespace SlowTests.Issues
                         DatabaseName = store1.Database,
                         OperateOnTypes = operateOnTypes,
                     },
-                    database);
+                    database, AuthorizationStatus.DatabaseAdmin);
 
             WaitForValue(() =>
             {

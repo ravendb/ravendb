@@ -8,11 +8,32 @@ namespace Raven.Server.Smuggler.Documents.Data
 {
     public sealed class DatabaseSmugglerOptionsServerSide : DatabaseSmugglerOptions, IDatabaseSmugglerImportOptions, IDatabaseSmugglerExportOptions
     {
+        private DatabaseSmugglerOptionsServerSide()
+        {
+            //Only for GenerateJsonDeserializationRoutine
+        }
+
+        public DatabaseSmugglerOptionsServerSide(AuthorizationStatus authorizationStatus)
+        {
+            _authorizationStatus = authorizationStatus;
+        }
+
         public bool ReadLegacyEtag { get; set; }
 
         public string FileName { get; set; }
 
-        public AuthorizationStatus AuthorizationStatus { get; set; } = AuthorizationStatus.ValidUser;
+        private AuthorizationStatus? _authorizationStatus;
+
+        public AuthorizationStatus AuthorizationStatus
+        {
+            get
+            {
+                if (_authorizationStatus == null)
+                    throw new InvalidOperationException("AuthorizationStatus must be set");
+
+                return _authorizationStatus.Value;
+            }
+        }
 
         public bool SkipRevisionCreation { get; set; }
         
@@ -20,9 +41,14 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         public CompressionLevel? CompressionLevel { get; set; }
 
-        public static DatabaseSmugglerOptionsServerSide Create(HttpContext httpContext)
+        public void SetAuthorizationStatus(AuthorizationStatus authorizationStatus)
         {
-            var result = new DatabaseSmugglerOptionsServerSide();
+            _authorizationStatus = authorizationStatus;
+        }
+
+        public static DatabaseSmugglerOptionsServerSide Create(HttpContext httpContext, AuthorizationStatus authorizationStatus)
+        {
+            var result = new DatabaseSmugglerOptionsServerSide(authorizationStatus);
 
             foreach (var item in httpContext.Request.Query)
             {

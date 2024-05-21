@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -12,6 +11,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Server.Extensions;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -29,7 +29,8 @@ namespace Raven.Server.Smuggler.Migration
         private readonly MajorVersion _majorVersion;
         private readonly int _buildVersion;
 
-        public Migrator_V3(MigratorOptions options, MigratorParameters parameters, MajorVersion majorVersion, int buildVersion) : base(options, parameters)
+        public Migrator_V3(MigratorOptions options, MigratorParameters parameters, MajorVersion majorVersion, int buildVersion, AuthorizationStatus authorizationStatus) : base(options, parameters, authorizationStatus
+        )
         {
             _majorVersion = majorVersion;
             _buildVersion = buildVersion;
@@ -119,7 +120,7 @@ namespace Raven.Server.Smuggler.Migration
         private async Task<string> MigrateRavenFs(string lastEtag, SmugglerResult parametersResult)
         {
             var destination = Parameters.Database.Smuggler.CreateDestination();
-            var options = new DatabaseSmugglerOptionsServerSide
+            var options = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus)
             {
                 OperateOnTypes = DatabaseItemType.Attachments,
                 SkipRevisionCreation = true
@@ -320,21 +321,22 @@ namespace Raven.Server.Smuggler.Migration
                                                     $"error: {responseString}");
             }
 
+            var options = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus)
+            {
+#pragma warning disable 618
+                ReadLegacyEtag = readLegacyEtag,
+#pragma warning restore 618
+                RemoveAnalyzers = Options.RemoveAnalyzers,
+                TransformScript = Options.TransformScript,
+                OperateOnTypes = Options.OperateOnTypes
+            };
             await using (var responseStream = await response.Content.ReadAsStreamAsync())
             await using (var stream = await BackupUtils.GetDecompressionStreamAsync(responseStream))
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(stream, context, Parameters.Database.Name))
+            using (var source = new StreamSource(stream, context, Parameters.Database.Name, options))
             {
                 var destination = Parameters.Database.Smuggler.CreateDestination();
-                var options = new DatabaseSmugglerOptionsServerSide
-                {
-#pragma warning disable 618
-                    ReadLegacyEtag = readLegacyEtag,
-#pragma warning restore 618
-                    RemoveAnalyzers = Options.RemoveAnalyzers,
-                    TransformScript = Options.TransformScript,
-                    OperateOnTypes = Options.OperateOnTypes
-                };
+
 
                 var smuggler = Parameters.Database.Smuggler.Create(source, destination, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 

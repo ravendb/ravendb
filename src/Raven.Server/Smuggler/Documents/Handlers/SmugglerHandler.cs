@@ -9,7 +9,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -122,14 +121,14 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             continue;
                         }
 
+                        var options = new DatabaseSmugglerOptionsServerSide(GetAuthorizationStatusForSmuggler(DatabaseName));
                         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         await using (var file = await getFile())
                         await using (var stream = await BackupUtils.GetDecompressionStreamAsync(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte)))
-                        using (var source = new StreamSource(stream, context, Database.Name))
+                        using (var source = new StreamSource(stream, context, Database.Name, options))
                         {
                             var destination = Database.Smuggler.CreateDestination();
-
-                            var smuggler = Database.Smuggler.Create(source, destination, context);
+                            var smuggler = Database.Smuggler.Create(source, destination, context, options);
 
                             var result = await smuggler.ExecuteAsync();
                             results.Enqueue(result);
@@ -185,7 +184,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 var migrator = new Migrator(migrationConfigurationJson, ServerStore);
                 await migrator.UpdateBuildInfoIfNeeded();
-                var operationId = migrator.StartMigratingSingleDatabase(migrationConfigurationJson.MigrationSettings, Database);
+
+                var operationId = migrator.StartMigratingSingleDatabase(migrationConfigurationJson.MigrationSettings, Database, GetAuthorizationStatusForSmuggler(DatabaseName));
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -354,7 +354,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             {
                                 using (ContextPool.AllocateOperationContext(out DocumentsOperationContext migrateContext))
                                 {
-                                    var options = new DatabaseSmugglerOptionsServerSide
+                                    var options = new DatabaseSmugglerOptionsServerSide(GetAuthorizationStatusForSmuggler(DatabaseName))
                                     {
                                         TransformScript = transformScript
                                     };
@@ -516,8 +516,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                             var fileName = contentDisposition.FileName.ToString().Trim('\"');
                                             collection = Inflector.Pluralize(CSharpClassName.ConvertToValidClassName(Path.GetFileNameWithoutExtension(fileName)));
                                         }
-
-                                        var options = new DatabaseSmugglerOptionsServerSide();
+                                        var options = new DatabaseSmugglerOptionsServerSide(GetAuthorizationStatusForSmuggler(DatabaseName));
 
                                         await using (var stream = GetDecompressedStream(section.Body, section.Headers))
                                             await ImportDocumentsFromCsvStreamAsync(stream, context, collection, options, result, onProgress, token, csvConfig);
@@ -566,7 +565,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         {
             await using (stream)
             using (token)
-            using (var source = new StreamSource(stream, context, Database.Name))
+            using (var source = new StreamSource(stream, context, Database.Name, new DatabaseSmugglerOptionsServerSide(GetAuthorizationStatusForSmuggler(DatabaseName))))
             {
                 var destination = Database.Smuggler.CreateDestination(token.Token);
                 var smuggler = Database.Smuggler.Create(source, destination, context, options, result, onProgress, token.Token);

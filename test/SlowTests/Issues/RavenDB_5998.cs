@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -32,11 +33,11 @@ namespace SlowTests.Issues
 
                 using (DocumentDatabase database = CreateDocumentDatabase())
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (var source = new StreamSource(stream, context, database.Name))
+                using (var source = new StreamSource(stream, context, database.Name, new DatabaseSmugglerOptionsServerSide(AuthorizationStatus.DatabaseAdmin)))
                 {
                     var destination = database.Smuggler.CreateDestination();
 
-                    var smuggler = database.Smuggler.Create(source, destination, context, new DatabaseSmugglerOptionsServerSide
+                    var smuggler = database.Smuggler.Create(source, destination, context, new DatabaseSmugglerOptionsServerSide(AuthorizationStatus.DatabaseAdmin)
                     {
                         TransformScript = "this['Test'] = 'NewValue';"
                     });
