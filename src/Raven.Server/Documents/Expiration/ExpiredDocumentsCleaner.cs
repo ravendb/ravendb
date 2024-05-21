@@ -16,6 +16,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Voron;
 
 namespace Raven.Server.Documents.Expiration
 {
@@ -218,7 +219,7 @@ namespace Raven.Server.Documents.Expiration
             {
                 return new DeleteExpiredDocumentsCommandDto
                 {
-                    Expired = _expired.ToArray(),
+                    Expired = _expired.Select(x => (x.Ticks, x.LowerId, x.Id)).ToArray(),
                     ForExpiration = _forExpiration,
                     CurrentTime = _currentTime
                 };
@@ -230,11 +231,17 @@ namespace Raven.Server.Documents.Expiration
     {
         public ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var command = new ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand(new Queue<ExpirationStorage.DocumentExpirationInfo>(Expired), database, ForExpiration, CurrentTime);
+            var queue = new Queue<ExpirationStorage.DocumentExpirationInfo>();
+            foreach (var item in Expired)
+            {
+                queue.Enqueue(new ExpirationStorage.DocumentExpirationInfo(item.Item1, item.Item2, item.Item3));
+            }
+
+            var command = new ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand(queue, database, ForExpiration, CurrentTime);
             return command;
         }
 
-        public ExpirationStorage.DocumentExpirationInfo[] Expired { get; set; }
+        public (Slice, Slice, string)[] Expired { get; set; }
 
         public bool ForExpiration { get; set; }
 
