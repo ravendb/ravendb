@@ -1,9 +1,12 @@
+#nullable enable
+
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
 
 #if NET6_0_OR_GREATER
+using System.ComponentModel.Design;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 #endif
@@ -77,7 +80,7 @@ namespace Sparrow
         {
             private readonly StringBuilder? _builder;
 
-            public NullThrowInterpolatedStringHandler(int literalLength, int formattedCount, object condition, out bool isEnabled)
+            public NullThrowInterpolatedStringHandler(int literalLength, int formattedCount, object? condition, out bool isEnabled)
             {
                 isEnabled = condition == null;
                 _builder = condition == null ? new StringBuilder(literalLength + formattedCount * 2 + 1) : null;
@@ -104,7 +107,7 @@ namespace Sparrow
         {
             private readonly StringBuilder? _builder;
 
-            public NotNullThrowInterpolatedStringHandler(int literalLength, int formattedCount, object condition, out bool isEnabled)
+            public NotNullThrowInterpolatedStringHandler(int literalLength, int formattedCount, object? condition, out bool isEnabled)
             {
                 isEnabled = condition != null;
                 _builder = condition != null ? new StringBuilder(literalLength + formattedCount * 2 + 1) : null;
@@ -132,14 +135,11 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
         public static void ThrowIfNull(
-#if NET6_0_OR_GREATER              
-            [NotNull]
-#endif
-            object argument,
+            object? argument,
 #if NET6_0_OR_GREATER        
             [CallerArgumentExpression(nameof(argument))]
 #endif
-            string paramName = null)
+            string? paramName = null)
         {
             if (argument == null)
             {
@@ -156,14 +156,11 @@ namespace Sparrow
 #endif
         [Conditional("DEBUG")]
         public static void ThrowIfNullOnDebug(
-#if NET6_0_OR_GREATER              
-            [NotNull]
-#endif
-            object argument,
+            object? argument,
 #if NET6_0_OR_GREATER        
             [CallerArgumentExpression(nameof(argument))]
 #endif
-            string paramName = null)
+            string? paramName = null)
         {
             ThrowIfNull(argument, paramName);
         }
@@ -172,14 +169,11 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
         public static void ThrowIfNotNull(
-#if NET6_0_OR_GREATER              
-            [NotNull]
-#endif
-            object argument,
+            object? argument,
 #if NET6_0_OR_GREATER        
             [CallerArgumentExpression(nameof(argument))]
 #endif
-            string paramName = null)
+            string? paramName = null)
         {
             if (argument != null)
             {
@@ -196,28 +190,22 @@ namespace Sparrow
 #endif
         [Conditional("DEBUG")]
         public static void ThrowIfNotNullOnDebug(
-#if NET6_0_OR_GREATER              
-            [NotNull]
-#endif
             object argument,
 #if NET6_0_OR_GREATER        
             [CallerArgumentExpression(nameof(argument))]
 #endif
-            string paramName = null)
+            string? paramName = null)
         {
             ThrowIfNotNull(argument, paramName);
         }
 
         public static void ThrowIfNull<T>(
-#if NET6_0_OR_GREATER
-            [NotNull]
-#endif
-            object argument,
-            string message = null,
+            object? argument,
+            string? message = null,
 #if NET6_0_OR_GREATER
             [CallerArgumentExpression(nameof(argument))]
 #endif
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             if (argument == null)
             {
@@ -232,12 +220,11 @@ namespace Sparrow
 
 #if NET6_0_OR_GREATER         
         public static void ThrowIfNull<T>(
-            [NotNull]
-            object argument,
+            object? argument,
             [InterpolatedStringHandlerArgument(nameof(argument))]
             NullThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(argument))]
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             if (argument == null)
             {
@@ -251,14 +238,11 @@ namespace Sparrow
 #endif
         [Conditional("DEBUG")]
         public static void ThrowIfNullOnDebug<T>(
-#if NET6_0_OR_GREATER
-            [NotNull]
-#endif
-            object argument,
+            object? argument,
 #if NET6_0_OR_GREATER
             [CallerArgumentExpression(nameof(argument))]
 #endif
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             ThrowIfNull<T>(argument, paramName);
         }
@@ -267,15 +251,12 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
         public static void ThrowIfNotNull<T>(
-#if NET6_0_OR_GREATER
-            [NotNull]
-#endif
-            object argument,
-            string message = null,
+            object? argument,
+            string? message = null,
 #if NET6_0_OR_GREATER
             [CallerArgumentExpression(nameof(argument))]
 #endif
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             if (argument != null)
             {
@@ -290,12 +271,11 @@ namespace Sparrow
 #if NET6_0_OR_GREATER 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ThrowIfNotNull<T>(
-            [NotNull]
-            object argument,
+            object? argument,
             [InterpolatedStringHandlerArgument(nameof(argument))]
             NotNullThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(argument))]
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             if (argument != null)
             {
@@ -309,15 +289,12 @@ namespace Sparrow
 #endif
         [Conditional("DEBUG")]
         public static void ThrowIfNotNullOnDebug<T>(
-#if NET6_0_OR_GREATER
-            [NotNull]
-#endif
-            object argument,
-            string message = null,
+            object? argument,
+            string? message = null,
 #if NET6_0_OR_GREATER
             [CallerArgumentExpression(nameof(argument))]
 #endif
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             ThrowIfNotNull<T>(argument, message, paramName);
         }
@@ -326,12 +303,11 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [Conditional("DEBUG")]
         public static void ThrowIfNotNullOnDebug<T>(
-            [NotNull]
-            object argument,
+            object? argument,
             [InterpolatedStringHandlerArgument(nameof(argument))]
             NotNullThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(argument))]
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             ThrowIfNotNull<T>(argument, message, paramName);
         }
@@ -341,14 +317,11 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
         public static unsafe void ThrowIfNull(
-#if NET6_0_OR_GREATER
-            [NotNull]
-#endif
             void* argument,
 #if NET6_0_OR_GREATER
             [CallerArgumentExpression(nameof(argument))]
 #endif
-            string paramName = null)
+            string? paramName = null)
         {
             if (argument == null)
             {
@@ -365,14 +338,11 @@ namespace Sparrow
 #endif
         [Conditional("DEBUG")]
         public static unsafe void ThrowIfNullOnDebug(
-#if NET6_0_OR_GREATER
-            [NotNull]
-#endif
             void* argument,
 #if NET6_0_OR_GREATER
             [CallerArgumentExpression(nameof(argument))]
 #endif
-            string paramName = null)
+            string? paramName = null)
         {
             ThrowIfNull(argument, paramName);
         }
@@ -381,14 +351,11 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
         public static unsafe void ThrowIfNotNull(
-#if NET6_0_OR_GREATER
-            [NotNull]
-#endif
             void* argument,
 #if NET6_0_OR_GREATER
             [CallerArgumentExpression(nameof(argument))]
 #endif
-            string paramName = null)
+            string? paramName = null)
         {
             if (argument != null)
             {
@@ -405,14 +372,11 @@ namespace Sparrow
 #endif
         [Conditional("DEBUG")]
         public static unsafe void ThrowIfNotNullOnDebug(
-#if NET6_0_OR_GREATER
-            [NotNull]
-#endif
             void* argument,
 #if NET6_0_OR_GREATER
             [CallerArgumentExpression(nameof(argument))]
 #endif
-            string paramName = null)
+            string? paramName = null)
         {
             ThrowIfNotNull(argument, paramName);
         }
@@ -422,14 +386,11 @@ namespace Sparrow
 #endif
         [Conditional("DEBUG")]
         public static unsafe void ThrowIfNullOnDebug<T>(
-#if NET6_0_OR_GREATER
-            [NotNull]
-#endif
             void* argument,
 #if NET6_0_OR_GREATER
             [CallerArgumentExpression(nameof(argument))]
 #endif
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             ThrowIfNull<T>(argument, paramName);
         }
@@ -438,15 +399,12 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
         public static unsafe void ThrowIfNull<T>(
-#if NET6_0_OR_GREATER
-            [NotNull]
-#endif
             void* argument,
-            string message = null,
+            string? message = null,
 #if NET6_0_OR_GREATER
             [CallerArgumentExpression(nameof(argument))]
 #endif
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             if (argument == null)
             {
@@ -462,40 +420,18 @@ namespace Sparrow
 #if NET6_0_OR_GREATER 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void ThrowIfNull<T>(
-
-            [NotNull]
             void* argument,
             [InterpolatedStringHandlerArgument(nameof(argument))]
             NullThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(argument))]
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             if (argument == null)
             {
                 Throw<T>(paramName, message.GetFormattedText());
             }
         }
-#endif
 
-#if NETCOREAPP2_0_OR_GREATER
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
-        [Conditional("DEBUG")]
-        public static unsafe void ThrowIfNullOnDebug<T>(
-#if NET6_0_OR_GREATER
-            [NotNull]
-#endif
-            void* argument,
-            string message = null,
-#if NET6_0_OR_GREATER
-            [CallerArgumentExpression(nameof(argument))]
-#endif
-            string paramName = null) where T : Exception
-        {
-            ThrowIfNull<T>(argument, message, paramName);
-        }
-
-#if NET6_0_OR_GREATER         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [Conditional("DEBUG")]
         public static unsafe void ThrowIfNullOnDebug<T>(
@@ -504,25 +440,40 @@ namespace Sparrow
             [InterpolatedStringHandlerArgument(nameof(argument))]
             NullThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(argument))]
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             ThrowIfNull<T>(argument, message.GetFormattedText(), paramName);
         }
+#else
+
+#if NETCOREAPP2_0_OR_GREATER
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-        
+        [Conditional("DEBUG")]
+        public static unsafe void ThrowIfNullOnDebug<T>(
+            void* argument,
+            string? message = null,
+            string? paramName = null) where T : Exception
+        {
+            ThrowIfNull<T>(argument, message, paramName);
+        }
+
+#endif
+
+
+
+
+
 #if NETCOREAPP2_0_OR_GREATER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
         public static unsafe void ThrowIfNotNull<T>(
-#if NET6_0_OR_GREATER
-            [NotNull]
-#endif
             void* argument,
-            string message = null,
+            string? message = null,
 #if NET6_0_OR_GREATER
             [CallerArgumentExpression(nameof(argument))]
 #endif
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             if (argument != null)
             {
@@ -537,12 +488,11 @@ namespace Sparrow
 #if NET6_0_OR_GREATER 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void ThrowIfNotNull<T>(
-            [NotNull]
             void* argument,
             [InterpolatedStringHandlerArgument(nameof(argument))]
             NotNullThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(argument))]
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             if (argument != null)
             {
@@ -556,15 +506,12 @@ namespace Sparrow
 #endif
         [Conditional("DEBUG")]
         public static unsafe void ThrowIfNotNullOnDebug<T>(
-#if NET6_0_OR_GREATER
-            [NotNull]
-#endif
             void* argument,
-            string message = null,
+            string?message = null,
 #if NET6_0_OR_GREATER
             [CallerArgumentExpression(nameof(argument))]
 #endif
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             ThrowIfNotNull<T>(argument, message, paramName);
         }
@@ -573,12 +520,11 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [Conditional("DEBUG")]
         public static unsafe void ThrowIfNotNullOnDebug<T>(
-            [NotNull]
             void* argument,
             [InterpolatedStringHandlerArgument(nameof(argument))]
             NotNullThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(argument))]
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             ThrowIfNotNull<T>(argument, message, paramName);
         }
@@ -589,11 +535,11 @@ namespace Sparrow
 #endif
         public static void ThrowIf<T>(
             bool condition,
-            string message = null,
+            string? message = null,
 #if NET6_0_OR_GREATER
             [CallerArgumentExpression(nameof(condition))]
 #endif
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             if (condition)
             {
@@ -612,7 +558,7 @@ namespace Sparrow
             [InterpolatedStringHandlerArgument(nameof(condition))]
             ConditionalThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(condition))]
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             if (condition)
             {
@@ -627,11 +573,11 @@ namespace Sparrow
         [Conditional("DEBUG")]
         public static void ThrowIfOnDebug<T>(
             bool condition,
-            string message = null,
+            string? message = null,
 #if NET6_0_OR_GREATER
             [CallerArgumentExpression(nameof(condition))]
 #endif
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             ThrowIf<T>(condition, message, paramName);
         }
@@ -644,7 +590,7 @@ namespace Sparrow
             [InterpolatedStringHandlerArgument(nameof(condition))]
             ConditionalThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(condition))]
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             ThrowIf<T>(condition, message, paramName);
         }
@@ -655,11 +601,11 @@ namespace Sparrow
 #endif
         public static void ThrowIfNot<T>(
             bool condition,
-            string message = null,
+            string? message = null,
 #if NET6_0_OR_GREATER
             [CallerArgumentExpression(nameof(condition))]
 #endif
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             if (condition == false)
             {
@@ -678,7 +624,7 @@ namespace Sparrow
             [InterpolatedStringHandlerArgument(nameof(condition))]
             NotConditionalThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(condition))]
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             if (condition == false)
             {
@@ -693,11 +639,11 @@ namespace Sparrow
         [Conditional("DEBUG")]
         public static void ThrowIfNotOnDebug<T>(
             bool condition,
-            string message = null,
+            string? message = null,
 #if NET6_0_OR_GREATER
             [CallerArgumentExpression(nameof(condition))]
 #endif
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             ThrowIfNot<T>(condition, message, paramName);
         }
@@ -710,7 +656,7 @@ namespace Sparrow
             [InterpolatedStringHandlerArgument(nameof(condition))]
             NotConditionalThrowInterpolatedStringHandler message,
             [CallerArgumentExpression(nameof(condition))]
-            string paramName = null) where T : Exception
+            string? paramName = null) where T : Exception
         {
             ThrowIfNot<T>(condition, message, paramName);
         }
@@ -722,7 +668,7 @@ namespace Sparrow
 #if NET6_0_OR_GREATER
         [DoesNotReturn]
 #endif
-        public static void Throw<T>(string paramName, string message)
+        public static void Throw<T>(string? paramName, string? message)
         {
             if (typeof(T) == typeof(ArgumentException))
                 throw new ArgumentException(message, paramName);
@@ -758,7 +704,7 @@ namespace Sparrow
 #if NET6_0_OR_GREATER
         [DoesNotReturn]
 #endif
-        public static T Throw<T>(string message) where T : Exception
+        public static T Throw<T>(string? message) where T : Exception
         {
             if (typeof(T) == typeof(ArgumentException))
                 throw new ArgumentException(message);
@@ -793,7 +739,7 @@ namespace Sparrow
 #if NET6_0_OR_GREATER
         [DoesNotReturn]
 #endif
-        private static void Throw(string paramName) => Throw<ArgumentNullException>(paramName);
+        private static void Throw(string? paramName) => Throw<ArgumentNullException>(paramName);
 
 #if NETCOREAPP2_0_OR_GREATER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

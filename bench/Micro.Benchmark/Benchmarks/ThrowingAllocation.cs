@@ -1,10 +1,11 @@
-﻿using System;
+﻿#nullable enable 
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading.Tasks;
 using BenchmarkDotNet.Analysers;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
@@ -13,7 +14,6 @@ using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
-using Sparrow;
 
 namespace Micro.Benchmark.Benchmarks
 {
@@ -193,9 +193,7 @@ namespace Micro.Benchmark.Benchmarks
 
         public static void ThrowIf(
             bool condition,
-            string message,
-            [CallerArgumentExpression(nameof(condition))]
-            string paramName = null)
+            string message)
         {
             if (condition)
             {
@@ -209,11 +207,11 @@ namespace Micro.Benchmark.Benchmarks
         public readonly ref struct ThrowInterpolatedStringHandler
         {
             // Storage for the built-up string
-            private readonly List<object> _strings;
+            private readonly List<object?> _strings;
 
             public ThrowInterpolatedStringHandler(int literalLength, int formattedCount)
             {
-                _strings = new List<object>(literalLength);
+                _strings = new List<object?>(literalLength);
             }
 
             public void AppendLiteral(string s)
@@ -238,9 +236,7 @@ namespace Micro.Benchmark.Benchmarks
 
         public static void ThrowIfInterpolated(
             bool condition,
-            ThrowInterpolatedStringHandler message,
-            [CallerArgumentExpression(nameof(condition))]
-            string paramName = null)
+            ThrowInterpolatedStringHandler message)
         {
             if (condition)
             {
@@ -266,9 +262,7 @@ namespace Micro.Benchmark.Benchmarks
         public static void ThrowIfInterpolatedEfficient(
             bool condition,
             [InterpolatedStringHandlerArgument(nameof(condition))]
-            ThrowInterpolatedStringEfficientHandler message,
-            [CallerArgumentExpression(nameof(condition))]
-            string paramName = null)
+            ThrowInterpolatedStringEfficientHandler message)
         {
             if (condition)
             {

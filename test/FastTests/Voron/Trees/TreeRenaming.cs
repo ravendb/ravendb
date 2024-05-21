@@ -5,20 +5,17 @@
 // -----------------------------------------------------------------------
 
 using System;
+using Tests.Infrastructure;
 using Xunit;
 using Voron.Global;
 using Xunit.Abstractions;
-using Elastic.Clients.Elasticsearch;
+
 
 namespace FastTests.Voron.Trees
 {
-    public class TreeRenaming : StorageTest
+    public class TreeRenaming(ITestOutputHelper output) : StorageTest(output)
     {
-        public TreeRenaming(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanRenameTree()
         {
             using (var tx = Env.WriteTransaction())
@@ -54,7 +51,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldNotAllowToRenameTreeIfTreeAlreadyExists()
         {
             using (var tx = Env.WriteTransaction())
@@ -68,7 +65,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldThrowIfTreeDoesNotExist()
         {
             using (var tx = Env.WriteTransaction())
@@ -79,7 +76,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void MustNotRenameToRootAndFreeSpaceRootTrees()
         {
             using (var tx = Env.WriteTransaction())
@@ -89,7 +86,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldPreventFromRenamingTreeInReadTransaction()
         {
             using (var tx = Env.ReadTransaction())
