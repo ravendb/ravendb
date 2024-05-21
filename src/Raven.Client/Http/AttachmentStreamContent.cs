@@ -25,10 +25,16 @@ namespace Raven.Client.Http
             _cancellationToken = cancellationToken;
         }
 
-        protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
+        protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
         {
             Debug.Assert(stream != null);
-            return _stream.CopyToAsync(stream, BufferSize, _cancellationToken);
+
+            // Immediately flush request stream to send headers
+            // https://github.com/dotnet/corefx/issues/39586#issuecomment-516210081
+            // https://github.com/dotnet/runtime/issues/96223#issuecomment-1865009861
+            await stream.FlushAsync(_cancellationToken).ConfigureAwait(false);
+
+            await _stream.CopyToAsync(stream, BufferSize, _cancellationToken).ConfigureAwait(false);
         }
 
         protected override bool TryComputeLength(out long length)
