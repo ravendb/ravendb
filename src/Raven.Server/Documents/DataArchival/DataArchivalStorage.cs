@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Voron;
 using Sparrow.Json.Parsing;
 using Voron.Impl;
@@ -15,7 +14,7 @@ public sealed class DataArchivalStorage : AbstractBackgroundWorkStorage
     private const string DocumentsByArchiveAtDateTime = "DocumentsByArchiveAtDateTime";
 
     public DataArchivalStorage(DocumentDatabase database, Transaction tx)
-        : base(tx, database, LoggingSource.Instance.GetLogger<DataArchivalStorage>(database.Name), DocumentsByArchiveAtDateTime, Constants.Documents.Metadata.ArchiveAt)
+        : base(tx, database, DocumentsByArchiveAtDateTime, Constants.Documents.Metadata.ArchiveAt)
     {
     }
 
@@ -47,7 +46,7 @@ public sealed class DataArchivalStorage : AbstractBackgroundWorkStorage
         }
     }
 
-    protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice clonedId, ref int totalCount, ref List<(Slice LowerId, string Id)> docsToProcess)
+    protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount)
     {
         // data archival ignores conflicts
     }

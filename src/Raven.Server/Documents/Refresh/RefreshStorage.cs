@@ -4,10 +4,8 @@ using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
-using Raven.Server.Documents.DataArchival;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Voron;
 using Voron.Impl;
 
@@ -18,7 +16,7 @@ namespace Raven.Server.Documents.Refresh
         private const string DocumentsByRefresh = "DocumentsByRefresh";
 
         public RefreshStorage(DocumentDatabase database, Transaction tx) 
-            : base(tx, database, LoggingSource.Instance.GetLogger<DataArchivalStorage>(database.Name), DocumentsByRefresh, Constants.Documents.Metadata.Refresh)
+            : base(tx, database, DocumentsByRefresh, Constants.Documents.Metadata.Refresh)
         {
         }
 
@@ -58,7 +56,7 @@ namespace Raven.Server.Documents.Refresh
             }
         }
 
-        protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice clonedId, ref int totalCount, ref List<(Slice LowerId, string Id)> expiredDocs)
+        protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount)
         {
             if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
                 return;
@@ -67,7 +65,7 @@ namespace Raven.Server.Documents.Refresh
 
             if (allExpired)
             {
-                expiredDocs.Add((clonedId, id));
+                expiredDocs.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id));
                 totalCount++;
             }
         }

@@ -11,7 +11,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Voron;
 using Voron.Impl;
 
@@ -21,18 +20,14 @@ namespace Raven.Server.Documents;
 public abstract unsafe class AbstractBackgroundWorkStorage
 {
     protected readonly DocumentDatabase Database;
-    protected readonly DocumentsStorage DocumentsStorage;
-    protected readonly Logger Logger;
     protected readonly string MetadataPropertyName;
     private readonly string _treeName;
 
-    protected AbstractBackgroundWorkStorage(Transaction tx, DocumentDatabase database, Logger logger, string treeName, string metadataPropertyName)
+    protected AbstractBackgroundWorkStorage(Transaction tx, DocumentDatabase database, string treeName, string metadataPropertyName)
     {
         tx.CreateTree(treeName);
         
-        Logger = logger;
         Database = database;
-        DocumentsStorage = Database.DocumentsStorage;
         _treeName = treeName;
         MetadataPropertyName = metadataPropertyName;
     }
@@ -62,9 +57,8 @@ public abstract unsafe class AbstractBackgroundWorkStorage
             $"The due date format for document '{lowerId}' is not valid: '{expirationDate}'. Use the following format: {Database.Time.GetUtcNow():O}");
     }
 
-    public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(BackgroundWorkParameters options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
+    public Queue<DocumentExpirationInfo> GetDocuments(BackgroundWorkParameters options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
     {
-        var count = 0;
         var currentTicks = options.CurrentTime.Ticks;
 
         var entriesTree = options.Context.Transaction.InnerTransaction.ReadTree(_treeName);
@@ -76,7 +70,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                 return null;
             }
 
-            var toProcess = new Dictionary<Slice, List<(Slice LowerId, string Id)>>(SliceComparer.Instance);
+            var toProcess = new Queue<DocumentExpirationInfo>();
             duration = Stopwatch.StartNew();
 
             do
@@ -86,8 +80,6 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                     break;
 
                 var ticksAsSlice = it.CurrentKey.Clone(options.Context.Transaction.InnerTransaction.Allocator);
-
-                var docsToProcess = new List<(Slice LowerId, string Id)>();
 
                 using (var multiIt = entriesTree.MultiRead(it.CurrentKey))
                 {
@@ -110,7 +102,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                                         HasPassed(metadata, options.CurrentTime, MetadataPropertyName) ==
                                         false)
                                     {
-                                        docsToProcess.Add((clonedId, null));
+                                        toProcess.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id: null));
                                         totalCount++;
                                         continue;
                                     }
@@ -118,34 +110,48 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                                     if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
                                         break;
 
-                                    docsToProcess.Add((clonedId, document.Id));
+                                    toProcess.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, document.Id));
                                     totalCount++;
                                     options.Context.Transaction.ForgetAbout(document);
                                 }
                             }
                             catch (DocumentConflictException)
                             {
-                                HandleDocumentConflict(options, clonedId, ref totalCount, ref docsToProcess);
+                                HandleDocumentConflict(options, ticksAsSlice, clonedId, toProcess, ref totalCount);
                             }
+
                         } while (multiIt.MoveNext()
-                                 && docsToProcess.Count + count < options.AmountToTake 
+                                 && toProcess.Count < options.AmountToTake 
                                  && totalCount < options.MaxItemsToProcess);
                     }
                 }
-
-                count += docsToProcess.Count;
-                if (docsToProcess.Count > 0)
-                    toProcess.Add(ticksAsSlice, docsToProcess);
-
             } while (it.MoveNext() 
-                     && count < options.AmountToTake
+                     && toProcess.Count < options.AmountToTake
                      && totalCount < options.MaxItemsToProcess);
 
             return toProcess;
         }
     }
 
-    protected abstract void HandleDocumentConflict(BackgroundWorkParameters options, Slice clonedId, ref int totalCount, ref List<(Slice LowerId, string Id)> docsToProcess);
+    public class DocumentExpirationInfo
+    {
+        public Slice Ticks { get; }
+        public Slice LowerId { get; }
+        public string Id { get; }
+
+        private DocumentExpirationInfo()
+        {
+        }
+
+        public DocumentExpirationInfo(Slice ticksAsSlice, Slice clonedId, string id)
+        {
+            Ticks = ticksAsSlice;
+            LowerId = clonedId;
+            Id = id;
+        }
+    }
+
+    protected abstract void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount);
 
     protected static bool ShouldHandleWorkOnCurrentNode(DatabaseTopology topology, string nodeTag)
     {
@@ -183,24 +189,35 @@ public abstract unsafe class AbstractBackgroundWorkStorage
     
     protected abstract void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime);
 
-    public int ProcessDocuments(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> docsToProcess, DateTime currentTime)
+    public int ProcessDocuments(DocumentsOperationContext context, Queue<DocumentExpirationInfo> expired, DateTime currentTime)
     {
         var processedCount = 0;
+        var count = 0;
+
         var docsTree = context.Transaction.InnerTransaction.ReadTree(_treeName);
-
-        foreach (var pair in docsToProcess)
+        foreach (var info in expired)
         {
-            foreach (var ids in pair.Value)
+            if (info.Id != null)
             {
-                if (ids.Id != null)
-                {
-                    ProcessDocument(context, ids.LowerId, ids.Id, currentTime);
-                    processedCount++;
-                }
-
-                docsTree.MultiDelete(pair.Key, ids.LowerId);
+                ProcessDocument(context, info.LowerId, info.Id, currentTime);
+                processedCount++;
             }
+
+            count++;
+            docsTree.MultiDelete(info.Ticks, info.LowerId);
         }
+
+        var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
+        tx.OnDispose += _ =>
+        {
+            if (tx.Committed == false)
+                return;
+
+            for (int i = 0; i < count; i++)
+            {
+                expired.Dequeue();
+            }
+        };
 
         return processedCount;
     }
