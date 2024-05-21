@@ -138,7 +138,7 @@ namespace Raven.Client.Documents.Operations
 
         private void OnConnectionStatusChanged(object sender, EventArgs e)
         {
-            if(e is DatabaseChanges.OnReconnect)
+            if (e is DatabaseChanges.OnReconnect)
                 AsyncHelpers.RunSync(OnConnectionStatusChangedAsync);
         }
 
@@ -146,7 +146,7 @@ namespace Raven.Client.Documents.Operations
         {
             try
             {
-                await FetchOperationStatus(shouldThrow: false).ConfigureAwait(false);
+                await FetchOperationStatus(shouldThrowOnNoStatus: false).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -191,7 +191,7 @@ namespace Raven.Client.Documents.Operations
         /// If we receive notification using changes API meanwhile, ignore fetched status
         /// to avoid issues with non monotonic increasing progress
         /// </summary>
-        protected async Task FetchOperationStatus(bool shouldThrow = true)
+        protected async Task FetchOperationStatus(bool shouldThrowOnNoStatus = true)
         {
             await _lock.WaitAsync().ConfigureAwait(false);
 
@@ -226,10 +226,12 @@ namespace Raven.Client.Documents.Operations
             }
 
             if (state == null)
-                if (shouldThrow)
+            {
+                if (shouldThrowOnNoStatus)
                     throw new InvalidOperationException($"Could not fetch state of operation '{_id}' from node '{NodeTag}'.");
-                else
-                    return;
+
+                return;
+            }
 
             OnNext(new OperationStatusChange
             {
