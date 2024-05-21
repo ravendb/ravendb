@@ -237,22 +237,49 @@ public unsafe class DynamicFieldsTests : StorageTest
             .AddBinding(1, dSlice);
         var fields = builder.Build();
 
-
+        using var dynamicBuilder = IndexFieldsMappingBuilder.CreateForWriter(isDynamic: true)
+            .AddBinding(Constants.IndexWriter.DynamicField, "Name");
+        var dynamicFields = dynamicBuilder.Build();
+        var documentId = -1L;
         using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
+            writer.UpdateDynamicFieldsMapping(dynamicFields);
             using (var entry = writer.Update("users/1"u8))
             {
                 entry.Write(0, "users/1"u8);
                 entry.Write(1, "Oren"u8);
                 entry.Write(Constants.IndexWriter.DynamicField,"Name", "Oren"u8);
                 entry.EndWriting();
+                documentId = entry.EntryId;
             }
             writer.Commit();
         }
+        
+        using (var rTx = Env.ReadTransaction())
+        {
+            var fieldsTree = rTx.ReadTree(Constants.IndexWriter.FieldsSlice);
+            Assert.Equal("Name", fields.GetByFieldId(1).FieldName.ToString());
+            var compactTree = fieldsTree.CompactTreeFor(fields.GetByFieldId(1).FieldName);
+            
+            Span<long> ids = stackalloc long[16];
+            var iterator = compactTree.Iterate();
+            iterator.Reset();
+            Assert.Equal(1, compactTree.NumberOfEntries);
+            Assert.Equal(1, iterator.Fill(ids));
+            Assert.Equal(2, EntryIdEncodings.Decode(ids[0]).Frequency);
+        }
 
+        using (var searcher = new IndexSearcher(Env, fields))
+        {
+            Page p = default;
+            var reader = searcher.GetEntryTermsReader(documentId, ref p);
+            var debugView = reader.Debug();
+            searcher.GetTermAmountInField(fields.GetByFieldId(1).Metadata);
+        }
 
         using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
+            writer.UpdateDynamicFieldsMapping(dynamicFields);
             writer.TryDeleteEntry("users/1");
             writer.Commit();
         }
@@ -278,8 +305,13 @@ public unsafe class DynamicFieldsTests : StorageTest
             .AddBinding(1, dSlice);
         var fields = builder.Build();
 
+        var dynamicMapping = IndexFieldsMappingBuilder.CreateForWriter(isDynamic: true)
+            .AddBinding(Constants.IndexWriter.DynamicField, "Rank")
+            .AddBinding(Constants.IndexWriter.DynamicField, "Name").Build();
+        
         using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
+            writer.UpdateDynamicFieldsMapping(dynamicMapping);
             using (var entry = writer.Index("users/1"))
             {
                 entry.Write(0, "users/1"u8);
@@ -293,6 +325,7 @@ public unsafe class DynamicFieldsTests : StorageTest
 
         using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
+            writer.UpdateDynamicFieldsMapping(dynamicMapping);
             using (var entry = writer.Update("users/1"u8))
             {
                 entry.Write(0, "users/1"u8);
@@ -306,6 +339,7 @@ public unsafe class DynamicFieldsTests : StorageTest
 
         using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
         {
+            writer.UpdateDynamicFieldsMapping(dynamicMapping);
             using (var entry = writer.Update("users/1"u8))
             {
                 entry.Write(0, "users/1"u8);

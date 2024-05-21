@@ -432,17 +432,19 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected IEnumerable<CoraxDynamicItem> CoraxCreateField(CurrentIndexingScope scope, string name, object value, CreateFieldOptions options)
         {
-            options = options ?? CreateFieldOptions.Default;
-
+            IndexFieldOptions explicitField = null;
             IndexFieldOptions allFields = null;
             if (scope.IndexDefinition is MapIndexDefinition mapIndexDefinition)
+            {
                 mapIndexDefinition.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out allFields);
-
+                mapIndexDefinition.IndexDefinition.Fields.TryGetValue(name, out explicitField);
+            }
+            
             var field = IndexField.Create(name, new IndexFieldOptions
             {
-                Storage = options.Storage,
-                TermVector = options.TermVector,
-                Indexing = options.Indexing,
+                Storage = options?.Storage ?? explicitField?.Storage ?? CreateFieldOptions.Default.Storage,
+                TermVector = options?.TermVector ?? explicitField?.TermVector ?? CreateFieldOptions.Default.TermVector,
+                Indexing = options?.Indexing ?? explicitField?.Indexing ?? CreateFieldOptions.Default.Indexing,
             }, allFields, Corax.Constants.IndexWriter.DynamicField);
 
             if (scope.DynamicFields == null)
@@ -453,7 +455,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 scope.DynamicFields[name] = field;
                 scope.IncrementDynamicFields();
             }
-            else if (options.Indexing != null && existing.Indexing != field.Indexing)
+            else if (options?.Indexing != null && existing.Indexing != field.Indexing)
             {
                 throw new InvalidDataException($"Inconsistent dynamic field creation options were detected. Field '{name}' was created with '{existing.Indexing}' analyzer but now '{field.Indexing}' analyzer was specified. This is not supported");
             }
