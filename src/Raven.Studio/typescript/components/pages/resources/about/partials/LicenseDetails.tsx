@@ -337,7 +337,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Static indexes per database",
-                community: { value: 12 },
+                community: { value: Infinity },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
@@ -345,7 +345,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Static indexes per cluster",
-                community: { value: 60 },
+                community: { value: Infinity },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
@@ -353,7 +353,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Auto indexes per database",
-                community: { value: 24 },
+                community: { value: Infinity },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
@@ -361,7 +361,7 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "Auto indexes per cluster",
-                community: { value: 120 },
+                community: { value: Infinity },
                 professional: { value: Infinity },
                 enterprise: { value: Infinity },
                 developer: { value: Infinity },
