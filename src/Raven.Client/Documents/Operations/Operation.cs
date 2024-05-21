@@ -111,6 +111,7 @@ namespace Raven.Client.Documents.Operations
                     var observable = changes.ForOperationId(_id);
                     _subscription = observable.Subscribe(this);
                     await observable.EnsureSubscribedNow().ConfigureAwait(false);
+                    _changes().ConnectionStatusChanged += OnConnectionStatusChanged;
 
                     if (_requestExecutor.ForTestingPurposes?.BeforeFetchOperationStatus != null)
                         await _requestExecutor.ForTestingPurposes.BeforeFetchOperationStatus.ConfigureAwait(false);
@@ -135,6 +136,23 @@ namespace Raven.Client.Documents.Operations
             }
         }
 
+        private void OnConnectionStatusChanged(object sender, EventArgs e)
+        {
+            if(e is DatabaseChanges.OnReconnect)
+                AsyncHelpers.RunSync(OnConnectionStatusChangedAsync);
+        }
+
+        private async Task OnConnectionStatusChangedAsync()
+        {
+            try
+            {
+                await FetchOperationStatus(shouldThrow: false).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                await StopProcessingUnderLock(e).ConfigureAwait(false);
+            }
+        }
         private async Task StopProcessingUnderLock(Exception e = null)
         {
             await _lock.WaitAsync().ConfigureAwait(false);
@@ -159,6 +177,7 @@ namespace Raven.Client.Documents.Operations
         {
             if (StatusFetchMode == OperationStatusFetchMode.ChangesApi)
             {
+                _changes().ConnectionStatusChanged -= OnConnectionStatusChanged;
                 _subscription?.Dispose();
                 _subscription = null;
             }
@@ -172,7 +191,7 @@ namespace Raven.Client.Documents.Operations
         /// If we receive notification using changes API meanwhile, ignore fetched status
         /// to avoid issues with non monotonic increasing progress
         /// </summary>
-        protected async Task FetchOperationStatus()
+        protected async Task FetchOperationStatus(bool shouldThrow = true)
         {
             await _lock.WaitAsync().ConfigureAwait(false);
 
@@ -207,7 +226,10 @@ namespace Raven.Client.Documents.Operations
             }
 
             if (state == null)
-                throw new InvalidOperationException($"Could not fetch state of operation '{_id}' from node '{NodeTag}'.");
+                if (shouldThrow)
+                    throw new InvalidOperationException($"Could not fetch state of operation '{_id}' from node '{NodeTag}'.");
+                else
+                    return;
 
             OnNext(new OperationStatusChange
             {
