@@ -189,14 +189,14 @@ namespace Raven.Server.Documents.Expiration
 
         internal class DeleteExpiredDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private readonly Queue<ExpirationStorage.ExpiredDocumentInfo> _expired;
+            private readonly Queue<ExpirationStorage.DocumentExpirationInfo> _expired;
             private readonly DocumentDatabase _database;
             private readonly bool _forExpiration;
             private readonly DateTime _currentTime;
 
             public int DeletionCount;
 
-            public DeleteExpiredDocumentsCommand(Queue<ExpirationStorage.ExpiredDocumentInfo> expired, DocumentDatabase database, bool forExpiration, DateTime currentTime)
+            public DeleteExpiredDocumentsCommand(Queue<ExpirationStorage.DocumentExpirationInfo> expired, DocumentDatabase database, bool forExpiration, DateTime currentTime)
             {
                 _expired = expired;
                 _database = database;
@@ -230,11 +230,11 @@ namespace Raven.Server.Documents.Expiration
     {
         public ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var command = new ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand(new Queue<ExpirationStorage.ExpiredDocumentInfo>(Expired), database, ForExpiration, CurrentTime);
+            var command = new ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand(new Queue<ExpirationStorage.DocumentExpirationInfo>(Expired), database, ForExpiration, CurrentTime);
             return command;
         }
 
-        public ExpirationStorage.ExpiredDocumentInfo[] Expired { get; set; }
+        public ExpirationStorage.DocumentExpirationInfo[] Expired { get; set; }
 
         public bool ForExpiration { get; set; }
 

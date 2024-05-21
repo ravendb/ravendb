@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.WebSockets;
-using System.Runtime.ExceptionServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Configuration;
@@ -32,7 +29,6 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -47,7 +43,6 @@ using Raven.Server.Utils.IoMetrics;
 using Sparrow;
 using Sparrow.Backups;
 using Sparrow.Collections;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
@@ -61,7 +56,6 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
-using static Raven.Server.Documents.DatabasesLandlord;
 using Constants = Raven.Client.Constants;
 using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
@@ -106,6 +100,9 @@ namespace Raven.Server.Documents
 
         private DocumentsCompressionConfiguration _documentsCompression = new(compressRevisions: false, collections: Array.Empty<string>());
         private HashSet<string> _compressedCollections = new(StringComparer.OrdinalIgnoreCase);
+
+        internal Sparrow.Size _maxTransactionSize = new(16, SizeUnit.Megabytes);
+
 
         public void ResetIdleTime()
         {

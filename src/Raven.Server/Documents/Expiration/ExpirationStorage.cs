@@ -21,7 +21,6 @@ namespace Raven.Server.Documents.Expiration
         private const string DocumentsByRefresh = "DocumentsByRefresh";
 
         private readonly DocumentDatabase _database;
-        private static readonly Size MaxTransactionSize = new(16, SizeUnit.Megabytes);
 
         public ExpirationStorage(DocumentDatabase database, Transaction tx)
         {
@@ -85,17 +84,17 @@ namespace Raven.Server.Documents.Expiration
                 = (context, currentTime, isFirstInTopology, amountToTake, maxItemsToProcess);
         }
 
-        public Queue<ExpiredDocumentInfo> GetExpiredDocuments(ExpiredDocumentsOptions options, ref int totalCount, out Stopwatch duration,  CancellationToken cancellationToken)
+        public Queue<DocumentExpirationInfo> GetExpiredDocuments(ExpiredDocumentsOptions options, ref int totalCount, out Stopwatch duration,  CancellationToken cancellationToken)
         {
             return GetDocuments(options, DocumentsByExpiration, Constants.Documents.Metadata.Expires, ref totalCount, out duration, cancellationToken);
         }
 
-        public Queue<ExpiredDocumentInfo> GetDocumentsToRefresh(ExpiredDocumentsOptions options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
+        public Queue<DocumentExpirationInfo> GetDocumentsToRefresh(ExpiredDocumentsOptions options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
         {
             return GetDocuments(options, DocumentsByRefresh, Constants.Documents.Metadata.Refresh, ref totalCount, out duration, cancellationToken);
         }
 
-        private Queue<ExpiredDocumentInfo> GetDocuments(ExpiredDocumentsOptions options, string treeName, string metadataPropertyToCheck, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
+        private Queue<DocumentExpirationInfo> GetDocuments(ExpiredDocumentsOptions options, string treeName, string metadataPropertyToCheck, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
         {
             var currentTicks = options.CurrentTime.Ticks;
 
@@ -108,7 +107,7 @@ namespace Raven.Server.Documents.Expiration
                     return null;
                 }
 
-                var expired = new Queue<ExpiredDocumentInfo>();
+                var expired = new Queue<DocumentExpirationInfo>();
                 duration = Stopwatch.StartNew();
                 
                 do
@@ -138,7 +137,7 @@ namespace Raven.Server.Documents.Expiration
                                             document.TryGetMetadata(out var metadata) == false ||
                                             HasPassed(metadata, metadataPropertyToCheck, options.CurrentTime) == false)
                                         {
-                                            expired.Enqueue(new ExpiredDocumentInfo(ticksAsSlice, clonedId, id: null));
+                                            expired.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id: null));
                                             totalCount++;
                                             continue;
                                         }
@@ -155,7 +154,7 @@ namespace Raven.Server.Documents.Expiration
                                             break;
                                         }
 
-                                        expired.Enqueue(new ExpiredDocumentInfo(ticksAsSlice, clonedId, document.Id));
+                                        expired.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, document.Id));
                                         totalCount++;
                                         options.Context.Transaction.ForgetAbout(document);
                                     }
@@ -169,7 +168,7 @@ namespace Raven.Server.Documents.Expiration
 
                                     if (allExpired)
                                     {
-                                        expired.Enqueue(new ExpiredDocumentInfo(ticksAsSlice, clonedId, id));
+                                        expired.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id));
                                         totalCount++;
                                     }
                                 }
@@ -235,17 +234,17 @@ namespace Raven.Server.Documents.Expiration
             return false;
         }
 
-        public class ExpiredDocumentInfo
+        public class DocumentExpirationInfo
         {
             public Slice Ticks { get; }
             public Slice LowerId { get; }
             public string Id { get; }
 
-            private ExpiredDocumentInfo()
+            private DocumentExpirationInfo()
             {
             }
 
-            public ExpiredDocumentInfo(Slice ticksAsSlice, Slice clonedId, string id)
+            public DocumentExpirationInfo(Slice ticksAsSlice, Slice clonedId, string id)
             {
                 Ticks = ticksAsSlice;
                 LowerId = clonedId;
@@ -253,7 +252,7 @@ namespace Raven.Server.Documents.Expiration
             }
         }
 
-        public int DeleteDocumentsExpiration(DocumentsOperationContext context, Queue<ExpiredDocumentInfo> expired, DateTime currentTime)
+        public int DeleteDocumentsExpiration(DocumentsOperationContext context, Queue<DocumentExpirationInfo> expired, DateTime currentTime)
         {
             var deletionCount = 0;
             var count = 0;
@@ -289,7 +288,7 @@ namespace Raven.Server.Documents.Expiration
                 expirationTree.MultiDelete(documentInfo.Ticks, documentInfo.LowerId);
                 count++;
 
-                if (context.Transaction.InnerTransaction.LowLevelTransaction.TransactionSize > MaxTransactionSize)
+                if (context.CanContinueTransaction == false)
                     break;
             }
 
@@ -308,7 +307,7 @@ namespace Raven.Server.Documents.Expiration
             return deletionCount;
         }
 
-        public int RefreshDocuments(DocumentsOperationContext context, Queue<ExpirationStorage.ExpiredDocumentInfo> expired, DateTime currentTime)
+        public int RefreshDocuments(DocumentsOperationContext context, Queue<ExpirationStorage.DocumentExpirationInfo> expired, DateTime currentTime)
         {
             var refreshCount = 0;
             var count = 0;
@@ -359,7 +358,7 @@ namespace Raven.Server.Documents.Expiration
                 refreshTree.MultiDelete(documentInfo.Ticks, documentInfo.LowerId);
                 count++;
 
-                if (context.Transaction.InnerTransaction.LowLevelTransaction.TransactionSize > MaxTransactionSize)
+                if (context.CanContinueTransaction == false)
                     break;
             }
 
