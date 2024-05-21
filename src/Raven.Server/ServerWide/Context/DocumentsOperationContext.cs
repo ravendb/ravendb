@@ -51,6 +51,15 @@ namespace Raven.Server.ServerWide.Context
             }
         }
 
+        public bool CanContinueTransaction
+        {
+            get
+            {
+                return Transaction.InnerTransaction.LowLevelTransaction.TransactionSize <= _documentDatabase._maxTransactionSize;
+            }
+        }
+
+
         protected internal override void Reset(bool forceResetLongLivedAllocator = false)
         {
             base.Reset(forceResetLongLivedAllocator);

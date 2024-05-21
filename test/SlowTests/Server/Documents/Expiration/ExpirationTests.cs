@@ -27,6 +27,7 @@ using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using Size = Sparrow.Size;
 
 namespace SlowTests.Server.Documents.Expiration
 {
@@ -410,6 +411,45 @@ namespace SlowTests.Server.Documents.Expiration
                     }
                 }
                 Assert.Equal(1, count);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ExpirationRefresh)]
+        public async Task Can_Expire_Large_Transactions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var expires = SystemTime.UtcNow.AddMinutes(5);
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var company = new Company { Name = "Company Name", Id = $"companies/{i}" };
+                        await session.StoreAsync(company);
+                        var metadata = session.Advanced.GetMetadataFor(company);
+                        metadata[Constants.Documents.Metadata.Expires] = expires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                var config = new ExpirationConfiguration
+                {
+                    Disabled = false,
+                    DeleteFrequencyInSec = (long)TimeSpan.FromMinutes(10).TotalSeconds,
+                };
+
+                await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
+
+                var database = await GetDatabase(store.Database);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                database._maxTransactionSize = new Size(1, SizeUnit.Kilobytes);
+                await database.ExpiredDocumentsCleaner.CleanupExpiredDocs();
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var count = await session.Query<Company>().CountAsync();
+                    Assert.Equal(0, count);
+                }
             }
         }
 
