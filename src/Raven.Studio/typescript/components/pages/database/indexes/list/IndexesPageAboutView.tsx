@@ -90,25 +90,25 @@ export default function IndexesPageAboutView({ isUnlimited }: IndexesPageAboutVi
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Auto indexes limit per cluster",
-        community: { value: 120 },
+        community: { value: Infinity },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
     },
     {
         featureName: "Static indexes limit per cluster",
-        community: { value: 60 },
+        community: { value: Infinity },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
     },
     {
         featureName: "Auto indexes limit per database",
-        community: { value: 24 },
+        community: { value: Infinity },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
     },
     {
         featureName: "Static indexes limit per database",
-        community: { value: 12 },
+        community: { value: Infinity },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
     },
