@@ -238,7 +238,6 @@ namespace Raven.Server.Documents.TimeSeries
         internal sealed class TimeSeriesRetentionCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public const int BatchSize = 1024;
-            private static readonly Size MaxTransactionSize = new(16, SizeUnit.Megabytes);
 
             private readonly List<Slice> _keys;
             private readonly string _collection;
@@ -276,7 +275,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (logger.IsInfoEnabled)
                         logger.Info($"{request} was executed (successfully: {done})");
 
-                    if (context.Transaction.InnerTransaction.LowLevelTransaction.TransactionSize > MaxTransactionSize)
+                    if (context.CanContinueTransaction == false)
                         break;
                 }
 
