@@ -32,7 +32,7 @@ namespace Raven.Client.Documents
     {
         private readonly ConcurrentDictionary<DatabaseChangesOptions, IDatabaseChanges> _databaseChanges = new ConcurrentDictionary<DatabaseChangesOptions, IDatabaseChanges>();
 
-        private readonly ConcurrentDictionary<string, Lazy<EvictItemsFromCacheBasedOnChanges>> _aggressiveCacheChanges = new ConcurrentDictionary<string, Lazy<EvictItemsFromCacheBasedOnChanges>>();
+        internal readonly ConcurrentDictionary<string, Lazy<EvictItemsFromCacheBasedOnChanges>> _aggressiveCacheChanges = new ConcurrentDictionary<string, Lazy<EvictItemsFromCacheBasedOnChanges>>();
 
         private readonly ConcurrentDictionary<string, Lazy<RequestExecutor>> _requestExecutors = new ConcurrentDictionary<string, Lazy<RequestExecutor>>(StringComparer.OrdinalIgnoreCase);
 

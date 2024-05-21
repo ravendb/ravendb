@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
 using FastTests;
 using Raven.Server.Config.Categories;
 using Raven.Server.Utils;
@@ -23,8 +24,9 @@ public class RavenDB_22210 : RavenTestBase
 
         try
         {
-            var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration());
-            Assert.True(result);
+            var explanationsList = new List<string>();
+            var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration(), explanationsList);
+            Assert.True(result, string.Join('\n', explanationsList));
         }
         finally
         {
@@ -40,8 +42,9 @@ public class RavenDB_22210 : RavenTestBase
 
         try
         {
-            var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration());
-            Assert.True(result);
+            var explanationsList = new List<string>();
+            var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration(), explanationsList);
+            Assert.True(result, string.Join('\n', explanationsList));
         }
         finally
         {
@@ -54,8 +57,9 @@ public class RavenDB_22210 : RavenTestBase
     {
         var certificates = GenerateAndRenewSelfSigned();
 
-        var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration());
-        Assert.True(result);
+        var explanationsList = new List<string>();
+        var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration(), explanationsList);
+        Assert.True(result, string.Join('\n', explanationsList));
     }
 
     [RavenFact(RavenTestCategory.Certificates)]
@@ -65,8 +69,9 @@ public class RavenDB_22210 : RavenTestBase
         PopulateCaStore(certificates.ca, certificates.intermediate, certificates.intermediate2);
         try
         {
-            var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration());
-            Assert.False(result);
+            var explanationsList = new List<string>();
+            var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration(), explanationsList);
+            Assert.False(result, string.Join('\n', explanationsList));
         }
         finally
         {

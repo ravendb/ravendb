@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net.WebSockets;
 using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
@@ -2089,6 +2090,8 @@ namespace Raven.Server.Documents
             internal Action BeforeSnapshotOfDocuments;
 
             internal Action AfterSnapshotOfDocuments;
+
+            internal Action<DynamicJsonValue, WebSocket> OnNextMessageChangesApi;
 
             internal bool SkipDrainAllRequests = false;
 
