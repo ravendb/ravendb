@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Replication)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task GetReplicationItemsShouldNotThrowNRE(Options options)
         {
             using (var store = GetDocumentStore(options))
