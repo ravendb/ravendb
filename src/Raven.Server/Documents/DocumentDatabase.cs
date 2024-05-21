@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,8 +6,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.WebSockets;
-using System.Runtime.ExceptionServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
@@ -29,7 +26,6 @@ using Raven.Server.Dashboard;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers.Batches.Commands;
-using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
@@ -43,11 +39,9 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger;
-using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -72,14 +66,12 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
-using static Raven.Server.Documents.DatabasesLandlord;
 using Constants = Raven.Client.Constants;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
-using static Raven.Server.Smuggler.Documents.CounterItem;
 
 namespace Raven.Server.Documents
 {
@@ -121,6 +113,8 @@ namespace Raven.Server.Documents
         public DocumentsCompressionConfiguration DocumentsCompression => _documentsCompression;
         private DocumentsCompressionConfiguration _documentsCompression = new(compressRevisions: false, collections: Array.Empty<string>());
         private HashSet<string> _compressedCollections = new(StringComparer.OrdinalIgnoreCase);
+
+        internal Sparrow.Size _maxTransactionSize = new(16, SizeUnit.Megabytes);
 
         public void ResetIdleTime()
         {
