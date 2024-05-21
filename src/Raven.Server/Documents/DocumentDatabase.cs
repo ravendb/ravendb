@@ -6,8 +6,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.WebSockets;
-using System.Runtime.ExceptionServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
@@ -68,14 +66,12 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
-using static Raven.Server.Documents.DatabasesLandlord;
 using Constants = Raven.Client.Constants;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
-using static Raven.Server.Smuggler.Documents.CounterItem;
 
 namespace Raven.Server.Documents
 {
@@ -117,6 +113,8 @@ namespace Raven.Server.Documents
         public DocumentsCompressionConfiguration DocumentsCompression => _documentsCompression;
         private DocumentsCompressionConfiguration _documentsCompression = new(compressRevisions: false, collections: Array.Empty<string>());
         private HashSet<string> _compressedCollections = new(StringComparer.OrdinalIgnoreCase);
+
+        internal Sparrow.Size _maxTransactionSize = new(16, SizeUnit.Megabytes);
 
         public void ResetIdleTime()
         {
