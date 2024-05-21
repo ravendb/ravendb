@@ -14,7 +14,6 @@ namespace Raven.Client.Documents.Changes
 {
     internal sealed class EvictItemsFromCacheBasedOnChanges : IObserver<DocumentChange>, IObserver<IndexChange>, IObserver<AggressiveCacheChange>, IDisposable
     {
-        private readonly string _databaseName;
         private readonly DatabaseChanges _changes;
         private IDisposable _documentsSubscription;
         private IDisposable _indexesSubscription;
@@ -24,9 +23,8 @@ namespace Raven.Client.Documents.Changes
 
         public EvictItemsFromCacheBasedOnChanges(DocumentStore store, string databaseName)
         {
-            _databaseName = databaseName;
             _requestExecutor = store.GetRequestExecutor(databaseName);
-            _changes = new DatabaseChanges(_requestExecutor, databaseName, onDispose: null, nodeTag: null);
+            _changes = new AggressiveCacheDatabaseChanges(_requestExecutor, databaseName, onDispose: () => store._aggressiveCacheChanges.TryRemove(databaseName, out _));
             _taskConnected = EnsureConnectedInternalAsync();
         }
 
@@ -81,6 +79,8 @@ namespace Raven.Client.Documents.Changes
 
         public void OnError(Exception error)
         {
+            // any error means that the changes connection was disconnected, and we must invalidate the cache
+            Interlocked.Increment(ref _requestExecutor.Cache.Generation);
         }
 
         public void OnCompleted()
