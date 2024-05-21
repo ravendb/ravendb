@@ -296,6 +296,11 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
         }
     }
 
+    public class OnReconnect : EventArgs
+    {
+        public static OnReconnect Instance = new OnReconnect();
+    }
+
     private async Task DoWork(string nodeTag)
     {
         try
@@ -351,9 +356,8 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
                         counter.Value.Set(counter.Value.OnConnect());
                     }
 
-                    ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+                    ConnectionStatusChanged?.Invoke(this, OnReconnect.Instance);
                 }
-
                 await ProcessChanges().ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (_cts.Token.IsCancellationRequested)
