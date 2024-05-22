@@ -618,7 +618,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                     : null;
 
                                 await using (var decompressionStream = FullBackup.GetDecompressionStream(entryStream))
-                                await using (var stream = GetInputStream(decompressionStream, snapshotEncryptionKey))
+                                await using (var stream = await GetInputStreamAsync(decompressionStream, snapshotEncryptionKey))
                                 {
                                     var json = await context.ReadForMemoryAsync(stream, "read database settings for restore");
                                     json.BlittableValidation();
@@ -931,7 +931,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             Action<DatabaseRecord> onDatabaseRecordAction = null)
         {
             await using (var fileStream = await GetStream(filePath))
-            await using (var inputStream = GetInputStream(fileStream, database.MasterKey))
+            await using (var inputStream = await GetInputStreamAsync(fileStream, database.MasterKey))
             await using (var gzipStream = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
             using (var source = new StreamSource(gzipStream, context, database))
             {
@@ -978,7 +978,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (entry != null)
             {
                 await using (var input = entry.Open())
-                await using (var inputStream = GetSnapshotInputStream(input, database.Name))
+                await using (var inputStream = await GetSnapshotInputStreamAsync(input, database.Name))
                 await using (var uncompressed = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
                 {
                     var source = new StreamSource(uncompressed, context, database);
@@ -993,24 +993,34 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private Stream GetInputStream(Stream stream, byte[] databaseEncryptionKey)
+        private async Task<Stream> GetInputStreamAsync(Stream stream, byte[] databaseEncryptionKey)
         {
             if (RestoreFromConfiguration.BackupEncryptionSettings == null ||
                 RestoreFromConfiguration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.None)
                 return stream;
+
+            byte[] encryptionKey;
 
             if (RestoreFromConfiguration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseDatabaseKey)
             {
                 if (databaseEncryptionKey == null)
                     throw new ArgumentException("Stream is encrypted but the encryption key is missing!");
 
-                return new DecryptingXChaCha20Oly1305Stream(stream, databaseEncryptionKey);
+                encryptionKey = databaseEncryptionKey;
+            }
+            else
+            {
+                encryptionKey = Convert.FromBase64String(RestoreFromConfiguration.BackupEncryptionSettings.Key);
             }
 
-            return new DecryptingXChaCha20Oly1305Stream(stream, Convert.FromBase64String(RestoreFromConfiguration.BackupEncryptionSettings.Key));
+            var decryptingStream = new DecryptingXChaCha20Oly1305Stream(stream, encryptionKey);
+
+            await decryptingStream.InitializeAsync();
+
+            return decryptingStream;
         }
 
-        private Stream GetSnapshotInputStream(Stream fileStream, string database)
+        private async Task<Stream> GetSnapshotInputStreamAsync(Stream fileStream, string database)
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
@@ -1018,7 +1028,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 var key = _serverStore.GetSecretKey(ctx, database);
                 if (key != null)
                 {
-                    return new DecryptingXChaCha20Oly1305Stream(fileStream, key);
+                    var decryptingStream = new DecryptingXChaCha20Oly1305Stream(fileStream, key);
+
+                    await decryptingStream.InitializeAsync();
+
+                    return decryptingStream;
                 }
             }
 

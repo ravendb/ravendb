@@ -844,14 +844,20 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (_isBackupEncrypted == false)
                 return fileStream;
 
+            byte[] encryptionKey;
+
             if (Database.MasterKey != null && Configuration.BackupEncryptionSettings == null)
-                return new EncryptingXChaCha20Poly1305Stream(fileStream, Database.MasterKey);
+                encryptionKey = Database.MasterKey;
+            else if (Configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseDatabaseKey)
+                encryptionKey = Database.MasterKey;
+            else
+                encryptionKey = Convert.FromBase64String(Configuration.BackupEncryptionSettings.Key);
+           
+            var encryptingStream = new EncryptingXChaCha20Poly1305Stream(fileStream, encryptionKey);
 
-            if (Configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseDatabaseKey)
-                return new EncryptingXChaCha20Poly1305Stream(fileStream, Database.MasterKey);
+            encryptingStream.Initialize();
 
-            return new EncryptingXChaCha20Poly1305Stream(fileStream,
-                Convert.FromBase64String(Configuration.BackupEncryptionSettings.Key));
+            return encryptingStream;
         }
 
         protected virtual void UploadToServer(string backupFilePath, string folderName, string fileName)
