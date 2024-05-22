@@ -3931,12 +3931,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     subscriptionsConfig = await destination.Subscriptions.GetSubscriptionsAsync(0, 10);
 
-                    await WaitForValueAsync(async () =>
-                    {
-                        subscriptionsConfig = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
-                        return subscriptionsConfig[0].ChangeVectorForNextBatchStartingPoint;
-                    }, lastCv);
-
                     Assert.Equal(1, subscriptionsConfig.Count);
                     Assert.Equal(snapshotCv.Split("-")[0], subscriptionsConfig[0].ChangeVectorForNextBatchStartingPoint.Split("-")[0]);
                 }
