@@ -1,10 +1,19 @@
-﻿import React from "react";
+﻿import React, { useState } from "react";
 import IndexFilter from "./IndexFilter";
 import IndexSelectActions from "./IndexSelectActions";
 import IndexUtils from "../../../../utils/IndexUtils";
 import { useAppUrls } from "hooks/useAppUrls";
 import "./IndexesPage.scss";
-import { Button, Col, Row, UncontrolledPopover } from "reactstrap";
+import {
+    Button,
+    Col,
+    DropdownItem,
+    DropdownMenu,
+    DropdownToggle,
+    Row,
+    UncontrolledDropdown,
+    UncontrolledPopover,
+} from "reactstrap";
 import { LoadingView } from "components/common/LoadingView";
 import { StickyHeader } from "components/common/StickyHeader";
 import { BulkIndexOperationConfirm } from "components/pages/database/indexes/list/BulkIndexOperationConfirm";
@@ -25,11 +34,16 @@ import IndexesPageAboutView from "./IndexesPageAboutView";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import DatabaseUtils from "components/utils/DatabaseUtils";
+import { ImportIndexes } from "components/pages/database/indexes/list/ImportIndexes";
+import { ExportIndexes } from "components/pages/database/indexes/list/ExportIndexes";
+import { todo } from "common/developmentHelper";
 
 interface IndexesPageProps {
     stale?: boolean;
     indexName?: string;
 }
+
+todo("Feature", "Damian", "Add logic for Import indexes");
 
 export function IndexesPage(props: IndexesPageProps) {
     const { stale, indexName: indexToHighlight } = props;
@@ -40,6 +54,12 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const { forCurrentDatabase: urls } = useAppUrls();
     const newIndexUrl = urls.newIndex();
+
+    const [isImportIndexModalOpen, setImportIndexModalOpen] = useState(false);
+
+    const toggleImportIndexModal = () => {
+        setImportIndexModalOpen(!isImportIndexModalOpen);
+    };
 
     const {
         loading,
@@ -160,15 +180,30 @@ export function IndexesPage(props: IndexesPageProps) {
                     <Row>
                         <Col className="hstack">
                             <div id="NewIndexButton">
-                                <Button
-                                    color="primary"
-                                    href={newIndexUrl}
-                                    disabled={isNewIndexDisabled}
-                                    className="rounded-pill px-3 pe-auto"
-                                >
-                                    <Icon icon="index" addon="plus" />
-                                    <span>New index</span>
-                                </Button>
+                                <UncontrolledDropdown group className="button-dropdown-pill">
+                                    <Button
+                                        color="primary"
+                                        href={newIndexUrl}
+                                        disabled={isNewIndexDisabled}
+                                        className="button-dropdown-btn"
+                                    >
+                                        <Icon icon="index" addon="plus" />
+                                        <span>New index</span>
+                                    </Button>
+                                    <DropdownToggle
+                                        className="dropdown-toggle button-dropdown-toggle"
+                                        color="primary"
+                                    />
+                                    <DropdownMenu>
+                                        <DropdownItem
+                                            onClick={toggleImportIndexModal}
+                                            title="Import indexes from a file"
+                                        >
+                                            <Icon icon="index-import" />
+                                            <span>Import indexes</span>
+                                        </DropdownItem>
+                                    </DropdownMenu>
+                                </UncontrolledDropdown>
                             </div>
 
                             {isNewIndexDisabled && (
@@ -271,6 +306,7 @@ export function IndexesPage(props: IndexesPageProps) {
                     allActionContexts={allActionContexts}
                 />
             )}
+            {isImportIndexModalOpen && <ImportIndexes toggle={toggleImportIndexModal} />}
         </div>
     );
 }
