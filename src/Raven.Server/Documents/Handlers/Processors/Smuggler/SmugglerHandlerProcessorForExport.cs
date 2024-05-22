@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var source = RequestHandler.Database.Smuggler.CreateSource(startDocumentEtag, startRaftIndex, Logger);
-                await using (var outputStream = GetOutputStream(RequestHandler.ResponseBodyStream(), options))
+                await using (var outputStream = await GetOutputStreamAsync(RequestHandler.ResponseBodyStream(), options))
                 {
                     var destination = new StreamDestination(outputStream, context, source, options.CompressionAlgorithm ?? RequestHandler.Database.Configuration.ExportImport.CompressionAlgorithm, options.CompressionLevel ?? RequestHandler.Database.Configuration.ExportImport.CompressionLevel);
                     var smuggler = RequestHandler.Database.Smuggler.Create(source, destination,

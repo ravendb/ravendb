@@ -22,9 +22,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             _progress = progress;
         }
 
-        protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
+        protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
         {
-            return Task.Run(async() =>
+            // Immediately flush request stream to send headers
+            // https://github.com/dotnet/corefx/issues/39586#issuecomment-516210081
+            // https://github.com/dotnet/runtime/issues/96223#issuecomment-1865009861
+            await stream.FlushAsync().ConfigureAwait(false);
+
+            await Task.Run(async() =>
             {
                 var buffer = new byte[DefaultBufferSize];
 
@@ -49,7 +54,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
 
                 _progress?.UploadProgress.ChangeState(UploadState.PendingResponse);
-            });
+            }).ConfigureAwait(false);
         }
 
         protected override bool TryComputeLength(out long length)

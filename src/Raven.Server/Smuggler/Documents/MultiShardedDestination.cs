@@ -81,7 +81,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private async Task PrepareShardStreamDestination(Dictionary<int, StreamDestinationHolder> holders, int shardNumber, SmugglerResult result, Action<IOperationProgress> onProgress, long buildVersion)
         {
-            var stream = ShardedSmugglerHandlerProcessorForImport.GetOutputStream(holders[shardNumber].OutStream.OutputStream.Result, _options);
+            var stream = await ShardedSmugglerHandlerProcessorForImport.GetOutputStreamAsync(holders[shardNumber].OutStream.OutputStream.Result, _options);
             holders[shardNumber].InputStream = stream;
             holders[shardNumber].ContextReturn = _handler.ContextPool.AllocateOperationContext(out JsonOperationContext context);
             var destination = new StreamDestination(stream, context, _source, _options.CompressionAlgorithm ?? _databaseContext.Configuration.ExportImport.CompressionAlgorithm, compressionLevel: _databaseContext.Configuration.Sharding.CompressionLevel);
@@ -189,7 +189,7 @@ namespace Raven.Server.Smuggler.Documents
                 _prevRtnCtx?.Dispose();
             }
 
-            public Stream GetTempStream() => StreamDestination.GetTempStream(_options);
+            public Task<Stream> GetTempStreamAsync() => StreamDestination.GetTempStreamAsync(_options);
         }
 
         private sealed class ShardedCompareExchangeActions : ShardedActions<ICompareExchangeActions>, ICompareExchangeActions

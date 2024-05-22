@@ -305,12 +305,12 @@ namespace Raven.Server.Smuggler.Documents
                 _duplicateDocsHandler._markForDispose = true;
             }
 
-            public Stream GetTempStream()
+            public Task<Stream> GetTempStreamAsync()
             {
                 if (_command.AttachmentStreamsTempFile == null)
                     _command.AttachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("smuggler");
 
-                return _command.AttachmentStreamsTempFile.StartNewStream();
+                return Task.FromResult(_command.AttachmentStreamsTempFile.StartNewStream());
             }
 
             public JsonOperationContext GetContextForNewDocument()
@@ -1286,7 +1286,7 @@ namespace Raven.Server.Smuggler.Documents
                 return _cmd.Context;
             }
 
-            public Stream GetTempStream()
+            public Task<Stream> GetTempStreamAsync()
             {
                 throw new NotSupportedException("GetTempStream is never used in CounterActions. Shouldn't happen");
             }

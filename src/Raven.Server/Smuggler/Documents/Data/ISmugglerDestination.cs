@@ -75,7 +75,7 @@ namespace Raven.Server.Smuggler.Documents.Data
     
     public interface INewDocumentActions : INewItemActions, IAsyncDisposable
     {
-        Stream GetTempStream();
+        Task<Stream> GetTempStreamAsync();
     }
 
     public interface IIndexActions : IAsyncDisposable
