@@ -119,3 +119,7 @@ export const availableS3Regions: SelectOption<string>[] = _.sortBy(
     ],
     [(region) => region.label.toLowerCase()]
 );
+
+export type OmitIndexSignature<T> = {
+    [K in keyof T as string extends K ? never : K]: T[K];
+};
