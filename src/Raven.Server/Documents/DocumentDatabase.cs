@@ -1501,7 +1501,14 @@ namespace Raven.Server.Documents
 
         public Stream GetOutputStream(Stream fileStream)
         {
-            return MasterKey == null ? fileStream : new EncryptingXChaCha20Poly1305Stream(fileStream, MasterKey);
+            if (MasterKey == null)
+                return fileStream;
+           
+            var encryptingStream = new EncryptingXChaCha20Poly1305Stream(fileStream, MasterKey);
+            
+            encryptingStream.Initialize();
+
+            return encryptingStream;
         }
 
         /// <summary>

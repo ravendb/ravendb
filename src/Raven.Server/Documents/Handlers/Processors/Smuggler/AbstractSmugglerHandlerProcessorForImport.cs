@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                                     continue;
 
                                 ApplyBackwardCompatibility(options);
-                                await using (var inputStream = GetInputStream(section.Body, options))
+                                await using (var inputStream = await GetInputStreamAsync(section.Body, options))
                                 await using (var stream = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
                                 {
                                     await onImport(context, stream, options, result, onProgress, operationId, token);

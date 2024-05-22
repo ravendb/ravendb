@@ -1405,7 +1405,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     var attachment = new DocumentItem.AttachmentStream
                     {
-                        Stream = actions != null ? actions.GetTempStream() : GetTempStream()
+                        Stream = actions != null ? await actions.GetTempStreamAsync() : await GetTempStreamAsync()
                     };
                     var attachmentInfo = ProcessLegacyAttachment(context, data, ref attachment);
                     if (ShouldSkip(attachmentInfo))
@@ -1601,7 +1601,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public Stream GetTempStream() => StreamDestination.GetTempStream( _options);
+        public Task<Stream> GetTempStreamAsync() => StreamDestination.GetTempStreamAsync( _options);
 
         private async IAsyncEnumerable<Tombstone> ReadTombstonesAsync(List<string> collectionsToOperate, INewDocumentActions actions = null)
         {
@@ -1907,7 +1907,7 @@ namespace Raven.Server.Smuggler.Documents
             attachment.Base64HashDispose = Slice.External(_allocator, hash, out attachment.Base64Hash);
             attachment.TagDispose = Slice.External(_allocator, tag, out attachment.Tag);
 
-            attachment.Stream = actions != null ? actions.GetTempStream() : GetTempStream();
+            attachment.Stream = actions != null ? await actions.GetTempStreamAsync() : await GetTempStreamAsync();
 
             while (size > 0)
             {

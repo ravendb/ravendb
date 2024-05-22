@@ -110,7 +110,7 @@ namespace Raven.Server.Smuggler.Migration
             {
                 var attachment = new DocumentItem.AttachmentStream
                 {
-                    Stream = documentActions.GetTempStream()
+                    Stream = await documentActions.GetTempStreamAsync()
                 };
                 using (var byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None))
                 {

@@ -1,8 +1,10 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Util;
 using Sparrow.Platform;
 using Sparrow.Server.Global;
 
@@ -11,12 +13,14 @@ namespace Raven.Server.Documents.PeriodicBackup
     public sealed class DecryptingXChaCha20Oly1305Stream : Stream
     {
         private readonly Stream _inner;
+        private readonly byte[] _key;
         private readonly byte[] _pullState;
         private readonly byte[] _encryptedBuffer = new byte[Constants.Encryption.DefaultBufferSize + Constants.Encryption.XChachaAdLen];
         private readonly byte[] _plainTextBuffer = new byte[Constants.Encryption.DefaultBufferSize];
         private Memory<byte> _plainTextWindow = Memory<byte>.Empty;
+        private bool _initialized;
 
-        public unsafe DecryptingXChaCha20Oly1305Stream(Stream inner, byte[] key)
+        public DecryptingXChaCha20Oly1305Stream(Stream inner, byte[] key)
         {
             if (key.Length != (int)Sodium.crypto_secretstream_xchacha20poly1305_keybytes())
                 throw new InvalidOperationException($"The size of the key must be " +
@@ -24,25 +28,38 @@ namespace Raven.Server.Documents.PeriodicBackup
                                                     $"but was {key.Length} bytes.");
 
             _inner = inner;
+            _key = key;
             _pullState = new byte[(int)Sodium.crypto_secretstream_xchacha20poly1305_statebytes()];
-            var headerbytes = (int)Sodium.crypto_secretstream_xchacha20poly1305_headerbytes();
-            var header = stackalloc byte[headerbytes];
+        }
 
-            var readingHeader = new Span<byte>(header, headerbytes);
+        public async ValueTask InitializeAsync()
+        {
+            var headerbytes = (int)Sodium.crypto_secretstream_xchacha20poly1305_headerbytes();
+
+            byte[] header = new byte[headerbytes];
+
+            var readingHeader = new Memory<byte>(header);
             while (readingHeader.IsEmpty == false)
             {
-                var read = _inner.Read(readingHeader);
+                var read = await _inner.ReadAsync(readingHeader);
                 if (read == 0)
                     throw new EndOfStreamException("Wrong or corrupted file, we are missing the header");
 
                 readingHeader = readingHeader.Slice(read);
             }
-            fixed (byte* ps = _pullState, pKey = key)
+
+            unsafe
             {
-                if (Sodium.crypto_secretstream_xchacha20poly1305_init_pull(ps, header, pKey) != 0)
-                    throw new CryptographicException("Failed to init state, wrong key or corrupted file");
+                fixed (byte* ps = _pullState, pKey = _key, pHeader = header)
+                {
+                    if (Sodium.crypto_secretstream_xchacha20poly1305_init_pull(ps, pHeader, pKey) != 0)
+                        throw new CryptographicException("Failed to init state, wrong key or corrupted file");
+                }
             }
+
+            _initialized = true;
         }
+
 
         public override void Flush()
         {
@@ -56,6 +73,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public override int Read(byte[] buffer, int offset, int count)
         {
+            EnsureInitialized();
+
             if (TryReadFromBuffer(buffer, offset, count, out int read))
                 return read;
 
@@ -106,6 +125,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
+            EnsureInitialized();
+
             if (TryReadFromBuffer(buffer, offset, count, out int read))
                 return read;
 
@@ -152,6 +173,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             set => throw new NotSupportedException();
         }
 
+        [Conditional("DEBUG")]
+        public void EnsureInitialized()
+        {
+            if (_initialized == false)
+                throw new InvalidOperationException($"{nameof(DecryptingXChaCha20Oly1305Stream)} must be initialized");
+        }
+
         protected override void Dispose(bool disposing)
         {
             _inner.Dispose();
@@ -162,13 +190,15 @@ namespace Raven.Server.Documents.PeriodicBackup
     public sealed class EncryptingXChaCha20Poly1305Stream : Stream
     {
         private readonly Stream _inner;
+        private readonly byte[] _key;
         private readonly byte[] _pushState;
         private readonly byte[] _encryptedBuffer = new byte[Constants.Encryption.DefaultBufferSize + Constants.Encryption.XChachaAdLen];
         private readonly byte[] _innerBuffer = new byte[Constants.Encryption.DefaultBufferSize];
         private int _pos = 0;
         private bool _shouldFlush;
+        private bool _initialized;
 
-        public unsafe EncryptingXChaCha20Poly1305Stream(Stream inner, byte[] key)
+        public EncryptingXChaCha20Poly1305Stream(Stream inner, byte[] key)
         {
             if (key.Length != (int)Sodium.crypto_secretstream_xchacha20poly1305_keybytes())
                 throw new InvalidOperationException($"The size of the key must be " +
@@ -176,21 +206,38 @@ namespace Raven.Server.Documents.PeriodicBackup
                                                     $"but was {key.Length} bytes.");
 
             _inner = inner;
+            _key = key;
             _pushState = new byte[(int)Sodium.crypto_secretstream_xchacha20poly1305_statebytes()];
+        }
+
+        public async Task InitializeAsync()
+        {
             var headerbytes = (int)Sodium.crypto_secretstream_xchacha20poly1305_headerbytes();
-            var header = stackalloc byte[headerbytes];
+            var header = new byte[headerbytes];
 
-            fixed (byte* ps = _pushState, pKey = key)
+            unsafe
             {
-                if (Sodium.crypto_secretstream_xchacha20poly1305_init_push(ps, header, pKey) != 0)
-                    throw new CryptographicException("Failed to init state, wrong or corrupted key");
-
-                _inner.Write(new ReadOnlySpan<byte>(header, headerbytes));
+                fixed (byte* ps = _pushState, pKey = _key, pHeader = header)
+                {
+                    if (Sodium.crypto_secretstream_xchacha20poly1305_init_push(ps, pHeader, pKey) != 0)
+                        throw new CryptographicException("Failed to init state, wrong or corrupted key");
+                }
             }
+
+            await _inner.WriteAsync(new Memory<byte>(header));
+
+            _initialized = true;
+        }
+
+        public void Initialize()
+        {
+            AsyncHelpers.RunSync(InitializeAsync);
         }
 
         public override void Flush()
         {
+            EnsureInitialized();
+
             // no-op - because we *cannot* do anything here, we *require* that all writes, except the last one
             // will be on 4Kb aligned value. This is already handled, but we may want to flush past writes, so
             // will allow it
@@ -203,6 +250,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
         {
+            EnsureInitialized();
+            
             // no-op - because we *cannot* do anything here, we *require* that all writes, except the last one
             // will be on 4Kb aligned value. This is already handled, but we may want to flush past writes, so
             // will allow it
@@ -215,6 +264,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public void Flush(bool flushToDisk)
         {
+            EnsureInitialized();
+
             // no-op - because we *cannot* do anything here, we *require* that all writes, except the last one
             // will be on 4Kb aligned value. This is already handled, but we may want to flush past writes, so
             // will allow it
@@ -278,6 +329,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public override void Write(byte[] buffer, int offset, int count)
         {
+            EnsureInitialized();
+
             while (count > 0)
             {
                 var sizeToWrite = Math.Min(Constants.Encryption.DefaultBufferSize - _pos, count);
@@ -294,6 +347,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
+            EnsureInitialized();
+
             while (count > 0)
             {
                 var sizeToWrite = Math.Min(Constants.Encryption.DefaultBufferSize - _pos, count);
@@ -317,6 +372,13 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             get => throw new NotSupportedException();
             set => throw new NotSupportedException();
+        }
+
+        [Conditional("DEBUG")]
+        public void EnsureInitialized()
+        {
+            if (_initialized == false)
+                throw new InvalidOperationException($"{nameof(EncryptingXChaCha20Poly1305Stream)} must be initialized");
         }
 
         protected override void Dispose(bool disposing)

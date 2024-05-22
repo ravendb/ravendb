@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Util;
@@ -19,13 +20,14 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Core)]
         public void ShouldNotLockDatabaseForever()
         {
+            List<MyDb> runningDatabases = new List<MyDb>();
             var dbsCache = new ResourceCache<MyDb>();
 
             var dbName = "foo";
 
             var task1 = new Task<MyDb>(() =>
             {
-                var myDb = new MyDb(dbName);
+                var myDb = new MyDb(dbName, runningDatabases);
 
                 myDb.Run();
 
@@ -39,6 +41,7 @@ namespace SlowTests.Issues
                 task1.Start();
                 task1.Wait();
             }
+            Assert.NotEmpty(runningDatabases);
 
             var mre = new ManualResetEvent(false);
             var mre2 = new ManualResetEvent(false);
@@ -65,19 +68,21 @@ namespace SlowTests.Issues
             t.Wait();
 
             Assert.False(dbsCache.TryGetValue(dbName, out var task));
+            Assert.Empty(runningDatabases);
         }
 
 
         [RavenFact(RavenTestCategory.Core)]
         public void ShouldUseNewDatabaseIfItWasChanged()
         {
+            List<MyDb> runningDatabases = new List<MyDb>();
             var dbsCache = new ResourceCache<MyDb>();
 
             var dbName = "foo";
 
             var task1 = new Task<MyDb>(() =>
             {
-                var myDb = new MyDb(dbName);
+                var myDb = new MyDb(dbName, runningDatabases);
 
                 myDb.Run();
 
@@ -115,7 +120,7 @@ namespace SlowTests.Issues
             // create new database meanwhile
             var expected = new Task<MyDb>(() =>
             {
-                var myDb = new MyDb(dbName);
+                var myDb = new MyDb(dbName, runningDatabases);
 
                 myDb.Run();
 
@@ -142,6 +147,8 @@ namespace SlowTests.Issues
             Assert.True(dbsCache.TryGetValue(dbName, out var current));
             Assert.Equal(expected, past);
             Assert.Equal(current, past);
+            Assert.NotEmpty(runningDatabases);
+
         }
     }
 }

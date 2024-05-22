@@ -44,22 +44,32 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                 options.OperateOnTypes |= DatabaseItemType.Attachments;
         }
 
-        internal static Stream GetInputStream(Stream fileStream, DatabaseSmugglerOptionsServerSide options)
+        internal static async Task<Stream> GetInputStreamAsync(Stream fileStream, DatabaseSmugglerOptionsServerSide options)
         {
             if (options.EncryptionKey != null)
-                return new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(options.EncryptionKey));
+            {
+                var decryptingStream = new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(options.EncryptionKey));
+
+                await decryptingStream.InitializeAsync();
+
+                return decryptingStream;
+            }
 
             return fileStream;
         }
 
-        internal static Stream GetOutputStream(Stream fileStream, DatabaseSmugglerOptionsServerSide options)
+        internal static async Task<Stream> GetOutputStreamAsync(Stream fileStream, DatabaseSmugglerOptionsServerSide options)
         {
             if (options.EncryptionKey == null)
                 return fileStream;
 
             var key = options?.EncryptionKey;
-            return new EncryptingXChaCha20Poly1305Stream(fileStream,
+            var encryptingStream = new EncryptingXChaCha20Poly1305Stream(fileStream,
                 Convert.FromBase64String(key));
+
+            await encryptingStream.InitializeAsync();
+
+            return encryptingStream;
         }
 
         internal static async ValueTask WriteSmugglerResultAsync(JsonOperationContext context, SmugglerResult result, Stream stream)
