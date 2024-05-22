@@ -189,13 +189,13 @@ public abstract unsafe class AbstractBackgroundWorkStorage
     
     protected abstract void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime);
 
-    public int ProcessDocuments(DocumentsOperationContext context, Queue<DocumentExpirationInfo> expired, DateTime currentTime)
+    public int ProcessDocuments(DocumentsOperationContext context, Queue<DocumentExpirationInfo> toProcess, DateTime currentTime)
     {
         var processedCount = 0;
-        var count = 0;
+        var dequeueCount = 0;
 
         var docsTree = context.Transaction.InnerTransaction.ReadTree(_treeName);
-        foreach (var info in expired)
+        foreach (var info in toProcess)
         {
             if (info.Id != null)
             {
@@ -203,7 +203,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                 processedCount++;
             }
 
-            count++;
+            dequeueCount++;
             docsTree.MultiDelete(info.Ticks, info.LowerId);
         }
 
@@ -213,9 +213,9 @@ public abstract unsafe class AbstractBackgroundWorkStorage
             if (tx.Committed == false)
                 return;
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < dequeueCount; i++)
             {
-                expired.Dequeue();
+                toProcess.Dequeue();
             }
         };
 

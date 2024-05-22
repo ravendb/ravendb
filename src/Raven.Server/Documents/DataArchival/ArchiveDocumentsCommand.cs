@@ -34,7 +34,7 @@ internal class ArchiveDocumentsCommand : MergedTransactionCommand<DocumentsOpera
     {
         return new ArchiveDocumentsCommandDto 
         {
-            ToArchive = _toArchive.Select(x => (x.Ticks, x.LowerId, x.Id)).ToArray(),
+            ToArchive = _toArchive.Select(x => (Ticks: x.Ticks, LowerId: x.LowerId, Id: x.Id)).ToArray(),
             CurrentTime = _currentTime
         };
     }
