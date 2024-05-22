@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.Expiration
             {
                 return new DeleteExpiredDocumentsCommandDto
                 {
-                    Expired = _expired.Select(x => (x.Ticks, x.LowerId, x.Id)).ToArray(),
+                    Expired = _expired.Select(x => (Ticks: x.Ticks, LowerId: x.LowerId, Id: x.Id)).ToArray(),
                     ForExpiration = _forExpiration,
                     CurrentTime = _currentTime
                 };
@@ -234,7 +234,7 @@ namespace Raven.Server.Documents.Expiration
             var queue = new Queue<ExpirationStorage.DocumentExpirationInfo>();
             foreach (var item in Expired)
             {
-                queue.Enqueue(new ExpirationStorage.DocumentExpirationInfo(item.Item1, item.Item2, item.Item3));
+                queue.Enqueue(new ExpirationStorage.DocumentExpirationInfo(item.Item1.Clone(context.Allocator), item.Item2.Clone(context.Allocator), item.Item3));
             }
 
             var command = new ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand(queue, database, ForExpiration, CurrentTime);
