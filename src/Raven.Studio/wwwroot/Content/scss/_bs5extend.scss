@@ -582,3 +582,37 @@ $panels: (
         background-color: var(#{$color});
     }
 }
+
+.button-dropdown-pill {
+    .button-dropdown-btn {
+        border-top-left-radius: $border-radius-pill;
+        border-bottom-left-radius: $border-radius-pill;
+    }
+    .button-dropdown-toggle {
+        border-top-right-radius: $border-radius-pill;
+        border-bottom-right-radius: $border-radius-pill;
+    }
+
+}
+
+$filtering-input-baseheight: 35px !default;
+$filtering-input-bg: $well-bg-var !default;
+$filtering-input-border-radius: $filtering-input-baseheight !default;
+$filtering-input-bg: $toggle-bg !default;
+
+// Text inputs for filtering that will go in pair with multi-toggle component
+.form-control.filtering-input {
+    background: $filtering-input-bg;
+    border-radius: $filtering-input-border-radius;
+    border: $border-width solid $border-color-light-var;
+    height: $filtering-input-baseheight;
+    font-size: 0.8rem;
+    min-width: 20em;
+    padding-left: $gutter-sm;
+    padding-right: $gutter-sm;
+}
+
+.hover-filter {
+    filter: $hover-filter-var;
+    transition: $global-easing-in-out;
+}

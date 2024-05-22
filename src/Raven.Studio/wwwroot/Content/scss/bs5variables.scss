@@ -1284,14 +1284,14 @@ $progress-bar-transition: width 0.6s ease !default;
 // List group
 
 // scss-docs-start list-group-variables
-$list-group-color: $text-color !default;
-$list-group-bg: transparent !default;
-$list-group-border-color: $border-color-light !default;
+$list-group-color: $text-color-var !default;
+$list-group-bg: $panel-header-bg-var !default;
+$list-group-border-color: $border-color-light-var !default;
 $list-group-border-width: var(--#{$prefix}border-width) !default;
 $list-group-border-radius: var(--#{$prefix}border-radius) !default;
 
-$list-group-item-padding-y: $spacer * 0.5 !default;
-$list-group-item-padding-x: $spacer !default;
+$list-group-item-padding-y: $gutter-xxs !default;
+$list-group-item-padding-x: $list-group-item-padding-y !default;
 // fusv-disable
 $list-group-item-bg-scale: -80% !default; // Deprecated in v5.3.0
 $list-group-item-color-scale: 40% !default; // Deprecated in v5.3.0

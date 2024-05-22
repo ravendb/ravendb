@@ -1,0 +1,11 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.drag-drop {
+    background-color: colors.$well-bg-var;
+    border: 2px dashed colors.$border-color-light-var;
+    border-radius: sizes.$border-radius-md;
+    color: colors.$text-muted-var;
+    cursor: pointer;
+}
