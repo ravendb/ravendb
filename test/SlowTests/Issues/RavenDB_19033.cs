@@ -20,33 +20,35 @@ public class RavenDB_19033 : NoDisposalNeeded
 
     internal class MyDb : IDisposable
     {
-        public static List<MyDb> RunningDatabases = new List<MyDb>();
+        private readonly List<MyDb> _runningDatabases;
 
-        public MyDb(string name)
+        public MyDb(string name, List<MyDb> runningDatabases)
         {
+            _runningDatabases = runningDatabases;
         }
 
         public void Run()
         {
-            RunningDatabases.Add(this);
+            _runningDatabases.Add(this);
         }
 
         public void Dispose()
         {
-            RunningDatabases.Remove(this);
+            _runningDatabases.Remove(this);
         }
     }
 
     [Fact]
     public async Task UnloadAndLockDatabaseMustNotIgnoreDatabaseDisabledLock()
     {
+        List<MyDb> runningDatabases = new List<MyDb>();
         var dbsCache = new ResourceCache<MyDb>();
 
         var dbName = "foo";
 
         var task1 = new Task<MyDb>(() =>
         {
-            var myDb = new MyDb(dbName);
+            var myDb = new MyDb(dbName, runningDatabases);
 
             myDb.Run();
 
@@ -60,6 +62,7 @@ public class RavenDB_19033 : NoDisposalNeeded
             task1.Start();
             task1.Wait();
         }
+        Assert.NotEmpty(runningDatabases);
 
         using (dbsCache.RemoveLockAndReturn(dbName, x => x.Dispose(), out _))
         {
@@ -73,7 +76,7 @@ public class RavenDB_19033 : NoDisposalNeeded
 
             var task2 = new Task<MyDb>(() =>
             {
-                var myDb = new MyDb(dbName);
+                var myDb = new MyDb(dbName, runningDatabases);
 
                 myDb.Run();
 
@@ -93,6 +96,6 @@ public class RavenDB_19033 : NoDisposalNeeded
 
         // delete database - there must be no running db instance
 
-        Assert.Empty(MyDb.RunningDatabases);
+        Assert.Empty(runningDatabases);
     }
 }
