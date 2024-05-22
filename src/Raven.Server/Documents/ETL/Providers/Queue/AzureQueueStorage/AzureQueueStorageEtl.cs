@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Exceptions.ETL.QueueEtl;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -43,6 +44,7 @@ public sealed class AzureQueueStorageEtl : QueueEtl<AzureQueueStorageItem>
             return 0;
         }
 
+        var tooLargeDocsErrors = new Queue<EtlErrorInfo>();
         idsToDelete = [];
         int count = 0;
 
@@ -79,15 +81,37 @@ public sealed class AzureQueueStorageEtl : QueueEtl<AzureQueueStorageItem>
                 }
                 catch (Azure.RequestFailedException ex)
                 {
-                    throw new QueueLoadException(
-                        $"Failed to deliver message, Azure error code: '{ex.ErrorCode}', error reason: '{ex.Message}' for document with id: '{queueItem.DocumentId}'",
-                        ex);
+                    if (ex.ErrorCode is "RequestBodyTooLarge")
+                    {
+                        tooLargeDocsErrors.Enqueue(new EtlErrorInfo()
+                        {
+                            Date = DateTime.UtcNow,
+                            DocumentId = queueItem.DocumentId,
+                            Error = ex.Message 
+                        });
+                    }
+                    else
+                    {
+                        throw new QueueLoadException(
+                            $"Failed to deliver message, Azure error code: '{ex.ErrorCode}', error reason: '{ex.Message}' for document with id: '{queueItem.DocumentId}'",
+                            ex);
+                    }
+
                 }
                 catch (Exception ex)
                 {
                     throw new QueueLoadException($"Failed to deliver message, error reason: '{ex.Message}'", ex);
                 }
             }
+
+            if (tooLargeDocsErrors.Count > 0)
+            {
+                Database.NotificationCenter.EtlNotifications.AddLoadErrors(Tag, Name, tooLargeDocsErrors,
+                    $"Batch of ({count}) documents has been successfully loaded, " +
+                    $"but some of the docs ({tooLargeDocsErrors.Count}) were too big (>64KB) to be handled by Azure Queue Storage. " +
+                    $"It caused load errors, that have been skipped.");
+            }
+
         }
 
         return count;
