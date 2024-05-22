@@ -1,17 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Documents;
-using Raven.Server.Documents.Indexes;
-using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -48,7 +42,8 @@ namespace SlowTests.Issues
         {
             using var store = GetDocumentStore();
 
-            await new Simple_Map_Index().ExecuteAsync(store);
+            var index = new Simple_Map_Index();
+            await index.ExecuteAsync(store);
             await store.Maintenance.SendAsync(new StopIndexingOperation());
 
             using (var session = store.OpenAsyncSession(new SessionOptions {
@@ -58,7 +53,8 @@ namespace SlowTests.Issues
                 session.Advanced.WaitForIndexesAfterSaveChanges(TimeSpan.FromSeconds(3));
 
                 await session.StoreAsync(new TestObj(), "testObjs/0");
-                await Assert.ThrowsAsync<RavenTimeoutException>(async () => await session.SaveChangesAsync());
+                var error = await Assert.ThrowsAsync<RavenTimeoutException>(async () => await session.SaveChangesAsync());
+                Assert.Contains($"total stale indexes: 1 ({index.IndexName})", error.Message);
             }
         }
 
