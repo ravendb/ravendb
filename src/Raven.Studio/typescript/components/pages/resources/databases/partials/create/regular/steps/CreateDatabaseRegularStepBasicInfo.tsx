@@ -17,7 +17,7 @@ import { createDatabaseRegularDataUtils } from "components/pages/resources/datab
 const newDatabaseImg = require("Content/img/createDatabase/new-database.svg");
 
 export default function CreateDatabaseRegularStepBasicInfo() {
-    const { control, setValue } = useFormContext<FormData>();
+    const { control, setValue, setFocus } = useFormContext<FormData>();
     const nodeTagsCount = useAppSelector(clusterSelectors.allNodeTags).length;
 
     const {
@@ -32,6 +32,11 @@ export default function CreateDatabaseRegularStepBasicInfo() {
             setValue("replicationAndShardingStep.isManualReplication", true, { shouldValidate: true });
         }
     }, [isManualReplicationRequiredForEncryption, setValue]);
+
+    // Focus the database name input when the step is loaded
+    useEffect(() => {
+        setFocus("basicInfoStep.databaseName");
+    }, [setFocus]);
 
     return (
         <div>

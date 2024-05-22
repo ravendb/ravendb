@@ -14,6 +14,7 @@ import Select, { InputNotHidden, SelectValue } from "./select/Select";
 import DatePicker from "./DatePicker";
 import { Icon } from "components/common/Icon";
 import PathSelector, { PathSelectorProps } from "components/common/pathSelector/PathSelector";
+import { OmitIndexSignature } from "components/utils/common";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -26,10 +27,11 @@ interface AddonProps {
     addon?: ReactNode;
 }
 
-type FormInputProps = Omit<InputProps, "addon"> &
+type FormInputProps = Omit<OmitIndexSignature<InputProps>, "addon"> &
     AddonProps & {
         type: InputType;
         passwordPreview?: boolean;
+        rows?: number | string;
     };
 
 export interface FormCheckboxesOption<T extends string | number = string> {
@@ -413,12 +415,12 @@ export function FormDatePicker<
 function FormInputGeneral<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
->(props: FormElementProps<TFieldValues, TName> & Omit<InputProps, "addon"> & AddonProps) {
+>(props: FormElementProps<TFieldValues, TName> & FormInputProps) {
     const { name, control, defaultValue, rules, shouldUnregister, children, type, addon, passwordPreview, ...rest } =
         props;
 
     const {
-        field: { onChange, onBlur, value },
+        field: { onChange, onBlur, value, ref },
         fieldState: { error, invalid },
         formState,
     } = useController({
@@ -447,6 +449,7 @@ function FormInputGeneral<
                 <div className="d-flex flex-grow-1">
                     <InputGroup>
                         <Input
+                            innerRef={ref}
                             name={name}
                             type={actualInputType}
                             onBlur={onBlur}

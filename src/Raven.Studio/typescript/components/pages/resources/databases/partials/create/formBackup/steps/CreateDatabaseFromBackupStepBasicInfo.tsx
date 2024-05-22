@@ -1,5 +1,5 @@
 import { Icon } from "components/common/Icon";
-import React from "react";
+import React, { useEffect } from "react";
 import { Row, Col, Button } from "reactstrap";
 import { CreateDatabaseFromBackupFormData } from "../createDatabaseFromBackupValidation";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -8,10 +8,15 @@ import { FormInput } from "components/common/Form";
 const fromBackupImg = require("Content/img/createDatabase/from-backup.svg");
 
 export default function CreateDatabaseFromBackupStepBasicInfo() {
-    const { control, setValue } = useFormContext<CreateDatabaseFromBackupFormData>();
+    const { control, setValue, setFocus } = useFormContext<CreateDatabaseFromBackupFormData>();
     const {
         basicInfoStep: { isSharded },
     } = useWatch({ control });
+
+    // Focus the database name input when the step is loaded
+    useEffect(() => {
+        setFocus("basicInfoStep.databaseName");
+    }, [setFocus]);
 
     return (
         <>
