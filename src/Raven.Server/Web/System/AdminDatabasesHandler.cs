@@ -1256,6 +1256,7 @@ namespace Raven.Server.Web.System
             {
                 throw new DatabaseDoesNotExistException($"Can't import into database {databaseName} because it doesn't exist.");
             }
+            var options = new DatabaseSmugglerOptionsServerSide(GetAuthorizationStatusForSmuggler(databaseName));
             var (commandline, tmpFile) = configuration.GenerateExporterCommandLine();
             var processStartInfo = new ProcessStartInfo(dataExporter, commandline);
 
@@ -1353,7 +1354,6 @@ namespace Raven.Server.Web.System
 
                                 result.AddInfo("Starting the import phase of the migration");
                                 onProgress(overallProgress);
-                                var options = new DatabaseSmugglerOptionsServerSide(GetAuthorizationStatusForSmuggler(databaseName));
                                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                                 await using (var reader = File.OpenRead(configuration.OutputFilePath))
                                 await using (var stream = await BackupUtils.GetDecompressionStreamAsync(reader))
