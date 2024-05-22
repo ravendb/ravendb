@@ -199,7 +199,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (token)
             {
                 var source = new DatabaseSource(Database, startDocumentEtag, startRaftIndex, Logger);
-                await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
+                await using (var outputStream = await GetOutputStreamAsync(ResponseBodyStream(), options))
                 {
                     var destination = new StreamDestination(outputStream, context, source, options.CompressionAlgorithm ?? Database.Configuration.ExportImport.CompressionAlgorithm, options.CompressionLevel ?? Database.Configuration.ExportImport.CompressionLevel);
                     var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, onProgress: onProgress, token: token.Token);
@@ -208,20 +208,29 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private Stream GetOutputStream(Stream fileStream, DatabaseSmugglerOptionsServerSide options)
+        private async Task<Stream> GetOutputStreamAsync(Stream fileStream, DatabaseSmugglerOptionsServerSide options)
         {
             if (options.EncryptionKey == null)
                 return fileStream;
 
             var key = options?.EncryptionKey;
-            return new EncryptingXChaCha20Poly1305Stream(fileStream,
-                Convert.FromBase64String(key));
+            var encryptingStream = new EncryptingXChaCha20Poly1305Stream(fileStream, Convert.FromBase64String(key));
+
+            await encryptingStream.InitializeAsync();
+
+            return encryptingStream;
         }
 
-        private Stream GetInputStream(Stream fileStream, DatabaseSmugglerOptionsServerSide options)
+        private async Task<Stream> GetInputStreamAsync(Stream fileStream, DatabaseSmugglerOptionsServerSide options)
         {
             if (options.EncryptionKey != null)
-                return new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(options.EncryptionKey));
+            {
+                var decryptingStream = new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(options.EncryptionKey));
+
+                await decryptingStream.InitializeAsync();
+
+                return decryptingStream;
+            }
 
             return fileStream;
         }
@@ -719,7 +728,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                                     ApplyBackwardCompatibility(options);
 
-                                    var inputStream = GetInputStream(section.Body, options);
+                                    var inputStream = await GetInputStreamAsync(section.Body, options);
                                     var stream = await BackupUtils.GetDecompressionStreamAsync(inputStream);
                                     await DoImportInternalAsync(context, stream, options, result, onProgress, token);
                                 }
