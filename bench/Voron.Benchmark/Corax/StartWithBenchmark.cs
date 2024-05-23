@@ -122,6 +122,7 @@ namespace Voron.Benchmark.Corax
                     entryWriter.Write(1, "Eini"u8);
                     entryWriter.Write(2, Encoding.UTF8.GetBytes(12L.ToString()), 12L, 12D);
                     entryWriter.Write(3, "Dog"u8);
+                    entryWriter.EndWriting();
                 }
 
                 {
@@ -130,6 +131,7 @@ namespace Voron.Benchmark.Corax
                     entryWriter.Write(1, "Eini"u8);
                     entryWriter.Write(2, Encoding.UTF8.GetBytes(7.ToString()), 7L, 7D);
                     entryWriter.Write(3, "Dog"u8);
+                    entryWriter.EndWriting();
                   
                 }
 
@@ -141,7 +143,7 @@ namespace Voron.Benchmark.Corax
                     var age = i % 15;
                     entryWriter.Write(2, Encoding.UTF8.GetBytes(age.ToString()), age, age);
                     entryWriter.Write(3, "Dog"u8);
-                  
+                    entryWriter.EndWriting();
                 }
 
                 writer.Commit();

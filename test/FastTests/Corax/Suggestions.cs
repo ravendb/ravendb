@@ -175,13 +175,14 @@ namespace FastTests.Corax
             using var builder = indexWriter.Index(entry.Id);
             builder.Write(IndexId, PrepareString(entry.Id));
             builder.Write(ContentId, PrepareString(entry.Content));
+            builder.EndWriting();
+            
             Span<byte> PrepareString(string value)
             {
                 if (value == null)
                     return Span<byte>.Empty;
                 return Encoding.UTF8.GetBytes(value);
             }
-
         }
 
         private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexEntryValues> list, IndexFieldsMapping mapping)

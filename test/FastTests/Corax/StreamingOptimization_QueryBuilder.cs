@@ -575,6 +575,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
                                 builder.DecrementList();
                             }
                         }
+                        builder.EndWriting();
                     }
                     indexWriter.Commit();
                 }

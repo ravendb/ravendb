@@ -43,6 +43,7 @@ public class FacetIndexingRepro : StorageTest
         {
             builder.Write(0, Encoding.UTF8.GetBytes(entryKey));
             entryId = builder.EntryId;
+            builder.EndWriting();
         }
         iw.Commit();
         
@@ -148,7 +149,7 @@ public class FacetIndexingRepro : StorageTest
                     continue;
                 }
 
-                using var indexEntryBuilder = iw.Index(id);
+                using(var indexEntryBuilder = iw.Index(id))
                 {
                     for (int i = 0; i < fieldsCount; i++)
                     {
@@ -156,7 +157,9 @@ public class FacetIndexingRepro : StorageTest
                        var s = br.ReadBytes(len);
                        indexEntryBuilder.Write(i, s);
                     }
+                    indexEntryBuilder.EndWriting();
                 }
+                
                 items++;
             }
 
