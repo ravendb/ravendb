@@ -107,9 +107,9 @@ public sealed class AzureQueueStorageEtl : QueueEtl<AzureQueueStorageItem>
             if (tooLargeDocsErrors.Count > 0)
             {
                 Database.NotificationCenter.EtlNotifications.AddLoadErrors(Tag, Name, tooLargeDocsErrors,
-                    $"Batch of ({count}) documents has been successfully loaded, " +
-                    $"but some of the docs ({tooLargeDocsErrors.Count}) were too big (>64KB) to be handled by Azure Queue Storage. " +
-                    $"It caused load errors, that have been skipped.");
+                    "ETL has successfully loaded the data, " +
+                    "but some of the documents were too big (>64KB) to be handled by Azure Queue Storage. " +
+                    "It caused load errors, that have been skipped. ");
             }
 
         }
