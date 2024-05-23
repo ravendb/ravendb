@@ -1,4 +1,4 @@
-﻿import React from "react";
+﻿import React, { useCallback } from "react";
 import { Button, CloseButton, Form, ModalBody, ModalFooter } from "reactstrap";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
@@ -19,7 +19,7 @@ import databasesManager from "common/shell/databasesManager";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { tryHandleSubmit } from "components/utils/common";
-import QuickCreateButton from "components/pages/resources/databases/partials/create/regular/QuickCreateButton";
+import QuickCreateButton from "./QuickCreateButton";
 import { yupResolver } from "@hookform/resolvers/yup";
 import {
     Control,
@@ -32,13 +32,11 @@ import {
     useWatch,
 } from "react-hook-form";
 import { useSteps } from "components/common/steps/useSteps";
-import { useCreateDatabaseAsyncValidation } from "components/pages/resources/databases/partials/create/shared/useCreateDatabaseAsyncValidation";
-import { createDatabaseRegularDataUtils } from "components/pages/resources/databases/partials/create/regular/createDatabaseRegularDataUtils";
-import {
-    CreateDatabaseStep,
-    createDatabaseUtils,
-} from "components/pages/resources/databases/partials/create/shared/createDatabaseUtils";
+import { useCreateDatabaseAsyncValidation } from "../shared/useCreateDatabaseAsyncValidation";
+import { createDatabaseRegularDataUtils } from "./createDatabaseRegularDataUtils";
+import { CreateDatabaseStep, createDatabaseUtils } from "../shared/createDatabaseUtils";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
+import { useCreateDatabaseShortcuts } from "../shared/useCreateDatabaseShortcuts";
 
 interface CreateDatabaseRegularProps {
     closeModal: () => void;
@@ -82,16 +80,20 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
         activeSteps.length
     );
 
-    const validateToTargetStep = (targetStep: number) => {
-        return createDatabaseUtils.getStepInRangeValidation({
-            currentStep,
-            targetStep,
-            activeStepIds: activeSteps.map((x) => x.id),
-            trigger,
-            asyncDatabaseNameValidation,
-            databaseName: formValues.basicInfoStep.databaseName,
-        });
-    };
+    const validateToTargetStep = useCallback(
+        (targetStep: number) => {
+            return createDatabaseUtils.getStepInRangeValidation({
+                currentStep,
+                targetStep,
+                activeStepIds: activeSteps.map((x) => x.id),
+                trigger,
+                asyncDatabaseNameValidation,
+                databaseName: formValues.basicInfoStep.databaseName,
+            });
+        },
+        [activeSteps, asyncDatabaseNameValidation, currentStep, formValues.basicInfoStep.databaseName, trigger]
+    );
+
     const { reportEvent } = useEventsCollector();
 
     const onFinish: SubmitHandler<FormData> = async (formValues) => {
@@ -123,6 +125,17 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
             closeModal();
         });
     };
+
+    const handleGoNext = useCallback(() => {
+        nextStepWithValidation(validateToTargetStep(currentStep));
+    }, [currentStep, nextStepWithValidation, validateToTargetStep]);
+
+    useCreateDatabaseShortcuts({
+        submit: handleSubmit(onFinish),
+        handleGoNext,
+        isLastStep,
+        canQuickCreate: true,
+    });
 
     return (
         <FormProvider {...form}>
@@ -173,7 +186,7 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
                             type="button"
                             color="primary"
                             className="rounded-pill"
-                            onClick={() => nextStepWithValidation(validateToTargetStep(currentStep))}
+                            onClick={handleGoNext}
                             disabled={asyncDatabaseNameValidation.loading}
                         >
                             Next <Icon icon="arrow-thin-right" margin="ms-1" />
