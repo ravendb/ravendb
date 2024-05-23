@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { Button, CloseButton, Form, ModalBody, ModalFooter } from "reactstrap";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
@@ -29,14 +29,12 @@ import { tryHandleSubmit } from "components/utils/common";
 import { useServices } from "components/hooks/useServices";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useSteps } from "components/common/steps/useSteps";
-import { createDatabaseFromBackupDataUtils } from "components/pages/resources/databases/partials/create/formBackup/createDatabaseFromBackupDataUtils";
+import { createDatabaseFromBackupDataUtils } from "./createDatabaseFromBackupDataUtils";
 import notificationCenter from "common/notifications/notificationCenter";
-import {
-    CreateDatabaseStep,
-    createDatabaseUtils,
-} from "components/pages/resources/databases/partials/create/shared/createDatabaseUtils";
+import { CreateDatabaseStep, createDatabaseUtils } from "../shared/createDatabaseUtils";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
+import { useCreateDatabaseShortcuts } from "../shared/useCreateDatabaseShortcuts";
 
 interface CreateDatabaseFromBackupProps {
     closeModal: () => void;
@@ -84,16 +82,19 @@ export default function CreateDatabaseFromBackup({
         activeSteps.length
     );
 
-    const validateToTargetStep = (targetStep: number) => {
-        return createDatabaseUtils.getStepInRangeValidation({
-            currentStep,
-            targetStep,
-            activeStepIds: activeSteps.map((x) => x.id),
-            trigger,
-            asyncDatabaseNameValidation,
-            databaseName: formValues.basicInfoStep.databaseName,
-        });
-    };
+    const validateToTargetStep = useCallback(
+        (targetStep: number) => {
+            return createDatabaseUtils.getStepInRangeValidation({
+                currentStep,
+                targetStep,
+                activeStepIds: activeSteps.map((x) => x.id),
+                trigger,
+                asyncDatabaseNameValidation,
+                databaseName: formValues.basicInfoStep.databaseName,
+            });
+        },
+        [activeSteps, asyncDatabaseNameValidation, currentStep, formValues.basicInfoStep.databaseName, trigger]
+    );
 
     const { reportEvent } = useEventsCollector();
 
@@ -117,6 +118,17 @@ export default function CreateDatabaseFromBackup({
             closeModal();
         });
     };
+
+    const handleGoNext = useCallback(() => {
+        nextStepWithValidation(validateToTargetStep(currentStep));
+    }, [currentStep, nextStepWithValidation, validateToTargetStep]);
+
+    useCreateDatabaseShortcuts({
+        submit: handleSubmit(onFinish),
+        handleGoNext,
+        isLastStep,
+        canQuickCreate: false,
+    });
 
     return (
         <FormProvider {...form}>
@@ -166,7 +178,7 @@ export default function CreateDatabaseFromBackup({
                             type="button"
                             color="primary"
                             className="rounded-pill"
-                            onClick={() => nextStepWithValidation(validateToTargetStep(currentStep))}
+                            onClick={handleGoNext}
                             disabled={asyncDatabaseNameValidation.loading}
                         >
                             Next <Icon icon="arrow-thin-right" margin="ms-1" />

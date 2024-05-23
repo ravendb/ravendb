@@ -19,6 +19,7 @@ export default function QuickCreateButton({ formValues, isSubmitting }: QuickCre
                 id="quickCreateButton"
                 icon="star"
                 isSpinning={isSubmitting}
+                title="Quick Create (Ctrl + Enter)"
             >
                 Quick Create
             </ButtonWithSpinner>
