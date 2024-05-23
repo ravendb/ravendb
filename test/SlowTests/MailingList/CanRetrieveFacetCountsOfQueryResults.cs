@@ -46,7 +46,6 @@ namespace SlowTests.MailingList
                     from i in items
                     select new
                     {
-                        i,
                         Distance = CreateSpatialField((double)i.Lat, (double)i.Lon),
                         i.Name,
                         i.Bedrooms,
@@ -104,7 +103,6 @@ namespace SlowTests.MailingList
                 new AccItems_Attributes().Execute(store);
 
                 Indexes.WaitForIndexing(store);
-
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<AccItem, AccItems_Spatial>()

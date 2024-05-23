@@ -853,7 +853,7 @@ select {{
         {
             using (var store = GetDocumentStore(options))
             {
-                store.ExecuteIndex(new OrderMapReduceIndex());
+                store.ExecuteIndex(new OrderMapReduceIndex(options.SearchEngineMode is RavenSearchEngineMode.Corax));
 
                 using (var session = store.OpenSession())
                 {
@@ -1063,6 +1063,11 @@ select project(o)")
 
             public OrderMapReduceIndex()
             {
+                //placeholder
+            }
+
+            public OrderMapReduceIndex(bool turnOffComplexFieldIndexing)
+            {
                 Map = orders =>
                     from order in orders
                     select new Result
@@ -1079,6 +1084,9 @@ select project(o)")
                         Freight = g.Key,
                         Lines = g.SelectMany(x => x.Lines).ToList()
                     };
+
+                if (turnOffComplexFieldIndexing)
+                    Index(x => x.Lines, FieldIndexing.No);
             }
         }
 

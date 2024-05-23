@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -20,9 +21,8 @@ public class RavenDB_21557 : RavenTestBase
     public void Can_project_role_names_from_user_without_roles(Options options)
     {
         using (var store = GetDocumentStore(options))
-        {
-            new UserIndex().Execute(store);
-
+        { 
+            new UserIndex(options.SearchEngineMode is RavenSearchEngineMode.Corax).Execute(store);
             User userWithoutRoles;
             User userWithRole;
 
@@ -98,6 +98,11 @@ public class RavenDB_21557 : RavenTestBase
 
         public UserIndex()
         {
+            
+        }
+
+        public UserIndex(bool noIndexComplexField)
+        {
             Map = users => from user in users
                 select new Result
                 {
@@ -111,6 +116,9 @@ public class RavenDB_21557 : RavenTestBase
                     Deleted = false
                 };
 
+            if (noIndexComplexField)
+                Index(x => x.Roles, FieldIndexing.No);
+            
             StoreAllFields(FieldStorage.Yes);
         }
     }

@@ -18,8 +18,8 @@ public class RavenDB_17097 : RavenTestBase
     {
     }
 
-    private async Task NotificationTest<TIndex>(Options options)
-        where TIndex : AbstractIndexCreationTask, new()
+    private async Task NotificationTest<TIndex>(Options options, TIndex index)
+        where TIndex : AbstractIndexCreationTask
     {
         using var store = GetDocumentStore(options);
         var db = await GetDatabase(store.Database);
@@ -35,7 +35,6 @@ public class RavenDB_17097 : RavenTestBase
             s.SaveChanges();
         }
 
-        var index = new TIndex();
         await index.ExecuteAsync(store);
         await Indexes.WaitForIndexingAsync(store);
 
@@ -63,19 +62,19 @@ public class RavenDB_17097 : RavenTestBase
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public Task FanOutIndexWithIncludedSourceDocumentWillSendNotification(Options options)
     {
-        return NotificationTest<FanOutIndexWithSourceDocument>(options);
+        return NotificationTest<FanOutIndexWithSourceDocument>(options, new(options.SearchEngineMode is RavenSearchEngineMode.Corax));
     }
     
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public Task IncludeDocumentDynamicField(Options options)
     {
-        return NotificationTest<IncludeDocumentDynamicFieldIndex>(options);
+        return NotificationTest<IncludeDocumentDynamicFieldIndex>(options, new(options.SearchEngineMode is RavenSearchEngineMode.Corax));
     }
     
     private class IncludeDocumentDynamicFieldIndex : AbstractIndexCreationTask<CollectionDocument>
     {
-        public IncludeDocumentDynamicFieldIndex()
+        public IncludeDocumentDynamicFieldIndex(bool skipIndexingComplexField)
         {
             Map = collectionDocuments =>
                 from documentItself in collectionDocuments
@@ -83,12 +82,20 @@ public class RavenDB_17097 : RavenTestBase
                 let x = 1
                 let z = 2
                 select new {Inner = inn, xx = x, zz = z, _ = CreateField("SourceDoc", documentItself)};
+
+            if (skipIndexingComplexField)
+            {
+                Index("Inner", FieldIndexing.No);
+                Index("SourceDoc", FieldIndexing.No);
+                Store("Inner", FieldStorage.Yes);
+                Store("SourceDoc", FieldStorage.Yes);
+            }
         }
     }
     
     private class FanOutIndexWithSourceDocument : AbstractIndexCreationTask<CollectionDocument>
     {
-        public FanOutIndexWithSourceDocument()
+        public FanOutIndexWithSourceDocument(bool skipIndexingComplexField)
         {
             Map = collectionDocuments =>
                 from documentItself in collectionDocuments
@@ -96,6 +103,14 @@ public class RavenDB_17097 : RavenTestBase
                 let x = 1
                 let z = 2
                 select new {Field = documentItself, Inner = inn, xx = x, zz = z};
+            
+            if (skipIndexingComplexField)
+            {
+                Index("Inner", FieldIndexing.No);
+                Index("Field", FieldIndexing.No);
+                Store("Inner", FieldStorage.Yes);
+                Store("Field", FieldStorage.Yes);
+            }
         }
     }
 
