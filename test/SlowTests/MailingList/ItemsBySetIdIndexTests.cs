@@ -22,7 +22,7 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore(options))
             {
-                new ItemsBySetIdIndex().Execute(store);
+                new ItemsBySetIdIndex(options.SearchEngineMode is RavenSearchEngineMode.Corax).Execute(store);
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Station { Id = "stations/radiofm" });
@@ -144,6 +144,11 @@ namespace SlowTests.MailingList
 
             public ItemsBySetIdIndex()
             {
+                //query
+            }
+
+            public ItemsBySetIdIndex(bool skipIndexingComplexField)
+            {
                 Map = items => from item in items
                                let song = LoadDocument<Song>(item.SongId)
                                let config = LoadDocument<SongConfig>(item.RelatedTo)
@@ -175,6 +180,9 @@ namespace SlowTests.MailingList
                 Index(x => x.Interpret, FieldIndexing.Search);
                 Index(x => x.Title, FieldIndexing.Search);
 
+                if (skipIndexingComplexField)
+                    Index(x => x.Attributes, FieldIndexing.No);
+                
                 Stores = new Dictionary<Expression<Func<Result, object>>, FieldStorage>()
                 {
                     { e=>e.SongId, FieldStorage.Yes},

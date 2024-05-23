@@ -25,7 +25,7 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore(options))
             {
-                new DataSetIndex().Execute(store);
+                new DataSetIndex(options.SearchEngineMode is RavenSearchEngineMode.Corax).Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -55,7 +55,7 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore(options))
             {
-                new DataSetIndex().Execute(store);
+                new DataSetIndex(options.SearchEngineMode is RavenSearchEngineMode.Corax).Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -152,6 +152,11 @@ namespace SlowTests.MailingList
 
             public DataSetIndex()
             {
+                //querying
+            }
+            
+            public DataSetIndex(bool skipIndexingComplexField)
+            {
                 Map = sets =>
                       from set in sets
                       from item in set.Items
@@ -186,6 +191,8 @@ namespace SlowTests.MailingList
                                  { e=>e.Attributes, FieldStorage.Yes},
                                  { e=>e.StationId, FieldStorage.Yes}
                              };
+                if (skipIndexingComplexField)
+                    Index(x => x.Attributes, FieldIndexing.No);
             }
         }
 

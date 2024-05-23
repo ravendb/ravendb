@@ -19,7 +19,7 @@ public partial class IndexWriter
 {
     public sealed class IndexEntryBuilder :  IIndexEntryBuilder, IDisposable
     {
-        private readonly Indexing.IndexWriter _parent;
+        private readonly IndexWriter _parent;
         private long _entryId;
         private int _termPerEntryIndex;
         public bool Active;
@@ -67,13 +67,13 @@ public partial class IndexWriter
                 // we need to rollback the data we've already written to the in-memory mapping. 
                 // For this particular scenario, we will use the mechanism we created for handling the Map-Reduce
                 // scenario where we have indexing and removals of the same document in the same indexing batch.
-                // We will commit all the data we have currently gathered and immediately call delete on the invalid document,
-                // which allows us to retrieve all the terms it contains using the already built-in mechanisms.
+                // We will commit all the data we have currently gathered and immediately call delete on the invalid document
+                // (which have to be handled by caller to avoid multiple calls of delete),
+                // This would allow us to retrieve all the terms it contains using the already built-in mechanisms.
                 // We also have to ensure that we're writing the current document ID into the compact tree since
                 // most writes include the ID at the end of the mapping (e.g., to avoid indexing empty documents).
                 // For the fanout scenario, we will rollback the whole document.
                 Write(Constants.IndexWriter.PrimaryKeyFieldId, _documentId);
-                _parent.TryDeleteEntry(_documentId, out var _);
             }
             Active = false;
         }

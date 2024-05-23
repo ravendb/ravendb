@@ -16,10 +16,19 @@ public class RavenDB_18357 : RavenTestBase
     }
     
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    public void StaticIndexShouldNotThrowWhenTryingToIndexComplexObjectAndIndexFieldOptionsWereNotExplicitlySetInDefinition(Options options)
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void StaticIndexShouldThrowWhenTryingToIndexComplexObjectAndIndexFieldOptionsWereNotExplicitlySetInDefinition(Options options)
     {
-        using var store = GetDocumentStore(options);
+        var modifiedOptions = new Options()
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                options.ModifyDatabaseRecord?.Invoke(record);
+                record.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "false";
+            }
+        };
+        
+        using var store = GetDocumentStore(modifiedOptions);
         {
             using var s = store.OpenSession();
             s.Store(new Input {Nested = new NestedItem {Name = "Matt"}});
@@ -29,8 +38,10 @@ public class RavenDB_18357 : RavenTestBase
 
         index.Execute(store);
         Indexes.WaitForIndexing(store);
-        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
-        Assert.Null(errors);
+        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: true);
+        Assert.NotEmpty(errors);
+        Assert.NotEmpty(errors[0].Errors);
+        Assert.Contains("The value of 'Nested' field is a complex object.", errors[0].Errors[0].Error);
     }
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]

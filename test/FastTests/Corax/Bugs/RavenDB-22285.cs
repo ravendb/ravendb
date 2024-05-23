@@ -39,6 +39,7 @@ public class RavenDB_22285 : StorageTest
                 result.Write(0, id);
                 result.Write(1, descendingSortedTerm[idX % descendingSortedTerm.Count]);
                 result.Write(2, Encodings.Utf8.GetBytes($"common{(idX % 10).ToString()}"));
+                result.EndWriting();
                 database.Add(new Dto($"item/{idX}", Encodings.Utf8.GetString(descendingSortedTerm[idX % descendingSortedTerm.Count]), $"common{idX % 10}", (int)result.EntryId));
             }
             
