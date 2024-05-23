@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Subscriptions
         public string ChangeVector { get; set; }
         public string MentorNode { get; set; }
         public bool Disabled { get; set; }
-        public bool PinToMentorNode { get; set; }
+        public virtual bool PinToMentorNode { get; set; }
     }
 
     public class SubscriptionCreationOptions<T>
@@ -52,6 +52,20 @@ namespace Raven.Client.Documents.Subscriptions
     {
         public long? Id { get; set; }
         public bool CreateNew { get; set; }
+
+        private bool _pinToMentorNode;
+
+        public override bool PinToMentorNode
+        {
+            get => _pinToMentorNode;
+            set
+            {
+                _pinToMentorNode = value;
+                PinToMentorNodeWasSet = true;
+            }
+        }
+
+        internal bool PinToMentorNodeWasSet { get; set; }
     }
 
     public class Revision<T> where T : class

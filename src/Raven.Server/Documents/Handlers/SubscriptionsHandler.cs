@@ -417,6 +417,8 @@ namespace Raven.Server.Documents.Handlers
                         [nameof(SubscriptionState.Disabled)] = x.Disabled,
                         [nameof(SubscriptionState.LastClientConnectionTime)] = x.LastClientConnectionTime,
                         [nameof(SubscriptionState.LastBatchAckTime)] = x.LastBatchAckTime,
+                        [nameof(SubscriptionState.MentorNode)] = x.MentorNode,
+                        [nameof(SubscriptionState.PinToMentorNode)] = x.PinToMentorNode,
                         [nameof(SubscriptionGeneralDataAndStats.Connections)] = GetSubscriptionConnectionsJson(x.Connections),
                         [nameof(SubscriptionGeneralDataAndStats.RecentConnections)] = x.RecentConnections == null ? Array.Empty<SubscriptionConnectionInfo>() : x.RecentConnections.Select(r => r.ToJson()),
                         [nameof(SubscriptionGeneralDataAndStats.RecentRejectedConnections)] = x.RecentRejectedConnections == null ? Array.Empty<SubscriptionConnectionInfo>() : x.RecentRejectedConnections.Select(r => r.ToJson()),
@@ -550,6 +552,7 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
+                bool pinToMentorNodeWasSet = json.TryGet(nameof(SubscriptionUpdateOptions.PinToMentorNode), out bool pinToMentorNode);
                 var options = JsonDeserializationServer.SubscriptionUpdateOptions(json);
 
                 var id = options.Id;
@@ -614,6 +617,9 @@ namespace Raven.Server.Documents.Handlers
 
                 if (options.MentorNode == null)
                     options.MentorNode = state.MentorNode;
+
+                if (pinToMentorNodeWasSet == false)
+                    options.PinToMentorNode = state.PinToMentorNode;
 
                 if (options.Query == null)
                     options.Query = state.Query;
