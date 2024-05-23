@@ -116,14 +116,14 @@ namespace Voron.Benchmark.Corax
 
             using (var writer = new IndexWriter(env, fields, SupportedFeatures.All))
             {
-                {
+                { 
                     using var builder = writer.Index("Arava");
-                    
-                   builder.Write(0, "Arava"u8);
-                   builder.Write(1, "Eini"u8);
-                   builder.Write(2, Encoding.UTF8.GetBytes(12L.ToString()), 12L, 12D);
-                   builder.Write(3, "Dog"u8);
-                   
+                    builder.Write(0, "Arava"u8);
+                    builder.Write(1, "Eini"u8);
+                    builder.Write(2, Encoding.UTF8.GetBytes(12L.ToString()), 12L, 12D);
+                    builder.Write(3, "Dog"u8);
+                    builder.EndWriting();
+
                 }
 
                 {
@@ -132,6 +132,7 @@ namespace Voron.Benchmark.Corax
                     builder.Write(1, "Eini"u8);
                     builder.Write(2, Encoding.UTF8.GetBytes(7.ToString()), 7L, 7D);
                     builder.Write(3, "Dog"u8);
+                    builder.EndWriting();
                 }
 
                 for (int i = 0; i < 10_000; i++)
@@ -142,6 +143,7 @@ namespace Voron.Benchmark.Corax
                     var age = i % 17;
                     builder.Write(2, Encoding.UTF8.GetBytes(age.ToString()), age, age);
                     builder.Write(3, "Dog"u8);
+                    builder.EndWriting();
                 }
 
                 writer.Commit();

@@ -171,6 +171,7 @@ namespace StressTests.Corax
             builder.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
             builder.Write(Content1, Encoding.UTF8.GetBytes(entry.Content1.ToString()), entry.Content1, Convert.ToDouble(entry.Content1));
             builder.Write(Content2, Encoding.UTF8.GetBytes(entry.Content2.ToString()), entry.Content2, Convert.ToDouble(entry.Content2));
+            builder.EndWriting();
         }
 
 

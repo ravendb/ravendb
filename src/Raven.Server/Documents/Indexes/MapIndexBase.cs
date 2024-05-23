@@ -86,11 +86,14 @@ namespace Raven.Server.Documents.Indexes
         private int UpdateIndexEntriesCorax(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             var it = mapResults.GetEnumerator();
+            bool shouldRollbackCurrentScope = true;
             try
             {
                 if (it.MoveNext() == false)
                 {
                     writer.Value.Delete(indexItem.LowerId, stats);
+
+                    shouldRollbackCurrentScope = false;
                     return 0; // no results at all
                 }
 
@@ -109,6 +112,8 @@ namespace Raven.Server.Documents.Indexes
                         writer.Value.UpdateDocument(
                             indexItem.LowerId, indexItem.LowerSourceDocumentId, first, stats, indexContext);
                     }
+
+                    shouldRollbackCurrentScope = false;
                     return 1;
                 }
                 else
@@ -122,12 +127,15 @@ namespace Raven.Server.Documents.Indexes
                         writer.Value.IndexDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, it.Current, stats, indexContext);
                     } while (it.MoveNext());
 
+                    shouldRollbackCurrentScope = false;
                     return numberOfOutputs;
                 }
-
             }
             finally
             {
+                if (shouldRollbackCurrentScope)
+                    writer.Value.Delete(indexItem.LowerId, stats);
+                
                 if(it is IDisposable d)
                     d.Dispose();
             }

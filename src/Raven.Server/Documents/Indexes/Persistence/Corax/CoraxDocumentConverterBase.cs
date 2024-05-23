@@ -414,19 +414,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         if (IgnoreComplexObjectsDuringIndex)
             return;
         
-        Debug.Assert(field.Indexing != FieldIndexing.No, "field.Indexing != FieldIndexing.No");
-
-        if (_index.GetIndexDefinition().Fields.TryGetValue(field.Name, out var fieldFromDefinition) &&
-            fieldFromDefinition.Indexing != null && 
-            fieldFromDefinition.Indexing != FieldIndexing.No)
-        {
-            // We need to disable the complex object handling after we check and then throw. 
-            DisableIndexingForComplexObject(field);
+        if (KnownFieldsForWriter.TryGetByFieldName(field.Name, out var binding) && binding.FieldIndexingMode != FieldIndexingMode.No)
             ThrowIndexingComplexObjectNotSupported(field, _index.Type);
-        }
-
-        DisableIndexingForComplexObject(field);
-
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -467,7 +456,6 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
     private void DisableIndexingForComplexObject(IndexField field)
     {
-        field.Indexing = FieldIndexing.No;
         _complexFields ??= new();
         _complexFields.Add(field);
         

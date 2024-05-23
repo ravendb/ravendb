@@ -49,6 +49,7 @@ public class IndexEntryReaderBigDoc : StorageTest
                     }
                 }
                 writer.DecrementList();
+                writer.EndWriting();
             }
             indexWriter.Commit();
         }

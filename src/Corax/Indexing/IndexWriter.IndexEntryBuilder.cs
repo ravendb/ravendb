@@ -17,14 +17,16 @@ namespace Corax.Indexing;
 
 public partial class IndexWriter
 {
-    public sealed class IndexEntryBuilder : IDisposable, IIndexEntryBuilder
+    public sealed class IndexEntryBuilder :  IIndexEntryBuilder, IDisposable
     {
         private readonly Indexing.IndexWriter _parent;
         private long _entryId;
         private int _termPerEntryIndex;
         public bool Active;
         private int _buildingList;
-        
+        private Slice _documentId;
+        private bool _mapFinishedSuccessfully = false;
+
         public long EntryId => _entryId;
 
         public IndexEntryBuilder(Indexing.IndexWriter parent)
@@ -37,15 +39,42 @@ public partial class IndexWriter
             _parent.BoostEntry(_entryId, boost);
         }
 
-        public void Init(long entryId, int termsPerEntryIndex)
+        public void Init(long entryId, int termsPerEntryIndex, Slice documentId)
         {
             Active = true;
+            _mapFinishedSuccessfully = false;
             _entryId = entryId;
             _termPerEntryIndex = termsPerEntryIndex;
+            _documentId = documentId;
         }
 
+        /// <summary>
+        /// This method must be called before dispose to indicate there were no exceptions during indexing.
+        /// If this is not called, we will start the rollback procedure (see more at Dispose()).
+        /// This allows us to avoid using a try...catch...finally block, thereby avoiding the overhead associated with the catch block.
+        /// </summary>
+        public void EndWriting()
+        {
+            Debug.Assert(Active, "Active");
+            _mapFinishedSuccessfully = true;
+        }
+        
         public void Dispose()
         {
+            if (_mapFinishedSuccessfully == false)
+            {
+                // When we encounter an exception during the building process (from the converter),
+                // we need to rollback the data we've already written to the in-memory mapping. 
+                // For this particular scenario, we will use the mechanism we created for handling the Map-Reduce
+                // scenario where we have indexing and removals of the same document in the same indexing batch.
+                // We will commit all the data we have currently gathered and immediately call delete on the invalid document,
+                // which allows us to retrieve all the terms it contains using the already built-in mechanisms.
+                // We also have to ensure that we're writing the current document ID into the compact tree since
+                // most writes include the ID at the end of the mapping (e.g., to avoid indexing empty documents).
+                // For the fanout scenario, we will rollback the whole document.
+                Write(Constants.IndexWriter.PrimaryKeyFieldId, _documentId);
+                _parent.TryDeleteEntry(_documentId, out var _);
+            }
             Active = false;
         }
 
