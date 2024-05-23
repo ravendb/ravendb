@@ -22,6 +22,9 @@ namespace Sparrow.Json
     /// </summary>
     public partial class JsonOperationContext : PooledItem, IDisposableQueryable
     {
+        private static readonly PerCoreContainer<PathCache> _perCorePathCache = new();
+        private static readonly PerCoreContainer<FastList<LazyStringValue>> _perCoreLazyStringValuesList = new(32);
+        
         private int _generation;
         internal long PoolGeneration;
         public const int InitialStreamSize = 4096;
@@ -33,13 +36,33 @@ namespace Sparrow.Json
         private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
         private AllocatedMemoryData _tempBuffer;
 
-        private readonly Dictionary<StringSegment, LazyStringValue> _fieldNames = new Dictionary<StringSegment, LazyStringValue>(StringSegmentEqualityStructComparer.BoxedInstance);
 
-        private static readonly PerCoreContainer<PathCache> _perCorePathCache = new PerCoreContainer<PathCache>();
+        private Dictionary<StringSegment, LazyStringValue> _fieldNames;
+
+        private Dictionary<StringSegment, LazyStringValue> FieldNames
+        {
+            get
+            {
+                _fieldNames ??= new Dictionary<StringSegment, LazyStringValue>(StringSegmentEqualityStructComparer.BoxedInstance);
+                return _fieldNames;
+            }
+        }
+
+        
         private PathCache _activeAllocatePathCaches;
-        private readonly Stack<MemoryStream> _cachedMemoryStreams = new Stack<MemoryStream>();
+        
+        
+        private Stack<MemoryStream> _cachedMemoryStreams;
+        private Stack<MemoryStream> CachedMemoryStreams
+        {
+            get
+            {
+                _cachedMemoryStreams ??= new Stack<MemoryStream>();
+                return _cachedMemoryStreams;
+            }
+        }
 
-        private static readonly PerCoreContainer<FastList<LazyStringValue>> _perCoreLazyStringValuesList = new PerCoreContainer<FastList<LazyStringValue>>(32);
+
         private int _numberOfAllocatedStringsValues;
         private FastList<LazyStringValue> _allocateStringValues;
 
@@ -270,18 +293,11 @@ namespace Sparrow.Json
                 }
             }
 
-            private sealed class Disposer : IDisposable
+            private sealed class Disposer(params IDisposable[] toDispose) : IDisposable
             {
-                private readonly IDisposable[] _toDispose;
-
-                public Disposer(params IDisposable[] toDispose)
-                {
-                    _toDispose = toDispose;
-                }
-
                 public void Dispose()
                 {
-                    foreach (var disposable in _toDispose)
+                    foreach (var disposable in toDispose)
                     {
                         disposable.Dispose();
                     }
@@ -413,7 +429,7 @@ namespace Sparrow.Json
         {
             ThrowIfDisposed(this);
 
-            if (_fieldNames.TryGetValue(key, out LazyStringValue value))
+            if (FieldNames.TryGetValue(key, out LazyStringValue value))
             {
                 //sanity check, in case the 'value' is manually disposed outside of this function
                 Debug.Assert(value.IsDisposed == false);
@@ -428,7 +444,7 @@ namespace Sparrow.Json
         {
             ThrowIfDisposed(this);
             
-            if (_fieldNames.TryGetValue(field, out LazyStringValue value))
+            if (FieldNames.TryGetValue(field, out LazyStringValue value))
             {
                 // PERF: This is usually the most common scenario, so actually being contiguous improves the behavior.
                 Debug.Assert(value.IsDisposed == false);
@@ -447,7 +463,7 @@ namespace Sparrow.Json
                 ThrowIfDisposed(this);
                 
                 LazyStringValue value = GetLazyString(key, longLived: true);
-                _fieldNames[key.Value] = value;
+                FieldNames[key.Value] = value;
 
                 //sanity check, in case the 'value' is manually disposed outside of this function
                 Debug.Assert(value.IsDisposed == false);
@@ -876,22 +892,26 @@ namespace Sparrow.Json
             if (allocatorForLongLivedValues != null &&
                 (allocatorForLongLivedValues.Allocated > _initialSize || forceReleaseLongLivedAllocator))
             {
-                foreach (var mem in _fieldNames.Values)
+                if (_fieldNames != null)
                 {
-                    _arenaAllocatorForLongLivedValues.Return(mem.AllocatedMemoryData);
-                    mem.AllocatedMemoryData = null;
-                    mem.IsDisposed = true;
+                    foreach (var mem in _fieldNames.Values)
+                    {
+                        _arenaAllocatorForLongLivedValues.Return(mem.AllocatedMemoryData);
+                        mem.AllocatedMemoryData = null;
+                        mem.IsDisposed = true;
+                    }
+
+                    _fieldNames.Clear();
                 }
 
                 _arenaAllocatorForLongLivedValues = null;
                 CachedProperties = null;
+                
                 // at this point, the long-lived section is far too large, this is something that can happen
                 // if we have dynamic properties. A back of the envelope calculation gives us roughly 32K
                 // property names before this kicks in, which is a true abuse of the system. In this case,
                 // in order to avoid unlimited growth, we'll reset the long-lived section
                 allocatorForLongLivedValues.Dispose();
-
-                _fieldNames.Clear();
             }
 
             if (_allocateStringValues != null)
@@ -1147,12 +1167,10 @@ namespace Sparrow.Json
         {
             ThrowIfDisposed(this);
             
-            if (_cachedMemoryStreams.Count == 0)
-            {
+            if (_cachedMemoryStreams == null || CachedMemoryStreams.Count == 0)
                 return new MemoryStream();
-            }
 
-            var stream = _cachedMemoryStreams.Pop();
+            var stream = CachedMemoryStreams.Pop();
             _sizeOfMemoryStreamCache -= stream.Capacity;
 
             return stream;
@@ -1174,7 +1192,7 @@ namespace Sparrow.Json
             ThrowIfDisposed(this);
 
             stream.SetLength(0);
-            _cachedMemoryStreams.Push(stream);
+            CachedMemoryStreams.Push(stream);
             _sizeOfMemoryStreamCache += stream.Capacity;
         }
 
