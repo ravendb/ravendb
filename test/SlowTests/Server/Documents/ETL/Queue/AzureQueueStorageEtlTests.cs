@@ -88,8 +88,8 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
                 return Task.FromResult(error);
             }, timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
 
-            Assert.StartsWith(
-                "Raven.Server.Exceptions.ETL.QueueEtl.QueueLoadException: Failed to deliver message, Azure error code: 'RequestBodyTooLarge'",
+            Assert.Contains(
+                "The request body is too large and exceeds",
                 alert.Error);
         }
     }
