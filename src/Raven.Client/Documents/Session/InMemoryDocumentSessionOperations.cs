@@ -260,7 +260,7 @@ namespace Raven.Client.Documents.Session
                 [
                     JavascriptConversionExtensions.LinqMethodsSupport.Instance,
                     JavascriptConversionExtensions.NullableSupport.Instance,
-                    new JavascriptConversionExtensions.EnumConversionExtension(documentStore.Conventions.SaveEnumsAsIntegers),
+                    JavascriptConversionExtensions.PatchDictionaryEnumSupport.Instance,
                 ])
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(RequestExecutor.Conventions)
