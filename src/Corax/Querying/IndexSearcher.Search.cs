@@ -214,6 +214,10 @@ public partial class IndexSearcher
                     termMatches ??= new();
                     terms.Clear(); // Clear the terms list.
                     EncodeAndApplyAnalyzerForMultipleTerms(field, word, ref terms);
+
+                    //When single term outputs multiple terms we've to jump into phraseQuery
+                    if (terms.Count > 1)
+                        goto PhraseQuery;
                     
                     foreach (var term in terms.GetEnumerator())
                     {
@@ -264,9 +268,10 @@ public partial class IndexSearcher
             //Phrase query
             terms.Clear();
             EncodeAndApplyAnalyzerForMultipleTerms(field, word, ref terms);
+            
             if (terms.Count == 0) 
                 continue; //sentence contained only stop-words
-
+            PhraseQuery:
             var hs = new HashSet<Slice>(SliceComparer.Instance);
             for (var i = 0; i < terms.Count; ++i)
             {
