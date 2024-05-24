@@ -1,9 +1,11 @@
 using System;
 using System.Dynamic;
 using System.Reflection;
+using System.Threading.Tasks;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Identity
 {
@@ -11,11 +13,23 @@ namespace Raven.Client.Documents.Identity
     {
         private readonly DocumentConventions _conventions;
         private readonly Func<object, string> _generateId;
+        private readonly Func<object, Task<string>> _generateIdAsync;
 
+        [Obsolete("This constructor is not supported anymore. Will be removed in next major version of the product. Use constructor with 'generateIdAsync' parameter instead.")]
         public GenerateEntityIdOnTheClient(DocumentConventions conventions, Func<object, string> generateId)
         {
             _conventions = conventions;
+            _generateIdAsync = entity => Task.FromResult(generateId(entity));
             _generateId = generateId;
+        }
+
+        public GenerateEntityIdOnTheClient(DocumentConventions conventions, Func<object, Task<string>> generateIdAsync)
+        {
+            _conventions = conventions;
+            _generateIdAsync = generateIdAsync;
+
+            if (_generateIdAsync != null)
+                _generateId = entity => AsyncHelpers.RunSync(() => _generateIdAsync(entity));
         }
 
         private MemberInfo GetIdentityProperty(Type entityType)
@@ -49,14 +63,20 @@ namespace Raven.Client.Documents.Identity
         /// <returns></returns>
         public string GetOrGenerateDocumentId(object entity)
         {
-            string id;
-            TryGetIdFromInstance(entity, out id);
+            TryGetIdFromInstance(entity, out string id);
 
-            if (id == null)
-            {
-                // Generate the ID up front
-                id = _generateId(entity);
-            }
+            id ??= _generateId(entity);
+
+            if (id != null && id.StartsWith("/"))
+                throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
+            return id;
+        }
+
+        public async ValueTask<string> GetOrGenerateDocumentIdAsync(object entity)
+        {
+            TryGetIdFromInstance(entity, out string id);
+
+            id ??= await _generateIdAsync(entity).ConfigureAwait(false);
 
             if (id != null && id.StartsWith("/"))
                 throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
@@ -68,17 +88,37 @@ namespace Raven.Client.Documents.Identity
             string id;
             if (_conventions.AddIdFieldToDynamicObjects && entity is IDynamicMetaObjectProvider)
             {
-                if (TryGetIdFromDynamic(entity, out id) == false || id == null)
-                {
-                    id = _generateId(entity);
-                    // If we generated a new id, store it back into the Id field so the client has access to it                    
-                    if (id != null)
-                        TrySetIdOnDynamic(entity, id);
-                }
+                if (TryGetIdFromDynamic(entity, out id) && id != null)
+                    return id;
+
+                id = _generateId(entity);
+                // If we generated a new id, store it back into the Id field so the client has access to it                    
+                if (id != null)
+                    TrySetIdOnDynamic(entity, id);
                 return id;
             }
 
             id = GetOrGenerateDocumentId(entity);
+            TrySetIdentity(entity, id);
+            return id;
+        }
+
+        public async ValueTask<string> GenerateDocumentIdForStorageAsync(object entity)
+        {
+            string id;
+            if (_conventions.AddIdFieldToDynamicObjects && entity is IDynamicMetaObjectProvider)
+            {
+                if (TryGetIdFromDynamic(entity, out id) && id != null)
+                    return id;
+
+                id = await _generateIdAsync(entity).ConfigureAwait(false);
+                // If we generated a new id, store it back into the Id field so the client has access to it                    
+                if (id != null)
+                    TrySetIdOnDynamic(entity, id);
+                return id;
+            }
+
+            id = await GetOrGenerateDocumentIdAsync(entity).ConfigureAwait(false);
             TrySetIdentity(entity, id);
             return id;
         }

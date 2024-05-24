@@ -162,7 +162,7 @@ namespace Raven.Client.Documents.BulkInsert
             _timeSeriesBatchSize = _conventions.BulkInsert.TimeSeriesBatchSize;
 
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions,
-                entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
+                entity => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity));
 
             _streamLock = new SemaphoreSlim(1, 1);
             _lastWriteToStream = DateTime.UtcNow;
@@ -343,7 +343,7 @@ namespace Raven.Client.Documents.BulkInsert
         public async Task<string> StoreAsync(object entity, IMetadataDictionary metadata = null)
         {
             if (metadata == null || metadata.TryGetValue(Constants.Documents.Metadata.Id, out var id) == false)
-                id = GetId(entity);
+                id = await GetIdAsync(entity).ConfigureAwait(false);
 
             await StoreAsync(entity, id, metadata).ConfigureAwait(false);
 
@@ -607,12 +607,12 @@ namespace Raven.Client.Documents.BulkInsert
             await _disposeOnce.DisposeAsync().ConfigureAwait(false);
         }
 
-        private string GetId(object entity)
+        private async ValueTask<string> GetIdAsync(object entity)
         {
             if (_generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out var id))
                 return id;
 
-            id = _generateEntityIdOnTheClient.GenerateDocumentIdForStorage(entity);
+            id = await _generateEntityIdOnTheClient.GenerateDocumentIdForStorageAsync(entity).ConfigureAwait(false);
             _generateEntityIdOnTheClient.TrySetIdentity(entity, id); //set Id property if it was null
             return id;
         }
