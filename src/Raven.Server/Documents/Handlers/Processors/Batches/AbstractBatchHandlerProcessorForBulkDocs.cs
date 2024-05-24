@@ -5,12 +5,16 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Json;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -55,8 +59,9 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
 
     public async ValueTask ExecuteInternalAsync()
     {
-        var indexBatchOptions = GetIndexBatchOptions();
-        var replicationBatchOptions = GetReplicationBatchOptions();
+        var parameters = QueryStringParameters.Create(HttpContext.Request);
+        var indexBatchOptions = GetIndexBatchOptions(parameters);
+        var replicationBatchOptions = GetReplicationBatchOptions(parameters);
 
         using (var commandsReader = GetCommandsReader())
         using (ContextPool.AllocateOperationContext(out TOperationContext context))
@@ -113,9 +118,8 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                 if (indexBatchOptions != null)
                     command.ModifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                var noReply = RequestHandler.GetBoolValueQueryString("noreply", required: false);
-                if (noReply.HasValue)
-                    command.IncludeReply = noReply.Value == false;
+                if (parameters.NoReply.HasValue)
+                    command.IncludeReply = parameters.NoReply.Value == false;
 
                 var results = await HandleTransactionAsync(context, command, indexBatchOptions, replicationBatchOptions).ConfigureAwait(false);
 
@@ -142,9 +146,9 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
         }
     }
 
-    private IndexBatchOptions GetIndexBatchOptions()
+    private static IndexBatchOptions GetIndexBatchOptions(QueryStringParameters parameters)
     {
-        var waitForIndexesTimeout = RequestHandler.GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
+        var waitForIndexesTimeout = parameters.WaitForIndexesTimeout;
         if (waitForIndexesTimeout == null)
             return null;
 
@@ -152,32 +156,23 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
         {
             WaitForIndexes = true,
             WaitForIndexesTimeout = waitForIndexesTimeout.Value,
-            ThrowOnTimeoutInWaitForIndexes = RequestHandler.GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true,
-            WaitForSpecificIndexes = RequestHandler.GetStringValuesQueryString("waitForSpecificIndex", required: false)
+            ThrowOnTimeoutInWaitForIndexes = parameters.WaitForIndexThrow,
+            WaitForSpecificIndexes = parameters.WaitForSpecificIndexes
         };
     }
 
-    private ReplicationBatchOptions GetReplicationBatchOptions()
+    private static ReplicationBatchOptions GetReplicationBatchOptions(QueryStringParameters parameters)
     {
-        var waitForReplicasTimeout = RequestHandler.GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
+        var waitForReplicasTimeout = parameters.WaitForReplicasTimeout;
         if (waitForReplicasTimeout == null)
             return null;
-
-        var numberOfReplicasStr = RequestHandler.GetStringQueryString("numberOfReplicasToWaitFor", required: false);
-        var numberOfReplicas = 1;
-        var majority = numberOfReplicasStr == "majority";
-        if (majority == false)
-        {
-            if (int.TryParse(numberOfReplicasStr, out numberOfReplicas) == false)
-                RequestHandler.ThrowInvalidInteger("numberOfReplicasToWaitFor", numberOfReplicasStr);
-        }
 
         return new ReplicationBatchOptions
         {
             WaitForReplicas = true,
-            Majority = majority,
-            NumberOfReplicasToWaitFor = numberOfReplicas,
-            ThrowOnTimeoutInWaitForReplicas = RequestHandler.GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas", required: false) ?? true,
+            Majority = parameters.Majority,
+            NumberOfReplicasToWaitFor = parameters.NumberOfReplicasToWaitFor,
+            ThrowOnTimeoutInWaitForReplicas = parameters.ThrowOnTimeoutInWaitForReplicas,
             WaitForReplicasTimeout = waitForReplicasTimeout.Value
         };
     }
@@ -209,5 +204,101 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
     private static void ThrowNotSupportedType(string contentType)
     {
         throw new InvalidOperationException($"The requested Content type '{contentType}' is not supported. Use 'application/json' or 'multipart/mixed'.");
+    }
+
+    private sealed class QueryStringParameters : AbstractQueryStringParameters
+    {
+        private static readonly ReadOnlyMemory<char> MajorityValue = "majority".AsMemory();
+
+        public bool? NoReply;
+
+        public TimeSpan? WaitForIndexesTimeout;
+
+        public bool WaitForIndexThrow = true;
+
+        public StringValues WaitForSpecificIndexes;
+
+        public TimeSpan? WaitForReplicasTimeout;
+
+        public bool Majority;
+
+        public int NumberOfReplicasToWaitFor = 1;
+
+        public bool ThrowOnTimeoutInWaitForReplicas = true;
+
+        private QueryStringParameters([JetBrains.Annotations.NotNull] HttpRequest httpRequest)
+            : base(httpRequest)
+        {
+        }
+
+        protected override void OnFinalize()
+        {
+            if (AnyStringValues() == false)
+                return;
+
+            WaitForSpecificIndexes = ConvertToStringValues("waitForSpecificIndex");
+        }
+
+        protected override void OnValue(QueryStringEnumerable.EncodedNameValuePair pair)
+        {
+            var name = pair.EncodedName;
+
+            if (IsMatch(name, NoReplyQueryStringName))
+            {
+                NoReply = GetBoolValue(name, pair.EncodedValue);
+                return;
+            }
+
+            if (IsMatch(name, WaitForIndexesTimeoutQueryStringName))
+            {
+                WaitForIndexesTimeout = GetTimeSpan(name, pair.EncodedValue);
+                return;
+            }
+
+            if (IsMatch(name, WaitForIndexThrowQueryStringName))
+            {
+                WaitForIndexThrow = GetBoolValue(name, pair.EncodedValue);
+                return;
+            }
+
+            if (IsMatch(name, WaitForSpecificIndexQueryStringName))
+            {
+                AddForStringValues("waitForSpecificIndex", pair.DecodeValue());
+                return;
+            }
+
+            if (IsMatch(name, WaitForReplicasTimeoutQueryStringName))
+            {
+                WaitForReplicasTimeout = GetTimeSpan(name, pair.EncodedValue);
+                return;
+            }
+
+            if (IsMatch(name, NumberOfReplicasToWaitForQueryStringName))
+            {
+                var value = pair.DecodeValue();
+                if (IsMatch(value, MajorityValue))
+                {
+                    Majority = true;
+                    return;
+                }
+
+                NumberOfReplicasToWaitFor = GetIntValue(name, value);
+                return;
+            }
+
+            if (IsMatch(name, ThrowOnTimeoutInWaitForReplicasQueryStringName))
+            {
+                ThrowOnTimeoutInWaitForReplicas = GetBoolValue(name, pair.EncodedValue);
+                return;
+            }
+        }
+
+        public static QueryStringParameters Create(HttpRequest httpRequest)
+        {
+            var parameters = new QueryStringParameters(httpRequest);
+            parameters.Parse();
+
+            return parameters;
+        }
     }
 }

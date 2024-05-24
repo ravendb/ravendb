@@ -348,37 +348,37 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
             if (IsMatch(name, MetadataOnlyQueryStringName))
             {
-                MetadataOnly = GetBoolValue(pair.EncodedValue);
+                MetadataOnly = GetBoolValue(name, pair.EncodedValue);
                 return;
             }
 
             if (IsMatch(name, AddSpatialPropertiesQueryStringName))
             {
-                AddSpatialProperties = GetBoolValue(pair.EncodedValue);
+                AddSpatialProperties = GetBoolValue(name, pair.EncodedValue);
                 return;
             }
 
             if (IsMatch(name, IncludeServerSideQueryQueryStringName))
             {
-                IncludeServerSideQuery = GetBoolValue(pair.EncodedValue);
+                IncludeServerSideQuery = GetBoolValue(name, pair.EncodedValue);
                 return;
             }
 
             if (IsMatch(name, DiagnosticsQueryStringName))
             {
-                Diagnostics = GetBoolValue(pair.EncodedValue);
+                Diagnostics = GetBoolValue(name, pair.EncodedValue);
                 return;
             }
 
             if (IsMatch(name, AddTimeSeriesNamesQueryStringName))
             {
-                AddTimeSeriesNames = GetBoolValue(pair.EncodedValue);
+                AddTimeSeriesNames = GetBoolValue(name, pair.EncodedValue);
                 return;
             }
 
             if (IsMatch(name, DisableAutoIndexCreationQueryStringName))
             {
-                DisableAutoIndexCreation = GetBoolValue(pair.EncodedValue);
+                DisableAutoIndexCreation = GetBoolValue(name, pair.EncodedValue);
                 return;
             }
 
@@ -390,7 +390,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
             if (IsMatch(name, IgnoreLimitQueryStringName))
             {
-                IgnoreLimit = GetBoolValue(pair.EncodedValue);
+                IgnoreLimit = GetBoolValue(name, pair.EncodedValue);
                 return;
             }
         }
