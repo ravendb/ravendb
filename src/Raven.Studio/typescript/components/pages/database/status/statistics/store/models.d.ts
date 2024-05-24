@@ -3,6 +3,7 @@
         name: string;
         isReduceIndex: boolean;
         type: Raven.Client.Documents.Indexes.IndexType;
+        referencedCollections: string[];
     };
 
     details: PerLocationIndexStats[];

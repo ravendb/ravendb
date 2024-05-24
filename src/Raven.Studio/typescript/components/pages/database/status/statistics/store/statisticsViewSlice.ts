@@ -165,6 +165,7 @@ export const statisticsViewSlice = createSlice({
                                 indexStat.Type === "AutoMapReduce" ||
                                 indexStat.Type === "MapReduce" ||
                                 indexStat.Type === "JavaScriptMapReduce",
+                            referencedCollections: indexStat.ReferencedCollections,
                         },
                         details: new Array(locationsCount).fill(null),
                     };

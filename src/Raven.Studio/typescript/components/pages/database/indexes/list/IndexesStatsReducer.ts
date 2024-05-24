@@ -112,6 +112,7 @@ function mapToIndexSharedInfo(stats: IndexStats): IndexSharedInfo {
         collectionNameForReferenceDocuments: stats.PatternReferencesCollectionName,
         searchEngine: stats.SearchEngineType,
         createdTimestamp: genUtils.isServerMinDate(stats.CreatedTimestamp) ? null : new Date(stats.CreatedTimestamp),
+        referencedCollections: stats.ReferencedCollections,
     };
 }
 
