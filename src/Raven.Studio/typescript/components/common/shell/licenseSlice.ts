@@ -29,6 +29,13 @@ export const licenseSlice = createSlice({
     reducers: {
         statusLoaded: (store, { payload: status }: PayloadAction<LicenseStatus>) => {
             store.status = status;
+
+            // 0 in MaxClusterSize means Infinity, in other fields null means Infinity
+            // for consistency we convert 0 to null
+            if ("MaxClusterSize" in store.status.Attributes && store.status.Attributes.MaxClusterSize === 0) {
+                store.status.Attributes.MaxClusterSize = null;
+                store.status.MaxClusterSize = null;
+            }
         },
         supportLoaded: (store, { payload: status }: PayloadAction<Raven.Server.Commercial.LicenseSupportInfo>) => {
             store.support = status;

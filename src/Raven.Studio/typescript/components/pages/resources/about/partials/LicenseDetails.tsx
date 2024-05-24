@@ -69,8 +69,17 @@ function LicenseTable(props: LicenseTableProps) {
     };
 
     const getEffectiveValue = (feature: FeatureAvailabilityItem, column: LicenseColumn) => {
-        const valueFromLicense = column === currentColumn ? (licenseStatus[feature.fieldInLicense] as any) : null;
-        return valueFromLicense ?? feature[column].value;
+        if (column !== currentColumn || !feature.fieldInLicense) {
+            return feature[column].value;
+        }
+
+        const licenseValue = licenseStatus[feature.fieldInLicense];
+
+        if (licenseValue === null) {
+            return Infinity;
+        }
+
+        return licenseValue;
     };
 
     const filteredSections = filterFeatureAvailabilitySection(
@@ -1065,10 +1074,12 @@ interface FeatureAvailabilitySection {
     items: FeatureAvailabilityItem[];
 }
 
+type DisplayableLicenseField = keyof Omit<LicenseStatus, "Attributes">;
+
 interface FeatureAvailabilityItem {
     name: string;
 
-    fieldInLicense: keyof LicenseStatus;
+    fieldInLicense: DisplayableLicenseField;
     community: ValueData;
     professional: ValueData;
     enterprise: ValueData;
