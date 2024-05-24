@@ -5,6 +5,8 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Queries.Timings;
@@ -18,6 +20,7 @@ using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Queries;
@@ -34,11 +37,12 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
     protected abstract IDisposable AllocateContextForQueryOperation(out TQueryContext queryContext, out TOperationContext context);
 
-    private async ValueTask HandleDebugAsync(IndexQueryServerSide query, TQueryContext queryContext, TOperationContext context, string debug, long? existingResultEtag, OperationCancelToken token)
+    private async ValueTask HandleDebugAsync(IndexQueryServerSide query, TQueryContext queryContext, TOperationContext context, QueryStringParameters parameters, long? existingResultEtag, OperationCancelToken token)
     {
+        var debug = parameters.Debug;
         if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
         {
-            var ignoreLimit = RequestHandler.GetBoolValueQueryString("ignoreLimit", required: false) ?? false;
+            var ignoreLimit = parameters.IgnoreLimit;
             await IndexEntriesAsync(queryContext, context, query, existingResultEtag, ignoreLimit, token);
             return;
         }
@@ -99,15 +103,12 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                 using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
                 using (AllocateContextForQueryOperation(out var queryContext, out var context))
                 {
-                    var addSpatialProperties = RequestHandler.GetBoolValueQueryString("addSpatialProperties", required: false) ?? false;
-                    var metadataOnly = RequestHandler.GetBoolValueQueryString("metadataOnly", required: false) ?? false;
-                    var shouldReturnServerSideQuery = RequestHandler.GetBoolValueQueryString("includeServerSideQuery", required: false) ?? false;
+                    var parameters = QueryStringParameters.Create(HttpContext.Request);
+                    var indexQuery = await GetIndexQueryAsync(context, QueryMethod, tracker, parameters.AddSpatialProperties);
 
-                    var indexQuery = await GetIndexQueryAsync(context, QueryMethod, tracker, addSpatialProperties);
-
-                    indexQuery.Diagnostics = RequestHandler.GetBoolValueQueryString("diagnostics", required: false) ?? false ? new List<string>() : null;
-                    indexQuery.AddTimeSeriesNames = RequestHandler.GetBoolValueQueryString("addTimeSeriesNames", false) ?? false;
-                    indexQuery.DisableAutoIndexCreation = RequestHandler.GetBoolValueQueryString("disableAutoIndexCreation", false) ?? false;
+                    indexQuery.Diagnostics = parameters.Diagnostics ? new List<string>() : null;
+                    indexQuery.AddTimeSeriesNames = parameters.AddTimeSeriesNames;
+                    indexQuery.DisableAutoIndexCreation = parameters.DisableAutoIndexCreation;
 
                     if (RequestHandler.HttpContext.Request.IsFromOrchestrator())
                         indexQuery.ReturnOptions = IndexQueryServerSide.QueryResultReturnOptions.CreateForSharding(indexQuery);
@@ -116,13 +117,11 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
                     var existingResultEtag = RequestHandler.GetLongFromHeaders(Constants.Headers.IfNoneMatch);
 
-                    var debug = RequestHandler.GetStringQueryString("debug", required: false);
-
                     EnsureQueryContextInitialized(queryContext, indexQuery);
 
-                    if (string.IsNullOrWhiteSpace(debug) == false)
+                    if (string.IsNullOrWhiteSpace(parameters.Debug) == false)
                     {
-                        await HandleDebugAsync(indexQuery, queryContext, context, debug, existingResultEtag, token);
+                        await HandleDebugAsync(indexQuery, queryContext, context, parameters, existingResultEtag, token);
                         return;
                     }
 
@@ -144,7 +143,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                     QueryResultServerSide<TQueryResult> result = null;
                     try
                     {
-                        result = await GetQueryResultsAsync(indexQuery, queryContext, existingResultEtag, metadataOnly, token);
+                        result = await GetQueryResultsAsync(indexQuery, queryContext, existingResultEtag, parameters.MetadataOnly, token);
                     }
                     catch (IndexDoesNotExistException)
                     {
@@ -174,8 +173,8 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                         {
                             result.Timings = indexQuery.Timings?.ToTimings();
 
-                            (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly,
-                                WriteAdditionalData(indexQuery, shouldReturnServerSideQuery), token.Token);
+                            (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentQueryResultAsync(context, result, parameters.MetadataOnly,
+                                WriteAdditionalData(indexQuery, parameters.IncludeServerSideQuery), token.Token);
                             await writer.MaybeOuterFlushAsync();
                         }
 
@@ -314,5 +313,94 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
     {
         if (TrafficWatchManager.HasRegisteredClients && indexQuery.Timings != null)
             HttpContext.Items[nameof(QueryTimings)] = indexQuery.Timings.ToTimings();
+    }
+
+    private sealed class QueryStringParameters : AbstractQueryStringParameters
+    {
+        public bool MetadataOnly;
+
+        public bool AddSpatialProperties;
+
+        public bool IncludeServerSideQuery;
+
+        public bool Diagnostics;
+
+        public bool AddTimeSeriesNames;
+
+        public bool DisableAutoIndexCreation;
+
+        public string Debug;
+
+        public bool IgnoreLimit;
+
+        private QueryStringParameters([NotNull] HttpRequest httpRequest)
+            : base(httpRequest)
+        {
+        }
+
+        protected override void OnFinalize()
+        {
+        }
+
+        protected override void OnValue(QueryStringEnumerable.EncodedNameValuePair pair)
+        {
+            var name = pair.EncodedName;
+
+            if (IsMatch(name, MetadataOnlyQueryStringName))
+            {
+                MetadataOnly = GetBoolValue(pair.EncodedValue);
+                return;
+            }
+
+            if (IsMatch(name, AddSpatialPropertiesQueryStringName))
+            {
+                AddSpatialProperties = GetBoolValue(pair.EncodedValue);
+                return;
+            }
+
+            if (IsMatch(name, IncludeServerSideQueryQueryStringName))
+            {
+                IncludeServerSideQuery = GetBoolValue(pair.EncodedValue);
+                return;
+            }
+
+            if (IsMatch(name, DiagnosticsQueryStringName))
+            {
+                Diagnostics = GetBoolValue(pair.EncodedValue);
+                return;
+            }
+
+            if (IsMatch(name, AddTimeSeriesNamesQueryStringName))
+            {
+                AddTimeSeriesNames = GetBoolValue(pair.EncodedValue);
+                return;
+            }
+
+            if (IsMatch(name, DisableAutoIndexCreationQueryStringName))
+            {
+                DisableAutoIndexCreation = GetBoolValue(pair.EncodedValue);
+                return;
+            }
+
+            if (IsMatch(name, DebugQueryStringName))
+            {
+                Debug = pair.DecodeValue().ToString();
+                return;
+            }
+
+            if (IsMatch(name, IgnoreLimitQueryStringName))
+            {
+                IgnoreLimit = GetBoolValue(pair.EncodedValue);
+                return;
+            }
+        }
+
+        public static QueryStringParameters Create(HttpRequest httpRequest)
+        {
+            var parameters = new QueryStringParameters(httpRequest);
+            parameters.Parse();
+
+            return parameters;
+        }
     }
 }

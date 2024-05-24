@@ -50,6 +50,20 @@ internal abstract class AbstractQueryStringParameters
 
     protected static readonly ReadOnlyMemory<char> CountValueQueryStringName = "countValue".AsMemory();
 
+    protected static readonly ReadOnlyMemory<char> AddSpatialPropertiesQueryStringName = "addSpatialProperties".AsMemory();
+
+    protected static readonly ReadOnlyMemory<char> IncludeServerSideQueryQueryStringName = "includeServerSideQuery".AsMemory();
+
+    protected static readonly ReadOnlyMemory<char> DiagnosticsQueryStringName = "diagnostics".AsMemory();
+
+    protected static readonly ReadOnlyMemory<char> AddTimeSeriesNamesQueryStringName = "addTimeSeriesNames".AsMemory();
+
+    protected static readonly ReadOnlyMemory<char> DisableAutoIndexCreationQueryStringName = "disableAutoIndexCreation".AsMemory();
+
+    protected static readonly ReadOnlyMemory<char> DebugQueryStringName = "debug".AsMemory();
+
+    protected static readonly ReadOnlyMemory<char> IgnoreLimitQueryStringName = "ignoreLimit".AsMemory();
+
     private Dictionary<string, List<string>> _tempStringValues;
 
     protected AbstractQueryStringParameters([NotNull] HttpRequest httpRequest)
