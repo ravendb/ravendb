@@ -2674,6 +2674,7 @@ namespace Raven.Client.Util
         /// <summary>
         /// This is a copy of Lambda2Js.EnumConversionExtension with modifications to always treat dictionary enum keys as strings (isDictionaryKey).
         /// </summary>
+        /// <see href="https://github.com/gearz-lab/lambda2js/blob/21fe75aa05ee1064d1a5984e9332f68d8d803e7c/Lambda2Js/Plugins/EnumConversionExtension.cs"/>
         internal sealed class EnumConversionExtension : JavascriptConversionExtension
         {
             private readonly EnumOptions opts;
