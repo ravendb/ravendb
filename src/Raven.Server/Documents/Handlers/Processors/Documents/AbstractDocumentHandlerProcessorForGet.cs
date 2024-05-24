@@ -586,7 +586,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
             if (IsMatch(name, MetadataOnlyQueryStringName))
             {
-                MetadataOnly = GetBoolValue(pair.EncodedValue);
+                MetadataOnly = GetBoolValue(name, pair.EncodedValue);
                 return;
             }
 

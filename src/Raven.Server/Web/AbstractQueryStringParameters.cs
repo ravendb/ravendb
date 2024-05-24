@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using JetBrains.Annotations;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
@@ -64,9 +64,23 @@ internal abstract class AbstractQueryStringParameters
 
     protected static readonly ReadOnlyMemory<char> IgnoreLimitQueryStringName = "ignoreLimit".AsMemory();
 
+    protected static readonly ReadOnlyMemory<char> NoReplyQueryStringName = "noreply".AsMemory();
+
+    protected static readonly ReadOnlyMemory<char> WaitForIndexesTimeoutQueryStringName = "waitForIndexesTimeout".AsMemory();
+
+    protected static readonly ReadOnlyMemory<char> WaitForIndexThrowQueryStringName = "waitForIndexThrow".AsMemory();
+
+    protected static readonly ReadOnlyMemory<char> WaitForSpecificIndexQueryStringName = "waitForSpecificIndex".AsMemory();
+
+    protected static readonly ReadOnlyMemory<char> WaitForReplicasTimeoutQueryStringName = "waitForReplicasTimeout".AsMemory();
+
+    protected static readonly ReadOnlyMemory<char> NumberOfReplicasToWaitForQueryStringName = "numberOfReplicasToWaitFor".AsMemory();
+
+    protected static readonly ReadOnlyMemory<char> ThrowOnTimeoutInWaitForReplicasQueryStringName = "throwOnTimeoutInWaitForReplicas".AsMemory();
+
     private Dictionary<string, List<string>> _tempStringValues;
 
-    protected AbstractQueryStringParameters([NotNull] HttpRequest httpRequest)
+    protected AbstractQueryStringParameters(HttpRequest httpRequest)
     {
         _httpRequest = httpRequest ?? throw new ArgumentNullException(nameof(httpRequest));
     }
@@ -77,6 +91,8 @@ internal abstract class AbstractQueryStringParameters
             OnValue(pair);
 
         OnFinalize();
+
+        _tempStringValues = null;
     }
 
     protected void AddForStringValues(string name, ReadOnlyMemory<char> value)
@@ -107,14 +123,54 @@ internal abstract class AbstractQueryStringParameters
         return name.Span.Equals(expectedName.Span, StringComparison.OrdinalIgnoreCase);
     }
 
-    protected static bool GetBoolValue(ReadOnlyMemory<char> value)
+    protected static bool GetBoolValue(ReadOnlyMemory<char> name, ReadOnlyMemory<char> value)
     {
-        return bool.Parse(value.Span);
+        if (bool.TryParse(value.Span, out var result))
+            return result;
+
+        ThrowInvalidBool(name, value);
+        return default;
+    }
+
+    protected static int GetIntValue(ReadOnlyMemory<char> name, ReadOnlyMemory<char> value)
+    {
+        if (int.TryParse(value.Span, out var result))
+            return result;
+
+        ThrowInvalidInt(name, value);
+        return default;
     }
 
     protected static bool TryGetEnumValue<TEnum>(ReadOnlyMemory<char> value, out TEnum outValue)
         where TEnum : struct
     {
         return Enum.TryParse(value.Span, ignoreCase: true, out outValue);
+    }
+
+    protected static TimeSpan GetTimeSpan(ReadOnlyMemory<char> name, ReadOnlyMemory<char> value)
+    {
+        if (TimeSpan.TryParse(value.Span, out TimeSpan result))
+            return result;
+
+        ThrowInvalidTimeSpan(name, value);
+        return default;
+    }
+
+    [DoesNotReturn]
+    private static void ThrowInvalidTimeSpan(ReadOnlyMemory<char> name, ReadOnlyMemory<char> value)
+    {
+        throw new ArgumentException($"Could not parse query string '{name}' as timespan val {value}");
+    }
+
+    [DoesNotReturn]
+    private static void ThrowInvalidBool(ReadOnlyMemory<char> name, ReadOnlyMemory<char> value)
+    {
+        throw new ArgumentException($"Could not parse query string '{name}' as bool val {value}");
+    }
+
+    [DoesNotReturn]
+    private static void ThrowInvalidInt(ReadOnlyMemory<char> name, ReadOnlyMemory<char> value)
+    {
+        throw new ArgumentException($"Could not parse query string '{name}' as int val {value}");
     }
 }
