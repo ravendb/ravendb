@@ -429,7 +429,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             </div>
                         </RichPanelDetailItem>
                     )}
-
+                    <ReferencedCollections collections={index.referencedCollections} />
                     {(hasReplacement || isReplacement) && (
                         <RichPanelDetailItem>
                             {hasReplacement && (
@@ -538,5 +538,24 @@ function InlineDetails(props: InlineDetailsProps) {
         </>
     );
 }
+
+interface ReferencedCollectionsProps {
+    collections: string[];
+}
+
+function ReferencedCollections({ collections }: ReferencedCollectionsProps) {
+    if (!collections?.length) {
+        return null;
+    }
+
+    return (
+        <RichPanelDetailItem>
+            <Icon icon="referenced-collections" title="Referenced collections" />
+            <div style={{ maxWidth: "300px" }}>{collections.join(", ")}</div>
+        </RichPanelDetailItem>
+    );
+}
+
+export default ReferencedCollections;
 
 const indexUniqueId = (index: IndexSharedInfo) => "index_" + index.name;
