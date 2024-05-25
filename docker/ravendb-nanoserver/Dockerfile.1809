@@ -2,7 +2,14 @@
 
 FROM mcr.microsoft.com/powershell:lts-nanoserver-1809
 
-ENV RAVEN_ARGS='' RAVEN_SETTINGS='' RAVEN_Setup_Mode='Initial' RAVEN_DataDir='RavenData' RAVEN_ServerUrl_Tcp='38888' RAVEN_AUTO_INSTALL_CA='true' RAVEN_IN_DOCKER='true'
+ENV RAVEN_ARGS='' `
+    RAVEN_SETTINGS='' `
+    RAVEN_Setup_Mode='Initial' `
+    RAVEN_DataDir='RavenData' `
+    RAVEN_ServerUrl_Tcp='38888' `
+    RAVEN_AUTO_INSTALL_CA='true' `
+    RAVEN_IN_DOCKER='true' `
+    RAVEN_Security_UnsecuredAccessAllowed='PrivateNetwork'
 
 EXPOSE 8080 38888 161
 
