@@ -55,8 +55,14 @@ namespace Raven.Server.Documents.Indexes.Static
                         }
                         catch (StatementsCountOverflowException e)
                         {
-                            throw new Raven.Client.Exceptions.Documents.Patching.JavaScriptException(
-                                $"The maximum number of statements executed has been reached. You can configure it by modifying the configuration option: '{RavenConfiguration.GetKey(x => x.Indexing.MaxStepsForScript)}'.", e);
+                            throw new Client.Exceptions.Documents.Patching.JavaScriptException(
+                                $"The maximum number of statements executed has been reached. You can configure it by modifying the configuration option: '{RavenConfiguration.GetKey(x => x.Indexing.MaxStepsForScript)}'.",
+                                e);
+                        }
+                        catch (JavaScriptException jse) when (jse.Message.Contains("String compilation has been disabled in engine options"))
+                        {
+                            throw new Client.Exceptions.Documents.Patching.JavaScriptException(
+                                $"String compilation has been disabled in engine options. You can configure it by modifying the configuration option: '{RavenConfiguration.GetKey(x => x.Indexing.AllowStringCompilation)}'.", jse);;
                         }
                         catch (JavaScriptException jse)
                         {

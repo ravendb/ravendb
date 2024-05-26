@@ -230,7 +230,7 @@ function map(name, lambda) {
                     .AddObjectConverter(new JintDateTimeConverter())
                     .AddObjectConverter(new JintTimeSpanConverter())
                     .LocalTimeZone(TimeZoneInfo.Utc)
-                    .StringCompilationAllowed = false;
+                    .StringCompilationAllowed = indexConfiguration.AllowStringCompilation;
             });
 
             using (_engine.DisableMaxStatements())
