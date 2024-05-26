@@ -88,7 +88,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <param name="name">The name of the time series to include.</param>
         /// <param name="type">Indicates how to retrieve the time series entries.
         /// When set to 'Last', retrieves entries from the end of the time series within the specified time range. <br/>
-        /// <remarks>Note that <typeparamref name="TimeSeriesRangeType"></typeparamref> cannot be 'None' when time is specified.</remarks></param>
+        /// <remarks>Note that <see cref="TimeSeriesRangeType"/> cannot be 'None' when time is specified.</remarks></param>
         /// <param name="time">The time range to consider when retrieving time series entries.</param>
         TBuilder IncludeTimeSeries(string name, TimeSeriesRangeType type, TimeValue time);
 
@@ -96,7 +96,7 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <param name="name">The name of the time series to include.</param>
         /// <param name="type">Indicates how to retrieve the time series entries.
         /// When set to 'Last', retrieves the last X entries, where X is determined by the 'count' parameter. <br/>
-        /// <remarks>Note that <typeparamref name="TimeSeriesRangeType"></typeparamref> cannot be 'None' when count is specified.</remarks></param>
+        /// <remarks>Note that <see cref="TimeSeriesRangeType"/> cannot be 'None' when count is specified.</remarks></param>
         /// <param name="count">The maximum number of entries to take when retrieving time series entries.</param>
         TBuilder IncludeTimeSeries(string name, TimeSeriesRangeType type, int count);
 
