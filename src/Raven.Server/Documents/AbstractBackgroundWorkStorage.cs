@@ -143,10 +143,10 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         {
         }
 
-        public DocumentExpirationInfo(Slice ticksAsSlice, Slice clonedId, string id)
+        public DocumentExpirationInfo(Slice ticks, Slice lowerId, string id)
         {
-            Ticks = ticksAsSlice;
-            LowerId = clonedId;
+            Ticks = ticks;
+            LowerId = lowerId;
             Id = id;
         }
     }

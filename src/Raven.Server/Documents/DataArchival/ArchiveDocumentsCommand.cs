@@ -48,13 +48,13 @@ internal class ArchiveDocumentsCommandDto: IReplayableCommandDto<DocumentsOperat
         var toArchive = new Queue<DocumentExpirationInfo>();
         foreach (var item in ToArchive)
         {
-            toArchive.Enqueue(new DocumentExpirationInfo(item.Item1, item.Item2, item.Item3));
+            toArchive.Enqueue(new DocumentExpirationInfo(item.Ticks.Clone(context.Allocator), item.LowerId.Clone(context.Allocator), item.Id));
         }
         var command = new ArchiveDocumentsCommand(toArchive, database, CurrentTime);
         return command;
     }
 
-    public (Slice, Slice, string)[] ToArchive { get; set; }
+    public (Slice Ticks, Slice LowerId, string Id)[] ToArchive { get; set; }
 
     public DateTime CurrentTime { get; set; }
 }
