@@ -88,6 +88,7 @@ public sealed class PutShardedSubscriptionCommand : PutSubscriptionCommand
             LastBatchAckTime = null,
             Disabled = Disabled,
             MentorNode = MentorNode,
+            PinToMentorNode = PinToMentorNode,
             LastClientConnectionTime = null,
             ShardingState = new SubscriptionShardingState
             {

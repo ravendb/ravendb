@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Subscriptions;
 using Sparrow.Json;
 
 namespace Raven.Client.Extensions
@@ -54,6 +55,49 @@ namespace Raven.Client.Extensions
                 writer.WritePropertyName(nameof(query.ProjectionBehavior));
                 writer.WriteString(query.ProjectionBehavior.ToString());
             }
+
+            writer.WriteEndObject();
+        }
+
+        public static void WriteSubscriptionUpdateOptions(this AbstractBlittableJsonTextWriter writer, SubscriptionUpdateOptions options)
+        {
+            writer.WriteStartObject();
+
+            if (options.Id.HasValue)
+            {
+                writer.WritePropertyName(nameof(options.Id));
+                writer.WriteInteger(options.Id.Value);
+                writer.WriteComma();
+            }
+
+            if (options.PinToMentorNodeWasSet)
+            {
+                writer.WritePropertyName(nameof(options.PinToMentorNode));
+                writer.WriteBool(options.PinToMentorNode);
+                writer.WriteComma();
+            }
+
+            writer.WritePropertyName(nameof(options.CreateNew));
+            writer.WriteBool(options.CreateNew);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(options.Name));
+            writer.WriteString(options.Name);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(options.Query));
+            writer.WriteString(options.Query);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(options.ChangeVector));
+            writer.WriteString(options.ChangeVector);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(options.MentorNode));
+            writer.WriteString(options.MentorNode);
+            writer.WriteComma();
+            writer.WritePropertyName(nameof(options.Disabled));
+            writer.WriteBool(options.Disabled);
 
             writer.WriteEndObject();
         }
