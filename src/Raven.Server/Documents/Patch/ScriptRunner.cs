@@ -50,6 +50,7 @@ namespace Raven.Server.Documents.Patch
     public sealed class ScriptRunner
     {
         private static readonly string MaxStepsForScriptConfigurationKey = RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript);
+        private static readonly string AllowStringCompilationKey = RavenConfiguration.GetKey(x => x.Patching.AllowStringCompilation);
 
         public sealed class Holder
         {
@@ -277,7 +278,7 @@ namespace Raven.Server.Documents.Patch
                         .AddObjectConverter(new JintDateTimeConverter())
                         .AddObjectConverter(new JintTimeSpanConverter())
                         .LocalTimeZone(TimeZoneInfo.Utc)
-                        .StringCompilationAllowed = false;
+                        .StringCompilationAllowed = _configuration.Patching.AllowStringCompilation;
                 });
 
                 JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
@@ -2118,9 +2119,15 @@ namespace Raven.Server.Documents.Patch
                 catch (StatementsCountOverflowException e)
                 {
                     JavaScriptUtils.Clear();
-                    throw new  Raven.Client.Exceptions.Documents.Patching.JavaScriptException(
+                    throw new Client.Exceptions.Documents.Patching.JavaScriptException(
                         $"The maximum number of statements executed have been reached - {_configuration.Patching.MaxStepsForScript}. You can configure it by modifying the configuration option: '{MaxStepsForScriptConfigurationKey}'.",
                         e);
+                }
+                catch (JavaScriptException jse) when (jse.Message.Contains("String compilation has been disabled in engine options"))
+                {
+                    JavaScriptUtils.Clear();
+                    throw new Client.Exceptions.Documents.Patching.JavaScriptException(
+                        $"String compilation has been disabled in engine options. You can configure it by modifying the configuration option: '{AllowStringCompilationKey}'.", jse);
                 }
                 catch (JavaScriptException e)
                 {
