@@ -17,7 +17,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("Enables calling 'eval' with custom code and function constructors taking function code as string")]
         [DefaultValue(false)]
-        [ConfigurationEntry("Patching.AllowStringCompilation", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry("Patching.AllowStringCompilation", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool AllowStringCompilation { get; set; }
 
         [Description("Enables Strict Mode in JavaScript engine. Default: true")]
