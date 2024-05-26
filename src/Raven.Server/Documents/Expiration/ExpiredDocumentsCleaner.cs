@@ -234,14 +234,14 @@ namespace Raven.Server.Documents.Expiration
             var queue = new Queue<ExpirationStorage.DocumentExpirationInfo>();
             foreach (var item in Expired)
             {
-                queue.Enqueue(new ExpirationStorage.DocumentExpirationInfo(item.Item1.Clone(context.Allocator), item.Item2.Clone(context.Allocator), item.Item3));
+                queue.Enqueue(new ExpirationStorage.DocumentExpirationInfo(item.Ticks.Clone(context.Allocator), item.LowerId.Clone(context.Allocator), item.Id));
             }
 
             var command = new ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand(queue, database, ForExpiration, CurrentTime);
             return command;
         }
 
-        public (Slice, Slice, string)[] Expired { get; set; }
+        public (Slice Ticks, Slice LowerId, string Id)[] Expired { get; set; }
 
         public bool ForExpiration { get; set; }
 
