@@ -36,6 +36,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             using (context.OpenReadTransaction())
             {
                 var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), null);
+                bool pinToMentorNodeWasSet = json.TryGet(nameof(SubscriptionUpdateOptions.PinToMentorNode), out bool pinToMentorNode);
                 var options = JsonDeserializationServer.SubscriptionUpdateOptions(json);
                 var id = options.Id;
 
@@ -99,6 +100,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 options.MentorNode ??= state.MentorNode;
                 options.Query ??= state.Query;
                 options.ArchivedDataProcessingBehavior = state.ArchivedDataProcessingBehavior;
+
+                if (pinToMentorNodeWasSet == false)
+                    options.PinToMentorNode = state.PinToMentorNode;
 
                 if (SubscriptionsHandler.SubscriptionHasChanges(options, state) == false)
                 {

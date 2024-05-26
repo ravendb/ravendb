@@ -933,15 +933,20 @@ namespace FastTests.Client.Subscriptions
         }
 
         [RavenTheory(RavenTestCategory.Subscriptions, LicenseRequired = true)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task CanUpdateSubscriptionById(Options options)
+        [RavenData(true, null, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, null, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(true, false, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, true, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUpdateSubscriptionById(Options options, bool create, bool? update)
         {
             using (var store = GetDocumentStore(options))
             {
                 store.Subscriptions.Create(new SubscriptionCreationOptions
                 {
                     Query = "from Users",
-                    Name = "Created"
+                    Name = "Created",
+                    MentorNode = "A",
+                    PinToMentorNode = create
                 });
 
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
@@ -949,14 +954,28 @@ namespace FastTests.Client.Subscriptions
                 Assert.Equal(1, subscriptions.Count);
                 Assert.Equal("Created", state.SubscriptionName);
                 Assert.Equal("from Users", state.Query);
+                Assert.Equal("A", state.MentorNode);
+                Assert.Equal(create, state.PinToMentorNode);
 
                 var newQuery = "from Users where Age > 18";
 
-                store.Subscriptions.Update(new SubscriptionUpdateOptions
+                if (update == null)
                 {
-                    Query = newQuery,
-                    Id = state.SubscriptionId
-                });
+                    store.Subscriptions.Update(new SubscriptionUpdateOptions
+                    {
+                        Query = newQuery,
+                        Id = state.SubscriptionId
+                    });
+                }
+                else
+                {
+                    store.Subscriptions.Update(new SubscriptionUpdateOptions
+                    {
+                        Query = newQuery,
+                        Id = state.SubscriptionId,
+                        PinToMentorNode = update.Value
+                    });
+                }
 
                 var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 var newState = newSubscriptions.First();
@@ -964,6 +983,16 @@ namespace FastTests.Client.Subscriptions
                 Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
                 Assert.Equal(newQuery, newState.Query);
                 Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
+                Assert.Equal(state.MentorNode, newState.MentorNode);
+                if (update == null)
+                {
+                    Assert.Equal(state.PinToMentorNode, newState.PinToMentorNode);
+                }
+                else
+                {
+                    Assert.Equal(update.Value, newState.PinToMentorNode);
+                    Assert.NotEqual(create, newState.PinToMentorNode);
+                }
             }
         }
 
