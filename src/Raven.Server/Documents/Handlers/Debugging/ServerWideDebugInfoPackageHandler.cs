@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (ctx.OpenReadTransaction())
                 topology = ServerStore.GetClusterTopology(ctx);
 
-            var timeoutInSecPerNode = GetIntValueQueryString("timeoutInSecPerNode", false) ?? 60;
+            var timeoutInSecPerNode = GetIntValueQueryString("timeoutInSecPerNode", false) ?? 60 * 60;
             var clusterOperationToken = CreateHttpRequestBoundOperationToken();
             var type = GetDebugInfoPackageContentType();
             var databases = GetStringValuesQueryString("database", required: false);
