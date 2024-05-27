@@ -1,13 +1,17 @@
 ﻿using System;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using SlowTests.Issues;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Tests.Infrastructure;
@@ -80,6 +84,49 @@ namespace SlowTests.Sharding.Issues
 
                     var expectedMsg = $"An error occurred while attempting to clean up bucket '{fromBucket}' from source shard '{fromShard}' [{db1.Name}].";
                     Assert.Equal(expectedMsg, msg);
+                }
+            }
+        }
+
+        private sealed class StartManualReshardingOperation : IMaintenanceOperation
+        {
+            private readonly long _fromBucket;
+            private readonly long _toBucket;
+            private readonly int _toShard;
+
+            public StartManualReshardingOperation(long fromBucket, long toBucket, int toShard)
+            {
+                _fromBucket = fromBucket;
+                _toBucket = toBucket;
+                _toShard = toShard;
+            }
+
+            public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new StartManualReshardingCommand(_fromBucket, _toBucket, _toShard);
+            }
+
+            private sealed class StartManualReshardingCommand : RavenCommand
+            {
+                private readonly long _fromBucket;
+                private readonly long _toBucket;
+                private readonly int _toShard;
+
+                public StartManualReshardingCommand(long fromBucket, long toBucket, int toShard)
+                {
+                    _fromBucket = fromBucket;
+                    _toBucket = toBucket;
+                    _toShard = toShard;
+                }
+
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/admin/resharding/start?fromBucket={_fromBucket}&toBucket={_toBucket}&toShard={_toShard}&database={node.Database}";
+
+                    return new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Post
+                    };
                 }
             }
         }
