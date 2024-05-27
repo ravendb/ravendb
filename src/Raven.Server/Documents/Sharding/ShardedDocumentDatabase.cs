@@ -31,7 +31,6 @@ namespace Raven.Server.Documents.Sharding;
 public sealed class ShardedDocumentDatabase : DocumentDatabase
 {
     private readonly Logger _logger;
-    private readonly ShardedDatabaseContext _shardedDatabaseContext;
 
     public readonly int ShardNumber;
     
@@ -51,7 +50,6 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
         Smuggler = new ShardedDatabaseSmugglerFactory(this);
 
         _logger = LoggingSource.Instance.GetLogger<ShardedDocumentDatabase>(Name);
-        _shardedDatabaseContext = serverStore.DatabasesLandlord.TryGetOrCreateDatabase(ShardedDatabaseName).DatabaseContext;
     }
 
     protected override byte[] ReadSecretKey(TransactionOperationContext context) => ServerStore.GetSecretKey(context, ShardedDatabaseName);
@@ -246,8 +244,8 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
                     return;
                 }
 
-                await Task.Delay(delay);
-                delay = delay.Add(TimeSpan.FromSeconds(1));
+                await Task.Delay(delay, cancellationToken: DatabaseShutdown);
+                delay = delay.Multiply(2);
                 continue;
             }
 
@@ -256,6 +254,7 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
                 // no documents in the bucket / everything was deleted
                 case DeleteBucketCommand.DeleteBucketResult.Empty:
                     await ServerStore.Sharding.SourceMigrationCleanup(ShardedDatabaseName, bucket, migrationIndex);
+                    DismissNotificationOnDeleteBucketSuccessIfNeeded();
                     return;
                 // some documents skipped and left in the bucket
                 case DeleteBucketCommand.DeleteBucketResult.Skipped:
@@ -263,6 +262,7 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
                 // we have more docs, batch limit reached.
                 case DeleteBucketCommand.DeleteBucketResult.FullBatch:
                 case DeleteBucketCommand.DeleteBucketResult.ReachedTransactionLimit:
+                    delay = TimeSpan.FromSeconds(1);
                     continue;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -277,14 +277,17 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
         if (_logger.IsInfoEnabled)
             _logger.Info(msg, exception);
 
-        _shardedDatabaseContext.NotificationCenter.Add(AlertRaised.Create(
+        ServerStore.NotificationCenter.Add(AlertRaised.Create(
             ShardedDatabaseName,
             "Resharding Delay Due to an Error",
             msg,
             AlertType.ClusterTransactionFailure,
             NotificationSeverity.Error,
-            details: new ExceptionDetails(exception)));
+            details: new ExceptionDetails(exception),
+            key: $"{Name}/ReshardingFailure"));
     }
+
+    private void DismissNotificationOnDeleteBucketSuccessIfNeeded() => ServerStore.NotificationCenter.Dismiss($"AlertRaised/ClusterTransactionFailure/{Name}/ReshardingFailure", sendNotificationEvenIfDoesntExist: false);
 
     private async Task WaitForOrchestratorConfirmationAsync(long confirmationIndex)
     {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions.Sharding;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -532,6 +533,16 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
                 // we allow writing the document to the wrong shard to avoid inconsistent data within the shard group
                 // and handle the leftovers at the end of the transaction 
                 context.Transaction.ExecuteDocumentsMigrationAfterCommit();
+                return;
+            }
+
+            if (type == DocumentChangeTypes.Delete &&
+                config.BucketMigrations.TryGetValue(bucket, out var migration) &&
+                migration.Status == MigrationStatus.OwnershipTransferred)
+            {
+                // RavenDB-22200
+                // we allow deletion of documents from the wrong shard in case there are leftover
+                // in the source shard due to a previous error during the bucket migration process
                 return;
             }
 

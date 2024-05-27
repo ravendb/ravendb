@@ -1833,7 +1833,7 @@ namespace Raven.Server.Documents
                         modifiedTicks, nonPersistentFlags, newFlags);
                 }
 
-                if (ForTestingPurposesOnly().DisableDebugAssertionForTableThrowNotOwned)
+                if (_forTestingPurposes?.DisableDebugAssertionForTableThrowNotOwned == true)
                     table.ForTestingPurposesOnly().DisableDebugAssertionForThrowNotOwned = true;
 
                 table.Delete(doc.StorageId);
