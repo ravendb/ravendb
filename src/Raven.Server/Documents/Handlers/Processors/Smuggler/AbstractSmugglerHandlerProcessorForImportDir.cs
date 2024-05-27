@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Sparrow.Utils;
 
@@ -47,7 +47,7 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportDir<TRequestHan
 
         var finalResult = new SmugglerResult();
         var token = RequestHandler.CreateHttpRequestBoundOperationToken();
-
+        var options = new DatabaseSmugglerOptionsServerSide(RequestHandler.GetAuthorizationStatusForSmuggler(RequestHandler.DatabaseName));
         for (int i = 0; i < tasks.Length; i++)
         {
             tasks[i] = Task.Run(async () =>
@@ -69,7 +69,7 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportDir<TRequestHan
                         await using (var file = await getFile())
                         await using (var stream = await Utils.BackupUtils.GetDecompressionStreamAsync(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte)))
                         {
-                            var result = await DoImport(context, stream, options: null, result: null, onProgress: null, operationId, token);
+                            var result = await DoImport(context, stream, options: options, result: null, onProgress: null, operationId, token);
                             results.Enqueue(result);
                         }
                     }
