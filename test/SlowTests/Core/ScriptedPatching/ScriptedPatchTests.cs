@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Patching;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -52,6 +53,56 @@ namespace SlowTests.Core.ScriptedPatching
                 var c = session.Load<Company>("companies/1");
 
                 Assert.Equal("Jon", c.Name);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanAllowStringCompilation(Options options, bool allowStringCompilation)
+        {
+            options.ModifyDatabaseRecord += record => record.Settings[RavenConfiguration.GetKey(x => x.Patching.AllowStringCompilation)] = allowStringCompilation.ToString();
+
+            using var store = GetDocumentStore(options);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Company
+                {
+                    Name = "The Wall"
+                }, "companies/1");
+
+                session.SaveChanges();
+            }
+
+            var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery()
+            {
+                Query = @"from Companies update { 
+                            const script = 'return ""Hello World"";';
+                            const dynoFunc = new Function(""doc"", script);
+                            this.Name = dynoFunc(company);
+                        }",
+            }));
+
+            if (allowStringCompilation)
+            {
+                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+
+                using (var session = store.OpenSession())
+                {
+                    var c = session.Load<Company>("companies/1");
+
+                    Assert.Equal("Hello World", c.Name);
+                }
+            }
+            else
+            {
+                var error = Assert.Throws<JavaScriptException>(() =>
+                {
+                    operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                });
+                Assert.Contains("String compilation has been disabled in engine options. You can configure it by modifying the configuration option: 'Patching.AllowStringCompilation'",
+                    error.Message);
             }
         }
 
