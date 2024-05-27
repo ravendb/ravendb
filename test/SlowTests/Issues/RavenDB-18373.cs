@@ -42,7 +42,8 @@ namespace SlowTests.Issues
         {
             using var store = GetDocumentStore();
 
-            await new Simple_Map_Index().ExecuteAsync(store);
+            var index = new Simple_Map_Index();
+            await index.ExecuteAsync(store);
             await store.Maintenance.SendAsync(new StopIndexingOperation());
 
             using (var session = store.OpenAsyncSession(new SessionOptions {
@@ -52,7 +53,8 @@ namespace SlowTests.Issues
                 session.Advanced.WaitForIndexesAfterSaveChanges(TimeSpan.FromSeconds(3));
 
                 await session.StoreAsync(new TestObj(), "testObjs/0");
-                await Assert.ThrowsAsync<RavenTimeoutException>(async () => await session.SaveChangesAsync());
+                var error = await Assert.ThrowsAsync<RavenTimeoutException>(async () => await session.SaveChangesAsync());
+                Assert.Contains($"total stale indexes: 1 ({index.IndexName})", error.Message);
             }
         }
 

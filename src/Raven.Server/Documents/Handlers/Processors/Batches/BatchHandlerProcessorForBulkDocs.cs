@@ -165,7 +165,7 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
     [DoesNotReturn]
     private static void ThrowTimeoutException(List<WaitForIndexItem> indexesToWait, int i, Stopwatch sp, QueryOperationContext context, long cutoffEtag)
     {
-        var staleIndexesCount = 0;
+        var staleIndexes = new List<string>();
         var erroredIndexes = new List<string>();
         var pausedIndexes = new List<string>();
 
@@ -183,11 +183,13 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
             }
 
             if (index.IsStale(context, cutoffEtag))
-                staleIndexesCount++;
+            {
+                staleIndexes.Add(index.Name);
+            }
         }
 
         var errorMessage = $"After waiting for {sp.Elapsed}, could not verify that all indexes has caught up with the changes as of etag: {cutoffEtag:#,#;;0}. " +
-                           $"Total relevant indexes: {indexesToWait.Count}, total stale indexes: {staleIndexesCount}";
+                           $"Total relevant indexes: {indexesToWait.Count}, total stale indexes: {staleIndexes.Count} ({string.Join(", ", staleIndexes)})";
 
         if (erroredIndexes.Count > 0)
         {

@@ -17,7 +17,8 @@ ENV RAVEN_ARGS='' \
     RAVEN_Logs_Path='/var/log/ravendb/logs' \
     RAVEN_Security_AuditLog_FolderPath='/var/log/ravendb/audit' \
     RAVEN_Security_MasterKey_Path='/etc/ravendb/security/master.key' \
-    RAVEN_Setup_Certificate_Path='/etc/ravendb/security/server.pfx'
+    RAVEN_Setup_Certificate_Path='/etc/ravendb/security/server.pfx' \
+    RAVEN_Security_UnsecuredAccessAllowed='PrivateNetwork'
 
 EXPOSE 8080 38888 161
 
