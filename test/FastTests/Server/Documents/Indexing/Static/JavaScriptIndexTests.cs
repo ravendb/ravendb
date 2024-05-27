@@ -1,7 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
 using Tests.Infrastructure;
@@ -99,7 +103,50 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        public class JavaScriptIndexWithIdMethod : AbstractJavaScriptIndexCreationTask
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task CanAllowStringCompilation(Options options, bool allowStringCompilation)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var index = new MyJSIndex(allowStringCompilation);
+                await index.ExecuteAsync(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company
+                    {
+                        Name = "RavenDB"
+                    });
+                    await session.SaveChangesAsync();
+                }
+
+                await Indexes.WaitForIndexingAsync(store);
+
+                if (allowStringCompilation)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var result = await session.Query<Company, MyJSIndex>()
+                            .ProjectInto<MyJSIndex.CustomProjection>()
+                            .ToListAsync();
+
+                        Assert.Equal(1, result.Count);
+                        Assert.Equal("Hello World", result[0].NewName);
+                    }
+                }
+                else
+                {
+                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation([index.IndexName], "A"));
+                    Assert.Equal(1, indexErrors.Length);
+                    Assert.Contains("String compilation has been disabled in engine options. You can configure it by modifying the configuration option: 'Indexing.AllowStringCompilation'",
+                        indexErrors[0].Errors.First().Error);
+                }
+            }
+        }
+
+        private class JavaScriptIndexWithIdMethod : AbstractJavaScriptIndexCreationTask
         {
             public class Result
             {
@@ -136,7 +183,7 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        public class JavaScriptIndexWithGetMetadataMethod : AbstractJavaScriptIndexCreationTask
+        private class JavaScriptIndexWithGetMetadataMethod : AbstractJavaScriptIndexCreationTask
         {
             public class Result
             {
@@ -174,6 +221,52 @@ namespace FastTests.Server.Documents.Indexing.Static
                         { nameof(Result.ChangeVector), fieldOptions },
                         { nameof(Result.Id), fieldOptions },
                         { nameof(Result.LastModified), fieldOptions },
+                    }
+                };
+            }
+        }
+
+        private class MyJSIndex : AbstractJavaScriptIndexCreationTask
+        {
+            public override string IndexName => "MyJSIndex";
+
+            public class CustomProjection
+            {
+                public string NewName { get; set; }
+            }
+
+            public MyJSIndex()
+            {
+            }
+
+            public MyJSIndex(bool allowStringCompilation = false)
+            {
+                Maps = new HashSet<string>()
+                {
+                    @"
+map('Companies', (company) => {
+    const script = 'return ""Hello World"";';
+    const dynoFunc = new Function(""doc"", script);
+    return {
+        NewName: dynoFunc(company)
+    };
+})"
+                };
+
+                Configuration = new IndexConfiguration
+                {
+                    {
+                        RavenConfiguration.GetKey(x => x.Indexing.AllowStringCompilation), allowStringCompilation.ToString()
+                    }
+                };
+
+                Fields = new Dictionary<string, IndexFieldOptions>
+                {
+                    {
+                        nameof(CustomProjection.NewName), new IndexFieldOptions
+                        {
+                            Storage = FieldStorage.Yes
+                        }
                     }
                 };
             }
