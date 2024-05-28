@@ -1191,8 +1191,11 @@ namespace RachisTests.DatabaseCluster
                     DeletePrevious = false,
                     DataDirectory = down1.DataDirectory
                 });
-                nodes[1].ServerStore.Engine.ForTestingPurposesOnly().NodeTagsToDisconnect.Add(nodes[0].ServerStore.NodeTag);
-                nodes[1].ServerStore.Engine.ForTestingPurposesOnly().NodeTagsToDisconnect.Add(nodes[2].ServerStore.NodeTag);
+                nodes[1].ServerStore.Engine.ForTestingPurposesOnly().NodeTagsToDisconnect =
+                [
+                    nodes[0].ServerStore.NodeTag,
+                    nodes[2].ServerStore.NodeTag
+                ];
                 Servers.Add(nodes[1]);
 
                 //make sure leader and follower [2] disconnected

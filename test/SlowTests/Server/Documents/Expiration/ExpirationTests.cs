@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.ServerWide.Context;
@@ -26,6 +27,7 @@ using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using Size = Sparrow.Size;
 
 namespace SlowTests.Server.Documents.Expiration
 {
@@ -46,8 +48,10 @@ namespace SlowTests.Server.Documents.Expiration
             await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
         }
 
-        [Fact]
-        public async Task CanAddEntityWithExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry()
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData([true])]
+        [InlineData([false])]
+        public async Task CanAddEntityWithExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(bool compressed)
         {
             var utcFormats = new Dictionary<string, DateTimeKind>
             {
@@ -63,7 +67,16 @@ namespace SlowTests.Server.Documents.Expiration
 
             foreach (var dateTimeFormat in utcFormats)
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseRecord = record =>
+                    {
+                        if (compressed)
+                        {
+                            record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                        }
+                    }
+                }))
                 {
                     await SetupExpiration(store);
 
@@ -109,14 +122,25 @@ namespace SlowTests.Server.Documents.Expiration
             }
         }
 
-        [Theory]
-        [InlineData(10)]
-        [InlineData(100)]
-        public async Task CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(int count)
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData(true, 10)]
+        [InlineData(false, 10)]
+        [InlineData(true, 100)]
+        [InlineData(false, 100)]
+        public async Task CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(bool compressed, int count)
         {
             var company = new { Name = "Company Name" };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                }
+            }))
             {
                 await SetupExpiration(store);
 
@@ -155,10 +179,22 @@ namespace SlowTests.Server.Documents.Expiration
             }
         }
 
-        [Fact]
-        public async Task CanAddEntityWithExpiry_BeforeActivatingExpirtaion_WillNotBeAbleToReadItAfterExpiry()
+        
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData([true])]
+        [InlineData([false])]
+        public async Task CanAddEntityWithExpiry_BeforeActivatingExpirtaion_WillNotBeAbleToReadItAfterExpiry(bool compressed)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                }
+            }))
             {
                 // Insert document with expiration before activating the expiration
                 var company = new Company { Name = "Company Name" };
@@ -187,10 +223,22 @@ namespace SlowTests.Server.Documents.Expiration
             }
         }
 
-        [Fact]
-        public async Task CanSetupExpirationAndRefresh()
+        
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData([true])]
+        [InlineData([false])]
+        public async Task CanSetupExpirationAndRefresh(bool compressed)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                }
+            }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -220,10 +268,21 @@ namespace SlowTests.Server.Documents.Expiration
             }
         }
         
-        [Fact]
-        public async Task CanRefreshFromClusterTransaction()
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData([true])]
+        [InlineData([false])]
+        public async Task CanRefreshFromClusterTransaction(bool compressed)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                }
+            }))
             {
                 var database = await GetDatabase(store.Database);
 
@@ -252,10 +311,21 @@ namespace SlowTests.Server.Documents.Expiration
             }
         }
 
-        [Fact]
-        public async Task ThrowsIfUsingWrongExpiresOrRefresh()
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData([true])]
+        [InlineData([false])]
+        public async Task ThrowsIfUsingWrongExpiresOrRefresh(bool compressed)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                    }
+                }
+            }))
             {
                 var expires = SystemTime.UtcNow.AddMinutes(5);
                 
@@ -286,10 +356,20 @@ namespace SlowTests.Server.Documents.Expiration
         }
 
         [RavenTheory(RavenTestCategory.ExpirationRefresh)]
-        [RavenData(10, DatabaseMode = RavenDatabaseMode.All)]
-        [RavenData(5, DatabaseMode = RavenDatabaseMode.All)]
-        public async Task ExpirationWithMaxItemsToProcessConfiguredShouldWork(Options options, int batchSize)
+        [RavenData(10, true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(10, false, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(5, true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(5, false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ExpirationWithMaxItemsToProcessConfiguredShouldWork(Options options, int batchSize, bool compressed)
         {
+            options.ModifyDatabaseRecord = record =>
+            {
+                if (compressed)
+                {
+                    record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                }
+            };
+            
             using (var store = GetDocumentStore(options))
             {
                 // Insert documents with expiration before activating the expiration
@@ -334,10 +414,58 @@ namespace SlowTests.Server.Documents.Expiration
             }
         }
 
-        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task RefreshWithMaxItemsToProcessConfiguredShouldWork(Options options)
+        [RavenFact(RavenTestCategory.ExpirationRefresh)]
+        public async Task Can_Expire_Large_Transactions()
         {
+            using (var store = GetDocumentStore())
+            {
+                var expires = SystemTime.UtcNow.AddMinutes(5);
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var company = new Company { Name = "Company Name", Id = $"companies/{i}" };
+                        await session.StoreAsync(company);
+                        var metadata = session.Advanced.GetMetadataFor(company);
+                        metadata[Constants.Documents.Metadata.Expires] = expires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                var config = new ExpirationConfiguration
+                {
+                    Disabled = false,
+                    DeleteFrequencyInSec = (long)TimeSpan.FromMinutes(10).TotalSeconds,
+                };
+
+                await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
+
+                var database = await GetDatabase(store.Database);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                database._maxTransactionSize = new Size(1, SizeUnit.Kilobytes);
+                await database.ExpiredDocumentsCleaner.CleanupExpiredDocs();
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var count = await session.Query<Company>().CountAsync();
+                    Assert.Equal(0, count);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RefreshWithMaxItemsToProcessConfiguredShouldWork(Options options, bool compressed)
+        {
+            options.ModifyDatabaseRecord = record =>
+            {
+                if (compressed)
+                {
+                    record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                }
+            };
+            
             using (var store = GetDocumentStore(options))
             {
                 // Insert documents with refresh before activating the refresh

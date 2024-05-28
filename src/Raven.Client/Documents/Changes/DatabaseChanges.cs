@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,6 +31,7 @@ namespace Raven.Client.Documents.Changes
         private readonly string _database;
 
         private readonly Action _onDispose;
+        private readonly string _nodeTag;
         private ClientWebSocket _client;
 
         private readonly Task _task;
@@ -73,9 +73,11 @@ namespace Raven.Client.Documents.Changes
             });
 
             _onDispose = onDispose;
+            _nodeTag = nodeTag;
             ConnectionStatusChanged += OnConnectionStatusChanged;
 
             _task = DoWork(nodeTag);
+            _ = _task.ContinueWith(_ => Dispose());
         }
 
         public static ClientWebSocket CreateClientWebSocket(RequestExecutor requestExecutor)
@@ -195,6 +197,8 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<OperationStatusChange> ForOperationId(long operationId)
         {
+            Debug.Assert(string.IsNullOrEmpty(_nodeTag) == false, "Changes API must be provided a node tag in order to track node-specific operations.");
+
             var counter = GetOrAddConnectionState("operations/" + operationId, "watch-operation", "unwatch-operation", operationId.ToString());
 
             var taskedObservable = new ChangesObservable<OperationStatusChange, DatabaseConnectionState>(
@@ -206,6 +210,8 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<OperationStatusChange> ForAllOperations()
         {
+            Debug.Assert(string.IsNullOrEmpty(_nodeTag) == false, "Changes API must be provided a node tag in order to track node-specific operations.");
+
             var counter = GetOrAddConnectionState("all-operations", "watch-operations", "unwatch-operations", null);
 
             var taskedObservable = new ChangesObservable<OperationStatusChange, DatabaseConnectionState>(
@@ -511,6 +517,11 @@ namespace Raven.Client.Documents.Changes
             }
         }
 
+        public class OnReconnect : EventArgs
+        {
+            public static OnReconnect Instance = new OnReconnect();
+        }
+
         private async Task DoWork(string nodeTag)
         {
             try
@@ -535,6 +546,7 @@ namespace Raven.Client.Documents.Changes
                 return;
             }
 
+            var timerInSec = 1;
             var wasConnected = false;
             while (_cts.IsCancellationRequested == false)
             {
@@ -552,6 +564,7 @@ namespace Raven.Client.Documents.Changes
                             await _client.ConnectAsync(_url, timeoutCts.Token).ConfigureAwait(false);
                         }
 
+                        timerInSec = 1;
                         wasConnected = true;
                         Interlocked.Exchange(ref _immediateConnection, 1);
 
@@ -560,9 +573,8 @@ namespace Raven.Client.Documents.Changes
                             counter.Value.Set(counter.Value.OnConnect());
                         }
 
-                        ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+                        ConnectionStatusChanged?.Invoke(this, OnReconnect.Instance);
                     }
-
                     await ProcessChanges().ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (_cts.Token.IsCancellationRequested)
@@ -576,17 +588,24 @@ namespace Raven.Client.Documents.Changes
                 }
                 catch (Exception e)
                 {
-                    //We don't report this error since we can automatically recover from it and we can't
-                    // recover from the OnError accessing the faulty WebSocket.
+                    // we don't report this error since we can automatically recover from it,
+                    // and we can't recover from the OnError accessing the faulty WebSocket.
                     try
                     {
+                        NotifyAboutReconnection(e);
+
                         if (wasConnected)
                             ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 
                         wasConnected = false;
                         try
                         {
-                            _serverNode = await _requestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
+                            // If node tag is provided we should not failover to a different node
+                            // Failing over will create a mismatch if the operation is created and monitored on the provided node tag
+                            if (string.IsNullOrEmpty(nodeTag))
+                                _serverNode = await _requestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
+                            else
+                                await _requestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(_serverNode) { TimeoutInMs = 0, ForceUpdate = true, DebugTag = "changes-api-connection-failure" }).ConfigureAwait(false);
                         }
                         catch (DatabaseDoesNotExistException databaseDoesNotExistException)
                         {
@@ -595,7 +614,7 @@ namespace Raven.Client.Documents.Changes
                         }
                         catch (Exception)
                         {
-                            //We don't want to stop observe for changes if server down. we will wait for one to be up
+                            // we don't want to stop observing for changes if the server is down. we will wait for it to be up.
                         }
 
                         if (ReconnectClient() == false)
@@ -620,7 +639,8 @@ namespace Raven.Client.Documents.Changes
 
                 try
                 {
-                    await TimeoutManager.WaitFor(TimeSpan.FromSeconds(1), _cts.Token).ConfigureAwait(false);
+                    timerInSec = Math.Min(timerInSec * 2, 60);
+                    await TimeoutManager.WaitFor(TimeSpan.FromSeconds(timerInSec), _cts.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -803,7 +823,11 @@ namespace Raven.Client.Documents.Changes
             }
         }
 
-        private void NotifyAboutError(Exception e)
+        internal virtual void NotifyAboutReconnection(Exception e)
+        {
+        }
+
+        internal void NotifyAboutError(Exception e)
         {
             if (_cts.Token.IsCancellationRequested)
                 return;

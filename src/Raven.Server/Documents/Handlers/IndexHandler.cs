@@ -626,10 +626,7 @@ namespace Raven.Server.Documents.Handlers
 
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
-                var clientCert = GetCurrentCertificate();
-
-                var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
-                auditLog.Info($"Index {name} DELETE by {clientCert?.Subject} {clientCert?.Thumbprint}");
+                LogAuditFor(Database.Name, $"Index {name} DELETE");
             }
 
             HttpContext.Response.StatusCode = await Database.IndexStore.TryDeleteIndexIfExists(name, GetRaftRequestIdFromQuery())

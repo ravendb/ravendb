@@ -21,7 +21,8 @@ class identity {
     currentValue = ko.observable<number>();
     warnAboutSmallerValue: KnockoutComputed<boolean>;
     
-    nextDocumentText: KnockoutComputed<string>;
+    textForEditIdentity: KnockoutComputed<string>;
+    textForNewIdentity: KnockoutComputed<string>;
     
     identitySeparator = ko.observable<string>();
     static readonly defaultIdentitySeparator = "/";
@@ -59,11 +60,27 @@ class identity {
             return prefix;
         });
         
-        this.nextDocumentText = ko.pureComputed(() => {
-            return `<span>The effective identity separator defined in configuration is: <strong>${genUtils.escapeHtml(this.identitySeparator())}</strong></span><br/>
-                    <span>The next document that will be created with Prefix: "<strong>${genUtils.escapeHtml(this.prefixWithPipe())}</strong>"
-                          will have ID: "<strong>${genUtils.escapeHtml(this.prefixWithoutPipe())}${this.identitySeparator()}${this.value() + 1}</strong>"</span>`;
+        this.textForEditIdentity = ko.pureComputed(() => {
+            return `<ul class="margin-top">
+                        <li>The next document that will be created using a <strong>pipe symbol</strong>, e.g.: <code>${genUtils.escapeHtml(this.prefixWithPipe())}</code>,
+                            will have ID: <code>${genUtils.escapeHtml(this.prefixWithoutPipe())}${this.identitySeparator()}${this.value() + 1}</code>
+                        </li>
+                        <li class="margin-top-sm">${separatorText}</li>
+                    </ul>`;
         });
+
+        this.textForNewIdentity = ko.pureComputed(() => {
+            return `<ul class="margin-top">
+                        <li>When setting "Prefix" & "Value", the next document created using a <strong>pipe symbol</strong>, i.e.: <code>&lt;Prefix&gt;|</code><br/>
+                            will be assigned an ID structured as <code>&lt;Prefix&gt;${genUtils.escapeHtml(this.identitySeparator())}&lt;Value + 1&gt;</code>
+                        </li>
+                        <li class="margin-top-sm">${separatorText}</li>
+                    </ul>`;
+        });
+        
+        const separatorText =
+            `In the resulting ID, the Prefix and Value parts are separated by the effective separator character defined in your configuration,
+            which is: <code>${genUtils.escapeHtml(this.identitySeparator())}</code>`;
         
         this.warnAboutSmallerValue = ko.pureComputed(() => {
            return this.value() < this.currentValue();

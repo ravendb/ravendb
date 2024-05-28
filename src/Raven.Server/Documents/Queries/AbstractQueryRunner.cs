@@ -199,7 +199,6 @@ namespace Raven.Server.Documents.Queries
 
                         return subCommand;
                     }, rateGate, token,
-                        maxTransactionSize: 16 * Constants.Size.Megabyte,
                         batchSize: batchSize);
 
                     await Database.TxMerger.Enqueue(command);

@@ -882,7 +882,7 @@ namespace Raven.Server.Documents
                         $"Operation was cancelled by the transaction merger for transaction #{llt.Id} due to high dirty memory in scratch files." +
                         $" This might be caused by a slow IO storage. Current memory usage: " +
                         $"Total Physical Memory: {MemoryInformation.TotalPhysicalMemory}, " +
-                        $"Total Scratch Allocated Memory: {new Size(dirtyMemoryState.TotalDirtyInBytes, SizeUnit.Bytes)} " +
+                        $"Total Scratch Allocated Memory: {dirtyMemoryState.TotalDirty} " +
                         $"(which is above {_parent.Configuration.Memory.TemporaryDirtyMemoryAllowedPercentage * 100}%)");
                 }
 

@@ -2266,7 +2266,7 @@ namespace Raven.Server
 
             if (tcpAuditLog != null)
                 tcpAuditLog.Info(
-                    $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName}.");
+                    $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName ?? "Server"}.");
             return header;
         }
 
@@ -3009,7 +3009,7 @@ namespace Raven.Server
                         var localLicenseStatus = LicenseManager.GetLicenseStatus(localLicense);
                         if (localLicenseStatus.Expiration >= RavenVersionAttribute.Instance.ReleaseDate)
                         {
-                            serverStore.LicenseManager.OnBeforeInitialize += () => serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure).Wait(serverStore.ServerShutdown);
+                            serverStore.LicenseManager.OnBeforeInitialize += () => AsyncHelpers.RunSync(() => serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure));
                             return;
                         }
 

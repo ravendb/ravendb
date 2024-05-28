@@ -76,7 +76,7 @@ namespace Raven.Server.NotificationCenter
 
             return new MessageDetails
             {
-                Message = $"{MemoryUtils.GetExtendedMemoryInfo(memoryInfo)} {Environment.NewLine}" +
+                Message = $"{MemoryUtils.GetExtendedMemoryInfo(memoryInfo, MemoryInformation.GetDirtyMemoryState())} {Environment.NewLine}" +
                           $"Error: {exception}"
             };
         }

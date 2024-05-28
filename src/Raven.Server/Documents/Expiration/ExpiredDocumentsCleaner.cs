@@ -162,11 +162,16 @@ namespace Raven.Server.Documents.Expiration
                             if (expired == null || expired.Count == 0)
                                 return;
 
-                            var command = new DeleteExpiredDocumentsCommand(expired, _database, forExpiration, currentTime);
-                            await _database.TxMerger.Enqueue(command);
+                            while (expired.Count > 0)
+                            {
+                                _database.DatabaseShutdown.ThrowIfCancellationRequested();
 
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info($"Successfully {(forExpiration ? "deleted" : "refreshed")} {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
+                                var command = new DeleteExpiredDocumentsCommand(expired, _database, forExpiration, currentTime);
+                                await _database.TxMerger.Enqueue(command);
+
+                                if (Logger.IsInfoEnabled)
+                                    Logger.Info($"Successfully {(forExpiration ? "deleted" : "refreshed")} {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
+                            }
                         }
                     }
                 }
@@ -185,14 +190,14 @@ namespace Raven.Server.Documents.Expiration
 
         internal class DeleteExpiredDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private readonly Dictionary<Slice, List<(Slice LowerId, string Id)>> _expired;
+            private readonly Queue<ExpirationStorage.DocumentExpirationInfo> _expired;
             private readonly DocumentDatabase _database;
             private readonly bool _forExpiration;
             private readonly DateTime _currentTime;
 
             public int DeletionCount;
 
-            public DeleteExpiredDocumentsCommand(Dictionary<Slice, List<(Slice LowerId, string Id)>> expired, DocumentDatabase database, bool forExpiration, DateTime currentTime)
+            public DeleteExpiredDocumentsCommand(Queue<ExpirationStorage.DocumentExpirationInfo> expired, DocumentDatabase database, bool forExpiration, DateTime currentTime)
             {
                 _expired = expired;
                 _database = database;
@@ -212,18 +217,9 @@ namespace Raven.Server.Documents.Expiration
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
-
-                var keyValuePairs = new KeyValuePair<Slice, List<(Slice LowerId, string Id)>>[_expired.Count];
-                var i = 0;
-                foreach (var item in _expired)
-                {
-                    keyValuePairs[i] = item;
-                    i++;
-                }
-
                 return new DeleteExpiredDocumentsCommandDto
                 {
-                    Expired = keyValuePairs,
+                    Expired = _expired.Select(x => (Ticks: x.Ticks, LowerId: x.LowerId, Id: x.Id)).ToArray(),
                     ForExpiration = _forExpiration,
                     CurrentTime = _currentTime
                 };
@@ -235,16 +231,17 @@ namespace Raven.Server.Documents.Expiration
     {
         public ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var expired = new Dictionary<Slice, List<(Slice LowerId, string Id)>>();
+            var queue = new Queue<ExpirationStorage.DocumentExpirationInfo>();
             foreach (var item in Expired)
             {
-                expired[item.Key] = item.Value;
+                queue.Enqueue(new ExpirationStorage.DocumentExpirationInfo(item.Ticks.Clone(context.Allocator), item.LowerId.Clone(context.Allocator), item.Id));
             }
-            var command = new ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand(expired, database, ForExpiration, CurrentTime);
+
+            var command = new ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand(queue, database, ForExpiration, CurrentTime);
             return command;
         }
 
-        public KeyValuePair<Slice, List<(Slice LowerId, string Id)>>[] Expired { get; set; }
+        public (Slice Ticks, Slice LowerId, string Id)[] Expired { get; set; }
 
         public bool ForExpiration { get; set; }
 

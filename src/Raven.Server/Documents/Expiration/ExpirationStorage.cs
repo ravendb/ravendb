@@ -10,7 +10,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Voron;
 using Voron.Impl;
 
@@ -22,14 +21,10 @@ namespace Raven.Server.Documents.Expiration
         private const string DocumentsByRefresh = "DocumentsByRefresh";
 
         private readonly DocumentDatabase _database;
-        private readonly DocumentsStorage _documentsStorage;
-        private readonly Logger _logger;
 
         public ExpirationStorage(DocumentDatabase database, Transaction tx)
         {
             _database = database;
-            _documentsStorage = _database.DocumentsStorage;
-            _logger = LoggingSource.Instance.GetLogger<ExpirationStorage>(database.Name);
 
             tx.CreateTree(DocumentsByExpiration);
             tx.CreateTree(DocumentsByRefresh);
@@ -89,19 +84,18 @@ namespace Raven.Server.Documents.Expiration
                 = (context, currentTime, isFirstInTopology, amountToTake, maxItemsToProcess);
         }
 
-        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetExpiredDocuments(ExpiredDocumentsOptions options, ref int totalCount, out Stopwatch duration,  CancellationToken cancellationToken)
+        public Queue<DocumentExpirationInfo> GetExpiredDocuments(ExpiredDocumentsOptions options, ref int totalCount, out Stopwatch duration,  CancellationToken cancellationToken)
         {
             return GetDocuments(options, DocumentsByExpiration, Constants.Documents.Metadata.Expires, ref totalCount, out duration, cancellationToken);
         }
 
-        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocumentsToRefresh(ExpiredDocumentsOptions options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
+        public Queue<DocumentExpirationInfo> GetDocumentsToRefresh(ExpiredDocumentsOptions options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
         {
             return GetDocuments(options, DocumentsByRefresh, Constants.Documents.Metadata.Refresh, ref totalCount, out duration, cancellationToken);
         }
 
-        private Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(ExpiredDocumentsOptions options, string treeName, string metadataPropertyToCheck, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
+        private Queue<DocumentExpirationInfo> GetDocuments(ExpiredDocumentsOptions options, string treeName, string metadataPropertyToCheck, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
         {
-            var count = 0;
             var currentTicks = options.CurrentTime.Ticks;
 
             var expirationTree = options.Context.Transaction.InnerTransaction.ReadTree(treeName);
@@ -113,7 +107,7 @@ namespace Raven.Server.Documents.Expiration
                     return null;
                 }
 
-                var expired = new Dictionary<Slice, List<(Slice LowerId, string Id)>>();
+                var expired = new Queue<DocumentExpirationInfo>();
                 duration = Stopwatch.StartNew();
                 
                 do
@@ -123,8 +117,6 @@ namespace Raven.Server.Documents.Expiration
                         break;
 
                     var ticksAsSlice = it.CurrentKey.Clone(options.Context.Transaction.InnerTransaction.Allocator);
-
-                    var expiredDocs = new List<(Slice LowerId, string Id)>();
 
                     using (var multiIt = expirationTree.MultiRead(it.CurrentKey))
                     {
@@ -145,7 +137,7 @@ namespace Raven.Server.Documents.Expiration
                                             document.TryGetMetadata(out var metadata) == false ||
                                             HasPassed(metadata, metadataPropertyToCheck, options.CurrentTime) == false)
                                         {
-                                            expiredDocs.Add((clonedId, null));
+                                            expired.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id: null));
                                             totalCount++;
                                             continue;
                                         }
@@ -162,8 +154,9 @@ namespace Raven.Server.Documents.Expiration
                                             break;
                                         }
 
-                                        expiredDocs.Add((clonedId, document.Id));
+                                        expired.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, document.Id));
                                         totalCount++;
+                                        options.Context.Transaction.ForgetAbout(document);
                                     }
                                 }
                                 catch (DocumentConflictException)
@@ -175,22 +168,18 @@ namespace Raven.Server.Documents.Expiration
 
                                     if (allExpired)
                                     {
-                                        expiredDocs.Add((clonedId, id));
+                                        expired.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id));
                                         totalCount++;
                                     }
                                 }
                             } while (multiIt.MoveNext() 
-                                     && expiredDocs.Count + count < options.AmountToTake 
+                                     && expired.Count < options.AmountToTake 
                                      && totalCount < options.MaxItemsToProcess);
                         }
                     }
 
-                    count += expiredDocs.Count;
-                    if (expiredDocs.Count > 0)
-                        expired.Add(ticksAsSlice, expiredDocs);
-
                 } while (it.MoveNext() 
-                         && count < options.AmountToTake
+                         && expired.Count < options.AmountToTake
                          && totalCount < options.MaxItemsToProcess);
 
                 return expired;
@@ -245,95 +234,145 @@ namespace Raven.Server.Documents.Expiration
             return false;
         }
 
-        public int DeleteDocumentsExpiration(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> expired, DateTime currentTime)
+        public class DocumentExpirationInfo
+        {
+            public Slice Ticks { get; }
+            public Slice LowerId { get; }
+            public string Id { get; }
+
+            private DocumentExpirationInfo()
+            {
+            }
+
+            public DocumentExpirationInfo(Slice ticks, Slice lowerId, string id)
+            {
+                Ticks = ticks;
+                LowerId = lowerId;
+                Id = id;
+            }
+        }
+
+        public int DeleteDocumentsExpiration(DocumentsOperationContext context, Queue<DocumentExpirationInfo> expired, DateTime currentTime)
         {
             var deletionCount = 0;
+            var count = 0;
             var expirationTree = context.Transaction.InnerTransaction.ReadTree(DocumentsByExpiration);
 
-            foreach (var pair in expired)
+            foreach (var documentInfo in expired)
             {
-                foreach (var ids in pair.Value)
+                if (documentInfo.Id != null)
                 {
-                    if (ids.Id != null)
+                    try
                     {
-                        try
+                        using (var doc = _database.DocumentsStorage.Get(context, documentInfo.LowerId, DocumentFields.Data, throwOnConflict: true))
                         {
-                            using (var doc = _database.DocumentsStorage.Get(context, ids.LowerId, DocumentFields.Data, throwOnConflict: true))
+                            if (doc != null && doc.TryGetMetadata(out var metadata))
                             {
-                                if (doc != null && doc.TryGetMetadata(out var metadata))
+                                if (HasPassed(metadata, Constants.Documents.Metadata.Expires, currentTime))
                                 {
-                                    if (HasPassed(metadata, Constants.Documents.Metadata.Expires, currentTime))
-                                    {
-                                        _database.DocumentsStorage.Delete(context, ids.LowerId, ids.Id, expectedChangeVector: null);
-                                    }
+                                    _database.DocumentsStorage.Delete(context, documentInfo.LowerId, documentInfo.Id, expectedChangeVector: null);
                                 }
                             }
-                        }
-                        catch (DocumentConflictException)
-                        {
-                            if (GetConflictedExpiration(context, currentTime, ids.LowerId).AllExpired)
-                                _database.DocumentsStorage.Delete(context, ids.LowerId, ids.Id, expectedChangeVector: null);
-                        }
 
-                        deletionCount++;
+                            context.Transaction.ForgetAbout(doc);
+                        }
                     }
-
-                    expirationTree.MultiDelete(pair.Key, ids.LowerId);
+                    catch (DocumentConflictException)
+                    {
+                        if (GetConflictedExpiration(context, currentTime, documentInfo.LowerId).AllExpired)
+                            _database.DocumentsStorage.Delete(context, documentInfo.LowerId, documentInfo.Id, expectedChangeVector: null);
+                    }
+                    deletionCount++;
                 }
+
+                expirationTree.MultiDelete(documentInfo.Ticks, documentInfo.LowerId);
+                count++;
+
+                if (context.CanContinueTransaction == false)
+                    break;
             }
+
+            var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
+            tx.OnDispose += _ =>
+            {
+                if (tx.Committed == false)
+                    return;
+
+                for (int i = 0; i < count; i++)
+                {
+                    expired.Dequeue();
+                }
+            };
 
             return deletionCount;
         }
 
-        public int RefreshDocuments(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> expired, DateTime currentTime)
+        public int RefreshDocuments(DocumentsOperationContext context, Queue<ExpirationStorage.DocumentExpirationInfo> expired, DateTime currentTime)
         {
             var refreshCount = 0;
+            var count = 0;
             var refreshTree = context.Transaction.InnerTransaction.ReadTree(DocumentsByRefresh);
 
-            foreach (var pair in expired)
+            foreach (var documentInfo in expired)
             {
-                foreach (var ids in pair.Value)
+                if (documentInfo.Id != null)
                 {
-                    if (ids.Id != null)
+                    using (var doc = _database.DocumentsStorage.Get(context, documentInfo.LowerId, throwOnConflict: false))
                     {
-                        using (var doc = _database.DocumentsStorage.Get(context, ids.LowerId, throwOnConflict: false))
+                        if (doc != null && doc.TryGetMetadata(out var metadata))
                         {
-                            if (doc != null && doc.TryGetMetadata(out var metadata))
+                            if (HasPassed(metadata, Constants.Documents.Metadata.Refresh, currentTime))
                             {
-                                if (HasPassed(metadata, Constants.Documents.Metadata.Refresh, currentTime))
-                                {
-                                    // remove the @refresh tag
-                                    metadata.Modifications = new Sparrow.Json.Parsing.DynamicJsonValue(metadata);
-                                    metadata.Modifications.Remove(Constants.Documents.Metadata.Refresh);
+                                // remove the @refresh tag
+                                metadata.Modifications = new Sparrow.Json.Parsing.DynamicJsonValue(metadata);
+                                metadata.Modifications.Remove(Constants.Documents.Metadata.Refresh);
 
-                                    using (var updated = context.ReadObject(doc.Data, doc.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                                using (var updated = context.ReadObject(doc.Data, doc.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                                {
+                                    try
                                     {
-                                        try
-                                        {
-                                            _database.DocumentsStorage.Put(context, doc.Id, doc.ChangeVector, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
-                                        }
-                                        catch (ConcurrencyException)
-                                        {
-                                            // This is expected and safe to ignore
-                                            // It can happen if there is a mismatch with the Cluster-Transaction-Index, which will
-                                            // sort itself out when the cluster & database will be in sync again
-                                        }
-                                        catch (DocumentConflictException)
-                                        {
-                                            // no good way to handle this, we'll wait to resolve
-                                            // the issue when the conflict is resolved
-                                        }
+                                        _database.DocumentsStorage.Put(context, doc.Id, doc.ChangeVector, updated,
+                                            flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
+                                    }
+                                    catch (ConcurrencyException)
+                                    {
+                                        // This is expected and safe to ignore
+                                        // It can happen if there is a mismatch with the Cluster-Transaction-Index, which will
+                                        // sort itself out when the cluster & database will be in sync again
+                                    }
+                                    catch (DocumentConflictException)
+                                    {
+                                        // no good way to handle this, we'll wait to resolve
+                                        // the issue when the conflict is resolved
                                     }
                                 }
                             }
                         }
 
-                        refreshCount++;
+                        context.Transaction.ForgetAbout(doc);
                     }
 
-                    refreshTree.MultiDelete(pair.Key, ids.LowerId);
+                    refreshCount++;
                 }
+
+                refreshTree.MultiDelete(documentInfo.Ticks, documentInfo.LowerId);
+                count++;
+
+                if (context.CanContinueTransaction == false)
+                    break;
             }
+
+            var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
+            tx.OnDispose += _ =>
+            {
+                if (tx.Committed == false)
+                    return;
+
+                for (int i = 0; i < count; i++)
+                {
+                    expired.Dequeue();
+                }
+            };
 
             return refreshCount;
         }

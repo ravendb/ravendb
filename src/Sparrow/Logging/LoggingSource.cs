@@ -7,7 +7,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.WebSockets;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,6 +27,11 @@ namespace Sparrow.Logging
 
         public static bool UseUtcTime;
         public long MaxFileSizeInBytes = 1024 * 1024 * 128;
+        private const string DateTimeWithMinutesFormat = "yyyy-MM-dd-HH-mm"; // current format
+        private const string DateOnlyFormat = "yyyy-MM-dd"; // for backward compatibility
+        internal const string LogExtension = ".log";
+        internal const string AdditionalCompressExtension = ".gz";
+        internal const string FullCompressExtension = LogExtension + AdditionalCompressExtension;
 
         internal static long LocalToUtcOffsetInTicks;
 
@@ -192,14 +196,16 @@ namespace Sparrow.Logging
 
         public void SetupLogMode(LogMode logMode, string path, TimeSpan retentionTime, long retentionSize, bool compress)
         {
+            if (_loggingThread?.ManagedThreadId == Thread.CurrentThread.ManagedThreadId)
+            {
+                Task.Run(() => SetupLogMode(logMode, path, retentionTime, retentionSize, compress));
+                return;
+            }
+
             lock (this)
             {
                 var copyLoggingThread = _loggingThread;
-                if (copyLoggingThread?.ManagedThreadId == Thread.CurrentThread.ManagedThreadId)
-                {
-                    Task.Run(() => SetupLogMode(logMode, path, retentionTime, retentionSize, compress));
-                    return;
-                }
+                
                 (bool info, bool operation) old = (_isInfoEnabled, _isOperationsEnabled);
                 (_isInfoEnabled, _isOperationsEnabled) = CalculateIsLogEnabled(logMode);
                 if (_isInfoEnabled == old.info && _isOperationsEnabled == old.operation && LogMode == logMode && path == _path && retentionTime == RetentionTime && compress == Compressing)
@@ -264,12 +270,12 @@ namespace Sparrow.Logging
 
         private bool TryGetNewStreamAndApplyRetentionPolicies(long maxFileSize, out FileStream fileStream)
         {
-            string[] logFiles;
-            string[] logGzFiles;
+            string[] allLogFiles;
             try
             {
-                logFiles = Directory.GetFiles(_path, "*.log");
-                logGzFiles = Directory.GetFiles(_path, "*.log.gz");
+                var logFiles = Directory.GetFiles(_path, $"*{LogExtension}");
+                var logGzFiles = Directory.GetFiles(_path, $"*{FullCompressExtension}");
+                allLogFiles = logFiles.Concat(logGzFiles).ToArray();
             }
             catch (Exception)
             {
@@ -277,50 +283,202 @@ namespace Sparrow.Logging
                 fileStream = null;
                 return false;
             }
-            Array.Sort(logFiles);
-            Array.Sort(logGzFiles);
 
-            if (DateTime.Today != _today)
-            {
-                _today = DateTime.Today;
-                _dateString = LogInfo.DateToLogFormat(DateTime.Today);
-            }
-
-            if (_logNumber < 0)
-                _logNumber = Math.Max(LastLogNumberForToday(logFiles), LastLogNumberForToday(logGzFiles));
+            _today = DateTime.Today;
+            (_logNumber, _dateString) = GetLastLogNumberAndDateStringForToday(allLogFiles);
 
             UpdateLocalDateTimeOffset();
 
-            string fileName;
+            string filePath;
             while (true)
             {
-                fileName = Path.Combine(_path, LogInfo.GetNewFileName(_dateString, _logNumber));
-                if (File.Exists(fileName))
+                var fileName = $"{_dateString}.{_logNumber:000}{LogExtension}";
+                filePath = Path.Combine(_path, fileName);
+                if (File.Exists(filePath))
                 {
-                    if(new FileInfo(fileName).Length < maxFileSize) 
-                        break;
+                    var currentFileSize = new FileInfo(filePath).Length;
+                    if (currentFileSize < maxFileSize)
+                        break; // we didn't reach the size limit yet
                 }
-                else if (File.Exists(LogInfo.AddCompressExtension(fileName)) == false)
+                else if (File.Exists($"{filePath}{AdditionalCompressExtension}") == false)
                 {
-                    break;
+                    break; // check if there is compressed file with the same name
                 }
                 _logNumber++;
             }
 
+            // If compression for log files is enabled, we apply retention rules to logs inside the compressLoggingThread
             if (Compressing == false)
             {
-                CleanupOldLogFiles(logFiles);
-                LimitLogSize(logFiles);
+                Array.Sort(allLogFiles);
+                ApplyRetentionRulesToLogs(allLogFiles);
             }
 
-            fileStream = SafeFileStream.Create(fileName, FileMode.Append, FileAccess.Write, FileShare.Read, 32 * 1024, false);
+            fileStream = SafeFileStream.Create(filePath, FileMode.Append, FileAccess.Write, FileShare.Read, 32 * 1024, false);
             fileStream.Write(_headerRow, 0, _headerRow.Length);
             return true;
         }
 
-        private void LimitLogSize(string[] logFiles)
+        private (string FullName, long Size) GetFileInfoSafe(string fileName)
         {
-            var logFilesInfo = logFiles.Select(f => new LogInfo(f)).ToArray();
+            var fileInfo = new FileInfo(fileName);
+            long fileSize = 0;
+            try
+            {
+                fileSize = fileInfo.Length;
+            }
+            catch
+            {
+                // Many things can happen
+            }
+
+            return (fileInfo.FullName, fileSize);
+        }
+
+        internal static bool TryGetLastWriteTimeUtc(string filePath, out DateTime dateTimeUtc) =>
+                TryGetFileTimeInternal(filePath, File.GetLastWriteTimeUtc, out dateTimeUtc);
+
+        internal static bool TryGetLastWriteTimeLocal(string filePath, out DateTime dateTimeLocal) =>
+            TryGetFileTimeInternal(filePath, File.GetLastWriteTime, out dateTimeLocal);
+
+        internal static bool TryGetCreationTimeUtc(string filePath, out DateTime dateTimeUtc) =>
+            TryGetFileTimeInternal(filePath, fp => GetLogFileCreationTime(fp, DateTimeKind.Utc), out dateTimeUtc);
+
+        internal static bool TryGetCreationTimeLocal(string filePath, out DateTime dateTimeLocal) =>
+            TryGetFileTimeInternal(filePath, fp => GetLogFileCreationTime(fp, DateTimeKind.Local), out dateTimeLocal);
+
+        private static bool TryGetFileTimeInternal(string filePath, Func<string, DateTime> fileTimeGetter, out DateTime dateTime)
+        {
+            dateTime = default;
+            try
+            {
+                if (filePath.Contains(Path.DirectorySeparatorChar) && File.Exists(filePath) == false)
+                    return false;
+
+                dateTime = fileTimeGetter(filePath);
+                return true;
+            }
+            catch
+            {
+                // ignored
+            }
+
+            return false;
+        }
+
+        internal static DateTime GetLogFileCreationTime(string filePathOrName, DateTimeKind timeKind)
+        {
+            var fileName = filePathOrName.Contains(Path.DirectorySeparatorChar) ? Path.GetFileName(filePathOrName) : filePathOrName;
+            var timestamp = fileName.Substring(0, fileName.IndexOf('.'));
+
+            if (DateTime.TryParseExact(timestamp, DateTimeWithMinutesFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dateTime) == false &&
+                DateTime.TryParseExact(timestamp, DateOnlyFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dateTime) == false) // backward compatibility
+                throw new InvalidOperationException($"Could not parse the log file name '{fileName}'");
+
+            return timeKind switch
+            {
+                DateTimeKind.Utc => dateTime.ToUniversalTime(),
+                DateTimeKind.Local => dateTime,
+                _ => throw new ArgumentOutOfRangeException(nameof(timeKind), timeKind, null)
+            };
+        }
+
+        internal static bool TryGetLogFileNumber(string filePathOrName, out int n)
+        {
+            n = -1;
+            var fileName = filePathOrName.Contains(Path.DirectorySeparatorChar) ? Path.GetFileName(filePathOrName) : filePathOrName;
+
+            var firstDotIndex = fileName.IndexOf('.');
+            if (firstDotIndex == -1)
+                return false;
+
+            var secondDotIndex = fileName.IndexOf('.', firstDotIndex + 1);
+            if (secondDotIndex == -1)
+                return false;
+
+            var betweenDots = fileName.Substring(firstDotIndex + 1, secondDotIndex - firstDotIndex - 1);
+            return int.TryParse(betweenDots, out n);
+        }
+
+        internal static string DateToLogFormat(DateTime dateTime)
+        {
+            return dateTime.ToString(DateTimeWithMinutesFormat, CultureInfo.InvariantCulture);
+        }
+
+        private void UpdateLocalDateTimeOffset()
+        {
+            if (_updateLocalTimeOffset == false || UseUtcTime)
+                return;
+
+            var offset = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).Ticks;
+            if (offset != LocalToUtcOffsetInTicks)
+                Interlocked.Exchange(ref LocalToUtcOffsetInTicks, offset);
+        }
+
+        private static (int LogNumber, string DateString) GetLastLogNumberAndDateStringForToday(IEnumerable<string> allLogFiles)
+        {
+            var now = DateTime.Now;
+            var todayPrefix = now.ToString(DateOnlyFormat);
+
+            var todayLogs = allLogFiles
+                .Select(Path.GetFileName)
+                .Where(fileName => fileName.StartsWith(todayPrefix))
+                .OrderBy(fileName => fileName)
+                .ToArray();
+
+            for (int i = todayLogs.Length - 1; i >= 0; i--)
+            {
+                if (TryGetCreationTimeLocal(todayLogs[i], out DateTime logDateTime) == false ||
+                    TryGetLogFileNumber(todayLogs[i], out var logNumber) == false)
+                    continue;
+
+                return (logNumber, DateToLogFormat(logDateTime));
+            }
+
+            return (0, DateToLogFormat(now));
+        }
+
+        private void ApplyRetentionRulesToLogs(string[] logFiles)
+        {
+            if (logFiles == null || logFiles.Length == 0)
+                return;
+
+            if (RetentionTime != TimeSpan.MaxValue)
+                logFiles = CleanupOldLogFiles(logFiles);
+
+            LimitTotalLogSize(logFiles);
+        }
+
+        private string[] CleanupOldLogFiles(string[] logFiles)
+        {
+            for (int i = 0; i < logFiles.Length; i++)
+            {
+                var logFile = logFiles[i];
+                if (TryGetLastWriteTimeLocal(logFile, out var logDateTime) == false ||
+                    DateTime.Now - logDateTime <= RetentionTime)
+                    continue;
+
+                try
+                {
+                    File.Delete(logFile);
+                    logFiles[i] = null;
+                }
+                catch (Exception)
+                {
+                    // we don't actually care if we can't handle this scenario, we'll just try again later
+                    // maybe something is currently reading the file?
+                }
+            }
+
+            return logFiles.Where(file => file != null).ToArray();
+        }
+
+        private void LimitTotalLogSize(string[] logFiles)
+        {
+            if (logFiles == null)
+                return;
+
+            var logFilesInfo = logFiles.Select(GetFileInfoSafe).ToArray();
             var totalLogSize = logFilesInfo.Sum(i => i.Size);
 
             long retentionSizeMinusCurrentFile = RetentionSize - MaxFileSizeInBytes;
@@ -342,127 +500,6 @@ namespace Sparrow.Logging
                 else
                 {
                     return;
-                }
-            }
-        }
-
-        internal class LogInfo
-        {
-            public const string LogExtension = ".log"; 
-            public const string AdditionalCompressExtension = ".gz"; 
-            public const string FullCompressExtension = LogExtension + AdditionalCompressExtension; 
-            private const string DateFormat = "yyyy-MM-dd";
-            private static readonly int DateFormatLength = DateFormat.Length;
-
-            public readonly string FullName;
-            public readonly long Size;
-
-            public LogInfo(string fileName)
-            {
-                var fileInfo = new FileInfo(fileName);
-                FullName = fileInfo.FullName;
-                try
-                {
-                    Size = fileInfo.Length;
-                }
-                catch
-                {
-                    //Many things can happen 
-                }
-            }
-
-            public static bool TryGetDate(string fileName, out DateTime dateTime)
-            {
-                try
-                {
-                    if (File.Exists(fileName))
-                    {
-                        dateTime = File.GetLastWriteTime(fileName);
-                        return true;
-                    }
-                }
-                catch
-                {
-                    // ignored
-                }
-
-                dateTime = default;
-                return false;
-            }
-            public static bool TryGetNumber(string fileName, out int n)
-            {
-                n = -1;
-                int end = fileName.LastIndexOf(LogExtension, fileName.Length - 1, StringComparison.Ordinal);
-                if (end == -1)
-                    return false;
-                
-                var start = fileName.LastIndexOf('.', end - 1);
-                if (start == -1)
-                    return false;
-                start++;
-                
-                var logNumber = fileName.Substring(start, end - start);
-                return int.TryParse(logNumber, out n);
-            }
-
-            public static string DateToLogFormat(DateTime dateTime)
-            {
-                return dateTime.ToString(DateFormat, CultureInfo.InvariantCulture);
-            }
-
-            public static string GetNewFileName(string dateString, int n)
-            {
-                return dateString + "." + n.ToString("000", CultureInfo.InvariantCulture) + LogExtension;
-            }
-            public static string AddCompressExtension(string dateString)
-            {
-                return dateString + AdditionalCompressExtension;
-            }
-        }
-
-        private void UpdateLocalDateTimeOffset()
-        {
-            if (_updateLocalTimeOffset == false || UseUtcTime)
-                return;
-
-            var offset = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).Ticks;
-            if (offset != LocalToUtcOffsetInTicks)
-                Interlocked.Exchange(ref LocalToUtcOffsetInTicks, offset);
-        }
-
-        private int LastLogNumberForToday(string[] files)
-        {
-            for (int i = files.Length - 1; i >= 0; i--)
-            {
-                if(LogInfo.TryGetDate(files[i], out var fileDate) == false || fileDate.Date.Equals(_today) == false)
-                    continue;
-                
-                if (LogInfo.TryGetNumber(files[i], out var n))
-                    return n;
-            }
-            
-            return 0;
-        }
-
-        private void CleanupOldLogFiles(string[] logFiles)
-        {
-            if (RetentionTime == TimeSpan.MaxValue)
-                return;
-
-            foreach (var logFile in logFiles)
-            {
-                if (LogInfo.TryGetDate(logFile, out var logDateTime) == false
-                    || DateTime.Now - logDateTime <= RetentionTime)
-                    continue;
-
-                try
-                {
-                    File.Delete(logFile);
-                }
-                catch (Exception)
-                {
-                    // we don't actually care if we can't handle this scenario, we'll just try again later
-                    // maybe something is currently reading the file?
                 }
             }
         }
@@ -495,9 +532,9 @@ namespace Sparrow.Logging
             public int Compare(string x, string y)
             {
                 string xFileName = Path.GetFileName(x);
-                var xJustFileName = xFileName.Substring(0, xFileName.LastIndexOf(".log", StringComparison.Ordinal));
+                var xJustFileName = xFileName.Substring(0, xFileName.LastIndexOf(LogExtension, StringComparison.Ordinal));
                 var yFileName = Path.GetFileName(y);
-                var yJustFileName = yFileName.Substring(0, yFileName.LastIndexOf(".log", StringComparison.Ordinal));
+                var yJustFileName = yFileName.Substring(0, yFileName.LastIndexOf(LogExtension, StringComparison.Ordinal));
                 return string.CompareOrdinal(xJustFileName, yJustFileName);
             }
         }
@@ -610,7 +647,6 @@ namespace Sparrow.Logging
             try
             {
                 Interlocked.Increment(ref _generation);
-                var threadStatesToRemove = new FastStack<WeakReference<LocalThreadWriterState>>();
                 while (_keepLogging)
                 {
                     try
@@ -760,8 +796,8 @@ namespace Sparrow.Logging
                     string[] logGzFiles;
                     try
                     {
-                        logFiles = Directory.GetFiles(_path, "*.log");
-                        logGzFiles = Directory.GetFiles(_path, "*.log.gz");
+                        logFiles = Directory.GetFiles(_path, $"*{LogExtension}");
+                        logGzFiles = Directory.GetFiles(_path, $"*{FullCompressExtension}");
                     }
                     catch (Exception)
                     {
@@ -770,7 +806,7 @@ namespace Sparrow.Logging
                     }
 
                     if (logFiles.Length <= 1)
-                        //There is only one log file in the middle of writing
+                        // There is only one log file in the middle of writing
                         continue;
 
                     Array.Sort(logFiles);
@@ -780,21 +816,21 @@ namespace Sparrow.Logging
                     {
                         var logFile = logFiles[i];
                         if (Array.BinarySearch(logGzFiles, logFile) > 0)
-                            continue;
+                            continue; // Already compressed
 
                         try
                         {
-                            var newZippedFile = Path.Combine(_path, Path.GetFileNameWithoutExtension(logFile) + ".log.gz");
+                            var newZippedFilePath = Path.Combine(_path, Path.GetFileNameWithoutExtension(logFile) + FullCompressExtension);
                             using (var logStream = SafeFileStream.Create(logFile, FileMode.Open, FileAccess.Read))
                             {
-                                //If there is compressed file with the same name (probably due to a failure) it will be overwritten
-                                using (var newFileStream = SafeFileStream.Create(newZippedFile, FileMode.Create, FileAccess.Write))
+                                // If there is compressed file with the same name (probably due to a failure) it will be overwritten
+                                using (var newFileStream = SafeFileStream.Create(newZippedFilePath, FileMode.Create, FileAccess.Write))
                                 using (var compressionStream = new GZipStream(newFileStream, CompressionMode.Compress))
                                 {
                                     logStream.CopyTo(compressionStream);
                                 }
                             }
-                            File.SetLastWriteTime(newZippedFile, File.GetLastWriteTime(logFile));
+                            File.SetLastWriteTime(newZippedFilePath, File.GetLastWriteTime(logFile));
                         }
                         catch (Exception)
                         {
@@ -813,10 +849,8 @@ namespace Sparrow.Logging
                         }
                     }
 
-                    Array.Sort(logGzFiles);
                     CleanupAlreadyCompressedLogFiles(logFiles, logGzFiles);
-                    CleanupOldLogFiles(logGzFiles);
-                    LimitLogSize(logGzFiles);
+                    ApplyRetentionRulesToLogs(logGzFiles);
                 }
                 catch (OperationCanceledException)
                 {

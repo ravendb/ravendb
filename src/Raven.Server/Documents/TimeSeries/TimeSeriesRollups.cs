@@ -274,6 +274,9 @@ namespace Raven.Server.Documents.TimeSeries
 
                     if (logger.IsInfoEnabled)
                         logger.Info($"{request} was executed (successfully: {done})");
+
+                    if (context.CanContinueTransaction == false)
+                        break;
                 }
 
                 return retained;

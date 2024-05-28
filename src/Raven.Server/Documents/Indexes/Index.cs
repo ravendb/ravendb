@@ -3312,9 +3312,13 @@ namespace Raven.Server.Documents.Indexes
                                     {
                                         var originalEnumerator = enumerator;
 
-                                        enumerator = new PulsedTransactionEnumerator<IndexReadOperationBase.QueryResult, QueryResultsIterationState>(queryContext.Documents,
+                                        var pulsedTransactionEnumerator = new PulsedTransactionEnumerator<IndexReadOperationBase.QueryResult, QueryResultsIterationState>(queryContext.Documents,
                                             state => originalEnumerator,
                                             new QueryResultsIterationState(queryContext.Documents, DocumentDatabase.Configuration.Databases.PulseReadTransactionLimit));
+                                        enumerator = pulsedTransactionEnumerator;
+                                        
+                                        //If we get a new transaction, we have to clear the cache in the retriever, because old allocations (documents, decompressed buffers) are no longer valid.
+                                        pulsedTransactionEnumerator.OnPulse += retriever.ClearCache;
                                     }
 
                                     using (enumerator)
@@ -4221,7 +4225,7 @@ namespace Raven.Server.Documents.Indexes
             return _lastStats;
         }
 
-        public abstract IQueryResultRetriever GetQueryResultRetriever(
+        public abstract IQueryResultRetriever<QueriedDocument> GetQueryResultRetriever(
             IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch,
             IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand);
 

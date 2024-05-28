@@ -42,6 +42,8 @@ namespace Voron.Global
 
         public static class Compression
         {
+            public const long NonReturnableStorageId = -1L;
+            
             public const int HeaderSize = CompressedNodesHeader.SizeOf;
 
             public const int MaxPageSize = 64 * Size.Kilobyte;

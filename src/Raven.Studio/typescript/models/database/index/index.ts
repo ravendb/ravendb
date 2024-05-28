@@ -34,6 +34,7 @@ class index {
     priority = ko.observable<Raven.Client.Documents.Indexes.IndexPriority>();
     state = ko.observable<Raven.Client.Documents.Indexes.IndexState>();
     status = ko.observable<Raven.Client.Documents.Indexes.IndexRunningStatus>();
+    referencedCollections = ko.observableArray<string>([]);
     
     reduceAttempts = ko.observable<number>();
     reduceErrors = ko.observable<number>();
@@ -113,6 +114,7 @@ class index {
         this.state(dto.State);
         this.globalIndexingStatus = globalIndexingStatus;
         this.status(dto.Status); 
+        this.referencedCollections(dto.ReferencedCollections);
         this.initializeObservables();
     }
 
@@ -349,6 +351,7 @@ class index {
         
         this.memory(incomingData.memory());
         this.isStale(incomingData.isStale());
+        this.referencedCollections(incomingData.referencedCollections());
     }
 
     filter(indexName: string, allowedStatuses: indexStatus[], withIndexingErrorsOnly: boolean): boolean {

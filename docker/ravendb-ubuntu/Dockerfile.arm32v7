@@ -1,10 +1,17 @@
-FROM mcr.microsoft.com/dotnet/runtime-deps:7.0-jammy-arm32v7
+FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-jammy-arm32v7
 
 RUN apt-get update \
     && apt-get install -y \
     && apt-get install --no-install-recommends openssl bzip2 jq curl -y
 
-ENV RAVEN_ARGS='' RAVEN_SETTINGS='' RAVEN_Setup_Mode='Initial' RAVEN_DataDir='RavenData' RAVEN_ServerUrl_Tcp='38888' RAVEN_AUTO_INSTALL_CA='true' RAVEN_IN_DOCKER='true'
+ENV RAVEN_ARGS='' \
+    RAVEN_SETTINGS='' \
+    RAVEN_Setup_Mode='Initial' \
+    RAVEN_DataDir='RavenData' \
+    RAVEN_ServerUrl_Tcp='38888' \
+    RAVEN_AUTO_INSTALL_CA='true' \
+    RAVEN_IN_DOCKER='true' \
+    RAVEN_Security_UnsecuredAccessAllowed='PrivateNetwork'
 
 EXPOSE 8080 38888 161
 

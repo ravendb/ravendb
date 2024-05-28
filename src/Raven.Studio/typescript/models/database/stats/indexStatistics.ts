@@ -7,7 +7,9 @@ class indexStatistics {
     indexType: Raven.Client.Documents.Indexes.IndexType;
 
     entriesCount: string; 
-    errorsCount: string;  
+    errorsCount: string;
+
+    referencedCollections: string[];
 
     mapAttempts: string; 
     mapSuccesses: string;
@@ -21,11 +23,11 @@ class indexStatistics {
     mappedPerSecondRate: number; 
     mappedPerSecondRateStr: string;
 
-    reduceAttempts?: string;        
-    reduceSuccesses?: string;       
-    reduceErrors?: string;          
+    reduceAttempts?: string;
+    reduceSuccesses?: string;
+    reduceErrors?: string;
     reducedPerSecondRate: number;
-    reducedPerSecondRateStr: string;   
+    reducedPerSecondRateStr: string; 
 
     isReduceIndex: boolean;
     isFaultyIndex: boolean;
@@ -37,6 +39,8 @@ class indexStatistics {
 
         this.entriesCount = dto.EntriesCount.toLocaleString();
         this.errorsCount = dto.ErrorsCount > 0 ? dto.ErrorsCount.toLocaleString() : "0";
+        
+        this.referencedCollections = dto.ReferencedCollections ?? [];
 
         this.mapAttempts = dto.MapAttempts.toLocaleString();
         this.mapSuccesses = dto.MapSuccesses.toLocaleString();

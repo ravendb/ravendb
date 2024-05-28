@@ -404,6 +404,9 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
+                    if (Database.ForTestingPurposes?.DelayQueryByPatch != null)
+                        await Database.ForTestingPurposes.DelayQueryByPatch.WaitAsync(token.Token);
+
                     return await GetRunner(query).ExecutePatchQuery(query, options, patch, patchArgs, queryContext, onProgress, token);
                 }
                 catch (ObjectDisposedException e)

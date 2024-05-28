@@ -44,7 +44,7 @@ namespace Raven.Server.Documents
                 await using (var readersItr = readers.GetAsyncEnumerator())
                 {
                     await ReadStartRecordingDetailsAsync(readersItr, context, peepingTomStream);
-                    while (await readersItr.MoveNextAsync())
+                    while (await readersItr.MoveNextAsync().ConfigureAwait(true))
                     {
                         using (readersItr.Current)
                         {

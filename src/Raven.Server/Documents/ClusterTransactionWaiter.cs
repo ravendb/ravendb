@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using static Raven.Server.Documents.DatabasesLandlord;
 using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents
 
         public void TrySetResult(string id, long index, HashSet<string> result)
         {
-            Database.RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+            Database.RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
             TrySetResult(id, result);
         }
     }

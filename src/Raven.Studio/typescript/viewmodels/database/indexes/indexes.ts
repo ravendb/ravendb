@@ -547,7 +547,7 @@ class indexes extends viewModelBase {
                     <small><i class="icon-warning"></i></small>
                 </div>
                 <div>
-                    <small>Clicking <strong>Reset</strong> will remove all existing indexed data.</small><br>
+                    <small>Clicking <strong>Reset</strong> will remove all existing indexed data from node ${this.localNodeTag()}.</small><br>
                     <small>All items matched by the index definition will be re-indexed.</small>
                 </div>
              </div>`,

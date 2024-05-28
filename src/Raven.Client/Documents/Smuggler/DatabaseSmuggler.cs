@@ -410,6 +410,11 @@ namespace Raven.Client.Documents.Smuggler
             {
                 _parent.ForTestingPurposes?.BeforeSerializeToStreamAsync?.Invoke();
 
+                // Immediately flush request stream to send headers
+                // https://github.com/dotnet/corefx/issues/39586#issuecomment-516210081
+                // https://github.com/dotnet/runtime/issues/96223#issuecomment-1865009861
+                await stream.FlushAsync().ConfigureAwait(false);
+
                 await base.SerializeToStreamAsync(stream, context).ConfigureAwait(false);
                 _tcs.TrySetResult(null);
             }

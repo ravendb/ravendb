@@ -8,7 +8,8 @@ class documentHelpers {
         const initialDocumentFields = doc.getDocumentPropertyNames();
         // get initial nodes list to work with
         const documentNodesFlattenedList = initialDocumentFields.map(curField => doc[curField]);
-        const guidRegex = /^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$/;
+        const guidRegexDashed = /^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$/;
+        const guidRegexWithoutDashes = /^[0-9a-fA-F]{32}$/;
         
         // examples:
         // - products/123
@@ -16,11 +17,20 @@ class documentHelpers {
         // - CloudInfo/34545-LINX
         const serverIdRegex = /^\w+\/\w+(-[A-Z]{1,4})?$/i;
 
-        const isGuid: (string: string) => boolean = string => string.length === 36 && guidRegex.test(string);
-        const isMaybeServerId: (string: string) => boolean = string =>
-            string.length < 512 && serverIdRegex.test(string);
+        const isGuid = (input: string) => (input.length === 36 && guidRegexDashed.test(input)) || (input.length === 32 && guidRegexWithoutDashes.test(input));
+        const isMaybeServerId = (input: string) => input.length < 512 && serverIdRegex.test(input);
+        
+        const isCollectionWithGuid = (input: string) => {
+            if (!input.includes("/")) {
+                return false;
+            }
+            
+            const tokens = input.split("/", 2);
+            return /^\w+$/i.test(tokens[0]) && isGuid(tokens[1]);
+        }
+        
         const isMaybeId: (field: string) => boolean = field =>
-            typeof field === "string" && (isGuid(field) || isMaybeServerId(field));
+            typeof field === "string" && (isGuid(field) || isMaybeServerId(field) || isCollectionWithGuid(field));
 
         for (let documentNodesCursor = 0; documentNodesCursor < documentNodesFlattenedList.length; documentNodesCursor++) {
             const curField = documentNodesFlattenedList[documentNodesCursor];

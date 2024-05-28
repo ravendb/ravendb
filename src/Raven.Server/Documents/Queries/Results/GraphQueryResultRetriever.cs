@@ -19,10 +19,9 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Results
 {
-    public class GraphQueryResultRetriever : QueryResultRetrieverBase
+    public class GraphQueryResultRetriever : QueryResultRetrieverBase<Document>
     {
         private readonly GraphQuery _graphQuery;
-        private readonly DocumentsOperationContext _context;
 
         public GraphQueryResultRetriever(GraphQuery graphQuery, DocumentDatabase database,
             IndexQueryServerSide query,
@@ -33,10 +32,9 @@ namespace Raven.Server.Documents.Queries.Results
             IncludeDocumentsCommand includeDocumentsCommand,
             IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand,
             IncludeRevisionsCommand includeRevisionsCommand)
-            : base(database, query, queryTimings, SearchEngineType.Lucene, fieldsToFetch, documentsStorage, context, false, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand)
+            : base(database, query, queryTimings, SearchEngineType.Lucene, fieldsToFetch, documentsStorage, context, context, false, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand)
         {
             _graphQuery = graphQuery;
-            _context = context;
         }
 
         protected override void ValidateFieldsToFetch(FieldsToFetch fieldsToFetch)
@@ -64,9 +62,12 @@ namespace Raven.Server.Documents.Queries.Results
             throw new NotSupportedException("Graph Queries do not deal with Corax indexes.");
         }
 
-        public override Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields) => DocumentsStorage.Get(_context, id);
-
-        protected override Document LoadDocument(string id) => DocumentsStorage.Get(_context, id);
+        protected override Document LoadDocument(Document parent, string id, ref RetrieverInput retrieverInput)
+        {
+            return id == string.Empty 
+                ? parent 
+                : DocumentsStorage.Get(DocumentContext, id);
+        }
 
         protected override long? GetCounter(string docId, string name)
         {
@@ -174,7 +175,7 @@ namespace Raven.Server.Documents.Queries.Results
                                 if (djv.Properties.Count == 0)
                                     continue;
 
-                                var matchJson = _context.ReadObject(djv, "graph/arg");
+                                var matchJson = DocumentContext.ReadObject(djv, "graph/arg");
 
                                 var doc = new Document { Data = matchJson };
 
@@ -216,7 +217,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             var dummy = new DynamicJsonValue();
             dummy["Dummy"] = array;
-            args[i] = _context.ReadObject(dummy, "graph/arg")["Dummy"];
+            args[i] = DocumentContext.ReadObject(dummy, "graph/arg")["Dummy"];
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Configuration;
@@ -28,7 +29,6 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -43,7 +43,6 @@ using Raven.Server.Utils.IoMetrics;
 using Sparrow;
 using Sparrow.Backups;
 using Sparrow.Collections;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
@@ -101,6 +100,9 @@ namespace Raven.Server.Documents
 
         private DocumentsCompressionConfiguration _documentsCompression = new(compressRevisions: false, collections: Array.Empty<string>());
         private HashSet<string> _compressedCollections = new(StringComparer.OrdinalIgnoreCase);
+
+        internal Sparrow.Size _maxTransactionSize = new(16, SizeUnit.Megabytes);
+
 
         public void ResetIdleTime()
         {
@@ -178,7 +180,8 @@ namespace Raven.Server.Documents
                 Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes,
                     Is32Bits ? TimeSpan.FromHours(12) : TimeSpan.FromDays(2));
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
-                RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
+                
+                RachisLogIndexNotifications = new DatabaseRaftIndexNotifications(_serverStore.Engine.StateMachine._rachisLogIndexNotifications, DatabaseShutdown);
                 CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, environmentPath, e, stacktrace) =>
                 {
                     serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId, environmentPath, stacktrace);
@@ -192,6 +195,7 @@ namespace Raven.Server.Documents
                 throw;
             }
         }
+
 
         public ServerStore ServerStore => _serverStore;
 
@@ -258,7 +262,7 @@ namespace Raven.Server.Documents
 
         public readonly DateTime StartTime;
 
-        public readonly RachisLogIndexNotifications RachisLogIndexNotifications;
+        public readonly DatabaseRaftIndexNotifications RachisLogIndexNotifications;
 
         public readonly byte[] MasterKey;
 
@@ -374,7 +378,7 @@ namespace Raven.Server.Documents
                     try
                     {
                         await NotifyFeaturesAboutStateChangeAsync(record, index);
-                        RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                        RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
                     }
                     catch (Exception e)
                     {
@@ -450,7 +454,7 @@ namespace Raven.Server.Documents
         {
             if (changeType == DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted)
             {
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
                 return;
             }
 
@@ -544,7 +548,7 @@ namespace Raven.Server.Documents
                 var index = _serverStore.Cluster.GetLastCompareExchangeIndexForDatabase(context, Name);
 
                 if (RachisLogIndexNotifications.LastModifiedIndex != index)
-                    RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                    RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
 
                 return batch;
             }
@@ -647,9 +651,9 @@ namespace Raven.Server.Documents
                 var index = command.Index;
                 var options = mergedCommands.Options[index];
 
-                ClusterTransactionWaiter.TrySetResult(options.TaskId, index, mergedCommands.ModifiedCollections);
-
                 ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
+
+                ClusterTransactionWaiter.TrySetResult(options.TaskId, index, mergedCommands.ModifiedCollections);
 
                 _nextClusterCommand = command.PreviousCount + command.Commands.Count;
                 _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
@@ -1340,7 +1344,14 @@ namespace Raven.Server.Documents
 
         public Stream GetOutputStream(Stream fileStream)
         {
-            return MasterKey == null ? fileStream : new EncryptingXChaCha20Poly1305Stream(fileStream, MasterKey);
+            if (MasterKey == null)
+                return fileStream;
+           
+            var encryptingStream = new EncryptingXChaCha20Poly1305Stream(fileStream, MasterKey);
+            
+            encryptingStream.Initialize();
+
+            return encryptingStream;
         }
 
         /// <summary>
@@ -1357,7 +1368,7 @@ namespace Raven.Server.Documents
                     ThrowDatabaseShutdown();
 
                 await NotifyFeaturesAboutValueChangeAsync(index, type, changeState);
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
             }
             catch (Exception e)
             {
@@ -1395,7 +1406,7 @@ namespace Raven.Server.Documents
 
                 await NotifyFeaturesAboutStateChangeAsync(record, index);
 
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
             }
             catch (Exception e)
             {
@@ -1981,6 +1992,8 @@ namespace Raven.Server.Documents
 
             internal Action AfterSnapshotOfDocuments;
 
+            internal Action<DynamicJsonValue, WebSocket> OnNextMessageChangesApi;
+
             internal bool SkipDrainAllRequests = false;
 
             internal Action<string, string> DisposeLog;
@@ -1988,6 +2001,8 @@ namespace Raven.Server.Documents
             internal bool ForceSendTombstones = false;
 
             internal Action<PathSetting> ActionToCallOnGetTempPath;
+
+            internal AsyncManualResetEvent DelayQueryByPatch;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {

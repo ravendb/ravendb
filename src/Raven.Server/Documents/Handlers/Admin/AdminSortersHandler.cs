@@ -31,10 +31,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
-                        var clientCert = GetCurrentCertificate();
-
-                        var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
-                        auditLog.Info($"Sorter {sorterDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {sorterToAdd}");
+                        LogAuditFor(Database.Name, $"Sorter {sorterDefinition.Name} PUT with definition: {sorterToAdd}");
                     }
 
                     sorterDefinition.Validate();
@@ -60,10 +57,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
-                var clientCert = GetCurrentCertificate();
-
-                var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
-                auditLog.Info($"Sorter {name} DELETE by {clientCert?.Subject} {clientCert?.Thumbprint}");
+                LogAuditFor(Database.Name, $"Sorter {name} DELETE");
             }
 
             var command = new DeleteSorterCommand(name, Database.Name, GetRaftRequestIdFromQuery());

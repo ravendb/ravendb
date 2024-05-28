@@ -395,7 +395,7 @@ namespace Sparrow.Server.Compression
         public int NumberOfEntries
         {
             get { return ReadNumberOfEntries(_state); }
-            set { MemoryMarshal.Write(_state.EncodingTable, ref value);}
+            set { MemoryMarshal.Write(_state.EncodingTable, in value);}
         }
 
         private static int ReadNumberOfEntries(in TEncoderState encoderState)
@@ -411,7 +411,7 @@ namespace Sparrow.Server.Compression
             set
             {
                 byte valueAsByte = (byte)value;
-                MemoryMarshal.Write(_state.EncodingTable.Slice(4, 1), ref valueAsByte);
+                MemoryMarshal.Write(_state.EncodingTable.Slice(4, 1), in valueAsByte);
             }
         }
 
@@ -421,7 +421,7 @@ namespace Sparrow.Server.Compression
             set
             {
                 byte valueAsByte = (byte)value;
-                MemoryMarshal.Write(_state.EncodingTable.Slice(5, 1), ref valueAsByte);
+                MemoryMarshal.Write(_state.EncodingTable.Slice(5, 1), in valueAsByte);
             }
         }
 
@@ -458,12 +458,13 @@ namespace Sparrow.Server.Compression
             int maxBitSequenceLength = 1;
             int minBitSequenceLength = int.MaxValue;
 
+            int tableI = 0;
             for (int i = 0; i < dictSize; i++)
             {
                 var symbol = symbolCodeList[i];
                 int symbolLength = symbol.Length;
 
-                ref var entry = ref EncodingTable[i];
+                var entry = EncodingTable[tableI];
 
                 // We update the size first to avoid getting a zero size start key.
                 entry.KeyLength = (byte)symbolLength;
@@ -496,24 +497,20 @@ namespace Sparrow.Server.Compression
                     entry.PrefixLength = (byte)symbolLength;
                 }
 
-                if (entry.PrefixLength == 0)
-                {
-                    i--;
-                    continue;
-                }
-                    
-                Debug.Assert(entry.PrefixLength > 0);
-
                 entry.Code = symbolCodeList[i].Code;
 
                 maxBitSequenceLength = Math.Max(maxBitSequenceLength, entry.Code.Length);
                 minBitSequenceLength = Math.Min(minBitSequenceLength, entry.Code.Length);
 
                 tree.Add((uint)entry.Code.Value, entry.Code.Length, (short)i);
+
+                // We update the table.
+                EncodingTable[tableI] = entry;
+                tableI++;
             }
 
-            _entries = dictSize;
-            NumberOfEntries = dictSize;
+            _entries = tableI;
+            NumberOfEntries = tableI;
             MaxBitSequenceLength = maxBitSequenceLength;
             MinBitSequenceLength = minBitSequenceLength;
         }

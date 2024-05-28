@@ -17,9 +17,5 @@ namespace Raven.Server.Exceptions
         public MissingAttachmentException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-        protected MissingAttachmentException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

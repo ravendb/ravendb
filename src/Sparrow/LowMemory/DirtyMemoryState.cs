@@ -4,6 +4,6 @@
     {
         public bool IsHighDirty;
 
-        public long TotalDirtyInBytes;
+        public Size TotalDirty;
     }
 }

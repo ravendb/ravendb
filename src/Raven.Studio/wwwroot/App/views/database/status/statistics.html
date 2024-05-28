@@ -223,6 +223,12 @@
                         <div class="name">Reduced Per Second Rate:</div>
                         <div class="value" data-bind="text: reducedPerSecondRateStr"></div>
                     </div>
+                    <div class="stats-item" data-bind="visible: referencedCollections.length">
+                        <div class="name">Referenced Collections:</div>
+                        <span class="value" data-bind="foreach: referencedCollections">
+                            <span data-bind="text: $data"></span>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>

@@ -67,6 +67,8 @@ public class RabbitMqEtl : QueueEtl<RabbitMqItem>
 
             foreach (var queueItem in exchange.Items)
             {
+                CancellationToken.ThrowIfCancellationRequested();
+
                 var properties = producer.CreateBasicProperties();
 
                 properties.Headers = new Dictionary<string, object>();

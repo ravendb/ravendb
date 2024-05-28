@@ -31,7 +31,7 @@ namespace Raven.Server.NotificationCenter
             {
                 _sw.Stop();
                 var httpContext = (HttpContext)state;
-                httpContext.Response.Headers.Add(Constants.Headers.RequestTime, _sw.ElapsedMilliseconds.ToString());
+                httpContext.Response.Headers[Constants.Headers.RequestTime] = _sw.ElapsedMilliseconds.ToString();
                 return Task.CompletedTask;
             }, _context);
         }

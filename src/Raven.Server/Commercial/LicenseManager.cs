@@ -536,7 +536,7 @@ namespace Raven.Server.Commercial
             var leaseLicenseInfo = GetLeaseLicenseInfo(currentLicense);
 
             var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/lease",
-                    new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"))
+                    new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"), _serverStore.ServerShutdown)
                 .ConfigureAwait(false);
 
             return response;
@@ -552,12 +552,12 @@ namespace Raven.Server.Commercial
             return leasedLicense.License;
         }
 
-        private static async Task<LeasedLicense> ConvertResponseToLeasedLicense(HttpResponseMessage httpResponseMessage)
+        private async Task<LeasedLicense> ConvertResponseToLeasedLicense(HttpResponseMessage httpResponseMessage)
         {
-            var leasedLicenseAsStream = await httpResponseMessage.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            var leasedLicenseAsStream = await httpResponseMessage.Content.ReadAsStreamAsync(_serverStore.ServerShutdown).ConfigureAwait(false);
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var json = await context.ReadForMemoryAsync(leasedLicenseAsStream, "leased license info");
+                var json = await context.ReadForMemoryAsync(leasedLicenseAsStream, "leased license info", _serverStore.ServerShutdown);
                 var leasedLicense = JsonDeserializationServer.LeasedLicense(json);
                 return leasedLicense;
             }
@@ -634,7 +634,7 @@ namespace Raven.Server.Commercial
                     if (license != null)
                         return license;
 
-                    var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    var responseString = await response.Content.ReadAsStringAsync(_serverStore.ServerShutdown).ConfigureAwait(false);
                     AddLeaseLicenseError($"status code: {response.StatusCode}, response: {responseString}");
                     return null;
                 }

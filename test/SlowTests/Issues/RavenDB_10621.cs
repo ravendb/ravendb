@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [MultiplatformFact(RavenArchitecture.X64)]
         public void ShouldNotErrorIndexOnInvalidProgramException()
         {
             // this test has been added initially to workaround the following issue: https://github.com/dotnet/coreclr/issues/14672

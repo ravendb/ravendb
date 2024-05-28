@@ -175,7 +175,7 @@ namespace SlowTests.Client.Queries
 
                     var query = RavenTestHelper.GetIndexQuery(ravenQueryable);
 
-                    Assert.Equal("from index 'test' where Name = $p0 and search(Tags, $p1)", query.Query);
+                    Assert.Equal("from index 'test' where (Name = $p0) and search(Tags, $p1)", query.Query);
                     Assert.Equal("i love cats", query.QueryParameters["p1"]);
                     Assert.Equal("User", query.QueryParameters["p0"]);
                 }

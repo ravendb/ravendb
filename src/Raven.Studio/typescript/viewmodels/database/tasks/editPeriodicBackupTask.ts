@@ -23,7 +23,7 @@ class editPeriodicBackupTask extends viewModelBase {
     backupDestinationsView = require("views/partial/backupDestinations.html");
     backupConfigurationView = require("views/partial/backupConfigurationScript.html");
     backupDestinationTestCredentialsView = require("views/partial/backupDestinationTestCredentialsResults.html");
-    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    taskResponsibleNodeSectionView = require("views/partial/taskResponsibleNodeSection_ForBackup.html");
     pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     titleForView: KnockoutComputed<string>;

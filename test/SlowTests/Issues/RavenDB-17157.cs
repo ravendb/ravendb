@@ -1,17 +1,12 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
-using Parquet.Thrift;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
-using Raven.Client.Json;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -47,7 +42,7 @@ namespace SlowTests.Issues
                     session.Store(new User { Name = "Bar" });
                     var exception = Assert.Throws<RavenTimeoutException>(() => session.SaveChanges());
 
-                    Assert.Contains("total stale indexes: 1", exception.Message);
+                    Assert.Contains($"total stale indexes: 1 ({indexName})", exception.Message);
                 }
             }
         }

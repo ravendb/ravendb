@@ -57,4 +57,5 @@ public enum RavenTestCategory : long
     Lucene = 1L << 42,
     Security = 1L << 43,
     Monitoring = 1L << 44,
+    Core = 1L << 45,
 }

@@ -37,7 +37,28 @@ namespace Raven.Server.Utils
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(CertificateUtils).FullName);
 
-        internal static bool CertHasKnownIssuer(X509Certificate2 userCertificate, X509Certificate2 knownCertificate, SecurityConfiguration securityConfiguration)
+        private static string GetCertificateName(X509Certificate2 certificate)
+        {
+            if (certificate == null)
+                return string.Empty;
+
+            return string.IsNullOrEmpty(certificate.FriendlyName) == false ? certificate.FriendlyName : certificate.Subject;
+        }
+
+        private static string GenerateCertificateChainDebugLog(X509Chain chain)
+        {
+            var stringBuilder = new StringBuilder();
+            stringBuilder.AppendLine("Certificate Chain (from leaf to CA) (name - pinning hash):");
+            foreach (var element in chain.ChainElements)
+            {
+                var certificate = element.Certificate;
+                stringBuilder.AppendLine($"{GetCertificateName(certificate)} - {certificate.GetPublicKeyPinningHash()}");
+            }
+
+            return stringBuilder.ToString();
+        }
+
+        internal static bool CertHasKnownIssuer(X509Certificate2 userCertificate, X509Certificate2 knownCertificate, SecurityConfiguration securityConfiguration, List<string> explanations = null)
         {
             X509Certificate2 issuerCertificate = null;
 
@@ -51,14 +72,19 @@ namespace Raven.Server.Utils
             // in order to do that properly it needs to be able to verify the chain by download the certificates
             //knownCertChain.ChainPolicy.DisableCertificateDownloads = true;
 
+            explanations?.Add($"Try building client certificate chain - {GetCertificateName(userCertificate)}.");
             try
             {
                 userChain.Build(userCertificate);
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}', failed to build the chain.", e);
+                var message = $"Cannot validate new client certificate '{GetCertificateName(userCertificate)} - ({userCertificate.Thumbprint})'," +
+                              $" failed to build the chain.";
+                explanations?.Add(message);
+                if (Logger.IsInfoEnabled) 
+                    Logger.Info(message, e);
+
                 return false;
             }
 
@@ -70,29 +96,53 @@ namespace Raven.Server.Utils
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Cannot extract pinning hash from the client certificate's issuer '{issuerCertificate?.FriendlyName} {issuerCertificate?.Thumbprint}'.", e);
+                var message = $"Cannot extract pinning hash from the client certificate's issuer '{issuerCertificate?.FriendlyName} {issuerCertificate?.Thumbprint}'.";
+                explanations?.Add(message);
+                if (Logger.IsInfoEnabled) 
+                    Logger.Info(message, e);
+
                 return false;
             }
 
+            explanations?.Add($"Try building know certificate chain - {GetCertificateName(knownCertificate)}.");
             try
             {
                 knownCertChain.Build(knownCertificate);
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Cannot validate new client certificate '{userCertificate.FriendlyName} {userCertificate.Thumbprint}'. Found a known certificate '{knownCertificate.Thumbprint}' with the same hash but failed to build its chain.", e);
+                var message = $"Cannot validate new client certificate '{GetCertificateName(userCertificate)} {userCertificate.Thumbprint}'." +
+                              $" Found a known certificate '{knownCertificate.Thumbprint}' with the same hash but failed to build its chain.";
+                explanations?.Add(message);
+                if (Logger.IsInfoEnabled) 
+                    Logger.Info(message, e);
+
                 return false;
             }
 
+            explanations?.Add("Comparing certificates (leafs):\n" +
+                              $"Client certificate - {GetCertificateName(userCertificate)} - {userCertificate.GetPublicKeyPinningHash()}\n" +
+                              $"Known certificate - {GetCertificateName(knownCertificate)} - {knownCertificate.GetPublicKeyPinningHash()}");
             // client certificates (leafs) Public Key pinning hashes must match
             if (userCertificate.GetPublicKeyPinningHash() != knownCertificate.GetPublicKeyPinningHash())
+            {
+                explanations?.Add("Client Certificate Public Key pinning hashes does not match");
                 return false;
+            }
 
             // support self-signed certs
             if (knownCertChain.ChainElements.Count == 1 && userChain.ChainElements.Count == 1)
+            {
+                explanations?.Add("Client certificate and known certificate are self-signed and have matching public key pinning hashes.");
                 return true;
+            }
+
+            if (explanations != null)
+            {
+                explanations.Add("Comparing issuers pinning hashes of client certificate and known certificate.");
+                explanations.Add($"Client certificate chain info:\n{GenerateCertificateChainDebugLog(userChain)}");
+                explanations.Add($"Known certificate chain info:\n{GenerateCertificateChainDebugLog(knownCertChain)}");
+            }
             
             // compare issuers pinning hashes starting from top of the chain (CA) since it's least likely to change
             // chain may have additional elements due to cross-signing, that's why we compare every issuer with each other
@@ -102,10 +152,14 @@ namespace Raven.Server.Utils
                 for (int j = userChain.ChainElements.Count - 1; j > 0; j--)
                 {
                     if (knownPinningHash == userChain.ChainElements[j].Certificate.GetPublicKeyPinningHash())
+                    {
+                        explanations?.Add($"Client certificate has issuer with matching public key pinning hash - {userChain.ChainElements[j].Certificate.FriendlyName}");
                         return true;
+                    }
                 }
             }
 
+            explanations?.Add("None of the issuers Public Key pinning hashes match.");
             return false;
         }
 

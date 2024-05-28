@@ -26,6 +26,8 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
         public long AvailableMemory { get; set; }
         public long AvailableMemoryForProcessing { get; set; }
         public long TotalSwapUsage { get; set; }
+        public long LuceneManagedTermCacheAllocations { get; set; }
+        public long LuceneUnmanagedAllocations { get; set; }
 
         public override ClusterDashboardNotificationType Type => ClusterDashboardNotificationType.MemoryUsage;
 
@@ -47,6 +49,8 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
             json[nameof(AvailableMemory)] = AvailableMemory;
             json[nameof(AvailableMemoryForProcessing)] = AvailableMemoryForProcessing;
             json[nameof(TotalSwapUsage)] = TotalSwapUsage;
+            json[nameof(LuceneManagedTermCacheAllocations)] = LuceneManagedTermCacheAllocations;
+            json[nameof(LuceneUnmanagedAllocations)] = LuceneUnmanagedAllocations;
 
             return json;
         }

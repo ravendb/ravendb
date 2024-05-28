@@ -30,14 +30,14 @@ namespace Raven.Server.Documents.Queries.Results
         }
     }
 
-    public abstract class StoredValueQueryResultRetriever : QueryResultRetrieverBase
+    public abstract class StoredValueQueryResultRetriever : QueryResultRetrieverBase<QueriedDocument>
     {
         private readonly string _storedValueFieldName;
         private readonly JsonOperationContext _context;
         private QueryTimingsScope _storageScope;
 
         protected StoredValueQueryResultRetriever(string storedValueFieldName, DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsStorage documentsStorage, JsonOperationContext context, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
-            : base(database, query, queryTimings, searchEngineType, fieldsToFetch, documentsStorage, context, true, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand)
+            : base(database, query, queryTimings, searchEngineType, fieldsToFetch, documentsStorage, context, documentContext: context as DocumentsOperationContext, true, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand)
         {
             if (storedValueFieldName == null)
                 throw new ArgumentNullException(nameof(storedValueFieldName));
@@ -54,11 +54,10 @@ namespace Raven.Server.Documents.Queries.Results
                 throw new InvalidQueryException($"Invalid projection behavior '{_query.ProjectionBehavior}'. You can only extract values from index.", _query.Query, _query.QueryParameters);
         }
 
-        protected override Document LoadDocument(string id)
+        protected override QueriedDocument LoadDocument(QueriedDocument parentDocument, string id, ref RetrieverInput retrieverInput)
         {
-            if (DocumentsStorage != null &&
-                _context is DocumentsOperationContext ctx)
-                return DocumentsStorage.Get(ctx, id);
+            if (DocumentsStorage != null && _context is DocumentsOperationContext ctx)
+                return base.LoadDocument(parentDocument, id, ref retrieverInput);
             // can happen during some debug endpoints that should never load a document
             return null;
         }
@@ -86,7 +85,7 @@ namespace Raven.Server.Documents.Queries.Results
             return djv;
         }
         
-        public override unsafe Document DirectGet(ref RetrieverInput retrieverInput,string id, DocumentFields fields)
+        public override unsafe QueriedDocument DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
         {
             BlittableJsonReaderObject result;
             if (retrieverInput.IsLuceneDocument() == false)
@@ -109,13 +108,14 @@ namespace Raven.Server.Documents.Queries.Results
                 result = new BlittableJsonReaderObject(allocation.Address, storedValue.Length, _context, buffer);
             }
 
-            return new Document
+            return new QueriedDocument()
             {
-                Data = result
+                Data = result,
+                NotPersistedInCache = true
             };
         }
 
-        public override (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token)
+        public override (QueriedDocument Document, List<QueriedDocument> List) Get(ref RetrieverInput retrieverInput, CancellationToken token)
         {
             if (FieldsToFetch.IsProjection)
                 return GetProjection(ref retrieverInput, null, token);
