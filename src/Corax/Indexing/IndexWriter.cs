@@ -1143,7 +1143,7 @@ namespace Corax.Indexing
                 _pagesToPrefetch = new ContextBoundNativeList<long>(_writer._entriesAllocator);
                 _buffers = _writer._textualFieldBuffers ??= new TextualFieldBuffers(_writer);
 
-                if (_writer.FieldSupportsPhraseQuery(indexedField))
+                if (indexedField.FieldSupportsPhraseQuery)
                 {
                     // For most cases, _indexField.Storage.Count is equal to _indexedField.Textual.Count().
                     // However, in cases where the field has mixed values (string/numerics), it differs. Therefore, we need to ensure that we have enough space to create the mapping.
@@ -1313,7 +1313,7 @@ namespace Corax.Indexing
                 RecordTermsForEntries(_entriesForTerm, entries, termContainerId);
     
                 //Update mapping virtual<=> storage location location. Final writing will be done after inserting ALL terms for specific field.
-                if (_writer.FieldSupportsPhraseQuery(_indexedField))
+                if (_indexedField.FieldSupportsPhraseQuery)
                 {
                     Debug.Assert(_virtualTermIdToTermContainerId[storageLocation] == Constants.IndexedField.Invalid, "virtualMapping[entries.StorageLocation] == Constants.IndexedField.Invalid, Term was already set! Persisted: {_virtualTermIdToTermContainerId[storageLocation]}, new: {termContainerId}");
                     _virtualTermIdToTermContainerId[storageLocation] = termContainerId;
@@ -1331,7 +1331,7 @@ namespace Corax.Indexing
             
             void ProcessTermsVector()
             {
-                if (_writer.FieldSupportsPhraseQuery(_indexedField) == false)
+                if (_indexedField.FieldSupportsPhraseQuery == false)
                     return;
 
                 const StoredFieldType storedFieldType = (StoredFieldType.List | StoredFieldType.Term);
@@ -2058,8 +2058,6 @@ namespace Corax.Indexing
                 _tokensBufferHandler = Analyzer.TokensPool.Rent(newTokenSize);
             }
         }
-
-        private bool FieldSupportsPhraseQuery(in IndexedField field) => _supportedFeatures.PhraseQuery && field.FieldIndexingMode is FieldIndexingMode.Search;
         
         public void Dispose()
         {
