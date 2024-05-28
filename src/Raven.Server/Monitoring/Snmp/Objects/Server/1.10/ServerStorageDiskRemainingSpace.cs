@@ -9,26 +9,16 @@ using Sparrow.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public sealed class ServerStorageDiskRemainingSpace : ScalarObjectBase<Gauge32>, ITaggedMetricInstrument<long>
+    public sealed class ServerStorageDiskRemainingSpace(ServerStore store) : ScalarObjectBase<Gauge32>(SnmpOids.Server.StorageDiskRemainingSpace), IMetricInstrument<long>
     {
-        private readonly ServerStore _store;
-        private readonly KeyValuePair<string, object> _nodeTag;
-
-        public ServerStorageDiskRemainingSpace(ServerStore store, KeyValuePair<string, object> nodeTag = default)
-            : base(SnmpOids.Server.StorageDiskRemainingSpace)
-        {
-            _store = store;
-            _nodeTag = nodeTag;
-        }
-
         private long? Value
         {
             get
             {
-                if (_store.Configuration.Core.RunInMemory)
+                if (store.Configuration.Core.RunInMemory)
                     return null;
                 
-                var result = _store.Server.MetricCacher.GetValue<DiskSpaceResult>(MetricCacher.Keys.Server.DiskSpaceInfo);
+                var result = store.Server.MetricCacher.GetValue<DiskSpaceResult>(MetricCacher.Keys.Server.DiskSpaceInfo);
                 if (result == null)
                     return null;
 
@@ -44,9 +34,6 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
                 : null;
         }
 
-        public Measurement<long> GetCurrentValue()
-        {
-            return new Measurement<long>(Value ?? -1, _nodeTag);
-        }
+        public long GetCurrentMeasurement() => Value ?? -1;
     }
 }

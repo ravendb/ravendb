@@ -33,7 +33,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             }
         }
 
-        public Measurement<int> GetCurrentValue()
+        public Measurement<int> GetCurrentMeasurement()
         {
             var db = GetDatabase();
             var value = db == null ? 0 : GetCountOfStaleIndexes(db);

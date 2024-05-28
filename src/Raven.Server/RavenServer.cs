@@ -22,12 +22,10 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using OpenTelemetry;
-using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using Raven.Client.Documents.Changes;
@@ -78,7 +76,6 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using DateTime = System.DateTime;
-using OpenTelemetry.Trace;
 using Raven.Server.Monitoring.OpenTelemetry;
 
 namespace Raven.Server
@@ -108,6 +105,7 @@ namespace Raven.Server
         private IWebHost _redirectingWebHost;
 
         private readonly Logger _tcpLogger;
+        private bool _openTelemetryInitialized;
         private readonly ExternalCertificateValidator _externalCertificateValidator;
         internal readonly JsonContextPool _tcpContextPool;
 
@@ -145,7 +143,7 @@ namespace Raven.Server
             Conventions = conventions ?? DocumentConventions.DefaultForServer;
 
             JsonDeserializationValidator.Validate();
-
+            Raven.Server.Monitoring.OpenTelemetry.Constants.Scanner();
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             if (Configuration.Initialized == false)
                 throw new InvalidOperationException("Configuration must be initialized");
@@ -443,33 +441,31 @@ namespace Raven.Server
 
         private void StartOpenTelemetry()
         {
-            MetricsBase.NodeTag = nodeTag;
-            MetricsManager = new MetricsManager(ServerStore.Server, nodeTag); 
+            if (_openTelemetryInitialized == false)
+                return; // since we're not exposing there is no reason to initialize meters itself.
+            
+            MetricsManager = new MetricsManager(ServerStore.Server); 
             MetricsManager.Execute();
         }
 
         private void ConfigureOpenTelemetry(IServiceCollection services)
         {
-            if (TryReadNodeTag(out var nodeTag) == false)
-                return;
-            
-            
             var openTelemetryConfiguration = Configuration.Monitoring.OpenTelemetry;
             if (openTelemetryConfiguration.Enabled == false)
                 return;
 
+            if (TryReadNodeTag(out var nodeTag) == false)
+                return;
+            
             var openTelemetryBuilder = services.AddOpenTelemetry();
             
             if (openTelemetryConfiguration.OltpExporter)
                 openTelemetryBuilder.UseOtlpExporter();
 
-            
-
-            if (openTelemetryConfiguration.MetricsEnabled)
-                openTelemetryBuilder.WithMetrics(ConfigureMetrics);
-            
+            openTelemetryBuilder.WithMetrics(ConfigureMetrics);
             void ConfigureMetrics(MeterProviderBuilder builder)
             {
+                builder.ConfigureResource(x => x.AddEnvironmentVariableDetector());
                 builder.SetResourceBuilder(
                     ResourceBuilder.CreateDefault()
                         .AddService("server", "ravendb", serviceInstanceId: nodeTag));
@@ -479,8 +475,11 @@ namespace Raven.Server
                 builder.AddMeter(Constants.ServerWideDatabasesMeterName);
                 builder.AddMeter(Constants.DatabaseStorageMeter);
                 builder.AddMeter(Constants.IndexMeter);
-               
-                //builder.AddConsoleExporter();
+
+                if (openTelemetryConfiguration.ConsoleExporter)
+                    builder.AddConsoleExporter();
+
+                _openTelemetryInitialized = true;
             }
         }
 

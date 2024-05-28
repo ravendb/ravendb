@@ -7,15 +7,8 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public sealed class ServerUnmanagedMemory : ScalarObjectBase<Gauge32>, ITaggedMetricInstrument<long>
+    public sealed class ServerUnmanagedMemory() : ScalarObjectBase<Gauge32>(SnmpOids.Server.UnmanagedMemory), IMetricInstrument<long>
     {
-        private readonly KeyValuePair<string, object> _nodeTag;
-
-        public ServerUnmanagedMemory(KeyValuePair<string, object> nodeTag  = default) : base(SnmpOids.Server.UnmanagedMemory)
-        {
-            _nodeTag = nodeTag;
-        }
-
         private long Value
         {
             get
@@ -30,9 +23,6 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
             return new Gauge32(Value);
         }
 
-        public Measurement<long> GetCurrentValue()
-        {
-            return new(Value, _nodeTag);
-        }
+        public long GetCurrentMeasurement() => Value;
     }
 }

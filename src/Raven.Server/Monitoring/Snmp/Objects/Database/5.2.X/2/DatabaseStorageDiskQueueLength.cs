@@ -7,8 +7,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database;
 
 public sealed class DatabaseStorageDiskQueueLength : DatabaseScalarObjectBase<Gauge32>, ITaggedMetricInstrument<long>
 {
-    public DatabaseStorageDiskQueueLength(string databaseName, DatabasesLandlord landlord, int index, string nodeTag = null)
-        : base(databaseName, landlord, SnmpOids.Databases.StorageDiskQueueLength, index, nodeTag)
+    public DatabaseStorageDiskQueueLength(string databaseName, DatabasesLandlord landlord, int index)
+        : base(databaseName, landlord, SnmpOids.Databases.StorageDiskQueueLength, index)
     {
     }
 
@@ -21,7 +21,7 @@ public sealed class DatabaseStorageDiskQueueLength : DatabaseScalarObjectBase<Ga
         return result == null || result.QueueLength.HasValue == false ? null : new Gauge32(result.QueueLength.Value);
     }
 
-    public Measurement<long> GetCurrentValue()
+    public Measurement<long> GetCurrentMeasurement()
     {
         if (TryGetDatabase(out var database))
         {

@@ -33,7 +33,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             }
         }
 
-        public Measurement<int> GetCurrentValue()
+        public Measurement<int> GetCurrentMeasurement()
         {
             return new Measurement<int>(1, _measurementTag);
         }

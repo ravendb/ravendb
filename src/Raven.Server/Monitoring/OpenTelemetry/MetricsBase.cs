@@ -1,57 +1,132 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Frozen;
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
+using System.Text;
+using Lextm.SharpSnmpLib;
+using Lextm.SharpSnmpLib.Pipeline;
 using Raven.Server.Config.Categories;
-using Raven.Server.Rachis;
+using Raven.Server.Monitoring.Snmp;
 
 namespace Raven.Server.Monitoring.OpenTelemetry;
 
-public abstract class MetricsBase
+public abstract class MetricsBase(MonitoringConfiguration.OpenTelemetryConfiguration configuration)
 {
-    private static string _nodeTag = null;
-    public static string NodeTag
-    {
-        get
-        {
-            if (_nodeTag == null || _nodeTag == RachisConsensus.InitialTag)
-                throw new InvalidOperationException(
-                    $"{nameof(NodeTag)} is neither 'null' nor default. OpenTelemetry in such case should not be running. This indicates a bug!");
-            
-            return _nodeTag;
-        }
-        set
-        {
-            if (_nodeTag != null)
-                throw new InvalidDataException($"{nameof(NodeTag)} for metrics is already set. This is a bug");
+    private static readonly FrozenDictionary<string, string> DescriptionMapping = SnmpOids.CreateMapping().ToFrozenDictionary();
+    protected readonly MonitoringConfiguration.OpenTelemetryConfiguration Configuration = configuration;
 
-            _nodeTag = value;
-        }
-    }
+    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_Id")]
+    private static extern ObjectIdentifier GetOidFromObservableValue(ScalarObject oids);
 
-    protected readonly MonitoringConfiguration.OpenTelemetryConfiguration Configuration;
-    protected MetricsBase(MonitoringConfiguration.OpenTelemetryConfiguration configuration)
-    {
-        Configuration = configuration;
-    }
     
-    protected void CreateObservableGaugeWithTags<T, TObservable>(string name, TObservable observeValue, string description, string[] family, Lazy<Meter> meter)
-        where TObservable : ITaggedMetricInstrument<T>
+    protected void CreateObservableGaugeWithTags<T, TObservable>(string name, Func<TObservable> observeValueFactory,
+        Expression<Func<MonitoringConfiguration.OpenTelemetryConfiguration, string[]>> family, Lazy<Meter> meter, string overridenDescription = null)
+        where TObservable : ScalarObject, ITaggedMetricInstrument<T>
         where T : struct
     {
-        if (family != null && family.Contains(name) == false)
+        if (ShouldSkipInstrument(name, family))
             return;
 
-        var x = meter.Value.CreateObservableGauge(name: name, observeValue: observeValue.GetCurrentValue, description: description);
+        var observableValue = observeValueFactory.Invoke();
+        RegisterInstrumentForDocumentation(name, family, observableValue);
+
+        meter.Value.CreateObservableGauge(name: name, observeValue: observableValue.GetCurrentMeasurement, description: overridenDescription ?? GetDescription(observableValue));
+    }
+
+
+
+    protected void CreateObservableGauge<T, TObservable>(string name, Func<TObservable> observeValueFactory,
+        Expression<Func<MonitoringConfiguration.OpenTelemetryConfiguration, string[]>> family, Lazy<Meter> meter)
+        where TObservable : ScalarObject, IMetricInstrument<T>
+        where T : struct
+    {
+        if (ShouldSkipInstrument(name, family))
+            return;
+
+        var observableValue = observeValueFactory.Invoke();
+        RegisterInstrumentForDocumentation(name, family, observableValue);
+
+        meter.Value.CreateObservableGauge(name: name, observeValue: observableValue.GetCurrentMeasurement, description: GetDescription(observableValue));
+    }
+
+    protected void CreateObservableUpDownCounterWithTags<T, TObservable>(string name, Func<TObservable> observeValueFactory,
+        Expression<Func<MonitoringConfiguration.OpenTelemetryConfiguration, string[]>> family, Lazy<Meter> meter)
+        where T : struct
+        where TObservable : ScalarObject, ITaggedMetricInstrument<T>
+    {
+        if (ShouldSkipInstrument(name, family))
+            return;
+
+        var observableValue = observeValueFactory.Invoke();
+        RegisterInstrumentForDocumentation(name, family, observableValue);
+
+        meter.Value.CreateObservableUpDownCounter(name: name, observeValue: observableValue.GetCurrentMeasurement, description: GetDescription(observableValue));
+    }
+
+    protected void CreateObservableUpDownCounter<T, TObservable>(string name, Func<TObservable> observeValueFactory,
+        Expression<Func<MonitoringConfiguration.OpenTelemetryConfiguration, string[]>> family, Lazy<Meter> meter)
+        where T : struct
+        where TObservable : ScalarObject, IMetricInstrument<T>
+    {
+        if (ShouldSkipInstrument(name, family))
+            return;
+
+        var observableValue = observeValueFactory.Invoke();
+        RegisterInstrumentForDocumentation(name, family, observableValue);
+        
+        meter.Value.CreateObservableUpDownCounter(name: name, observeValue: observableValue.GetCurrentMeasurement, description: GetDescription(observableValue));
+    }
+
+    private bool ShouldSkipInstrument(string name, Expression<Func<MonitoringConfiguration.OpenTelemetryConfiguration, string[]>> family)
+    {
+        var filter = family?.Compile()?.Invoke(Configuration);
+        return filter != null && filter.Contains(name) == false;
+    }
+
+    private static string GetDescription<T>(T value)
+        where T : ScalarObject
+    {
+        var underlyingId = GetOidFromObservableValue(value);
+        ArgumentNullException.ThrowIfNull(underlyingId);
+        
+        var desc = DescriptionMapping[underlyingId.ToString()];
+        ArgumentException.ThrowIfNullOrEmpty(desc);
+       
+        return desc;
     }
     
-    protected void CreateObservableUpDownCounterWithTags<T, TObservable>(string name, TObservable observeValue, string description, string[] family, Lazy<Meter> meter)
-        where T : struct
-        where TObservable : ITaggedMetricInstrument<T>
-    {
-        if (family != null && family.Contains(name) == false) 
-            return;
+#if DEBUG
+    public static readonly ConcurrentDictionary<(string Name, string Family), string> InstrumentDescriptionHolder = new();
 
-        meter.Value.CreateObservableUpDownCounter(name: name, observeValue: observeValue.GetCurrentValue, description: description);
+    public static string GenerateTableOfInstrumentationMarkdown()
+    {
+        var table = new StringBuilder();
+        var source = InstrumentDescriptionHolder.OrderBy(x => x.Key.Family).ThenBy(x => x.Key.Name);
+        table.AppendLine($"| Family | Name | Description |");
+        table.AppendLine(@"| :--- | :--- | :--- |");
+        foreach (var instrument in source)
+        {
+            table.AppendLine($"| {instrument.Key.Family} | {instrument.Key.Name} | {instrument.Value} |");
+        }
+
+        return table.ToString();
+    }
+    
+#endif
+
+    [Conditional("DEBUG")]
+    private static void RegisterInstrumentForDocumentation(string name, Expression<Func<MonitoringConfiguration.OpenTelemetryConfiguration, string[]>> family, ScalarObject scalarObject, string overridenDescription = null)
+    {
+#if DEBUG
+        var familyName = family.Body.ToString().Split('.')[1];
+        var description = (overridenDescription ?? GetDescription(scalarObject))
+            .Replace("(", @"\(")
+            .Replace(")", @"\)");
+        InstrumentDescriptionHolder.TryAdd((Name: name, Family: familyName), description);
+#endif
     }
 }

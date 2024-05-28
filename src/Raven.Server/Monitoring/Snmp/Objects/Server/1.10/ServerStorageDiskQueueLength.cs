@@ -6,26 +6,16 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database;
 
-public sealed class ServerStorageDiskQueueLength : ScalarObjectBase<Gauge32>, ITaggedMetricInstrument<long>
+public sealed class ServerStorageDiskQueueLength(ServerStore store) : ScalarObjectBase<Gauge32>(SnmpOids.Server.StorageDiskQueueLength), IMetricInstrument<long>
 {
-    private readonly ServerStore _store;
-    private readonly KeyValuePair<string, object> _nodeTag;
-
-    public ServerStorageDiskQueueLength(ServerStore store, KeyValuePair<string, object> nodeTag = default)
-        : base(SnmpOids.Server.StorageDiskQueueLength)
-    {
-        _store = store;
-        _nodeTag = nodeTag;
-    }
-
     private long? Value
     {
         get
         {
-            if (_store.Configuration.Core.RunInMemory)
+            if (store.Configuration.Core.RunInMemory)
                 return null;
 
-            var result = _store.Server.DiskStatsGetter.Get(_store._env.Options.DriveInfoByPath?.Value.BasePath.DriveName);
+            var result = store.Server.DiskStatsGetter.Get(store._env.Options.DriveInfoByPath?.Value.BasePath.DriveName);
             
             return result == null || result.QueueLength.HasValue == false 
                 ? null 
@@ -41,8 +31,5 @@ public sealed class ServerStorageDiskQueueLength : ScalarObjectBase<Gauge32>, IT
             : null;
     }
 
-    public Measurement<long> GetCurrentValue()
-    {
-        return new(Value ?? -1, _nodeTag);
-    }
+    public long GetCurrentMeasurement() => Value ?? -1;
 }

@@ -8,8 +8,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database;
 
 public sealed class DatabaseStorageDiskReadThroughput : DatabaseScalarObjectBase<Gauge32>, ITaggedMetricInstrument<long>
 {
-    public DatabaseStorageDiskReadThroughput(string databaseName, DatabasesLandlord landlord, int index, string nodeTag = null)
-        : base(databaseName, landlord, SnmpOids.Databases.StorageDiskReadThroughput, index, nodeTag)
+    public DatabaseStorageDiskReadThroughput(string databaseName, DatabasesLandlord landlord, int index)
+        : base(databaseName, landlord, SnmpOids.Databases.StorageDiskReadThroughput, index)
     {
     }
 
@@ -31,7 +31,7 @@ public sealed class DatabaseStorageDiskReadThroughput : DatabaseScalarObjectBase
         return null;
     }
     
-    public Measurement<long> GetCurrentValue()
+    public Measurement<long> GetCurrentMeasurement()
     {
         if (TryGetDatabase(out var database) && Value(database) is { } result)
             return new(result, MeasurementTags);

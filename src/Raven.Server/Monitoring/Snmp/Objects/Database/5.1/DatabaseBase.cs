@@ -11,12 +11,10 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public abstract class DatabaseBase<TData> : ScalarObjectBase<TData> where TData : ISnmpData
     {
         protected readonly ServerStore ServerStore;
-        protected readonly KeyValuePair<string, object> MeasurementTag;
         
-        protected DatabaseBase(ServerStore serverStore, string dots, KeyValuePair<string,object> nodeTag = default)
+        protected DatabaseBase(ServerStore serverStore, string dots)
             : base(dots)
         {
-            MeasurementTag = nodeTag;
             ServerStore = serverStore;
         }
 

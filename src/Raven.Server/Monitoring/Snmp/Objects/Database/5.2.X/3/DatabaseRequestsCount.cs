@@ -4,12 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Diagnostics.Metrics;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
+using Raven.Server.Monitoring.OpenTelemetry;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class DatabaseRequestsCount : DatabaseScalarObjectBase<Integer32>
+    public sealed class DatabaseRequestsCount : DatabaseScalarObjectBase<Integer32>, ITaggedMetricInstrument<int>
     {
         public DatabaseRequestsCount(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.RequestsCount, index)
@@ -24,6 +26,13 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
         private static int GetCount(DocumentDatabase database)
         {
             return (int)database.Metrics.Requests.RequestsPerSec.Count;
+        }
+        
+        public Measurement<int> GetCurrentMeasurement()
+        {
+            if (TryGetDatabase(out var db))
+                return new(GetCount(db), MeasurementTags);
+            return new(0, MeasurementTags);
         }
     }
 }

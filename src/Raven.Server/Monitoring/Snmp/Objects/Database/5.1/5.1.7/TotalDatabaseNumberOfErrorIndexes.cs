@@ -3,22 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-
-using System.Collections.Generic;
-using System.Diagnostics.Metrics;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class TotalDatabaseNumberOfErrorIndexes : DatabaseBase<Integer32>, ITaggedMetricInstrument<int>
+    public sealed class TotalDatabaseNumberOfErrorIndexes(ServerStore serverStore)
+        : DatabaseBase<Integer32>(serverStore, SnmpOids.Databases.General.TotalNumberOfErrorIndexes), IMetricInstrument<int>
     {
-        public TotalDatabaseNumberOfErrorIndexes(ServerStore serverStore, KeyValuePair<string, object> nodeTag = default)
-            : base(serverStore, SnmpOids.Databases.General.TotalNumberOfErrorIndexes, nodeTag)
-        {
-        }
-
         private int Value
         {
             get
@@ -35,9 +28,6 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             return new Integer32(Value);
         }
 
-        public Measurement<int> GetCurrentValue()
-        {
-            return new(Value, MeasurementTag);
-        }
+        public int GetCurrentMeasurement() => Value;
     }
 }

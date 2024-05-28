@@ -14,7 +14,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects
         protected readonly KeyValuePair<string, object>[] MeasurementTags;
         protected readonly DatabasesLandlord Landlord;
 
-        protected DatabaseScalarObjectBase(string databaseName, DatabasesLandlord landlord, string dots, int index, string nodeTag = null, KeyValuePair<string, object>[] measurementTags = null)
+        protected DatabaseScalarObjectBase(string databaseName, DatabasesLandlord landlord, string dots, int index, KeyValuePair<string, object>[] measurementTags = null)
             : base(dots, index)
         {
             DatabaseName = databaseName;
@@ -22,7 +22,6 @@ namespace Raven.Server.Monitoring.Snmp.Objects
             MeasurementTags = new[]
                 {
                     new KeyValuePair<string, object>(Constants.Tags.Database, databaseName),
-                    new KeyValuePair<string, object>(Constants.Tags.NodeTag, nodeTag)
                 }
                 .Concat(measurementTags ?? Enumerable.Empty<KeyValuePair<string, object>>())
                 .ToArray();

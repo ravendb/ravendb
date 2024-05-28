@@ -1,4 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using Lextm.SharpSnmpLib.Pipeline;
 
 namespace Raven.Server.Monitoring.OpenTelemetry;
 
@@ -152,10 +156,45 @@ public static class Constants
         public const string ThreadPoolAvailableCompletionPortThreads = Prefix + "thread.pool.available.completion.port.threads";
         public const string TcpActiveConnections = Prefix + "tcp.active.connections";
         public const string FeatureAnyExperimental = Prefix + "feature.any.experimental";
+        
+        public class GC
+        {
+            private const string Prefix = ServerWide.Prefix + "gc.";
+            public const string ServerGcCompacted = Prefix + "compacted";
+            public const string ServerGcConcurrent = Prefix + "concurrent";
+            public const string ServerGcFinalizationPendingCount = Prefix + "finalizationpendingcount";
+            public const string ServerGcFragmented = Prefix + "fragmented";
+            public const string ServerGcGeneration = Prefix + "generation";
+            public const string ServerGcHeapSize = Prefix + "heapsize";
+            public const string ServerGcHighMemoryLoadThreshold = Prefix + "highmemoryloadthreshold";
+            public const string ServerGcIndex = Prefix + "index";
+            public const string ServerGcMemoryLoad = Prefix + "memoryload";
+            public const string ServerGcPauseDurations1 = Prefix + "pausedurations1";
+            public const string ServerGcPauseDurations2 = Prefix + "pausedurations2";
+            public const string ServerGcPauseTimePercentage = Prefix + "timepercentage";
+            public const string ServerGcPinnedObjectsCount = Prefix + "pinnedobjectscount";
+            public const string ServerGcPromoted = Prefix + "promoted";
+            public const string ServerGcTotalAvailableMemory = Prefix + "totalavailablememory";
+            public const string ServerGcTotalCommitted = Prefix + "totalcommited";
+            public const string ServerGcLohSize = Prefix + "gclohsize";
+        }
     }
 
-    static Constants()
+    public static void Scanner()
     {
-        //todo write code to assert conventions
+        return;
+        var assembly = AppDomain.CurrentDomain.GetAssemblies();
+        var inheritingTypes = assembly.SelectMany(x => x.GetTypes()
+            .Where(t => t.IsClass && t.IsAbstract == false && t.IsSubclassOf(typeof(SnmpObjectBase)))).ToArray();
+
+        // Filter out types that do not implement interface Y
+        var nonConformingTypes = inheritingTypes
+            .Where(t => t.IsClass && t.IsAbstract == false)
+            .ToArray();
+
+        var x = nonConformingTypes.Where(t => !typeof(PlaceHolderReflection).IsAssignableFrom(t)).ToList();
+        foreach (var i in x)
+            Console.WriteLine(i.FullName);
+
     }
 }

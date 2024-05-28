@@ -16,10 +16,10 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 
         protected override Integer32 GetData()
         {
-            return new Integer32(GetCurrentValue());
+            return new Integer32(GetCurrentMeasurement());
         }
         
-        public int GetCurrentValue()
+        public int GetCurrentMeasurement()
         {
             return _landlord.DatabasesCache.Count;
         }

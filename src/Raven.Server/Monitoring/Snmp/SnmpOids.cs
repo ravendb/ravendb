@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Lextm.SharpSnmpLib;
+using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.Platform.Posix;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -377,6 +380,14 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Monitor lock contention count")]
             public const string MonitorLockContentionCount = "1.18.1";
 
+            public static Dictionary<string, string> CreateMapping()
+            {
+                var dictionary = new Dictionary<string, string>();
+                foreach (DynamicJsonValue field in ToJson())
+                    dictionary.Add(field["OID"]!.ToString() ?? throw new InvalidOperationException(), field["Description"]!.ToString());
+                return dictionary;
+            }
+            
             public static DynamicJsonArray ToJson()
             {
                 var array = new DynamicJsonArray();
@@ -752,6 +763,20 @@ namespace Raven.Server.Monitoring.Snmp
                 [Description("Index type")]
                 public const string Type = "5.2.{0}.4.{{0}}.16";
 
+
+                public static Dictionary<string, string> CreateMapping(long ignoreIndex)
+                {
+                    var dictioanry = new Dictionary<string, string>();
+                    foreach (var field in typeof(Indexes).GetFields())
+                    {
+                        var fieldValue = GetFieldValue(field);
+                        var databaseOid = string.Format(fieldValue.Oid, ignoreIndex);
+                        var indexOid = string.Format(databaseOid, ignoreIndex);
+                        dictioanry.Add(Root + indexOid, fieldValue.Description);
+                    }
+
+                    return dictioanry;
+                }
                 public static DynamicJsonValue ToJson(ServerStore serverStore, TransactionOperationContext context, RawDatabaseRecord record, long databaseIndex)
                 {
                     var mapping = SnmpDatabase.GetIndexMapping(context, serverStore, record.DatabaseName);
@@ -850,6 +875,19 @@ namespace Raven.Server.Monitoring.Snmp
                 [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of faulted databases")]
                 public const string FaultedCount = "5.1.10";
+                public const string FaultedCountDescription = "Number of faulted databases";
+
+                internal static Dictionary<string, string> CreateMapping()
+                {
+                    var dictionary = new Dictionary<string, string>();
+                    foreach (var field in typeof(General).GetFields())
+                    {
+                        var fieldValue = GetFieldValue(field);
+                        dictionary.Add(Root + fieldValue.Oid, fieldValue.Description);
+                    }
+
+                    return dictionary;
+                }
 
                 [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of enabled ongoing tasks for all databases")]
@@ -963,6 +1001,19 @@ namespace Raven.Server.Monitoring.Snmp
                 }
             }
 
+            public static Dictionary<string, string> CreateMapping()
+            {
+                var dict = General.CreateMapping().Concat(Indexes.CreateMapping(DatabaseWideMetrics.IgnoreIndex)).ToDictionary();
+                foreach (var field in typeof(Databases).GetFields())
+                {
+                    var fieldValue = GetFieldValue(field);
+                    var oid = string.Format(fieldValue.Oid, DatabaseWideMetrics.IgnoreIndex);
+                    dict.Add(Root + oid, fieldValue.Description);
+                }
+
+                return dict;
+            }
+
             public static DynamicJsonValue ToJson(ServerStore serverStore, TransactionOperationContext context)
             {
                 var djv = new DynamicJsonValue
@@ -997,6 +1048,13 @@ namespace Raven.Server.Monitoring.Snmp
 
                 return djv;
             }
+        }
+
+        public static Dictionary<string, string> CreateMapping()
+        {
+            return Server.CreateMapping()
+                .Union(Databases.CreateMapping())
+                .ToDictionary();
         }
 
         private static (string Oid, string Description, Type Type, SnmpType? TypeCode) GetFieldValue(FieldInfo field)

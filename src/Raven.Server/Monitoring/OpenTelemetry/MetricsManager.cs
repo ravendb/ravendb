@@ -12,14 +12,13 @@ namespace Raven.Server.Monitoring.OpenTelemetry;
 public class MetricsManager
 {
     private readonly RavenServer _server;
-    private readonly string _nodeTag;
     private readonly SemaphoreSlim _locker = new(1, 1);
     private ServerMetrics _serverMetrics;
     private readonly Dictionary<string, DatabaseWideMetrics> _loadedDatabases = new(StringComparer.OrdinalIgnoreCase);
-    public MetricsManager(RavenServer server, string nodeTag)
+
+    public MetricsManager(RavenServer server)
     {
         _server = server;
-        _nodeTag = nodeTag;
         _server.ServerStore.LicenseManager.LicenseChanged += OnLicenseChanged;
     }
 
@@ -40,7 +39,7 @@ public class MetricsManager
             else
             {
                 //when we dispose meter all registered thing will die eventually however metrics still be exported but there will be no instruments
-            }    
+            }
         }
         catch (ObjectDisposedException)
         {
@@ -52,7 +51,7 @@ public class MetricsManager
             _locker.Release();
         }
     }
-    
+
     public void Execute()
     {
         if (_server.Configuration.Monitoring.OpenTelemetry.Enabled == false)
@@ -75,7 +74,8 @@ public class MetricsManager
         }
         catch (Exception e)
         {
-            Debugger.Launch(); Debugger.Break();
+            Debugger.Launch();
+            Debugger.Break();
             throw;
         }
         finally
@@ -88,6 +88,9 @@ public class MetricsManager
 
     private async Task AddDatabases()
     {
+        if (_server.Configuration.Monitoring.OpenTelemetry.Databases == false)
+            return;
+
         await _locker.WaitAsync();
         try
         {
@@ -100,51 +103,51 @@ public class MetricsManager
                 .ItemKeysStartingWith(context, Client.Constants.Documents.Prefix, 0, long.MaxValue)
                 .Select(x => x.Substring(Client.Constants.Documents.Prefix.Length))
                 .ToList();
-            
-            if (databases.Count == 0) 
+
+            if (databases.Count == 0)
                 return;
 
-            var databaseNamesToShare = _server.Configuration.Monitoring.OpenTelemetry.DatabaseNamesToShare;
+            var databaseNamesToShare = _server.Configuration.Monitoring.OpenTelemetry.ExposedDatabases;
             foreach (var database in databases)
             {
-                if ( (databaseNamesToShare == null || databaseNamesToShare.Contains(database)) && _loadedDatabases.TryGetValue(database, out var databaseMetrics) == false)
+                if ((databaseNamesToShare == null || databaseNamesToShare.Contains(database)) && _loadedDatabases.TryGetValue(database, out var databaseMetrics) == false)
                 {
-                    _loadedDatabases[database] = new DatabaseWideMetrics(_server.ServerStore.DatabasesLandlord, database,  _nodeTag, _server.Configuration.Monitoring.OpenTelemetry); 
+                    _loadedDatabases[database] = new DatabaseWideMetrics(_server.ServerStore.DatabasesLandlord, database, _server.Configuration.Monitoring.OpenTelemetry);
                 }
             }
-            
-        }
-        catch (Exception e)
-        {
-            Debugger.Launch(); Debugger.Break();
-            throw;
         }
         finally
         {
             _locker.Release();
         }
-
-        
     }
 
     private void AddDatabasesIfNecessary(string databaseName)
     {
+        if (_server.Configuration.Monitoring.OpenTelemetry.Databases == false)
+            return;
+
+        var exposedDatabases = _server.Configuration.Monitoring.OpenTelemetry.ExposedDatabases;
+        if (exposedDatabases != null && exposedDatabases.Contains(databaseName) == false)
+            return;
+
         if (string.IsNullOrWhiteSpace(databaseName))
             return;
-        
+
         if (_loadedDatabases.ContainsKey(databaseName))
             return;
-        
-        _loadedDatabases.Add(databaseName, new DatabaseWideMetrics(_server.ServerStore.DatabasesLandlord, databaseName, _nodeTag, _server.Configuration.Monitoring.OpenTelemetry));
+
+        _loadedDatabases.Add(databaseName, new DatabaseWideMetrics(_server.ServerStore.DatabasesLandlord, databaseName, _server.Configuration.Monitoring.OpenTelemetry));
     }
 
     private void RegisterServerWideMeters()
     {
         if (_serverMetrics != null)
             throw new InvalidOperationException("Server-wide metrics are already initialized.");
-        
+
         if (_server.Configuration.Monitoring.OpenTelemetry.ServerWideEnabled == false)
             return;
-        _serverMetrics = new(_server, _nodeTag);
+
+        _serverMetrics = new(_server);
     }
 }

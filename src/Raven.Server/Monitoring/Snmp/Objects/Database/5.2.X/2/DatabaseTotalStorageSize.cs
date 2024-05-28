@@ -8,8 +8,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public sealed class DatabaseTotalStorageSize : DatabaseScalarObjectBase<Gauge32>, ITaggedMetricInstrument<long>
     {
-        public DatabaseTotalStorageSize(string databaseName, DatabasesLandlord landlord, int index, string nodeTag = null)
-            : base(databaseName, landlord, SnmpOids.Databases.TotalStorageSize, index, nodeTag)
+        public DatabaseTotalStorageSize(string databaseName, DatabasesLandlord landlord, int index)
+            : base(databaseName, landlord, SnmpOids.Databases.TotalStorageSize, index)
         {
         }
 
@@ -24,7 +24,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             return size / 1024L / 1024L;
         }
 
-        public Measurement<long> GetCurrentValue()
+        public Measurement<long> GetCurrentMeasurement()
         {
             if (TryGetDatabase(out var database))
                 return new(GetTotalStorageSize(database), MeasurementTags);

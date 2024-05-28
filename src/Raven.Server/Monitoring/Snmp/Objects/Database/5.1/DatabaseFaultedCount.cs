@@ -1,11 +1,12 @@
 using Lextm.SharpSnmpLib;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
+using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class DatabaseFaultedCount : DatabaseBase<Integer32>
+    public sealed class DatabaseFaultedCount : DatabaseBase<Integer32>, IMetricInstrument<int>
     {
         public DatabaseFaultedCount(ServerStore serverStore)
             : base(serverStore, SnmpOids.Databases.General.FaultedCount)
@@ -39,5 +40,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 
             return count;
         }
+
+        public int GetCurrentMeasurement() => GetCount();
     }
 }

@@ -4,14 +4,16 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Diagnostics.Metrics;
 using System.Linq;
 using Lextm.SharpSnmpLib;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
+using Raven.Server.Monitoring.OpenTelemetry;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class DatabaseNumberOfIdleIndexes : DatabaseScalarObjectBase<Integer32>
+    public sealed class DatabaseNumberOfIdleIndexes : DatabaseScalarObjectBase<Integer32>, ITaggedMetricInstrument<int>
     {
         public DatabaseNumberOfIdleIndexes(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.NumberOfIdleIndexes, index)
@@ -20,12 +22,22 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 
         protected override Integer32 GetData(DocumentDatabase database)
         {
-            var count = database
+            return new Integer32(Value(database));
+        }
+
+        private static int Value(DocumentDatabase database)
+        {
+            return database
                 .IndexStore
                 .GetIndexes()
                 .Count(x => x.State == IndexState.Idle);
+        }
 
-            return new Integer32(count);
+        public Measurement<int> GetCurrentMeasurement()
+        {
+            if (TryGetDatabase(out var db))
+                return new(Value(db), MeasurementTags);
+            return new(0, MeasurementTags);
         }
     }
 }

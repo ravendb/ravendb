@@ -7,26 +7,16 @@ using Sparrow;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database;
 
-public sealed class ServerStorageDiskWriteThroughput : ScalarObjectBase<Gauge32>, ITaggedMetricInstrument<long>
+public sealed class ServerStorageDiskWriteThroughput(ServerStore store) : ScalarObjectBase<Gauge32>(SnmpOids.Server.StorageDiskWriteThroughput), IMetricInstrument<long>
 {
-    private readonly ServerStore _store;
-    private readonly KeyValuePair<string, object> _nodeTag;
-
-    public ServerStorageDiskWriteThroughput(ServerStore store, KeyValuePair<string, object> nodeTag = default)
-        : base(SnmpOids.Server.StorageDiskWriteThroughput)
-    {
-        _store = store;
-        _nodeTag = nodeTag;
-    }
-
     private long? Value
     {
         get
         {
-            if (_store.Configuration.Core.RunInMemory)
+            if (store.Configuration.Core.RunInMemory)
                 return null;
             
-            var result = _store.Server.DiskStatsGetter.Get(_store._env.Options.DriveInfoByPath?.Value.BasePath.DriveName);
+            var result = store.Server.DiskStatsGetter.Get(store._env.Options.DriveInfoByPath?.Value.BasePath.DriveName);
             return result?.WriteThroughput.GetValue(SizeUnit.Kilobytes);
         }
     }
@@ -37,8 +27,5 @@ public sealed class ServerStorageDiskWriteThroughput : ScalarObjectBase<Gauge32>
         return result == null ? null : new Gauge32(result.Value);
     }
 
-    public Measurement<long> GetCurrentValue()
-    {
-        return new(Value ?? -1, _nodeTag);
-    }
+    public long GetCurrentMeasurement() => Value ?? -1;
 }

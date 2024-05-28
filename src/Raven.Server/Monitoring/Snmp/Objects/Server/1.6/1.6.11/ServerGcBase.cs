@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Utils;
 
@@ -9,12 +10,14 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
     {
         private readonly MetricCacher _metricCacher;
         private readonly string _cacheKey;
+        protected KeyValuePair<string, object?> MeasurementTag;
 
         protected ServerGcBase(MetricCacher metricCacher, GCKind gcKind, string dots)
             : base(dots, (int)gcKind)
         {
             _metricCacher = metricCacher;
             _cacheKey = GetCacheKey(gcKind);
+            MeasurementTag = new(nameof(GCKind), gcKind.ToString());
         }
 
         private static string GetCacheKey(GCKind gcKind)

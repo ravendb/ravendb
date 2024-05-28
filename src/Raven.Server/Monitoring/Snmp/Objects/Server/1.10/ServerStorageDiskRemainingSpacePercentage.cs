@@ -10,26 +10,17 @@ using Sparrow.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public sealed class ServerStorageDiskRemainingSpacePercentage : ScalarObjectBase<Gauge32>, ITaggedMetricInstrument<int>
+    public sealed class ServerStorageDiskRemainingSpacePercentage(ServerStore store)
+        : ScalarObjectBase<Gauge32>(SnmpOids.Server.StorageDiskRemainingSpacePercentage), IMetricInstrument<int>
     {
-        private readonly ServerStore _store;
-        private readonly KeyValuePair<string, object> _nodeTag;
-
-        public ServerStorageDiskRemainingSpacePercentage(ServerStore store, KeyValuePair<string, object> nodeTag = default)
-            : base(SnmpOids.Server.StorageDiskRemainingSpacePercentage)
-        {
-            _store = store;
-            _nodeTag = nodeTag;
-        }
-
         public int? Value
         {
             get
             {
-                if (_store.Configuration.Core.RunInMemory)
+                if (store.Configuration.Core.RunInMemory)
                     return null;
 
-                var result = _store.Server.MetricCacher.GetValue<DiskSpaceResult>(MetricCacher.Keys.Server.DiskSpaceInfo);
+                var result = store.Server.MetricCacher.GetValue<DiskSpaceResult>(MetricCacher.Keys.Server.DiskSpaceInfo);
                 if (result == null)
                     return null;
 
@@ -47,9 +38,6 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
                 : null;
         }
 
-        public Measurement<int> GetCurrentValue()
-        {
-            return new(Value ?? -1, _nodeTag);
-        }
+        public int GetCurrentMeasurement() => Value ?? -1;
     }
 }

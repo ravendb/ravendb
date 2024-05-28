@@ -7,26 +7,16 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database;
 
-public sealed class ServerStorageDiskIosReadOperations : ScalarObjectBase<Gauge32>, ITaggedMetricInstrument<int>
+public sealed class ServerStorageDiskIosReadOperations(ServerStore store) : ScalarObjectBase<Gauge32>(SnmpOids.Server.StorageDiskIoReadOperations), IMetricInstrument<int>
 {
-    private readonly ServerStore _store;
-    private readonly KeyValuePair<string, object> _nodeTag;
-
-    public ServerStorageDiskIosReadOperations(ServerStore store, KeyValuePair<string, object> nodeTag = default)
-        : base(SnmpOids.Server.StorageDiskIoReadOperations)
-    {
-        _store = store;
-        _nodeTag = nodeTag;
-    }
-
     private int? Value
     {
         get
         {
-            if (_store.Configuration.Core.RunInMemory)
+            if (store.Configuration.Core.RunInMemory)
                 return null;
 
-            var result = _store.Server.DiskStatsGetter.Get(_store._env.Options.DriveInfoByPath?.Value.BasePath.DriveName);
+            var result = store.Server.DiskStatsGetter.Get(store._env.Options.DriveInfoByPath?.Value.BasePath.DriveName);
             return result == null ? null : (int)Math.Round(result.IoReadOperations);
         }
     }
@@ -39,8 +29,5 @@ public sealed class ServerStorageDiskIosReadOperations : ScalarObjectBase<Gauge3
             : new Gauge32(result.Value);
     }
 
-    public Measurement<int> GetCurrentValue()
-    {
-        return new(Value ?? -1, _nodeTag);
-    }
+    public int GetCurrentMeasurement() => Value ?? -1;
 }

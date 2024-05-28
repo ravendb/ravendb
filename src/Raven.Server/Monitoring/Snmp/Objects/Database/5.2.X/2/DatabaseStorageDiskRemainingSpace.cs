@@ -11,8 +11,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public sealed class DatabaseStorageDiskRemainingSpace : DatabaseScalarObjectBase<Gauge32>, ITaggedMetricInstrument<long>
     {
-        public DatabaseStorageDiskRemainingSpace(string databaseName, DatabasesLandlord landlord, int index, string nodeTag = null)
-            : base(databaseName, landlord, SnmpOids.Databases.StorageDiskRemainingSpace, index, nodeTag)
+        public DatabaseStorageDiskRemainingSpace(string databaseName, DatabasesLandlord landlord, int index)
+            : base(databaseName, landlord, SnmpOids.Databases.StorageDiskRemainingSpace, index)
         {
         }
 
@@ -36,7 +36,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             return null;
         }
         
-        public Measurement<long> GetCurrentValue()
+        public Measurement<long> GetCurrentMeasurement()
         {
             if (TryGetDatabase(out var database) && Value(database) is {} result)
                 return new(result, MeasurementTags);

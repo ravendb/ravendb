@@ -1,10 +1,11 @@
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
+using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class DatabaseCountOfAttachments : DatabaseScalarObjectBase<Gauge32>
+    public sealed class DatabaseCountOfAttachments : DatabaseScalarObjectBase<Gauge32>, IMetricInstrument<long>
     {
         public DatabaseCountOfAttachments(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.CountOfAttachments, index)
@@ -23,6 +24,13 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             {
                 return database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context).AttachmentCount;
             }
+        }
+
+        public long GetCurrentMeasurement()
+        {
+            return TryGetDatabase(out var db) 
+                ? GetCount(db) 
+                : 0;
         }
     }
 }
