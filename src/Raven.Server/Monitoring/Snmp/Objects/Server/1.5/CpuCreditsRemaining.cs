@@ -1,20 +1,17 @@
 ﻿using Lextm.SharpSnmpLib;
+using Raven.Server.Monitoring.OpenTelemetry;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public sealed class CpuCreditsRemaining : ScalarObjectBase<Gauge32>
+    public sealed class CpuCreditsRemaining(RavenServer.CpuCreditsState state) : ScalarObjectBase<Gauge32>(SnmpOids.Server.CpuCreditsRemaining), IMetricInstrument<int>
     {
-        private readonly RavenServer.CpuCreditsState _state;
-
-        public CpuCreditsRemaining(RavenServer.CpuCreditsState state) 
-            : base(SnmpOids.Server.CpuCreditsRemaining)
-        {
-            _state = state;
-        }
+        private int Value => (int)state.RemainingCpuCredits;
 
         protected override Gauge32 GetData()
         {
-            return new Gauge32((int)_state.RemainingCpuCredits);
+            return new Gauge32(Value);
         }
+
+        public int GetCurrentMeasurement() => Value;
     }
 }

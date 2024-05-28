@@ -7,13 +7,9 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class TotalDatabaseDataWrittenPerSecond : DatabaseBase<Gauge32>, ITaggedMetricInstrument<int>
+    public sealed class TotalDatabaseDataWrittenPerSecond(ServerStore serverStore)
+        : DatabaseBase<Gauge32>(serverStore, SnmpOids.Databases.General.TotalDataWrittenPerSecond), IMetricInstrument<int>
     {
-        public TotalDatabaseDataWrittenPerSecond(ServerStore serverStore, KeyValuePair<string, object> nodeTag = default)
-            : base(serverStore, SnmpOids.Databases.General.TotalDataWrittenPerSecond, nodeTag)
-        {
-        }
-
         private int Value
         {
             get
@@ -41,9 +37,6 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             return (int)value;
         }
 
-        public Measurement<int> GetCurrentValue()
-        {
-            return new(Value, MeasurementTag);
-        }
+        public int GetCurrentMeasurement() => Value;
     }
 }

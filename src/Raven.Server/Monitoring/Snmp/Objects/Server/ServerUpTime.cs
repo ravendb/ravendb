@@ -6,7 +6,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    internal sealed class ServerUpTime : ScalarObjectBase<TimeTicks>, ITaggedMetricInstrument<long>
+    internal sealed class ServerUpTime : ScalarObjectBase<TimeTicks>, IMetricInstrument<long>
     {
         private readonly ServerStatistics _statistics;
 
@@ -21,10 +21,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
             return SnmpValuesHelper.TimeSpanToTimeTicks(_statistics.UpTime);
         }
 
-        public Measurement<long> GetCurrentValue()
-        {
-            return new((long)_statistics.UpTime.TotalMilliseconds, new KeyValuePair<string, object>("b", 1));
-        }
+        public long GetCurrentMeasurement() => (long)_statistics.UpTime.TotalMilliseconds;
     }
 
     internal sealed class ServerUpTimeGlobal : ScalarObjectBase<TimeTicks>, IMetricInstrument<long>
@@ -42,7 +39,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
             return SnmpValuesHelper.TimeSpanToTimeTicks(_statistics.UpTime);
         }
 
-        public long GetCurrentValue()
+        public long GetCurrentMeasurement()
         {
             return (long)_statistics.UpTime.TotalMilliseconds;
         }

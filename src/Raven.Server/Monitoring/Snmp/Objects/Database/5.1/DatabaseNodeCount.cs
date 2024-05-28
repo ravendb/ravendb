@@ -1,11 +1,12 @@
 using System.Linq;
 using Lextm.SharpSnmpLib;
+using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class DatabaseNodeCount : DatabaseBase<Integer32>
+    public sealed class DatabaseNodeCount : DatabaseBase<Integer32>, IMetricInstrument<int>
     {
         public DatabaseNodeCount(ServerStore serverStore)
             : base(serverStore, SnmpOids.Databases.General.NodeCount)
@@ -25,5 +26,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
                 return GetDatabases(context).Count(x => x.Topology.RelevantFor(ServerStore.NodeTag));
             }
         }
+
+        public int GetCurrentMeasurement() => GetCount();
     }
 }

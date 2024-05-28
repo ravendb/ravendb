@@ -7,8 +7,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public sealed class DatabaseIndexPriority : DatabaseIndexScalarObjectBase<OctetString>, ITaggedMetricInstrument<byte>
     {
-        public DatabaseIndexPriority(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex, string nodeTag = null)
-            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.Priority, nodeTag)
+        public DatabaseIndexPriority(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex)
+            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.Priority)
         {
         }
 
@@ -18,7 +18,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             return new OctetString(index.Definition.Priority.ToString());
         }
 
-        public Measurement<byte> GetCurrentValue()
+        public Measurement<byte> GetCurrentMeasurement()
         {
             if (TryGetIndex(out var index))
                 return new((byte)index.Definition.Priority, MeasurementTags);

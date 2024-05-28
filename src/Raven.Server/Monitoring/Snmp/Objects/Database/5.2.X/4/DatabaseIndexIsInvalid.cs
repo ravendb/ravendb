@@ -7,8 +7,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public sealed class DatabaseIndexIsInvalid : DatabaseIndexScalarObjectBase<OctetString>, ITaggedMetricInstrument<byte>
     {
-        public DatabaseIndexIsInvalid(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex, string nodeTag = null)
-            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.IsInvalid, nodeTag)
+        public DatabaseIndexIsInvalid(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex)
+            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.IsInvalid)
         {
         }
 
@@ -20,7 +20,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             return new OctetString(stats.IsInvalidIndex.ToString());
         }
 
-        public Measurement<byte> GetCurrentValue()
+        public Measurement<byte> GetCurrentMeasurement()
         {
             if (TryGetIndex(out var index))
                 return new(index.GetStats().IsInvalidIndex ? (byte)1 : (byte)0, MeasurementTags);

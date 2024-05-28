@@ -8,8 +8,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public sealed class DatabaseStorageDiskIosWriteOperations : DatabaseScalarObjectBase<Gauge32>, ITaggedMetricInstrument<int>
     {
-        public DatabaseStorageDiskIosWriteOperations(string databaseName, DatabasesLandlord landlord, int index, string nodeTag = null)
-            : base(databaseName, landlord, SnmpOids.Databases.StorageDiskIoWriteOperations, index, nodeTag)
+        public DatabaseStorageDiskIosWriteOperations(string databaseName, DatabasesLandlord landlord, int index)
+            : base(databaseName, landlord, SnmpOids.Databases.StorageDiskIoWriteOperations, index)
         {
         }
 
@@ -30,7 +30,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             return result == null ? null : new Gauge32(result.Value);
         }
 
-        public Measurement<int> GetCurrentValue()
+        public Measurement<int> GetCurrentMeasurement()
         {
             if (TryGetDatabase(out var database) && Value(database) is {} result)
             {

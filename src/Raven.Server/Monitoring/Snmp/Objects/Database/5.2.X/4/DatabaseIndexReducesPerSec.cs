@@ -8,8 +8,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public sealed class DatabaseIndexReducesPerSec : DatabaseIndexScalarObjectBase<Gauge32>, ITaggedMetricInstrument<int>
     {
-        public DatabaseIndexReducesPerSec(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex, string nodeTag = null)
-            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.ReducesPerSec, nodeTag)
+        public DatabaseIndexReducesPerSec(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex)
+            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.ReducesPerSec)
         {
         }
 
@@ -21,7 +21,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             return new Gauge32(Value(index));
         }
 
-        public Measurement<int> GetCurrentValue()
+        public Measurement<int> GetCurrentMeasurement()
         {
             if (TryGetIndex(out var index))
                 return new Measurement<int>(Value(index), MeasurementTags);

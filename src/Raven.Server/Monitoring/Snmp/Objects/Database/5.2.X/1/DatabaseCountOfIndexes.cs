@@ -7,8 +7,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public sealed class DatabaseCountOfIndexes : DatabaseScalarObjectBase<Gauge32>, ITaggedMetricInstrument<long>
     {
-        public DatabaseCountOfIndexes(string databaseName, DatabasesLandlord landlord, int index, string nodeTag = default)
-            : base(databaseName, landlord, SnmpOids.Databases.CountOfIndexes, index, null)
+        public DatabaseCountOfIndexes(string databaseName, DatabasesLandlord landlord, int index)
+            : base(databaseName, landlord, SnmpOids.Databases.CountOfIndexes, index)
         {
         }
 
@@ -17,7 +17,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             return new Gauge32(database.IndexStore.Count);
         }
 
-        public Measurement<long> GetCurrentValue()
+        public Measurement<long> GetCurrentMeasurement()
         {
             var value = GetDatabase()?.IndexStore.Count ?? 0;
             return new Measurement<long>(value, MeasurementTags);

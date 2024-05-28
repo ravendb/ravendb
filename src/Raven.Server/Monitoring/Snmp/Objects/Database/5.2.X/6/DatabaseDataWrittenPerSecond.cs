@@ -13,8 +13,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public sealed class DatabaseDataWrittenPerSecond : DatabaseScalarObjectBase<Gauge32>, ITaggedMetricInstrument<int>
     {
-        public DatabaseDataWrittenPerSecond(string databaseName, DatabasesLandlord landlord, int index, string nodeTag = null)
-            : base(databaseName, landlord, SnmpOids.Databases.DataWrittenPerSecond, index, nodeTag)
+        public DatabaseDataWrittenPerSecond(string databaseName, DatabasesLandlord landlord, int index)
+            : base(databaseName, landlord, SnmpOids.Databases.DataWrittenPerSecond, index)
         {
         }
 
@@ -33,7 +33,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             return (int)value;
         }
 
-        public Measurement<int> GetCurrentValue()
+        public Measurement<int> GetCurrentMeasurement()
         {
             var db = GetDatabase();
             var result = db != null ? GetCount(db) : 0;

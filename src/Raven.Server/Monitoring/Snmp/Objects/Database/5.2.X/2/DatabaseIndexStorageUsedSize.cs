@@ -8,8 +8,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public sealed class DatabaseIndexStorageUsedSize : DatabaseScalarObjectBase<Gauge32>, ITaggedMetricInstrument<long>
     {
-        public DatabaseIndexStorageUsedSize(string databaseName, DatabasesLandlord landlord, int index, string nodeTag = null)
-            : base(databaseName, landlord, SnmpOids.Databases.IndexStorageUsedSize, index, nodeTag)
+        public DatabaseIndexStorageUsedSize(string databaseName, DatabasesLandlord landlord, int index)
+            : base(databaseName, landlord, SnmpOids.Databases.IndexStorageUsedSize, index)
         {
         }
 
@@ -27,7 +27,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             return size / 1024L / 1024L;
         }
 
-        public Measurement<long> GetCurrentValue()
+        public Measurement<long> GetCurrentMeasurement()
         {
             if (TryGetDatabase(out var database))
                 return new(GetIndexStorageUsedSize(database), MeasurementTags);

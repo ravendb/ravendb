@@ -4,12 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Diagnostics.Metrics;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
+using Raven.Server.Monitoring.OpenTelemetry;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class DatabaseWritesPerSecond : DatabaseScalarObjectBase<Gauge32>
+    public sealed class DatabaseWritesPerSecond : DatabaseScalarObjectBase<Gauge32>, ITaggedMetricInstrument<int>
     {
         public DatabaseWritesPerSecond(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.WritesPerSecond, index)
@@ -29,6 +31,13 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
                         + database.Metrics.TimeSeries.PutsPerSec.OneMinuteRate;
 
             return (int)value;
+        }
+
+        public Measurement<int> GetCurrentMeasurement()
+        {
+            if (TryGetDatabase(out var db))
+                return new(GetCount(db), MeasurementTags);
+            return new(0, MeasurementTags);
         }
     }
 }

@@ -9,8 +9,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public sealed class DatabaseIndexExists : DatabaseIndexScalarObjectBase<OctetString>, ITaggedMetricInstrument<byte>
     {
-        public DatabaseIndexExists(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex, string nodeTag = null)
-            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.Exists, nodeTag)
+        public DatabaseIndexExists(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex)
+            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.Exists)
         {
         }
 
@@ -35,7 +35,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             throw new NotSupportedException();
         }
 
-        public Measurement<byte> GetCurrentValue()
+        public Measurement<byte> GetCurrentMeasurement()
         {
             if (TryGetIndex(out var index))
                 return new(1, MeasurementTags);

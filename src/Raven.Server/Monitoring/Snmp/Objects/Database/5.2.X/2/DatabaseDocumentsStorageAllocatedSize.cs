@@ -7,8 +7,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public sealed class DatabaseDocumentsStorageAllocatedSize : DatabaseScalarObjectBase<Gauge32>, ITaggedMetricInstrument<long>
     {
-        public DatabaseDocumentsStorageAllocatedSize(string databaseName, DatabasesLandlord landlord, int index, string nodeTag = null)
-            : base(databaseName, landlord, SnmpOids.Databases.DocumentsStorageAllocatedSize, index, nodeTag)
+        public DatabaseDocumentsStorageAllocatedSize(string databaseName, DatabasesLandlord landlord, int index)
+            : base(databaseName, landlord, SnmpOids.Databases.DocumentsStorageAllocatedSize, index)
         {
         }
 
@@ -17,7 +17,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             return new Gauge32(GetDocumentsStorageAllocatedSize(database));
         }
 
-        public Measurement<long> GetCurrentValue()
+        public Measurement<long> GetCurrentMeasurement()
         {
             if (TryGetDatabase(out var database))
                 return new(GetDocumentsStorageAllocatedSize(database), MeasurementTags);

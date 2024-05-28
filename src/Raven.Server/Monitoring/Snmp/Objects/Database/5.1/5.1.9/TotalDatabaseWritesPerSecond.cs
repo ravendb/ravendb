@@ -7,16 +7,24 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class TotalDatabaseWritesPerSecond : DatabaseBase<Gauge32>, ITaggedMetricInstrument<int>
+    public sealed class TotalDatabaseWritesPerSecond(ServerStore serverStore) : DatabaseBase<Gauge32>(serverStore, SnmpOids.Databases.General.TotalWritesPerSecond), IMetricInstrument<int>
     {
-        public TotalDatabaseWritesPerSecond(ServerStore serverStore, KeyValuePair<string, object> nodeTag = default)
-            : base(serverStore, SnmpOids.Databases.General.TotalWritesPerSecond, nodeTag)
+        private int Value
         {
+            get
+            {
+                var count = 0;
+                foreach (var database in GetLoadedDatabases())
+                    count += GetCountSafely(database, GetCount);
+                return count;
+            }
         }
 
+        public int GetCurrentMeasurement() => Value;
+        
         protected override Gauge32 GetData()
         {
-            return new Gauge32(GetCurrentValue().Value);
+            return new Gauge32(GetCurrentMeasurement());
         }
 
         private static int GetCount(DocumentDatabase database)
@@ -27,14 +35,6 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
                         + database.Metrics.TimeSeries.PutsPerSec.OneMinuteRate;
 
             return (int)value;
-        }
-
-        public Measurement<int> GetCurrentValue()
-        {
-            var count = 0;
-            foreach (var database in GetLoadedDatabases())
-                count += GetCountSafely(database, GetCount);
-            return new(count, MeasurementTag);
         }
     }
 }

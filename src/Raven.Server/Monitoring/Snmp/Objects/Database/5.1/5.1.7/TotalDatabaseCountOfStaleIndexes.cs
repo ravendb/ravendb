@@ -9,18 +9,27 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class TotalDatabaseCountOfStaleIndexes : DatabaseBase<Gauge32>, ITaggedMetricInstrument<int>
+    public sealed class TotalDatabaseCountOfStaleIndexes(ServerStore serverStore)
+        : DatabaseBase<Gauge32>(serverStore, SnmpOids.Databases.General.TotalNumberOfStaleIndexes), IMetricInstrument<int>
     {
-        public TotalDatabaseCountOfStaleIndexes(ServerStore serverStore, KeyValuePair<string, object> nodeTag = default)
-            : base(serverStore, SnmpOids.Databases.General.TotalNumberOfStaleIndexes)
+        private int Value
         {
+            get
+            {
+                var count = 0;
+                foreach (var database in GetLoadedDatabases())
+                    count += GetCountSafely(database, GetCount);
+                return count;
+            }
         }
 
         protected override Gauge32 GetData()
         {
-            return new Gauge32(GetCurrentValue().Value);
+            return new Gauge32(Value);
         }
 
+        public int GetCurrentMeasurement() => Value;
+        
         private static int GetCount(DocumentDatabase database)
         {
             using (var context = QueryOperationContext.Allocate(database, needsServerContext: true))
@@ -33,14 +42,6 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 
                 return count;
             }
-        }
-
-        public Measurement<int> GetCurrentValue()
-        {
-            var count = 0;
-            foreach (var database in GetLoadedDatabases())
-                count += GetCountSafely(database, GetCount);
-            return new (count, new KeyValuePair<string, object>("x", "y"));
         }
     }
 }

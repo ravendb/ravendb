@@ -8,8 +8,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public sealed class DatabaseIndexTimeSinceLastQuery : DatabaseIndexScalarObjectBase<TimeTicks>, ITaggedMetricInstrument<long>
     {
-        public DatabaseIndexTimeSinceLastQuery(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex, string nodeTag = null)
-            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.TimeSinceLastQuery, nodeTag)
+        public DatabaseIndexTimeSinceLastQuery(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex)
+            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.TimeSinceLastQuery)
         {
         }
 
@@ -25,7 +25,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
         }
 
 
-        public Measurement<long> GetCurrentValue()
+        public Measurement<long> GetCurrentMeasurement()
         {
             if (TryGetIndex(out var index))
             {

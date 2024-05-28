@@ -8,16 +8,16 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public sealed class ServerTotalMemory : ScalarObjectBase<Gauge32>, ITaggedMetricInstrument<long>
+    public sealed class ServerTotalMemory : ScalarObjectBase<Gauge32>, IMetricInstrument<long>
     {
         private readonly MetricCacher _metricCacher;
-        private readonly KeyValuePair<string, object> _nodeTag;
 
-        public ServerTotalMemory(MetricCacher metricCacher, KeyValuePair<string, object> nodeTag = default)
+
+        public ServerTotalMemory(MetricCacher metricCacher)
             : base(SnmpOids.Server.TotalMemory)
         {
             _metricCacher = metricCacher;
-            _nodeTag = nodeTag;
+
         }
 
         private long Value => _metricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate15Seconds).WorkingSet
@@ -28,9 +28,6 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
             return new Gauge32(Value);
         }
 
-        public Measurement<long> GetCurrentValue()
-        {
-            return new(Value, _nodeTag);
-        }
+        public long GetCurrentMeasurement() => Value;
     }
 }

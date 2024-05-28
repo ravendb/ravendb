@@ -13,8 +13,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public sealed class DatabaseIndexErrors : DatabaseIndexScalarObjectBase<Integer32>, ITaggedMetricInstrument<int>
     {
-        public DatabaseIndexErrors(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex, string nodeTag = null)
-            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.Errors, nodeTag)
+        public DatabaseIndexErrors(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex)
+            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.Errors)
         {
         }
 
@@ -24,7 +24,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             return new Integer32((int)index.GetErrorCount());
         }
 
-        public Measurement<int> GetCurrentValue()
+        public Measurement<int> GetCurrentMeasurement()
         {
             if (TryGetIndex(out var index))
                 return new Measurement<int>((int)index.GetErrorCount(), MeasurementTags);
