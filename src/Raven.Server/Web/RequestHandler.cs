@@ -775,7 +775,7 @@ namespace Raven.Server.Web
             HttpContext.Response.Headers["Location"] = leaderLocation;
         }
 
-        public virtual bool IsShutdownRequested() => ServerStore.ServerShutdown.IsCancellationRequested;
+        public virtual bool IsShutdownRequested() => ServerStore.IsShutdownRequested();
 
         [DoesNotReturn]
         public virtual void ThrowShutdownException(Exception inner = null) => throw new OperationCanceledException($"Server on node {ServerStore.NodeTag} is shutting down", inner);
@@ -889,33 +889,6 @@ namespace Raven.Server.Web
             }
 
             return null;
-        }
-
-        public void LogTaskToAudit(string description, long id, BlittableJsonReaderObject configuration)
-        {
-            if (LoggingSource.AuditLog.IsInfoEnabled)
-            {
-                DynamicJsonValue conf = GetCustomConfigurationAuditJson(description, configuration);
-                var clientCert = GetCurrentCertificate();
-                var auditLog = LoggingSource.AuditLog.GetLogger(_context.DatabaseName ?? "Server", "Audit");
-                var line = $"Task: '{description}' with taskId: '{id}'";
-
-                if (clientCert != null)
-                    line += $" executed by '{clientCert.Subject}' '{clientCert.Thumbprint}'";
-
-                if (conf != null)
-                {
-                    var confString = string.Empty;
-                    using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
-                    {
-                        confString = ctx.ReadObject(conf, "conf").ToString();
-                    }
-
-                    line += ($" Configuration: {confString}");
-                }
-
-                auditLog.Info(line);
-            }
         }
     }
 }

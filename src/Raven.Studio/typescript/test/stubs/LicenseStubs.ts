@@ -1,7 +1,15 @@
 ﻿import moment from "moment";
 import LicenseLimitsUsage = Raven.Server.Commercial.LicenseLimitsUsage;
+import BuildCompatibilityInfo = Raven.Server.Web.Studio.UpgradeInfoHandler.BuildCompatibilityInfo;
 
 export class LicenseStubs {
+    static licenseServerConnectivityValid() {
+        return {
+            connected: true,
+            exception: null as string,
+        };
+    }
+
     static getStatus(): LicenseStatus {
         return {
             Type: "Enterprise",
@@ -135,6 +143,74 @@ export class LicenseStubs {
             NumberOfCustomSortersInCluster: 4,
             NumberOfAnalyzersInCluster: 4,
             NumberOfSubscriptionsInCluster: 14,
+        };
+    }
+
+    static changeLog(): Raven.Server.Web.Studio.UpgradeInfoHandler.UpgradeInfoResponse {
+        return {
+            BuildCompatibilitiesForLatestMajorMinor: [
+                LicenseStubs.buildCompatibilityInfo("6.0.100"),
+                LicenseStubs.buildCompatibilityInfo("6.0.8"),
+                LicenseStubs.buildCompatibilityInfo("6.0.7", false),
+            ],
+            BuildCompatibilitiesForUserMajorMinor: [
+                LicenseStubs.buildCompatibilityInfo("6.0.5"),
+                LicenseStubs.buildCompatibilityInfo("6.0.0", false),
+            ],
+            TotalBuildsForLatestMajorMinor: 3,
+            TotalBuildsForUserMajorMinor: 2,
+        };
+    }
+
+    private static buildCompatibilityInfo(fullVersion = "6.0.100", canChange: boolean = true): BuildCompatibilityInfo {
+        return {
+            CanDowngradeFollowingUpgrade: canChange,
+            CanUpgrade: canChange,
+            ChangelogHtml: `<h3>Breaking changes</h3>
+<ul>
+    <li><code>[Backups]</code> compression algorithm was changes from gzip/deflate to zstd, which might introduce some backward compatibility concerns. </li>
+</ul>
+<hr />
+<h3>Server</h3>
+<ul>
+    <li><code>[Backups]</code> switched to zstd compression algorithm for all backup types and exports. More info <a href=\\"https://github.com/ravendb/ravendb/discussions/17678\\">here</a></li>
+</ul>`,
+            ReleasedAt: "2023-10-02T07:36:24.3850897",
+            FullVersion: fullVersion,
+        };
+    }
+
+    static support(): Raven.Server.Commercial.LicenseSupportInfo {
+        return {
+            Status: "ProfessionalSupport",
+            EndsAt: moment()
+                .add(2 as const, "months")
+                .format() as any,
+        };
+    }
+
+    static configurationSettings(): Raven.Server.Config.Categories.LicenseConfiguration {
+        return {
+            License: "THIS IS LICENSE",
+            CanActivate: true,
+            CanRenew: true,
+            CanForceUpdate: true,
+            DisableAutoUpdate: false,
+            EulaAccepted: true,
+            DisableLicenseSupportCheck: false,
+            DisableAutoUpdateFromApi: false,
+            SkipLeasingErrorsLogging: false,
+            LicensePath: null,
+        };
+    }
+
+    static latestVersion(): Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo {
+        return {
+            Version: "6.0.5",
+            BuildNumber: 60050,
+            BuildType: "Stable",
+            PublishedAt: "2024-01-19T12:58:07.0000000Z",
+            UpdateSeverity: "TODO",
         };
     }
 }

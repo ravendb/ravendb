@@ -64,6 +64,8 @@ namespace SlowTests.Issues
 
             using (var session = store.OpenAsyncSession())
             {
+                session.Advanced.WaitForReplicationAfterSaveChanges(timeout: new TimeSpan(hours: 0, minutes: 0, seconds: 15), throwOnTimeout: true, replicas: 1);
+
                 await session.StoreAsync(user1);
                 await session.StoreAsync(company3);
                 await session.StoreAsync(post4);
@@ -112,6 +114,8 @@ namespace SlowTests.Issues
 
             using (var session = store.OpenAsyncSession())
             {
+                session.Advanced.WaitForReplicationAfterSaveChanges(timeout: new TimeSpan(hours: 0, minutes: 0, seconds: 15), throwOnTimeout: true, replicas: 1);
+
                 await session.StoreAsync(user1);
                 await session.StoreAsync(user3);
                 await session.SaveChangesAsync();

@@ -58,7 +58,7 @@
         border: 1px solid bs5variables.$border-color-light-var;
         border-radius: bs5variables.$border-radius;
         background-color: bs5variables.$panel-bg-2-var;
-        z-index: 5;
+        z-index: bs5variables.$zindex-dropdown;
 
         .react-select__menu-list {
             .react-select__option {
@@ -71,6 +71,11 @@
                     background-color: bs5variables.$panel-bg-3-var;
                     color: bs5variables.$link-color;
                 }
+            }
+
+            .react-select__option--is-focused {
+                background-color: bs5variables.$panel-bg-3-var;
+                color: bs5variables.$link-color;
             }
 
             hr {

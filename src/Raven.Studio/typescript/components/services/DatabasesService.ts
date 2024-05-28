@@ -66,6 +66,10 @@ import deleteIntegrationsPostgreSqlCredentialsCommand = require("commands/databa
 import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import saveUnusedDatabaseIDsCommand = require("commands/database/settings/saveUnusedDatabaseIDsCommand");
+import { createDatabaseCommand } from "commands/resources/createDatabaseCommand";
+import { restoreDatabaseFromBackupCommand } from "commands/resources/restoreDatabaseFromBackupCommand";
+import distributeSecretCommand = require("commands/database/secrets/distributeSecretCommand");
+import saveCustomAnalyzerCommand from "commands/database/settings/saveCustomAnalyzerCommand";
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -200,6 +204,10 @@ export default class DatabasesService {
         return new deleteCustomAnalyzerCommand(databaseName, name).execute();
     }
 
+    async saveCustomAnalyzer(...args: ConstructorParameters<typeof saveCustomAnalyzerCommand>) {
+        return new saveCustomAnalyzerCommand(...args).execute();
+    }
+
     async getCustomSorters(databaseName: string) {
         return new getCustomSortersCommand(databaseName).execute();
     }
@@ -325,5 +333,17 @@ export default class DatabasesService {
 
     async saveUnusedDatabaseIDs(...args: ConstructorParameters<typeof saveUnusedDatabaseIDsCommand>) {
         return new saveUnusedDatabaseIDsCommand(...args).execute();
+    }
+
+    async createDatabase(...args: ConstructorParameters<typeof createDatabaseCommand>) {
+        return new createDatabaseCommand(...args).execute();
+    }
+
+    async restoreDatabaseFromBackup(...args: ConstructorParameters<typeof restoreDatabaseFromBackupCommand>) {
+        return new restoreDatabaseFromBackupCommand(...args).execute();
+    }
+
+    async distributeSecret(...args: ConstructorParameters<typeof distributeSecretCommand>) {
+        return new distributeSecretCommand(...args).execute();
     }
 }

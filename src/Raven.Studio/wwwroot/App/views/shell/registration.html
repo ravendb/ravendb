@@ -1,4 +1,4 @@
-<div class="modal-dialog prevent-close" role="document" id="licenseModal">
+<div class="modal-dialog prevent-close registration-modal" role="document" id="licenseModal">
     <form class="form-horizontal" autocomplete="off" data-bind="submit: submit">
         <div class="modal-content neo-modal">
             <div class="modal-header">
@@ -97,6 +97,21 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <div>
+                        <div class="content text-left">
+                            <small>Connection to License Server: 
+                                
+                            </small>
+                            <span class="connected" data-bind="visible: connectedToLicenseServer"><i class="icon-check connection-status"></i></span>
+                            <span class="not-connected" data-bind="visible: !connectedToLicenseServer()"><i class="icon-cancel connection-status"></i></span>
+
+                            <i class="check-connection icon-refresh" title="Click to check connection"
+                               data-bind="click: checkConnectionToLicenseServer, css: { 'btn-spinner margin-left margin-left-sm': spinners.checkConnectionToLicenseServer() }">
+                            </i>
+                        </div>
+                    </div>
+                    
                     <div class="clearfix">
                     <button type="submit" title="Click to submit the new license"
                             data-bind="disable: spinners.activateLicense() || spinners.forceLicenseUpdate(), css: { 'btn-spinner': spinners.activateLicense }"

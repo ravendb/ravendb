@@ -289,10 +289,9 @@ namespace Voron
         private unsafe void LoadExistingDatabase()
         {
             var header = stackalloc TransactionHeader[1];
-            bool hadIntegrityIssues;
 
             Options.AddToInitLog?.Invoke("Starting Recovery");
-            hadIntegrityIssues = _journal.RecoverDatabase(header, Options.AddToInitLog);
+            bool hadIntegrityIssues = _journal.RecoverDatabase(header, Options.AddToInitLog);
             var successString = hadIntegrityIssues ? "(with integrity issues)" : "(successfully)";
             Options.AddToInitLog?.Invoke($"Recovery Ended {successString}");
 
@@ -305,18 +304,15 @@ namespace Voron
 
             var entry = _headerAccessor.CopyHeader();
             var nextPageNumber = (header->TransactionId == 0 ? entry.LastPageNumber : header->LastPageNumber) + 1;
-            State = new StorageEnvironmentState(null, nextPageNumber)
-            {
-                NextPageNumber = nextPageNumber,
-                Options = Options
-            };
+            State = new StorageEnvironmentState(nextPageNumber);
 
             Interlocked.Exchange(ref _transactionsCounter, header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
             var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             using (var writeTx = new Transaction(tx))
             {
-                var root = Tree.Open(tx, null, Constants.RootTreeNameSlice, header->TransactionId == 0 ? &entry.Root : &header->Root);
+                var rootHeader = header->TransactionId == 0 ? entry.Root : header->Root;
+                var root = Tree.Open(tx, null, Constants.RootTreeNameSlice, rootHeader);
                 tx.UpdateRootsIfNeeded(root);
 
                 var metadataTree = writeTx.ReadTree(Constants.MetadataTreeNameSlice);
@@ -446,10 +442,7 @@ namespace Voron
         private void CreateNewDatabase()
         {
             const int initialNextPageNumber = 0;
-            State = new StorageEnvironmentState(null, initialNextPageNumber)
-            {
-                Options = Options
-            };
+            State = new StorageEnvironmentState(initialNextPageNumber);
 
             if (Options.SimulateFailureOnDbCreation)
                 ThrowSimulateFailureOnDbCreation();
@@ -786,6 +779,10 @@ namespace Voron
             AfterCommitWhenNewTransactionsPrevented?.Invoke(tx);
         }
 
+#if DEBUG
+        public bool CaptureTransactionStackTrace;
+#endif
+
         [Conditional("DEBUG")]
         private void ThrowOnWriteTransactionOpenedByTheSameThread()
         {
@@ -794,8 +791,15 @@ namespace Voron
                 currentWriteTransactionHolder == NativeMemory.CurrentThreadStats)
             {
                 throw new InvalidOperationException($"A write transaction is already opened by thread name: " +
-                                                    $"{currentWriteTransactionHolder.Name}, Id: {currentWriteTransactionHolder.ManagedThreadId}");
+                                                    $"{currentWriteTransactionHolder.Name}, Id: {currentWriteTransactionHolder.ManagedThreadId}{Environment.NewLine}" +
+                                                    $"{currentWriteTransactionHolder.CapturedStackTrace}");
             }
+#if DEBUG
+            if (currentWriteTransactionHolder != null && CaptureTransactionStackTrace)
+            {
+                currentWriteTransactionHolder.CapturedStackTrace = Environment.StackTrace;
+            }
+#endif
         }
 
         internal void IncrementUsageOnNewTransaction()
@@ -922,6 +926,8 @@ namespace Voron
 
         internal void TransactionAfterCommit(LowLevelTransaction tx)
         {
+            tx._forTestingPurposes?.ActionToCallOnTransactionAfterCommit?.Invoke();
+
             if (ActiveTransactions.Contains(tx) == false)
             {
                 if (tx.Committed && tx.FlushedToJournal)
@@ -1136,8 +1142,8 @@ namespace Voron
                             case RootObjectType.VariableSizeTree:
                                 var tree = tx.ReadTree(currentKey);
                                 RegisterPages(tree.AllPages(), name + " (VST)");
-                                if (tree.State.Flags.HasFlag(TreeFlags.CompactTrees) ||
-                                    tree.State.Flags.HasFlag(TreeFlags.Lookups))
+                                if (tree.State.Header.Flags.HasFlag(TreeFlags.CompactTrees) ||
+                                    tree.State.Header.Flags.HasFlag(TreeFlags.Lookups))
                                 {
                                     var it = tree.Iterate(false);
                                     if (it.Seek(Slices.BeforeAllKeys))
@@ -1265,8 +1271,8 @@ namespace Voron
 
             Tree GetTableTree(Tree tableTree, TableSchema tableSchema, Slice treeName)
             {
-                var treeHeader = tableTree.DirectRead(treeName);
-                var t = Tree.Open(tx.LowLevelTransaction, tx, treeName, (TreeRootHeader*)treeHeader);
+                var treeHeader = (TreeRootHeader*)tableTree.DirectRead(treeName);
+                var t = Tree.Open(tx.LowLevelTransaction, tx, treeName, *treeHeader);
                 return t;
             }
 
@@ -1470,7 +1476,7 @@ namespace Voron
                 return new EnvironmentStats
                 {
                     FreePagesOverhead = FreeSpaceHandling.GetFreePagesOverhead(tx),
-                    RootPages = tx.RootObjects.State.PageCount,
+                    RootPages = tx.RootObjects.State.Header.PageCount,
                     UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
                     UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * Constants.Storage.PageSize,
                     AllocatedDataFileSizeInBytes = numberOfAllocatedPages * Constants.Storage.PageSize,

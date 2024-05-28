@@ -90,7 +90,7 @@ namespace SlowTests.Issues
                     session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(5));
                     var error = await Assert.ThrowsAsync<RavenTimeoutException>(async () => await session.SaveChangesAsync());
                     Assert.StartsWith("Raven.Client.Exceptions.RavenTimeoutException", error.Message);
-                    Assert.Contains($"Total relevant indexes: 1, total stale indexes: 1, total errored indexes: 1 ({index.IndexName})", error.Message);
+                    Assert.Contains($"Total relevant indexes: 1, total stale indexes: 1 ({index.IndexName}), total errored indexes: 1 ({index.IndexName})", error.Message);
                     Assert.DoesNotContain("total paused indexes", error.Message);
                 }
 
@@ -104,7 +104,7 @@ namespace SlowTests.Issues
                     session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(5), indexes: new[] { index.IndexName });
                     var error = await Assert.ThrowsAsync<RavenTimeoutException>(async () => await session.SaveChangesAsync());
                     Assert.StartsWith("Raven.Client.Exceptions.RavenTimeoutException", error.Message);
-                    Assert.Contains($"Total relevant indexes: 1, total stale indexes: 1, total errored indexes: 1 ({index.IndexName})", error.Message);
+                    Assert.Contains($"Total relevant indexes: 1, total stale indexes: 1 ({index.IndexName}), total errored indexes: 1 ({index.IndexName})", error.Message);
                     Assert.DoesNotContain("total paused indexes", error.Message);
                 }
 
@@ -120,7 +120,7 @@ namespace SlowTests.Issues
                     session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(5));
                     var error = await Assert.ThrowsAsync<RavenTimeoutException>(async () => await session.SaveChangesAsync());
                     Assert.StartsWith("Raven.Client.Exceptions.RavenTimeoutException", error.Message);
-                    Assert.Contains($"Total relevant indexes: 2, total stale indexes: 1, total errored indexes: 1 ({index.IndexName})", error.Message);
+                    Assert.Contains($"Total relevant indexes: 2, total stale indexes: 1 ({index.IndexName}), total errored indexes: 1 ({index.IndexName})", error.Message);
                     Assert.DoesNotContain("total paused indexes", error.Message);
                 }
             }

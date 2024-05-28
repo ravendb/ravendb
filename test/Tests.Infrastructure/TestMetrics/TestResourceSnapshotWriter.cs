@@ -79,12 +79,13 @@ namespace Tests.Infrastructure.TestMetrics
             var cpuUsage = _metricCacher.GetCpuUsage();
             var memoryInfo = _metricCacher.GetMemoryInfoExtended();
             var tcpConnections = TcpStatisticsProvider.GetConnections();
+            var dirtyMemoryState = MemoryInformation.GetDirtyMemoryState();
 
             var snapshot = new TestResourceSnapshot
             {
-                TotalScratchAllocatedMemory = new Size(MemoryInformation.GetTotalScratchAllocatedMemory(), SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
-                TotalDirtyMemory = new Size(MemoryInformation.GetDirtyMemoryState().TotalDirtyInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
-                IsHighDirty = MemoryInformation.GetDirtyMemoryState().IsHighDirty,
+                TotalScratchAllocatedMemory = new Size(MemoryInformation.GetTotalScratchAllocatedMemoryInBytes(), SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+                TotalDirtyMemory = dirtyMemoryState.TotalDirty.GetValue(SizeUnit.Megabytes),
+                IsHighDirty = dirtyMemoryState.IsHighDirty,
                 TestStage = testStage,
                 Timestamp = timeStamp.ToString("o"),
                 AssemblyName = assemblyName,
@@ -96,7 +97,6 @@ namespace Tests.Infrastructure.TestMetrics
                 AvailableMemoryInMb = memoryInfo.AvailableMemory.GetValue(SizeUnit.Megabytes),
                 CurrentCommitChargeInMb = memoryInfo.CurrentCommitCharge.GetValue(SizeUnit.Megabytes),
                 SharedCleanMemoryInMb = memoryInfo.SharedCleanMemory.GetValue(SizeUnit.Megabytes),
-                TotalScratchDirtyMemory = memoryInfo.TotalScratchDirtyMemory.GetValue(SizeUnit.Megabytes),
                 CurrentIpv4Connections = tcpConnections.CurrentIpv4,
                 CurrentIpv6Connections = tcpConnections.CurrentIpv6
             };
@@ -139,8 +139,6 @@ namespace Tests.Infrastructure.TestMetrics
             public long CurrentCommitChargeInMb { get; set; }
             
             public long SharedCleanMemoryInMb { get; set; }
-            
-            public long TotalScratchDirtyMemory { get; set; }
             
             public long TotalScratchAllocatedMemory { get; set; }
             

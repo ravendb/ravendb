@@ -27,11 +27,12 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Migration;
-using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Commands;
+using Raven.Server.Documents.Handlers.Processors.Stats;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
@@ -45,6 +46,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
+using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
@@ -54,7 +56,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
-using Sparrow.Utils;
 using Voron;
 using Voron.Util.Settings;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
@@ -535,9 +536,16 @@ namespace Raven.Server.Web.System
             if (database == null)
                 DatabaseDoesNotExistException.Throw(databaseName);
 
+            var delayUntil = DateTime.UtcNow.AddTicks(delay.Value.Ticks);
+
             using (var token = CreateHttpRequestBoundOperationToken())
             {
-                await database.PeriodicBackupRunner.DelayAsync(id, delay.Value, GetCurrentCertificate(), token.Token);
+                await database.PeriodicBackupRunner.DelayAsync(id, delayUntil, GetCurrentCertificate(), token.Token);
+            }
+
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                LogAuditFor(databaseName, $"Backup task with task id '{id}' was delayed until '{delayUntil}' UTC");
             }
 
             NoContentStatus();
@@ -561,10 +569,7 @@ namespace Raven.Server.Web.System
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    clientCertificate = GetCurrentCertificate();
-
-                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
-                    auditLog.Info($"Attempt to delete [{string.Join(", ", parameters.DatabaseNames)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())}) by {clientCertificate?.Subject} ({clientCertificate?.Thumbprint})");
+                    LogAuditFor("DbMgmt", $"Attempt to delete [{string.Join(", ", parameters.DatabaseNames)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())})");
                 }
 
                 using (context.OpenReadTransaction())
@@ -642,10 +647,7 @@ namespace Raven.Server.Web.System
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    var clientCert = GetCurrentCertificate();
-
-                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
-                    auditLog.Info($"Delete [{string.Join(", ", databasesToDelete)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())}) by {clientCert?.Subject} ({clientCert?.Thumbprint})");
+                    LogAuditFor("DbMgmt", $"Delete [{string.Join(", ", databasesToDelete)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())})");
                 }
 
                 long index = -1;
@@ -1125,67 +1127,75 @@ namespace Raven.Server.Web.System
 
             await ServerStore.EnsureNotPassiveAsync();
 
+            HashSet<string> unusedIds;
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var json = await context.ReadForDiskAsync(RequestBodyStream(), "unused-databases-ids"))
             {
                 var parameters = JsonDeserializationServer.Parameters.UnusedDatabaseParameters(json);
-                if (validate)
-                {
-                    using (var token = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan))
-                        await ValidateUnusedIdsAsync(parameters.DatabaseIds, database, token.Token);
-                }
-
-                var command = new UpdateUnusedDatabaseIdsCommand(database, parameters.DatabaseIds, GetRaftRequestIdFromQuery());
-                await ServerStore.SendToLeaderAsync(command);
+                unusedIds = parameters.DatabaseIds;
+                validate |= parameters.Validate;
             }
+
+            if (validate)
+            {
+                foreach (var id in unusedIds)
+                    ValidateDatabaseIdFormat(id);
+                
+                using (var token = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan))
+                    await ValidateUnusedIdsAsync(unusedIds, database, token.Token);
+            }
+
+            var command = new UpdateUnusedDatabaseIdsCommand(database, unusedIds, GetRaftRequestIdFromQuery());
+            await ServerStore.SendToLeaderAsync(command);
 
             NoContentStatus();
         }
 
-        private async Task ValidateUnusedIdsAsync(HashSet<string> unusedIds, string databaseName, CancellationToken token)
+        private static unsafe void ValidateDatabaseIdFormat(string id)
         {
-            foreach (var id in unusedIds)
+            const int fixedLength = StorageEnvironment.Base64IdLength + StorageEnvironment.Base64IdLength % 4;
+
+            if (id is not { Length: StorageEnvironment.Base64IdLength })
             {
-                ValidateDatabaseId(id);
+                throw new InvalidOperationException($"Database ID '{id}' isn't valid because its length ({id.Length}) isn't {StorageEnvironment.Base64IdLength}.");
             }
 
-            DatabaseTopology topology;
-            ClusterTopology clusterTopology;
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
+            Span<byte> bytes = stackalloc byte[fixedLength / 3 * 4];
+            char* buffer = stackalloc char[fixedLength];
+            fixed (char* str = id)
             {
-                topology = rawRecord.Topology;
-                clusterTopology = ServerStore.GetClusterTopology(context);
-            }
+                Buffer.MemoryCopy(str, buffer, 24 * sizeof(char), StorageEnvironment.Base64IdLength * sizeof(char));
+                for (int i = StorageEnvironment.Base64IdLength; i < fixedLength; i++)
+                    buffer[i] = '=';
 
-            if (unusedIds.Contains(topology.DatabaseTopologyIdBase64))
-                throw new InvalidOperationException($"'DatabaseTopologyIdBase64' ({topology.DatabaseTopologyIdBase64}) cannot be added to the 'unused ids' list (of '{databaseName}').");
-
-            if (unusedIds.Contains(topology.ClusterTransactionIdBase64))
-                throw new InvalidOperationException($"'ClusterTransactionIdBase64' ({topology.ClusterTransactionIdBase64}) cannot be added to the 'unused ids' list (of '{databaseName}').");
-
-            var nodesUrls = topology.AllNodes.Select(clusterTopology.GetUrlFromTag).ToArray();
-
-            using var requestExecutor = RequestExecutor.Create(nodesUrls, databaseName, Server.Certificate.Certificate, DocumentConventions.Default);
-
-            foreach (var nodeTag in topology.AllNodes)
-            {
-                using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+                if (Convert.TryFromBase64Chars(new ReadOnlySpan<char>(buffer, fixedLength), bytes, out _) == false)
                 {
-                    var cmd = new GetStatisticsOperation.GetStatisticsCommand(debugTag: "unused-database-validation", nodeTag);
-                    await requestExecutor.ExecuteAsync(cmd, context, token: token);
-                    var stats = cmd.Result;
-
-                    if (unusedIds.Contains(stats.DatabaseId))
-                    {
-                        throw new InvalidOperationException(
-                            $"'{stats.DatabaseId}' cannot be added to the 'unused ids' list (of '{databaseName}'), because it's the database id of '{databaseName}' on node {nodeTag}.");
-                    }
+                    throw new InvalidOperationException($"Database ID '{id}' isn't valid because it isn't Base64Id (it contains chars which cannot be in Base64String).");
                 }
             }
-
         }
+
+        private async Task ValidateUnusedIdsAsync(HashSet<string> unusedIds, string database, CancellationToken token = default)
+        {
+            string[] nodesUrls;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                nodesUrls = ServerStore.GetClusterTopology(context).AllNodes.Values.ToArray();
+            }
+
+            using (var requestExecutor = RequestExecutor.CreateForServer(nodesUrls, database, Server.Certificate.Certificate, DocumentConventions.Default))
+            using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+            {
+                var cmd = new ValidateUnusedIdsCommand(
+                    new ValidateUnusedIdsCommand.Parameters { DatabaseIds = unusedIds });
+
+                await requestExecutor.ExecuteAsync(cmd, context, token: token);
+            }
+        }
+
 
         [RavenAction("/admin/migrate", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task MigrateDatabases()
@@ -1199,7 +1209,8 @@ namespace Raven.Server.Web.System
                     throw new ArgumentException("Url cannot be null or empty");
 
                 var migrator = new Migrator(migrationConfigurationJson, ServerStore);
-                await migrator.MigrateDatabases(migrationConfigurationJson.Databases);
+
+                await migrator.MigrateDatabases(migrationConfigurationJson.Databases, AuthorizationStatus.Operator);
 
                 NoContentStatus();
             }
@@ -1245,6 +1256,7 @@ namespace Raven.Server.Web.System
             {
                 throw new DatabaseDoesNotExistException($"Can't import into database {databaseName} because it doesn't exist.");
             }
+            var options = new DatabaseSmugglerOptionsServerSide(GetAuthorizationStatusForSmuggler(databaseName));
             var (commandline, tmpFile) = configuration.GenerateExporterCommandLine();
             var processStartInfo = new ProcessStartInfo(dataExporter, commandline);
 
@@ -1345,10 +1357,12 @@ namespace Raven.Server.Web.System
                                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                                 await using (var reader = File.OpenRead(configuration.OutputFilePath))
                                 await using (var stream = await BackupUtils.GetDecompressionStreamAsync(reader))
-                                using (var source = new StreamSource(stream, context, database.Name))
+                                using (var source = new StreamSource(stream, context, database.Name, options))
                                 {
                                     var destination = database.Smuggler.CreateDestination();
-                                    var smuggler = database.Smuggler.Create(source, destination, context, result: result, onProgress: onProgress, token: token.Token);
+                                    var smuggler = database.Smuggler.Create(source, destination, context,
+                                        options,
+                                        result: result, onProgress: onProgress, token: token.Token);
 
                                     await smuggler.ExecuteAsync();
                                 }
@@ -1472,24 +1486,5 @@ namespace Raven.Server.Web.System
             return (false, progressLine);
         }
 
-        private static unsafe void ValidateDatabaseId(string id)
-        {
-            const int fixedLength = StorageEnvironment.Base64IdLength + StorageEnvironment.Base64IdLength % 4;
-
-            if (id is not { Length: StorageEnvironment.Base64IdLength })
-                throw new InvalidOperationException($"Database ID '{id}' isn't valid because its length ({id.Length}) isn't {StorageEnvironment.Base64IdLength}.");
-
-            Span<byte> bytes = stackalloc byte[fixedLength / 3 * 4];
-            char* buffer = stackalloc char[fixedLength];
-            fixed (char* str = id)
-            {
-                Buffer.MemoryCopy(str, buffer, 24 * sizeof(char), StorageEnvironment.Base64IdLength * sizeof(char));
-                for (int i = StorageEnvironment.Base64IdLength; i < fixedLength; i++)
-                    buffer[i] = '=';
-
-                if (Convert.TryFromBase64Chars(new ReadOnlySpan<char>(buffer, fixedLength), bytes, out _) == false)
-                    throw new InvalidOperationException($"Database ID '{id}' isn't valid because it isn't Base64Id (it contains chars which cannot be in Base64String).");
-            }
-        }
     }
 }

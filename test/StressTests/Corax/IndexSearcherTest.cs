@@ -45,7 +45,7 @@ public class IndexSearcherTest : StorageTest
 
     private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexSingleEntry> list, IndexFieldsMapping mapping)
     {
-        using var indexWriter = new IndexWriter(Env, mapping);
+        using var indexWriter = new IndexWriter(Env, mapping, SupportedFeatures.All);
 
         foreach (var entry in list)
         {

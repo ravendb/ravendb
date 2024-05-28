@@ -23,6 +23,7 @@ export interface IndexSharedInfo {
     collectionNameForReferenceDocuments: string;
     nodesInfo: IndexNodeInfo[];
     createdTimestamp: Date;
+    referencedCollections: string[];
 }
 
 export interface IndexNodeInfo {

@@ -6,8 +6,6 @@ using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
-using Constants = Voron.Global.Constants;
 
 namespace Raven.Server.Documents
 {
@@ -17,7 +15,6 @@ namespace Raven.Server.Documents
         private readonly Func<T, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> _commandToExecute;
         private readonly RateGate _rateGate;
         private readonly OperationCancelToken _token;
-        private readonly Size? _maxTransactionSize;
         private readonly int? _batchSize;
         private readonly CancellationToken _cancellationToken;
 
@@ -26,15 +23,12 @@ namespace Raven.Server.Documents
             Func<T, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> commandToExecute,
             RateGate rateGate,
             OperationCancelToken token,
-            int? maxTransactionSize,
             int? batchSize)
         {
             _documentIds = documentIds;
             _commandToExecute = commandToExecute;
             _rateGate = rateGate;
             _token = token;
-            if (maxTransactionSize != null)
-                _maxTransactionSize = new Size(maxTransactionSize.Value, SizeUnit.Bytes);
             _batchSize = batchSize;
             _cancellationToken = token.Token;
         }
@@ -73,8 +67,7 @@ namespace Raven.Server.Documents
                 if (_batchSize != null && Processed >= _batchSize)
                     break;
 
-                if (_maxTransactionSize != null &&
-                    context.Transaction.InnerTransaction.LowLevelTransaction.TransactionSize > _maxTransactionSize)
+                if (context.CanContinueTransaction == false)
                     break;
 
                 if (context.CachedProperties.NeedClearPropertiesCache())

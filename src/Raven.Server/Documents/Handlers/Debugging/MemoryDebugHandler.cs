@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
 using Raven.Server.Web;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
@@ -332,10 +331,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(MemoryInfo.EncryptionBuffersPool)] = Size.Humane(encryptionBuffers.TotalPoolSize),
                 [nameof(MemoryInfo.EncryptionLockedMemory)] = Size.Humane(Sodium.LockedBytes),
                 [nameof(MemoryInfo.MemoryMapped)] = Size.Humane(totalMapping),
-                [nameof(MemoryInfo.ScratchDirtyMemory)] = memInfo.TotalScratchDirtyMemory.ToString(),
                 [nameof(MemoryInfo.IsHighDirty)] = dirtyMemoryState.IsHighDirty,
-                [nameof(MemoryInfo.DirtyMemory)] = Size.Humane(dirtyMemoryState.TotalDirtyInBytes),
-                [nameof(MemoryInfo.AvailableMemory)] = Size.Humane(memInfo.AvailableMemory.GetValue(SizeUnit.Bytes)),
+                [nameof(MemoryInfo.DirtyMemory)] = dirtyMemoryState.TotalDirty.ToString(),
+                [nameof(MemoryInfo.AvailableMemory)] = memInfo.AvailableMemory.ToString(),
                 [nameof(MemoryInfo.AvailableMemoryForProcessing)] = memInfo.AvailableMemoryForProcessing.ToString(),
             };
             if (memInfo.Remarks != null)
@@ -540,7 +538,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string EncryptionBuffersPool { get; set; }
             public string EncryptionLockedMemory { get; set; }
             public string MemoryMapped { get; set; }
-            public string ScratchDirtyMemory { get; set; }
             public bool IsHighDirty { get; set; }
             public string DirtyMemory { get; set; }
             public string AvailableMemory { get; set; }

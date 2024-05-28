@@ -268,6 +268,12 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.MaxStepsForScript", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int MaxStepsForScript { get; set; }
+        
+        [Description("Enables calling 'eval' with custom code and function constructors taking function code as string")]
+        [DefaultValue(false)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.AllowStringCompilation", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public bool AllowStringCompilation { get; set; }
 
         [Description("Time (in minutes) between auto-index cleanup")]
         [DefaultValue(10)]
@@ -567,6 +573,12 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Corax.MaxAllocationsAtDictionaryTrainingInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public Size MaxAllocationsAtDictionaryTraining { get; protected set; }
+        
+        [Description("The default mode of the index reset operation.")]
+        [ConfigurationEntry("Indexing.ResetMode", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [DefaultValue(IndexResetMode.InPlace)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        public IndexResetMode ResetMode { get; set; }
 
         protected override void ValidateProperty(PropertyInfo property)
         {

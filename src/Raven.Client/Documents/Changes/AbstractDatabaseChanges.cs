@@ -28,7 +28,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
     private readonly string _database;
 
     private readonly Action _onDispose;
-    private readonly string _nodeTag;
+    protected readonly string _nodeTag;
     private readonly bool _throttleConnection;
 
     private ClientWebSocket _client => _lazyClient.Value;
@@ -76,7 +76,12 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
                 .ConfigureAwait(false);
         });
 
-        _task = new Lazy<Task>(() => DoWork(_nodeTag), LazyThreadSafetyMode.ExecutionAndPublication);
+        _task = new Lazy<Task>(() =>
+        {
+            var t = DoWork(_nodeTag);
+            t.ContinueWith(_ => Dispose());
+            return t;
+        }, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
     private void EnsureRunning() => _ = _task.Value;
@@ -291,6 +296,11 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
         }
     }
 
+    public class OnReconnect : EventArgs
+    {
+        public static OnReconnect Instance = new OnReconnect();
+    }
+
     private async Task DoWork(string nodeTag)
     {
         try
@@ -315,6 +325,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
             return;
         }
 
+        var timerInSec = 1;
         var wasConnected = false;
         while (_cts.IsCancellationRequested == false)
         {
@@ -336,6 +347,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
 #endif
                     }
 
+                    timerInSec = 1;
                     wasConnected = true;
                     Interlocked.Exchange(ref _immediateConnection, 1);
 
@@ -344,9 +356,8 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
                         counter.Value.Set(counter.Value.OnConnect());
                     }
 
-                    ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+                    ConnectionStatusChanged?.Invoke(this, OnReconnect.Instance);
                 }
-
                 await ProcessChanges().ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (_cts.Token.IsCancellationRequested)
@@ -360,17 +371,24 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
             }
             catch (Exception e)
             {
-                //We don't report this error since we can automatically recover from it and we can't
-                // recover from the OnError accessing the faulty WebSocket.
+                // we don't report this error since we can automatically recover from it,
+                // and we can't recover from the OnError accessing the faulty WebSocket.
                 try
                 {
+                    NotifyAboutReconnection(e);
+
                     if (wasConnected)
                         ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 
                     wasConnected = false;
                     try
                     {
-                        _serverNode = await RequestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
+                        // If node tag is provided we should not failover to a different node
+                        // Failing over will create a mismatch if the operation is created and monitored on the provided node tag
+                        if (string.IsNullOrEmpty(_nodeTag))
+                            _serverNode = await RequestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
+                        else
+                            await RequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(_serverNode) { TimeoutInMs = 0, ForceUpdate = true, DebugTag = $"changes-api-connection-failure-{_database}" }).ConfigureAwait(false);
                     }
                     catch (DatabaseDoesNotExistException databaseDoesNotExistException)
                     {
@@ -379,7 +397,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
                     }
                     catch (Exception)
                     {
-                        //We don't want to stop observe for changes if server down. we will wait for one to be up
+                        // we don't want to stop observing for changes if the server is down. we will wait for it to be up.
                     }
 
                     if (ReconnectClient() == false)
@@ -404,7 +422,8 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
 
             try
             {
-                await TimeoutManager.WaitFor(TimeSpan.FromSeconds(1), _cts.Token).ConfigureAwait(false);
+                timerInSec = Math.Min(timerInSec * 2, 60);
+                await TimeoutManager.WaitFor(TimeSpan.FromSeconds(timerInSec), _cts.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -521,7 +540,11 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
         NotifyAboutError(new Exception(exceptionAsString));
     }
 
-    private void NotifyAboutError(Exception e)
+    internal virtual void NotifyAboutReconnection(Exception e)
+    {
+    }
+
+    internal void NotifyAboutError(Exception e)
     {
         if (_cts.Token.IsCancellationRequested)
             return;

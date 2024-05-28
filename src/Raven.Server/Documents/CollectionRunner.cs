@@ -137,8 +137,7 @@ namespace Raven.Server.Documents
 
                     do
                     {
-                        var command = new ExecuteRateLimitedOperations<string>(ids, action, rateGate, token,
-                            maxTransactionSize: 16 * Voron.Global.Constants.Size.Megabyte,
+                        var command = new ExecuteRateLimitedOperations<string>(ids, action, rateGate, token, 
                             batchSize: OperationBatchSize);
 
                         await Database.TxMerger.Enqueue(command).ConfigureAwait(false);

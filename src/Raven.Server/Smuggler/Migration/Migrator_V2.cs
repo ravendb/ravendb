@@ -13,6 +13,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
+using Raven.Server.Routing;
 
 namespace Raven.Server.Smuggler.Migration
 {
@@ -20,7 +21,7 @@ namespace Raven.Server.Smuggler.Migration
     {
         private const int AttachmentsPageSize = 32;
 
-        public Migrator_V2(MigratorOptions options, MigratorParameters parameters) : base(options, parameters)
+        public Migrator_V2(MigratorOptions options, MigratorParameters parameters, AuthorizationStatus authorizationStatus) : base(options, parameters, authorizationStatus)
         {
         }
 
@@ -75,10 +76,10 @@ namespace Raven.Server.Smuggler.Migration
 
             await using (var responseStream = await response.Content.ReadAsStreamAsync())
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(responseStream, context, Parameters.Database.Name))
+            using (var source = new StreamSource(responseStream, context, Parameters.Database.Name, new DatabaseSmugglerOptionsServerSide(AuthorizationStatus)))
             {
                 var destination = Parameters.Database.Smuggler.CreateDestination();
-                var options = new DatabaseSmugglerOptionsServerSide
+                var options = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus)
                 {
 #pragma warning disable 618
                     ReadLegacyEtag = true,
@@ -96,7 +97,7 @@ namespace Raven.Server.Smuggler.Migration
         private async Task MigrateAttachments(string lastEtag, SmugglerResult parametersResult)
         {
             var destination = Parameters.Database.Smuggler.CreateDestination();
-            var options = new DatabaseSmugglerOptionsServerSide
+            var options = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus)
             {
                 OperateOnTypes = DatabaseItemType.Attachments,
                 SkipRevisionCreation = true
@@ -244,16 +245,16 @@ namespace Raven.Server.Smuggler.Migration
                                                     $"error: {responseString}");
             }
 
+            var options = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus)
+            {
+                RemoveAnalyzers = Options.RemoveAnalyzers
+            };
             await using (var responseStream = await response.Content.ReadAsStreamAsync())
             await using (var indexesStream = new ArrayStream(responseStream, "Indexes")) // indexes endpoint returns an array
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(indexesStream, context, Parameters.Database.Name))
+            using (var source = new StreamSource(indexesStream, context, Parameters.Database.Name, options))
             {
                 var destination = Parameters.Database.Smuggler.CreateDestination();
-                var options = new DatabaseSmugglerOptionsServerSide
-                {
-                    RemoveAnalyzers = Options.RemoveAnalyzers,
-                };
                 var smuggler = Parameters.Database.Smuggler.Create(source, destination, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 await smuggler.ExecuteAsync();

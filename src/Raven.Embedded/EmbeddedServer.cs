@@ -81,6 +81,10 @@ namespace Raven.Embedded
                     var thumbprint = options.Security.ServerCertificateThumbprint;
                     RequestExecutor.RemoteCertificateValidationCallback += (sender, certificate, chain, errors) =>
                     {
+#if NET6_0_OR_GREATER
+                        if (certificate == null)
+                            return false;
+#endif
                         var certificate2 = certificate as X509Certificate2 ?? new X509Certificate2(certificate);
                         return certificate2.Thumbprint == thumbprint;
                     };

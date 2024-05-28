@@ -11,13 +11,14 @@ import {
     FormSelectCreatable,
     FormSwitch,
     FormAceEditor,
+    FormPathSelector,
 } from "./Form";
 import React, { useEffect } from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { Label } from "reactstrap";
+import { Button, Label } from "reactstrap";
 
 export default {
     title: "Bits/Form",
@@ -125,6 +126,14 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
                     isMulti
                 />
             </div>
+
+            <div className="input-group">
+                <FormInput type="text" control={control} name="inputText" />
+                <Button color="secondary" icon="rocket" title="Test connection">
+                    Test connection
+                </Button>
+            </div>
+
             <div>
                 <Label>Date picker</Label>
                 <FormDatePicker control={control} name="inputDatePicker" />
@@ -136,6 +145,15 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
             <div>
                 <Label>Ace editor</Label>
                 <FormAceEditor mode="javascript" control={control} name="inputAceEditor" />
+            </div>
+            <div>
+                <Label>Path selector</Label>
+                <FormPathSelector
+                    control={control}
+                    name="inputPath"
+                    getPaths={() => Promise.resolve(["C:\\", "D:\\"])}
+                    getPathDependencies={(path: string) => [path]}
+                />
             </div>
         </div>
     );
@@ -156,6 +174,7 @@ const schema = yup.object().shape({
     inputDatePicker: yup.date().required(),
     inputDurationPicker: yup.number().required(),
     inputAceEditor: yup.string().required(),
+    inputPath: yup.string().required(),
 });
 
 const formResolver = yupResolver(schema);
@@ -174,6 +193,7 @@ const validValues: FormData = {
     inputDatePicker: new Date(),
     inputDurationPicker: 2,
     inputAceEditor: "const x = 1;",
+    inputPath: "C:\\",
 };
 
 const invalidValues: FormData = {
@@ -189,4 +209,5 @@ const invalidValues: FormData = {
     inputDatePicker: null,
     inputDurationPicker: null,
     inputAceEditor: "",
+    inputPath: "",
 };

@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
                 Results = new List<ShardNodeSmugglerResult>()
             };
 
-            await using (var outputStream = GetOutputStream(RequestHandler.ResponseBodyStream(), options))
+            await using (var outputStream = await GetOutputStreamAsync(RequestHandler.ResponseBodyStream(), options))
             await using (var writer = new AsyncBlittableJsonTextWriter(jsonOperationContext, BackupUtils.GetCompressionStream(outputStream, options.CompressionAlgorithm ?? RequestHandler.DatabaseContext.Configuration.ExportImport.CompressionAlgorithm, RequestHandler.DatabaseContext.Configuration.ExportImport.CompressionLevel)))
             {
                 writer.WriteStartObject();
@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
 
                     var smugglerOperation = await smuggler.ExportToStreamAsync(options.ToExportOptions(), async stream =>
                     {
-                        await using (var gzipStream = await BackupUtils.GetDecompressionStreamAsync(GetInputStream(stream, options)))
+                        await using (var gzipStream = await BackupUtils.GetDecompressionStreamAsync(await GetInputStreamAsync(stream, options)))
                         {
                             await writer.WriteStreamAsync(gzipStream);
                         }

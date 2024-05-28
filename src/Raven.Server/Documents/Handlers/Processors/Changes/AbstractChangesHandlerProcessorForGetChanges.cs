@@ -76,6 +76,10 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
                             await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, token.Token);
                         }
                     }
+                    catch (ObjectDisposedException)
+                    {
+                        // disposing
+                    }
                     catch (Exception exception)
                     {
                         if (Logger.IsInfoEnabled)

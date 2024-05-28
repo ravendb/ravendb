@@ -15,6 +15,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Nito.AsyncEx;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Configuration;
@@ -24,6 +25,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Routing;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
+using Raven.Client.Http.Behaviors;
 using Raven.Client.Properties;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.Util;
@@ -139,6 +141,8 @@ namespace Raven.Client.Http
         private bool _usePrivateUrls;
 
         private bool _includePromotables;
+
+        private AbstractCommandResponseBehavior.CommandUnsuccessfulResponseBehavior _commandUnsuccessfulResponseBehavior = AbstractCommandResponseBehavior.CommandUnsuccessfulResponseBehavior.WrapException;
 
         public TimeSpan? DefaultTimeout
         {
@@ -383,6 +387,7 @@ namespace Raven.Client.Http
         {
             var executor = Create(initialUrls, databaseName, certificate, conventions, usePrivateUrls: usePrivateUrls, includePromotables);
             executor._disableClientConfigurationUpdates = true;
+            executor._commandUnsuccessfulResponseBehavior = AbstractCommandResponseBehavior.CommandUnsuccessfulResponseBehavior.None;
             return executor;
         }
 
@@ -1622,7 +1627,7 @@ namespace Raven.Client.Http
                     return true;
 
                 default:
-                    return await command.ResponseBehavior.TryHandleUnsuccessfulResponseAsync(context, command, response).ConfigureAwait(false);
+                    return await command.ResponseBehavior.TryHandleUnsuccessfulResponseAsync(context, command, response, _commandUnsuccessfulResponseBehavior).ConfigureAwait(false);
             }
         }
 
@@ -1992,31 +1997,38 @@ namespace Raven.Client.Http
         {
             if (response != null)
             {
-                var stream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
-                var ms = new MemoryStream(); // todo: have a pool of those
-                await stream.CopyToAsync(ms).ConfigureAwait(false);
-                try
+                using (var stream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false))
+                using (var ms = new MemoryStream()) // todo: have a pool of those
                 {
-                    ms.Position = 0;
-                    using (var responseJson = await context.ReadForMemoryAsync(ms, "RequestExecutor/HandleServerDown/ReadResponseContent").ConfigureAwait(false))
+                    await stream.CopyToAsync(ms).ConfigureAwait(false);
+                    try
                     {
-                        return ExceptionDispatcher.Get(responseJson, response.StatusCode, e);
+                        ms.Position = 0;
+                        using (var responseJson = await context.ReadForMemoryAsync(ms, "RequestExecutor/HandleServerDown/ReadResponseContent").ConfigureAwait(false))
+                        {
+                            return ExceptionDispatcher.Get(responseJson, response.StatusCode, e);
+                        }
+                    }
+                    catch
+                    {
+                        using (var streamReader = new StreamReader(ms))
+                        {
+                            // we failed to parse the error
+                            ms.Position = 0;
+                            return ExceptionDispatcher.Get(
+                                new ExceptionDispatcher.ExceptionSchema
+                                {
+                                    Url = request.RequestUri.ToString(),
+                                    Message = "Got unrecognized response from the server",
+                                    Error = await streamReader.ReadToEndAsync().ConfigureAwait(false),
+                                    Type = "Unparsable Server Response"
+                                }, response.StatusCode, e);
+                        }
                     }
                 }
-                catch
-                {
-                    // we failed to parse the error
-                    ms.Position = 0;
-                    return ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
-                    {
-                        Url = request.RequestUri.ToString(),
-                        Message = "Got unrecognized response from the server",
-                        Error = await new StreamReader(ms).ReadToEndAsync().ConfigureAwait(false),
-                        Type = "Unparseable Server Response"
-                    }, response.StatusCode, e);
-                }
             }
-            //this would be connections that didn't have response, such as "couldn't connect to remote server"
+
+            // this would be connections that didn't have response, such as "couldn't connect to remote server"
             return ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
             {
                 Url = request.RequestUri.ToString(),
@@ -2080,6 +2092,9 @@ namespace Raven.Client.Http
 
             if (certificate != null)
             {
+                if (httpMessageHandler.ClientCertificates == null)
+                    throw new NotSupportedException($"{typeof(HttpClientHandler)} does not support {nameof(httpMessageHandler.ClientCertificates)}. Setting the UseNativeHttpHandler property in project settings to false may solve the issue.");
+
                 httpMessageHandler.ClientCertificates.Add(certificate);
                 try
                 {
@@ -2530,6 +2545,8 @@ namespace Raven.Client.Http
             internal Action DelayRequest;
 
             internal Action<GetDatabaseTopologyCommand> SetCommandTimeout;
+
+            internal Task WaitBeforeFetchOperationStatus;
         }
     }
 }

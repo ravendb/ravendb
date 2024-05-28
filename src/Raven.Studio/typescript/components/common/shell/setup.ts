@@ -57,6 +57,9 @@ function initRedux() {
                     serverUrl: x.serverUrl(),
                 })) ?? [];
 
+        globalDispatch(
+            clusterActions.serverStateLoaded({ passive: clusterTopologyManager.default.topology()?.isPassive() })
+        );
         globalDispatch(clusterActions.nodesLoaded(clusterNodes));
     };
 
@@ -72,6 +75,9 @@ function initRedux() {
         globalDispatch(licenseActions.statusLoaded(licenseStatus));
         throttledUpdateLicenseLimitsUsage();
     });
+    licenseModel.supportCoverage.subscribe((supportCoverage) => {
+        globalDispatch(licenseActions.supportLoaded(supportCoverage));
+    });
 
     collectionsTracker.default.collections.subscribe((collections) =>
         globalDispatch(collectionsTrackerActions.collectionsLoaded(collections.map((x) => x.toCollectionState())))
@@ -83,6 +89,7 @@ function initRedux() {
 declare module "yup" {
     interface StringSchema {
         basicUrl(msg?: string): this;
+        base64(msg?: string): this;
     }
 }
 
@@ -102,6 +109,7 @@ function initYup() {
             },
         },
         string: {
+            url: "Please enter valid URL",
             email: "Please enter valid e-mail",
             length: ({ length }) => `Please enter exactly ${length} character${length > 1 ? "s" : ""}`,
             min: ({ min }) => `Please provide at least ${min} characters`,
@@ -126,6 +134,10 @@ function initYup() {
 
     yup.addMethod<yup.StringSchema>(yup.string, "basicUrl", function (msg = genUtils.invalidUrlMessage) {
         return this.matches(genUtils.urlRegex, msg);
+    });
+
+    yup.addMethod<yup.StringSchema>(yup.string, "base64", function (msg = "Please enter valid base64 string") {
+        return this.matches(/^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/, msg);
     });
 }
 

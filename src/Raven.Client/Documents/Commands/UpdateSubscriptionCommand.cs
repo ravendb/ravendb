@@ -2,6 +2,7 @@
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
@@ -28,7 +29,11 @@ namespace Raven.Client.Documents.Commands
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, ctx)).ConfigureAwait(false), _conventions)
+                Content = new BlittableJsonContent(async stream =>
+                {
+                    await using var writer = new AsyncBlittableJsonTextWriter(ctx, stream);
+                    writer.WriteSubscriptionUpdateOptions(_options);
+                }, _conventions)
             };
             return request;
         }

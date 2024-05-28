@@ -46,20 +46,20 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        using (RavenEtl.TestScript(new TestRavenEtlScript
-                               {
-                                   DocumentId = docId,
-                                   Configuration = new RavenEtlConfiguration()
-                                   {
-                                       Name = "simulate",
-                                       Transforms =
-                                       {
-                                           new Transformation()
-                                           {
-                                               Collections = {"Orders"},
-                                               Name = "OrdersAndLines",
-                                               Script =
-                                                   @"
+                        var testResult = RavenEtl.TestScript(new TestRavenEtlScript
+                        {
+                            DocumentId = docId,
+                            Configuration = new RavenEtlConfiguration()
+                            {
+                                Name = "simulate",
+                                Transforms =
+                                {
+                                    new Transformation()
+                                    {
+                                        Collections = { "Orders" },
+                                        Name = "OrdersAndLines",
+                                        Script =
+                                            @"
 var orderData = {
     Id: id(this),
     LinesCount: this.Lines.length,
@@ -80,22 +80,21 @@ for (var i = 0; i < this.Lines.length; i++) {
 output('test output');
 
 loadToOrders(orderData);"
-                                           }
-                                       }
-                                   }
-                               }, database, database.ServerStore, context, out var testResult))
-                        {
-                            var result = (RavenEtlTestScriptResult)testResult;
+                                    }
+                                }
+                            }
+                        }, database, database.ServerStore, context);
+                        
+                        var result = (RavenEtlTestScriptResult)testResult;
 
-                            Assert.Equal(0, result.TransformationErrors.Count);
+                        Assert.Equal(0, result.TransformationErrors.Count);
 
-                            Assert.Equal(4, result.Commands.Count);
+                        Assert.Equal(4, result.Commands.Count);
 
-                            Assert.Equal(1, result.Commands.OfType<DeletePrefixedCommandData>().Count());
-                            Assert.Equal(3, result.Commands.OfType<PutCommandDataWithBlittableJson>().Count());
+                        Assert.Equal(1, result.Commands.OfType<DeletePrefixedCommandData>().Count());
+                        Assert.Equal(3, result.Commands.OfType<PutCommandDataWithBlittableJson>().Count());
 
-                            Assert.Equal("test output", result.DebugOutput[0]);
-                        }
+                        Assert.Equal("test output", result.DebugOutput[0]);
                     }
                 }
             }
@@ -141,7 +140,7 @@ loadToOrders(this);"
                                     }
                                 }
                         }
-                    }, database, database.ServerStore, context, out _);
+                    }, database, database.ServerStore, context);
                 }
             }
         }
@@ -184,7 +183,7 @@ loadToDifferentCollection(this);"
                                     }
                                 }
                             }
-                        }, database, database.ServerStore, context, out _);
+                        }, database, database.ServerStore, context);
                     });
 
                     Assert.Contains(
@@ -209,25 +208,25 @@ loadToDifferentCollection(this);"
 
                 var database = await Etl.GetDatabaseFor(store, documentId);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (RavenEtl.TestScript(
-                   new TestRavenEtlScript
-                   {
-                       DocumentId = documentId,
-                       Configuration = new RavenEtlConfiguration()
-                       {
-                           Name = "simulate", 
-                           Transforms =
-                           {
-                               new Transformation()
-                               {
-                                   Collections = { "Orders" }, 
-                                   Name = "OrdersAndLines", 
-                                   Script = null
-                               }
-                           }
-                       }
-                   }, database, database.ServerStore, context, out var testResult))
                 {
+                    var testResult = RavenEtl.TestScript(
+                        new TestRavenEtlScript
+                        {
+                            DocumentId = documentId,
+                            Configuration = new RavenEtlConfiguration()
+                            {
+                                Name = "simulate", 
+                                Transforms =
+                                {
+                                    new Transformation()
+                                    {
+                                        Collections = { "Orders" }, 
+                                        Name = "OrdersAndLines", 
+                                        Script = null
+                                    }
+                                }
+                            }
+                        }, database, database.ServerStore, context);
 
                     var result = (RavenEtlTestScriptResult)testResult;
 

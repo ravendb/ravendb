@@ -114,50 +114,7 @@ namespace StressTests.Corax
                 Assert.Equal(100_000 * 2, sortedByCorax.Count);
             }
         }
-
-        [Fact]
-        public void WithBoosting()
-        {
-            for (int i = 0; i < 100_000; ++i)            
-            {
-                longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/{i}", Content1 = i % 2137, });
-            }
-
-            IndexEntries();
-            longList.Sort(CompareDescending);
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            {
-                //var match = searcher.Or(searcher.Boost(searcher.GreaterThan(searcher.AllEntries(), Content1, 2137), 1000),
-                //    searcher.LessThan(searcher.AllEntries(), Content1, 99L));
-                var match = searcher.Boost(searcher.UnaryQuery(searcher.AllEntries(), searcher.FieldMetadataBuilder("Content1", Content1), 2137, UnaryMatchOperation.GreaterThanOrEqual), 1000);
-                var orderMetadata = new OrderMetadata[2]
-                {
-                    new(default, true, MatchCompareFieldType.Score),
-                    new OrderMetadata(searcher.FieldMetadataBuilder("Id", IndexId), true, MatchCompareFieldType.Sequence)
-                };
-
-                var sorted = searcher.OrderBy(match, orderMetadata);
-                var read = sorted.Fill(_buffer);
-
-                var localResult = longList.Where(x => x.Content1 >= 2137).OrderBy(o => o.Content1).ThenBy(o => o.Id).Select(ll => ll.Id).ToList();
-                Assert.Equal(localResult.Count, read);
-
-                var realIds = new List<string>();
-                for (var i = 0; i < localResult.Count; ++i)
-                {
-                    long id = _buffer[i];
-                    realIds.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
-                }
-
-                Assert.True(localResult.SequenceEqual(realIds));
-            }
-        }
-
-        private static int CompareAscending(IndexSingleNumericalEntry<long, long> value1, IndexSingleNumericalEntry<long, long> value2)
-        {
-            return value1.Content1.CompareTo(value2.Content1);
-        }
-
+        
         private static int CompareAscendingThenDescending(IndexSingleNumericalEntry<long, long> value1, IndexSingleNumericalEntry<long, long> value2)
         {
             var result = value1.Content1.CompareTo(value2.Content1);
@@ -198,7 +155,7 @@ namespace StressTests.Corax
             using var knownFields = CreateKnownFields(bsc);
 
             {
-                using var indexWriter = new IndexWriter(Env, knownFields);
+                using var indexWriter = new IndexWriter(Env, knownFields, SupportedFeatures.All);
 
                 foreach (var entry in longList)
                 {

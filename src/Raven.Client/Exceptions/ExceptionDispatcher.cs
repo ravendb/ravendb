@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Http;
+using Raven.Client.Http.Behaviors;
 using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
@@ -74,7 +75,7 @@ namespace Raven.Client.Exceptions
             return exception;
         }
 
-        public static async Task Throw(JsonOperationContext context, HttpResponseMessage response)
+        public static async Task Throw(JsonOperationContext context, HttpResponseMessage response, AbstractCommandResponseBehavior.CommandUnsuccessfulResponseBehavior unsuccessfulResponseBehavior)
         {
             if (response == null)
                 throw new ArgumentNullException(nameof(response));
@@ -110,7 +111,8 @@ namespace Raven.Client.Exceptions
                     throw RavenException.Generic(schema.Error, json);
                 }
 
-                if (typeof(RavenException).IsAssignableFrom(type) == false)
+                if (unsuccessfulResponseBehavior == AbstractCommandResponseBehavior.CommandUnsuccessfulResponseBehavior.WrapException && 
+                    typeof(RavenException).IsAssignableFrom(type) == false)
                     throw new RavenException(schema.Error, exception);
 
                 FillException(exception, json);

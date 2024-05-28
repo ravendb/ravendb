@@ -273,7 +273,7 @@ namespace Raven.Server.Documents.Patch
                 if (indexField != null && indexField.Storage == FieldStorage.No)
                     return false;
 
-                var fieldType = QueryResultRetrieverBase.GetFieldType(property, parent.IndexRetriever.LuceneDocument);
+                var fieldType = QueryResultRetrieverCommon.GetFieldType(property, parent.IndexRetriever.LuceneDocument);
                 if (fieldType.IsArray)
                 {
                     // here we need to perform a manipulation in order to generate the object from the data
@@ -464,7 +464,7 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 // If number is not in double boundaries, we return the LazyNumberValue
-                return new ObjectWrapper(engine, value);
+                return ObjectWrapper.Create(engine, value);
             }
         }
 

@@ -47,7 +47,7 @@ export default function ServerWideCustomSorters() {
                         {sorters.length > 0 && (
                             <Alert color="info">
                                 <Icon icon="info" />
-                                To test this server-wide sorter go to the Custom Sorters View in a database
+                                To test server-wide sorters, go to the Custom Sorters view in a database
                             </Alert>
                         )}
                         <div id="newServerWideCustomSorter" className="w-fit-content mt-4">

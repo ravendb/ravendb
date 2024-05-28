@@ -6,6 +6,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Sharding.Handlers.Batches;
+using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -27,12 +28,12 @@ public sealed class ShardedClusterTransactionRequestProcessor : AbstractClusterT
 
     public override Task WaitForDatabaseCompletion(Task<HashSet<string>> onDatabaseCompletionTask, long index, ClusterTransactionOptions options, CancellationToken token)
     {
-        return Task.CompletedTask;
+        return RequestHandler.DatabaseContext.Cluster.WaitForExecutionOnShardsAsync(index, token).AsTask();
     }
 
     protected override ClusterTransactionCommand CreateClusterTransactionCommand(
         ArraySegment<BatchRequestParser.CommandData> parsedCommands,
-        ClusterTransactionCommand.ClusterTransactionOptions options,
+        ClusterTransactionOptions options,
         string raftRequestId)
     {
         return new ClusterTransactionCommand(

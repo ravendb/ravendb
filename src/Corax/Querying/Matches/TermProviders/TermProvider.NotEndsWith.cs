@@ -19,7 +19,7 @@ namespace Corax.Querying.Matches.TermProviders
 
         private CompactTree.Iterator<TLookupIterator> _iterator;
 
-        public NotEndsWithTermProvider(Querying.IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey endsWith)
+        public NotEndsWithTermProvider(Querying.IndexSearcher searcher, CompactTree tree, in FieldMetadata field, CompactKey endsWith)
         {
             _searcher = searcher;
             _field = field;

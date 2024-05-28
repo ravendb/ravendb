@@ -1,28 +1,37 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-class createDatabaseCommand extends commandBase {
+export type CreateDatabaseDto = Pick<
+    Raven.Client.ServerWide.DatabaseRecord,
+    "DatabaseName" | "Settings" | "Disabled" | "Encrypted"
+> & {
+    Topology?: Pick<Raven.Client.ServerWide.DatabaseTopology, "Members" | "DynamicNodesDistribution">;
+    Sharding?: {
+        Shards: Record<number, { Members?: string[] }>;
+        Orchestrator: {
+            Topology: Pick<Raven.Client.ServerWide.DatabaseTopology, "Members">
+        }
+    };
+};
 
-    private databaseDocument: Raven.Client.ServerWide.DatabaseRecord;
-
+export class createDatabaseCommand extends commandBase {
+    private dto: CreateDatabaseDto;
     private replicationFactor: number;
 
-    constructor(databaseDocument: Raven.Client.ServerWide.DatabaseRecord, replicationFactor: number) {
+    constructor(dto: CreateDatabaseDto, replicationFactor: number) {
         super();
         this.replicationFactor = replicationFactor;
-        this.databaseDocument = databaseDocument;
+        this.dto = dto;
     }
 
     execute(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasePutResult> {
         const args = {
-            name: this.databaseDocument.DatabaseName,
+            name: this.dto.DatabaseName,
             replicationFactor: this.replicationFactor
         };
         const url = endpoints.global.adminDatabases.adminDatabases + this.urlEncodeArgs(args);
-        return this.put<Raven.Client.ServerWide.Operations.DatabasePutResult>(url, JSON.stringify(this.databaseDocument), null, { dataType: undefined })
-            .done(() => this.reportSuccess(this.databaseDocument.DatabaseName + " created"))
+        return this.put<Raven.Client.ServerWide.Operations.DatabasePutResult>(url, JSON.stringify(this.dto), null, { dataType: undefined })
+            .done(() => this.reportSuccess(this.dto.DatabaseName + " created"))
             .fail((response: JQueryXHR) => this.reportError("Failed to create database", response.responseText, response.statusText));
     }
 }
-
-export = createDatabaseCommand; 

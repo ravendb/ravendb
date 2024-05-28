@@ -50,6 +50,7 @@ namespace Raven.Server.Documents.Patch
     public sealed class ScriptRunner
     {
         private static readonly string MaxStepsForScriptConfigurationKey = RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript);
+        private static readonly string AllowStringCompilationKey = RavenConfiguration.GetKey(x => x.Patching.AllowStringCompilation);
 
         public sealed class Holder
         {
@@ -68,7 +69,7 @@ namespace Raven.Server.Documents.Patch
         private readonly ScriptRunnerCache _parent;
         internal readonly bool _enableClr;
         private readonly DateTime _creationTime;
-        public readonly List<Script> ScriptsSource = new List<Script>();
+        public readonly List<Prepared<Script>> ScriptsSource = new List<Prepared<Script>>();
 
         public int NumberOfCachedScripts => _cache.Count(x =>
             x.Value != null ||
@@ -215,7 +216,7 @@ namespace Raven.Server.Documents.Patch
             if (arg.IsString() == false)
                 throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
 
-            return TimeSeriesRetriever.ParseDateTime(arg.AsString());
+            return TimeSeriesRetrieverBase.ParseDateTime(arg.AsString());
         }
 
         private static string GetTypes(JsValue value) => $"JintType({value.Type}) .NETType({value.GetType().Name})";
@@ -259,7 +260,7 @@ namespace Raven.Server.Documents.Patch
             private const string _unarchiveSignature = "unarchive(doc)";
             public const string GetMetadataMethod = "getMetadata";
 
-            public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<Script> scriptsSource, bool ignoreValidationErrors)
+            public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<Prepared<Script>> scriptsSource, bool ignoreValidationErrors)
             {
                 _database = database;
                 _configuration = configuration;
@@ -277,7 +278,7 @@ namespace Raven.Server.Documents.Patch
                         .AddObjectConverter(new JintDateTimeConverter())
                         .AddObjectConverter(new JintTimeSpanConverter())
                         .LocalTimeZone(TimeZoneInfo.Utc)
-                        .StringCompilationAllowed = false;
+                        .StringCompilationAllowed = _configuration.Patching.AllowStringCompilation;
                 });
 
                 JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
@@ -1627,7 +1628,7 @@ namespace Raven.Server.Documents.Patch
 
                 var queryParams = ((Document)tsFunctionArgs[^1]).Data;
 
-                var retriever = new TimeSeriesRetriever(_docsCtx, queryParams, loadedDocuments: null, token: _token);
+                var retriever = new TimeSeriesRetriever<Document>(_docsCtx, queryParams, loadedDocuments: null, token: _token);
 
                 var streamableResults = retriever.InvokeTimeSeriesFunction(func, docId, tsFunctionArgs, out var type);
                 var result = retriever.MaterializeResults(streamableResults, type, addProjectionToResult: false, fromStudio: false);
@@ -2027,13 +2028,13 @@ namespace Raven.Server.Documents.Patch
                             case BlittableJsonToken.Boolean:
                                 return (bool)propDetails.Value;
                             case BlittableJsonToken.Integer:
-                                return new ObjectWrapper(selfInstance.Engine, value);
+                                return ObjectWrapper.Create(selfInstance.Engine, value);
                             case BlittableJsonToken.LazyNumber:
-                                return new ObjectWrapper(selfInstance.Engine, value);
+                                return ObjectWrapper.Create(selfInstance.Engine, value);
                             case BlittableJsonToken.String:
-                                return new ObjectWrapper(selfInstance.Engine, value);
+                                return ObjectWrapper.Create(selfInstance.Engine, value);
                             case BlittableJsonToken.CompressedString:
-                                return new ObjectWrapper(selfInstance.Engine, value);
+                                return ObjectWrapper.Create(selfInstance.Engine, value);
                             default:
                                 throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must return either raw numeric or raw string types");
                         }
@@ -2118,9 +2119,15 @@ namespace Raven.Server.Documents.Patch
                 catch (StatementsCountOverflowException e)
                 {
                     JavaScriptUtils.Clear();
-                    throw new  Raven.Client.Exceptions.Documents.Patching.JavaScriptException(
+                    throw new Client.Exceptions.Documents.Patching.JavaScriptException(
                         $"The maximum number of statements executed have been reached - {_configuration.Patching.MaxStepsForScript}. You can configure it by modifying the configuration option: '{MaxStepsForScriptConfigurationKey}'.",
                         e);
+                }
+                catch (JavaScriptException jse) when (jse.Message.Contains("String compilation has been disabled in engine options"))
+                {
+                    JavaScriptUtils.Clear();
+                    throw new Client.Exceptions.Documents.Patching.JavaScriptException(
+                        $"String compilation has been disabled in engine options. You can configure it by modifying the configuration option: '{AllowStringCompilationKey}'.", jse);
                 }
                 catch (JavaScriptException e)
                 {

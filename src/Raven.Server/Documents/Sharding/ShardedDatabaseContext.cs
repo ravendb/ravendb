@@ -225,6 +225,11 @@ namespace Raven.Server.Documents.Sharding
             Configuration = DatabasesLandlord.CreateDatabaseConfiguration(ServerStore, DatabaseName, settings);
         }
 
+        public bool IsShutdownRequested()
+        {
+            return _databaseShutdown.IsCancellationRequested;
+        }
+
         public void Dispose()
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 needs an ExceptionAggregator like DocumentDatabase");
@@ -243,6 +248,8 @@ namespace Raven.Server.Documents.Sharding
             exceptionAggregator.Execute(() => AllOrchestratorNodesExecutor?.Dispose());
 
             exceptionAggregator.Execute(() => SubscriptionsStorage.Dispose());
+
+            Operations.Dispose(exceptionAggregator);
 
             exceptionAggregator.Execute(() => _databaseShutdown.Dispose());
 

@@ -1842,7 +1842,15 @@ class query extends shardViewModelBase {
         this.projectionBehavior(projectionBehavior);
         // Force dropdown menu to close. (for nested dropdowns, the menu stays open)
         $(".projection-behavior-dropdown").removeClass("open");
-}
+    }
+    
+    formatTime(input: number) {
+        if (!input) {
+            return "<1 ms";
+        }
+        
+        return input.toLocaleString() + " ms";
+    }
 }
 
 export = query;

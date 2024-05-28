@@ -14,6 +14,7 @@ using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.TimeSeries;
 using Sparrow.Json;
@@ -362,7 +363,7 @@ namespace Raven.Server.Documents.Patch
 
         internal JsValue TranslateToJs(Engine engine, JsonOperationContext context, object o, bool needsClone = true)
         {
-            if (o is TimeSeriesRetriever.TimeSeriesStreamingRetrieverResult tsrr)
+            if (o is TimeSeriesRetrieverBase.TimeSeriesStreamingRetrieverResult tsrr)
             { 
                 // we are passing a streaming value to the JS engine, so we need
                 // to materialize all the results
@@ -383,6 +384,17 @@ namespace Raven.Server.Documents.Patch
                     IndexFields = t.Item3,
                     AnyDynamicIndexFields = t.Item4 ?? false,
                     Projection = t.Item5
+                };
+            }
+            if (o is Tuple<QueriedDocument, RetrieverInput, Dictionary<string, IndexField>, bool?, ProjectionOptions> qt)
+            {
+                var d = qt.Item1;
+                return new BlittableObjectInstance(engine, null, Clone(d.Data, context), d)
+                {
+                    IndexRetriever = qt.Item2,
+                    IndexFields = qt.Item3,
+                    AnyDynamicIndexFields = qt.Item4 ?? false,
+                    Projection = qt.Item5
                 };
             }
             if (o is Document doc)
@@ -435,6 +447,17 @@ namespace Raven.Server.Documents.Patch
                 var jsArray = new JsArray(engine, args);
                 return jsArray;
             }
+            if (o is List<QueriedDocument> queriedDocuments)
+            {
+                var args = new JsValue[queriedDocuments.Count];
+                for (var i = 0; i < queriedDocuments.Count; i++)
+                {
+                    args[i] = new BlittableObjectInstance(engine, null, Clone(queriedDocuments[i].Data, context), queriedDocuments[i]);
+                }
+                var jsArray = new JsArray(engine, args);
+                return jsArray;
+            }
+            
             // for admin
             if (o is RavenServer || o is DocumentDatabase)
             {

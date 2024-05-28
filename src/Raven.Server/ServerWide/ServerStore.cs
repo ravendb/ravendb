@@ -2570,6 +2570,11 @@ namespace Raven.Server.ServerWide
 
         public Guid ServerId => GetServerId();
 
+        public bool IsShutdownRequested()
+        {
+            return _shutdownNotification.IsCancellationRequested;
+        }
+
         public void Dispose()
         {
             if (_shutdownNotification.IsCancellationRequested || _disposed)
@@ -3852,6 +3857,10 @@ namespace Raven.Server.ServerWide
             internal Action AfterCommitInClusterTransaction;
             internal Action<string, List<ClusterTransactionCommand.SingleClusterDatabaseCommand>> BeforeExecuteClusterTransactionBatch;
         }
+
+#if DEBUG
+        public bool EnableCaptureWriteTransactionStackTrace = false;
+#endif
 
         public readonly MemoryCache QueryClauseCache;
 

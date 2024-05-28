@@ -5,7 +5,7 @@ import { Card } from "reactstrap";
 import { IndexPanel } from "./IndexPanel";
 import { IndexSharedInfo } from "components/models/indexes";
 import { Icon } from "components/common/Icon";
-import { ResetIndexData, SwapSideBySideData } from "./useIndexesPage";
+import { ResetIndexesData, SwapSideBySideData } from "./useIndexesPage";
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 
@@ -15,7 +15,7 @@ export interface IndexesPageListProps {
     selectedIndexes: string[];
     indexToHighlight: string;
     globalIndexingStatus: "Running";
-    resetIndexData: ResetIndexData;
+    resetIndexData: ResetIndexesData;
     swapSideBySideData: SwapSideBySideData;
     setIndexPriority: (index: IndexSharedInfo, priority: IndexPriority) => Promise<void>;
     setIndexLockMode: (index: IndexSharedInfo, lockMode: IndexLockMode) => Promise<void>;
@@ -56,7 +56,9 @@ export default function IndexesPageList({
                             setPriority={(p) => setIndexPriority(index, p)}
                             setLockMode={(l) => setIndexLockMode(index, l)}
                             globalIndexingStatus={globalIndexingStatus}
-                            resetIndex={() => resetIndexData.setIndexName(index.name)}
+                            resetIndex={(mode?: Raven.Client.Documents.Indexes.IndexResetMode) =>
+                                resetIndexData.openConfirm([index.name], mode)
+                            }
                             openFaulty={(location: databaseLocationSpecifier) => openFaulty(index, location)}
                             startIndexing={() => startIndexes([index])}
                             disableIndexing={() => disableIndexes([index])}
@@ -93,7 +95,7 @@ export default function IndexesPageList({
                                 setPriority={(p) => setIndexPriority(replacement, p)}
                                 setLockMode={(l) => setIndexLockMode(replacement, l)}
                                 globalIndexingStatus={globalIndexingStatus}
-                                resetIndex={() => resetIndexData.setIndexName(replacement.name)}
+                                resetIndex={() => resetIndexData.openConfirm([replacement.name], "InPlace")}
                                 openFaulty={(location: databaseLocationSpecifier) => openFaulty(replacement, location)}
                                 startIndexing={() => startIndexes([replacement])}
                                 disableIndexing={() => disableIndexes([replacement])}

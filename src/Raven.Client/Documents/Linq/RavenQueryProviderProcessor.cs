@@ -54,8 +54,8 @@ namespace Raven.Client.Documents.Linq
         private readonly LinqQueryHighlightings _highlightings;
         private readonly QueryStatistics _queryStatistics;
         private bool _chainedWhere;
-        private int _insideWhere;
-        private int _insideFilter;
+        private int _insideWhereOrSearchCounter;
+        private int _insideFilterCounter;
         private bool _insideNegate;
         private bool _insideExact;
         private SpecialQueryType _queryType = SpecialQueryType.None;
@@ -235,7 +235,7 @@ namespace Raven.Client.Documents.Linq
 
         private void VisitBinaryExpression(BinaryExpression expression)
         {
-            if (_insideWhere > 0)
+            if (_insideWhereOrSearchCounter > 0)
             {
                 VerifyLegalBinaryExpression(expression);
             }
@@ -314,7 +314,6 @@ namespace Raven.Client.Documents.Linq
         {
             if (TryHandleBetween(andAlso))
                 return;
-
 
             if (_subClauseDepth > 0)
                 DocumentQuery.OpenSubclause();
@@ -1686,7 +1685,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
             object value;
             while (true)
             {
-
                 expressions.Add(search);
 
                 if (LinqPathProvider.GetValueFromExpressionWithoutConversion(search.Arguments[4], out value) == false)
@@ -1706,7 +1704,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 target = search.Arguments[0];
             }
 
+            // This has to be set in order to have correct parentheses
+            // when using both search and where clause, e.g.
+            // where (Category = $p0 or Category = $p1) and search(Name, $p2)
+            _insideWhereOrSearchCounter++;
             VisitExpression(target);
+            _insideWhereOrSearchCounter--;
 
             if (expressions.Count > 1)
             {
@@ -1898,7 +1901,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 case "Filter":
                 {
-                    _insideFilter++;
+                    _insideFilterCounter++;
                     VisitExpression(expression.Arguments[0]);
                     using (FilterModeScope(true))
                     {
@@ -1908,15 +1911,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             DocumentQuery.OpenSubclause();
                         }
 
-                        if (_chainedWhere == false && _insideFilter > 1)
+                        if (_chainedWhere == false && _insideFilterCounter > 1)
                             DocumentQuery.OpenSubclause();
 
                         VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-                        if (_chainedWhere == false && _insideFilter > 1)
+                        if (_chainedWhere == false && _insideFilterCounter > 1)
                             DocumentQuery.CloseSubclause();
                         if (_chainedWhere)
                             DocumentQuery.CloseSubclause();
-                        _insideFilter--;
+                        _insideFilterCounter--;
                         if (expression.Arguments.Count is 3 && LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var limit))
                         {
                             AddFilterLimit((int)limit);
@@ -1929,14 +1932,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         using (FilterModeScope(@on: false))
                         {
-                            _insideWhere++;
+                            _insideWhereOrSearchCounter++;
                             VisitExpression(expression.Arguments[0]);
                             if (_chainedWhere)
                             {
                                 DocumentQuery.AndAlso();
                                 DocumentQuery.OpenSubclause();
                             }
-                            if (_chainedWhere == false && _insideWhere > 1)
+                            if (_chainedWhere == false && _insideWhereOrSearchCounter > 1)
                                 DocumentQuery.OpenSubclause();
 
                             if (expression.Arguments.Count == 3)
@@ -1945,12 +1948,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
                             _insideExact = false;
 
-                            if (_chainedWhere == false && _insideWhere > 1)
+                            if (_chainedWhere == false && _insideWhereOrSearchCounter > 1)
                                 DocumentQuery.CloseSubclause();
                             if (_chainedWhere)
                                 DocumentQuery.CloseSubclause();
                             _chainedWhere = true;
-                            _insideWhere--;
+                            _insideWhereOrSearchCounter--;
                         }
                         break;
                     }
@@ -2923,7 +2926,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void VisitLet(NewExpression expression)
         {
-            if (_insideWhere > 0)
+            if (_insideWhereOrSearchCounter > 0)
                 throw new NotSupportedException("Queries with a LET clause before a WHERE clause are not supported. " +
                                                 "WHERE clauses should appear before any LET clauses.");
 

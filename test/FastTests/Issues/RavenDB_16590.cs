@@ -45,6 +45,7 @@ namespace FastTests.Issues
                  * See for details: RavenDB-16590
                  * 
                  */
+                "Indexing.AllowStringCompilation",
                 "Indexing.Analyzers.Default",
                 "Indexing.Analyzers.Exact.Default",
                 "Indexing.Lucene.Analyzers.NGram.MaxGram",

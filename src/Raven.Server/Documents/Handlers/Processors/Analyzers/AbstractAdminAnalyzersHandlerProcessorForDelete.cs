@@ -21,10 +21,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Analyzers
 
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
-                var clientCert = RequestHandler.GetCurrentCertificate();
-
-                var auditLog = LoggingSource.AuditLog.GetLogger(databaseName, "Audit");
-                auditLog.Info($"Analyzer {name} DELETE by {clientCert?.Subject} {clientCert?.Thumbprint}");
+                RequestHandler.LogAuditFor(databaseName, $"Analyzer '{name}' DELETE");
             }
 
             var command = new DeleteAnalyzerCommand(name, databaseName, RequestHandler.GetRaftRequestIdFromQuery());

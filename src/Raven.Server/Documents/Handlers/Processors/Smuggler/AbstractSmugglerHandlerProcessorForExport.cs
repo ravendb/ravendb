@@ -48,29 +48,22 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                     var firstRead = await stream.ReadAsync(buffer.Memory.Memory);
                     buffer.Used = 0;
                     buffer.Valid = firstRead;
+
                     if (firstRead != 0)
                     {
                         var blittableJson = await context.ParseToMemoryAsync(stream, "DownloadOptions", BlittableJsonDocumentBuilder.UsageMode.None, buffer);
                         options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
+                        options.SetAuthorizationStatus(RequestHandler.GetAuthorizationStatusForSmuggler(RequestHandler.DatabaseName));
                     }
                     else
                     {
                         // no content, we'll use defaults
-                        options = new DatabaseSmugglerOptionsServerSide();
+                        options = new DatabaseSmugglerOptionsServerSide(RequestHandler.GetAuthorizationStatusForSmuggler(RequestHandler.DatabaseName));
                     }
                 }
 
                 if (string.IsNullOrWhiteSpace(options.EncryptionKey) == false)
                     ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
-
-                var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-
-                if (feature == null)
-                    options.AuthorizationStatus = AuthorizationStatus.DatabaseAdmin;
-                else
-                    options.AuthorizationStatus = feature.CanAccess(RequestHandler.DatabaseName, requireAdmin: true, requireWrite: false)
-                        ? AuthorizationStatus.DatabaseAdmin
-                        : AuthorizationStatus.ValidUser;
 
                 var fileName = options.FileName;
                 if (string.IsNullOrEmpty(fileName))

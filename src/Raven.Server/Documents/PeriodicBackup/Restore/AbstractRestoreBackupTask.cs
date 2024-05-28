@@ -303,9 +303,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 return;
 
             // restore the smuggler backup
-            var options = new DatabaseSmugglerOptionsServerSide
+            var options = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus.DatabaseAdmin)
             {
-                AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                 SkipRevisionCreation = true,
                 IncludeArchived = true
             };
@@ -347,21 +346,31 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             await ImportSingleBackupFileAsync(database, Progress, Result, lastFilePath, context, lastFileDestination, options, isLastFile: true);
         }
 
-        protected Stream GetInputStream(Stream stream, byte[] databaseEncryptionKey)
+        protected async Task<Stream> GetInputStreamAsync(Stream stream, byte[] databaseEncryptionKey)
         {
             if (RestoreConfiguration.BackupEncryptionSettings == null ||
                 RestoreConfiguration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.None)
                 return stream;
+
+            byte[] encryptionKey;
 
             if (RestoreConfiguration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseDatabaseKey)
             {
                 if (databaseEncryptionKey == null)
                     throw new ArgumentException("Stream is encrypted but the encryption key is missing!");
 
-                return new DecryptingXChaCha20Oly1305Stream(stream, databaseEncryptionKey);
+                encryptionKey = databaseEncryptionKey;
+            }
+            else
+            {
+                encryptionKey = Convert.FromBase64String(RestoreConfiguration.BackupEncryptionSettings.Key);
             }
 
-            return new DecryptingXChaCha20Oly1305Stream(stream, Convert.FromBase64String(RestoreConfiguration.BackupEncryptionSettings.Key));
+            var decryptingStream = new DecryptingXChaCha20Oly1305Stream(stream, encryptionKey);
+
+            await decryptingStream.InitializeAsync();
+
+            return decryptingStream;
         }
 
         protected void DisableOngoingTasksIfNeeded(DatabaseRecord databaseRecord)
@@ -464,9 +473,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             bool isLastFile)
         {
             await using (var fileStream = await RestoreSource.GetStream(filePath))
-            await using (var inputStream = GetInputStream(fileStream, database.MasterKey))
+            await using (var inputStream = await GetInputStreamAsync(fileStream, database.MasterKey))
             await using (var gzipStream = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
-            using (var source = new StreamSource(gzipStream, context, database.Name))
+            using (var source = new StreamSource(gzipStream, context, database.Name, options))
             {
                 var smuggler = database.Smuggler.CreateForRestore(RestoreSettings.DatabaseRecord, source, destination, context, options, restoreResult, onProgress);
 

@@ -106,6 +106,12 @@ internal static class DocumentationUrls
             /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/how-to-perform-group-by-query#by-array-content"/></remarks>
             public const string GroupByArrayContent = nameof(GroupByArrayContent);
 
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/document-query/how-to-use-not-operator"/></remarks>
+            public const string HowToUseNotOperator = nameof(HowToUseNotOperator);
+
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/document-query/how-to-use-lucene"/></remarks>
+            public const string HowToUseLucene = nameof(HowToUseLucene);
+
             /// <remarks><see href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/how-to/handle-document-relationships#includes"/></remarks>
             public const string Includes = nameof(Includes);
 
@@ -157,6 +163,9 @@ internal static class DocumentationUrls
         {
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/session/get/get-entries#include-parent-and-tagged-documents"/></remarks>
             public const string Include = nameof(Include);
+
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/session/include/with-session-query"/></remarks>
+            public const string IncludeWithQuery = nameof(IncludeWithQuery);
 
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/timeseries/client-api/overview"/></remarks>
             public const string ClientApi = nameof(ClientApi);

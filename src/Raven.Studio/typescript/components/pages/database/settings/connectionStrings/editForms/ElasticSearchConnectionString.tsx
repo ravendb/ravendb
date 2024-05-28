@@ -288,7 +288,7 @@ function NodeUrl({ idx, control, formValues, isDeleteButtonVisible, onDelete, tr
                     </Badge>
                 ) : null}
             </Label>
-            <div className="d-flex gap-1 mb-2">
+            <div className="input-group">
                 <FormInput
                     type="text"
                     control={control}

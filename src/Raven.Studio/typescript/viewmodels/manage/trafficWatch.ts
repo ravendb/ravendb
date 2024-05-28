@@ -85,10 +85,10 @@ class runQueryFeature implements columnPreviewFeature {
         lines.forEach((line: string) => {
             if (line) {
                 const jsonObj = JSON.parse(line);
-                
-                const queriesEndpoint = jsonObj.Url.endsWith("/queries");
-                const query = jsonObj.Query.slice("?query=".length);
-                                
+
+                const queriesEndpoint = jsonObj.Url?.endsWith("/queries");
+                const query = jsonObj.Query?.slice("?query=".length);
+
                 if (queriesEndpoint && query) {
                     queryList.push(query);
                 }

@@ -10,6 +10,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Sparrow.Json;
+using static Raven.Server.RavenServer;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
@@ -25,22 +26,22 @@ internal sealed class AdminIndexHandlerProcessorForJavaScriptPut : AbstractAdmin
 
     protected override async ValueTask HandleIndexesFromLegacyReplicationAsync()
     {
-        if (HttpContext.Features.Get<IHttpAuthenticationFeature>() is RavenServer.AuthenticateConnection feature &&
-            feature.CanAccess(RequestHandler.DatabaseName, requireAdmin: true, requireWrite: true) == false)
+        var authenticateConnection = HttpContext.Features.Get<IHttpAuthenticationFeature>() as AuthenticateConnection;
+        if (authenticateConnection != null &&
+            authenticateConnection.CanAccess(RequestHandler.DatabaseName, requireAdmin: true, requireWrite: true) == false)
         {
             throw new UnauthorizedAccessException("Deploying indexes from legacy replication requires admin privileges.");
         }
 
+        var options = new DatabaseSmugglerOptionsServerSide(RequestHandler.GetAuthorizationStatusForSmuggler(RequestHandler.DatabaseName))
+        {
+            OperateOnTypes = DatabaseItemType.Indexes
+        };
         using (ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
         await using (var stream = new ArrayStream(RequestHandler.RequestBodyStream(), nameof(DatabaseItemType.Indexes)))
-        using (var source = new StreamSource(stream, jsonOperationContext, RequestHandler.DatabaseName))
+        using (var source = new StreamSource(stream, jsonOperationContext, RequestHandler.DatabaseName, options))
         {
             var destination = RequestHandler.Database.Smuggler.CreateDestination();
-            var options = new DatabaseSmugglerOptionsServerSide
-            {
-                OperateOnTypes = DatabaseItemType.Indexes
-            };
-
             var smuggler = RequestHandler.Database.Smuggler.Create(source, destination, jsonOperationContext, options);
             await smuggler.ExecuteAsync();
         }

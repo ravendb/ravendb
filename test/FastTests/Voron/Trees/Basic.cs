@@ -34,9 +34,11 @@ namespace FastTests.Voron.Trees
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.ReadTree("foo");
-                Assert.Equal(tree.State.PageCount, allPages.Count);
-                Assert.Equal(4, tree.State.PageCount);
-                Assert.Equal(3, tree.State.OverflowPages);
+
+                ref readonly var state = ref tree.State.Header;
+                Assert.Equal(state.PageCount, allPages.Count);
+                Assert.Equal(4, state.PageCount);
+                Assert.Equal(3, state.OverflowPages);
             }
         }
 
@@ -78,15 +80,14 @@ namespace FastTests.Voron.Trees
         {
             using (var tx = Env.WriteTransaction())
             {
-                Slice key;
-                Slice.From(tx.Allocator, "test", out key);
+                Slice.From(tx.Allocator, "test", out Slice key);
                 var tree = tx.CreateTree("foo");
                 tree.Add(key, StreamFor("value"));
 
                 tx.Commit();
 
-                Assert.Equal(1, tree.State.PageCount);
-                Assert.Equal(1, tree.State.LeafPages);
+                Assert.Equal(1, tree.State.Header.PageCount);
+                Assert.Equal(1, tree.State.Header.LeafPages);
             }
         }
 
@@ -110,10 +111,10 @@ namespace FastTests.Voron.Trees
                 tx.Commit();
 
 
-                Assert.Equal(4, tree.State.PageCount);
-                Assert.Equal(3, tree.State.LeafPages);
-                Assert.Equal(1, tree.State.BranchPages);
-                Assert.Equal(2, tree.State.Depth);
+                Assert.Equal(4, tree.State.Header.PageCount);
+                Assert.Equal(3, tree.State.Header.LeafPages);
+                Assert.Equal(1, tree.State.Header.BranchPages);
+                Assert.Equal(2, tree.State.Header.Depth);
 
             }
         }

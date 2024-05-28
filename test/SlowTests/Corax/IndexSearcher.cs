@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Corax;
 using Corax.Analyzers;
 using Corax.Mappings;
 using FastTests.Voron;
@@ -114,7 +115,7 @@ public class IndexSearcherTest : StorageTest
 
     private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexEntry> list, IndexFieldsMapping mapping)
     {
-        using var indexWriter = new IndexWriter(Env, mapping);
+        using var indexWriter = new IndexWriter(Env, mapping, SupportedFeatures.All);
 
         foreach (var entry in list)
         {

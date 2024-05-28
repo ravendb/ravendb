@@ -10,4 +10,24 @@ export default class MockLicenseService extends AutoMockService<LicenseService> 
     withLimitsUsage(dto?: MockedValue<Raven.Server.Commercial.LicenseLimitsUsage>) {
         return this.mockResolvedValue(this.mocks.getClusterLimitsUsage, dto, LicenseStubs.limitsUsage());
     }
+
+    withGetConfigurationSettings(dto?: MockedValue<Raven.Server.Config.Categories.LicenseConfiguration>) {
+        return this.mockResolvedValue(this.mocks.getConfigurationSettings, dto, LicenseStubs.configurationSettings());
+    }
+
+    withConnectivityCheck(dto?: MockedValue<{ connected: boolean; exception: string }>) {
+        return this.mockResolvedValue(
+            this.mocks.checkLicenseServerConnectivity,
+            dto,
+            LicenseStubs.licenseServerConnectivityValid()
+        );
+    }
+
+    withGetChangeLog(dto?: MockedValue<Raven.Server.Web.Studio.UpgradeInfoHandler.UpgradeInfoResponse>) {
+        return this.mockResolvedValue(this.mocks.getChangeLog, dto, LicenseStubs.changeLog());
+    }
+
+    withLatestVersion(dto?: MockedValue<Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo>) {
+        return this.mockResolvedValue(this.mocks.getLatestVersion, dto, LicenseStubs.latestVersion());
+    }
 }

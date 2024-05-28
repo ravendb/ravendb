@@ -1034,7 +1034,7 @@ namespace Raven.Server.Smuggler.Documents
                 _context = context;
             }
 
-            public async ValueTask WriteIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType)
+            public async ValueTask WriteAutoIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType, AuthorizationStatus authorizationStatus)
             {
                 if (First == false)
                     Writer.WriteComma();
@@ -1054,7 +1054,7 @@ namespace Raven.Server.Smuggler.Documents
                 await Writer.MaybeFlushAsync();
             }
 
-            public async ValueTask WriteIndexAsync(IndexDefinition indexDefinition)
+            public async ValueTask WriteIndexAsync(IndexDefinition indexDefinition, AuthorizationStatus authorizationStatus)
             {
                 if (First == false)
                     Writer.WriteComma();
@@ -1152,7 +1152,7 @@ namespace Raven.Server.Smuggler.Documents
                 return _context;
             }
 
-            public Stream GetTempStream()
+            public Task<Stream> GetTempStreamAsync()
             {
                 throw new NotSupportedException("GetTempStream is never used in StreamCounterActions. Shouldn't happen");
             }
@@ -1397,7 +1397,7 @@ namespace Raven.Server.Smuggler.Documents
                 yield break;
             }
 
-            public Stream GetTempStream() => _attachmentStreamsTempFile ??= StreamDestination.GetTempStream(_options);
+            public async Task<Stream> GetTempStreamAsync() => _attachmentStreamsTempFile ??= await StreamDestination.GetTempStreamAsync(_options);
 
             private async ValueTask WriteUniqueAttachmentStreamsAsync(Document document, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress)
             {
@@ -1610,11 +1610,17 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public static Stream GetTempStream(DatabaseSmugglerOptionsServerSide options)
+        public static async Task<Stream> GetTempStreamAsync(DatabaseSmugglerOptionsServerSide options)
         {
             var tempFileName = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.smuggler");
             if (options.EncryptionKey != null)
-                return new DecryptingXChaCha20Oly1305Stream(new StreamsTempFile(tempFileName, true).StartNewStream(), Convert.FromBase64String(options.EncryptionKey));
+            {
+                var decryptingStream = new DecryptingXChaCha20Oly1305Stream(new StreamsTempFile(tempFileName, true).StartNewStream(), Convert.FromBase64String(options.EncryptionKey));
+
+                await decryptingStream.InitializeAsync();
+
+                return decryptingStream;
+            }
 
             return new StreamsTempFile(tempFileName, false).StartNewStream();
         }

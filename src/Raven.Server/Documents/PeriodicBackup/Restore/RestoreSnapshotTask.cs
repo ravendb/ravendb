@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                     : null;
 
                                 await using (var decompressionStream = FullBackup.GetDecompressionStream(entryStream))
-                                await using (var stream = GetInputStream(decompressionStream, snapshotEncryptionKey))
+                                await using (var stream = await GetInputStreamAsync(decompressionStream, snapshotEncryptionKey))
                                 {
                                     var json = await context.ReadForMemoryAsync(stream, "read database settings for restore");
                                     json.BlittableValidation();
@@ -274,9 +274,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             var destination = database.Smuggler.CreateDestination();
 
-            var smugglerOptions = new DatabaseSmugglerOptionsServerSide
+            var smugglerOptions = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus.DatabaseAdmin)
             {
-                AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                 OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities | DatabaseItemType.Subscriptions,
                 SkipRevisionCreation = true
             };
@@ -293,10 +292,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (entry != null)
             {
                 await using (var input = entry.Open())
-                await using (var inputStream = GetSnapshotInputStream(input, database.Name))
+                await using (var inputStream = await GetSnapshotInputStreamAsync(input, database.Name))
                 await using (var uncompressed = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
                 {
-                    var source = new StreamSource(uncompressed, context, database.Name);
+                    var source = new StreamSource(uncompressed, context, database.Name, smugglerOptions);
 
                     var smuggler = database.Smuggler.CreateForRestore(databaseRecord: null, source, destination, context, smugglerOptions, result: null, onProgress,
                         OperationCancelToken.Token);
@@ -307,7 +306,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private Stream GetSnapshotInputStream(Stream fileStream, string database)
+        private async Task<Stream> GetSnapshotInputStreamAsync(Stream fileStream, string database)
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
@@ -315,7 +314,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 var key = ServerStore.GetSecretKey(ctx, database);
                 if (key != null)
                 {
-                    return new DecryptingXChaCha20Oly1305Stream(fileStream, key);
+                    var decryptingStream = new DecryptingXChaCha20Oly1305Stream(fileStream, key);
+
+                    await decryptingStream.InitializeAsync();
+
+                    return decryptingStream;
                 }
             }
 

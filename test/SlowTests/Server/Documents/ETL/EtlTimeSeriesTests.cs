@@ -225,32 +225,30 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                         },
                     },
                 };
-                using (RavenEtl.TestScript(testRavenEtlScript, database, database.ServerStore, context, out var testResult))
+                var testResult = RavenEtl.TestScript(testRavenEtlScript, database, database.ServerStore, context);
+                var result = (RavenEtlTestScriptResult)testResult;
+
+                var timeSeriesCommand = result.Commands.OfType<TimeSeriesBatchCommandData>().FirstOrDefault(c =>
+                    c.Name == timeSeriesName && c.TimeSeries?.Appends != null && c.TimeSeries.Appends.Any());
+
+                if (shouldEtlTs)
                 {
-                    var result = (RavenEtlTestScriptResult)testResult;
+                    Assert.Equal(0, result.TransformationErrors.Count);
 
-                    var timeSeriesCommand = result.Commands.OfType<TimeSeriesBatchCommandData>().FirstOrDefault(c =>
-                        c.Name == timeSeriesName && c.TimeSeries?.Appends != null && c.TimeSeries.Appends.Any());
+                    Assert.NotNull(timeSeriesCommand);
 
-                    if (shouldEtlTs)
-                    {
-                        Assert.Equal(0, result.TransformationErrors.Count);
+                    Assert.Equal(CommandType.TimeSeries, timeSeriesCommand.Type);
+                    Assert.True(timeSeriesCommand.FromEtl);
 
-                        Assert.NotNull(timeSeriesCommand);
-
-                        Assert.Equal(CommandType.TimeSeries, timeSeriesCommand.Type);
-                        Assert.True(timeSeriesCommand.FromEtl);
-
-                        var actualSent = timeSeriesCommand.TimeSeries.Appends.FirstOrDefault();
-                        Assert.NotNull(actualSent);
-                        Assert.Equal(tag, actualSent.Tag);
-                        Assert.Equal(time, actualSent.Timestamp);
-                        Assert.Equal(value, actualSent.Values.FirstOrDefault());
-                    }
-                    else
-                    {
-                        Assert.Null(timeSeriesCommand);
-                    }
+                    var actualSent = timeSeriesCommand.TimeSeries.Appends.FirstOrDefault();
+                    Assert.NotNull(actualSent);
+                    Assert.Equal(tag, actualSent.Tag);
+                    Assert.Equal(time, actualSent.Timestamp);
+                    Assert.Equal(value, actualSent.Values.FirstOrDefault());
+                }
+                else
+                {
+                    Assert.Null(timeSeriesCommand);
                 }
             }
         }

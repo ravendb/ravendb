@@ -24,7 +24,7 @@ internal abstract class AbstractShardedEtlHandlerProcessorForTest<TTestEtlScript
 
     protected override bool SupportsCurrentNode => false;
 
-    protected override IDisposable TestScript(TransactionOperationContext context, TTestEtlScript testScript, out TestEtlScriptResult testResult)
+    protected override TestEtlScriptResult TestScript(TransactionOperationContext context, TTestEtlScript testScript)
     {
         throw new NotSupportedException();
     }

@@ -911,7 +911,7 @@ public class DataArchivalIndexingTests : RavenTestBase
 
     [RavenTheory(RavenTestCategory.TimeSeries)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    public async void DataArchivalWontAffectIndexingDocumentsTimeSeries(Options options)
+    public async Task DataArchivalWontAffectIndexingDocumentsTimeSeries(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -1073,7 +1073,7 @@ public class DataArchivalIndexingTests : RavenTestBase
 
 
     [Fact]
-    public async void CanIndexOnlyUnarchivedDocuments_JavaScriptMapReduceIndex()
+    public async Task CanIndexOnlyUnarchivedDocuments_JavaScriptMapReduceIndex()
     {
         using (var store = GetDocumentStore())
         {
@@ -1122,7 +1122,7 @@ public class DataArchivalIndexingTests : RavenTestBase
 
 
     [Fact]
-    public async void CanIndexOnlyArchivedDocuments_JavaScriptMapReduceIndex()
+    public async Task CanIndexOnlyArchivedDocuments_JavaScriptMapReduceIndex()
     {
         using (var store = GetDocumentStore())
         {
@@ -1170,7 +1170,7 @@ public class DataArchivalIndexingTests : RavenTestBase
     }
 
     [Fact]
-    public async void CanIndexAllDocuments_JavaScriptMapReduceIndex()
+    public async Task CanIndexAllDocuments_JavaScriptMapReduceIndex()
     {
         using (var store = GetDocumentStore())
         {
@@ -1218,7 +1218,7 @@ public class DataArchivalIndexingTests : RavenTestBase
     }
     
     [Fact]
-    public async void CanIndexOnlyUnarchivedDocuments_JavaScriptMapIndex()
+    public async Task CanIndexOnlyUnarchivedDocuments_JavaScriptMapIndex()
     {
         using (var store = GetDocumentStore())
         {
@@ -1267,7 +1267,7 @@ public class DataArchivalIndexingTests : RavenTestBase
 
 
     [Fact]
-    public async void CanIndexOnlyArchivedDocuments_JavaScriptMapIndex()
+    public async Task CanIndexOnlyArchivedDocuments_JavaScriptMapIndex()
     {
         using (var store = GetDocumentStore())
         {
@@ -1315,7 +1315,7 @@ public class DataArchivalIndexingTests : RavenTestBase
     }
 
     [Fact]
-    public async void CanIndexAllDocuments_JavaScriptMapIndex()
+    public async Task CanIndexAllDocuments_JavaScriptMapIndex()
     {
         using (var store = GetDocumentStore())
         {
@@ -1381,7 +1381,7 @@ User: counter.DocumentId
     }
 
     [Fact]
-    public async void SettingArchivedDataProcessingBehaviorOnJSCountersIndexWillThrowNotSupportedException()
+    public async Task SettingArchivedDataProcessingBehaviorOnJSCountersIndexWillThrowNotSupportedException()
     {
         using (var store = GetDocumentStore())
         {

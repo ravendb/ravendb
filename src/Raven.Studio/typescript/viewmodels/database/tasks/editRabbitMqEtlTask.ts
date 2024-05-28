@@ -161,7 +161,7 @@ class editRabbitMqEtlTask extends viewModelBase {
     view = require("views/database/tasks/editRabbitMqEtlTask.html");
     optionsPerQueueEtlView = require("views/database/tasks/optionsPerQueueEtl.html");
     connectionStringView = require("views/database/settings/connectionStringRabbitMq.html");
-    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    taskResponsibleNodeSectionView = require("views/partial/taskResponsibleNodeSection.html");
     pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
     
     static readonly scriptNamePrefix = "Script_";

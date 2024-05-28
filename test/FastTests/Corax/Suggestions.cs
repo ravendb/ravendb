@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Corax;
 using Corax.Analyzers;
 using Corax.Querying;
 using Corax.Mappings;
@@ -101,7 +102,7 @@ namespace FastTests.Corax
             mapping.TryGetByFieldId(1, out var contentField);
 
             {
-                using var indexWriter = new IndexWriter(Env, mapping);
+                using var indexWriter = new IndexWriter(Env, mapping, SupportedFeatures.All);
                 indexWriter.TryDeleteEntry(entry1.Id);
                 indexWriter.Commit();
             }
@@ -185,7 +186,7 @@ namespace FastTests.Corax
 
         private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexEntryValues> list, IndexFieldsMapping mapping)
         {
-            using var indexWriter = new IndexWriter(Env, mapping);
+            using var indexWriter = new IndexWriter(Env, mapping, SupportedFeatures.All);
 
             foreach (var entry in list)
             {

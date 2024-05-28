@@ -36,7 +36,7 @@ public class FacetIndexingRepro : StorageTest
         var fieldsTree = wtx.CreateTree(Constants.IndexWriter.FieldsSlice);
         CompactTree idTree = fieldsTree.CompactTreeFor(id);
 
-        using var iw = new IndexWriter(wtx, fields);
+        using var iw = new IndexWriter(wtx, fields, SupportedFeatures.All);
         string entryKey = "users/00000001";
         long entryId;
         using (var builder = iw.Index("entryKey"))
@@ -125,7 +125,7 @@ public class FacetIndexingRepro : StorageTest
         var wtx = Env.WriteTransaction();
         try
         {
-            var iw = new IndexWriter(wtx, fields);
+            var iw = new IndexWriter(wtx, fields, SupportedFeatures.All);
             while (true)
             {
                 string id;
@@ -178,7 +178,7 @@ public class FacetIndexingRepro : StorageTest
                 txns++;
                 items = 0;
                 wtx = Env.WriteTransaction();
-                iw = new IndexWriter(wtx, fields);
+                iw = new IndexWriter(wtx, fields, SupportedFeatures.All);
             }
         }
         finally
@@ -228,7 +228,7 @@ public class FacetIndexingRepro : StorageTest
         IndexFieldsMapping indexFieldsMapping = builder.Build();
         using (var wtx = Env.WriteTransaction())
         {
-            var iw = new IndexWriter(wtx, indexFieldsMapping);
+            var iw = new IndexWriter(wtx, indexFieldsMapping, SupportedFeatures.All);
             while (true)
             {
                 string id;
@@ -248,7 +248,7 @@ public class FacetIndexingRepro : StorageTest
                 {
                     iw.Commit();
                     iw.Dispose();
-                    iw = new IndexWriter(wtx, indexFieldsMapping);
+                    iw = new IndexWriter(wtx, indexFieldsMapping, SupportedFeatures.All);
                     continue;
                 }
 

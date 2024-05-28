@@ -15,92 +15,88 @@ namespace Raven.Client.Documents.Session
     public interface IFilterDocumentQueryBase<T, TSelf> where TSelf : IDocumentQueryBase<T, TSelf>
     {
         /// <summary>
-        ///     Negate the next operation
+        ///     Negates the next subclause.
         /// </summary>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToUseNotOperator"/>
         TSelf Not { get; }
 
-        /// <summary>
-        ///     Add an AND to the query
-        /// </summary>
+        /// <inheritdoc cref="AndAlso(bool)"/>
         TSelf AndAlso();
 
         /// <summary>
-        ///     Wraps previous query with clauses and add an AND operation to the given query
+        ///     Adds an 'AND' statement to the query.
         /// </summary>
+        /// <param name="wrapPreviousQueryClauses">Wraps preceding clauses using parentheses.</param>
         TSelf AndAlso(bool wrapPreviousQueryClauses);
 
         /// <summary>
-        ///     Simplified method for closing a clause within the query
+        ///     Closes previously opened subclause.
         /// </summary>
-        /// <returns></returns>
         TSelf CloseSubclause();
 
         /// <summary>
-        ///     Performs a query matching ALL of the provided values against the given field (AND)
+        ///     Matches documents with chosen field containing all provided values.
         /// </summary>
+        /// <param name="fieldName">Name of the field to match values against.</param>
+        /// <param name="values">Values that the chosen field has to contain.</param>
         TSelf ContainsAll(string fieldName, IEnumerable<object> values);
 
-        /// <summary>
-        ///     Performs a query matching ALL of the provided values against the given field (AND)
-        /// </summary>
+        /// <inheritdoc cref="ContainsAll{TValue}(Expression{Func{T, IEnumerable{TValue}}}, IEnumerable{TValue})"/>
         TSelf ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values);
 
         /// <summary>
-        ///     Performs a query matching ALL of the provided values against the given field (AND)
+        ///     Matches documents with chosen field containing all provided values.
         /// </summary>
+        /// <param name="propertySelector">Property selector for the field to match values against.</param>
+        /// <param name="values">Values that the chosen field has to contain.</param>
         TSelf ContainsAll<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values);
 
         /// <summary>
-        ///     Performs a query matching ANY of the provided values against the given field (OR)
+        ///     Matches documents with chosen field containing any of provided values.
         /// </summary>
+        /// <param name="fieldName">Name of the field to match values against.</param>
+        /// <param name="values">Values, where at least one must be contained in <paramref name="fieldName"/> value in order to match the document.</param>
         TSelf ContainsAny(string fieldName, IEnumerable<object> values);
 
-        /// <summary>
-        ///     Performs a query matching ANY of the provided values against the given field (OR)
-        /// </summary>
+        /// <inheritdoc cref="ContainsAny{TValue}(Expression{Func{T, IEnumerable{TValue}}}, IEnumerable{TValue})"/>
         TSelf ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values);
 
         /// <summary>
-        ///     Performs a query matching ANY of the provided values against the given field (OR)
+        ///     Matches documents with chosen field containing any of provided values.
         /// </summary>
+        /// <param name="propertySelector">Property selector for the field to match values against.</param>
+        /// <param name="values">Values, where at least one must be contained in <paramref name="propertySelector"/> value in order to match the document.</param>
         TSelf ContainsAny<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values);
 
         /// <summary>
-        ///     Negate the next operation
+        ///     Negates the next subclause.
         /// </summary>
         TSelf NegateNext();
 
         /// <summary>
-        ///     Simplified method for opening a new clause within the query
+        ///     Opens a new subclause.
         /// </summary>
-        /// <returns></returns>
         TSelf OpenSubclause();
 
         /// <summary>
-        ///     Add an OR to the query
+        ///     Adds an 'OR' statement to the query.
         /// </summary>
         TSelf OrElse();
 
         /// <summary>
-        ///     Perform a search for documents which fields that match the searchTerms.
-        ///     If there is more than a single term, each of them will be checked independently.
+        ///     Matches documents with value of chosen field matching searched terms.
         /// </summary>
-        /// <param name="fieldName">Marks a field in which terms should be looked for</param>
-        /// <param name="searchTerms">
-        ///     Space separated terms e.g. 'John Adam' means that we will look in selected field for 'John'
-        ///     or 'Adam'.
-        /// </param>
+        /// <param name="fieldName">Name of the field that searched terms will be checked against.</param>
+        /// <param name="searchTerms">Space separated terms to search. If there is more than a single term, each of them will be checked independently.</param>
+        /// <param name="operator">Operator to be used for relationship between terms. Default: Or.</param>
         TSelf Search(string fieldName, string searchTerms, SearchOperator @operator = SearchOperator.Or);
 
         /// <summary>
-        ///     Perform a search for documents which fields that match the searchTerms.
-        ///     If there is more than a single term, each of them will be checked independently.
+        ///     Matches documents with value of chosen field matching searched terms.
         /// </summary>
-        /// <param name="propertySelector">Expression marking a field in which terms should be looked for</param>
-        /// <param name="searchTerms">
-        ///     Space separated terms e.g. 'John Adam' means that we will look in selected field for 'John'
-        ///     or 'Adam'.
-        /// </param>
+        /// <param name="propertySelector">Property selector for the field that searched terms will be checked against.</param>
+        /// <param name="searchTerms">Space separated terms to search. If there is more than a single term, each of them will be checked independently.</param>
+        /// <param name="operator">Operator to be used for relationship between terms. Default: Or.</param>
         TSelf Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, SearchOperator @operator = SearchOperator.Or);
 
         /// <summary>
@@ -109,298 +105,341 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IEnumerable<T> Where(Func<T, bool> predicate);
 
-        /// <summary>
-        ///     Filter the results from the index using the specified where clause.
-        /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="whereClause">Lucene-syntax based query predicate.</param>
+        /// <inheritdoc cref="WhereLucene(string, string, bool)"/>
         TSelf WhereLucene(string fieldName, string whereClause);
 
         /// <summary>
-        ///     Filter the results from the index using the specified where clause.
+        ///     Matches documents with chosen field value meeting criteria of specified predicate in Lucene syntax.
         /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="whereClause">Lucene-syntax based query predicate.</param>
+        /// <param name="fieldName">Name of the field to get value from.</param>
+        /// <param name="whereClause">Predicate in Lucene syntax.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive.</param>
+        /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToUseLucene"/>
         TSelf WhereLucene(string fieldName, string whereClause, bool exact);
 
         /// <summary>
-        ///     Matches fields where the value is between the specified start and end, inclusive 
+        ///     Matches documents with value of the chosen field between the specified start and end value, inclusive. 
         /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="start">The start.</param>
-        /// <param name="end">The end.</param>
+        /// <param name="fieldName">Name of the field to get value from.</param>
+        /// <param name="start">Start value.</param>
+        /// <param name="end">End value.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereBetween(string fieldName, object start, object end, bool exact = false);
 
         /// <summary>
-        ///     Matches fields where the value is between the specified start and end, inclusive
+        ///     Matches documents with value of the chosen field between specified the start and end, inclusive.
         /// </summary>
-        /// <param name="propertySelector">Property selector for the field.</param>
-        /// <param name="start">The start.</param>
-        /// <param name="end">The end.</param>
+        /// <param name="propertySelector">Property selector for the field to get value from.</param>
+        /// <param name="start">Start value.</param>
+        /// <param name="end">End value.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end, bool exact = false);
 
-        /// <summary>
-        ///     Matches fields which ends with the specified value.
-        /// </summary>
+        /// <inheritdoc cref="WhereEndsWith(string, object, bool)"/>
         TSelf WhereEndsWith(string fieldName, object value);
 
         /// <summary>
-        ///     Matches fields which ends with the specified value.
+        ///     Matches documents with value of the chosen field ending with the specified value.
         /// </summary>
+        /// <param name="fieldName">Name of the field to get value from.</param>
+        /// <param name="value">Value that the <paramref name="fieldName"/> value has to end with in order to match the document.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive.</param>
         TSelf WhereEndsWith(string fieldName, object value, bool exact);
 
-        /// <summary>
-        ///     Matches fields which ends with the specified value.
-        /// </summary>
+        /// <inheritdoc cref="WhereEndsWith{TValue}(Expression{Func{T, TValue}}, TValue, bool)"/>
         TSelf WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
 
         /// <summary>
-        ///     Matches fields which ends with the specified value.
+        ///     Matches documents with value of the chosen field ending with the specified value.
         /// </summary>
+        /// <param name="propertySelector">Property selector for the field to get value from.</param>
+        /// <param name="value">Value that the <paramref name="propertySelector"/> value has to end with in order to match the document.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive.</param>
         TSelf WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact);
 
         /// <summary>
-        ///     Matches value
+        ///     Matches documents with value of the chosen field equal to the specified value.
         /// </summary>
+        /// <param name="fieldName">Name of the field to get value from.</param>
+        /// <param name="value">Value to compare with <paramref name="fieldName"/> value.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereEquals(string fieldName, object value, bool exact = false);
 
         /// <summary>
-        ///     Matches the evaluated expression
+        ///     Matches documents with value of the chosen field equal to the evaluated provided expression.
         /// </summary>
+        /// <param name="fieldName">Name of the field to get value from.</param>
+        /// <param name="value">Expression to evaluate.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereEquals(string fieldName, MethodCall value, bool exact = false);
 
         /// <summary>
-        ///     Matches value
+        ///     Matches documents with value of the chosen field equal to the specified value.
         /// </summary>
+        /// <param name="propertySelector">Name of the field to get value from.</param>
+        /// <param name="value"></param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
-        ///     Matches value
+        ///     Matches documents with value of the chosen field equal to the evaluated provided expression.
         /// </summary>
+        /// <param name="propertySelector">Property selector for the field to get value from.</param>
+        /// <param name="value">Expression to evaluate.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, MethodCall value, bool exact = false);
 
         /// <summary>
-        ///     Matches value
+        ///     Matches documents that match specified <paramref name="whereParams"/>.
         /// </summary>
+        /// <param name="whereParams">WhereParams containing query parameters.</param>
         TSelf WhereEquals(WhereParams whereParams);
 
         /// <summary>
-        ///     Not matches value
+        ///     Matches documents with value of the chosen field different than the specified value.
         /// </summary>
+        /// <param name="fieldName">Name of the field to get value from.</param>
+        /// <param name="value">Value to compare with <paramref name="fieldName"/> value.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereNotEquals(string fieldName, object value, bool exact = false);
 
         /// <summary>
-        ///     Not matches the evaluated expression
+        ///     Matches documents with value of the chosen field different than the evaluated provided expression.
         /// </summary>
+        /// <param name="fieldName">Name of the field to get value from.</param>
+        /// <param name="value">Expression to evaluate.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereNotEquals(string fieldName, MethodCall value, bool exact = false);
 
         /// <summary>
-        ///     Not matches value
+        ///     Matches documents with value of the chosen field different than the specified value.
         /// </summary>
+        /// <param name="propertySelector">Property selector for the field to get value from.</param>
+        /// <param name="value">Value to compare with <paramref name="propertySelector"/> value.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereNotEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
-        ///     Matches value
+        ///     Matches documents with value of the chosen field different than the evaluated provided expression.
         /// </summary>
+        /// <param name="propertySelector">Property selector for the field to get value from.</param>
+        /// <param name="value">Expression to evaluate.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereNotEquals<TValue>(Expression<Func<T, TValue>> propertySelector, MethodCall value, bool exact = false);
 
         /// <summary>
-        ///     Not matches value
+        ///     Matches documents that do not match specified <paramref name="whereParams"/>.
         /// </summary>
+        /// <param name="whereParams">WhereParams containing query parameters.</param>
         TSelf WhereNotEquals(WhereParams whereParams);
 
         /// <summary>
-        ///     Matches fields where the value is greater than the specified value
+        ///     Matches documents with value of the chosen field greater than the specified value.
         /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="value">The value.</param>
+        /// <param name="fieldName">Name of the field to get value from.</param>
+        /// <param name="value">Value to compare with <paramref name="fieldName"/> value.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereGreaterThan(string fieldName, object value, bool exact = false);
 
         /// <summary>
-        ///     Matches fields where the value is greater than the specified value
+        ///     Matches documents with value of the chosen field greater than the specified value.
         /// </summary>
-        /// <param name="propertySelector">Property selector for the field.</param>
-        /// <param name="value">The value.</param>
+        /// <param name="propertySelector">Property selector for the field to get value from.</param>
+        /// <param name="value">Value to compare with <paramref name="propertySelector"/> value.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
-        ///     Matches fields where the value is greater than or equal to the specified value
+        ///     Matches documents with value of the chosen field greater than or equal to the specified value.
         /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="value">The value.</param>
+        /// <param name="fieldName">Name of the field to get value from.</param>
+        /// <param name="value">Value to compare with <paramref name="fieldName"/> value.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereGreaterThanOrEqual(string fieldName, object value, bool exact = false);
 
         /// <summary>
-        ///     Matches fields where the value is greater than or equal to the specified value
+        ///     Matches documents with value of the chosen field greater than or equal to the specified value.
         /// </summary>
-        /// <param name="propertySelector">Property selector for the field.</param>
-        /// <param name="value">The value.</param>
+        /// <param name="propertySelector">Property selector for the field to get value from.</param>
+        /// <param name="value">Value to compare with <paramref name="propertySelector"/> value.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
-        ///     Check that the field has one of the specified values
+        ///     Matches documents with value of the chosen field contained in provided values.
         /// </summary>
+        /// <param name="fieldName">Name of the field to get value from.</param>
+        /// <param name="values">Values that have to contain <paramref name="fieldName"/> value in order for the document to be matched.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereIn(string fieldName, IEnumerable<object> values, bool exact = false);
 
         /// <summary>
-        ///     Check that the field has one of the specified values
+        ///     Matches documents with value of the chosen field contained in provided values.
         /// </summary>
+        /// <param name="propertySelector">Property selector for the field to get value from.</param>
+        /// <param name="values">Values that have to contain <paramref name="propertySelector"/> value in order for the document to be matched.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values, bool exact = false);
 
         /// <summary>
-        ///     Matches fields where the value is less than the specified value
+        ///     Matches documents with value of the chosen field less than the specified value.
         /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="value">The value.</param>
+        /// <param name="fieldName">Name of the field to get value from.</param>
+        /// <param name="value">Value to compare with <paramref name="fieldName"/> value.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereLessThan(string fieldName, object value, bool exact = false);
 
         /// <summary>
-        ///     Matches fields where the value is less than the specified value
+        ///     Matches documents with value of the chosen field less than the specified value.
         /// </summary>
-        /// <param name="propertySelector">Property selector for the field.</param>
-        /// <param name="value">The value.</param>
+        /// <param name="propertySelector">Property selector for the field to get value from.</param>
+        /// <param name="value">Value to compare with <paramref name="propertySelector"/> value.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
-        ///     Matches fields where the value is less than or equal to the specified value
+        ///     Matches documents with value of the chosen field less than or equal to the specified value.
         /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="value">The value.</param>
+        /// <param name="fieldName">Name of the field to get value from.</param>
+        /// <param name="value">Value to compare with <paramref name="fieldName"/> value.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereLessThanOrEqual(string fieldName, object value, bool exact = false);
 
         /// <summary>
-        ///     Matches fields where the value is less than or equal to the specified value
+        ///     Matches documents with value of the chosen field less than or equal to the specified value.
         /// </summary>
-        /// <param name="propertySelector">Property selector for the field.</param>
-        /// <param name="value">The value.</param>
+        /// <param name="propertySelector">Property selector for the field to get value from.</param>
+        /// <param name="value">Value to compare with <paramref name="propertySelector"/> value.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive. Default: false.</param>
         TSelf WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
-        /// <summary>
-        ///     Matches fields which starts with the specified value.
-        /// </summary>
+        /// <inheritdoc cref="WhereStartsWith(string, object, bool)"/>
         TSelf WhereStartsWith(string fieldName, object value);
 
         /// <summary>
-        ///     Matches fields which starts with the specified value.
+        ///     Matches documents with value of the chosen field starting with the specified value.
         /// </summary>
+        /// <param name="fieldName">Name of the field to get value from.</param>
+        /// <param name="value">Value that the <paramref name="fieldName"/> value has to start with in order to match the document.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive.</param>
         TSelf WhereStartsWith(string fieldName, object value, bool exact);
 
-        /// <summary>
-        ///     Matches fields which starts with the specified value.
-        /// </summary>
+        /// <inheritdoc cref="WhereStartsWith{TValue}(Expression{Func{T, TValue}}, TValue, bool)"/>
         TSelf WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
 
         /// <summary>
-        ///     Matches fields which starts with the specified value.
+        ///     Matches documents with value of the chosen field starting with the specified value.
         /// </summary>
+        /// <param name="propertySelector">Property selector for the field to get value from.</param>
+        /// <param name="value">Value that the <paramref name="propertySelector"/> value has to start with in order to match the document.</param>
+        /// <param name="exact">Specifies if comparison is case sensitive.</param>
         TSelf WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact);
 
         /// <summary>
-        ///     Check if the given field exists
+        ///     Matches documents with existing given field.
         /// </summary>
-        /// <param name="propertySelector">Property selector for the field.</param>
+        /// <param name="propertySelector">Property selector for the field to check the existence of.</param>
         TSelf WhereExists<TValue>(Expression<Func<T, TValue>> propertySelector);
 
         /// <summary>
-        ///     Check if the given field exists
+        ///     Matches documents with existing given field.
         /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
+        /// <param name="fieldName">Name of the field to check the existence of.</param>
         TSelf WhereExists(string fieldName);
 
         /// <summary>
-        /// Checks value of a given field against supplied regular expression pattern
+        ///     Matches documents with the value of a given field matched by provided regular expression.
         /// </summary>
+        /// <param name="propertySelector">Property selector for the field to get value from.</param>
+        /// <param name="pattern">Regular expression pattern to check field value against.</param>
         TSelf WhereRegex<TValue>(Expression<Func<T, TValue>> propertySelector, string pattern);
 
         /// <summary>
-        /// Checks value of a given field against supplied regular expression pattern
+        ///     Matches documents with the value of a given field matched by provided regular expression.
         /// </summary>
+        /// <param name="fieldName">Name of the field to get value from.</param>
+        /// <param name="pattern">Regular expression pattern to check field value against.</param>
         TSelf WhereRegex(string fieldName, string pattern);
 
         /// <summary>
-        ///     Filter matches to be inside the specified radius
+        ///     Matches documents with the value of specified field in radius of given spatial circle.
         /// </summary>
-        /// <param name="propertySelector">Property selector for the field.</param>
+        /// <param name="propertySelector">Property selector for the spatial field to get the value from.</param>
         /// <param name="radius">Radius (measured in units passed to radiusUnits parameter) in which matches should be found.</param>
-        /// <param name="latitude">Latitude pointing to a circle center.</param>
-        /// <param name="longitude">Longitude pointing to a circle center.</param>
-        /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
+        /// <param name="latitude">Latitude of a circle center.</param>
+        /// <param name="longitude">Longitude of a circle center.</param>
+        /// <param name="radiusUnits">Units that the radius was measured in (kilometers or miles).</param>
+        /// <param name="distanceErrorPct">Allowed error percentage. Default: 0.025.</param>
         TSelf WithinRadiusOf<TValue>(Expression<Func<T, TValue>> propertySelector, double radius, double latitude, double longitude, SpatialUnits? radiusUnits = null, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
-        ///     Filter matches to be inside the specified radius
+        ///     Matches documents with the value of specified field in radius of given spatial circle.
         /// </summary>
-        /// <param name="fieldName">Spatial field name.</param>
+        /// <param name="fieldName">Name of the spatial field to get the value from.</param>
         /// <param name="radius">Radius (measured in units passed to radiusUnits parameter) in which matches should be found.</param>
-        /// <param name="latitude">Latitude pointing to a circle center.</param>
-        /// <param name="longitude">Longitude pointing to a circle center.</param>
-        /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
+        /// <param name="latitude">Latitude of a circle center.</param>
+        /// <param name="longitude">Longitude of a circle center.</param>
+        /// <param name="radiusUnits">Units that the radius was measured in (kilometers or miles).</param>
+        /// /// <param name="distanceErrorPct">Allowed error percentage. Default: 0.025.</param>
         TSelf WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits? radiusUnits = null, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
-        /// <summary>
-        ///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
-        ///     have a relation rel with the given shapeWkt will be returned
-        /// </summary>
-        /// <param name="propertySelector">Property selector for the field.</param>
-        /// <param name="shapeWkt">WKT formatted shape</param>
-        /// <param name="relation">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
-        /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
+        /// <inheritdoc cref="RelatesToShape{TValue}(Expression{Func{T, TValue}}, string, SpatialRelation, SpatialUnits, double)"/>
         TSelf RelatesToShape<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWkt, SpatialRelation relation, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
-        ///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
-        ///     have a relation rel with the given shapeWkt will be returned
+        ///     Matches documents with the value of specified field in relation with the provided WKT shape.
         /// </summary>
-        /// <param name="propertySelector">Property selector for the field.</param>
-        /// <param name="shapeWkt">WKT formatted shape</param>
-        /// <param name="relation">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
-        /// <param name="units">Units to be used</param>
-        /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
+        /// <param name="propertySelector">Property selector for the spatial field to get the value from.</param>
+        /// <param name="shapeWkt">String representing the WKT shape.</param>
+        /// <param name="relation">Spatial relation to check (Within, Contains, Disjoint, Intersects).</param>
+        /// <param name="units">Units to be used (kilometers or miles).</param>
+        /// <param name="distanceErrorPct">Allowed error percentage. Default: 0.025.</param>
         TSelf RelatesToShape<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWkt, SpatialRelation relation, SpatialUnits units, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
-        /// <summary>
-        ///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
-        ///     have a relation rel with the given shapeWkt will be returned
-        /// </summary>
-        /// <param name="fieldName">Spatial field name.</param>
-        /// <param name="shapeWkt">WKT formatted shape</param>
-        /// <param name="relation">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
-        /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
+        /// <inheritdoc cref="RelatesToShape(string, string, SpatialRelation, SpatialUnits, double)"/>
         TSelf RelatesToShape(string fieldName, string shapeWkt, SpatialRelation relation, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
-        ///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
-        ///     have a relation rel with the given shapeWkt will be returned
+        ///     Matches documents with the value of specified field in relation with the provided WKT shape.
         /// </summary>
-        /// <param name="fieldName">Spatial field name.</param>
-        /// <param name="shapeWkt">WKT formatted shape</param>
-        /// <param name="relation">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
-        /// <param name="units">Units to be used</param>
-        /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
+        /// <param name="fieldName">Spatial field name to get the value from.</param>
+        /// <param name="shapeWkt">String representing the WKT shape.</param>
+        /// <param name="relation">Spatial relation (Within, Contains, Disjoint, Intersects).</param>
+        /// <param name="units">Units to be used (kilometers or miles).</param>
+        /// <param name="distanceErrorPct">Allowed error percentage. Default: 0.025.</param>
         TSelf RelatesToShape(string fieldName, string shapeWkt, SpatialRelation relation, SpatialUnits units, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
-        ///     Ability to use one factory to determine spatial shape that will be used in query.
+        ///     Matches documents based on provided spatial criteria created by factory.
         /// </summary>
-        /// <param name="path">Spatial field name.</param>
-        /// <param name="clause">function with spatial criteria factory</param>
+        /// <param name="path">Path to the spatial field to get value from.</param>
+        /// <param name="clause">Function creating spatial criteria.</param>
         TSelf Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
         /// <summary>
-        ///     Ability to use one factory to determine spatial shape that will be used in query.
+        ///     Matches documents based on provided spatial criteria created by factory.
         /// </summary>
-        /// <param name="fieldName">Spatial field name.</param>
-        /// <param name="clause">function with spatial criteria factory</param>
+        /// <param name="fieldName">Name of spatial field to get value from.</param>
+        /// <param name="clause">Function creating spatial criteria.</param>
         TSelf Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
+        /// <summary>
+        ///     Matches documents based on provided spatial criteria created by factory.
+        /// </summary>
+        /// <param name="field">Dynamic spatial field to get value from.</param>
+        /// <param name="clause">Function creating spatial criteria.</param>
         TSelf Spatial(DynamicSpatialField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
+        /// <summary>
+        ///     Matches documents based on provided factories.
+        /// </summary>
+        /// <param name="field">Function creating dynamic spatial field using values from chosen fields.</param>
+        /// <param name="clause">Function creating spatial criteria.</param>
         TSelf Spatial(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
         /// <inheritdoc cref="MoreLikeThisBase"/>
-        /// <param name="moreLikeThis">Specify MoreLikeThisQuery.</param>
+        /// <param name="moreLikeThis">Specified MoreLikeThisQuery.</param>
         TSelf MoreLikeThis(MoreLikeThisBase moreLikeThis);
-
     }
 
     public interface IGroupByDocumentQueryBase<T, TSelf> where TSelf : IDocumentQueryBase<T, TSelf>

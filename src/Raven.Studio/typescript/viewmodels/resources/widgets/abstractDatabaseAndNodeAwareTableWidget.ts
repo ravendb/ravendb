@@ -1,4 +1,3 @@
-import app = require("durandal/app");
 import websocketBasedWidget = require("viewmodels/resources/widgets/websocketBasedWidget");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
@@ -6,8 +5,8 @@ import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import appUrl = require("common/appUrl");
 import generalUtils = require("common/generalUtils");
-import createDatabase = require("viewmodels/resources/createDatabase");
 import databasesManager = require("common/shell/databasesManager");
+import CreateDatabase from "components/pages/resources/databases/partials/create/CreateDatabase";
 
 interface statsBase<TItem> {
     disconnected: KnockoutObservable<boolean>;
@@ -21,6 +20,14 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
     protected databaseManager = databasesManager.default;
 
     noDatabases = ko.pureComputed(() => !this.databaseManager.databases().length);
+
+    isCreateDatabaseViewOpen = ko.observable(false);
+    createDatabaseView: ReactInKnockout<typeof CreateDatabase> = ko.pureComputed(() => ({
+        component: CreateDatabase,
+        props: {
+            closeModal: () => this.isCreateDatabaseViewOpen(false),
+        }
+    }));
 
     spinners = {
         loading: ko.observable<boolean>(true)
@@ -203,11 +210,6 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
     }
     
     protected abstract generateLocalLink(database: string): string;
-
-    newDatabase() {
-        const createDbView = new createDatabase("newDatabase");
-        app.showBootstrapDialog(createDbView);
-    }
 }
 
 export = abstractDatabaseAndNodeAwareTableWidget;

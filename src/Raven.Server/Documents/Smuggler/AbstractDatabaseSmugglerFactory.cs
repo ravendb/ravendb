@@ -34,7 +34,7 @@ public abstract class AbstractDatabaseSmugglerFactory
         ISmugglerSource source,
         ISmugglerDestination destination,
         JsonOperationContext context,
-        DatabaseSmugglerOptionsServerSide options = null,
+        DatabaseSmugglerOptionsServerSide options,
         SmugglerResult result = null,
         Action<IOperationProgress> onProgress = null,
         CancellationToken token = default);

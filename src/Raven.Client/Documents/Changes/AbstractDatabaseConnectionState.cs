@@ -70,7 +70,8 @@ internal abstract class AbstractDatabaseConnectionState
 
     public virtual void Dispose()
     {
-        Set(Task.FromException(new ObjectDisposedException(nameof(DatabaseConnectionState))));
+        if(_connected?.Exception == null)
+            Set(Task.FromException(new ObjectDisposedException(nameof(DatabaseConnectionState))));
         OnError = null;
     }
 }

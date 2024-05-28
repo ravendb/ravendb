@@ -46,10 +46,14 @@ type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
     | Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged;
 
-export interface ResetIndexData {
-    indexName: string;
-    setIndexName: (x: string) => void;
+export interface ResetIndexesData {
+    confirmData: {
+        indexNames: string[];
+        mode?: Raven.Client.Documents.Indexes.IndexResetMode;
+    };
     onConfirm: (contexts: DatabaseActionContexts[]) => Promise<void>;
+    openConfirm: (indexNames: string[], mode?: Raven.Client.Documents.Indexes.IndexResetMode) => void;
+    closeConfirm: () => void;
 }
 
 export interface SwapSideBySideData {
@@ -77,7 +81,18 @@ export function useIndexesPage(stale: boolean) {
     const eventsCollector = useEventsCollector();
     const { databaseChangesApi, serverNotifications } = useChanges();
 
-    const [resetIndexName, setResetIndexName] = useState<string>(null);
+    const [resetIndexesConfirmData, setResetIndexesConfirmData] = useState<ResetIndexesData["confirmData"]>(null);
+
+    const openResetIndexConfirm = (indexNames: string[], mode?: Raven.Client.Documents.Indexes.IndexResetMode) => {
+        setResetIndexesConfirmData({
+            indexNames,
+            mode,
+        });
+    };
+
+    const closeResetIndexConfirm = () => {
+        setResetIndexesConfirmData(null);
+    };
 
     const confirm = useConfirm();
 
@@ -554,31 +569,35 @@ export function useIndexesPage(stale: boolean) {
         const resetRequests: Promise<void>[] = [];
         setResettingIndex(true);
 
-        try {
-            for (const { nodeTag, shardNumbers } of contexts) {
-                const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
+        for (const indexName of resetIndexesConfirmData.indexNames) {
+            try {
+                for (const { nodeTag, shardNumbers } of contexts) {
+                    const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
 
-                for (const location of locations) {
-                    resetRequests.push(
-                        indexesService.resetIndex(resetIndexName, db.name, location).then(() => {
-                            dispatch({
-                                type: "ResetIndex",
-                                indexName: resetIndexName,
-                                location,
-                            });
-                        })
-                    );
+                    for (const location of locations) {
+                        resetRequests.push(
+                            indexesService
+                                .resetIndex(indexName, db.name, resetIndexesConfirmData.mode, location)
+                                .then(() => {
+                                    dispatch({
+                                        type: "ResetIndex",
+                                        indexName: indexName,
+                                        location,
+                                    });
+                                })
+                        );
+                    }
                 }
+
+                await Promise.all(resetRequests);
+                messagePublisher.reportSuccess("Index " + indexName + " restarted successfully.");
+            } finally {
+                // wait a bit and trigger refresh
+                await delay(1_000);
+
+                throttledRefresh.current();
+                setResettingIndex(false);
             }
-
-            await Promise.all(resetRequests);
-            messagePublisher.reportSuccess("Index " + resetIndexName + " restarted successfully.");
-        } finally {
-            // wait a bit and trigger refresh
-            await delay(1_000);
-
-            throttledRefresh.current();
-            setResettingIndex(false);
         }
     };
 
@@ -597,7 +616,7 @@ export function useIndexesPage(stale: boolean) {
             }
 
             await Promise.all(swapRequests);
-            messagePublisher.reportSuccess("Index " + resetIndexName + " replaced successfully.");
+            messagePublisher.reportSuccess("Index " + swapSideBySideConfirmIndexName + " replaced successfully.");
         } finally {
             setSwapNowProgress((item) => item.filter((x) => x !== swapSideBySideConfirmIndexName));
         }
@@ -724,10 +743,11 @@ export function useIndexesPage(stale: boolean) {
         setIndexLockMode,
         toggleSelection,
         resetIndexData: {
-            indexName: resetIndexName,
-            setIndexName: setResetIndexName,
+            confirmData: resetIndexesConfirmData,
             onConfirm: onResetIndexConfirm,
-        } satisfies ResetIndexData,
+            closeConfirm: closeResetIndexConfirm,
+            openConfirm: openResetIndexConfirm,
+        } satisfies ResetIndexesData,
         swapSideBySideData: {
             indexName: swapSideBySideConfirmIndexName,
             setIndexName: setSwapSideBySideConfirmIndexName,

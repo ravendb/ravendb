@@ -41,6 +41,7 @@ import { Icon } from "components/common/Icon";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import ResetIndexesButton from "components/pages/database/indexes/list/partials/ResetIndexesButton";
 
 export interface IndexPanelProps {
     index: IndexSharedInfo;
@@ -51,7 +52,7 @@ export interface IndexPanelProps {
     disableIndexing: () => Promise<void>;
     pauseIndexing: () => Promise<void>;
     deleteIndex: () => Promise<void>;
-    resetIndex: () => void;
+    resetIndex: (mode?: Raven.Client.Documents.Indexes.IndexResetMode) => void;
     openFaulty: (location: databaseLocationSpecifier) => Promise<void>;
     selected: boolean;
     hasReplacement?: boolean;
@@ -88,7 +89,7 @@ function getLockColor(index: IndexSharedInfo) {
 }
 
 export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTMLDivElement>) {
-    const { index, selected, toggleSelection, hasReplacement, globalIndexingStatus } = props;
+    const { index, selected, toggleSelection, hasReplacement, globalIndexingStatus, resetIndex } = props;
 
     const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.hasDatabaseWriteAccess());
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -175,8 +176,6 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
     const openFaulty = async (location: databaseLocationSpecifier) => {
         await props.openFaulty(location);
     };
-
-    const resetIndex = () => props.resetIndex();
 
     const { forCurrentDatabase: urls } = useAppUrls();
     const queryUrl = urls.query(index.name)();
@@ -365,16 +364,13 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         {isFaulty && (
                             <Button onClick={() => openFaulty(index.nodesInfo[0].location)}>Open faulty index</Button>
                         )}
-
                         {hasDatabaseWriteAccess && (
-                            <ButtonGroup>
-                                <Button color="warning" onClick={resetIndex} title="Reset index (rebuild)">
-                                    <Icon icon="reset-index" margin="m-0" />
-                                </Button>
+                            <>
+                                <ResetIndexesButton resetIndex={resetIndex} isDropdownVisible={!isReplacement} />
                                 <Button color="danger" onClick={deleteIndex} title="Delete the index">
                                     <Icon icon="trash" margin="m-0" />
                                 </Button>
-                            </ButtonGroup>
+                            </>
                         )}
                     </RichPanelActions>
                 </RichPanelHeader>
@@ -433,7 +429,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             </div>
                         </RichPanelDetailItem>
                     )}
-
+                    <ReferencedCollections collections={index.referencedCollections} />
                     {(hasReplacement || isReplacement) && (
                         <RichPanelDetailItem>
                             {hasReplacement && (
@@ -542,5 +538,24 @@ function InlineDetails(props: InlineDetailsProps) {
         </>
     );
 }
+
+interface ReferencedCollectionsProps {
+    collections: string[];
+}
+
+function ReferencedCollections({ collections }: ReferencedCollectionsProps) {
+    if (!collections?.length) {
+        return null;
+    }
+
+    return (
+        <RichPanelDetailItem>
+            <Icon icon="referenced-collections" title="Referenced collections" />
+            <div style={{ maxWidth: "300px" }}>{collections.join(", ")}</div>
+        </RichPanelDetailItem>
+    );
+}
+
+export default ReferencedCollections;
 
 const indexUniqueId = (index: IndexSharedInfo) => "index_" + index.name;

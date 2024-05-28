@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Raven.Server.Documents.Sharding.Handlers.Processors;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Stats;
 using Raven.Server.Routing;
 
@@ -52,6 +53,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public async Task BytesMetrics()
         {
             using (var processor = new ShardedStatsHandlerProcessorForGetMetricsBytes(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/admin/validate-unused-ids", "POST")]
+        public async Task ValidateUnusedIds()
+        {
+            using (var processor = new ShardedStatsHandlerProcessorForPostValidateUnusedIds(this))
                 await processor.ExecuteAsync();
         }
     }

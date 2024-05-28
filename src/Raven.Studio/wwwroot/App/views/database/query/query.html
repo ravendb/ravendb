@@ -133,8 +133,8 @@
                             </strong>
                             <span data-bind="visible: queriedIndex() && queriedIndex().indexOf('collection') === 0">&nbsp;collection</span>
                             &nbsp;was used to get <span data-bind="text: fromCache() ? 'cached' : 'the'"></span> results in
-                            <strong data-bind="text: queryStats().DurationInMs.toLocaleString() + ' ms'"></strong>
-                            <span data-bind="visible: originalRequestTime, if: originalRequestTime">(original request took: <strong data-bind="text: originalRequestTime().toLocaleString() + ' ms'"></strong>)</span>
+                            <strong data-bind="text: $root.formatTime(queryStats().DurationInMs)"></strong>
+                            <span data-bind="visible: originalRequestTime, if: originalRequestTime">(original request took: <strong data-bind="text: $root.formatTime(originalRequestTime())"></strong>)</span>
                             <span data-bind="visible: queriedFieldsOnly">
                                 . Showing <strong>stored index fields</strong> only.
                             </span>

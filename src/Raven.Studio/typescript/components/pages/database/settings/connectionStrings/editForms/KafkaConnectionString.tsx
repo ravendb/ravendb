@@ -107,7 +107,7 @@ export default function KafkaConnectionString({
                         </Badge>
                     ) : null}
                 </Label>
-                <div className="d-flex gap-1">
+                <div className="input-group">
                     <FormInput
                         control={control}
                         name="bootstrapServers"

@@ -31,10 +31,10 @@ public partial class ShardedDatabaseContext
         /// <summary>
         /// Wait for indexes to be applied on the cluster nodes where the physical database shards are available
         /// </summary>
-        public async ValueTask WaitForExecutionOnShardsAsync(long index)
+        public async ValueTask WaitForExecutionOnShardsAsync(long index, CancellationToken token = default)
         {
             var op = new WaitForIndexNotificationOperation(index);
-            await _context.ShardExecutor.ExecuteParallelForAllAsync(op);
+            await _context.ShardExecutor.ExecuteParallelForAllAsync(op, token);
         }
     }
 }

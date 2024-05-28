@@ -144,7 +144,7 @@ namespace SlowTests.Issues
                             var table = context.Transaction.InnerTransaction.OpenTable(documentDatabase.DocumentsStorage.AttachmentsStorage.AttachmentsSchema, AttachmentsMetadataSlice);
                             var count = table.NumberOfEntries;
                             var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-                            var streamsCount = tree.State.NumberOfEntries;
+                            var streamsCount = tree.State.Header.NumberOfEntries;
                             msg.AppendLine($"count={count}, streamsCount={streamsCount}");
 
                             using (var it = tree.Iterate(false))

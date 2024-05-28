@@ -36,7 +36,7 @@ public class RavenDB_19283 : StorageTest
         using var knownFields = builder.Build();
 
         long entryId;
-        using (var indexWriter = new IndexWriter(Env, knownFields))
+        using (var indexWriter = new IndexWriter(Env, knownFields, SupportedFeatures.All))
         {
             var options = new[] { "one", "two", "three" };
             using (var writer = indexWriter.Index("users/1"))

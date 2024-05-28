@@ -34,6 +34,13 @@ export default function DatabaseCustomSorters() {
         },
     });
 
+    const asyncGetServerWideSorters = useAsync(async () => {
+        if (!hasServerWideCustomSorters) {
+            return [];
+        }
+        return await manageServerService.getServerWideCustomSorters();
+    }, []);
+
     const { appUrl } = useAppUrls();
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
 
@@ -41,13 +48,6 @@ export default function DatabaseCustomSorters() {
     const licenseDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomSortersPerDatabase"));
     const numberOfCustomSortersInCluster = useAppSelector(licenseSelectors.limitsUsage).NumberOfCustomSortersInCluster;
     const hasServerWideCustomSorters = useAppSelector(licenseSelectors.statusValue("HasServerWideCustomSorters"));
-
-    const asyncGetServerWideSorters = useAsync(async () => {
-        if (!hasServerWideCustomSorters) {
-            return [];
-        }
-        return await manageServerService.getServerWideCustomSorters();
-    }, []);
 
     const databaseResultsCount = sorters.length;
     const serverWideResultsCount = asyncGetServerWideSorters.result?.length ?? null;

@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Maintenance.Sharding;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Executors;
@@ -22,8 +25,6 @@ public sealed class ShardExecutionResult<T>
 public abstract class AbstractExecutor : IDisposable
 {
     protected readonly ServerStore ServerStore;
-
-    private Dictionary<int, Exception> _exceptions;
 
     protected AbstractExecutor([NotNull] ServerStore store)
     {
@@ -44,10 +45,13 @@ public abstract class AbstractExecutor : IDisposable
     protected abstract void OnCertificateChange(object sender, EventArgs e);
 
     public Task<TCombinedResult> ExecuteParallelForAllAsync<TResult, TCombinedResult>(IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token = default)
-        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult, TCombinedResult>(GetAllPositions(), operation, token);
+        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFirstFailure, TResult, TCombinedResult>(GetAllPositions(), operation, token);
+
+    public Task<TCombinedResult> ExecuteParallelForAllThrowAggregatedFailure<TResult, TCombinedResult>(IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token = default)
+        => ExecuteForShardsAsync<ParallelExecution, ThrowAggregatedFailure, TResult, TCombinedResult>(GetAllPositions(), operation, token);
 
     public Task<TResult> ExecuteParallelForAllAsync<TResult>(IShardedOperation<TResult> operation, CancellationToken token = default)
-        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult>(GetAllPositions(), operation, token);
+        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFirstFailure, TResult>(GetAllPositions(), operation, token);
 
     protected Task<TResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(Memory<int> shards, IShardedOperation<TResult, TResult> operation, CancellationToken token = default)
         where TExecutionMode : struct, IExecutionMode
@@ -56,15 +60,15 @@ public abstract class AbstractExecutor : IDisposable
 
     public Task ExecuteParallelForShardsAsync(Memory<int> shards,
         IShardedOperation operation, CancellationToken token = default)
-        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, object, object>(shards, operation, token);
+        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFirstFailure, object, object>(shards, operation, token);
 
     public Task<TResult> ExecuteParallelForShardsAsync<TResult>(Memory<int> shards,
         IShardedOperation<TResult> operation, CancellationToken token = default)
-        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult, TResult>(shards, operation, token);
+        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFirstFailure, TResult, TResult>(shards, operation, token);
 
     public Task<TCombinedResult> ExecuteParallelForShardsAsync<TResult, TCombinedResult>(Memory<int> shards,
         IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token = default)
-        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult, TCombinedResult>(shards, operation, token);
+        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFirstFailure, TResult, TCombinedResult>(shards, operation, token);
 
     public Task<TCombinedResult> ExecuteParallelAndIgnoreErrorsForShardsAsync<TResult, TCombinedResult>(Memory<int> shards,
         IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token = default)
@@ -178,12 +182,14 @@ public abstract class AbstractExecutor : IDisposable
                 }
                 catch
                 {
-                    if (typeof(TFailureMode) == typeof(ThrowOnFailure))
+                    if (typeof(TFailureMode) == typeof(ThrowOnFirstFailure))
                         throw;
                 }
             }
         }
-        
+
+        List<ExecutionForShardException> exceptions = null;
+
         foreach (var (shardNumber, command) in commands)
         {
             try
@@ -192,13 +198,22 @@ public abstract class AbstractExecutor : IDisposable
             }
             catch (Exception e)
             {
-                if (typeof(TFailureMode) == typeof(ThrowOnFailure))
+                if (typeof(TFailureMode) == typeof(ThrowOnFirstFailure))
                     throw;
 
-                _exceptions ??= new Dictionary<int, Exception>();
-                _exceptions[shardNumber] = e;
+                exceptions ??= new List<ExecutionForShardException>();
+                exceptions.Add(new ExecutionForShardException(shardNumber, e));
             }
         }
+
+        if (typeof(TFailureMode) == typeof(ThrowAggregatedFailure) && exceptions?.Count > 0)
+        {
+            if (exceptions.Count == 1)
+                throw exceptions.First();
+
+            throw new AggregateException($"Some shards threw an exception", exceptions);
+        }
+
     }
 
     protected static void SafelyDisposeExecutors(IEnumerable<RequestExecutor> executors)
@@ -277,12 +292,17 @@ public struct OneByOneExecution : IExecutionMode
 
 }
 
-public struct ThrowOnFailure : IFailureMode
+public struct ThrowOnFirstFailure : IFailureMode
 {
 
 }
 
 public struct IgnoreFailure : IFailureMode
+{
+
+}
+
+public struct ThrowAggregatedFailure : IFailureMode
 {
 
 }

@@ -35,7 +35,6 @@ namespace Raven.Server.Documents.PeriodicBackup
     public sealed class PeriodicBackupRunner : ITombstoneAware, IDisposable
     {
         private readonly Logger _logger;
-        private readonly Logger _auditLog;
 
         private readonly DocumentDatabase _database;
         private readonly ServerStore _serverStore;
@@ -61,7 +60,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             _database = database;
             _serverStore = serverStore;
             _logger = LoggingSource.Instance.GetLogger<PeriodicBackupRunner>(_database.Name);
-            _auditLog = LoggingSource.AuditLog.GetLogger(_database.Name, "Audit");
             _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
             _tempBackupPath = BackupUtils.GetBackupTempPath(_database.Configuration, "PeriodicBackupTemp", out _);
 
@@ -223,7 +221,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return CreateBackupTask(periodicBackup, isFullBackup, startTimeUtc ?? SystemTime.UtcNow, operationId);
         }
 
-        public async Task DelayAsync(long taskId, TimeSpan delay, X509Certificate2 clientCert, CancellationToken token)
+        public async Task DelayAsync(long taskId, DateTime delayUntil, X509Certificate2 clientCert, CancellationToken token)
         {
             foreach (var periodicBackup in _periodicBackups)
             {
@@ -231,7 +229,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (runningTask == null || runningTask.Id != taskId)
                     continue;
 
-                var delayUntil = DateTime.UtcNow.AddTicks(delay.Ticks);
                 var nextBackup = GetNextBackupDetails(
                     periodicBackup.Value.Configuration, 
                     periodicBackup.Value.BackupStatus,
@@ -263,16 +260,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                         
                         _logger.Operations(msg, e);
                     }
-                }
-
-                if (_auditLog.IsInfoEnabled)
-                {
-                    var msg = $"Backup task with task id '{taskId}' was delayed until '{delayUntil}' UTC";
-
-                    if (clientCert != null)
-                        msg += $" by {clientCert.Subject} ({clientCert.Thumbprint})";
-
-                    _auditLog.Info(msg);
                 }
 
                 periodicBackup.Value.BackupStatus.DelayUntil = delayUntil;

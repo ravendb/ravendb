@@ -127,11 +127,16 @@ public class DataArchivist : BackgroundWorkBase
                         if (toArchive == null || toArchive.Count == 0)
                             return;
 
-                        var command = new ArchiveDocumentsCommand(toArchive, _database, currentTime);
-                        await _database.TxMerger.Enqueue(command);
+                        while (toArchive.Count > 0)
+                        {
+                            _database.DatabaseShutdown.ThrowIfCancellationRequested();
 
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Successfully archived {command.ArchivedDocsCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
+                            var command = new ArchiveDocumentsCommand(toArchive, _database, currentTime);
+                            await _database.TxMerger.Enqueue(command);
+
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"Successfully archived {command.ArchivedDocsCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
+                        }
                     }
                 }
             }

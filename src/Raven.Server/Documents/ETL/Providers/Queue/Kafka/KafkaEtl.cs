@@ -159,6 +159,8 @@ public sealed class KafkaEtl : QueueEtl<KafkaItem>
             {
                 foreach (var queueItem in topic.Items)
                 {
+                    CancellationToken.ThrowIfCancellationRequested();
+
                     var cloudEvent = CreateCloudEvent(queueItem);
 
                     var kafkaMessage = cloudEvent.ToKafkaMessage(ContentMode.Binary, formatter);

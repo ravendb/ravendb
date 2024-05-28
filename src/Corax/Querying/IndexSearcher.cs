@@ -242,7 +242,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
-    public void ApplyAnalyzer(FieldMetadata binding, Analyzer analyzer, ReadOnlySpan<byte> originalTerm, out Slice value)
+    public void ApplyAnalyzer(in FieldMetadata binding, Analyzer analyzer, ReadOnlySpan<byte> originalTerm, out Slice value)
     {
         if (binding.FieldId == Constants.IndexWriter.DynamicField && binding.Mode is not (FieldIndexingMode.Exact or FieldIndexingMode.No))
         {
@@ -329,19 +329,19 @@ public sealed unsafe partial class IndexSearcher : IDisposable
        return terms?.DictionaryId ?? -1;
    }
    
-    public long GetTermAmountInField(FieldMetadata field)
+    public long GetTermAmountInField(in FieldMetadata field)
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
 
         return terms?.NumberOfEntries ?? 0;
     }
 
-    public bool TryGetTermsOfField(FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)
+    public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)
     {
         return TryGetTermsOfField<Lookup<CompactKeyLookup>.ForwardIterator>(field, out existsTermProvider);
     }
 
-    public bool TryGetTermsOfField<TLookupIterator>(FieldMetadata field, out ExistsTermProvider<TLookupIterator> existsTermProvider)
+    public bool TryGetTermsOfField<TLookupIterator>(in FieldMetadata field, out ExistsTermProvider<TLookupIterator> existsTermProvider)
         where TLookupIterator : struct, ILookupIterator
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
@@ -492,6 +492,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return HasMultipleTermsInField(slice);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool HasMultipleTermsInField(in FieldMetadata fieldMetadata)
     {
         return HasMultipleTermsInField(fieldMetadata.FieldName);
@@ -571,7 +572,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
-    private long GetRootPageByFieldName(in Slice fieldName)
+    private long GetRootPageByFieldName(Slice fieldName)
     {
         var it = _fieldsTree.Iterate(false);
         var result = _fieldsTree.Read(fieldName);

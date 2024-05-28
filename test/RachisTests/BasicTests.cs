@@ -2,10 +2,12 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -58,14 +60,20 @@ namespace RachisTests
         }
 
         [Fact]
-        public async Task RavenDB_13659()
+        public void RavenDB_13659()
         {
-            var leader = await CreateNetworkAndGetLeader(1);
-            var mre = new AsyncManualResetEvent();
+            EnableCaptureWriteTransactionStackTrace = true;
+
+            var leader = AsyncHelpers.RunSync(() => CreateNetworkAndGetLeader(1));
+            var mre = new ManualResetEventSlim();
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var currentThread = NativeMemory.CurrentThreadStats.ManagedThreadId;
 
             leader.Timeout.Start(() =>
             {
+                if (currentThread == NativeMemory.CurrentThreadStats.ManagedThreadId)
+                    throw new InvalidOperationException("Can't use same thread as the xUnit test");
+
                 mre.Set();
                 try
                 {
@@ -85,12 +93,12 @@ namespace RachisTests
             using (leader.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenWriteTransaction())
             {
-                await mre.WaitAsync();
+                mre.Wait();
                 leader.SetNewStateInTx(context, RachisState.Follower, null, leader.CurrentTerm, "deadlock");
                 context.Transaction.Commit();
             }
 
-            await tcs.Task;
+            AsyncHelpers.RunSync(() => tcs.Task);
         }
     }
 }

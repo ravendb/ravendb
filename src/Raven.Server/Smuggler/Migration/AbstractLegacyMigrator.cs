@@ -13,6 +13,7 @@ using Raven.Client.Exceptions.Security;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -26,7 +27,7 @@ namespace Raven.Server.Smuggler.Migration
 {
     public abstract class AbstractLegacyMigrator : AbstractMigrator
     {
-        protected AbstractLegacyMigrator(MigratorOptions options, MigratorParameters parameters) : base(options, parameters)
+        protected AbstractLegacyMigrator(MigratorOptions options, MigratorParameters parameters, AuthorizationStatus authorizationStatus) : base(options, parameters, authorizationStatus)
         {
         }
 
@@ -110,7 +111,7 @@ namespace Raven.Server.Smuggler.Migration
             {
                 var attachment = new DocumentItem.AttachmentStream
                 {
-                    Stream = documentActions.GetTempStream()
+                    Stream = await documentActions.GetTempStreamAsync()
                 };
                 using (var byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None))
                 {

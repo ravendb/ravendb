@@ -818,12 +818,12 @@ $zindexes: (
     "menu-resize": 1035,
     "fixed": 1037,
     "offcanvas-backdrop": 1040,
+    "topalert": 1083,
     "modal-backdrop": 1050,
     "offcanvas": 1055,
-    "topalert": 1083,
-    "modal": 1085,
-    "tooltip": 1086,
     "popover": 1086,
+    "tooltip": 1086,
+    "modal": 1085,
     "toast": 1090,
     "menu-xs": 1090,
     "loading-overlay": 2490,
@@ -1003,31 +1003,30 @@ $pagination-padding-x-lg: 1.5rem !default;
 
 $pagination-font-size: $font-size-base !default;
 
-$pagination-color: var(--#{$prefix}link-color) !default;
-$pagination-bg: transparent !default;
+$pagination-color: var(--#{$prefix}text-color) !default;
+$pagination-bg: $panel-header-bg-var !default;
 $pagination-border-radius: var(--#{$prefix}border-radius) !default;
 $pagination-border-width: var(--#{$prefix}border-width) !default;
 $pagination-margin-start: calc(
     #{$pagination-border-width} * -1
 ) !default; // stylelint-disable-line function-disallowed-list
-$pagination-border-color: var(--#{$prefix}border-color) !default;
+$pagination-border-color: var(--border-color-light) !default;
 
-$pagination-focus-color: var(--#{$prefix}link-hover-color) !default;
+$pagination-focus-color: $pagination-color !default;
 $pagination-focus-bg: $panel-bg-2-var !default;
-$pagination-focus-box-shadow: $focus-ring-box-shadow !default;
 $pagination-focus-outline: 0 !default;
 
-$pagination-hover-color: var(--#{$prefix}link-hover-color) !default;
-$pagination-hover-bg: var(--#{$prefix}tertiary-bg) !default;
-$pagination-hover-border-color: var(--#{$prefix}border-color) !default; // Todo in v6: remove this?
+$pagination-hover-color: $pagination-color !default;
+$pagination-hover-bg: $pagination-bg !default;
+$pagination-hover-border-color: $pagination-border-color !default;
 
-$pagination-active-color: $component-active-color !default;
-$pagination-active-bg: $component-active-bg !default;
-$pagination-active-border-color: $component-active-bg !default;
+$pagination-active-color: $text-emphasis-var !default;
+$pagination-active-bg: $primary-var !default;
+$pagination-active-border-color: $pagination-border-color !default;
 
-$pagination-disabled-color: var(--#{$prefix}secondary-color) !default;
-$pagination-disabled-bg: var(--#{$prefix}secondary-bg) !default;
-$pagination-disabled-border-color: var(--#{$prefix}border-color) !default;
+$pagination-disabled-color: $text-muted-var !default;
+$pagination-disabled-bg: $pagination-bg !default;
+$pagination-disabled-border-color: $pagination-border-color !default;
 
 $pagination-transition:
     color 0.05s ease-in-out,
@@ -1391,16 +1390,16 @@ $carousel-dark-control-icon-filter: invert(1) grayscale(100) !default;
 $spinner-width: 2rem !default;
 $spinner-height: $spinner-width !default;
 $spinner-vertical-align: -0.125em !default;
-$spinner-border-width: 0.25em !default;
+$spinner-border-width: $border-width * 2 !default;
 $spinner-animation-speed: 0.75s !default;
 
 $spinner-width-sm: 1rem !default;
 $spinner-height-sm: $spinner-width-sm !default;
-$spinner-border-width-sm: 0.2em !default;
+$spinner-border-width-sm: $spinner-border-width !default;
 
 $spinner-width-xs: 0.7rem !default;
 $spinner-height-xs: $spinner-width-xs !default;
-$spinner-border-width-xs: 0.2em !default;
+$spinner-border-width-xs: $spinner-border-width !default;
 // scss-docs-end spinner-variables
 
 // Close

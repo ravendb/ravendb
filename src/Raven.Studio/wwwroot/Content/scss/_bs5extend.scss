@@ -184,7 +184,7 @@
 }
 
 .well {
-    background-color: $well-bg;
+    background-color: $well-bg-var;
 }
 
 .border-radius-xs {
@@ -391,14 +391,14 @@ select {
 //Override bootstrap 5.3 CSS custom properties theming errors
 .accordion-button {
     &::after {
-        content: "\f154" !important;
+        content: "\f117" !important;
         font-family: "icomoon" !important;
         text-align: center;
     }
 }
 .btn-close {
     &::after {
-        content: "\f162" !important;
+        content: "\f117" !important;
         font-family: "icomoon" !important;
         text-align: center;
     }
@@ -448,14 +448,21 @@ select {
     }
 }
 
+.max-paragraph-width {
+    max-width: 50em;
+}
+
 //Styling for eye button that allows to preview password
 .preview-password {
     border-top-right-radius: $border-radius-sm !important;
     border-bottom-right-radius: $border-radius-sm !important;
 }
 
-.btn-preview {
+.input-btn {
+    position: absolute !important;
     z-index: 5 !important;
+    right: 0;
+    height: 100%;
 }
 
 //Checkbox that activates input, e.g. Client Configuration form
@@ -548,4 +555,30 @@ select {
 //Remove shadow from all btn-close on focus
 .btn-close:focus {
     box-shadow: none;
+}
+
+.validation-message {
+    order: 3;
+    white-space: normal;
+    z-index: 10;
+    .badge {
+        white-space: normal;
+    }
+}
+
+.nobr {
+    white-space: nowrap;
+    display: inline !important;
+}
+
+//Classes for different panel colors
+$panels: (
+    1: --panel-bg-1,
+    2: --panel-bg-2,
+    3: --panel-bg-3,
+);
+@each $key, $color in $panels {
+    .panel-bg-#{$key} {
+        background-color: var(#{$color});
+    }
 }

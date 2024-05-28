@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax.Mappings;
 using Corax.Querying.Matches;
+using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.TermProviders;
 using Voron;
 using Voron.Data.Lookups;
@@ -14,7 +15,7 @@ namespace Corax.Querying;
 public partial class IndexSearcher
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch BetweenQuery<TValue>(FieldMetadata field, TValue low, TValue high, UnaryMatchOperation leftSide = UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation rightSide = UnaryMatchOperation.LessThanOrEqual, bool forward = true, bool streamingEnabled = false, long maxNumberOfTerms = long.MaxValue, CancellationToken token = default) {
+    public MultiTermMatch BetweenQuery<TValue>(in FieldMetadata field, TValue low, TValue high, UnaryMatchOperation leftSide = UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation rightSide = UnaryMatchOperation.LessThanOrEqual, bool forward = true, bool streamingEnabled = false, long maxNumberOfTerms = long.MaxValue, CancellationToken token = default) {
         if (typeof(TValue) == typeof(long))
         {
             return (leftSide, rightSide) switch
@@ -85,19 +86,19 @@ public partial class IndexSearcher
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch GreaterThanQuery<TValue>(FieldMetadata field, TValue value, bool forward = true, bool streamingEnabled = false,  long maxNumberOfTerms = long.MaxValue,CancellationToken token = default)
+    public MultiTermMatch GreaterThanQuery<TValue>(in FieldMetadata field, TValue value, bool forward = true, bool streamingEnabled = false,  long maxNumberOfTerms = long.MaxValue,CancellationToken token = default)
     {
         return GreatBuilder<Range.Exclusive, Range.Inclusive, TValue>(field, value, forward, streamingEnabled, maxNumberOfTerms, token: token);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch GreatThanOrEqualsQuery<TValue>(FieldMetadata field, TValue value, bool forward = true, bool streamingEnabled = false, long maxNumberOfTerms = long.MaxValue, CancellationToken token = default)
+    public MultiTermMatch GreatThanOrEqualsQuery<TValue>(in FieldMetadata field, TValue value, bool forward = true, bool streamingEnabled = false, long maxNumberOfTerms = long.MaxValue, CancellationToken token = default)
     {
         return GreatBuilder<Range.Inclusive, Range.Inclusive, TValue>(field, value, forward, streamingEnabled, maxNumberOfTerms , token: token);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private MultiTermMatch GreatBuilder<TLeftRange, TRightRange, TValue>(FieldMetadata field, TValue value, bool forward = true, bool streamingEnabled = false, long maxNumberOfTerms = long.MaxValue, CancellationToken token = default)
+    private MultiTermMatch GreatBuilder<TLeftRange, TRightRange, TValue>(in FieldMetadata field, TValue value, bool forward = true, bool streamingEnabled = false, long maxNumberOfTerms = long.MaxValue, CancellationToken token = default)
         where TLeftRange : struct, Range.Marker
         where TRightRange : struct, Range.Marker
     {
@@ -118,15 +119,15 @@ public partial class IndexSearcher
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch LessThanOrEqualsQuery<TValue>(FieldMetadata field, TValue value, bool forward = true, bool streamingEnabled = false,  long maxNumberOfTerms = long.MaxValue, CancellationToken token = default)
+    public MultiTermMatch LessThanOrEqualsQuery<TValue>(in FieldMetadata field, TValue value, bool forward = true, bool streamingEnabled = false,  long maxNumberOfTerms = long.MaxValue, CancellationToken token = default)
         => LessBuilder<Range.Inclusive, Range.Inclusive, TValue>(field, value, forward, streamingEnabled,maxNumberOfTerms,  token: token);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch LessThanQuery<TValue>(FieldMetadata field, TValue value,bool forward = true, bool streamingEnabled = false,  long maxNumberOfTerms = long.MaxValue, CancellationToken token = default)
+    public MultiTermMatch LessThanQuery<TValue>(in FieldMetadata field, TValue value,bool forward = true, bool streamingEnabled = false,  long maxNumberOfTerms = long.MaxValue, CancellationToken token = default)
         => LessBuilder<Range.Inclusive, Range.Exclusive, TValue>(field, value, forward, streamingEnabled, maxNumberOfTerms, token: token);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private MultiTermMatch LessBuilder<TLeftRange, TRightRange, TValue>(FieldMetadata field, TValue value,
+    private MultiTermMatch LessBuilder<TLeftRange, TRightRange, TValue>(in FieldMetadata field, TValue value,
         bool forward, bool streamingEnabled, long maxNumberOfTerms, CancellationToken token)
         where TLeftRange : struct, Range.Marker
         where TRightRange : struct, Range.Marker
@@ -146,7 +147,7 @@ public partial class IndexSearcher
         throw new ArgumentException("Range queries are supporting strings, longs or doubles only");
     }
     
-    private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, Slice low, Slice high,  bool forward, bool streamingEnabled, long maxNumberOfTerms,CancellationToken token)
+    private MultiTermMatch RangeBuilder<TLow, THigh>(in FieldMetadata field, Slice low, Slice high,  bool forward, bool streamingEnabled, long maxNumberOfTerms,CancellationToken token)
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {

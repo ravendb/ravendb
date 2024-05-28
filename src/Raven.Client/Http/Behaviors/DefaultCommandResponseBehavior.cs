@@ -41,15 +41,15 @@ internal sealed class DefaultCommandResponseBehavior : AbstractCommandResponseBe
 
     public override async ValueTask<bool> TryHandleConflictAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpResponseMessage response)
     {
-        await ExceptionDispatcher.Throw(context, response).ConfigureAwait(false);
+        await ExceptionDispatcher.Throw(context, response, unsuccessfulResponseBehavior: CommandUnsuccessfulResponseBehavior.WrapException).ConfigureAwait(false);
         return false;
     }
 
-    public override async ValueTask<bool> TryHandleUnsuccessfulResponseAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpResponseMessage response)
+    public override async ValueTask<bool> TryHandleUnsuccessfulResponseAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpResponseMessage response, CommandUnsuccessfulResponseBehavior unsuccessfulResponseBehavior)
     {
         command.OnResponseFailure(response);
 
-        await ExceptionDispatcher.Throw(context, response).ConfigureAwait(false);
+        await ExceptionDispatcher.Throw(context, response, unsuccessfulResponseBehavior).ConfigureAwait(false);
         return false;
     }
 }

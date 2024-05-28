@@ -19,7 +19,7 @@ public partial class IndexWriter
             $"Attempt to remove term: '{term}' for field {indexedField.Name}, but it does not exists! This is a bug.");
     }
     
-    private static void ThrowMoreThanOneRemovalFoundForSingleItem(long idInTree, EntriesModifications entries, long existingEntryId, short existingFrequency)
+    private static void ThrowMoreThanOneRemovalFoundForSingleItem(long idInTree, in EntriesModifications entries, long existingEntryId, short existingFrequency)
     {
         throw new InvalidOperationException($"More than one removal found for a single item, which is impossible. " +
                                             $"{Environment.NewLine}Current tree id: {idInTree}" +

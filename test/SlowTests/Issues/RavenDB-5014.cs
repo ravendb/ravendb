@@ -39,7 +39,7 @@ namespace SlowTests.Issues
 
                     var operationId = JsonDeserializationClient.OperationIdResult(json);
 
-                    new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId.OperationId).WaitForCompletion(TimeSpan.FromSeconds(15));
+                    new Operation(commands.RequestExecutor, () => store.Changes(store.Database, Server.ServerStore.NodeTag), store.Conventions, operationId.OperationId, Server.ServerStore.NodeTag).WaitForCompletion(TimeSpan.FromSeconds(15));
 
                     var collectionStats = store.Maintenance.Send(new GetCollectionStatisticsOperation());
 

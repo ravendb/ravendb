@@ -26,6 +26,11 @@ namespace Raven.Client.Json
 
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
         {
+            // Immediately flush request stream to send headers
+            // https://github.com/dotnet/corefx/issues/39586#issuecomment-516210081
+            // https://github.com/dotnet/runtime/issues/96223#issuecomment-1865009861
+            await stream.FlushAsync().ConfigureAwait(false);
+
             if (_conventions.UseHttpCompression == false)
             {
                 await _asyncTaskWriter(stream).ConfigureAwait(false);

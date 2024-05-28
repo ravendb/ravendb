@@ -97,7 +97,7 @@ class editKafkaSinkTask extends viewModelBase {
 
     view = require("views/database/tasks/editKafkaSinkTask.html");
     connectionStringView = require("views/database/settings/connectionStringKafka.html");
-    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    taskResponsibleNodeSectionView = require("views/partial/taskResponsibleNodeSection.html");
     pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     patchDebugActionsLoadedView = require("views/database/patch/patchDebugActionsLoaded.html");

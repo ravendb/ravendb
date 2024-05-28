@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.IO.Compression;
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -9,7 +8,6 @@ using Microsoft.Net.Http.Headers;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Http;
 using Raven.Client.Properties;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
@@ -108,6 +106,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                                     IgnoreDatabaseItemTypesIfCurrentVersionIsOlderThenClientVersion(context, ref blittableJson);
 
                                     options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
+                                    options.SetAuthorizationStatus(RequestHandler.GetAuthorizationStatusForSmuggler(RequestHandler.DatabaseName));
+
                                     continue;
                                 }
 
@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                                     continue;
 
                                 ApplyBackwardCompatibility(options);
-                                await using (var inputStream = GetInputStream(section.Body, options))
+                                await using (var inputStream = await GetInputStreamAsync(section.Body, options))
                                 await using (var stream = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
                                 {
                                     await onImport(context, stream, options, result, onProgress, operationId, token);

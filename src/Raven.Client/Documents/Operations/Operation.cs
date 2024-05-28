@@ -7,6 +7,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Changes;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -110,7 +111,10 @@ namespace Raven.Client.Documents.Operations
                     var observable = changes.ForOperationId(_id);
                     _subscription = observable.Subscribe(this);
                     await observable.EnsureSubscribedNow().ConfigureAwait(false);
-                    changes.ConnectionStatusChanged += OnConnectionStatusChanged;
+                    _changes().ConnectionStatusChanged += OnConnectionStatusChanged;
+
+                    if (_requestExecutor.ForTestingPurposes?.WaitBeforeFetchOperationStatus != null)
+                        await _requestExecutor.ForTestingPurposes.WaitBeforeFetchOperationStatus.ConfigureAwait(false);
 
                     // We start the operation before we subscribe,
                     // so if we subscribe after the operation was already completed we will miss the notification for it. 
@@ -134,21 +138,21 @@ namespace Raven.Client.Documents.Operations
 
         private void OnConnectionStatusChanged(object sender, EventArgs e)
         {
-            AsyncHelpers.RunSync(OnConnectionStatusChangedAsync);
+            if (e is DatabaseChanges.OnReconnect)
+                AsyncHelpers.RunSync(OnConnectionStatusChangedAsync);
         }
 
         private async Task OnConnectionStatusChangedAsync()
         {
             try
             {
-                await FetchOperationStatus().ConfigureAwait(false);
+                await FetchOperationStatus(shouldThrowOnNoStatus: false).ConfigureAwait(false);
             }
             catch (Exception e)
             {
                 await StopProcessingUnderLock(e).ConfigureAwait(false);
             }
         }
-
         private async Task StopProcessingUnderLock(Exception e = null)
         {
             await _lock.WaitAsync().ConfigureAwait(false);
@@ -187,7 +191,7 @@ namespace Raven.Client.Documents.Operations
         /// If we receive notification using changes API meanwhile, ignore fetched status
         /// to avoid issues with non monotonic increasing progress
         /// </summary>
-        protected async Task FetchOperationStatus()
+        protected async Task FetchOperationStatus(bool shouldThrowOnNoStatus = true)
         {
             await _lock.WaitAsync().ConfigureAwait(false);
 
@@ -222,7 +226,12 @@ namespace Raven.Client.Documents.Operations
             }
 
             if (state == null)
-                throw new InvalidOperationException($"Could not fetch state of operation '{_id}' from node '{NodeTag}'.");
+            {
+                if (shouldThrowOnNoStatus)
+                    throw new InvalidOperationException($"Could not fetch state of operation '{_id}' from node '{NodeTag}'.");
+
+                return;
+            }
 
             OnNext(new OperationStatusChange
             {
@@ -338,29 +347,43 @@ namespace Raven.Client.Documents.Operations
             {
                 var result = await InitializeResult().ConfigureAwait(false);
 
-                _ = Task.Factory.StartNew(Initialize);
+                var initTask = Task.Factory.StartNew(Initialize);
 
                 try
                 {
+                    try
+                    {
 #if NET6_0_OR_GREATER
-                    await result.WaitAsync(token).ConfigureAwait(false);
-                    await _afterOperationCompleted.WaitAsync(token).ConfigureAwait(false);
+                        await result.WaitAsync(token).ConfigureAwait(false);
+                        await _afterOperationCompleted.WaitAsync(token).ConfigureAwait(false);
 #else
-                    await result.WithCancellation(token).ConfigureAwait(false);
-                    await _afterOperationCompleted.WithCancellation(token).ConfigureAwait(false);
+                        await result.WithCancellation(token).ConfigureAwait(false);
+                        await _afterOperationCompleted.WithCancellation(token).ConfigureAwait(false);
 #endif
-                }
-                catch (TaskCanceledException e) when (token.IsCancellationRequested)
-                {
-                    await StopProcessingUnderLock().ConfigureAwait(false);
-                    throw new TimeoutException($"Did not get a reply for operation '{_id}'.", e);
-                }
-                catch (Exception ex)
-                {
-                    await StopProcessingUnderLock(ex).ConfigureAwait(false);
-                }
+                    }
+                    catch (TaskCanceledException e) when (token.IsCancellationRequested)
+                    {
+                        await StopProcessingUnderLock().ConfigureAwait(false);
+                        throw new TimeoutException($"Did not get a reply for operation '{_id}'.", e);
+                    }
+                    catch (Exception ex)
+                    {
+                        await StopProcessingUnderLock(ex).ConfigureAwait(false);
+                    }
 
-                return (TResult)await result.ConfigureAwait(false); // already done waiting but in failure we want the exception itself and not AggregateException 
+                    return (TResult)await result.ConfigureAwait(false); // already done waiting but in failure we want the exception itself and not AggregateException 
+                }
+                finally
+                {
+                    try
+                    {
+                        await initTask.ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
+                }
             }
         }
 

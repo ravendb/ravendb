@@ -3,6 +3,7 @@ import jsonUtil = require("common/jsonUtil");
 
 class configurationItem {
     static readonly PerDatabaseIndexingConfigurationOptions: Array<string> = [
+        "Indexing.AllowStringCompilation",
         "Indexing.Analyzers.Default",
         "Indexing.Analyzers.Exact.Default",
         "Indexing.Analyzers.Lucene.NGram.MaxGram",

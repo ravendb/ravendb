@@ -42,7 +42,7 @@ namespace FastTests.Corax
                 Assert.Equal(_longList.Count, match.Fill(ids));
             }
 
-            using (var indexWriter = new IndexWriter(Env, _analyzers))
+            using (var indexWriter = new IndexWriter(Env, _analyzers, SupportedFeatures.All))
             {
                 indexWriter.TryDeleteEntry("list/0");
                 indexWriter.Commit();
@@ -81,7 +81,7 @@ namespace FastTests.Corax
                 Assert.Equal(_longList.Count, match.Fill(ids));
             }
 
-            using (var indexWriter = new IndexWriter(Env, _analyzers))
+            using (var indexWriter = new IndexWriter(Env, _analyzers, SupportedFeatures.All))
             {
                 indexWriter.TryDeleteEntry("list/0");
                 indexWriter.Commit();
@@ -116,7 +116,7 @@ namespace FastTests.Corax
                 Assert.Equal(batchSize, indexSearcher.NumberOfEntries);
             }
             
-            using (var indexWriter = new IndexWriter(Env, _analyzers))
+            using (var indexWriter = new IndexWriter(Env, _analyzers, SupportedFeatures.All))
             {
                 indexWriter.TryDeleteEntry("list/0");
                 indexWriter.Commit();
@@ -144,7 +144,7 @@ namespace FastTests.Corax
                 Assert.Equal(count, match.Fill(ids));
             }
 
-            using (var indexWriter = new IndexWriter(Env, _analyzers))
+            using (var indexWriter = new IndexWriter(Env, _analyzers, SupportedFeatures.All))
             {
                 indexWriter.TryDeleteEntry("list/9");
                 indexWriter.Commit();
@@ -180,7 +180,7 @@ namespace FastTests.Corax
                 var match = indexSearcher.TermQuery("Content", "0");
                 Assert.Equal(1, match.Fill(ids));
             }
-            using (var indexWriter = new IndexWriter(Env, _analyzers))
+            using (var indexWriter = new IndexWriter(Env, _analyzers, SupportedFeatures.All))
             {
                 indexWriter.TryDeleteEntry("list/0");
                 indexWriter.Commit();
@@ -229,7 +229,7 @@ namespace FastTests.Corax
 
         private void IndexEntries(IndexFieldsMapping knownFields)
         {
-            using var indexWriter = new IndexWriter(Env, knownFields);
+            using var indexWriter = new IndexWriter(Env, knownFields, SupportedFeatures.All);
 
             foreach (var entry in _longList)
             {

@@ -2,17 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Corax.Querying.Matches.Meta;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
-using static Voron.Global.Constants;
 
 namespace Corax.Querying.Matches
 {
     [DebuggerDisplay("{DebugView,nq}")]
-    public unsafe partial struct AndNotMatch<TInner, TOuter> : IQueryMatch
+    public struct AndNotMatch<TInner, TOuter> : IQueryMatch
     where TInner : IQueryMatch
     where TOuter : IQueryMatch
     {
@@ -27,11 +25,13 @@ namespace Corax.Querying.Matches
         public long Count => _totalResults;
 
         private readonly ByteStringContext _context;
-        internal bool _isAndWithBuffer;
-        internal long* _buffer;
-        internal int _bufferSize;
-        internal int _bufferIdx;              
-        internal IDisposable _bufferHandler;
+        
+        /// <summary>
+        /// Indicates that the buffer is used by the AndWith method.
+        /// </summary>
+        private bool _isAndWithBuffer;
+
+        private GrowableBuffer<Progressive> _buffer;
 
         private bool _doNotSortResults;
 
@@ -57,12 +57,6 @@ namespace Corax.Querying.Matches
             _token = token;
 
             _context = context;
-
-            int bufferSize = 4 * Math.Min(Math.Max(Size.Kilobyte, (int)outer.Count), 16 * Size.Kilobyte);
-            _bufferHandler = _context.Allocate(bufferSize * sizeof(long), out var buffer);
-            _bufferSize = bufferSize;
-            _buffer = (long*)buffer.Ptr;
-            _bufferIdx = -1;
             _isAndWithBuffer = false;
         }
 
@@ -71,54 +65,33 @@ namespace Corax.Querying.Matches
         {
             if (_isAndWithBuffer)
                 throw new InvalidOperationException($"We cannot execute `{nameof(Fill)}` after initiating a `{nameof(AndWith)}` operation.");
-
             // Check if this is the second time we enter or not. 
-            if (_bufferIdx == -1)
-            {                
-                var bufferState = new Span<long>(_buffer, _bufferSize);
+            if (_buffer.IsInitialized == false)
+            {
+                _buffer = new GrowableBuffer<Progressive>();
                 int iterations = 0;
-
-                int count = 0;
-                while (true)
+                
+                _buffer.Init(_context, _outer.Count);
+                while (_outer.Fill(_buffer.GetSpace()) is var read)
                 {
-                    var read = _outer.Fill(bufferState);
                     if (read == 0)
-                        goto End;
-
-                    // We will use multiple rounds to get the whole buffer.
+                        break;
+                    
+                    _buffer.AddUsage(read);
                     iterations++;
-
-                    // We havent finished and probably we will need to expand the temporary buffer.
-                    int bufferUsedItems = count + read;
-                    if (bufferUsedItems > _bufferSize * 3 / 4)
-                    {
-                        _token.ThrowIfCancellationRequested();
-                        UnlikelyGrowBuffer(bufferUsedItems);
-                        bufferState = new Span<long>(_buffer, _bufferSize).Slice(count);
-                    }
-
-                    // Every time this is called we will store in a growable temporary buffer all the matches to be used in the AndNot later.
-                    bufferState = bufferState.Slice(read);
-                    count += read;
-                }                
-
-                End:
-
+                }
+                
                 // The problem is that multiple Fill calls do not ensure that we will get a sequence of ordered
                 // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
-                if (iterations > 1 && count > 1)
+                if (iterations > 1 && _buffer.Count > 1)
                 {
-                    // We need to sort and remove duplicates.
-                    var bufferBasePtr = _buffer;
-                    _token.ThrowIfCancellationRequested();
-                    count = Sorting.SortAndRemoveDuplicates(bufferBasePtr, count);
+                    var newCount = Sorting.SortAndRemoveDuplicates(_buffer.Results);
+                    _buffer.Truncate(newCount);
                 }
-
-                _bufferIdx = count;
             }
 
             // The outer is empty, so item in inner will be returned. 
-            if (_bufferIdx == 0)
+            if (_buffer.Count == 0)
                 return _inner.Fill(matches);
 
             // Now it is time to run the other part of the algorithm, which is getting the Inner data until we fill the buffer.
@@ -157,7 +130,7 @@ namespace Corax.Querying.Matches
                     return 0;
                 
                 // We have matches and therefore we need now to remove the ones found in the outer buffer.
-                Span<long> outerBuffer = new Span<long>(_buffer, _bufferIdx);
+                Span<long> outerBuffer = _buffer.Results;
                 Span<long> innerBuffer = matches.Slice(0, totalResults);
                 _token.ThrowIfCancellationRequested();
                 totalResults = MergeHelper.AndNot(innerBuffer, innerBuffer, outerBuffer);
@@ -171,138 +144,55 @@ namespace Corax.Querying.Matches
             }
         }
 
-        
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private void UnlikelyGrowBuffer(int currentlyUsed)
-        {
-            // Calculate the new size. 
-            int currentLength = _bufferSize;
-            int size;
-            if (currentLength > 16 * Size.Megabyte)
-            {
-                size = (int)(currentLength * 1.5);
-            }
-            else
-            {
-                size = currentLength * 2;
-            }
-
-            // Allocate the new buffer
-            var bufferHandler = _context.Allocate(size * sizeof(long), out var buffer);
-
-            // Ensure we copy the content and then switch the buffers. 
-            new Span<long>(_buffer, currentlyUsed).CopyTo(new Span<long>(buffer.Ptr, size));
-            _bufferHandler.Dispose();
-
-            _bufferSize = size;
-            _buffer = (long*)buffer.Ptr;
-            _bufferHandler = bufferHandler;
-        }
-
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private (IDisposable, ByteString) UnlikelyGrowBuffer(ByteString buffer, int currentlyUsed)
-        {
-            // Calculate the new size. 
-            int currentSizeInBytes = buffer.Length;
-            int sizeInBytes;
-            if (currentSizeInBytes > 16 * Size.Megabyte)
-            {
-                sizeInBytes = (int)(currentSizeInBytes * 1.5);
-            }
-            else
-            {
-                sizeInBytes = currentSizeInBytes * 2;
-            }
-
-            // Allocate the new buffer based on the size the original buffer had in bytes.
-            var newBufferHandler = _context.Allocate(sizeInBytes * sizeof(long), out var newBuffer);
-
-            // Ensure we copy the content and then switch the buffers. 
-            new Span<long>(buffer.Ptr, currentlyUsed).CopyTo(new Span<long>(newBuffer.Ptr, newBuffer.Length));
-
-            return (newBufferHandler, newBuffer);
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int AndWith(Span<long> buffer, int matches)
         {
             // This is not an AndWith memoized buffer, therefore we need to acquire a buffer to store the results
             // before continuing.   
-
             if (_isAndWithBuffer == false)
             {
                 _token.ThrowIfCancellationRequested();
-                int bufferSizeInItems = 4 * Math.Min(Math.Max(Size.Kilobyte, (int)_inner.Count), 16 * Size.Kilobyte);
-                IDisposable scope = _context.Allocate(bufferSizeInItems * sizeof(long), out ByteString currentMatchesBuffer);
-                var currentMatches = MemoryMarshal.Cast<byte, long>(currentMatchesBuffer.ToSpan());
-
-                int totalResults = 0;
+                var andWithBuffer = new GrowableBuffer<Progressive>();
+                andWithBuffer.Init(_context, Count);
 
                 // Now it is time to run the other part of the algorithm, which is getting the Inner data until we fill the buffer.
-                bool isDone = false;
-                while (isDone == false)
+                int iterations = 0;
+                while (Fill(andWithBuffer.GetSpace()) is var read)
                 {
-                    int iterations = 0;
-
-                    var resultsSpan = currentMatches;
-                    while (resultsSpan.Length > 0)
-                    {
-                        // RavenDB-17750: We have to fill everything possible UNTIL there are no more matches availables.
-                        var read = Fill(resultsSpan);
-                        if (read == 0)
-                        {
-                            isDone = true;
-                            break;
-                        }
-
-                        // We havent finished and probably we will need to expand the temporary buffer.
-                        int bufferUsedItems = totalResults + read;
-                        if (bufferUsedItems > bufferSizeInItems * 15 / 16)
-                        {     
-                            _token.ThrowIfCancellationRequested();
-                            (var newBufferHandler, currentMatchesBuffer) = UnlikelyGrowBuffer(currentMatchesBuffer, bufferUsedItems);
-                            scope.Dispose();
-                            scope = newBufferHandler;
-
-                            resultsSpan = MemoryMarshal.Cast<byte, long>(currentMatchesBuffer.ToSpan());
-                            bufferSizeInItems = resultsSpan.Length;
-                            resultsSpan = resultsSpan.Slice(totalResults);                            
-                        }
-
-                        totalResults += read;
-                        iterations++;
-
-                        resultsSpan = resultsSpan.Slice(read);
-                    }
-
-                    // Again multiple Fill calls do not ensure that we will get a sequence of ordered
-                    // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
-                    if (iterations > 1 && totalResults > 0)
-                    {
-                        // We need to sort and remove duplicates.
-                        var bufferBasePtr = (long*)currentMatchesBuffer.Ptr;
-                        _token.ThrowIfCancellationRequested();
-                        totalResults = Sorting.SortAndRemoveDuplicates(bufferBasePtr, totalResults);
-                    }
+                    if (read == 0)
+                        break;
+                    
+                    _token.ThrowIfCancellationRequested();
+                    andWithBuffer.AddUsage(read);
+                    iterations++;
                 }
 
+                // Again multiple Fill calls do not ensure that we will get a sequence of ordered
+                // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
+                if (iterations > 1 && andWithBuffer.Count > 0)
+                {
+                    // We need to sort and remove duplicates.
+                    _token.ThrowIfCancellationRequested();
+                    var newCount = Sorting.SortAndRemoveDuplicates(andWithBuffer.Results);
+                    andWithBuffer.Truncate(newCount);
+                }
+                
                 // Now we signal that this is now indeed an AndWith memoized buffer, no Fill allowed from now on.                
                 _isAndWithBuffer = true;
-                _bufferHandler.Dispose();
-                _bufferHandler = scope;
-                _buffer = (long*)currentMatchesBuffer.Ptr;
-                _bufferSize = currentMatchesBuffer.Size;
-                _bufferIdx = totalResults;                
+                _buffer.Dispose();
+                _buffer = andWithBuffer;
+                
+                //Since we evaluated whole query we exactly know how many items it returns.
+                _totalResults = _buffer.Count;
+                _confidence = QueryCountConfidence.High;
             }
 
-            // If we dont have any result, no need to do anything. And with nothing will mean that there is nothing.
-            if (_bufferSize == 0)
+            // If we don't have any result, no need to do anything. And with nothing will mean that there is nothing.
+            if (_buffer.Count == 0)
                 return 0;
 
             _token.ThrowIfCancellationRequested();
-            return MergeHelper.And(buffer, buffer.Slice(0, matches), new Span<long>(_buffer, _bufferIdx));
+            return MergeHelper.And(buffer, buffer.Slice(0, matches), _buffer.Results);
         }
 
 
@@ -327,7 +217,7 @@ namespace Corax.Querying.Matches
         string DebugView => Inspect().ToString();
 
 
-        public static AndNotMatch<TInner, TOuter> Create(Querying.IndexSearcher searcher, in TInner inner, in TOuter outer, in CancellationToken token)
+        public static AndNotMatch<TInner, TOuter> Create(IndexSearcher searcher, in TInner inner, in TOuter outer, in CancellationToken token)
         {
             // Estimate Confidence values.
             QueryCountConfidence confidence;

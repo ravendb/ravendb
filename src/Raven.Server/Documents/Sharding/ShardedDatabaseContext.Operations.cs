@@ -145,5 +145,16 @@ public partial class ShardedDatabaseContext
         }
 
         internal DatabaseChanges GetChanges(ShardedDatabaseIdentifier key) => _changes.GetOrAdd(key, k => new DatabaseChangesForShard(_context.ServerStore, _context.ShardExecutor.GetRequestExecutorAt(k.ShardNumber), ShardHelper.ToShardName(_context.DatabaseName, k.ShardNumber), onDispose: null, k.NodeTag));
+
+
+        public override void Dispose(ExceptionAggregator exceptionAggregator)
+        {
+            foreach (var changes in _changes)
+            {
+                changes.Value.Dispose();
+            }
+
+            base.Dispose(exceptionAggregator);
+        }
     }
 }

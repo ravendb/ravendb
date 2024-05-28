@@ -52,7 +52,7 @@ public class SpatialTests : StorageTest
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         var fieldsMapping = GetFieldsMapping(bsc);
         
-        using (var writer = new IndexWriter(Env, fieldsMapping))
+        using (var writer = new IndexWriter(Env, fieldsMapping, SupportedFeatures.All))
         {
             using (var entry = writer.Index(IdString))
             {
@@ -82,7 +82,7 @@ public class SpatialTests : StorageTest
             }
         }
 
-        using (var writer = new IndexWriter(Env, fieldsMapping))
+        using (var writer = new IndexWriter(Env, fieldsMapping, SupportedFeatures.All))
         {
             writer.TryDeleteEntry(IdString);
             writer.Commit();

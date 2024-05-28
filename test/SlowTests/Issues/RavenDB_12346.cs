@@ -31,7 +31,7 @@ namespace SlowTests.Issues
                     docQuery = q.ToDocumentQuery();
 
                     Assert.Equal(q.ToString(), docQuery.ToString());
-                    Assert.Equal("from 'Users' where Name = $p0 and search(Age, $p1)", docQuery.ToString());
+                    Assert.Equal("from 'Users' where (Name = $p0) and search(Age, $p1)", docQuery.ToString());
 
                     var e = Assert.Throws<InvalidOperationException>(() => q.ToAsyncDocumentQuery());
                     Assert.Equal("Cannot convert sync query to async document query.", e.Message);
@@ -43,7 +43,7 @@ namespace SlowTests.Issues
                     docQuery = q.ToDocumentQuery();
 
                     Assert.Equal(q.ToString(), docQuery.ToString());
-                    Assert.Equal("from 'Users' where Name = $p0 and search(Age, $p1) or Age > $p2", docQuery.ToString());
+                    Assert.Equal("from 'Users' where (Name = $p0) and search(Age, $p1) or Age > $p2", docQuery.ToString());
                 }
 
                 using (var asyncSession = store.OpenAsyncSession())
@@ -56,7 +56,7 @@ namespace SlowTests.Issues
                     docQuery = q.ToAsyncDocumentQuery();
 
                     Assert.Equal(q.ToString(), docQuery.ToString());
-                    Assert.Equal("from 'Users' where Name = $p0 and search(Age, $p1)", docQuery.ToString());
+                    Assert.Equal("from 'Users' where (Name = $p0) and search(Age, $p1)", docQuery.ToString());
 
                     var e = Assert.Throws<InvalidOperationException>(() => q.ToDocumentQuery());
                     Assert.Equal("Cannot convert async query to sync document query.", e.Message);
@@ -68,7 +68,7 @@ namespace SlowTests.Issues
                     docQuery = q.ToAsyncDocumentQuery();
 
                     Assert.Equal(q.ToString(), docQuery.ToString());
-                    Assert.Equal("from 'Users' where Name = $p0 and search(Age, $p1) or Age > $p2", docQuery.ToString());
+                    Assert.Equal("from 'Users' where (Name = $p0) and search(Age, $p1) or Age > $p2", docQuery.ToString());
                 }
             }
         }

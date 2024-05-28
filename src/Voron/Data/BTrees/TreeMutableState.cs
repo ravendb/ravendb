@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Voron.Global;
 using Voron.Impl;
@@ -8,35 +7,39 @@ namespace Voron.Data.BTrees
 {
     public sealed unsafe class TreeMutableState
     {
+        private TreeRootHeader _header;
+        private bool _stateIsModified;
+
+        public ref readonly TreeRootHeader Header => ref _header;
+
+        public bool IsModified => _stateIsModified;
+
         private readonly LowLevelTransaction _tx;
-
-        public RootObjectType RootObjectType;
-        public long RootPageNumber;
-        public TreeFlags Flags;
-
-        private bool _isModified;
-
-        public long BranchPages;
-        public long LeafPages;
-        public long OverflowPages;
-        public int Depth;
-        public long PageCount;
-        public long NumberOfEntries;
 
         public TreeMutableState(LowLevelTransaction tx)
         {
             _tx = tx;
         }
 
-        public bool IsModified
+        internal TreeMutableState(LowLevelTransaction tx, TreeMutableState state)
         {
-            get { return _isModified; }
-            set
-            {
-                if (_tx.Flags != TransactionFlags.ReadWrite)
-                    ThrowCanOnlyModifyInWriteTransaction();
-                _isModified = value;
-            }
+            _tx = tx;
+            _header = state._header;
+        }
+
+        internal TreeMutableState(LowLevelTransaction tx, in TreeRootHeader header)
+        {
+            _tx = tx;
+            _header = header;
+        }
+
+        internal ref TreeRootHeader Modify()
+        {
+            if (_tx.Flags != TransactionFlags.ReadWrite)
+                ThrowCanOnlyModifyInWriteTransaction();
+
+            _stateIsModified = true;
+            return ref _header;
         }
 
         [DoesNotReturn]
@@ -47,81 +50,26 @@ namespace Voron.Data.BTrees
 
         public void CopyTo(TreeRootHeader* header)
         {
-            header->RootObjectType = RootObjectType;
-            header->Flags = Flags;
-            header->BranchPages = BranchPages;
-            header->Depth = Depth;
-            header->LeafPages = LeafPages;
-            header->OverflowPages = OverflowPages;
-            header->PageCount = PageCount;
-            header->NumberOfEntries = NumberOfEntries;
-            header->RootPageNumber = RootPageNumber;
+            *header = _header;
+        }
+
+        public void CopyTo(ref TreeRootHeader header)
+        {
+            header = _header;
         }
 
         public TreeMutableState Clone()
         {
-            return new TreeMutableState(_tx)
-                {
-                    RootObjectType = RootObjectType,
-                    BranchPages = BranchPages,
-                    Depth = Depth,
-                    NumberOfEntries = NumberOfEntries,
-                    LeafPages = LeafPages,
-                    OverflowPages = OverflowPages,
-                    PageCount = PageCount,
-                    Flags = Flags,
-                    RootPageNumber = RootPageNumber,
-                };
-        }
-
-        public void RecordNewPage(TreePage p, int num)
-        {
-            PageCount += num;
-
-            if (p.IsBranch)
-            {
-                BranchPages++;
-            }
-            else if (p.IsLeaf)
-            {
-                LeafPages++;
-            }
-            else if (p.IsOverflow)
-            {
-                OverflowPages += num;
-            }
-        }
-
-        public void RecordFreedPage(TreePage p, int num)
-        {
-            PageCount -= num;
-            Debug.Assert(PageCount >= 0);
-
-            if (p.IsBranch)
-            {
-                BranchPages--;
-                Debug.Assert(BranchPages >= 0);
-            }
-            else if (p.IsLeaf)
-            {
-                LeafPages--;
-                Debug.Assert(LeafPages >= 0);
-            }
-            else if (p.IsOverflow)
-            {
-                OverflowPages -= num;
-                Debug.Assert(OverflowPages >= 0);
-            }
+            return new TreeMutableState(_tx, in _header);
         }
 
         public override string ToString()
         {
-            return string.Format(@" Pages: {1:#,#}, Entries: {2:#,#}
-    Depth: {0}, FixedTreeFlags: {3}
-    Root Page: {4}
-    Leafs: {5:#,#} Overflow: {6:#,#} Branches: {7:#,#}
-    Size: {8:F2} Mb", Depth, PageCount, NumberOfEntries, Flags, RootPageNumber, LeafPages, OverflowPages, BranchPages, 
-    ((float)(PageCount * Constants.Storage.PageSize) / (1024 * 1024)));
+            return $@" Pages: {_header.PageCount:#,#}, Entries: {_header.NumberOfEntries:#,#}
+    Depth: {_header.Depth}, FixedTreeFlags: {_header.Flags}
+    Root Page: {_header.RootPageNumber}
+    Leafs: {_header.LeafPages:#,#} Overflow: {_header.OverflowPages:#,#} Branches: {_header.BranchPages:#,#}
+    Size: {((float)(_header.PageCount * Constants.Storage.PageSize) / (1024 * 1024)):F2} Mb";
         }
     }
 }

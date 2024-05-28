@@ -230,14 +230,6 @@ interface operationIdDto {
     OperationId: number;
 }
 
-type availableConfigurationSectionId = "restore" | "encryption" | "replicationAndSharding" | "path";
-
-type restoreSource = "local" | "cloud" | "amazonS3" | "azure" | "googleCloud";
-
-interface restoreTypeAware {
-    Type: Raven.Client.Documents.Operations.Backups.RestoreType;
-}
-
 // Matching interface from Cloud Project 
 interface federatedCredentials extends Raven.Client.Documents.Operations.Backups.S3Settings, IBackupCredentials {
 }
@@ -254,15 +246,6 @@ type BackupStorageType = "S3" | "Azure";
 interface IBackupCredentials {
     BackupStorageType: BackupStorageType;
     Expires: string;
-}
-
-interface availableConfigurationSection {
-    name: string;
-    id: availableConfigurationSectionId;
-    alwaysEnabled: boolean;
-    disableToggle: KnockoutObservable<boolean>;
-    enabled: KnockoutObservable<boolean>;
-    validationGroup?: KnockoutValidationGroup;
 }
 
 interface storageReportDto {
@@ -545,8 +528,6 @@ type rqlQueryType = "Select" | "Update";
 type autoCompleteCompleter = (editor: AceAjax.Editor, session: AceAjax.IEditSession, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: autoCompleteWordList[]) => void) => void;
 type certificateMode = "generate" | "regenerate" | "upload" | "editExisting" | "replace";
 
-type dbCreationMode = "newDatabase" | "restore";
-
 interface unifiedCertificateDefinition extends Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition {
     Thumbprints: Array<string>;
     Visible: KnockoutObservable<boolean>;
@@ -788,12 +769,6 @@ type sinkScriptDefinitionCacheItem = {
 
 type addressType = "ipv4" | "ipv6" | "hostname" | "invalid";
 type timeMagnitude = "minutes" | "hours" | "days";
-
-interface RestorePointsGroup {
-    databaseName: string;
-    databaseNameTitle: string;
-    restorePoints: restorePoint[];
-}
 
 interface pullReplicationExportFileFormat {
     Database: string;

@@ -96,7 +96,7 @@ class editRabbitMqSinkTask extends viewModelBase {
 
     view = require("views/database/tasks/editRabbitMqSinkTask.html");
     connectionStringView = require("views/database/settings/connectionStringRabbitMq.html");
-    pinResponsibleNodeButtonsScriptView = require("views/partial/pinResponsibleNodeButtonsScript.html");
+    taskResponsibleNodeSectionView = require("views/partial/taskResponsibleNodeSection.html");
     pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
     patchDebugActionsLoadedView = require("views/database/patch/patchDebugActionsLoaded.html");

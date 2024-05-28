@@ -42,7 +42,7 @@ namespace SlowTests.Issues
                     session.Store(new User { Name = "Bar" });
                     var exception = Assert.Throws<RavenTimeoutException>(() => session.SaveChanges());
 
-                    Assert.Contains("total stale indexes: 1", exception.Message);
+                    Assert.Contains($"total stale indexes: 1 ({indexName})", exception.Message);
                 }
             }
         }

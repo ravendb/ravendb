@@ -176,7 +176,6 @@ namespace Raven.Server.Documents.Indexes
                             catch (OperationCanceledException e)
                             {
                                 AddToIndexesToDelete(index);
-
                                 _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
                                 return;
                             }
@@ -586,7 +585,7 @@ namespace Raven.Server.Documents.Indexes
             return didWork;
         }
 
-        private Index HandleStaticIndexChange(string name, IndexDefinition definition)
+        private Index HandleStaticIndexChange(string name, IndexDefinition definition, bool forceUpdate = false)
         {
             using (IndexLock(name))
             {
@@ -596,6 +595,9 @@ namespace Raven.Server.Documents.Indexes
 
                 if (currentIndex != null)
                     creationOptions = GetIndexCreationOptions(definition, currentIndex.ToIndexInformationHolder(), _documentDatabase.Configuration, out currentDifferences);
+
+                if (forceUpdate)
+                    creationOptions = IndexCreationOptions.Update;
 
                 var replacementIndexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
 
@@ -1051,6 +1053,7 @@ namespace Raven.Server.Documents.Indexes
             if (indexDef != null)
             {
                 differences = existingIndex.Definition.Compare(indexDef);
+                
                 if (indexDef.ClusterState?.LastStateIndex > (existingIndex.Definition.ClusterState?.LastStateIndex ?? -1))
                 {
                     differences |= IndexDefinitionCompareDifferences.State;
@@ -1157,13 +1160,19 @@ namespace Raven.Server.Documents.Indexes
             return true;
         }
 
-        public Index ResetIndex(string name)
+        public Index ResetIndex(string name, IndexResetMode indexResetMode = IndexResetMode.InPlace)
         {
             var index = GetIndex(name);
+            
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(name);
 
-            return ResetIndexInternal(index);
+            return indexResetMode switch
+            {
+                IndexResetMode.InPlace => ResetIndexInternal(index),
+                IndexResetMode.SideBySide => ResetIndexSideBySideInternal(index),
+                _ => throw new Exception($"Unknown {nameof(IndexResetMode)} parameter provided for index reset.")
+            };
         }
 
         public async Task DeleteIndex(string name, string raftRequestId)
@@ -1507,6 +1516,53 @@ namespace Raven.Server.Documents.Indexes
                 {
                     throw new IndexCreationException($"Failed to reset index: {index.Name}", e);
                 }
+            }
+        }
+
+        private Index ResetIndexSideBySideInternal(Index index)
+        {
+            if (index.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix))
+                throw new InvalidOperationException($"Index {index.Name} is already a side-by-side running index.");
+            
+            try
+            {
+                var definitionClone = new IndexDefinition();
+                var definition = index.GetIndexDefinition();
+                definition.CopyTo(definitionClone);
+
+                var sideBySideIndex = GetIndex(Constants.Documents.Indexing.SideBySideIndexNamePrefix + index.Name);
+
+                if (sideBySideIndex != null)
+                {
+                    using (IndexLock(sideBySideIndex.Name))
+                    {
+                        try
+                        {
+                            DeleteIndexInternal(sideBySideIndex);
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new IndexDeletionException($"Failed to delete index: {sideBySideIndex.Name} when resetting {index.Name} side by side.", ex);
+                        }
+                    }
+                }
+
+                sideBySideIndex = HandleStaticIndexChange(index.Name, definitionClone, forceUpdate: true);
+                
+                using (IndexLock(sideBySideIndex.Name))
+                {
+                    StartIndex(sideBySideIndex);
+                }
+
+                return sideBySideIndex;
+            }
+            catch (TimeoutException toe)
+            {
+                throw new IndexCreationException($"Failed to reset index side by side: {index.Name}.", toe);
+            }
+            catch (Exception e)
+            {
+                throw new IndexCreationException($"Failed to reset index side by side: {index.Name}.", e);
             }
         }
 

@@ -1,26 +1,22 @@
 ﻿import React, { useState } from "react";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
-import {
-    Button,
-    ButtonGroup,
-    DropdownItem,
-    DropdownMenu,
-    DropdownToggle,
-    Spinner,
-    UncontrolledDropdown,
-} from "reactstrap";
+import { Button, DropdownItem, DropdownMenu, DropdownToggle, Spinner, UncontrolledDropdown } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { Checkbox } from "components/common/Checkbox";
 import { SelectionActions } from "components/common/SelectionActions";
 import genUtils = require("common/generalUtils");
+import ResetIndexesButton from "components/pages/database/indexes/list/partials/ResetIndexesButton";
+import { IndexSharedInfo } from "components/models/indexes";
 
 interface IndexSelectActionProps {
     indexNames: string[];
     selectedIndexes: string[];
+    replacements: IndexSharedInfo[];
     deleteSelectedIndexes: () => Promise<void>;
     startSelectedIndexes: () => Promise<void>;
     disableSelectedIndexes: () => Promise<void>;
     pauseSelectedIndexes: () => Promise<void>;
+    resetSelectedIndexes: (mode?: Raven.Client.Documents.Indexes.IndexResetMode) => void;
     setLockModeSelectedIndexes: (lockMode: IndexLockMode) => Promise<void>;
     toggleSelectAll: () => void;
     onCancel: () => void;
@@ -30,10 +26,12 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
     const {
         indexNames,
         selectedIndexes,
+        replacements,
         deleteSelectedIndexes,
         startSelectedIndexes,
         disableSelectedIndexes,
         pauseSelectedIndexes,
+        resetSelectedIndexes,
         setLockModeSelectedIndexes,
         toggleSelectAll,
         onCancel,
@@ -43,6 +41,8 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
     // TODO: IDK I just wanted it to compile
 
     const selectionState = genUtils.getSelectionState(indexNames, selectedIndexes);
+
+    const isResetDropdownVisible = !replacements.some((x) => selectedIndexes.includes(x.name));
 
     return (
         <div className="position-relative">
@@ -63,7 +63,7 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                     <div className="lead text-nowrap">
                         <strong className="text-emphasis me-1">{selectedIndexes.length}</strong> selected
                     </div>
-                    <ButtonGroup className="gap-2 flex-wrap justify-content-center">
+                    <div className="hstack gap-2 flex-wrap justify-content-center">
                         <UncontrolledDropdown>
                             <DropdownToggle
                                 title="Set the indexing state for the selected indexes"
@@ -124,6 +124,13 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                                 </DropdownItem>
                             </DropdownMenu>
                         </UncontrolledDropdown>
+
+                        <ResetIndexesButton
+                            resetIndex={resetSelectedIndexes}
+                            isDropdownVisible={isResetDropdownVisible}
+                            isRounded
+                        />
+
                         <Button
                             color="danger"
                             disabled={selectedIndexes.length === 0}
@@ -133,7 +140,7 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                             <Icon icon="trash" />
                             <span>Delete</span>
                         </Button>
-                    </ButtonGroup>
+                    </div>
                     <Button onClick={onCancel} color="link">
                         Cancel
                     </Button>

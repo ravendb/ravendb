@@ -40,7 +40,7 @@ interface MergeCandidateIndexItem {
     lastIndexingTime?: Date;
 }
 
-interface MergeIndex {
+export interface MergeIndex {
     toMerge: MergeCandidateIndexItem[];
     mergedIndexDefinition: Raven.Client.Documents.Indexes.IndexDefinition;
 }
@@ -330,6 +330,8 @@ export default function useIndexCleanup() {
     };
 }
 
+export type UseIndexCleanupResult = ReturnType<typeof useIndexCleanup>;
+
 function getNewer(date1: string, date2: string) {
     if (!date1) {
         return date2;
@@ -385,3 +387,12 @@ function getIndexInfoForDelete(indexes: Raven.Client.Documents.Indexes.IndexStat
         indexesInfoForDelete,
     };
 }
+
+export const formatIndexCleanupDate = (date: Date) => {
+    return (
+        <>
+            {moment.utc(date).local().fromNow()}{" "}
+            <small className="text-muted">({moment.utc(date).format("MM/DD/YY, h:mma")})</small>
+        </>
+    );
+};

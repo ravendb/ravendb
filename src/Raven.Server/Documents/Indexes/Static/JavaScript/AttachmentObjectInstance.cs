@@ -120,6 +120,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             throw new NotSupportedException();
         }
 
+        [Obsolete("Will be removed")]
         protected override void AddProperty(JsValue property, PropertyDescriptor descriptor)
         {
             throw new NotSupportedException();

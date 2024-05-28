@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Handlers.Processors.Stats;
 using Raven.Server.Routing;
 
@@ -54,6 +55,13 @@ namespace Raven.Server.Documents.Handlers
         public async Task BytesMetrics()
         {
             using (var processor = new StatsHandlerProcessorForGetMetricsBytes(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenAction("/databases/*/admin/validate-unused-ids", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task ValidateUnusedIds()
+        {
+            using (var processor = new StatsHandlerProcessorForPostValidateUnusedIds(this))
                 await processor.ExecuteAsync();
         }
     }

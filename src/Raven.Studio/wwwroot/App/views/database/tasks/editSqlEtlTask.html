@@ -64,34 +64,11 @@
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle" data-placement="right" data-toggle="tooltip" data-bind="attr: { title: $root.db.isSharded() ? 'Not supported in sharded databases' : 'Toggle on to set a responsible node for the task'  }"
                                      data-animation="true">
-                                    <input id="responsibleNode" type="checkbox" data-bind="checked: manualChooseMentor, disable: $root.db.isSharded()">
+                                    <input id="responsibleNode" type="checkbox" data-bind="checked: manualChooseMentor, disable: $root.possibleMentors().length === 0 || $root.db.isSharded()">
                                     <label for="responsibleNode">Set responsible node</label>
                                 </div>
                             </div>
-                            <div data-bind="validationElement: mentorNode, collapse: manualChooseMentor"> 
-                                <div class="form-group" data-bind="css: { 'margin-bottom-xs': mentorNode() }">
-                                    <div>
-                                        <label class="control-label">Responsible Node</label>
-                                    </div>
-                                    <div class="flex-grow"> 
-                                        <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                                            <span data-bind="text: mentorNode() ? 'Node ' + mentorNode() : 'Select responsible node'"></span>
-                                            <span class="caret"></span>
-                                        </button>
-                                        <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
-                                            <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.mentorNode.bind($parent.mentorNode, $data)"></a></li>
-                                        </ul>
-                                        <span class="help-block" data-bind="validationMessage: mentorNode"></span>
-                                    </div>
-                                    <div data-bind="compose: $root.pinResponsibleNodeButtonsScriptView"></div>
-                                </div>
-                                <div data-bind="visible: mentorNode">
-                                    <div class="form-group small">
-                                        <label class="control-label">&nbsp;</label>
-                                        <div class="flex-grow" data-bind="compose: $root.pinResponsibleNodeTextScriptView"></div>
-                                    </div>
-                                </div>
-                            </div>
+                            <div data-bind="compose: $root.taskResponsibleNodeSectionView"></div>
                             <div class="form-group">
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle">

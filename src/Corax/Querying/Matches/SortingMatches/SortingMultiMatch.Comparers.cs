@@ -322,11 +322,6 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             }
 
             Sort.Run(buffer);
-
-            if (match._take >= 0 &&
-                buffer.Length > match._take)
-                buffer = buffer[..match._take];
-
             MaybeBreakTies(buffer, tieBreaker, isDescending);
 
             return ExtractIndexes(buffer, isDescending);

@@ -19,7 +19,7 @@ namespace Corax.Querying.Matches.TermProviders
         private CompactTree.Iterator<TLookupIterator> _iterator;
 
 
-        public ContainsTermProvider(Querying.IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey term)
+        public ContainsTermProvider(Querying.IndexSearcher searcher, CompactTree tree, in FieldMetadata field, CompactKey term)
         {
             _tree = tree;
             _searcher = searcher;

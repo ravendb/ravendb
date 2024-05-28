@@ -10,6 +10,7 @@ export type TextColor =
     | "warning"
     | "danger"
     | "muted"
+    | "emphasis"
     | "node"
     | "shard"
     | "orchestrator";
@@ -52,4 +53,17 @@ export type SortDirection = "asc" | "desc";
 
 export interface ClassNameProps {
     className?: string;
+}
+
+export interface RestorePoint {
+    dateTime?: string;
+    location?: string;
+    fileName?: string;
+    isSnapshotRestore?: boolean;
+    isIncremental?: boolean;
+    isEncrypted?: boolean;
+    filesToRestore?: number;
+    databaseName?: string;
+    nodeTag?: string;
+    backupType?: string;
 }

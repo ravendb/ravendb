@@ -27,6 +27,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Raven.Server.Routing;
 using Raven.Server.Smuggler.Migration;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
@@ -180,7 +181,6 @@ namespace SlowTests.Smuggler
 
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
                     var periodicBackupRunner = (await Databases.GetDocumentDatabaseInstanceFor(store2)).PeriodicBackupRunner;
                     var backups = periodicBackupRunner.PeriodicBackups;
 
@@ -419,7 +419,7 @@ namespace SlowTests.Smuggler
                                                        DatabaseRecordItemType.SqlEtls |
                                                        DatabaseRecordItemType.RavenConnectionStrings |
                                                        DatabaseRecordItemType.Analyzers
-                    }, database);
+                    }, database, AuthorizationStatus.DatabaseAdmin);
 
                     WaitForValue(() =>
                     {

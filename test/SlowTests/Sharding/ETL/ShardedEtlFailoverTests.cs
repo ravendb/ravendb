@@ -18,11 +18,13 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.ETL.Olap;
+using Sparrow.Json;
 using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
@@ -152,7 +154,7 @@ namespace SlowTests.Sharding.ETL
                     ex = e;
                 }
 
-                Assert.True(ex is NodeIsPassiveException, await AddDebugInfo(ex));
+                Assert.True(ex is NodeIsPassiveException, await AddDebugInfo(ex, originalTaskNode));
 
                 /*Assert.Throws<NodeIsPassiveException>(() =>
                 {
@@ -851,13 +853,16 @@ loadToOrders(partitionBy(key),
             Assert.True(files.Length > count);
         }
 
-        private async Task<string> AddDebugInfo(Exception ex)
+        private async Task<string> AddDebugInfo(Exception ex, RavenServer node)
         {
             var sb = new StringBuilder()
                 .AppendLine($"Failed. Expected NodeIsPassiveException but {(ex == null ? "none" : ex.GetType())} was thrown.")
                 .AppendLine("Cluster debug logs:");
-
             await GetClusterDebugLogsAsync(sb);
+
+            sb.AppendLine().AppendLine($"Debug logs for removed node '{node.ServerStore.NodeTag}':");
+            GetDebugLogsForNode(node, sb);
+
             return sb.ToString();
         }
 

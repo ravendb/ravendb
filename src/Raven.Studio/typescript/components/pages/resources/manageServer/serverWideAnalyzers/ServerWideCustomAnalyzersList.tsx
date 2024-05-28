@@ -1,44 +1,20 @@
-import { todo } from "common/developmentHelper";
-import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { EmptySet } from "components/common/EmptySet";
-import { Icon } from "components/common/Icon";
-import { LoadError } from "components/common/LoadError";
+import { CustomAnalyzer } from "components/common/customAnalyzers/useCustomAnalyzers";
+import { AsyncStateStatus } from "react-async-hook";
+import React from "react";
 import { LoadingView } from "components/common/LoadingView";
-import {
-    RichPanel,
-    RichPanelHeader,
-    RichPanelInfo,
-    RichPanelName,
-    RichPanelActions,
-} from "components/common/RichPanel";
-import DeleteCustomAnalyzerConfirm from "components/common/customAnalyzers/DeleteCustomAnalyzerConfirm";
-import { useAppUrls } from "components/hooks/useAppUrls";
-import { useServices } from "components/hooks/useServices";
-import React, { useState } from "react";
-import { AsyncStateStatus, useAsyncCallback } from "react-async-hook";
+import { LoadError } from "components/common/LoadError";
+import { EmptySet } from "components/common/EmptySet";
+import ServerWideCustomAnalyzersListItem from "components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzersListItem";
 
 interface ServerWideCustomAnalyzersListProps {
+    analyzers: CustomAnalyzer[];
     fetchStatus: AsyncStateStatus;
-    analyzers: Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition[];
     reload: () => void;
-    isReadOnly?: boolean;
+    remove: (idx: number) => void;
 }
 
-export default function ServerWideCustomAnalyzersList({
-    fetchStatus,
-    analyzers,
-    reload,
-    isReadOnly,
-}: ServerWideCustomAnalyzersListProps) {
-    const { manageServerService } = useServices();
-
-    const asyncDeleteAnalyzer = useAsyncCallback(manageServerService.deleteServerWideCustomAnalyzer, {
-        onSuccess: reload,
-    });
-
-    const [nameToConfirmDelete, setNameToConfirmDelete] = useState<string>(null);
-
-    const { appUrl } = useAppUrls();
+export default function ServerWideCustomAnalyzersList(props: ServerWideCustomAnalyzersListProps) {
+    const { analyzers, fetchStatus, reload, remove } = props;
 
     if (fetchStatus === "loading") {
         return <LoadingView />;
@@ -52,44 +28,7 @@ export default function ServerWideCustomAnalyzersList({
         return <EmptySet>No server-wide custom analyzers have been defined</EmptySet>;
     }
 
-    todo("Feature", "Damian", "Render react edit analyzer");
-
-    return (
-        <div>
-            {analyzers.map((analyzer) => (
-                <RichPanel key={analyzer.Name} className="mt-3">
-                    <RichPanelHeader>
-                        <RichPanelInfo>
-                            <RichPanelName>{analyzer.Name}</RichPanelName>
-                        </RichPanelInfo>
-                        {!isReadOnly && (
-                            <RichPanelActions>
-                                <a
-                                    href={appUrl.forEditServerWideCustomAnalyzer(analyzer.Name)}
-                                    className="btn btn-secondary"
-                                >
-                                    <Icon icon="edit" margin="m-0" />
-                                </a>
-
-                                {nameToConfirmDelete != null && (
-                                    <DeleteCustomAnalyzerConfirm
-                                        name={nameToConfirmDelete}
-                                        onConfirm={(name) => asyncDeleteAnalyzer.execute(name)}
-                                        toggle={() => setNameToConfirmDelete(null)}
-                                        isServerWide
-                                    />
-                                )}
-                                <ButtonWithSpinner
-                                    color="danger"
-                                    onClick={() => setNameToConfirmDelete(analyzer.Name)}
-                                    icon="trash"
-                                    isSpinning={asyncDeleteAnalyzer.status === "loading"}
-                                />
-                            </RichPanelActions>
-                        )}
-                    </RichPanelHeader>
-                </RichPanel>
-            ))}
-        </div>
-    );
+    return analyzers.map((analyzer, idx) => (
+        <ServerWideCustomAnalyzersListItem key={analyzer.id} initialAnalyzer={analyzer} remove={() => remove(idx)} />
+    ));
 }

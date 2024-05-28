@@ -35,10 +35,7 @@ internal abstract class AbstractAdminSortersHandlerProcessorForPut<TRequestHandl
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    var clientCert = RequestHandler.GetCurrentCertificate();
-
-                    var auditLog = LoggingSource.AuditLog.GetLogger(databaseName, "Audit");
-                    auditLog.Info($"Sorter {sorterDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {sorterToAdd}");
+                    RequestHandler.LogAuditFor(databaseName, $"Sorter {sorterDefinition.Name} PUT with definition: {sorterToAdd}");
                 }
 
                 sorterDefinition.Validate();

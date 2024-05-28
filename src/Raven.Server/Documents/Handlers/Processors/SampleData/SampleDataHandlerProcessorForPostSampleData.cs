@@ -1,7 +1,10 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -17,17 +20,16 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
 
         protected override async ValueTask ExecuteSmugglerAsync(JsonOperationContext context, Stream sampleDataStream, DatabaseItemType operateOnTypes)
         {
-            using (var source = new StreamSource(sampleDataStream, context, RequestHandler.DatabaseName))
+            var options = new DatabaseSmugglerOptionsServerSide(RequestHandler.GetAuthorizationStatusForSmuggler(RequestHandler.DatabaseName))
+            {
+                OperateOnTypes = operateOnTypes,
+                SkipRevisionCreation = true
+            };
+            using (var source = new StreamSource(sampleDataStream, context, RequestHandler.DatabaseName, options))
             {
                 var destination = RequestHandler.Database.Smuggler.CreateDestination();
 
-                var smuggler = RequestHandler.Database.Smuggler.Create(source, destination, context,
-                    options: new DatabaseSmugglerOptionsServerSide
-                    {
-                        OperateOnTypes = operateOnTypes,
-                        SkipRevisionCreation = true
-                    });
-
+                var smuggler = RequestHandler.Database.Smuggler.Create(source, destination, context, options);
                 await smuggler.ExecuteAsync();
             }
         }

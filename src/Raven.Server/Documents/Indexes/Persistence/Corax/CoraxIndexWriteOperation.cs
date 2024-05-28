@@ -21,6 +21,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexWriteOperation : IndexWriteOperationBase
     {
+        
         public const int MaximumPersistedCapacityOfCoraxWriter = 512;
         private readonly IndexWriter _indexWriter;
         private readonly CoraxDocumentConverterBase _converter;
@@ -42,7 +43,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _allocator = writeTransaction.Allocator;
             try
             {
-                _indexWriter =  new IndexWriter(writeTransaction, knownFields, phraseQuerySupport: index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.PhraseQuerySupportInCoraxIndexes);
+                _indexWriter =  new IndexWriter(writeTransaction, knownFields, new SupportedFeatures(
+                    isPhraseQuerySupported: index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.PhraseQuerySupportInCoraxIndexes,
+                    isStoreOnlySupported: index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.StoreOnlySupportInCoraxIndexes));
             }
             catch (Exception e) when (e.IsOutOfMemory())
             {

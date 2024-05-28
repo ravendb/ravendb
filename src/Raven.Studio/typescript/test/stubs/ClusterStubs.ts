@@ -2,6 +2,17 @@
 import ClusterTopologyChanged = Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged;
 
 export class ClusterStubs {
+    static clientVersion(): string {
+        return "6.0.4";
+    }
+    static serverVersion(): serverBuildVersionDto {
+        return {
+            BuildVersion: 60008,
+            ProductVersion: "6.0",
+            CommitHash: "5a7eae5",
+            FullVersion: "6.0.4",
+        };
+    }
     static singleNodeTopology(): clusterTopology {
         const dto = {
             NodeTag: "A",

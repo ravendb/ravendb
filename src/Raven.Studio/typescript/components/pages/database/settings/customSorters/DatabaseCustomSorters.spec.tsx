@@ -11,7 +11,7 @@ const selectors = {
     previewButtonClass: "icon-preview",
 };
 
-describe("ServerWideCustomSorters", () => {
+describe("DatabaseCustomSorters", () => {
     it("can render empty list", async () => {
         const { screen, waitForLoad } = rtlRender(<DatabaseCustomSortersStory isEmpty={true} />);
         await waitForLoad();

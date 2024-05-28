@@ -606,6 +606,12 @@ namespace Raven.Client.Documents.Indexes
         Rolling
     }
 
+    public enum IndexResetMode
+    {
+        InPlace,
+        SideBySide
+    }
+
     [Flags]
     public enum IndexDefinitionCompareDifferences
     {

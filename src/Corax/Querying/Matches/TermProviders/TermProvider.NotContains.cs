@@ -18,7 +18,7 @@ namespace Corax.Querying.Matches.TermProviders
 
         private CompactTree.Iterator<TLookupIterator> _iterator;
 
-        public NotContainsTermProvider(Querying.IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey term)
+        public NotContainsTermProvider(Querying.IndexSearcher searcher, CompactTree tree, in FieldMetadata field, CompactKey term)
         {
             _tree = tree;
             _searcher = searcher;

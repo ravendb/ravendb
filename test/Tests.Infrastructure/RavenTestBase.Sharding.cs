@@ -107,7 +107,7 @@ public partial class RavenTestBase
                 ReplicationFactor = shardReplicationFactor, // this ensures not to use the same path for the replicas
                 Server = leader
             };
-
+            options.AddToDescription($"{nameof(RavenDataAttribute.DatabaseMode)} = {nameof(RavenDatabaseMode.Sharded)}");
             return options;
         }
 
@@ -270,6 +270,12 @@ public partial class RavenTestBase
             }
         }
 
+        public async ValueTask<IAsyncEnumerable<ShardedDocumentDatabase>> GetShardsDocumentDatabaseInstancesForDocId(IDocumentStore store, string docId, List<RavenServer> servers = null)
+        {
+            var shardDatabaseName = await GetShardDatabaseNameForDocAsync(store, docId);
+            return GetShardsDocumentDatabaseInstancesFor(shardDatabaseName, servers);
+        }
+
         public IAsyncEnumerable<ShardedDocumentDatabase> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, List<RavenServer> servers = null)
         {
             return GetShardsDocumentDatabaseInstancesFor(store.Database, servers);
@@ -311,7 +317,7 @@ public partial class RavenTestBase
             return null;
         }
 
-        public async ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync(DocumentStore store, string database = null, DatabaseRecord record = null, List<RavenServer> servers = null)
+        public async ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync(IDocumentStore store, string database = null, DatabaseRecord record = null, List<RavenServer> servers = null)
         {
             var shardingConfiguration = record != null ? record.Sharding : await GetShardingConfigurationAsync(store, database);
             DatabaseStatistics combined = new DatabaseStatistics();

@@ -26,6 +26,7 @@ import ShardedBackupResult = Raven.Client.Documents.Operations.Backups.ShardedBa
 import ShardNodeSmugglerResult = Raven.Client.Documents.Smuggler.ShardNodeSmugglerResult;
 import ShardNodeBackupResult = Raven.Client.Documents.Operations.Backups.ShardNodeBackupResult;
 import BackupResult = Raven.Client.Documents.Operations.Backups.BackupResult;
+import { timeAwareEWMA } from "viewmodels/common/timeAwareEWMA";
 
 type smugglerListItemStatus = "processed" | "skipped" | "processing" | "pending" | "processedWithErrors";
 
@@ -38,13 +39,17 @@ type smugglerListItem = {
     erroredCount: string;
     hasSkippedCount: boolean;
     skippedCount: string;
-    processingSpeedText: string;
     isNested: boolean;
 }
 
 type uploadListItem = {
     name: string;
     uploadProgress: genericProgress;
+}
+
+interface ProcessingItem {
+    ewma: timeAwareEWMA;
+    lastItemsCount: number;
 }
 
 class smugglerDatabaseDetails extends abstractOperationDetails {
@@ -54,13 +59,11 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     private static sizeFormatter = generalUtils.formatBytesToSize;
 
     static extractingDataStageName = "Extracting data";
-    static ProcessingText = 'Processing';
 
     detailsVisible = ko.observable<boolean>(false);
     tail = ko.observable<boolean>(true);
 
-    itemsLastCount: dictionary<number> = {};
-    lastProcessingSpeedText = smugglerDatabaseDetails.ProcessingText;
+    processingItems: dictionary<ProcessingItem> = {};
 
     canDelay: KnockoutComputed<boolean>;
 
@@ -522,19 +525,31 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             }
         }
 
-        let processingSpeedText = smugglerDatabaseDetails.ProcessingText;
-
         const hasSkippedCount = "SkippedCount" in item;
         const skippedCount = hasSkippedCount ? (item as CountsWithSkippedCountAndLastEtag).SkippedCount : 0;
 
         if (smugglerDatabaseDetails.showSpeed(name) && item.StartTime) {
-            const itemsCount = item.ReadCount + skippedCount + item.ErroredCount;
+            
+            if (stage === "processed" && this.processingItems[name]) {
+                this.processingItems[name].ewma.reset();
+                this.processingItems[name] = null;
+            }
 
-            if (itemsCount === this.itemsLastCount[name]) {
-                processingSpeedText = this.lastProcessingSpeedText;
-            } else {
-                this.itemsLastCount[name] = itemsCount;
-                processingSpeedText = this.lastProcessingSpeedText = this.calcSpeedText(itemsCount, item.StartTime);
+            if (stage === "processing") {
+                const itemsCount = item.ReadCount + skippedCount + item.ErroredCount;
+
+                if (!this.processingItems[name]) {
+                    this.processingItems[name] = {
+                        // 2 seconds halfLife with average incoming data 1-3 seconds seems reasonable
+                        ewma: new timeAwareEWMA(2_000),
+                        lastItemsCount: 0
+                    }
+                }
+
+                const itemsDifference = itemsCount - this.processingItems[name].lastItemsCount;
+
+                this.processingItems[name].ewma.handleServerTick(itemsDifference);
+                this.processingItems[name].lastItemsCount = itemsCount;
             }
         }
 
@@ -547,19 +562,20 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             skippedCount: hasSkippedCount ? skippedCount.toLocaleString() : "-",
             hasErroredCount: true, // it will be reassigned in post-processing
             erroredCount: item.ErroredCount.toLocaleString(),
-            processingSpeedText: processingSpeedText,
             isNested: isNested
         };
     }
 
-    private static showSpeed(name: string) {
-        return name === "Documents" || name === "Revisions" || name === "Counters" || name === "TimeSeries";
+    getProcessingSpeed(name: string) {
+        if (!this.processingItems[name]) {
+            return null;
+        }
+
+        return this.processingItems[name].ewma.value();
     }
 
-    private calcSpeedText(count: number, startTime: string) {
-        const durationInSeconds = this.op.getElapsedSeconds(startTime);
-        const processingSpeed = abstractOperationDetails.calculateProcessingSpeed(durationInSeconds, count);
-        return processingSpeed ? `${processingSpeed.toLocaleString()} items/sec` : smugglerDatabaseDetails.ProcessingText;
+    private static showSpeed(name: string) {
+        return name === "Documents" || name === "Revisions" || name === "Counters" || name === "TimeSeries";
     }
 
     static supportsDetailsFor(notification: abstractNotification) {

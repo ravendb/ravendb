@@ -114,6 +114,7 @@
         "antlr4-c3": "^1.1.16",
         "antlr4ts": "^0.5.0-alpha.4",
         "assert": "^2.0.0",
+        "awesome-debounce-promise": "^2.1.0",
         "boostrap5": "npm:bootstrap@5.3.2",
         "bootstrap": "^3.4.1",
         "bootstrap-duration-picker": "^2.1.3",

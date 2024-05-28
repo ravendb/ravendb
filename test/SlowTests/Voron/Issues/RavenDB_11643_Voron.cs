@@ -33,7 +33,7 @@ namespace SlowTests.Voron.Issues
             {
                 var tree = tx.ReadTree("tree");
 
-                Assert.True(tree.State.Flags.HasFlag(TreeFlags.LeafsCompressed));
+                Assert.True(tree.State.Header.Flags.HasFlag(TreeFlags.LeafsCompressed));
 
                 for (int i = 0; i < 40_000; i++)
                 {
@@ -50,7 +50,7 @@ namespace SlowTests.Voron.Issues
             {
                 var tree = tx.ReadTree("tree");
 
-                Assert.True(tree.State.Flags.HasFlag(TreeFlags.LeafsCompressed));
+                Assert.True(tree.State.Header.Flags.HasFlag(TreeFlags.LeafsCompressed));
 
                 for (int i = 0; i < 40_000; i += 4)
                 {

@@ -26,7 +26,7 @@ namespace Corax.Querying.Matches.TermProviders
         private bool _includeLastTerm = true;
         private bool _isEmpty;
 
-        public TermNumericRangeProvider(Querying.IndexSearcher searcher, Lookup<TVal> set, FieldMetadata field, TVal low, TVal high)
+        public TermNumericRangeProvider(Querying.IndexSearcher searcher, Lookup<TVal> set, in FieldMetadata field, TVal low, TVal high)
         {
             _searcher = searcher;
             _field = field;

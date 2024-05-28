@@ -40,6 +40,8 @@ function IndexStatistics(props: { indexName: string }) {
     const showReducedPerSecondRate = index.details.some((x) => x && x.reducedPerSecondRate > 1);
     const showReduceErrors = index.details.some((x) => x && x.reduceErrors > 0);
 
+    const referencedCollections = index.sharedInfo.referencedCollections;
+
     const { reportEvent } = useEventsCollector();
 
     const showStaleReasons = (index: IndexItem, location: databaseLocationSpecifier) => {
@@ -199,6 +201,15 @@ function IndexStatistics(props: { indexName: string }) {
                     )}
                 </tbody>
             </Table>
+            {referencedCollections?.length > 0 && (
+                <div className="small">
+                    <span className="text-muted">
+                        <Icon icon="referenced-collections" title="Referenced collections" />
+                        Referenced collections:
+                    </span>{" "}
+                    <strong>{referencedCollections.join(", ")}</strong>
+                </div>
+            )}
         </React.Fragment>
     );
 }

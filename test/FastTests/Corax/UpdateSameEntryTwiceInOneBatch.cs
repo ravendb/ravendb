@@ -32,7 +32,7 @@ namespace FastTests.Corax
         public void ManyUpdateToTheSameEntry()
         {
             var fields = CreateKnownFields(_bsc);
-            using (var writer = new IndexWriter(Env, fields))
+            using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
             {
                 using (var builder = writer.Index("users/1"u8))
                 {
@@ -43,7 +43,7 @@ namespace FastTests.Corax
                 writer.Commit();
             }
 
-            using (var writer = new IndexWriter(Env, fields))
+            using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
             {
                 using (var builder = writer.Update("users/1"u8))
                 {
@@ -54,7 +54,7 @@ namespace FastTests.Corax
             }
             
             Dictionary<long, string> fieldNamesByRootPage;
-            using (var writer = new IndexWriter(Env, fields))
+            using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
             {
                 using (var builder = writer.Update("users/1"u8))
                 {
@@ -67,7 +67,7 @@ namespace FastTests.Corax
                 writer.Commit();
             }
             
-            using (var writer = new IndexWriter(Env, fields))
+            using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
             {
                 using (var builder = writer.Update("users/1"u8))
                 {
@@ -99,7 +99,7 @@ namespace FastTests.Corax
         public void CanWork()
         {
             var fields = CreateKnownFields(_bsc);
-            using (var writer = new IndexWriter(Env, fields))
+            using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
             {
                 using (var builder = writer.Index("users/1"u8))
                 {
@@ -110,7 +110,7 @@ namespace FastTests.Corax
                 writer.Commit();
             }
 
-            using (var writer = new IndexWriter(Env, fields))
+            using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
             {
                 {
                     using (var builder = writer.Update("users/1"u8))
@@ -146,7 +146,7 @@ namespace FastTests.Corax
         public void CanRemoveDocumentUpdatedTwiceInSameBatch()
         {
             var fields = CreateKnownFields(_bsc);
-            using (var writer = new IndexWriter(Env, fields))
+            using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
             {
                 using (var builder = writer.Index("users/1"u8))
                 {
@@ -157,7 +157,7 @@ namespace FastTests.Corax
                 writer.Commit();
             }
 
-            using (var writer = new IndexWriter(Env, fields))
+            using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
             {
                 {
                     using (var builder = writer.Update("users/1"u8))
@@ -194,7 +194,7 @@ namespace FastTests.Corax
         public void CanRemoveDocumentUpdatedTwiceInSameBatchNotByMainKey()
         {
             var fields = CreateKnownFields(_bsc);
-            using (var writer = new IndexWriter(Env, fields))
+            using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
             {
                 using (var builder = writer.Index("users/1"u8))
                 {
@@ -206,7 +206,7 @@ namespace FastTests.Corax
                 writer.Commit();
             }
 
-            using (var writer = new IndexWriter(Env, fields))
+            using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
             {
                 {
                     using (var builder = writer.Update("users/1"u8))
@@ -254,7 +254,7 @@ namespace FastTests.Corax
         public void InsertNewDocumentIntoTermWhileUpdatingAnotherDocumentWithTheSameTerm()
         {
             var fields = CreateKnownFields(_bsc);
-            using (var writer = new IndexWriter(Env, fields))
+            using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
             {
                 using (var builder = writer.Index("users/1"u8))
                 {
@@ -267,7 +267,7 @@ namespace FastTests.Corax
                 writer.Commit();
             }
 
-            using (var writer = new IndexWriter(Env, fields))
+            using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
             {
                
                 using (var builder = writer.Update("users/1"u8))
@@ -301,7 +301,7 @@ namespace FastTests.Corax
                 Assert.Contains("maciej", output);
             }
 
-            using (var writer = new IndexWriter(Env, fields))
+            using (var writer = new IndexWriter(Env, fields, SupportedFeatures.All))
             {
                 Assert.True(writer.TryDeleteEntry("users/1"u8));
                 Assert.True(writer.TryDeleteEntry("users/2"u8));

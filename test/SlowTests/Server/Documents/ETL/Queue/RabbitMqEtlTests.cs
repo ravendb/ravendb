@@ -453,23 +453,23 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                using (QueueEtl<QueueItem>.TestScript(
-                           new TestQueueEtlScript
-                           {
-                               DocumentId = "orders/1-A",
-                               Configuration = new QueueEtlConfiguration
-                               {
-                                   Name = "simulate",
-                                   ConnectionStringName = "simulate",
-                                   Queues = { new EtlQueue() { Name = "Orders" } },
-                                   BrokerType = QueueBrokerType.RabbitMq,
-                                   Transforms =
-                                   {
-                                       new Transformation
-                                       {
-                                           Collections = { "Orders" },
-                                           Name = "Orders",
-                                           Script = @"
+                var testResult = QueueEtl<QueueItem>.TestScript(
+                    new TestQueueEtlScript
+                    {
+                        DocumentId = "orders/1-A",
+                        Configuration = new QueueEtlConfiguration
+                        {
+                            Name = "simulate",
+                            ConnectionStringName = "simulate",
+                            Queues = { new EtlQueue() { Name = "Orders" } },
+                            BrokerType = QueueBrokerType.RabbitMq,
+                            Transforms =
+                            {
+                                new Transformation
+                                {
+                                    Collections = { "Orders" },
+                                    Name = "Orders",
+                                    Script = @"
 var orderData = {
     Id: id(this),
     OrderLinesCount: this.OrderLines.length,
@@ -490,25 +490,24 @@ loadToOrders(orderData, 'myRoutingKey', {
                                                      });
 
 output('test output')"
-                                       }
-                                   }
-                               }
-                           }, database, database.ServerStore, context, out var testResult))
-                {
-                    var result = (QueueEtlTestScriptResult)testResult;
+                                }
+                            }
+                        }
+                    }, database, database.ServerStore, context);
+                
+                var result = (QueueEtlTestScriptResult)testResult;
 
-                    Assert.Equal(0, result.TransformationErrors.Count);
+                Assert.Equal(0, result.TransformationErrors.Count);
 
-                    Assert.Equal(1, result.Summary.Count);
+                Assert.Equal(1, result.Summary.Count);
 
-                    Assert.Equal("Orders", result.Summary[0].QueueName);
-                    Assert.Equal("myRoutingKey", result.Summary[0].Messages[0].RoutingKey);
-                    Assert.Equal("orders/1-A", result.Summary[0].Messages[0].Attributes.Id);
-                    Assert.Equal("com.github.users", result.Summary[0].Messages[0].Attributes.Type);
-                    Assert.Equal("/registrations/direct-signup", result.Summary[0].Messages[0].Attributes.Source.ToString());
+                Assert.Equal("Orders", result.Summary[0].QueueName);
+                Assert.Equal("myRoutingKey", result.Summary[0].Messages[0].RoutingKey);
+                Assert.Equal("orders/1-A", result.Summary[0].Messages[0].Attributes.Id);
+                Assert.Equal("com.github.users", result.Summary[0].Messages[0].Attributes.Type);
+                Assert.Equal("/registrations/direct-signup", result.Summary[0].Messages[0].Attributes.Source.ToString());
 
-                    Assert.Equal("test output", result.DebugOutput[0]);
-                }
+                Assert.Equal("test output", result.DebugOutput[0]);
             }
         }
     }

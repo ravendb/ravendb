@@ -65,7 +65,7 @@ public partial class IndexSearcher
     
     public Lookup<DoubleLookupKey> GetDoubleTermsFor(Slice name) =>_fieldsTree?.LookupFor<DoubleLookupKey>(name);
 
-    public TermMatch TermQuery(FieldMetadata field, string term, CompactTree termsTree = null)
+    public TermMatch TermQuery(in FieldMetadata field, string term, CompactTree termsTree = null)
     {
         var terms = termsTree ?? _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null && term != null)
@@ -104,7 +104,7 @@ public partial class IndexSearcher
     }
     
     //Should be already analyzed...
-    public TermMatch TermQuery(FieldMetadata field, Slice term, CompactTree termsTree = null)
+    public TermMatch TermQuery(in FieldMetadata field, Slice term, CompactTree termsTree = null)
     {
         var terms = termsTree ?? _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null)
@@ -192,7 +192,7 @@ public partial class IndexSearcher
         return set;
     }
 
-    public long NumberOfDocumentsUnderSpecificTerm<TData>(FieldMetadata binding, TData term)
+    public long NumberOfDocumentsUnderSpecificTerm<TData>(in FieldMetadata binding, TData term)
     {
         if (typeof(TData) == typeof(long))
         {
@@ -208,7 +208,7 @@ public partial class IndexSearcher
         return NumberOfDocumentsUnderSpecificTerm(binding, (string)(object)term);
     }
     
-    private long NumberOfDocumentsUnderSpecificTerm(FieldMetadata binding, string term)
+    private long NumberOfDocumentsUnderSpecificTerm(in FieldMetadata binding, string term)
     {
         var terms = _fieldsTree?.CompactTreeFor(binding.FieldName);
         if (terms == null && term != null)

@@ -38,9 +38,24 @@ internal class BlittableJsonElasticSerializer : Serializer
         }
     }
 
-    public override Task SerializeAsync<T>(T data, Stream stream,
-        SerializationFormatting formatting = SerializationFormatting.None, CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException();
+    public override async Task SerializeAsync<T>(T data, Stream stream,
+        SerializationFormatting formatting = SerializationFormatting.None, CancellationToken cancellationToken = default)
+    {
+        if (_context is null)
+        {
+            throw new InvalidOperationException("Context cannot be null");
+        }
+        if (data is not BlittableJsonReaderObject json)
+        {
+            throw new NotSupportedException(
+                $"Blittable elastic serializer cannot serialize object of type '{data.GetType()}'. Object type needs to be '{typeof(BlittableJsonReaderObject)}'");
+        }
+
+        await using (var writer = new AsyncBlittableJsonTextWriter(_context, stream))
+        {
+            writer.WriteObject(json);
+        }
+    }
         
     public override object Deserialize(Type type, Stream stream) =>
         throw new NotSupportedException();

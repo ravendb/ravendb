@@ -1,0 +1,30 @@
+.qrcode {
+    position: relative;
+    display: inline-block;
+
+    &::before {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        -moz-transform: translateX(-50%) translateY(-50%);
+        -webkit-transform: translateX(-50%) translateY(-50%);
+        -o-transform: translateX(-50%) translateY(-50%);
+        -ms-transform: translateX(-50%) translateY(-50%);
+        transform: translateX(-50%) translateY(-50%);
+        content: "";
+        width: 25%;
+        height: 25%;
+        background-image: url(../img/qr_logo.png);
+        background-size: contain;
+    }
+
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+    img,
+    canvas {
+        padding: 10%;
+        background-color: white;
+    }
+}

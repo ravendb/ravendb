@@ -173,8 +173,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
                                session.Advanced.Exists(secondaryId) == false;
                     }
                 }, true, timeout);
-
-                Assert.True(etlReachedDestination, await Etl.GetEtlDebugInfo(src.Database, TimeSpan.FromMilliseconds(timeout), srcDbMode));
+                
+                Assert.True(etlReachedDestination, await AddDebugInfo(src, dest, srcDbMode, dstDbMode));
 
                 using (var session = dest.OpenSession())
                 {
@@ -187,6 +187,40 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     Assert.Null(item);
                 }
             }
+        }
+
+        private async Task<string> AddDebugInfo(IDocumentStore src, IDocumentStore dest, RavenDatabaseMode srcDbMode, RavenDatabaseMode destDbMode)
+        {
+            var etlDebugInfo = await Etl.GetEtlDebugInfo(src.Database, TimeSpan.FromMilliseconds(30_000), srcDbMode);
+            var sb = new StringBuilder().AppendLine(etlDebugInfo);
+
+            sb.AppendLine().AppendLine($"Database statistics for destination db '{dest.Database}':");
+
+            var stats = destDbMode switch
+            {
+                RavenDatabaseMode.Single => await dest.Maintenance.SendAsync(new GetStatisticsOperation()),
+                RavenDatabaseMode.Sharded => await Sharding.GetDatabaseStatisticsAsync(dest),
+                _ => throw new ArgumentOutOfRangeException(nameof(destDbMode), destDbMode, null)
+            };
+
+            sb.AppendLine(JsonConvert.SerializeObject(stats)).AppendLine();
+
+            using (var session = dest.OpenAsyncSession())
+            {
+                var ids = await session.Query<User>()
+                    .Select(u => u.Id)
+                    .ToListAsync();
+
+                if (ids.Count > 0)
+                {
+                    sb.AppendLine($"'User' documents in destination database '{dest.Database}': ")
+                        .Append('[')
+                        .Append(string.Join(',', ids))
+                        .Append(']');
+                }
+            }
+
+            return sb.ToString();
         }
 
         [RavenTheory(RavenTestCategory.Etl)]

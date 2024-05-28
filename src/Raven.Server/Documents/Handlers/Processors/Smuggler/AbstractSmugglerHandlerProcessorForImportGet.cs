@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.IO.Compression;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -34,7 +33,8 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportGet<TRequestHan
         }
 
         operationId ??= GetOperationId();
-        var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext);
+
+        var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext, RequestHandler.GetAuthorizationStatusForSmuggler(RequestHandler.DatabaseName));
         await using (var file = await GetImportStream())
         await using (var stream = await BackupUtils.GetDecompressionStreamAsync(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte)))
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())

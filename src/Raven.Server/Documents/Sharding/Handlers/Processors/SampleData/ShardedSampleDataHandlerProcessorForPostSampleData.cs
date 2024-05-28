@@ -1,9 +1,11 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents.Handlers.Processors.SampleData;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Collections;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -21,8 +23,13 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.SampleData
         {
             var operationId = RequestHandler.DatabaseContext.Operations.GetNextOperationId();
             var record = RequestHandler.DatabaseContext.DatabaseRecord;
-            
-            using (var source = new OrchestratorStreamSource(sampleDataStream, context, RequestHandler.DatabaseName, RequestHandler.DatabaseContext.ShardCount))
+            var options = new DatabaseSmugglerOptionsServerSide(RequestHandler.GetAuthorizationStatusForSmuggler(RequestHandler.DatabaseName))
+            {
+                OperateOnTypes = operateOnTypes,
+                SkipRevisionCreation = true
+            };
+
+            using (var source = new OrchestratorStreamSource(sampleDataStream, context, RequestHandler.DatabaseName, RequestHandler.DatabaseContext.ShardCount, options))
             {
                 var smuggler = new ShardedDatabaseSmuggler(
                     source,
@@ -30,11 +37,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.SampleData
                     context,
                     record,
                     RequestHandler.ServerStore,
-                    options: new DatabaseSmugglerOptionsServerSide
-                    {
-                        OperateOnTypes = operateOnTypes,
-                        SkipRevisionCreation = true
-                    },
+                    options,
                     result: null);
 
                 await smuggler.ExecuteAsync();

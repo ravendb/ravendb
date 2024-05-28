@@ -331,14 +331,14 @@ namespace FastTests
                     _ => throw new ArgumentOutOfRangeException(nameof(databaseMode), databaseMode, null)
                 };
 
-                var sb = new StringBuilder($"ETL did not finish in {timeout?.TotalSeconds ?? 30} seconds.");
+                var sb = new StringBuilder().AppendLine($"ETL did not finish in {timeout?.TotalSeconds ?? 30} seconds.");
 
                 foreach (var documentDatabase in databases)
                 {
                     var performanceStats = GetEtlPerformanceStatsForDatabase(documentDatabase);
                     if (performanceStats == null)
                         continue;
-                    sb.AppendLine($"database '{documentDatabase.Name}' stats : {performanceStats}");
+                    sb.AppendLine($"Database '{documentDatabase.Name}' ETL performance stats : {performanceStats}");
                 }
 
                 return sb.ToString();

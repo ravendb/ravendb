@@ -47,6 +47,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 InitialChangeVector = changeVectorValidationResult.InitialChangeVector,
                 SubscriptionName = options.Name,
                 SubscriptionId = id,
+                PinToMentorNode = options.PinToMentorNode,
                 Disabled = disabled ?? false
             });
 

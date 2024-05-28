@@ -75,14 +75,14 @@ namespace Raven.Server.Smuggler.Documents.Data
     
     public interface INewDocumentActions : INewItemActions, IAsyncDisposable
     {
-        Stream GetTempStream();
+        Task<Stream> GetTempStreamAsync();
     }
 
     public interface IIndexActions : IAsyncDisposable
     {
-        ValueTask WriteIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType);
+        ValueTask WriteAutoIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType, AuthorizationStatus authorizationStatus);
 
-        ValueTask WriteIndexAsync(IndexDefinition indexDefinition);
+        ValueTask WriteIndexAsync(IndexDefinition indexDefinition, AuthorizationStatus authorizationStatus);
     }
 
     public interface ICounterActions : INewDocumentActions

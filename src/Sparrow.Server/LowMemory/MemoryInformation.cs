@@ -180,7 +180,7 @@ namespace Sparrow.Server.LowMemory
             LowMemoryNotification.Instance.SimulateLowMemoryNotification();
 
             throw new EarlyOutOfMemoryException($"The amount of available memory to commit on the system is low. " +
-                                                MemoryUtils.GetExtendedMemoryInfo(memInfo), memInfo);
+                                                MemoryUtils.GetExtendedMemoryInfo(memInfo, GetDirtyMemoryState()), memInfo);
 
         }
 
@@ -424,7 +424,7 @@ namespace Sparrow.Server.LowMemory
             }
         }
 
-        public static long GetTotalScratchAllocatedMemory()
+        public static long GetTotalScratchAllocatedMemoryInBytes()
         {
             long totalScratchAllocated = 0;
             foreach (var scratchGetAllocated in DirtyMemoryObjects)
@@ -741,13 +741,13 @@ namespace Sparrow.Server.LowMemory
 
         internal static DirtyMemoryState GetDirtyMemoryState()
         {
-            var totalScratchMemory = GetTotalScratchAllocatedMemory();
+            var totalScratchMemory = new Size(GetTotalScratchAllocatedMemoryInBytes(), SizeUnit.Bytes);
 
             return new DirtyMemoryState
             {
-                IsHighDirty = totalScratchMemory > TotalPhysicalMemory.GetValue(SizeUnit.Bytes) *
-                              LowMemoryNotification.Instance.TemporaryDirtyMemoryAllowedPercentage,
-                TotalDirtyInBytes = totalScratchMemory
+                IsHighDirty = totalScratchMemory >
+                              TotalPhysicalMemory * LowMemoryNotification.Instance.TemporaryDirtyMemoryAllowedPercentage,
+                TotalDirty = totalScratchMemory
             };
         }
     }

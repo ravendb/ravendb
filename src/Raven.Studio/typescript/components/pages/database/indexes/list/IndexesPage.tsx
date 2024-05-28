@@ -8,7 +8,7 @@ import { Button, Col, Row, UncontrolledPopover } from "reactstrap";
 import { LoadingView } from "components/common/LoadingView";
 import { StickyHeader } from "components/common/StickyHeader";
 import { BulkIndexOperationConfirm } from "components/pages/database/indexes/list/BulkIndexOperationConfirm";
-import { ConfirmResetIndex } from "components/pages/database/indexes/list/ConfirmResetIndex";
+import { ConfirmResetIndexes } from "components/pages/database/indexes/list/ConfirmResetIndexes";
 import { getAllIndexes, useIndexesPage } from "components/pages/database/indexes/list/useIndexesPage";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { NoIndexes } from "components/pages/database/indexes/list/partials/NoIndexes";
@@ -81,6 +81,9 @@ export function IndexesPage(props: IndexesPageProps) {
     const startSelectedIndexes = () => startIndexes(getSelectedIndexes());
     const disableSelectedIndexes = () => disableIndexes(getSelectedIndexes());
     const pauseSelectedIndexes = () => pauseIndexes(getSelectedIndexes());
+    const resetSelectedIndexes = (mode?: Raven.Client.Documents.Indexes.IndexResetMode) => {
+        return resetIndexData.openConfirm(selectedIndexes, mode);
+    };
 
     const indexNames = getAllIndexes(groups, replacements).map((x) => x.name);
 
@@ -217,10 +220,12 @@ export function IndexesPage(props: IndexesPageProps) {
                         <IndexSelectActions
                             indexNames={indexNames}
                             selectedIndexes={selectedIndexes}
+                            replacements={replacements}
                             deleteSelectedIndexes={deleteSelectedIndexes}
                             startSelectedIndexes={startSelectedIndexes}
                             disableSelectedIndexes={disableSelectedIndexes}
                             pauseSelectedIndexes={pauseSelectedIndexes}
+                            resetSelectedIndexes={resetSelectedIndexes}
                             setLockModeSelectedIndexes={confirmSetLockModeSelectedIndexes}
                             toggleSelectAll={toggleSelectAll}
                             onCancel={onSelectCancel}
@@ -250,11 +255,11 @@ export function IndexesPage(props: IndexesPageProps) {
             {bulkOperationConfirm && (
                 <BulkIndexOperationConfirm {...bulkOperationConfirm} toggle={() => setBulkOperationConfirm(null)} />
             )}
-            {resetIndexData.indexName && (
-                <ConfirmResetIndex
-                    indexName={resetIndexData.indexName}
-                    toggle={() => resetIndexData.setIndexName(null)}
-                    onConfirm={(x) => resetIndexData.onConfirm(x)}
+            {resetIndexData.confirmData && (
+                <ConfirmResetIndexes
+                    {...resetIndexData.confirmData}
+                    closeConfirm={resetIndexData.closeConfirm}
+                    onConfirm={resetIndexData.onConfirm}
                     allActionContexts={allActionContexts}
                 />
             )}

@@ -4,8 +4,11 @@ import endpoints = require("endpoints");
 type VersionInfoDto = Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo;
 
 class getLatestVersionInfoCommand extends commandBase {
-    constructor(private refresh?: boolean) {
+    private readonly refresh?: boolean;
+
+    constructor(refresh?: boolean) {
         super();
+        this.refresh = refresh;
     }
  
     execute(): JQueryPromise<VersionInfoDto> {

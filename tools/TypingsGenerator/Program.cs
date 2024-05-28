@@ -326,6 +326,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexOptimizeResult));
             scripter.AddType(typeof(TestIndexParameters));
             scripter.AddType(typeof(TestIndexResult));
+            scripter.AddType(typeof(IndexResetMode));
 
             // cluster
             scripter.AddType(typeof(ClusterTopology));
@@ -665,6 +666,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(StudioConfiguration));
 
             scripter.AddType(typeof(StudioTasksHandler.StudioBootstrapConfiguration));
+            scripter.AddType(typeof(UpgradeInfoHandler.UpgradeInfoResponse));
 
             // custom sorters & analyzers
             scripter.AddType(typeof(SorterDefinition));

@@ -214,7 +214,7 @@ namespace Voron.Data.Tables
 
                         var dictionariesTree = tx.CreateTree(TableSchema.CompressionDictionariesSlice);
 
-                        var newId = (int)(dictionariesTree.State.NumberOfEntries + 1);
+                        var newId = (int)(dictionariesTree.State.Header.NumberOfEntries + 1);
 
                         using var compressionDictionary = new ZstdLib.CompressionDictionary(newId, dictionaryBuffer.Ptr, dictionaryBufferSpan.Length, 3);
 
@@ -314,11 +314,11 @@ namespace Voron.Data.Tables
                                 // ensuring that the last entry is the most recent.
                                 lastWritten = int.Parse(Path.GetFileNameWithoutExtension(zip.Entries[^1].Name));
 
-                            Debug.Assert(lastWritten <= dictionaries.State.NumberOfEntries,
+                            Debug.Assert(lastWritten <= dictionaries.State.Header.NumberOfEntries,
                                 message: "The number of last written entry in recovery file must be equal to or less than the total number of entries in the state. " +
                                          "Any deviation from this is a bug.");
 
-                            if (lastWritten == dictionaries.State.NumberOfEntries)
+                            if (lastWritten == dictionaries.State.Header.NumberOfEntries)
                                 continue;
 
                             AppendNewDictionaryEntries(lastWritten, zip);

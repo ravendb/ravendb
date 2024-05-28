@@ -1,6 +1,11 @@
 ﻿import React from "react";
-import { Meta } from "@storybook/react";
-import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
+import { Meta, StoryObj } from "@storybook/react";
+import {
+    withStorybookContexts,
+    withBootstrap5,
+    databaseAccessArgType,
+    withForceRerender,
+} from "test/storybookTestUtils";
 import DatabaseCustomAnalyzers from "./DatabaseCustomAnalyzers";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
@@ -9,77 +14,58 @@ import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 
 export default {
     title: "Pages/Database/Settings/Custom Analyzers",
-    component: DatabaseCustomAnalyzers,
-    decorators: [withStorybookContexts, withBootstrap5],
-} satisfies Meta<typeof DatabaseCustomAnalyzers>;
+    decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
+} satisfies Meta;
 
-const databaseName = "databaseName";
-
-function commonInit() {
-    const { accessManager, databases } = mockStore;
-    const { manageServerService, licenseService } = mockServices;
-
-    databases.withActiveDatabase_NonSharded_SingleNode((x) => {
-        x.name = databaseName;
-    });
-
-    accessManager.with_securityClearance("ValidUser");
-
-    licenseService.withLimitsUsage();
-    manageServerService.withServerWideCustomAnalyzers();
+interface DefaultDatabaseCustomAnalyzersProps {
+    isEmpty: boolean;
+    databaseAccess: databaseAccessLevel;
+    hasServerWideCustomAnalyzers: boolean;
+    maxNumberOfCustomAnalyzersPerDatabase: number;
+    maxNumberOfCustomAnalyzersPerCluster: number;
 }
 
-export function NoLimits() {
-    commonInit();
+export const DatabaseCustomAnalyzersStory: StoryObj<DefaultDatabaseCustomAnalyzersProps> = {
+    name: "Custom Analyzers",
+    render: (props: DefaultDatabaseCustomAnalyzersProps) => {
+        const { accessManager, license, databases } = mockStore;
+        const { databasesService, manageServerService } = mockServices;
 
-    const { accessManager, license } = mockStore;
-    const { databasesService } = mockServices;
+        const db = databases.withActiveDatabase_NonSharded_SingleNode();
 
-    accessManager.with_databaseAccess({
-        [databaseName]: "DatabaseAdmin",
-    });
+        accessManager.with_securityClearance("ValidUser");
+        accessManager.with_databaseAccess({
+            [db.name]: props.databaseAccess,
+        });
 
-    databasesService.withCustomAnalyzers([
-        ...DatabasesStubs.customAnalyzers(),
-        ManageServerStubs.serverWideCustomAnalyzers()[0],
-    ]);
+        manageServerService.withServerWideCustomAnalyzers(
+            props.isEmpty ? [] : ManageServerStubs.serverWideCustomAnalyzers()
+        );
 
-    license.with_License();
+        databasesService.withEssentialStats();
+        databasesService.withCustomAnalyzers(props.isEmpty ? [] : DatabasesStubs.customAnalyzers());
+        databasesService.withQueryResult();
 
-    return <DatabaseCustomAnalyzers />;
-}
+        license.with_LimitsUsage({
+            NumberOfAnalyzersInCluster: ManageServerStubs.serverWideCustomAnalyzers().length,
+        });
 
-export function BelowDatabaseAdmin() {
-    commonInit();
+        license.with_License({
+            HasServerWideAnalyzers: props.hasServerWideCustomAnalyzers,
+            MaxNumberOfCustomAnalyzersPerDatabase: props.maxNumberOfCustomAnalyzersPerDatabase,
+            MaxNumberOfCustomAnalyzersPerCluster: props.maxNumberOfCustomAnalyzersPerCluster,
+        });
 
-    const { accessManager, license } = mockStore;
-    const { databasesService } = mockServices;
-
-    accessManager.with_databaseAccess({
-        [databaseName]: "DatabaseRead",
-    });
-
-    databasesService.withCustomAnalyzers();
-
-    license.with_License();
-
-    return <DatabaseCustomAnalyzers />;
-}
-
-export function LicenseLimits() {
-    commonInit();
-
-    const { accessManager, license } = mockStore;
-    const { databasesService } = mockServices;
-
-    accessManager.with_databaseAccess({
-        [databaseName]: "DatabaseAdmin",
-    });
-
-    databasesService.withCustomAnalyzers();
-
-    license.with_LicenseLimited();
-    license.with_LimitsUsage();
-
-    return <DatabaseCustomAnalyzers />;
-}
+        return <DatabaseCustomAnalyzers />;
+    },
+    args: {
+        isEmpty: false,
+        databaseAccess: "DatabaseAdmin",
+        hasServerWideCustomAnalyzers: true,
+        maxNumberOfCustomAnalyzersPerDatabase: 3,
+        maxNumberOfCustomAnalyzersPerCluster: 10,
+    },
+    argTypes: {
+        databaseAccess: databaseAccessArgType,
+    },
+};

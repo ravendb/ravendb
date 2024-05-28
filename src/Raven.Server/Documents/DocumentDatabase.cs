@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
@@ -25,7 +26,6 @@ using Raven.Server.Dashboard;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers.Batches.Commands;
-using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
@@ -39,11 +39,9 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger;
-using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -74,7 +72,6 @@ using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
-using static Raven.Server.Smuggler.Documents.CounterItem;
 
 namespace Raven.Server.Documents
 {
@@ -116,6 +113,8 @@ namespace Raven.Server.Documents
         public DocumentsCompressionConfiguration DocumentsCompression => _documentsCompression;
         private DocumentsCompressionConfiguration _documentsCompression = new(compressRevisions: false, collections: Array.Empty<string>());
         private HashSet<string> _compressedCollections = new(StringComparer.OrdinalIgnoreCase);
+
+        internal Sparrow.Size _maxTransactionSize = new(16, SizeUnit.Megabytes);
 
         public void ResetIdleTime()
         {
@@ -177,7 +176,8 @@ namespace Raven.Server.Documents
                     configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
                 Operations = new DatabaseOperations(this);
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
-                RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
+                
+                RachisLogIndexNotifications = new DatabaseRaftIndexNotifications(_serverStore.Engine.StateMachine._rachisLogIndexNotifications, DatabaseShutdown);
                 CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, environmentPath, e, stacktrace) =>
                 {
                     serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId, environmentPath, stacktrace);
@@ -315,7 +315,7 @@ namespace Raven.Server.Documents
 
         public readonly DateTime StartTime;
 
-        public readonly RachisLogIndexNotifications RachisLogIndexNotifications;
+        public readonly DatabaseRaftIndexNotifications RachisLogIndexNotifications;
 
         public byte[] MasterKey { get; private set; }
 
@@ -452,7 +452,7 @@ namespace Raven.Server.Documents
                     try
                     {
                         await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange);
-                        RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                        RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
                     }
                     catch (Exception e)
                     {
@@ -525,7 +525,7 @@ namespace Raven.Server.Documents
         {
             if (changeType == DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted)
             {
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
                 return;
             }
 
@@ -661,7 +661,7 @@ namespace Raven.Server.Documents
                     var index = CompareExchangeStorage.GetLastCompareExchangeIndex(context);
 
                     if (RachisLogIndexNotifications.LastModifiedIndex != index)
-                        RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                        RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
                     return (0, 0);
                 }
 
@@ -769,10 +769,11 @@ namespace Raven.Server.Documents
                 var index = command.Index;
                 var options = mergedCommands.Options[index];
 
-                ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId, mergedCommands.ModifiedCollections);
 
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
                 ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
+
+                ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId, mergedCommands.ModifiedCollections);
 
                 _nextClusterCommand = command.PreviousCount + command.Commands.Count;
                 _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
@@ -1411,9 +1412,8 @@ namespace Raven.Server.Documents
                         using (DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                         {
                             var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource, compressionAlgorithm.ToExportCompressionAlgorithm(), compressionLevel);
-                            var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
+                            var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus.DatabaseAdmin)
                             {
-                                AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                                 OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities
                             };
 
@@ -1494,7 +1494,14 @@ namespace Raven.Server.Documents
 
         public Stream GetOutputStream(Stream fileStream)
         {
-            return MasterKey == null ? fileStream : new EncryptingXChaCha20Poly1305Stream(fileStream, MasterKey);
+            if (MasterKey == null)
+                return fileStream;
+           
+            var encryptingStream = new EncryptingXChaCha20Poly1305Stream(fileStream, MasterKey);
+            
+            encryptingStream.Initialize();
+
+            return encryptingStream;
         }
 
         /// <summary>
@@ -1511,7 +1518,7 @@ namespace Raven.Server.Documents
                     ThrowDatabaseShutdown();
 
                 await NotifyFeaturesAboutValueChangeAsync(index, type, changeState);
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
             }
             catch (Exception e)
             {
@@ -1572,7 +1579,7 @@ namespace Raven.Server.Documents
 
                 await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange);
 
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
             }
             catch (Exception e)
             {
@@ -2084,6 +2091,8 @@ namespace Raven.Server.Documents
 
             internal Action AfterSnapshotOfDocuments;
 
+            internal Action<DynamicJsonValue, WebSocket> OnNextMessageChangesApi;
+
             internal bool SkipDrainAllRequests = false;
 
             internal Action<string, string> DisposeLog;
@@ -2091,6 +2100,8 @@ namespace Raven.Server.Documents
             internal bool ForceSendTombstones = false;
 
             internal Action<PathSetting> ActionToCallOnGetTempPath;
+
+            internal AsyncManualResetEvent DelayQueryByPatch;
 
             internal bool EnableWritesToTheWrongShard = false;
 

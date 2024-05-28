@@ -268,7 +268,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 throw new ArgumentException($"JintPropertyAccessor.GetValue is expecting a target of type ObjectInstance but got one of type {target.GetType().Name}.");
             if (oi.HasOwnProperty(name) == false)
                 throw new MissingFieldException($"The target for 'JintPropertyAccessor.GetValue' doesn't contain the property {name}.");
-            return GetValue(oi.GetProperty(name).Value);
+            return GetValue(oi.GetOwnProperty(name).Value);
         }
 
         private static object GetValue(JsValue jsValue)

@@ -9,10 +9,12 @@ import AceEditor, { AceEditorProps } from "./AceEditor";
 import classNames from "classnames";
 import DurationPicker, { DurationPickerProps } from "./DurationPicker";
 import SelectCreatable from "./select/SelectCreatable";
-import { GetOptionValue, GroupBase, OnChangeValue, OptionsOrGroups } from "react-select";
-import Select, { SelectValue } from "./select/Select";
+import { GetOptionValue, GroupBase, InputActionMeta, OnChangeValue, OptionsOrGroups } from "react-select";
+import Select, { InputNotHidden, SelectValue } from "./select/Select";
 import DatePicker from "./DatePicker";
 import { Icon } from "components/common/Icon";
+import PathSelector, { PathSelectorProps } from "components/common/pathSelector/PathSelector";
+import { OmitIndexSignature } from "components/utils/common";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -25,10 +27,11 @@ interface AddonProps {
     addon?: ReactNode;
 }
 
-type FormInputProps = Omit<InputProps, "addon"> &
+type FormInputProps = Omit<OmitIndexSignature<InputProps>, "addon"> &
     AddonProps & {
         type: InputType;
         passwordPreview?: boolean;
+        rows?: number | string;
     };
 
 export interface FormCheckboxesOption<T extends string | number = string> {
@@ -70,6 +73,7 @@ export function FormCheckboxes<TFieldValues extends FieldValues, TName extends F
     const {
         field: { onChange, value: selectedValues },
         fieldState: { invalid, error },
+        formState,
     } = useController({
         name,
         control,
@@ -95,13 +99,12 @@ export function FormCheckboxes<TFieldValues extends FieldValues, TName extends F
                         className={checkboxClassName}
                         selected={selectedValues.includes(option.value)}
                         toggleSelection={(x) => toggleSelection(x.currentTarget.checked, option.value)}
+                        disabled={formState.isSubmitting}
                     >
                         {option.label}
                     </Checkbox>
                 ))}
-                {invalid && (
-                    <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
-                )}
+                {invalid && <FormValidationMessage>{error.message}</FormValidationMessage>}
             </div>
         </div>
     );
@@ -140,8 +143,8 @@ export function getFormSelectedOptions<Option>(
     const allOptions: Option[] = [...optionsFromGroups, ...basicOptions];
 
     return Array.isArray(formValues)
-        ? formValues.map((value) => allOptions.find((option) => valueAccessor(option) === value))
-        : allOptions.find((option) => valueAccessor(option) === formValues);
+        ? formValues.map((value) => allOptions.find((option) => _.isEqual(valueAccessor(option), value)))
+        : allOptions.find((option) => _.isEqual(valueAccessor(option), formValues));
 }
 
 export function FormSelect<
@@ -156,6 +159,7 @@ export function FormSelect<
     const {
         field: { onChange, value: formValues },
         fieldState: { invalid, error },
+        formState,
     } = useController({
         name,
         control,
@@ -169,22 +173,23 @@ export function FormSelect<
     const selectedOptions = getFormSelectedOptions<Option>(formValues, rest.options, valueAccessor);
 
     return (
-        <div className={classNames("position-relative flex-grow-1", className)}>
-            <div className="d-flex flex-grow-1">
-                <Select
-                    value={selectedOptions}
-                    onChange={(options: OnChangeValue<Option, IsMulti>) => {
-                        onChange(
-                            Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options)
-                        );
-                    }}
-                    {...rest}
-                />
+        <>
+            <div className={classNames("position-relative flex-grow-1", className)}>
+                <div className="d-flex flex-grow-1">
+                    <Select
+                        value={selectedOptions}
+                        onChange={(options: OnChangeValue<Option, IsMulti>) => {
+                            onChange(
+                                Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options)
+                            );
+                        }}
+                        isDisabled={formState.isSubmitting}
+                        {...rest}
+                    />
+                </div>
             </div>
-            {invalid && (
-                <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
-            )}
-        </div>
+            {invalid && <FormValidationMessage>{error.message}</FormValidationMessage>}
+        </>
     );
 }
 
@@ -206,6 +211,7 @@ export function FormSelectCreatable<
     const {
         field: { onChange, value: formValues },
         fieldState: { invalid, error },
+        formState,
     } = useController({
         name,
         control,
@@ -241,13 +247,50 @@ export function FormSelectCreatable<
                         );
                     }}
                     onCreateOption={onCreateOption}
+                    disabled={formState.isSubmitting}
                     {...rest}
                 />
             </div>
-            {invalid && (
-                <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
-            )}
+            {invalid && <FormValidationMessage>{error.message}</FormValidationMessage>}
         </div>
+    );
+}
+
+export function FormSelectAutocomplete<
+    Option,
+    IsMulti extends boolean = false,
+    Group extends GroupBase<Option> = GroupBase<Option>,
+    TFieldValues extends FieldValues = FieldValues,
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+>(
+    props: FormElementProps<TFieldValues, TName> &
+        ComponentProps<typeof SelectCreatable<Option, IsMulti, Group>> & {
+            customOptions?: OptionsOrGroups<Option, Group>;
+            optionCreator?: (value: string) => any;
+        }
+) {
+    const {
+        field: { onChange, value },
+    } = useController({
+        name: props.name,
+    });
+
+    const onInputChange = (value: string, action: InputActionMeta) => {
+        if (action?.action !== "input-blur" && action?.action !== "menu-close") {
+            onChange(value);
+        }
+    };
+
+    return (
+        <FormSelectCreatable<Option, IsMulti, Group, TFieldValues, TName>
+            inputValue={value}
+            onInputChange={onInputChange}
+            components={{ Input: InputNotHidden }}
+            tabSelectsValue
+            controlShouldRenderValue={false}
+            closeMenuOnSelect={false}
+            {...props}
+        />
     );
 }
 
@@ -259,6 +302,7 @@ export function FormRadioToggleWithIcon<TFieldValues extends FieldValues, TName 
     const {
         field: { onChange, value },
         fieldState: { error, invalid },
+        formState,
     } = useController({
         name,
         control,
@@ -270,11 +314,15 @@ export function FormRadioToggleWithIcon<TFieldValues extends FieldValues, TName 
     return (
         <div className="position-relative flex-grow-1">
             <div className="d-flex flex-grow-1">
-                <RadioToggleWithIcon name={name} selectedValue={value} setSelectedValue={onChange} {...rest} />
+                <RadioToggleWithIcon
+                    name={name}
+                    selectedValue={value}
+                    setSelectedValue={onChange}
+                    disabled={formState.isSubmitting}
+                    {...rest}
+                />
             </div>
-            {invalid && (
-                <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
-            )}
+            {invalid && <FormValidationMessage>{error.message}</FormValidationMessage>}
         </div>
     );
 }
@@ -308,6 +356,7 @@ export function FormDurationPicker<
     const {
         field: { onChange, value },
         fieldState: { error },
+        formState,
     } = useController({
         name,
         control,
@@ -319,9 +368,9 @@ export function FormDurationPicker<
     return (
         <div className="position-relative flex-grow-1">
             <div className="d-flex flex-grow-1">
-                <DurationPicker totalSeconds={value} onChange={onChange} {...rest} />
+                <DurationPicker totalSeconds={value} onChange={onChange} disabled={formState.isSubmitting} {...rest} />
             </div>
-            {error && <div className="position-absolute badge bg-danger rounded-pill">{error.message}</div>}
+            {error && <FormValidationMessage>{error.message}</FormValidationMessage>}
         </div>
     );
 }
@@ -335,6 +384,7 @@ export function FormDatePicker<
     const {
         field: { onChange, value },
         fieldState: { error, invalid },
+        formState,
     } = useController({
         name,
         control,
@@ -347,13 +397,17 @@ export function FormDatePicker<
         <div className="position-relative flex-grow-1">
             <div className="d-flex flex-grow-1">
                 <InputGroup>
-                    <DatePicker {...rest} selected={value} onChange={onChange} invalid={invalid} />
+                    <DatePicker
+                        selected={value}
+                        onChange={onChange}
+                        invalid={invalid}
+                        disabled={formState.isSubmitting}
+                        {...rest}
+                    />
                     {addon && <InputGroupText>{addon}</InputGroupText>}
                 </InputGroup>
             </div>
-            {error && (
-                <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
-            )}
+            {error && <FormValidationMessage>{error.message}</FormValidationMessage>}
         </div>
     );
 }
@@ -361,13 +415,14 @@ export function FormDatePicker<
 function FormInputGeneral<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
->(props: FormElementProps<TFieldValues, TName> & Omit<InputProps, "addon"> & AddonProps) {
+>(props: FormElementProps<TFieldValues, TName> & FormInputProps) {
     const { name, control, defaultValue, rules, shouldUnregister, children, type, addon, passwordPreview, ...rest } =
         props;
 
     const {
-        field: { onChange, onBlur, value },
+        field: { onChange, onBlur, value, ref },
         fieldState: { error, invalid },
+        formState,
     } = useController({
         name,
         control,
@@ -389,45 +444,46 @@ function FormInputGeneral<
     const actualInputType = showPassword ? "text" : type;
 
     return (
-        <div className="position-relative flex-grow-1">
-            <div className="d-flex flex-grow-1">
-                <InputGroup>
-                    <Input
-                        name={name}
-                        type={actualInputType}
-                        onBlur={onBlur}
-                        onChange={(x) => handleValueChange(x.currentTarget.value)}
-                        value={value == null ? "" : value}
-                        invalid={invalid}
-                        className={classNames(
-                            "position-relative d-flex flex-grow-1",
-                            passwordPreview ? "preview-password" : null
-                        )}
-                        {...rest}
-                    >
-                        {children}
-                    </Input>
-                    {addon && <InputGroupText>{addon}</InputGroupText>}
-                    {passwordPreview && (
-                        <Button
-                            color="link-muted"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className={classNames("btn-preview position-absolute end-0 h-100", invalid && "me-3")}
-                        >
-                            {showPassword ? (
-                                <Icon icon="preview-off" title="Hide password" margin="m-0" />
-                            ) : (
-                                <Icon icon="preview" title="Show password" margin="m-0" />
+        <>
+            <div className="position-relative flex-grow-1">
+                <div className="d-flex flex-grow-1">
+                    <InputGroup>
+                        <Input
+                            innerRef={ref}
+                            name={name}
+                            type={actualInputType}
+                            onBlur={onBlur}
+                            onChange={(x) => handleValueChange(x.currentTarget.value)}
+                            value={value == null ? "" : value}
+                            invalid={invalid}
+                            className={classNames(
+                                "position-relative d-flex flex-grow-1",
+                                passwordPreview ? "preview-password" : null
                             )}
-                        </Button>
-                    )}
-                </InputGroup>
+                            disabled={formState.isSubmitting}
+                            {...rest}
+                        >
+                            {children}
+                        </Input>
+                        {addon && <InputGroupText>{addon}</InputGroupText>}
+                        {passwordPreview && (
+                            <Button
+                                color="link-muted"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className={classNames("input-btn", invalid && "me-3")}
+                            >
+                                {showPassword ? (
+                                    <Icon icon="preview-off" title="Hide password" margin="m-0" />
+                                ) : (
+                                    <Icon icon="preview" title="Show password" margin="m-0" />
+                                )}
+                            </Button>
+                        )}
+                    </InputGroup>
+                </div>
             </div>
-
-            {error && (
-                <div className="position-absolute badge bg-danger rounded-pill margin-top-xxs">{error.message}</div>
-            )}
-        </div>
+            {error && <FormValidationMessage>{error.message}</FormValidationMessage>}
+        </>
     );
 }
 
@@ -438,7 +494,8 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
 
     const {
         field: { onChange, onBlur, value },
-        fieldState: { error, invalid },
+        fieldState: { invalid },
+        formState,
     } = useController({
         name,
         control,
@@ -471,10 +528,79 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
                     invalid={invalid}
                     onBlur={onBlur}
                     color="primary"
+                    disabled={formState.isSubmitting}
                     {...rest}
                 />
             </div>
-            {invalid && <div className="position-absolute badge bg-danger rounded-pill">{error.message}</div>}
+        </div>
+    );
+}
+
+export function FormPathSelector<
+    TFieldValues extends FieldValues = FieldValues,
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+    ParamsType extends unknown[] = unknown[],
+>(props: FormElementProps<TFieldValues, TName> & Omit<PathSelectorProps<ParamsType>, "handleSelect">) {
+    const {
+        name,
+        control,
+        defaultValue,
+        rules,
+        shouldUnregister,
+        selectorTitle,
+        placeholder,
+        getPaths,
+        getPathDependencies,
+        disabled,
+    } = props;
+
+    const {
+        field: { onChange, value: formValuePath },
+        formState,
+        fieldState: { invalid, error },
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    return (
+        <div className="position-relative flex-grow-1">
+            <div className="d-flex flex-grow-1">
+                <InputGroup>
+                    <Input
+                        name={name}
+                        type="text"
+                        onChange={(x) => onChange(x.currentTarget.value)}
+                        value={formValuePath == null ? "" : formValuePath}
+                        invalid={invalid}
+                        className="position-relative d-flex flex-grow-1"
+                        placeholder={placeholder || "Enter path"}
+                        disabled={disabled || formState.isSubmitting}
+                    />
+                    <PathSelector
+                        getPaths={getPaths}
+                        getPathDependencies={getPathDependencies}
+                        handleSelect={onChange}
+                        defaultPath={formValuePath}
+                        selectorTitle={selectorTitle}
+                        disabled={disabled || formState.isSubmitting}
+                        buttonClassName={classNames("input-btn", invalid && "me-3")}
+                    />
+                </InputGroup>
+            </div>
+            {error && <FormValidationMessage>{error.message}</FormValidationMessage>}
+        </div>
+    );
+}
+
+function FormValidationMessage(props: { children: string }) {
+    const { children } = props;
+    return (
+        <div className="validation-message text-start w-100 ">
+            <div className="badge bg-danger rounded-pill">{children}</div>
         </div>
     );
 }
