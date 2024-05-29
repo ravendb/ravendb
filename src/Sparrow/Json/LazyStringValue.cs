@@ -220,15 +220,11 @@ namespace Sparrow.Json
                     _lazyStringTempComparisonBuffer = new byte[Bits.PowerOf2(sizeInBytes)];
             }
 
-            fixed (char* pOther = other)
-            fixed (byte* pBuffer = _lazyStringTempComparisonBuffer)
-            {
-                var tmpSize = Encodings.Utf8.GetBytes(pOther, other.Length, pBuffer, _lazyStringTempComparisonBuffer.Length);
-                if (Size != tmpSize)
-                    return false;
+            var tmpSize = Encodings.Utf8.GetBytes(other.AsSpan(), _lazyStringTempComparisonBuffer);
+            if (Size != tmpSize)
+                return false;
 
-                return Memory.CompareInline(Buffer, pBuffer, tmpSize) == 0;
-            }
+            return Memory.CompareInline(new ReadOnlySpan<byte>(Buffer, tmpSize), _lazyStringTempComparisonBuffer.AsSpan(), tmpSize) == 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -256,12 +252,9 @@ namespace Sparrow.Json
             if (_lazyStringTempComparisonBuffer == null || _lazyStringTempComparisonBuffer.Length < other.Length)
                 _lazyStringTempComparisonBuffer = new byte[Bits.PowerOf2(sizeInBytes)];
 
-            fixed (char* pOther = other)
-            fixed (byte* pBuffer = _lazyStringTempComparisonBuffer)
-            {
-                var tmpSize = Encodings.Utf8.GetBytes(pOther, other.Length, pBuffer, sizeInBytes);
-                return Compare(pBuffer, tmpSize);
-            }
+            var otherSize = Encodings.Utf8.GetBytes(other.AsSpan(), _lazyStringTempComparisonBuffer);
+            var result = Memory.CompareInline(new ReadOnlySpan<byte>(Buffer, Length), _lazyStringTempComparisonBuffer, Math.Min(Size, otherSize));
+            return result == 0 ? Size - otherSize : result;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
