@@ -42,8 +42,8 @@ namespace Raven.Server.Documents
             await using (var gZipStream = new GZipStream(replayStream, CompressionMode.Decompress, leaveOpen: true))
             {
                 var peepingTomStream = new PeepingTomStream(gZipStream, context);
-                var state = new JsonParserState();
-                var parser = new UnmanagedJsonParser(context, state, "file");
+                using var _ = context.AcquireParserState(out var state);
+                using var parser = new UnmanagedJsonParser(context, state, "file");
 
                 var commandsProgress = 0L;
                 var readers = UnmanagedJsonParserHelper.ReadArrayToMemoryAsync(context, peepingTomStream, parser, state, buffer);

@@ -111,8 +111,9 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
 #pragma warning disable CA2012
                 var receiveAsync = webSocket.ReceiveAsync(segments[index].Memory.Memory, token.Token);
 #pragma warning restore CA2012
-                var jsonParserState = new JsonParserState();
-                using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
+                
+                using (context.AcquireParserState(out var state))
+                using (var parser = new UnmanagedJsonParser(context, state, debugTag))
                 {
                     connection.SendSupportedFeatures();
 
@@ -127,7 +128,7 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
 
                     while (true)
                     {
-                        using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState))
+                        using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, state))
                         {
                             parser.NewDocument();
                             builder.ReadObjectDocument();

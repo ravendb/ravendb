@@ -137,9 +137,8 @@ namespace Raven.Debug.LogTrafficWatch
                 {
                     string file = Path.Combine(_path, _logNameCreator.GetNewFileName());
 
-                    var state = new JsonParserState();
-
                     using (var context = JsonOperationContext.ShortTermSingleUse())
+                    using (context.AcquireParserState(out var state))
                     // Read
                     await using (var stream = new WebSocketStream(_client, _cancellationTokenSource.Token))
                     using (context.GetMemoryBuffer(out var buffer))

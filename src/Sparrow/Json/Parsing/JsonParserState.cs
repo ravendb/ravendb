@@ -15,7 +15,7 @@ namespace Sparrow.Json.Parsing
         public JsonParserToken CurrentTokenType;
         public JsonParserTokenContinuation Continuation;
 
-        public readonly FastList<int> EscapePositions = new FastList<int>();
+        public readonly FastList<int> EscapePositions = new();
        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteVariableSizeInt(ref byte* dest, int value)
