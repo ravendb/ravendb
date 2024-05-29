@@ -41,8 +41,7 @@ namespace Raven.Server.Documents.Commands.Replication
             await stream.CopyToAsync(memoryStream);
 
             memoryStream.Position = 0;
-            var state = new JsonParserState();
-
+            using (context.AcquireParserState(out var state))
             using (var parser = new UnmanagedJsonParser(context, state, "outgoing-failures/response"))
             using (context.GetMemoryBuffer(out var buffer))
             using (var peepingTomStream = new PeepingTomStream(memoryStream, context))

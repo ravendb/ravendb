@@ -72,10 +72,10 @@ public class BatchCommandStreamCopier : AbstractBatchCommandParsingObserver
         {
             stream.Position = 0;
 
-            var state = new JsonParserState();
             var batchRequestParser = new BatchRequestParser();
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            using (ctx.AcquireParserState(out var state))                
             using (var parser = new UnmanagedJsonParser(ctx, state, "copied-bulk-insert-command-validation"))
             using (ctx.GetMemoryBuffer(out var buffer))
             using (var modifier = new BlittableMetadataModifier(ctx))
