@@ -87,7 +87,12 @@ namespace Raven.Server.Documents.Revisions
 
         public Table EnsureRevisionTableCreated(Transaction tx, CollectionName collection)
         {
-            var revisionsSchema = _database.DocumentsCompression.CompressRevisions ?
+            return EnsureRevisionTableCreated(tx, collection, out _);
+        }
+
+        public Table EnsureRevisionTableCreated(Transaction tx, CollectionName collection, out TableSchema revisionsSchema)
+        {
+            revisionsSchema = _database.DocumentsCompression.CompressRevisions ?
                 CompressedRevisionsSchema :
                 RevisionsSchema;
 
@@ -1196,8 +1201,8 @@ namespace Raven.Server.Documents.Revisions
         public IEnumerable<Document> GetRevisionsInReverseEtagOrderForCollection(DocumentsOperationContext context, string collection, int skip, int take)
         {
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
-            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
-            return GetRevisionsInReverseEtagOrderInternal(context, table, index: RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], skip, take);
+            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName, out var revisionsSchema);
+            return GetRevisionsInReverseEtagOrderInternal(context, table, index: revisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], skip, take);
         }
 
         private IEnumerable<Document> GetRevisionsInReverseEtagOrderInternal(DocumentsOperationContext context, Table table, TableSchema.FixedSizeKeyIndexDef index, int skip, int take)
@@ -2681,8 +2686,12 @@ namespace Raven.Server.Documents.Revisions
 
         public string GetLastRevisionChangeVectorForCollection(DocumentsOperationContext context, string collection)
         {
-            var table = GetOrCreateTable(context.Transaction.InnerTransaction, new CollectionName(collection));
+            var table = GetExistingTable(context.Transaction.InnerTransaction, new CollectionName(collection));
+            if (table == null)
+                return null;
             var tvr = table.ReadLast(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice]);
+            if (tvr == null)
+                return null;
             return TableValueToChangeVector(context, (int)RevisionsTable.ChangeVector, ref tvr.Reader);
         }
 
@@ -2694,17 +2703,16 @@ namespace Raven.Server.Documents.Revisions
 
         public long GetNumberOfRevisionDocumentsForCollection(DocumentsOperationContext context, string collection)
         {
-            var table = GetOrCreateTable(context.Transaction.InnerTransaction, new CollectionName(collection));
+            var table = GetExistingTable(context.Transaction.InnerTransaction, new CollectionName(collection));
+            if (table == null)
+                return 0;
             return table.GetNumberOfEntriesFor(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice]);
         }
 
-        internal Table GetOrCreateTable(Transaction tx, CollectionName collection)
+        private Table GetExistingTable(Transaction tx, CollectionName collection)
         {
             string tableName = collection.GetTableName(CollectionTableType.Revisions);
-            var table = tx.OpenTable(RevisionsSchema, tableName);
-            if (table == null)
-                throw new InvalidOperationException($"Collection \"{collection}\" doesn't exist");
-            return table;
+            return tx.OpenTable(RevisionsSchema, tableName);
         }
     }
 }
