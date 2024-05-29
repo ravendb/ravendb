@@ -3,18 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions.Sharding;
-using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
-using Voron.Global;
 using Voron.Impl;
 using static Raven.Server.Documents.Schemas.Attachments;
 using static Raven.Server.Documents.Schemas.Conflicts;
@@ -537,8 +534,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
             }
 
             if (type == DocumentChangeTypes.Delete &&
-                config.BucketMigrations.TryGetValue(bucket, out var migration) &&
-                migration.Status == MigrationStatus.OwnershipTransferred)
+                documentFlags.Contain(DocumentFlags.Artificial | DocumentFlags.FromResharding))
             {
                 // RavenDB-22200
                 // we allow deletion of documents from the wrong shard in case there are leftover

@@ -270,6 +270,8 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
         }
     }
 
+    private string ReshardingFailureNotificationKey => $"{Name}/ReshardingFailure";
+
     private void RaiseNotificationOnDeleteBucketFailure(int bucket, Exception exception)
     {
         var msg = $"An error occurred while attempting to clean up bucket '{bucket}' from source shard '{ShardNumber}' [{Name}].";
@@ -284,10 +286,14 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
             AlertType.ClusterTransactionFailure,
             NotificationSeverity.Error,
             details: new ExceptionDetails(exception),
-            key: $"{Name}/ReshardingFailure"));
+            key: ReshardingFailureNotificationKey));
     }
 
-    private void DismissNotificationOnDeleteBucketSuccessIfNeeded() => ServerStore.NotificationCenter.Dismiss($"AlertRaised/ClusterTransactionFailure/{Name}/ReshardingFailure", sendNotificationEvenIfDoesntExist: false);
+    private void DismissNotificationOnDeleteBucketSuccessIfNeeded()
+    {
+        var id = AlertRaised.GetKey(AlertType.ClusterTransactionFailure, ReshardingFailureNotificationKey);
+        ServerStore.NotificationCenter.Dismiss(id, sendNotificationEvenIfDoesntExist: false);
+    } 
 
     private async Task WaitForOrchestratorConfirmationAsync(long confirmationIndex)
     {
