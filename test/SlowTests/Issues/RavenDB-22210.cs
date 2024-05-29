@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using FastTests;
 using Raven.Server.Config.Categories;
 using Raven.Server.Utils;
@@ -148,10 +150,39 @@ public class RavenDB_22210 : RavenTestBase
 
     private static void PopulateCaStore(params X509Certificate2[] certificates)
     {
+        const int maxRetries = 3;
+        foreach (var certificate in certificates)
+        {
+            var retries = 0;
+            while (IsCACertificateInStore(certificate) == false)
+            {
+                if (retries >= maxRetries)
+                    throw new InvalidOperationException($"Failed to add certificate {certificate.Subject} to the certificate authority store");
+
+                using (var store = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser))
+                {
+                    store.Open(OpenFlags.ReadWrite);
+                    store.Add(certificate);
+                }
+
+                Thread.Sleep(13);
+
+                retries++;
+            }
+        }
+    }
+
+    private static bool IsCACertificateInStore(X509Certificate2 certificate)
+    {
         using (var store = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser))
         {
-            store.Open(OpenFlags.ReadWrite);
-            store.AddRange(new X509Certificate2Collection(certificates));
+            store.Open(OpenFlags.ReadOnly);
+            var certCollection = store.Certificates.Find(
+                X509FindType.FindByThumbprint,
+                certificate.Thumbprint,
+                false);
+
+            return certCollection.Count > 0;
         }
     }
 
