@@ -14,10 +14,17 @@ public class GrowableBufferTests : NoDisposalNoOutputNeeded
     {
     }
 
-    [RavenTheory(RavenTestCategory.Corax)]
+    [RavenMultiplatformTheory(RavenTestCategory.Corax, RavenArchitecture.All)]
     [InlineData(4 * Sparrow.Global.Constants.Size.Megabyte)]
+    [InlineData(8 * Sparrow.Global.Constants.Size.Megabyte)]
+    public void CanExtendAndNotLooseAnything(int size) => CanExtendAndNotLooseAnythingBase(size);
+    
+    [RavenMultiplatformTheory(RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     [InlineData(16 * Sparrow.Global.Constants.Size.Megabyte)]
-    public void CanExtendAndNotLooseAnything(int size)
+    [InlineData(32 * Sparrow.Global.Constants.Size.Megabyte)]
+    public void CanExtendAndNotLooseAnythingExtended(int size) => CanExtendAndNotLooseAnythingBase(size);
+    
+    private void CanExtendAndNotLooseAnythingBase(int size)
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using var growableBuffer = new GrowableBuffer<Progressive>();
