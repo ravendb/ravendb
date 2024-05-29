@@ -31,8 +31,6 @@ namespace SlowTests.Sharding.Issues
         {
             using (var store = Sharding.GetDocumentStore())
             {
-                var orchestrator = Sharding.GetOrchestrator(store.Database);
-
                 await using (var stream = typeof(RavenDB_10404).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_22200.OneDamagedBucket.ravendbdump"))
                 {
                     var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream, CancellationToken.None);
@@ -47,7 +45,7 @@ namespace SlowTests.Sharding.Issues
                 }
 
                 var notificationsQueue = new AsyncQueue<DynamicJsonValue>();
-                using (orchestrator.NotificationCenter.TrackActions(notificationsQueue, null))
+                using (Server.ServerStore.NotificationCenter.TrackActions(notificationsQueue, null))
                 {
                     var databaseRecord = store.Maintenance.ForDatabase(store.Database).Server.Send(new GetDatabaseRecordOperation(store.Database));
                     var db1 = await GetDocumentDatabaseInstanceForAsync(store, RavenDatabaseMode.Sharded, docId);
@@ -62,7 +60,7 @@ namespace SlowTests.Sharding.Issues
 
                     // resharding of 10 buckets
                     await store.Maintenance.SendAsync(new StartManualReshardingOperation(fromBucket, fromBucket + 10, toShard: toShard));
-
+                
                     Tuple<bool, DynamicJsonValue> alertRaised = null;
                     await AssertWaitForValueAsync(async () =>
                     {
