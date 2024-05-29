@@ -963,7 +963,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private async IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> InternalGetCompareExchangeValuesAsync()
         {
-            var state = new JsonParserState();
+            using (_context.AcquireParserState(out var state))
             using (var parser = new UnmanagedJsonParser(_context, state, "Import/CompareExchange"))
             using (var builder = new BlittableJsonDocumentBuilder(_context,
                 Mode, "Import/CompareExchange", parser, state))

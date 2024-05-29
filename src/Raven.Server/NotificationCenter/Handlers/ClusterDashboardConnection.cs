@@ -73,8 +73,8 @@ namespace Raven.Server.NotificationCenter.Handlers
 #pragma warning disable CA2012
                     var receiveAsync = _webSocket.ReceiveAsync(segments[index].Memory.Memory, _resourceShutdown);
 #pragma warning restore CA2012
-                    var jsonParserState = new JsonParserState();
-                    using (var parser = new UnmanagedJsonParser(_readContext, jsonParserState, "cluster-dashboard"))
+                    using (_readContext.AcquireParserState(out var state))
+                    using (var parser = new UnmanagedJsonParser(_readContext, state, "cluster-dashboard"))
                     {
                         var result = await receiveAsync;
                         _resourceShutdown.ThrowIfCancellationRequested();
@@ -88,7 +88,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                         while (true)
                         {
                             using (var builder = new BlittableJsonDocumentBuilder(_readContext, BlittableJsonDocumentBuilder.UsageMode.None, 
-                                "cluster-dashboard", parser, jsonParserState))
+                                "cluster-dashboard", parser, state))
                             {
                                 parser.NewDocument();
                                 builder.ReadObjectDocument();

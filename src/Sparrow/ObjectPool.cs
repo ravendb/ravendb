@@ -360,7 +360,7 @@ namespace Sparrow
         }
     }
 
-    internal struct ObjectPoolContext<T, TR> : IDisposable 
+    internal readonly struct ObjectPoolContext<T, TR> : IDisposable 
         where T : class
         where TR : struct, IResetSupport<T>
     {

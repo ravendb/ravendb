@@ -102,7 +102,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
 
     public async Task BuildCommandsAsync(JsonOperationContext context, Stream stream, char separator, CancellationToken token)
     {
-        var state = new JsonParserState();
+        using (context.AcquireParserState(out var state))
         using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
         using (var parser = new UnmanagedJsonParser(context, state, "bulk_docs"))
         /* In case we have a conflict between attachment with the same name we need attachment information from metadata */
