@@ -32,7 +32,11 @@ export const licenseSlice = createSlice({
 
             // 0 in MaxClusterSize means Infinity, in other fields null means Infinity
             // for consistency we convert 0 to null
-            if ("MaxClusterSize" in store.status.Attributes && store.status.Attributes.MaxClusterSize === 0) {
+            if (
+                store.status?.Attributes &&
+                "MaxClusterSize" in store.status.Attributes &&
+                store.status.Attributes.MaxClusterSize === 0
+            ) {
                 store.status.Attributes.MaxClusterSize = null;
                 store.status.MaxClusterSize = null;
             }
