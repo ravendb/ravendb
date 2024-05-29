@@ -39,46 +39,48 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
 
     protected override Task WriteItemsAsync(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer)
     {
-        var revisions = string.IsNullOrEmpty(Collection)
-            ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsInReverseEtagOrder(context, _start, _pageSize)
-            : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsInReverseEtagOrderForCollection(context, Collection, _start, _pageSize);
-
         writer.WriteStartArray();
 
-        var first = true;
-        foreach (var revision in revisions)
+        if (_totalResults > 0)
         {
-            if (first)
-                first = false;
-            else
+            var revisions = string.IsNullOrEmpty(Collection)
+                ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsInReverseEtagOrder(context, _start, _pageSize)
+                : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsInReverseEtagOrderForCollection(context, Collection, _start, _pageSize);
+
+            var first = true;
+            foreach (var revision in revisions)
+            {
+                if (first)
+                    first = false;
+                else
+                    writer.WriteComma();
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(Document.Id));
+                writer.WriteString(revision.Id);
                 writer.WriteComma();
 
-            writer.WriteStartObject();
+                writer.WritePropertyName(nameof(Document.Etag));
+                writer.WriteInteger(revision.Etag);
+                writer.WriteComma();
 
-            writer.WritePropertyName(nameof(Document.Id));
-            writer.WriteString(revision.Id);
-            writer.WriteComma();
+                writer.WritePropertyName(nameof(Document.LastModified));
+                writer.WriteDateTime(revision.LastModified, true);
+                writer.WriteComma();
 
-            writer.WritePropertyName(nameof(Document.Etag));
-            writer.WriteInteger(revision.Etag);
-            writer.WriteComma();
+                writer.WritePropertyName(nameof(Document.ChangeVector));
+                writer.WriteString(revision.ChangeVector);
+                writer.WriteComma();
 
-            writer.WritePropertyName(nameof(Document.LastModified));
-            writer.WriteDateTime(revision.LastModified, true);
-            writer.WriteComma();
+                writer.WritePropertyName(nameof(Document.Flags));
+                writer.WriteString(revision.Flags.ToString());
 
-            writer.WritePropertyName(nameof(Document.ChangeVector));
-            writer.WriteString(revision.ChangeVector);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(Document.Flags));
-            writer.WriteString(revision.Flags.ToString());
-
-            writer.WriteEndObject();
+                writer.WriteEndObject();
+            }
         }
 
         writer.WriteEndArray();
-
         return Task.CompletedTask;
     }
 
