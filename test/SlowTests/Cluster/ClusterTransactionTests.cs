@@ -24,10 +24,12 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -43,17 +45,17 @@ namespace SlowTests.Cluster
 
         protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]string caller = null)
         {
-            if (options == null)
-            {
-                options = new ServerCreationOptions();
-            }
+            options ??= new ServerCreationOptions();
+            options.CustomSettings ??= new Dictionary<string, string>();
 
-            if (options.CustomSettings == null)
-                options.CustomSettings = new Dictionary<string, string>();
+            if(options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)) == false)
+                options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)] = "60";
+            
+            if(options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)) == false)
+                options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "10";
 
-            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)] = "60";
-            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "10";
-            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)] = "30000";
+            if(options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)) == false)
+                options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)] = "30000";
 
             return base.GetNewServer(options, caller);
         }
@@ -1942,7 +1944,6 @@ select incl(c)"
             {
                 using var session = store.OpenAsyncSession();
                 await session.LoadAsync<TestObj>("testObjs/0", tcs.Token);
-                Console.WriteLine();
             });
             
             while(true)
@@ -1960,6 +1961,92 @@ select incl(c)"
 
             tcs.CancelAfter(TimeSpan.FromSeconds(10));
             await shouldBeCompletedWhenReachIndexTask;
+        }
+
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task DatabaseRequest_WhenLastClusterTrxWasDeleteCmpxchg_ShouldNotHang(bool withClusterTrxBefore)
+        {
+            var cmpXchgKey = "cmpXchgKey";
+
+            var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string>()
+                {
+                    [RavenConfiguration.GetKey(x => x.Cluster.SupervisorSamplePeriod)] = "50",
+                    [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
+                }
+            });
+
+            server.Configuration.Cluster.CompareExchangeTombstonesCleanupInterval = new TimeSetting(100, TimeUnit.Milliseconds);
+            
+            using var store = GetDocumentStore(new Options{Server = server});
+            using var store2 = new DocumentStore
+            {
+                Database = store.Database,
+                Urls = store.Urls
+            }.Initialize();
+
+            if (withClusterTrxBefore)
+            {
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                await session.StoreAsync(new TestObj(), "TestObjs/0");
+                await session.SaveChangesAsync();
+            }
+            
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                session.Advanced.ClusterTransaction.CreateCompareExchangeValue(cmpXchgKey, "some-value");
+                await session.SaveChangesAsync();
+            }
+
+            var mre = new ManualResetEvent(false);
+            try
+            {
+                var database = await GetDatabase(server, store.Database);
+                var testCommandTask = database.TxMerger.Enqueue(new TestCommand(mre, TimeSpan.FromSeconds(15)));
+
+                var executeClusterTransactionHangTask = Task.Run(async () =>
+                {
+                    //This task should hang the DocumentDatabase.ExecuteClusterTransaction
+                    using (var session = store2.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        await session.StoreAsync(new TestObj(), "TestObjs/1");
+                        await session.SaveChangesAsync();
+                    }
+                });
+
+                await Task.Delay(1);
+                await store.ExecuteIndexAsync(new TestIndex("TestIndex1"));
+                await store.ExecuteIndexAsync(new TestIndex("TestIndex2"));
+                
+                using  (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var cmpXchg = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(cmpXchgKey);
+                    session.Advanced.ClusterTransaction.DeleteCompareExchangeValue(cmpXchg);
+                    await session.SaveChangesAsync();
+                }
+            
+                await Task.Delay(1000);
+                
+                mre.Set();
+                await testCommandTask;
+                await executeClusterTransactionHangTask;
+            }
+            finally
+            {
+                mre.Set();
+            }
+            
+            using  (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var tokenSource = new CancellationTokenSource();
+                tokenSource.CancelAfter(TimeSpan.FromSeconds(15));
+                
+                //For the test it can be any database request and should not hang
+                await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(cmpXchgKey, tokenSource.Token);
+            }
         }
         
         [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
