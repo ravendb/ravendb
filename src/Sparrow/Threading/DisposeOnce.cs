@@ -158,7 +158,8 @@ namespace Sparrow.Threading
                     return state.Item2.Task.IsCompleted;
                 }
 
-                throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
+                PortableExceptions.Throw<NotSupportedException>("Unknown operation mode: " + typeof(TOperationMode));
+                return false;
             }
         }
     }
@@ -178,7 +179,7 @@ namespace Sparrow.Threading
             if (typeof(TOperationMode) != typeof(ExceptionRetry) &&
                 typeof(TOperationMode) != typeof(SingleAttempt)) 
             {
-                throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
+                PortableExceptions.Throw<NotSupportedException>("Unknown operation mode: " + typeof(TOperationMode));
             }
             _operationModeData = default;
         }
@@ -248,7 +249,7 @@ namespace Sparrow.Threading
                     }
                     else
                     {
-                        throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
+                        PortableExceptions.Throw<NotSupportedException>("Unknown operation mode: " + typeof(TOperationMode));
                     }
 
                     // Rethrow so that our thread knows it failed
@@ -280,8 +281,8 @@ namespace Sparrow.Threading
                     return state.Item2.Task.IsCompleted;
                 }
 
-
-                throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
+                PortableExceptions.Throw<NotSupportedException>("Unknown operation mode: " + typeof(TOperationMode));
+                return false;
             }
         }
     }
