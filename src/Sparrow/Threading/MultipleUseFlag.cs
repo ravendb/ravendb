@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -54,6 +55,9 @@ namespace Sparrow.Threading
         /// <summary>
         /// This is here to allow RaiseOrDie() to be inlined.
         /// </summary>
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowRaiseException()
         {
             throw new InvalidOperationException($"Repeated Raise for a {nameof(MultipleUseFlag)} instance");
@@ -72,6 +76,9 @@ namespace Sparrow.Threading
         /// <summary>
         /// This is here to allow LowerOrDie() to be inlined.
         /// </summary>
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         private static void ThrowLowerException()
         {
             throw new InvalidOperationException($"Repeated Lower for a {nameof(MultipleUseFlag)} instance");

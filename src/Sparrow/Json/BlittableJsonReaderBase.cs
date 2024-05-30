@@ -226,14 +226,5 @@ namespace Sparrow.Json
         {
             return ZigZagEncoding.Decode<long>(_mem, out _, pos: pos);
         }
-
-        [Conditional("DEBUG")]
-        protected void AssertContextNotDisposed(JsonOperationContext context)
-        {
-            if (context?.IsDisposed ?? false)
-            {
-                throw new ObjectDisposedException("blittable's context has been disposed, blittable should not be used now in that case!");
-            }
-        }
     }
 }
