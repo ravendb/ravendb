@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Threading.Tasks;
-using Lextm.SharpSnmpLib.Pipeline;
+using Raven.Server.EventListener;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
@@ -86,14 +85,14 @@ namespace Raven.Server.Web.System
         {
             var delay = GetIntValueQueryString("delay", required: false) ?? 10;
 
-            IReadOnlyCollection<GcEventsEventListener.Event> events;
-            using (var listener = new GcEventsEventListener())
+            IReadOnlyCollection<GcEventsHandler.GCEventBase> events;
+            using (var listener = new GcEventsListener())
             {
                 await Task.Delay(TimeSpan.FromSeconds(delay));
                 events = listener.Events;
             }
 
-            var sortedEvents = new SortedSet<GcEventsEventListener.Event>(events, new EventComparerByDuration());
+            var sortedEvents = new SortedSet<GcEventsHandler.GCEventBase>(events, new EventComparerByDuration());
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -141,23 +140,13 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private class EventComparerByDuration : IComparer<GcEventsEventListener.Event>
-        {
-            public int Compare(GcEventsEventListener.Event x, GcEventsEventListener.Event y)
-            {
-                if (ReferenceEquals(x, y))return 0;
-                if (ReferenceEquals(null, y)) return 1;
-                if (ReferenceEquals(null, x)) return -1;
-
-                return y.DurationInMs.CompareTo(x.DurationInMs);
-            }
-        }
-
-        internal class GcAllocationsEventListener : Expensive_GcEventListener
+        internal class GcAllocationsEventListener : AbstractEventListener
         {
             internal const string AllocationEventName = "GCAllocationTick_V4";
 
             private readonly Dictionary<string, AllocationInfo> _allocations = new();
+
+            protected override DotNetEventType? EventKeywords => DotNetEventType.GC;
 
             public IReadOnlyCollection<AllocationInfo> Allocations => _allocations.Values;
 
@@ -213,256 +202,6 @@ namespace Raven.Server.Web.System
 
                         break;
                 }
-            }
-        }
-
-        private class GcEventsEventListener : Expensive_GcEventListener
-        {
-            private Dictionary<long, (DateTime DateTime, uint Generation, uint Reason)> _timeGcStartByIndex = new();
-            private EventWrittenEventArgs _suspendData;
-            private DateTime? _timeGcRestartStart;
-            private DateTime? _timeGcFinalizersStart;
-            private readonly List<Event> _events = new();
-
-            public IReadOnlyCollection<Event> Events => _events;
-
-            public enum EventType
-            {
-                GC,
-                GCSuspend,
-                GCRestart,
-                GCFinalizers
-            }
-
-            public class Event : IDynamicJson
-            {
-                private EventType Type { get; }
-
-                private long OSThreadId { get; }
-
-                public DateTime Start { get; }
-
-                private DateTime End { get; }
-
-                private double? _durationInMs;
-
-                public Event(EventType type, DateTime start, EventWrittenEventArgs eventData)
-                {
-                    Type = type;
-                    OSThreadId = eventData.OSThreadId;
-                    Start = start;
-                    End = eventData.TimeStamp;
-                }
-
-                public double DurationInMs
-                {
-                    get
-                    {
-                        _durationInMs ??= (End.Ticks - Start.Ticks) / 10.0 / 1000.0;
-                        return _durationInMs.Value;
-                    }
-                }
-
-                public virtual DynamicJsonValue ToJson()
-                {
-                    return new DynamicJsonValue
-                    {
-                        [nameof(Type)] = Type,
-                        [nameof(OSThreadId)] = OSThreadId,
-                        [nameof(Start)] = Start,
-                        [nameof(End)] = End,
-                        [nameof(DurationInMs)] = DurationInMs
-                    };
-                }
-            }
-
-            private class GCEvent : Event
-            {
-                private long Index { get; }
-
-                private uint Generation { get; }
-
-                private string Reason { get; }
-
-                public GCEvent(DateTime start, EventWrittenEventArgs eventData, long index, uint generation, uint reason)
-                    : base(EventType.GC, start, eventData)
-                {
-                    Index = index;
-                    Generation = generation;
-                    Reason = GetGcReason(reason);
-                }
-
-                public override DynamicJsonValue ToJson()
-                {
-                    var json = base.ToJson();
-                    json[nameof(Index)] = Index;
-                    json[nameof(Generation)] = Generation;
-                    json[nameof(Reason)] = Reason;
-                    return json;
-                }
-
-                private static string GetGcReason(uint valueReason)
-                {
-                    switch (valueReason)
-                    {
-                        case 0x0:
-                            return "Small object heap allocation";
-                        case 0x1:
-                            return "Induced";
-                        case 0x2:
-                            return "Low memory";
-                        case 0x3:
-                            return "Empty";
-                        case 0x4:
-                            return "Large object heap allocation";
-                        case 0x5:
-                            return "Out of space (for small object heap)";
-                        case 0x6:
-                            return "Out of space (for large object heap)";
-                        case 0x7:
-                            return "Induced but not forced as blocking";
-
-                        default:
-                            return null;
-                    }
-                }
-            }
-
-            private class GCSuspendEvent : Event
-            {
-                public uint Index { get; }
-
-                private string Reason { get; }
-
-                public GCSuspendEvent(DateTime start, EventWrittenEventArgs eventData, uint index, uint reason)
-                    : base(EventType.GCSuspend, start, eventData)
-                {
-                    Index = index;
-                    Reason = GetSuspendReason(reason);
-                }
-
-                public override DynamicJsonValue ToJson()
-                {
-                    var json = base.ToJson();
-                    json[nameof(Index)] = Index;
-                    json[nameof(Reason)] = Reason;
-                    return json;
-                }
-
-                private static string GetSuspendReason(uint? suspendReason)
-                {
-                    switch (suspendReason)
-                    {
-                        case 0x0:
-                            return "Suspend for Other";
-                        case 0x1:
-                            return "Suspend for GC";
-                        case 0x2:
-                            return "Suspend for AppDomain shutdown";
-                        case 0x3:
-                            return "Suspend for code pitching";
-                        case 0x4:
-                            return "Suspend for shutdown";
-                        case 0x5:
-                            return "Suspend for debugger";
-                        case 0x6:
-                            return "Suspend for GC Prep";
-                        case 0x7:
-                            return "Suspend for debugger sweep";
-
-                        default:
-                            return null;
-                    }
-                }
-            }
-
-            protected override void OnEventWritten(EventWrittenEventArgs eventData)
-            {
-                if (eventData.EventName == null)
-                    return;
-
-                switch (eventData.EventName)
-                {
-                    case "GCStart_V2":
-                        var startIndex = long.Parse(eventData.Payload[0].ToString());
-                        var generation = (uint)eventData.Payload[1];
-                        var reason = (uint)eventData.Payload[2];
-                        _timeGcStartByIndex[startIndex] = (eventData.TimeStamp, generation, reason);
-                        break;
-
-                    case "GCEnd_V1":
-                        var endIndex = long.Parse(eventData.Payload[0].ToString());
-
-                        if (_timeGcStartByIndex.TryGetValue(endIndex, out var tuple) == false)
-                            return;
-
-                        _events.Add(new GCEvent(tuple.DateTime, eventData, endIndex, tuple.Generation, tuple.Reason));
-                        _timeGcStartByIndex.Remove(endIndex);
-                        break;
-
-                    case "GCSuspendEEBegin_V1":
-                        _suspendData = eventData;
-                        break;
-
-                    case "GCSuspendEEEnd_V1":
-                        if (_suspendData == null)
-                            return;
-
-                        var index = (uint)_suspendData.Payload[1];
-                        var suspendReason = (uint)_suspendData.Payload[0];
-
-                        _events.Add(new GCSuspendEvent(_suspendData.TimeStamp, eventData, index, suspendReason));
-                        _suspendData = null;
-                        break;
-
-                    case "GCRestartEEBegin_V1":
-                        _timeGcRestartStart = eventData.TimeStamp;
-                        break;
-
-                    case "GCRestartEEEnd_V1":
-                        if (_timeGcRestartStart == null)
-                            return;
-
-                        _events.Add(new Event(EventType.GCRestart, _timeGcRestartStart.Value, eventData));
-                        _timeGcRestartStart = null;
-                        break;
-
-                    case "GCFinalizersBegin_V1":
-                        _timeGcFinalizersStart = eventData.TimeStamp;
-                        break;
-
-                    case "GCFinalizersEnd_V1":
-                        if (_timeGcFinalizersStart == null)
-                            return;
-
-                        _events.Add(new Event(EventType.GCFinalizers, _timeGcFinalizersStart.Value, eventData));
-                        _timeGcFinalizersStart = null;
-                        break;
-                }
-            }
-        }
-
-        //https://devblogs.microsoft.com/dotnet/a-portable-way-to-get-gc-events-in-process-and-no-admin-privilege-with-10-lines-of-code-and-ability-to-dynamically-enable-disable-events/
-        internal abstract class Expensive_GcEventListener : EventListener
-        {
-            private const int GC_KEYWORD = 0x0000001;
-            private EventSource eventSourceDotNet;
-
-            protected override void OnEventSourceCreated(EventSource eventSource)
-            {
-                if (eventSource.Name.Equals("Microsoft-Windows-DotNETRuntime"))
-                {
-                    EnableEvents(eventSource, EventLevel.Verbose, (EventKeywords)GC_KEYWORD);
-                    eventSourceDotNet = eventSource;
-                }
-            }
-
-            public override void Dispose()
-            {
-                if (eventSourceDotNet != null)
-                    DisableEvents(eventSourceDotNet);
-
-                base.Dispose();
             }
         }
     }
