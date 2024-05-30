@@ -300,6 +300,7 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             report.LastTransactionId = dbInstance.LastTransactionId;
             report.LastCompletedClusterTransaction = dbInstance.LastCompletedClusterTransaction;
+            report.LastClusterWideTransactionRaftIndex = dbInstance.ClusterWideTransactionIndexWaiter.LastIndex;
         }
 
         private static void FillIndexInfo(Index index, QueryOperationContext context, DateTime now, DatabaseStatusReport report)

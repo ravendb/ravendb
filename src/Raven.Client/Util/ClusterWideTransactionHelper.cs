@@ -6,7 +6,7 @@ internal static class ClusterWideTransactionHelper
 {
     public static bool IsAtomicGuardKey(string id, out string docId)
     {
-        if (IsAtomicGuardKey(id))
+        if (IsAtomicGuardKey(id) == false)
         {
             docId = null;
             return false;

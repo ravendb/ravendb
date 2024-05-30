@@ -642,9 +642,17 @@ namespace Raven.Server.ServerWide.Maintenance
                     if (hasState == false)
                         return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
 
-                    if (nodeReport.Report.TryGetValue(state.Name, out var report) == false)
-                        continue;
+                    var tryGetValue = nodeReport.Report.TryGetValue(state.Name, out var report);
+                    Debug.Assert(tryGetValue, $"Could not find state for node '{nodeTag}' for database '{state.Name}'.");
+                    if (tryGetValue == false)
+                    {
+                        return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+                    }
 
+                    var clusterWideTransactionIndex = report.LastClusterWideTransactionRaftIndex;
+                    if (clusterWideTransactionIndex < maxEtag)
+                        maxEtag = clusterWideTransactionIndex;
+                    
                     foreach (var kvp in report.LastIndexStats)
                     {
                         var lastIndexedCompareExchangeReferenceTombstoneEtag = kvp.Value.LastIndexedCompareExchangeReferenceTombstoneEtag;

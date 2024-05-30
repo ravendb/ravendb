@@ -551,7 +551,10 @@ namespace Raven.Server.Documents
             
             if (batch.Count == 0)
             {
-                var index = _serverStore.Cluster.GetLastCompareExchangeIndexForDatabase(context, Name);
+                var cmpXchgIndex = _serverStore.Cluster.GetLastCompareExchangeIndexForDatabase(context, Name);
+                var tombstoneCmpxchgIndex = _serverStore.Cluster.GetLastCompareExchangeTombstoneIndexForDatabase(context, Name);
+                var index = Math.Max(cmpXchgIndex, tombstoneCmpxchgIndex);
+                
                 ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(index);
                 return batch;
             }
