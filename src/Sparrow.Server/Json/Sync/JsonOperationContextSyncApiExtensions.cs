@@ -30,7 +30,7 @@ namespace Sparrow.Server.Json.Sync
             return ParseToMemory(syncContext, stream, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
         }
         
-        public static unsafe BlittableJsonReaderObject ReadForMemory(this JsonOperationContext.SyncJsonOperationContext syncContext, string jsonString, string documentId)
+        public static BlittableJsonReaderObject ReadForMemory(this JsonOperationContext.SyncJsonOperationContext syncContext, string jsonString, string documentId)
         {
             // todo: maybe use ManagedPinnedBuffer here
             var maxByteSize = Encodings.Utf8.GetMaxByteCount(jsonString.Length);
