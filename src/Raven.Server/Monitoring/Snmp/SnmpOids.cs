@@ -1,6 +1,12 @@
 ﻿using System;
 using System.ComponentModel;
+using System.IO;
 using System.Reflection;
+using System.Text;
+using System.Threading.Tasks;
+using Elastic.Clients.Elasticsearch.MachineLearning;
+using Lextm.SharpSnmpLib;
+using Raven.Client.Properties;
 using Raven.Server.Platform.Posix;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -22,268 +28,350 @@ namespace Raven.Server.Monitoring.Snmp
             {
             }
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Server URL")]
             public const string Url = "1.1.1";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Server Public URL")]
             public const string PublicUrl = "1.1.2";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Server TCP URL")]
             public const string TcpUrl = "1.1.3";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Server Public TCP URL")]
             public const string PublicTcpUrl = "1.1.4";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Server version")]
             public const string Version = "1.2.1";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Server full version")]
             public const string FullVersion = "1.2.2";
 
+            [SnmpDataType(SnmpType.TimeTicks)]
             [Description("Server up-time")]
             public const string UpTime = "1.3";
 
+            [SnmpDataType(SnmpType.TimeTicks)]
             [Description("Server up-time")]
             public const string UpTimeGlobal = "1.3.6.1.2.1.1.3.0";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Server process ID")]
             public const string Pid = "1.4";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Process CPU usage in %")]
             public const string ProcessCpu = "1.5.1";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Machine CPU usage in %")]
             public const string MachineCpu = "1.5.2";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("CPU Credits Base")]
             public const string CpuCreditsBase = "1.5.3.1";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("CPU Credits Max")]
             public const string CpuCreditsMax = "1.5.3.2";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("CPU Credits Remaining")]
             public const string CpuCreditsRemaining = "1.5.3.3";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("CPU Credits Gained Per Second")]
             public const string CpuCreditsCurrentConsumption = "1.5.3.4";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("CPU Credits Background Tasks Alert Raised")]
             public const string CpuCreditsBackgroundTasksAlertRaised = "1.5.3.5";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("CPU Credits Failover Alert Raised")]
             public const string CpuCreditsFailoverAlertRaised = "1.5.3.6";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("CPU Credits Any Alert Raised")]
             public const string CpuCreditsAlertRaised = "1.5.3.7";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("IO wait in %")]
             public const string MachineIoWait = "1.5.4";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Server allocated memory in MB")]
             public const string TotalMemory = "1.6.1";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Server low memory flag value")]
             public const string LowMemoryFlag = "1.6.2";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Server total swap size in MB")]
             public const string TotalSwapSize = "1.6.3";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Server total swap usage in MB")]
             public const string TotalSwapUsage = "1.6.4";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Server working set swap usage in MB")]
             public const string WorkingSetSwapUsage = "1.6.5";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Dirty Memory that is used by the scratch buffers in MB")]
             public const string DirtyMemory = "1.6.6";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Server managed memory size in MB")]
             public const string ManagedMemory = "1.6.7";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Server unmanaged memory size in MB")]
             public const string UnmanagedMemory = "1.6.8";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Server encryption buffers memory being in use in MB")]
             public const string EncryptionBuffersMemoryInUse = "1.6.9";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Server encryption buffers memory being in pool in MB")]
             public const string EncryptionBuffersMemoryInPool = "1.6.10";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Specifies if this is a compacting GC or not.")]
             public const string GcCompacted = "1.6.11.{0}.1";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Specifies if this is a concurrent GC or not.")]
             public const string GcConcurrent = "1.6.11.{0}.2";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the number of objects ready for finalization this GC observed.")]
             public const string GcFinalizationPendingCount = "1.6.11.{0}.3";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the total fragmentation (in MB) when the last garbage collection occurred.")]
             public const string GcFragmented = "1.6.11.{0}.4";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the generation this GC collected.")]
             public const string GcGeneration = "1.6.11.{0}.5";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the total heap size (in MB) when the last garbage collection occurred.")]
             public const string GcHeapSize = "1.6.11.{0}.6";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the high memory load threshold (in MB) when the last garbage collection occurred.")]
             public const string GcHighMemoryLoadThreshold = "1.6.11.{0}.7";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. The index of this GC.")]
             public const string GcIndex = "1.6.11.{0}.8";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the memory load (in MB) when the last garbage collection occurred.")]
             public const string GcMemoryLoad = "1.6.11.{0}.9";
 
+            [SnmpDataType(SnmpType.TimeTicks)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the pause durations. First item in the array.")]
             public const string GcPauseDurations1 = "1.6.11.{0}.10.1";
 
+            [SnmpDataType(SnmpType.TimeTicks)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the pause durations. Second item in the array.")]
             public const string GcPauseDurations2 = "1.6.11.{0}.10.2";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the pause time percentage in the GC so far.")]
             public const string GcPauseTimePercentage = "1.6.11.{0}.11";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the number of pinned objects this GC observed.")]
             public const string GcPinnedObjectsCount = "1.6.11.{0}.12";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the promoted MB for this GC.")]
             public const string GcPromoted = "1.6.11.{0}.13";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the total available memory (in MB) for the garbage collector to use when the last garbage collection occurred.")]
             public const string GcTotalAvailableMemory = "1.6.11.{0}.14";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the total committed MB of the managed heap.")]
             public const string GcTotalCommitted = "1.6.11.{0}.15";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the large object heap size (in MB) after the last garbage collection of given kind occurred.")]
             public const string GcLohSize = "1.6.11.{0}.16.3";
 
             public const string MemInfoPrefix = "1.6.12.{0}";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Available memory for processing (in MB)")]
             public const string AvailableMemoryForProcessing = "1.6.13";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of concurrent requests")]
             public const string ConcurrentRequests = "1.7.1";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Total number of requests since server startup")]
             public const string TotalRequests = "1.7.2";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of requests per second (one minute rate)")]
             public const string RequestsPerSecond1M = "1.7.3";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of requests per second (five second rate)")]
             public const string RequestsPerSecond5S = "1.7.3.1";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Average request time in milliseconds")]
             public const string RequestAverageDuration = "1.7.4";
 
+            [SnmpDataType(SnmpType.TimeTicks)]
             [Description("Server last request time")]
             public const string LastRequestTime = "1.8";
 
+            [SnmpDataType(SnmpType.TimeTicks)]
             [Description("Server last authorized non cluster admin request time")]
             public const string LastAuthorizedNonClusterAdminRequestTime = "1.8.1";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Server license type")]
             public const string ServerLicenseType = "1.9.1";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Server license expiration date")]
             public const string ServerLicenseExpiration = "1.9.2";
 
+            [SnmpDataType(SnmpType.TimeTicks)]
             [Description("Server license expiration left")]
             public const string ServerLicenseExpirationLeft = "1.9.3";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Server license utilized CPU cores")]
             public const string ServerLicenseUtilizedCpuCores = "1.9.4";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Server license max CPU cores")]
             public const string ServerLicenseMaxCpuCores = "1.9.5";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Server storage used size in MB")]
             public const string StorageUsedSize = "1.10.1";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Server storage total size in MB")]
             public const string StorageTotalSize = "1.10.2";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Remaining server storage disk space in MB")]
             public const string StorageDiskRemainingSpace = "1.10.3";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Remaining server storage disk space in %")]
             public const string StorageDiskRemainingSpacePercentage = "1.10.4";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("IO read operations per second")]
             public const string StorageDiskIoReadOperations = "1.10.5";
-            
+
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("IO write operations per second")]
             public const string StorageDiskIoWriteOperations = "1.10.6";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Read throughput in kilobytes per second")]
             public const string StorageDiskReadThroughput = "1.10.7";
-            
+
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Write throughput in kilobytes per second")]
             public const string StorageDiskWriteThroughput = "1.10.8";
-            
+
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Queue length")]
             public const string StorageDiskQueueLength = "1.10.9";
-            
+
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Server certificate expiration date")]
             public const string ServerCertificateExpiration = "1.11.1";
 
+            [SnmpDataType(SnmpType.TimeTicks)]
             [Description("Server certificate expiration left")]
             public const string ServerCertificateExpirationLeft = "1.11.2";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("List of well known admin certificate thumbprints")]
             public const string WellKnownAdminCertificates = "1.11.3";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("List of well known admin certificate issuers")]
             public const string WellKnownAdminIssuers = "1.11.4";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of expiring certificates")]
             public const string CertificateExpiringCount = "1.11.5";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of expired certificates")]
             public const string CertificateExpiredCount = "1.11.6";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of processor on the machine")]
             public const string MachineProcessorCount = "1.12.1";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of assigned processors on the machine")]
             public const string MachineAssignedProcessorCount = "1.12.2";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of backups currently running")]
             public const string ServerBackupsCurrent = "1.13.1";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Max number of backups that can run concurrently")]
             public const string ServerBackupsMax = "1.13.2";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of available worker threads in the thread pool")]
             public const string ThreadPoolAvailableWorkerThreads = "1.14.1";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of available completion port threads in the thread pool")]
             public const string ThreadPoolAvailableCompletionPortThreads = "1.14.2";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of active TCP connections")]
             public const string TcpActiveConnections = "1.15.1";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Indicates if any experimental features are used")]
             public const string FeatureAnyExperimental = "1.16.1";
 
@@ -348,6 +436,56 @@ namespace Raven.Server.Monitoring.Snmp
                 }
 
                 return array;
+            }
+
+            public static async Task WriteMibAsync(StreamWriter w)
+            {
+                foreach (var field in typeof(Server).GetFields())
+                {
+                    switch (field.Name)
+                    {
+                        case nameof(UpTimeGlobal):
+                        case nameof(ServerLimitsPrefix):
+                            continue;
+                    }
+
+                    var fieldValue = GetFieldValue(field);
+
+                    switch (field.Name)
+                    {
+                        default:
+                            var fieldName = field.Name[0].ToString().ToLower() + field.Name[1..];
+
+                            await w.WriteLineAsync($"{fieldName} OBJECT-TYPE");
+                            await WriteSyntaxAsync(w, fieldValue.TypeCode);
+                            await w.WriteLineAsync("   MAX-ACCESS read-only");
+                            await w.WriteLineAsync("   STATUS current");
+                            await w.WriteLineAsync($"   DESCRIPTION \"{fieldValue.Description}\"");
+                            await w.WriteLineAsync($"   ::= {{ server {fieldValue.Oid.Replace(".", " ")} }}");
+                            break;
+                    }
+                }
+
+                static async Task WriteSyntaxAsync(StreamWriter w, SnmpType typeCode)
+                {
+                    switch (typeCode)
+                    {
+                        case SnmpType.Integer32:
+                            await w.WriteLineAsync("   SYNTAX Integer32");
+                            break;
+                        case SnmpType.OctetString:
+                            await w.WriteLineAsync("   SYNTAX DisplayString (SIZE (0..255))");
+                            break;
+                        case SnmpType.Gauge32:
+                            await w.WriteLineAsync("   SYNTAX Gauge32");
+                            break;
+                        case SnmpType.TimeTicks:
+                            await w.WriteLineAsync("   SYNTAX TimeTicks");
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(typeCode), typeCode, null);
+                    }
+                }
             }
         }
 
@@ -451,19 +589,19 @@ namespace Raven.Server.Monitoring.Snmp
 
             [Description("Remaining storage disk space in MB")]
             public const string StorageDiskRemainingSpace = "5.2.{0}.2.6";
-            
+
             [Description("IO read operations per second")]
             public const string StorageDiskIoReadOperations = "5.2.{0}.2.7";
-            
+
             [Description("IO write operations per second")]
             public const string StorageDiskIoWriteOperations = "5.2.{0}.2.8";
-            
+
             [Description("Read throughput in kilobytes per second")]
             public const string StorageDiskReadThroughput = "5.2.{0}.2.9";
-            
+
             [Description("Write throughput in kilobytes per second")]
             public const string StorageDiskWriteThroughput = "5.2.{0}.2.10";
-            
+
             [Description("Queue length")]
             public const string StorageDiskQueueLength = "5.2.{0}.2.11";
 
@@ -765,9 +903,53 @@ namespace Raven.Server.Monitoring.Snmp
             }
         }
 
-        private static (string Oid, string Description, Type Type) GetFieldValue(FieldInfo field)
+        public static async Task WriteMibAsync(Stream stream)
         {
-            return (field.GetRawConstantValue().ToString(), field.GetCustomAttribute<DescriptionAttribute>()?.Description, field.GetCustomAttribute<SnmpEnumIndexAttribute>()?.Type);
+            var now = DateTime.UtcNow;
+
+            await using var w = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            w.NewLine = "\n";
+
+            await w.WriteLineAsync($"-- Copyright (C) {now.Year} Hibernating Rhinos, Ltd.  All Rights Reserved.");
+            await w.WriteLineAsync();
+
+            await w.WriteLineAsync("RAVENDB-MIB DEFINITIONS ::= BEGIN");
+            await w.WriteLineAsync();
+
+            await w.WriteLineAsync("IMPORTS");
+            await w.WriteLineAsync("   enterprises, MODULE-IDENTITY, Integer32, TimeTicks, Gauge32");
+            await w.WriteLineAsync("      FROM SNMPv2-SMI");
+            await w.WriteLineAsync("   OBJECT-TYPE");
+            await w.WriteLineAsync("      FROM RFC1155-SMI");
+            await w.WriteLineAsync("   DisplayString");
+            await w.WriteLineAsync("      FROM SNMPv2-TC;");
+            await w.WriteLineAsync();
+
+            await w.WriteLineAsync("ravendb MODULE-IDENTITY");
+            await w.WriteLineAsync($"    LAST-UPDATED \"{now:yyyyMMddHHmm}Z\"");
+            await w.WriteLineAsync("    ORGANIZATION \"Hibernating Rhinos Ltd\"");
+            await w.WriteLineAsync("    CONTACT-INFO \"https://ravendb.net/contact\"");
+            await w.WriteLineAsync($"    DESCRIPTION \"MIB for the RavenDB {RavenVersionAttribute.Instance.FullVersion}\"");
+            await w.WriteLineAsync($"    REVISION \"{now:yyyyMMddHHmm}Z\"");
+            await w.WriteLineAsync($"    DESCRIPTION \"Generated MIB on {now:yyyyMMddHHmm} for RavenDB {RavenVersionAttribute.Instance.FullVersion}\"");
+            await w.WriteLineAsync("    ::= { software 1 }");
+            await w.WriteLineAsync();
+
+            await w.WriteLineAsync("hibernatingRhinos\t\t\t\tOBJECT IDENTIFIER ::= { enterprises 45751 }");
+            await w.WriteLineAsync("software\t\t\t\tOBJECT IDENTIFIER ::= { hibernatingRhinos 1 }");
+            await w.WriteLineAsync("server\t\t\t\tOBJECT IDENTIFIER ::= { ravendb 1 }");
+            await w.WriteLineAsync("databases\t\t\t\tOBJECT IDENTIFIER ::= { ravendb 5 }");
+            await w.WriteLineAsync();
+
+            await Server.WriteMibAsync(w);
+
+            await w.WriteLineAsync();
+            await w.WriteLineAsync("END");
+        }
+
+        private static (string Oid, string Description, Type Type, SnmpType TypeCode) GetFieldValue(FieldInfo field)
+        {
+            return (field.GetRawConstantValue().ToString(), field.GetCustomAttribute<DescriptionAttribute>()?.Description, field.GetCustomAttribute<SnmpEnumIndexAttribute>()?.Type, field.GetCustomAttribute<SnmpDataTypeAttribute>().TypeCode);
         }
 
         private static DynamicJsonValue CreateJsonItem(string oid, string description)
