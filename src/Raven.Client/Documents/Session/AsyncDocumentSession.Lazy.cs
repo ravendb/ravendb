@@ -212,6 +212,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public Lazy<Task<T>> LoadAsync<T>(string id, Action<T> onEval, CancellationToken token = new CancellationToken())
         {
+            if (string.IsNullOrWhiteSpace(id))
+                return new Lazy<Task<T>>(() => Task.FromResult<T>(default));
+
             if (IsLoaded(id))
                 return new Lazy<Task<T>>(() => LoadAsync<T>(id, token));
 
