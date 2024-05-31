@@ -25,6 +25,12 @@ namespace Raven.Client.Documents.Session
         Lazy<int> CountLazily();
 
         /// <summary>
+        ///     Register the query as a lazy-count query in the session and return a lazy
+        ///     instance that will evaluate the query only when needed.
+        /// </summary>
+        Lazy<long> LongCountLazily();
+
+        /// <summary>
         ///     Executed the query and returns the results.
         /// </summary>
         List<T> ToList();

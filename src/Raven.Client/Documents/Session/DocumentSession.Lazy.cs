@@ -159,14 +159,13 @@ namespace Raven.Client.Documents.Session
 
             return lazyValue;
         }
-        
+
         internal Lazy<long> AddLazyLongCountOperation(ILazyOperation operation)
         {
             PendingLazyOperations.Add(operation);
             var lazyValue = new Lazy<long>(() =>
             {
                 ExecuteAllPendingLazyOperations();
-                
                 
                 return operation.QueryResult.TotalResults;
             });

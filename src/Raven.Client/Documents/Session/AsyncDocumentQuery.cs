@@ -626,6 +626,20 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        Lazy<Task<long>> IAsyncDocumentQueryBase<T>.LongCountLazilyAsync(CancellationToken token)
+        {
+            if (QueryOperation == null)
+            {
+                Take(0);
+                QueryOperation = InitializeQueryOperation();
+            }
+
+            var lazyQueryOperation = new LazyQueryOperation<T>(TheSession, QueryOperation, AfterQueryExecutedCallback);
+
+            return ((AsyncDocumentSession)TheSession).AddLazyLongCountOperation(lazyQueryOperation, token);
+        }
+
+        /// <inheritdoc />
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AddOrder(string fieldName, bool descending, OrderingType ordering)
         {
             if (descending)

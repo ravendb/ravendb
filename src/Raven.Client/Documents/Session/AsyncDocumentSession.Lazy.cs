@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Session
                     
                     var value = operation.QueryResult.TotalResults;
                     if (value > int.MaxValue)
-                        DocumentSession.ThrowWhenResultsAreOverInt32(value, nameof(AddLazyCountOperation), nameof(AddLazyCountLongOperation));
+                        DocumentSession.ThrowWhenResultsAreOverInt32(value, nameof(AddLazyCountOperation), nameof(AddLazyLongCountOperation));
                     
                     return (int)value;
                 }, token));
@@ -62,7 +62,7 @@ namespace Raven.Client.Documents.Session
             return lazyValue;
         }
         
-        internal Lazy<Task<long>> AddLazyCountLongOperation(ILazyOperation operation, CancellationToken token = default(CancellationToken))
+        internal Lazy<Task<long>> AddLazyLongCountOperation(ILazyOperation operation, CancellationToken token = default(CancellationToken))
         {
             PendingLazyOperations.Add(operation);
             var lazyValue = new Lazy<Task<long>>(() => ExecuteAllPendingLazyOperationsAsync(token)

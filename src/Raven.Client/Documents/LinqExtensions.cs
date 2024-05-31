@@ -310,6 +310,23 @@ namespace Raven.Client.Documents
         /// Register the query as a lazy-count query in the session and return a lazy
         /// instance that will evaluate the query only when needed
         /// </summary>
+        public static Lazy<long> LongCountLazily<T>(this IQueryable<T> source)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
+            var provider = source.Provider as IRavenQueryProvider;
+
+            if (provider == null)
+                throw new InvalidOperationException("LongCountLazily only be used with IRavenQueryable");
+
+            return provider.LongCountLazily<T>(source.Expression);
+        }
+
+        /// <summary>
+        /// Register the query as a lazy-count query in the session and return a lazy
+        /// instance that will evaluate the query only when needed
+        /// </summary>
         public static Lazy<Task<int>> CountLazilyAsync<T>(this IQueryable<T> source, CancellationToken token = default)
         {
             if (source == null)
@@ -321,6 +338,23 @@ namespace Raven.Client.Documents
                 throw new InvalidOperationException("CountLazily only be used with IRavenQueryable");
 
             return provider.CountLazilyAsync<T>(source.Expression, token);
+        }
+
+        /// <summary>
+        /// Register the query as a lazy-count query in the session and return a lazy
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+        public static Lazy<Task<long>> LongCountLazilyAsync<T>(this IQueryable<T> source, CancellationToken token = default)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
+            var provider = source.Provider as IRavenQueryProvider;
+
+            if (provider == null)
+                throw new InvalidOperationException("CountLazily only be used with IRavenQueryable");
+
+            return provider.LongCountLazilyAsync<T>(source.Expression, token);
         }
 
         /// <summary>
