@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.BulkInsert;
+using Raven.Client.Util;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Server;
 using Tests.Infrastructure;
@@ -41,6 +42,210 @@ namespace SlowTests.Issues
                     await Task.Delay(_delay);
                     await bulk.StoreAsync(new User { Name = "Ido" }, "users/3");
                     await Task.Delay(_delay);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    Assert.NotNull(user);
+                    Assert.Equal("Daniel", user.Name);
+
+                    user = session.Load<User>("users/2");
+                    Assert.NotNull(user);
+                    Assert.Equal("Yael", user.Name);
+
+                    user = session.Load<User>("users/3");
+                    Assert.NotNull(user);
+                    Assert.Equal("Ido", user.Name);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BulkInsert)]
+        public async Task BulkInsertWithDelay2()
+        {
+            DoNotReuseServer();
+            var delay = TimeSpan.FromMilliseconds(1200);
+            using (var store = GetDocumentStore())
+            {
+                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                db.ForTestingPurposesOnly().BulkInsertStreamReadTimeout = _readTimeout;
+                var bulkInsertOptions = new BulkInsertOptions();
+                bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = _readTimeout;
+
+                await using (var bulk = store.BulkInsert(bulkInsertOptions))
+                {
+                    await Task.Delay(delay);
+                    await bulk.StoreAsync(new User { Name = "Daniel" }, "users/1");
+                    await bulk.StoreAsync(new User { Name = "Yael" }, "users/2");
+
+                    await Task.Delay(delay);
+                    await bulk.StoreAsync(new User { Name = "Ido" }, "users/3");
+                    await Task.Delay(delay);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    Assert.NotNull(user);
+                    Assert.Equal("Daniel", user.Name);
+
+                    user = session.Load<User>("users/2");
+                    Assert.NotNull(user);
+                    Assert.Equal("Yael", user.Name);
+
+                    user = session.Load<User>("users/3");
+                    Assert.NotNull(user);
+                    Assert.Equal("Ido", user.Name);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BulkInsert)]
+        public async Task BulkInsertWithDelay200()
+        {
+            DoNotReuseServer();
+            var delay = TimeSpan.FromMilliseconds(400);
+            using (var store = GetDocumentStore())
+            {
+                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                db.ForTestingPurposesOnly().BulkInsertStreamReadTimeout = 200;
+                var bulkInsertOptions = new BulkInsertOptions();
+                bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = 200;
+
+                await using (var bulk = store.BulkInsert(bulkInsertOptions))
+                {
+                    await Task.Delay(delay);
+                    await bulk.StoreAsync(new User { Name = "Daniel" }, "users/1");
+                    await bulk.StoreAsync(new User { Name = "Yael" }, "users/2");
+
+                    await Task.Delay(delay);
+                    await bulk.StoreAsync(new User { Name = "Ido" }, "users/3");
+                    Console.WriteLine($"{SystemTime.UtcNow}:{SystemTime.UtcNow.Millisecond}- {db.Name} - After users/3");
+                    await Task.Delay(delay);
+                    Console.WriteLine($"{SystemTime.UtcNow}:{SystemTime.UtcNow.Millisecond}- {db.Name} - before dispose");
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    Assert.NotNull(user);
+                    Assert.Equal("Daniel", user.Name);
+
+                    user = session.Load<User>("users/2");
+                    Assert.NotNull(user);
+                    Assert.Equal("Yael", user.Name);
+
+                    user = session.Load<User>("users/3");
+                    Assert.NotNull(user);
+                    Assert.Equal("Ido", user.Name);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BulkInsert)]
+        public async Task BulkInsertWithDelay_2()
+        {
+            DoNotReuseServer();
+
+            using (var store = GetDocumentStore())
+            {
+                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                db.ForTestingPurposesOnly().BulkInsertStreamReadTimeout = _readTimeout;
+                var bulkInsertOptions = new BulkInsertOptions();
+                bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = _readTimeout;
+
+                await using (var bulk = store.BulkInsert(bulkInsertOptions))
+                {
+                    await Task.Delay(_delay);
+                    await bulk.StoreAsync(new User { Name = "Daniel" }, "users/1");
+                    await bulk.StoreAsync(new User { Name = "Yael" }, "users/2");
+
+                    await Task.Delay(_delay);
+                    await bulk.StoreAsync(new User { Name = "Ido" }, "users/3");
+                    await Task.Delay(_delay);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    Assert.NotNull(user);
+                    Assert.Equal("Daniel", user.Name);
+
+                    user = session.Load<User>("users/2");
+                    Assert.NotNull(user);
+                    Assert.Equal("Yael", user.Name);
+
+                    user = session.Load<User>("users/3");
+                    Assert.NotNull(user);
+                    Assert.Equal("Ido", user.Name);
+                }
+            }
+        }
+        
+        [RavenFact(RavenTestCategory.BulkInsert)]
+        public async Task BulkInsertWithDelay200_2()
+        {
+            DoNotReuseServer();
+            var delay = TimeSpan.FromMilliseconds(400);
+            using (var store = GetDocumentStore())
+            {
+                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                db.ForTestingPurposesOnly().BulkInsertStreamReadTimeout = 200;
+                var bulkInsertOptions = new BulkInsertOptions();
+                bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = 200;
+
+                await using (var bulk = store.BulkInsert(bulkInsertOptions))
+                {
+                    await Task.Delay(delay);
+                    await bulk.StoreAsync(new User { Name = "Daniel" }, "users/1");
+                    await bulk.StoreAsync(new User { Name = "Yael" }, "users/2");
+
+                    await Task.Delay(delay);
+                    await bulk.StoreAsync(new User { Name = "Ido" }, "users/3");
+                    Console.WriteLine($"{SystemTime.UtcNow}:{SystemTime.UtcNow.Millisecond}- {db.Name} - After users/3");
+                    await Task.Delay(delay);
+                    Console.WriteLine($"{SystemTime.UtcNow}:{SystemTime.UtcNow.Millisecond}- {db.Name} - before dispose");
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    Assert.NotNull(user);
+                    Assert.Equal("Daniel", user.Name);
+
+                    user = session.Load<User>("users/2");
+                    Assert.NotNull(user);
+                    Assert.Equal("Yael", user.Name);
+
+                    user = session.Load<User>("users/3");
+                    Assert.NotNull(user);
+                    Assert.Equal("Ido", user.Name);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BulkInsert)]
+        public async Task BulkInsertWithDelay1000()
+        {
+            DoNotReuseServer();
+            var delay = TimeSpan.FromMilliseconds(2000);
+            using (var store = GetDocumentStore())
+            {
+                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                db.ForTestingPurposesOnly().BulkInsertStreamReadTimeout = 1000;
+                var bulkInsertOptions = new BulkInsertOptions();
+                bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = 1000;
+
+                await using (var bulk = store.BulkInsert(bulkInsertOptions))
+                {
+                    await Task.Delay(delay);
+                    await bulk.StoreAsync(new User { Name = "Daniel" }, "users/1");
+                    await bulk.StoreAsync(new User { Name = "Yael" }, "users/2");
+
+                    await Task.Delay(delay);
+                    await bulk.StoreAsync(new User { Name = "Ido" }, "users/3");
+                    await Task.Delay(delay);
                 }
 
                 using (var session = store.OpenSession())

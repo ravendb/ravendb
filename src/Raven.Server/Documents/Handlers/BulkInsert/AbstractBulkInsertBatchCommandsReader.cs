@@ -36,7 +36,8 @@ public abstract class AbstractBulkInsertBatchCommandsReader<TCommandData> : IDis
     {
         while (_parser.Read() == false)
             await BatchRequestParser.RefillParserBuffer(_stream, _buffer, _parser, _token);
-
+        if (_token.IsCancellationRequested)
+            throw new OperationCanceledException("The token was canceled at InitAsync");
         if (_state.CurrentTokenType != JsonParserToken.StartArray)
         {
             BatchRequestParser.ThrowUnexpectedToken(JsonParserToken.StartArray, _state);
@@ -62,6 +63,8 @@ public abstract class AbstractBulkInsertBatchCommandsReader<TCommandData> : IDis
         do
         {
             await BatchRequestParser.RefillParserBuffer(_stream, _buffer, _parser, _token);
+            if (_token.IsCancellationRequested)
+                throw new OperationCanceledException("The token was canceled at MoveNextUnlikely");
         } while (_parser.Read() == false);
 
         if (_state.CurrentTokenType == JsonParserToken.EndArray)

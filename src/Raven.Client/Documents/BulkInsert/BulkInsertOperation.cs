@@ -190,6 +190,7 @@ namespace Raven.Client.Documents.BulkInsert
                     {
                         await _streamLock.WaitAsync().ConfigureAwait(false);
                         await _writer.DisposeAsync().ConfigureAwait(false);
+                        Console.WriteLine($"{SystemTime.UtcNow}:{SystemTime.UtcNow.Millisecond}- {_database} - AfterDispose");
                     }
                     catch (Exception e)
                     {
@@ -258,14 +259,13 @@ namespace Raven.Client.Documents.BulkInsert
 
                 if (_first == false)
                 {
-
                     WriteComma();
                 }
 
                 _first = false;
                 _inProgressCommand = CommandType.None;
                 _writer.Write("{\"Type\":\"HeartBeat\"}");
-
+                Console.WriteLine($"{SystemTime.UtcNow}:{SystemTime.UtcNow.Millisecond}- {_database} - HeartBeat");
                 
                 await FlushIfNeeded(force: true).ConfigureAwait(false);
                 await _writer._requestBodyStream.FlushAsync(_token).ConfigureAwait(false);
@@ -277,6 +277,7 @@ namespace Raven.Client.Documents.BulkInsert
             finally
             {
                 _streamLock.Release();
+                Console.WriteLine($"{SystemTime.UtcNow}:{SystemTime.UtcNow.Millisecond} - {_database} - _streamLock.Release");
             }
         }
 

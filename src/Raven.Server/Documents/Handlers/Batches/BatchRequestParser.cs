@@ -166,8 +166,13 @@ namespace Raven.Server.Documents.Handlers.Batches
 
             while (true)
             {
+                if (token.IsCancellationRequested)
+                    throw new OperationCanceledException("The token was canceled at ReadSingleCommand - true");
                 while (parser.Read() == false)
                     await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+
+                if (token.IsCancellationRequested)
+                    throw new OperationCanceledException("The token was canceled at ReadSingleCommand");
 
                 if (state.CurrentTokenType == JsonParserToken.EndObject)
                 {
@@ -184,6 +189,10 @@ namespace Raven.Server.Documents.Handlers.Batches
                     case CommandPropertyName.Type:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+
+                        if (token.IsCancellationRequested)
+                            throw new OperationCanceledException("The token was canceled at CommandPropertyName.Type");
+
                         if (state.CurrentTokenType != JsonParserToken.String)
                         {
                             ThrowUnexpectedToken(JsonParserToken.String, state);
