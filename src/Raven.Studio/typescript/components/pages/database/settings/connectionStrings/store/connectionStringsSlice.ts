@@ -13,8 +13,8 @@ import {
     mapSqlConnectionsFromDto,
 } from "./connectionStringsMapsFromDto";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
-import { DatabaseSharedInfo } from "components/models/databases";
 import DatabaseUtils from "components/utils/DatabaseUtils";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 interface ConnectionStringsState {
     loadStatus: loadStatus;
@@ -136,15 +136,17 @@ interface FetchDataResult {
 
 const fetchData = createAsyncThunk<
     FetchDataResult,
-    DatabaseSharedInfo,
+    string,
     {
         state: RootState;
     }
->(connectionStringsSlice.name + "/fetchConnectionStrings", async (db, { getState }) => {
+>(connectionStringsSlice.name + "/fetchConnectionStrings", async (databaseName, { getState }) => {
     const state = getState();
 
+    const db = databaseSelectors.databaseByName(databaseName)(state);
+
     const ongoingTasksDto = await services.tasksService.getOngoingTasks(
-        db.name,
+        databaseName,
         DatabaseUtils.getFirstLocation(db, state.cluster.localNodeTag)
     );
     const connectionStringsDto = await services.tasksService.getConnectionStrings(db.name);
