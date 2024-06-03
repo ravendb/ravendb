@@ -576,6 +576,11 @@ namespace Raven.Server.Documents.Handlers
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                LogAuditFor(Database.Name, $"Index {name} RESET");
+            }
+
             IndexDefinition indexDefinition;
             lock (Database)
             {
