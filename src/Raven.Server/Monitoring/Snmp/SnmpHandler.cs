@@ -9,7 +9,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using static Raven.Server.Utils.Cpu.WindowsCpuUsageCalculator;
 
 namespace Raven.Server.Monitoring.Snmp
 {
@@ -99,10 +98,15 @@ namespace Raven.Server.Monitoring.Snmp
         [RavenAction("/monitoring/snmp/mib", "GET", AuthorizationStatus.Operator)]
         public async Task GetMib()
         {
+            var includeServer = GetBoolValueQueryString("includeServer", required: false) ?? true;
+            var includeCluster = GetBoolValueQueryString("includeCluster", required: false) ?? false;
+            var includeDatabases = GetBoolValueQueryString("includeDatabases", required: false) ?? false;
+
             const string fileName = "RavenDB-MIB.txt";
             HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{fileName}";
 
-            await SnmpOids.WriteMibAsync(ResponseBodyStream());
+            await using (var writer = new SnmpMibWriter(ResponseBodyStream(), includeServer, includeCluster, includeDatabases))
+                await writer.WriteAsync();
         }
 
         private async ValueTask BulkInternal(string[] oids, JsonOperationContext context)
