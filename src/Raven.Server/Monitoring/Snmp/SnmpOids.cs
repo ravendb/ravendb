@@ -453,7 +453,7 @@ namespace Raven.Server.Monitoring.Snmp
                         default:
                             if (fieldValue.Type == null)
                             {
-                                await writer.WriteObjectAsync(field.Name, "server", fieldValue.TypeCode, fieldValue.Description, fieldValue.Oid);
+                                await writer.WriteObjectAsync(field.Name, "server", fieldValue.TypeCode.Value, fieldValue.Description, fieldValue.Oid);
                             }
                             else
                             {
@@ -466,7 +466,7 @@ namespace Raven.Server.Monitoring.Snmp
                                     var finalOid = fieldValue.Oid.Replace("{0}", enumUnderlyingValue.ToString());
                                     var finalDescription = fieldValue.Description.Replace("{0}", $"{fieldValue.Type.Name}.{value}");
 
-                                    await writer.WriteObjectAsync(finalName, "server", fieldValue.TypeCode, finalDescription, finalOid);
+                                    await writer.WriteObjectAsync(finalName, "server", fieldValue.TypeCode.Value, finalDescription, finalOid);
                                 }
                             }
                             break;
@@ -522,7 +522,7 @@ namespace Raven.Server.Monitoring.Snmp
                 {
                     var fieldValue = GetFieldValue(field);
 
-                    await writer.WriteObjectAsync(field.Name, "server", fieldValue.TypeCode, fieldValue.Description, fieldValue.Oid);
+                    await writer.WriteObjectAsync(field.Name, "server", fieldValue.TypeCode.Value, fieldValue.Description, fieldValue.Oid);
                 }
             }
         }
@@ -932,7 +932,7 @@ namespace Raven.Server.Monitoring.Snmp
                     {
                         var fieldValue = GetFieldValue(field);
 
-                        await writer.WriteObjectAsync(field.Name, "server", fieldValue.TypeCode, fieldValue.Description, fieldValue.Oid);
+                        await writer.WriteObjectAsync(field.Name, "server", fieldValue.TypeCode.Value, fieldValue.Description, fieldValue.Oid);
                     }
                 }
             }
@@ -973,9 +973,9 @@ namespace Raven.Server.Monitoring.Snmp
             }
         }
 
-        private static (string Oid, string Description, Type Type, SnmpType TypeCode) GetFieldValue(FieldInfo field)
+        private static (string Oid, string Description, Type Type, SnmpType? TypeCode) GetFieldValue(FieldInfo field)
         {
-            return (field.GetRawConstantValue().ToString(), field.GetCustomAttribute<DescriptionAttribute>()?.Description, field.GetCustomAttribute<SnmpEnumIndexAttribute>()?.Type, field.GetCustomAttribute<SnmpDataTypeAttribute>().TypeCode);
+            return (field.GetRawConstantValue().ToString(), field.GetCustomAttribute<DescriptionAttribute>()?.Description, field.GetCustomAttribute<SnmpEnumIndexAttribute>()?.Type, field.GetCustomAttribute<SnmpDataTypeAttribute>()?.TypeCode);
         }
 
         private static DynamicJsonValue CreateJsonItem(string oid, string description)
