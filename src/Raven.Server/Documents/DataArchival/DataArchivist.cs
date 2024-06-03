@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.ServerWide;
@@ -118,25 +120,28 @@ public class DataArchivist : BackgroundWorkBase
                     context.Reset();
                     context.Renew();
 
+                    Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo> toArchive;
+                    Stopwatch duration;
+
                     using (context.OpenReadTransaction())
                     {
                         var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize, maxItemsToProcess);
 
-                        var toArchive = _database.DocumentsStorage.DataArchivalStorage.GetDocuments(options, ref totalCount, out var duration, CancellationToken);
+                        toArchive = _database.DocumentsStorage.DataArchivalStorage.GetDocuments(options, ref totalCount, out duration, CancellationToken);
 
                         if (toArchive == null || toArchive.Count == 0)
                             return;
+                    }
 
-                        while (toArchive.Count > 0)
-                        {
-                            _database.DatabaseShutdown.ThrowIfCancellationRequested();
+                    while (toArchive.Count > 0)
+                    {
+                        _database.DatabaseShutdown.ThrowIfCancellationRequested();
 
-                            var command = new ArchiveDocumentsCommand(toArchive, _database, currentTime);
-                            await _database.TxMerger.Enqueue(command);
+                        var command = new ArchiveDocumentsCommand(toArchive, _database, currentTime);
+                        await _database.TxMerger.Enqueue(command);
 
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info($"Successfully archived {command.ArchivedDocsCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
-                        }
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Successfully archived {command.ArchivedDocsCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
                     }
                 }
             }
