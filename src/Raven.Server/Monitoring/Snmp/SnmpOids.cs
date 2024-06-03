@@ -932,7 +932,7 @@ namespace Raven.Server.Monitoring.Snmp
                     {
                         var fieldValue = GetFieldValue(field);
 
-                        await writer.WriteObjectAsync(field.Name, "databases", fieldValue.TypeCode, fieldValue.Description, fieldValue.Oid);
+                        await writer.WriteObjectAsync(field.Name, "server", fieldValue.TypeCode, fieldValue.Description, fieldValue.Oid);
                     }
                 }
             }
