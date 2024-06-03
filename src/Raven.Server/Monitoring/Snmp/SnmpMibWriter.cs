@@ -47,7 +47,7 @@ public class SnmpMibWriter : IAsyncDisposable
 
         await WriteObjectIdentifierAsync("hibernatingRhinos", "enterprises", "45751");
         await WriteObjectIdentifierAsync("server", "ravendb", "1");
-        await WriteObjectIdentifierAsync("databases", "ravendb", "5");
+        await WriteObjectIdentifierAsync("databases", "server", "5");
 
 
         if (_includeServer)
