@@ -1,12 +1,8 @@
 ﻿using System;
 using System.ComponentModel;
-using System.IO;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
-using Elastic.Clients.Elasticsearch.MachineLearning;
 using Lextm.SharpSnmpLib;
-using Raven.Client.Properties;
 using Raven.Server.Platform.Posix;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -438,13 +434,14 @@ namespace Raven.Server.Monitoring.Snmp
                 return array;
             }
 
-            public static async Task WriteMibAsync(StreamWriter w)
+            public static async Task WriteMibAsync(SnmpMibWriter writer)
             {
                 foreach (var field in typeof(Server).GetFields())
                 {
                     switch (field.Name)
                     {
                         case nameof(UpTimeGlobal):
+                        case nameof(MemInfoPrefix):
                         case nameof(ServerLimitsPrefix):
                             continue;
                     }
@@ -454,38 +451,29 @@ namespace Raven.Server.Monitoring.Snmp
                     switch (field.Name)
                     {
                         default:
-                            var fieldName = field.Name[0].ToString().ToLower() + field.Name[1..];
+                            if (fieldValue.Type == null)
+                            {
+                                await writer.WriteObjectAsync(field.Name, "server", fieldValue.TypeCode, fieldValue.Description, fieldValue.Oid);
+                            }
+                            else
+                            {
+                                var enumUnderlyingType = Enum.GetUnderlyingType(fieldValue.Type);
+                                foreach (var value in fieldValue.Type.GetEnumValues())
+                                {
+                                    var enumUnderlyingValue = Convert.ChangeType(value, enumUnderlyingType);
 
-                            await w.WriteLineAsync($"{fieldName} OBJECT-TYPE");
-                            await WriteSyntaxAsync(w, fieldValue.TypeCode);
-                            await w.WriteLineAsync("   MAX-ACCESS read-only");
-                            await w.WriteLineAsync("   STATUS current");
-                            await w.WriteLineAsync($"   DESCRIPTION \"{fieldValue.Description}\"");
-                            await w.WriteLineAsync($"   ::= {{ server {fieldValue.Oid.Replace(".", " ")} }}");
+                                    var finalName = field.Name + enumUnderlyingValue;
+                                    var finalOid = fieldValue.Oid.Replace("{0}", enumUnderlyingValue.ToString());
+                                    var finalDescription = fieldValue.Description.Replace("{0}", $"{fieldValue.Type.Name}.{value}");
+
+                                    await writer.WriteObjectAsync(finalName, "server", fieldValue.TypeCode, finalDescription, finalOid);
+                                }
+                            }
                             break;
                     }
                 }
 
-                static async Task WriteSyntaxAsync(StreamWriter w, SnmpType typeCode)
-                {
-                    switch (typeCode)
-                    {
-                        case SnmpType.Integer32:
-                            await w.WriteLineAsync("   SYNTAX Integer32");
-                            break;
-                        case SnmpType.OctetString:
-                            await w.WriteLineAsync("   SYNTAX DisplayString (SIZE (0..255))");
-                            break;
-                        case SnmpType.Gauge32:
-                            await w.WriteLineAsync("   SYNTAX Gauge32");
-                            break;
-                        case SnmpType.TimeTicks:
-                            await w.WriteLineAsync("   SYNTAX TimeTicks");
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException(nameof(typeCode), typeCode, null);
-                    }
-                }
+
             }
         }
 
@@ -495,18 +483,23 @@ namespace Raven.Server.Monitoring.Snmp
             {
             }
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Current node tag")]
             public const string NodeTag = "3.1.1";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Current node state")]
             public const string NodeState = "3.1.2";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Cluster term")]
             public const string Term = "3.2.1";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Cluster index")]
             public const string Index = "3.2.2";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Cluster ID")]
             public const string Id = "3.2.3";
 
@@ -522,6 +515,16 @@ namespace Raven.Server.Monitoring.Snmp
 
                 return array;
             }
+
+            public static async Task WriteMibAsync(SnmpMibWriter writer)
+            {
+                foreach (var field in typeof(Cluster).GetFields())
+                {
+                    var fieldValue = GetFieldValue(field);
+
+                    await writer.WriteObjectAsync(field.Name, "server", fieldValue.TypeCode, fieldValue.Description, fieldValue.Oid);
+                }
+            }
         }
 
         public sealed class Databases
@@ -530,126 +533,167 @@ namespace Raven.Server.Monitoring.Snmp
             {
             }
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Database name")]
             public const string Name = "5.2.{0}.1.1";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of indexes")]
             public const string CountOfIndexes = "5.2.{0}.1.2";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of stale indexes")]
             public const string CountOfStaleIndexes = "5.2.{0}.1.3";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of documents")]
             public const string CountOfDocuments = "5.2.{0}.1.4";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of revision documents")]
             public const string CountOfRevisionDocuments = "5.2.{0}.1.5";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of attachments")]
             public const string CountOfAttachments = "5.2.{0}.1.6";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of unique attachments")]
             public const string CountOfUniqueAttachments = "5.2.{0}.1.7";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of alerts")]
             public const string Alerts = "5.2.{0}.1.10";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Database ID")]
             public const string Id = "5.2.{0}.1.11";
 
+            [SnmpDataType(SnmpType.TimeTicks)]
             [Description("Database up-time")]
             public const string UpTime = "5.2.{0}.1.12";
 
+            [SnmpDataType(SnmpType.OctetString)]
             [Description("Indicates if database is loaded")]
             public const string Loaded = "5.2.{0}.1.13";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of rehabs")]
             public const string Rehabs = "5.2.{0}.1.14";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of performance hints")]
             public const string PerformanceHints = "5.2.{0}.1.15";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of indexing errors")]
             public const string IndexingErrors = "5.2.{0}.1.16";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Documents storage allocated size in MB")]
             public const string DocumentsStorageAllocatedSize = "5.2.{0}.2.1";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Documents storage used size in MB")]
             public const string DocumentsStorageUsedSize = "5.2.{0}.2.2";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Index storage allocated size in MB")]
             public const string IndexStorageAllocatedSize = "5.2.{0}.2.3";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Index storage used size in MB")]
             public const string IndexStorageUsedSize = "5.2.{0}.2.4";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Total storage size in MB")]
             public const string TotalStorageSize = "5.2.{0}.2.5";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Remaining storage disk space in MB")]
             public const string StorageDiskRemainingSpace = "5.2.{0}.2.6";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("IO read operations per second")]
             public const string StorageDiskIoReadOperations = "5.2.{0}.2.7";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("IO write operations per second")]
             public const string StorageDiskIoWriteOperations = "5.2.{0}.2.8";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Read throughput in kilobytes per second")]
             public const string StorageDiskReadThroughput = "5.2.{0}.2.9";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Write throughput in kilobytes per second")]
             public const string StorageDiskWriteThroughput = "5.2.{0}.2.10";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Queue length")]
             public const string StorageDiskQueueLength = "5.2.{0}.2.11";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of document puts per second (one minute rate)")]
             public const string DocPutsPerSecond = "5.2.{0}.3.1";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of indexed documents per second for map indexes (one minute rate)")]
             public const string MapIndexIndexesPerSecond = "5.2.{0}.3.2";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of maps per second for map-reduce indexes (one minute rate)")]
             public const string MapReduceIndexMappedPerSecond = "5.2.{0}.3.3";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of reduces per second for map-reduce indexes (one minute rate)")]
             public const string MapReduceIndexReducedPerSecond = "5.2.{0}.3.4";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of requests per second (one minute rate)")]
             public const string RequestsPerSecond = "5.2.{0}.3.5";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of requests from database start")]
             public const string RequestsCount = "5.2.{0}.3.6";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Average request time in milliseconds")]
             public const string RequestAverageDuration = "5.2.{0}.3.7";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of indexes")]
             public const string NumberOfIndexes = "5.2.{0}.5.1";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of static indexes")]
             public const string NumberOfStaticIndexes = "5.2.{0}.5.2";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of auto indexes")]
             public const string NumberOfAutoIndexes = "5.2.{0}.5.3";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of idle indexes")]
             public const string NumberOfIdleIndexes = "5.2.{0}.5.4";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of disabled indexes")]
             public const string NumberOfDisabledIndexes = "5.2.{0}.5.5";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of error indexes")]
             public const string NumberOfErrorIndexes = "5.2.{0}.5.6";
 
+            [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of faulty indexes")]
             public const string NumberOfFaultyIndexes = "5.2.{0}.5.7";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of writes (documents, attachments, counters)")]
             public const string WritesPerSecond = "5.2.{0}.6.1";
 
+            [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of bytes written (documents, attachments, counters)")]
             public const string DataWrittenPerSecond = "5.2.{0}.6.2";
 
@@ -739,51 +783,67 @@ namespace Raven.Server.Monitoring.Snmp
                 {
                 }
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of all databases")]
                 public const string TotalCount = "5.1.1";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of loaded databases")]
                 public const string LoadedCount = "5.1.2";
 
+                [SnmpDataType(SnmpType.TimeTicks)]
                 [Description("Time since oldest backup")]
                 public const string TimeSinceOldestBackup = "5.1.3";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of disabled databases")]
                 public const string DisabledCount = "5.1.4";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of encrypted databases")]
                 public const string EncryptedCount = "5.1.5";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of databases for current node")]
                 public const string NodeCount = "5.1.6";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of indexes in all loaded databases")]
                 public const string TotalNumberOfIndexes = "5.1.7.1";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of stale indexes in all loaded databases")]
                 public const string TotalNumberOfStaleIndexes = "5.1.7.2";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of error indexes in all loaded databases")]
                 public const string TotalNumberOfErrorIndexes = "5.1.7.3";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of faulty indexes in all loaded databases")]
                 public const string TotalNumberOfFaultyIndexes = "5.1.7.4";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of indexed documents per second for map indexes (one minute rate) in all loaded databases")]
                 public const string TotalMapIndexIndexesPerSecond = "5.1.8.1";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of maps per second for map-reduce indexes (one minute rate) in all loaded databases")]
                 public const string TotalMapReduceIndexMappedPerSecond = "5.1.8.2";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of reduces per second for map-reduce indexes (one minute rate) in all loaded databases")]
                 public const string TotalMapReduceIndexReducedPerSecond = "5.1.8.3";
 
+                [SnmpDataType(SnmpType.Gauge32)]
                 [Description("Number of writes (documents, attachments, counters) in all loaded databases")]
                 public const string TotalWritesPerSecond = "5.1.9.1";
 
+                [SnmpDataType(SnmpType.Gauge32)]
                 [Description("Number of bytes written (documents, attachments, counters) in all loaded databases")]
                 public const string TotalDataWrittenPerSecond = "5.1.9.2";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of faulted databases")]
                 public const string FaultedCount = "5.1.10";
 
@@ -865,6 +925,16 @@ namespace Raven.Server.Monitoring.Snmp
 
                     return array;
                 }
+
+                public static async Task WriteMibAsync(SnmpMibWriter writer)
+                {
+                    foreach (var field in typeof(General).GetFields())
+                    {
+                        var fieldValue = GetFieldValue(field);
+
+                        await writer.WriteObjectAsync(field.Name, "databases", fieldValue.TypeCode, fieldValue.Description, fieldValue.Oid);
+                    }
+                }
             }
 
             public static DynamicJsonValue ToJson(ServerStore serverStore, TransactionOperationContext context)
@@ -901,50 +971,6 @@ namespace Raven.Server.Monitoring.Snmp
 
                 return djv;
             }
-        }
-
-        public static async Task WriteMibAsync(Stream stream)
-        {
-            var now = DateTime.UtcNow;
-
-            await using var w = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-            w.NewLine = "\n";
-
-            await w.WriteLineAsync($"-- Copyright (C) {now.Year} Hibernating Rhinos, Ltd.  All Rights Reserved.");
-            await w.WriteLineAsync();
-
-            await w.WriteLineAsync("RAVENDB-MIB DEFINITIONS ::= BEGIN");
-            await w.WriteLineAsync();
-
-            await w.WriteLineAsync("IMPORTS");
-            await w.WriteLineAsync("   enterprises, MODULE-IDENTITY, Integer32, TimeTicks, Gauge32");
-            await w.WriteLineAsync("      FROM SNMPv2-SMI");
-            await w.WriteLineAsync("   OBJECT-TYPE");
-            await w.WriteLineAsync("      FROM RFC1155-SMI");
-            await w.WriteLineAsync("   DisplayString");
-            await w.WriteLineAsync("      FROM SNMPv2-TC;");
-            await w.WriteLineAsync();
-
-            await w.WriteLineAsync("ravendb MODULE-IDENTITY");
-            await w.WriteLineAsync($"    LAST-UPDATED \"{now:yyyyMMddHHmm}Z\"");
-            await w.WriteLineAsync("    ORGANIZATION \"Hibernating Rhinos Ltd\"");
-            await w.WriteLineAsync("    CONTACT-INFO \"https://ravendb.net/contact\"");
-            await w.WriteLineAsync($"    DESCRIPTION \"MIB for the RavenDB {RavenVersionAttribute.Instance.FullVersion}\"");
-            await w.WriteLineAsync($"    REVISION \"{now:yyyyMMddHHmm}Z\"");
-            await w.WriteLineAsync($"    DESCRIPTION \"Generated MIB on {now:yyyyMMddHHmm} for RavenDB {RavenVersionAttribute.Instance.FullVersion}\"");
-            await w.WriteLineAsync("    ::= { software 1 }");
-            await w.WriteLineAsync();
-
-            await w.WriteLineAsync("hibernatingRhinos\t\t\t\tOBJECT IDENTIFIER ::= { enterprises 45751 }");
-            await w.WriteLineAsync("software\t\t\t\tOBJECT IDENTIFIER ::= { hibernatingRhinos 1 }");
-            await w.WriteLineAsync("server\t\t\t\tOBJECT IDENTIFIER ::= { ravendb 1 }");
-            await w.WriteLineAsync("databases\t\t\t\tOBJECT IDENTIFIER ::= { ravendb 5 }");
-            await w.WriteLineAsync();
-
-            await Server.WriteMibAsync(w);
-
-            await w.WriteLineAsync();
-            await w.WriteLineAsync("END");
         }
 
         private static (string Oid, string Description, Type Type, SnmpType TypeCode) GetFieldValue(FieldInfo field)
