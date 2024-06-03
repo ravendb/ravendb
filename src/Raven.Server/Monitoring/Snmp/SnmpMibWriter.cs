@@ -70,6 +70,7 @@ public class SnmpMibWriter : IAsyncDisposable
         }
 
         await _writer.WriteLineAsync("END");
+        await _writer.FlushAsync();
     }
 
     private async Task WriteSyntaxAsync(SnmpType typeCode)
