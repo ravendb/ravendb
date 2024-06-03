@@ -375,7 +375,7 @@ namespace Raven.Server.Documents.Handlers
                         TrafficWatchQuery(query);
 
                     if (LoggingSource.AuditLog.IsInfoEnabled)
-                        LogAuditFor(Database.Name, $"Deleting documents matching the query: {query}");
+                        LogAuditFor(Database.Name, $"DELETE documents matching the query: {query}");
 
                     await ExecuteQueryOperation(query,
                         (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, queryContext, onProgress, token),
