@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Expiration;
@@ -150,28 +151,32 @@ namespace Raven.Server.Documents.Expiration
                         context.Reset();
                         context.Renew();
 
+                        Queue<ExpirationStorage.DocumentExpirationInfo> expired;
+                        Stopwatch duration;
+
                         using (context.OpenReadTransaction())
                         {
                             var options = new ExpirationStorage.ExpiredDocumentsOptions(context, currentTime, isFirstInTopology, batchSize, maxItemsToProcess);
 
-                            var expired =
-                                forExpiration ?
-                                    _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, ref totalCount, out var duration, CancellationToken) :
-                                    _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, ref totalCount, out duration, CancellationToken);
+                            expired =
+                                forExpiration
+                                    ? _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, ref totalCount, out duration, CancellationToken)
+                                    : _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, ref totalCount, out duration, CancellationToken);
 
-                            if (expired == null || expired.Count == 0)
-                                return;
+                        }
 
-                            while (expired.Count > 0)
-                            {
-                                _database.DatabaseShutdown.ThrowIfCancellationRequested();
+                        if (expired == null || expired.Count == 0)
+                            return;
 
-                                var command = new DeleteExpiredDocumentsCommand(expired, _database, forExpiration, currentTime);
-                                await _database.TxMerger.Enqueue(command);
+                        while (expired.Count > 0)
+                        {
+                            _database.DatabaseShutdown.ThrowIfCancellationRequested();
 
-                                if (Logger.IsInfoEnabled)
-                                    Logger.Info($"Successfully {(forExpiration ? "deleted" : "refreshed")} {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
-                            }
+                            var command = new DeleteExpiredDocumentsCommand(expired, _database, forExpiration, currentTime);
+                            await _database.TxMerger.Enqueue(command);
+
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"Successfully {(forExpiration ? "deleted" : "refreshed")} {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
                         }
                     }
                 }
