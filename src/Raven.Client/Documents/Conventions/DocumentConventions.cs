@@ -340,6 +340,7 @@ namespace Raven.Client.Documents.Conventions
         private static readonly TypeCache<MemberInfo> IdPropertyCache = new(1024);
 
         private bool _saveEnumsAsIntegers;
+        private bool _saveEnumsAsIntegersForPatching;
         private char _identityPartsSeparator;
         private bool _disableTopologyUpdates;
 
@@ -1004,6 +1005,19 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _saveEnumsAsIntegers = value;
+            }
+        }
+
+        /// <summary>
+        ///     Patches Enums as integers.
+        /// </summary>
+        public bool SaveEnumsAsIntegersForPatching
+        {
+            get => _saveEnumsAsIntegersForPatching;
+            set
+            {
+                AssertNotFrozen();
+                _saveEnumsAsIntegersForPatching = value;
             }
         }
 

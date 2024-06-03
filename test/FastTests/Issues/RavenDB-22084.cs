@@ -72,6 +72,9 @@ namespace FastTests.Issues
                 id = session.Advanced.GetDocumentId(entity);
             }
 
+            var storedJson = GetRawJson(store, id);
+            Assert.Equal("""{"Checks":{"Engine":"Good","Gears":"Good"}}""", storedJson);
+
             using (var session = store.OpenSession())
             {
                 session.Advanced.Patch<Machine, Status>(id, x => x.Checks[Parts.Engine], Status.Bad);
@@ -83,11 +86,49 @@ namespace FastTests.Issues
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public void PatchOnDictionaryWithEnumKeyAndSaveEnumsAsIntegersShouldWork()
+        public void PatchOnDictionaryWithEnumKeyAndSaveEnumsAsIntegersShouldBeInconsistent()
+        {
+            // https://github.com/ravendb/ravendb/pull/18530#discussion_r1612819842
+            using var store = GetDocumentStore(new()
+            {
+                ModifyDocumentStore = store =>
+                {
+                    store.Conventions.SaveEnumsAsIntegers = true;
+                },
+            });
+
+            string id;
+            using (var session = store.OpenSession())
+            {
+                var entity = Machine.Create();
+                session.Store(entity);
+                session.SaveChanges();
+                id = session.Advanced.GetDocumentId(entity);
+            }
+
+            var storedJson = GetRawJson(store, id);
+            Assert.Equal("""{"Checks":{"Engine":1,"Gears":1}}""", storedJson);
+
+            using (var session = store.OpenSession())
+            {
+                session.Advanced.Patch<Machine, Status>(id, x => x.Checks[Parts.Engine], Status.Bad);
+                session.SaveChanges();
+            }
+
+            var patchedJson = GetRawJson(store, id);
+            Assert.Equal("""{"Checks":{"Engine":"Bad","Gears":1}}""", patchedJson);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void PatchOnDictionaryWithEnumKeyAndSaveEnumsAsIntegersAndSaveEnumsAsIntegersForPatchingShouldWork()
         {
             using var store = GetDocumentStore(new()
             {
-                ModifyDocumentStore = store => store.Conventions.SaveEnumsAsIntegers = true,
+                ModifyDocumentStore = store =>
+                {
+                    store.Conventions.SaveEnumsAsIntegers = true;
+                    store.Conventions.SaveEnumsAsIntegersForPatching = true;
+                },
             });
 
             string id;
@@ -107,6 +148,75 @@ namespace FastTests.Issues
 
             var patchedJson = GetRawJson(store, id);
             Assert.Equal("""{"Checks":{"Engine":2,"Gears":1}}""", patchedJson);
+        }
+
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void PatchOnEnumPropertyAndSaveEnumsAsIntegersShouldBeInconsistent()
+        {
+            // https://github.com/ravendb/ravendb/pull/18530#discussion_r1612819842
+            using var store = GetDocumentStore(new()
+            {
+                ModifyDocumentStore = store =>
+                {
+                    store.Conventions.SaveEnumsAsIntegers = true;
+                },
+            });
+
+            string id;
+            using (var session = store.OpenSession())
+            {
+                var entity = Thing.Create();
+                session.Store(entity);
+                session.SaveChanges();
+                id = session.Advanced.GetDocumentId(entity);
+            }
+
+            var storedJson = GetRawJson(store, id);
+            Assert.Equal("""{"Status":0}""", storedJson);
+
+            using (var session = store.OpenSession())
+            {
+                session.Advanced.Patch<Thing, Status>(id, x => x.Status, Status.Bad);
+                session.SaveChanges();
+            }
+
+            var patchedJson = GetRawJson(store, id);
+            Assert.Equal("""{"Status":"Bad"}""", patchedJson);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void PatchOnEnumPropertyAndSaveEnumsAsIntegersAndSaveEnumsAsIntegersForPatchingShouldWork()
+        {
+            using var store = GetDocumentStore(new()
+            {
+                ModifyDocumentStore = store =>
+                {
+                    store.Conventions.SaveEnumsAsIntegers = true;
+                    store.Conventions.SaveEnumsAsIntegersForPatching = true;
+                },
+            });
+
+            string id;
+            using (var session = store.OpenSession())
+            {
+                var entity = Thing.Create();
+                session.Store(entity);
+                session.SaveChanges();
+                id = session.Advanced.GetDocumentId(entity);
+            }
+
+            var storedJson = GetRawJson(store, id);
+            Assert.Equal("""{"Status":0}""", storedJson);
+
+            using (var session = store.OpenSession())
+            {
+                session.Advanced.Patch<Thing, Status>(id, x => x.Status, Status.Bad);
+                session.SaveChanges();
+            }
+
+            var patchedJson = GetRawJson(store, id);
+            Assert.Equal("""{"Status":2}""", patchedJson);
         }
 
         private string GetRawJson(DocumentStore store, string id)
@@ -147,6 +257,16 @@ namespace FastTests.Issues
             None,
             Good,
             Bad,
+        }
+
+        private class Thing
+        {
+            public static Thing Create() => new()
+            {
+                Status = Status.None,
+            };
+
+            public Status Status { get; set; }
         }
     }
 }
