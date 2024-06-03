@@ -46,7 +46,6 @@ public class SnmpMibWriter : IAsyncDisposable
         await WriteModuleAsync(now);
 
         await WriteObjectIdentifierAsync("hibernatingRhinos", "enterprises", "45751");
-        await WriteObjectIdentifierAsync("software", "hibernatingRhinos", "1");
         await WriteObjectIdentifierAsync("server", "ravendb", "1");
         await WriteObjectIdentifierAsync("databases", "ravendb", "5");
 
@@ -103,7 +102,7 @@ public class SnmpMibWriter : IAsyncDisposable
         await _writer.WriteLineAsync($"    DESCRIPTION \"MIB for the RavenDB {RavenVersionAttribute.Instance.FullVersion}\"");
         await _writer.WriteLineAsync($"    REVISION \"{now:yyyyMMddHHmm}Z\"");
         await _writer.WriteLineAsync($"    DESCRIPTION \"Generated MIB on {now:yyyyMMddHHmm} for RavenDB {RavenVersionAttribute.Instance.FullVersion}\"");
-        await _writer.WriteLineAsync("    ::= { software 1 }");
+        await _writer.WriteLineAsync("    ::= { hibernatingRhinos 1 }");
         await _writer.WriteLineAsync();
     }
 
