@@ -3292,6 +3292,12 @@ namespace Raven.Server.ServerWide
                     var response = await SendToNodeAsync(context, cachedLeaderTag, cmd, reachedLeader, token);
                     return (response.Index, cmd.FromRemote(response.Result));
                 }
+                catch (ConcurrencyException ex) when(reachedLeader.Value)
+                {
+                    // RachisMergedCommand try to insert to leaders log, but its leader is outdated (with old term)
+                    requestException = ex;
+                    continue;
+                }
                 catch (Exception ex)
                 {
                     if (Logger.IsInfoEnabled)
@@ -3877,6 +3883,7 @@ namespace Raven.Server.ServerWide
             internal Action RestoreDatabaseAfterSavingDatabaseRecord;
             internal Action AfterCommitInClusterTransaction;
             internal Action<string, List<ClusterTransactionCommand.SingleClusterDatabaseCommand>> BeforeExecuteClusterTransactionBatch;
+            internal Func<CommandBase, long, long> ModifyTermBeforeRachisMergedCommandInsertToLeaderLog;  // gets: command and term, returns: new term
         }
 
 #if DEBUG
