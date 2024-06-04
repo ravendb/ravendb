@@ -3,13 +3,13 @@ using Sparrow;
 
 namespace Raven.Server.Smuggler.Documents.Iteration
 {
-    public sealed class TimeSeriesDeletedRangeIterationState : CollectionAwareIterationState<TimeSeriesDeletedRangeItem>
+    public sealed class TimeSeriesDeletedRangeIterationState : CollectionAwareIterationState<TimeSeriesDeletedRangeItemForSmuggler>
     {
         public TimeSeriesDeletedRangeIterationState(DocumentsOperationContext context, Size pulseLimit) : base(context, pulseLimit)
         {
         }
 
-        public override void OnMoveNext(TimeSeriesDeletedRangeItem current)
+        public override void OnMoveNext(TimeSeriesDeletedRangeItemForSmuggler current)
         {
             if (StartEtagByCollection.Count != 0)
             {

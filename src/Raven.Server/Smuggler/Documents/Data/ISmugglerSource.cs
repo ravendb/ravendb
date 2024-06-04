@@ -58,7 +58,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         SmugglerSourceType GetSourceType();
 
-        IAsyncEnumerable<TimeSeriesDeletedRangeItem> GetTimeSeriesDeletedRangesAsync(ITimeSeriesActions action, List<string> collectionsToExport);
+        IAsyncEnumerable<TimeSeriesDeletedRangeItemForSmuggler> GetTimeSeriesDeletedRangesAsync(ITimeSeriesActions action, List<string> collectionsToExport);
 
     }
 

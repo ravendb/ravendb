@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             throw new NotSupportedException("Time Series are currently not supported by OLAP ETL");
         }
 
-        protected override IEnumerator<ToOlapItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeReplicationItem> timeSeries, string collection)
+        protected override IEnumerator<ToOlapItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
         {
             throw new NotSupportedException("Time series deletes aren't supported by OLAP ETL");
         }

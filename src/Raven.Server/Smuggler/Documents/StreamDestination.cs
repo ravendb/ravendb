@@ -1142,7 +1142,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            public async ValueTask WriteTimeSeriesDeletedRangeAsync(TimeSeriesDeletedRangeItem deletedRangeItem)
+            public async ValueTask WriteTimeSeriesDeletedRangeAsync(TimeSeriesDeletedRangeItemForSmuggler deletedRangeItem)
             {
                 using (deletedRangeItem)
                 {
@@ -1153,27 +1153,27 @@ namespace Raven.Server.Smuggler.Documents
 
                     Writer.WriteStartObject();
 
-                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItem.DocId));
+                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItemForSmuggler.DocId));
                     Writer.WriteString(deletedRangeItem.DocId, skipEscaping: true);
                     Writer.WriteComma();
 
-                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItem.Name));
+                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItemForSmuggler.Name));
                     Writer.WriteString(deletedRangeItem.Name, skipEscaping: true);
                     Writer.WriteComma();
 
-                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItem.Collection));
+                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItemForSmuggler.Collection));
                     Writer.WriteString(deletedRangeItem.Collection);
                     Writer.WriteComma();
 
-                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItem.ChangeVector));
+                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItemForSmuggler.ChangeVector));
                     Writer.WriteString(deletedRangeItem.ChangeVector);
                     Writer.WriteComma();
 
-                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItem.From));
+                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItemForSmuggler.From));
                     Writer.WriteDateTime(deletedRangeItem.From, isUtc: true);
                     Writer.WriteComma();
 
-                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItem.To));
+                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItemForSmuggler.To));
                     Writer.WriteDateTime(deletedRangeItem.To, isUtc: true);
 
                     Writer.WriteEndObject();

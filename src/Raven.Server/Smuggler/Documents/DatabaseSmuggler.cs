@@ -1260,7 +1260,7 @@ namespace Raven.Server.Smuggler.Documents
 
             return result.TimeSeriesDeletedRanges;
 
-            static bool ShouldSkip(TimeSeriesDeletedRangeItem deletedRange, SmugglerPatcher patcher)
+            static bool ShouldSkip(TimeSeriesDeletedRangeItemForSmuggler deletedRange, SmugglerPatcher patcher)
             {
                 return patcher != null && patcher.ShouldSkip(deletedRange.DocId);
             }

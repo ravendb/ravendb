@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             TimeSeriesSegmentEntry = timeSeriesSegmentEntry;
         }
 
-        public RavenEtlItem(TimeSeriesDeletedRangeReplicationItem deletedRange, string collection)
+        public RavenEtlItem(TimeSeriesDeletedRangeItem deletedRange, string collection)
         {
             Etag = deletedRange.Etag;
             ChangeVector = deletedRange.ChangeVector;

@@ -2412,7 +2412,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public IEnumerable<TimeSeriesDeletedRangeReplicationItem> GetDeletedRangesFrom(DocumentsOperationContext context, long etag, long toEtag = long.MaxValue)
+        public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFrom(DocumentsOperationContext context, long etag, long toEtag = long.MaxValue)
         {
             var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
 
@@ -2426,7 +2426,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public IEnumerable<TimeSeriesDeletedRangeReplicationItem> GetDeletedRangesFrom(DocumentsOperationContext context, string collection, long fromEtag, long toEtag = long.MaxValue)
+        public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFrom(DocumentsOperationContext context, string collection, long fromEtag, long toEtag = long.MaxValue)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -2445,7 +2445,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public IEnumerable<TimeSeriesDeletedRangeReplicationItem> GetDeletedRangesForDoc(DocumentsOperationContext context, string docId)
+        public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesForDoc(DocumentsOperationContext context, string docId)
         {
             var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
             using var dispose = DocumentIdWorker.GetSliceFromId(context, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator);
@@ -2463,12 +2463,12 @@ namespace Raven.Server.Documents.TimeSeries
             return Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize);
         }
 
-        private static TimeSeriesDeletedRangeReplicationItem CreateDeletedRangeItem(DocumentsOperationContext context, ref TableValueReader reader)
+        private static TimeSeriesDeletedRangeItem CreateDeletedRangeItem(DocumentsOperationContext context, ref TableValueReader reader)
         {
             var etag = *(long*)reader.Read((int)DeletedRangeTable.Etag, out _);
             var changeVectorPtr = reader.Read((int)DeletedRangeTable.ChangeVector, out int changeVectorSize);
 
-            var item = new TimeSeriesDeletedRangeReplicationItem
+            var item = new TimeSeriesDeletedRangeItem
             {
                 Type = ReplicationBatchItem.ReplicationItemType.DeletedTimeSeriesRange,
                 ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),

@@ -1179,7 +1179,7 @@ namespace Raven.Server.Documents.Handlers
 
             private readonly Dictionary<string, List<TimeSeriesItem>> _dictionary;
 
-            private readonly Dictionary<string, List<TimeSeriesDeletedRangeItem>> _deletedRanges;
+            private readonly Dictionary<string, List<TimeSeriesDeletedRangeItemForSmuggler>> _deletedRanges;
 
             private readonly DocumentsOperationContext _context;
 
@@ -1202,7 +1202,7 @@ namespace Raven.Server.Documents.Handlers
                 _toDispose = new();
                 _toReturn = new();
                 _releaseContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
-                _deletedRanges = new Dictionary<string, List<TimeSeriesDeletedRangeItem>>(StringComparer.OrdinalIgnoreCase);
+                _deletedRanges = new Dictionary<string, List<TimeSeriesDeletedRangeItemForSmuggler>>(StringComparer.OrdinalIgnoreCase);
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -1274,7 +1274,7 @@ namespace Raven.Server.Documents.Handlers
                 return newItem;
             }
 
-            public bool AddToDeletedRanges(TimeSeriesDeletedRangeItem item)
+            public bool AddToDeletedRanges(TimeSeriesDeletedRangeItemForSmuggler item)
             {
                 bool newItem = false;
 
