@@ -24,7 +24,7 @@ export default function ConnectionStrings(props: ConnectionStringsUrlParameters)
     const { name: nameFromUrl, type: typeFromUrl } = props;
 
     const { hasNone: hasNoneInLicense } = useConnectionStringsLicense();
-    const db = useAppSelector(databaseSelectors.activeDatabase);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
 
     const dispatch = useAppDispatch();
@@ -36,12 +36,12 @@ export default function ConnectionStrings(props: ConnectionStringsUrlParameters)
                 type: typeFromUrl,
             })
         );
-        dispatch(connectionStringsActions.fetchData(db));
+        dispatch(connectionStringsActions.fetchData(databaseName));
 
         return () => {
             dispatch(connectionStringsActions.reset());
         };
-    }, [db, dispatch, nameFromUrl, typeFromUrl]);
+    }, [databaseName, dispatch, nameFromUrl, typeFromUrl]);
 
     const loadStatus = useAppSelector(connectionStringSelectors.loadStatus);
     const connections = useAppSelector(connectionStringSelectors.connections);
@@ -52,7 +52,7 @@ export default function ConnectionStrings(props: ConnectionStringsUrlParameters)
         return (
             <LoadError
                 error="Unable to load connection strings"
-                refresh={() => dispatch(connectionStringsActions.fetchData(db))}
+                refresh={() => dispatch(connectionStringsActions.fetchData(databaseName))}
             />
         );
     }
