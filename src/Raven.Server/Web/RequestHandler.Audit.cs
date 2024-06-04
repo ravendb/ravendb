@@ -30,7 +30,7 @@ namespace Raven.Server.Web
 
         public string RequestIp => IsLocalRequest() ? Environment.MachineName : HttpContext.Connection.RemoteIpAddress.ToString();
 
-        public void LogAuditFor(string logger, string message)
+        public void LogAuditFor(string logger, string action, string target)
         {
             var auditLog = LoggingSource.AuditLog.GetLogger(logger, "Audit");
             Debug.Assert(auditLog.IsInfoEnabled, $"auditlog info is disabled");
@@ -44,8 +44,8 @@ namespace Raven.Server.Web
                 sb.Append($"CN={clientCert.Subject} [{clientCert.Thumbprint}], ");
             else
                 sb.Append("no certificate, ");
-            
-            sb.Append(message);
+
+            sb.Append($"{action} {target}");
 
             auditLog.Info(sb.ToString());
         }

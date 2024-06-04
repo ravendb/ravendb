@@ -230,8 +230,8 @@ namespace Raven.Server.Web.Authentication
                         ? Environment.NewLine + string.Join(Environment.NewLine, certificate.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))
                         : string.Empty;
 
-                    LogAuditFor("Certificates",
-                        $"Add new certificate {certificate?.Name} ['{certificate?.Thumbprint}']. Security Clearance: {certificate?.SecurityClearance}. Permissions:{permissions}.");
+                    LogAuditFor("Certificates", "ADD", 
+                        $"New certificate {certificate?.Name} ['{certificate?.Thumbprint}']. Security Clearance: {certificate?.SecurityClearance}. Permissions:{permissions}.");
                 }
                 
                 try
@@ -410,7 +410,7 @@ namespace Raven.Server.Web.Authentication
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    LogAuditFor("Certificates", $"Delete certificate '{thumbprint}'.");
+                    LogAuditFor("Certificates", "DELETE", $"Certificate '{thumbprint}'.");
                 }
                 
                 await DeleteInternal(keysToDelete, GetRaftRequestIdFromQuery());
