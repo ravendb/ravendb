@@ -14,7 +14,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
 {
-    public class TimeSeriesDeletedRangeReplicationItem : ReplicationBatchItem
+    public class TimeSeriesDeletedRangeItem : ReplicationBatchItem
     {
         public Slice Key;
         public LazyStringValue Collection;
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         protected override ReplicationBatchItem CloneInternal(JsonOperationContext context, ByteStringContext allocator)
         {
-            return new TimeSeriesDeletedRangeReplicationItem
+            return new TimeSeriesDeletedRangeItem
             {
                 Collection = Collection.Clone(context),
                 From = From,

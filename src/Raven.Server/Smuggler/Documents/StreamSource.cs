@@ -1056,18 +1056,18 @@ namespace Raven.Server.Smuggler.Documents
             return SmugglerSourceType.Import;
         }
 
-        public async IAsyncEnumerable<TimeSeriesDeletedRangeItem> GetTimeSeriesDeletedRangesAsync(ITimeSeriesActions action, List<string> collectionsToExport)
+        public async IAsyncEnumerable<TimeSeriesDeletedRangeItemForSmuggler> GetTimeSeriesDeletedRangesAsync(ITimeSeriesActions action, List<string> collectionsToExport)
         {
             var collectionsHashSet = new HashSet<string>(collectionsToExport, StringComparer.OrdinalIgnoreCase);
 
             await foreach (var reader in ReadArrayAsync(action))
             {
-                if (reader.TryGet(nameof(TimeSeriesDeletedRangeItem.Collection), out LazyStringValue collection) == false || 
-                    reader.TryGet(nameof(TimeSeriesDeletedRangeItem.DocId), out LazyStringValue docId) == false ||
-                    reader.TryGet(nameof(TimeSeriesDeletedRangeItem.Name), out LazyStringValue name) == false ||
-                    reader.TryGet(nameof(TimeSeriesDeletedRangeItem.ChangeVector), out LazyStringValue cv) == false ||
-                    reader.TryGet(nameof(TimeSeriesDeletedRangeItem.From), out DateTime from) == false ||
-                    reader.TryGet(nameof(TimeSeriesDeletedRangeItem.To), out DateTime to) == false)
+                if (reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.Collection), out LazyStringValue collection) == false || 
+                    reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.DocId), out LazyStringValue docId) == false ||
+                    reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.Name), out LazyStringValue name) == false ||
+                    reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.ChangeVector), out LazyStringValue cv) == false ||
+                    reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.From), out DateTime from) == false ||
+                    reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.To), out DateTime to) == false)
                 {
                     _result.TimeSeriesDeletedRanges.ErroredCount++;
                     _result.AddWarning("Could not read timeseries deleted range entry.");
@@ -1079,7 +1079,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 action.RegisterForDisposal(reader);
 
-                yield return new TimeSeriesDeletedRangeItem
+                yield return new TimeSeriesDeletedRangeItemForSmuggler
                 {
                     DocId = docId,
                     Name = name,

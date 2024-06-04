@@ -2380,7 +2380,7 @@ namespace Raven.Server.Smuggler.Documents
                 _batchSize.Add(item.Segment.NumberOfBytes, SizeUnit.Bytes);
             }
 
-            private void AddToBatch(TimeSeriesDeletedRangeItem item)
+            private void AddToBatch(TimeSeriesDeletedRangeItemForSmuggler item)
             {
                 _cmd.AddToDeletedRanges(item);
 
@@ -2404,7 +2404,7 @@ namespace Raven.Server.Smuggler.Documents
                 await HandleBatchOfTimeSeriesIfNecessaryAsync();
             }
 
-            public async ValueTask WriteTimeSeriesDeletedRangeAsync(TimeSeriesDeletedRangeItem deletedRange)
+            public async ValueTask WriteTimeSeriesDeletedRangeAsync(TimeSeriesDeletedRangeItemForSmuggler deletedRange)
             {
                 AddToBatch(deletedRange);
                 await HandleBatchOfTimeSeriesIfNecessaryAsync();

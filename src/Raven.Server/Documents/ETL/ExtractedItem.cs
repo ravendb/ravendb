@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.ETL
         
         public TimeSeriesSegmentEntry TimeSeriesSegmentEntry { get; protected set; }
 
-        public TimeSeriesDeletedRangeReplicationItem TimeSeriesDeletedRangeItem { get; protected set; }
+        public TimeSeriesDeletedRangeItem TimeSeriesDeletedRangeItem { get; protected set; }
         
         public LazyStringValue CounterTombstoneId { get; protected set; }
 

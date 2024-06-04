@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             throw new NotSupportedException("Time series aren't supported by SQL ETL");
         }
 
-        protected override IEnumerator<ToSqlItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeReplicationItem> timeSeries, string collection)
+        protected override IEnumerator<ToSqlItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
         {
             throw new NotSupportedException("Time series aren't supported by SQL ETL");
         }

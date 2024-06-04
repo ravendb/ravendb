@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         }
 
         protected override IEnumerator<ElasticSearchItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context,
-            IEnumerator<TimeSeriesDeletedRangeReplicationItem> timeSeries, string collection)
+            IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
         {
             throw new NotSupportedException("Time series aren't supported by ElasticSearch ETL");
         }
