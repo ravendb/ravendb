@@ -5,7 +5,7 @@ DEST_DIR=/build
 release=$(lsb_release -sr | cut -d. -f1)
 
 if [[ $release -ge 22 ]]; then
-    mv -v $ASSETS_DIR/ravendb/debian/control_$release $ASSETS_DIR/ravendb/debian/control
+    mv -v $ASSETS_DIR/ravendb/debian/control_22 $ASSETS_DIR/ravendb/debian/control
 else
     apt install dh-systemd
     mv -v $ASSETS_DIR/ravendb/debian/control_legacy $ASSETS_DIR/ravendb/debian/control
@@ -43,7 +43,7 @@ export DOTNET_RUNTIME_VERSION="$DOTNET_VERSION_MINOR"
 
 # Show dependencies for amd64 since that's the only platform Microsoft ships package for,
 # however the dependencies are the same at the moment.
-DOTNET_RUNTIME_DEPS_PKG="dotnet-runtime-deps-$DOTNET_RUNTIME_VERSION:amd64"
+DOTNET_RUNTIME_DEPS_PKG="dotnet-runtime-$DOTNET_RUNTIME_VERSION:amd64"
 DOTNET_RUNTIME_DEPS=$(apt show $DOTNET_RUNTIME_DEPS_PKG 2>/dev/null | sed -n -e 's/Depends: //p')
 if [ -z "$DOTNET_RUNTIME_DEPS" ]; then
     echo "Could not extract dependencies from $DOTNET_RUNTIME_DEPS_PKG package."
