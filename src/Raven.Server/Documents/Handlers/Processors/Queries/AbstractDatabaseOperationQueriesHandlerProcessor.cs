@@ -11,6 +11,8 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Queries;
 
@@ -50,6 +52,9 @@ internal abstract class AbstractDatabaseOperationQueriesHandlerProcessor : Abstr
         Debug.Assert(ReferenceEquals(returnAsyncOperationContext, QueryOperationContext), "returnAsyncOperationContext == _queryOperationContext");
 
         var op = GetOperation(query);
+
+        if (LoggingSource.AuditLog.IsInfoEnabled)
+            RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "DELETE", $"Documents matching the query: {query}");
 
         ExecuteQueryOperation(query, operationId, options, op.Action,  QueryOperationContext, op.Type);
     }

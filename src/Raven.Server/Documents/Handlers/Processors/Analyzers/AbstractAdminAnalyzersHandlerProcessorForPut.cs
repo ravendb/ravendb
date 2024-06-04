@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Analyzers
 
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
-                        RequestHandler.LogAuditFor(databaseName, $"Analyzer '{analyzerDefinition.Name}' PUT with definition: {analyzerToAdd}");
+                        RequestHandler.LogAuditFor(databaseName, "PUT", $"Analyzer '{analyzerDefinition.Name}' with definition: {analyzerToAdd}");
                     }
 
                     analyzerDefinition.Validate();

@@ -3,13 +3,16 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Raven.Client;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Logging;
 using HttpMethod = System.Net.Http.HttpMethod;
 
 namespace Raven.Server.Documents.Handlers.Processors.Streaming
@@ -103,6 +106,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                     RequestHandler.TrafficWatchStreamQuery(query);
 
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
+
+                if (LoggingSource.AuditLog.IsInfoEnabled && query.Metadata.CollectionName == Constants.Documents.Collections.AllDocumentsCollection)
+                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "QUERY", $"Streaming all documents (query: {query}, format: {format}, debug: {debug}, ignore limit: {ignoreLimit})");
+
                 // set the exported file name prefix
                 var fileNamePrefix = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
                 fileNamePrefix = $"{RequestHandler.DatabaseName}_{ServerStore.NodeTag}_{fileNamePrefix}";

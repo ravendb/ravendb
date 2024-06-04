@@ -12,6 +12,8 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Integrations.PostgreSQL.Handlers.Processors;
 
@@ -88,6 +90,11 @@ internal abstract class AbstractPostgreSqlIntegrationHandlerProcessorForAddUser<
         }
 
         users.Add(newUser);
+
+        if (LoggingSource.AuditLog.IsInfoEnabled)
+        {
+            RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "PUT", $"User '{newUser.Username}' in Postgres integration");
+        }
 
         return config;
     }
