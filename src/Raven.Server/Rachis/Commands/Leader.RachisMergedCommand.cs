@@ -125,7 +125,11 @@ namespace Raven.Server.Rachis
                 else
                 {
                     _engine.InvokeBeforeAppendToRaftLog(context, this);
-                    index = _engine.InsertToLeaderLog(context, _leader.Term, Command.Raw, RachisEntryFlags.StateMachineCommand);
+                    var term = _leader.Term;
+                    if (_engine.ServerStore?.ForTestingPurposes?.ModifyTermBeforeRachisMergedCommandInsertToLeaderLog != null)
+                        term = _engine.ServerStore.ForTestingPurposes.ModifyTermBeforeRachisMergedCommandInsertToLeaderLog.Invoke(Command, term);
+
+                    index = _engine.InsertToLeaderLog(context, term, Command.Raw, RachisEntryFlags.StateMachineCommand);
                 }
                
                 if (_leader._entries.TryGetValue(index, out var state) == false)
