@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
 
                 if (LoggingSource.AuditLog.IsInfoEnabled && query.Metadata.CollectionName == Constants.Documents.Collections.AllDocumentsCollection)
-                    LogAuditFor(Database.Name, $"Streaming results for all documents query: {query} (format: {format}, debug: {debug}, ignore limit: {ignoreLimit})");
+                    LogAuditFor(Database.Name, "QUERY", $"Streaming all documents (query: {query}, format: {format}, debug: {debug}, ignore limit: {ignoreLimit})");
 
                 // set the exported file name prefix
                 var fileNamePrefix = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
 
                 if (LoggingSource.AuditLog.IsInfoEnabled && query.Metadata.CollectionName == Constants.Documents.Collections.AllDocumentsCollection)
-                    LogAuditFor(Database.Name, $"Streaming results for all documents query: {query} (format: {format}, debug: {debug}, ignore limit: {ignoreLimit})");
+                    LogAuditFor(Database.Name, "QUERY", $"Streaming all documents (query: {query}, format: {format}, debug: {debug}, ignore limit: {ignoreLimit})");
 
                 // set the exported file name prefix
                 var fileNamePrefix = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";

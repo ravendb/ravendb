@@ -644,7 +644,7 @@ namespace Raven.Server.Web.System
 
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
-                LogAuditFor(Database.Name, $"Connection string {connectionStringName} DELETE");
+                LogAuditFor(Database.Name, "DELETE", $"Connection string '{connectionStringName}'");
             }
 
             var (index, _) = await ServerStore.RemoveConnectionString(Database.Name, connectionStringName, type, GetRaftRequestIdFromQuery());
@@ -798,7 +798,7 @@ namespace Raven.Server.Web.System
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
                         if (connectionString.TryGet(nameof(ConnectionString.Name), out string name))
-                            LogAuditFor(Database.Name, $"Connection string {name} PUT");
+                            LogAuditFor(Database.Name, "PUT", $"Connection string '{name}'");
                     }
 
                     return ServerStore.PutConnectionString(_, databaseName, connectionString, guid);

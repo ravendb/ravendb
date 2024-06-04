@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
-                        LogAuditFor(Database.Name, $"Index {indexDefinition.Name} PUT with definition: {indexToAdd}");
+                        LogAuditFor(Database.Name, "PUT", $"Index '{indexDefinition.Name}' with definition: {indexToAdd}");
                     }
 
                     if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)

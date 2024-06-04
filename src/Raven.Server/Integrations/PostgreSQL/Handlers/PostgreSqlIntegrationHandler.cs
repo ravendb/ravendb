@@ -142,7 +142,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
 
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
-                        LogAuditFor(Database.Name, $"Postgres integration. User {newUser.Username} PUT");
+                        LogAuditFor(Database.Name, "PUT", $"User '{newUser.Username}' in Postgres integration");
                     }
                 }
             }
@@ -201,7 +201,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
 
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
-                        LogAuditFor(Database.Name, $"Postgres integration. User {userToDelete.Username} DELETE");
+                        LogAuditFor(Database.Name, "DELETE", $"User '{userToDelete.Username}' in Postgres integration");
                     }
                 }
             }

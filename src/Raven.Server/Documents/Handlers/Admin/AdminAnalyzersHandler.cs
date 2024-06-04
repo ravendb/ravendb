@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
-                        LogAuditFor(Database.Name, $"Analyzer '{analyzerDefinition.Name}' PUT with definition: {analyzerToAdd}");
+                        LogAuditFor(Database.Name, "PUT",  $"Analyzer '{analyzerDefinition.Name}' with definition: {analyzerToAdd}");
                     }
 
                     analyzerDefinition.Validate();
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
-                LogAuditFor(Database.Name, $"Analyzer '{name}' DELETE");
+                LogAuditFor(Database.Name, "DELETE", $"Analyzer '{name}'");
             }
 
             var command = new DeleteAnalyzerCommand(name, Database.Name, GetRaftRequestIdFromQuery());
