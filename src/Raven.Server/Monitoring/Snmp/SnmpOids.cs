@@ -649,11 +649,11 @@ namespace Raven.Server.Monitoring.Snmp
                 [Description("Number of active ongoing tasks for all databases")]
                 public const string TotalNumberOfActiveOngoingTasks = "5.1.11.2";
 
-                [Description("Number of enabled replication tasks for all databases")]
-                public const string TotalNumberOfReplicationTasks = "5.1.11.3";
+                [Description("Number of enabled external replication tasks for all databases")]
+                public const string TotalNumberOfExternalReplicationTasks = "5.1.11.3";
 
-                [Description("Number of active replication tasks for all databases")]
-                public const string TotalNumberOfActiveReplicationTasks = "5.1.11.4";
+                [Description("Number of active external replication tasks for all databases")]
+                public const string TotalNumberOfActiveExternalReplicationTasks = "5.1.11.4";
 
                 public static DynamicJsonArray ToJson()
                 {
