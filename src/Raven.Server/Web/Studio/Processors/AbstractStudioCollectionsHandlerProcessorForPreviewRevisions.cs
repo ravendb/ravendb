@@ -64,7 +64,7 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
                 writer.WritePropertyName(nameof(PreviewRevisionsResult.Results));
                 await WriteItems(context, writer);
 
-                
+                WriteAdditionalField(context, writer);
                 writer.WriteEndObject();
             }
 
@@ -78,6 +78,10 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
     protected abstract bool NotModified(TOperationContext context, out string etag);
 
     protected abstract Task WriteItems(TOperationContext context, AsyncBlittableJsonTextWriter writer);
+
+    protected virtual void WriteAdditionalField(TOperationContext context, AsyncBlittableJsonTextWriter writer)
+    {
+    }
 
     protected virtual Task InitializeAsync(TOperationContext context, CancellationToken token)
     {
