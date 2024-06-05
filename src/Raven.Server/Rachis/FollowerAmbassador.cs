@@ -644,10 +644,10 @@ namespace Raven.Server.Rachis
                                 case RootObjectType.VariableSizeTree:
                                     var tree = txr.ReadTree(currentTreeKey);
 
-                                    binaryWriter.Write(tree.State.Header.NumberOfEntries);
+                                    binaryWriter.Write(tree.State.NumberOfEntries);
                                     totalSizeInBytes += sizeof(long);
 
-                                    var type = tree.State.Header.Flags;
+                                    var type = tree.State.Flags;
                                     if (_connection.Features.MultiTree)
                                     {
                                         binaryWriter.Write((int)type);

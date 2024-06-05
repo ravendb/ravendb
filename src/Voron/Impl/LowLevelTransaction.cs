@@ -912,8 +912,7 @@ namespace Voron.Impl
             _transactionPages.Remove(value);
             _transactionPages.Add(shrinked);
 
-            ref var state = ref treeState.Modify();
-            state.OverflowPages -= prevNumberOfPages - lowerNumberOfPages;
+            treeState.OverflowPages -= prevNumberOfPages - lowerNumberOfPages;
         }
 
         [Conditional("DEBUG")]
@@ -1491,7 +1490,7 @@ namespace Voron.Impl
                 return;
             }
             
-            if (_state.Root.Header.PageCount < pageId)
+            if (_state.Root.PageCount < pageId)
                 return;
             
             var page = GetPage(pageId);
