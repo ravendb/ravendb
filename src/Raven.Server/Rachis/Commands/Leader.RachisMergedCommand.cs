@@ -5,6 +5,7 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using System.Diagnostics.CodeAnalysis;
+using Raven.Client.Exceptions.Cluster;
 using Sparrow.Json;
 using Voron.Impl;
 
@@ -129,7 +130,9 @@ namespace Raven.Server.Rachis
                     if (_engine.ServerStore?.ForTestingPurposes?.ModifyTermBeforeRachisMergedCommandInsertToLeaderLog != null)
                         term = _engine.ServerStore.ForTestingPurposes.ModifyTermBeforeRachisMergedCommandInsertToLeaderLog.Invoke(Command, term);
 
-                    index = _engine.InsertToLeaderLog(context, term, Command.Raw, RachisEntryFlags.StateMachineCommand);
+                    ValidateTerm(term);
+
+                    index = _engine.InsertToLeaderLog(context, term, Command.Raw, RachisEntryFlags.StateMachineCommand, validateTerm: false);
                 }
                
                 if (_leader._entries.TryGetValue(index, out var state) == false)
@@ -157,6 +160,14 @@ namespace Raven.Server.Rachis
                     //https://issues.hibernatingrhinos.com/issue/RavenDB-20762
                     state.WriteResultAction += BlittableResultWriter.CopyResult;
 
+            }
+
+            private void ValidateTerm(long term)
+            {
+                if (term != _engine.CurrentTerm)
+                {
+                    throw new RachisMergedCommandConcurrencyException($"The term was changed from {term:#,#;;0} to {_engine.CurrentTerm:#,#;;0}");
+                }
             }
 
             private void AfterCommit(LowLevelTransaction tx)

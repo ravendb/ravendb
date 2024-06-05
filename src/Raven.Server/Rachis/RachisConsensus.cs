@@ -1448,7 +1448,7 @@ namespace Raven.Server.Rachis
         }
 
         public unsafe long InsertToLeaderLog(ClusterOperationContext context, long term, BlittableJsonReaderObject cmd,
-            RachisEntryFlags flags)
+            RachisEntryFlags flags, bool validateTerm = true)
         {
             if (MaxSizeOfSingleRaftCommandInBytes.HasValue)
             {
@@ -1458,7 +1458,8 @@ namespace Raven.Server.Rachis
 
             Debug.Assert(context.Transaction != null);
 
-            ValidateTerm(term);
+            if(validateTerm)
+                ValidateTerm(term);
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
 

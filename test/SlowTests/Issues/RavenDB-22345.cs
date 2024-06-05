@@ -22,7 +22,7 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.Cluster)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task Test(Options options)
+        public async Task HandleOutdatedLeaderOnRachisMergedCommand(Options options)
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, watcherCluster: true);
             var follower = nodes.First(n => n.ServerStore.NodeTag != leader.ServerStore.NodeTag);
