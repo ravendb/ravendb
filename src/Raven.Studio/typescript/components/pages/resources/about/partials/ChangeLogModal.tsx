@@ -154,7 +154,7 @@ export function ChangeLogModal(props: ChangelogModalProps) {
                                                     ) : (
                                                         <>
                                                             Your license can&apos;t be used with the target version.
-                                                            Prior updating, please contact Sales and update your license
+                                                            Prior updating, please contact us and update your license
                                                             beforehand.
                                                         </>
                                                     )}
