@@ -75,7 +75,7 @@ public class RavenDB_14963 : RavenTestBase
         await AssertResultsAsync(store, list, totalResults: 8, start: 2, pageSize: 3);
         await AssertResultsAsync(store, list, totalResults: 8, start: 0, pageSize: 8);
 
-        await AssertResultsAsync(store, list, totalResults: 0, start: 0, pageSize: 8, "Companies");
+        await Assert.ThrowsAsync<RavenException>(() => AssertResultsAsync(store, list, totalResults: 0, start: 0, pageSize: 8, "Companies"));
 
         await AssertResultsAsync(store, list, totalResults: 4, start: 0, pageSize: 2, "Users");
         await AssertResultsAsync(store, list, totalResults: 4, start: 1, pageSize: 2, "Users");
