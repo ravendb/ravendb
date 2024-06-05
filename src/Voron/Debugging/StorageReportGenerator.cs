@@ -116,8 +116,8 @@ namespace Voron.Debugging
             {
                 var treeReport = GetReport(tree, input.IncludeDetails);
                 trees.Add(treeReport);
-                if (tree.State.Header.Flags.HasFlag(TreeFlags.CompactTrees) ||
-                    tree.State.Header.Flags.HasFlag(TreeFlags.Lookups))
+                if (tree.State.Flags.HasFlag(TreeFlags.CompactTrees) ||
+                    tree.State.Flags.HasFlag(TreeFlags.Lookups))
                 {
                     using var it = tree.Iterate(false);
                     if (it.Seek(Slices.BeforeAllKeys))
@@ -564,13 +564,11 @@ namespace Voron.Debugging
             MultiValuesReport multiValues = null;
             StreamsReport streams = null;
 
-            ref readonly var state = ref tree.State.Header;
-
-            if (state.Flags == TreeFlags.MultiValueTrees)
+            if (tree.State.Flags == TreeFlags.MultiValueTrees)
             {
                 multiValues = CreateMultiValuesReport(tree);
             }
-            else if (state.Flags == (TreeFlags.FixedSizeTrees | TreeFlags.Streams))
+            else if (tree.State.Flags == (TreeFlags.FixedSizeTrees | TreeFlags.Streams))
             {
                 streams = CreateStreamsReport(tree, includeDetails);
             }
@@ -581,15 +579,15 @@ namespace Voron.Debugging
             {
                 Type = RootObjectType.VariableSizeTree,
                 Name = tree.Name.ToString(),
-                BranchPages = state.BranchPages,
-                Depth = state.Depth,
-                NumberOfEntries = state.NumberOfEntries,
-                LeafPages = state.LeafPages,
-                OverflowPages = state.OverflowPages,
-                PageCount = state.PageCount,
+                BranchPages = tree.State.BranchPages,
+                Depth = tree.State.Depth,
+                NumberOfEntries = tree.State.NumberOfEntries,
+                LeafPages = tree.State.LeafPages,
+                OverflowPages = tree.State.OverflowPages,
+                PageCount = tree.State.PageCount,
                 Density = density,
-                AllocatedSpaceInBytes = PagesToBytes(state.PageCount) + (streams?.AllocatedSpaceInBytes ?? 0),
-                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(state.PageCount) * density) : -1,
+                AllocatedSpaceInBytes = PagesToBytes(tree.State.PageCount) + (streams?.AllocatedSpaceInBytes ?? 0),
+                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(tree.State.PageCount) * density) : -1,
                 MultiValues = multiValues,
                 Streams = streams,
                 BalanceHistogram = pageBalance,
@@ -623,8 +621,11 @@ namespace Voron.Debugging
                 return new StreamsReport
                 {
                     AllocatedSpaceInBytes = -1,
-                    NumberOfStreams = tree.State.Header.NumberOfEntries,
-                    Streams = [_skippedStreamsDetailsEntry],
+                    NumberOfStreams = tree.State.NumberOfEntries,
+                    Streams = new List<StreamDetails>
+                    {
+                        _skippedStreamsDetailsEntry
+                    },
                     TotalNumberOfAllocatedPages = -1
                 };
             }
@@ -669,7 +670,7 @@ namespace Voron.Debugging
                 return new StreamsReport
                 {
                     Streams = streams,
-                    NumberOfStreams = tree.State.Header.NumberOfEntries,
+                    NumberOfStreams = tree.State.NumberOfEntries,
                     TotalNumberOfAllocatedPages = totalNumberOfAllocatedPages,
                     AllocatedSpaceInBytes = PagesToBytes(totalNumberOfAllocatedPages)
                 };
@@ -746,7 +747,7 @@ namespace Voron.Debugging
         {
             var histogram = new Dictionary<int, int>();
 
-            var root = tree.GetReadOnlyTreePage(tree.State.Header.RootPageNumber);
+            var root = tree.GetReadOnlyTreePage(tree.State.RootPageNumber);
 
             GatherBalanceDistribution(tree, root, histogram, depth: 1);
 
