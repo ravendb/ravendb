@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Session
     {
         private int _valsCount;
         private int _customCount;
-        private readonly Lazy<JavascriptCompilationOptions> _javascriptCompilationOptions;
+        private readonly Lazy<JavascriptCompilationOptions> _pathScriptCompilationOptions;
 
         public void Increment<T, U>(T entity, Expression<Func<T, U>> path, U valToAdd)
         {
@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Session
 
         public void Increment<T, U>(string id, Expression<Func<T, U>> path, U valToAdd)
         {
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
+            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
 
             var variable = $"this.{pathScript}";
             var value = $"args.val_{_valsCount}";
@@ -64,7 +64,7 @@ namespace Raven.Client.Documents.Session
         public void AddOrIncrement<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU valueToAdd)
         {
 
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
+            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
 
             var variable = $"this.{pathScript}";
             var value = $"args.val_{_valsCount}";
@@ -110,7 +110,7 @@ namespace Raven.Client.Documents.Session
                 Suffix = _customCount++,
                 SaveEnumsAsIntegersForPatching = DocumentStore.Conventions.SaveEnumsAsIntegersForPatching,
             };
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
+            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
             var adderScript = arrayAdder.CompileToJavascript(
                 new JavascriptCompilationOptions(
                     JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
@@ -142,7 +142,7 @@ namespace Raven.Client.Documents.Session
 
         public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU value)
         {
-            var patchScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
+            var patchScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
             var valueToUse = AddTypeNameToValueIfNeeded(path.Body.Type, value);
             if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
             {
@@ -190,7 +190,7 @@ namespace Raven.Client.Documents.Session
 
         public void Patch<T, U>(string id, Expression<Func<T, U>> path, U value)
         {
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
+            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
 
             var valueToUse = AddTypeNameToValueIfNeeded(path.Body.Type, value);
             if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
@@ -224,7 +224,7 @@ namespace Raven.Client.Documents.Session
                 Suffix = _customCount++,
                 SaveEnumsAsIntegersForPatching = DocumentStore.Conventions.SaveEnumsAsIntegersForPatching,
             };
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
+            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
             var adderScript = arrayAdder.CompileToJavascript(
                 new JavascriptCompilationOptions(
                     JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
@@ -244,7 +244,7 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, TKey, TValue>(string id, Expression<Func<T, IDictionary<TKey, TValue>>> path,
             Expression<Func<JavaScriptDictionary<TKey, TValue>, object>> dictionaryAdder)
         {
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
+            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
 
             if (!(dictionaryAdder.Body is MethodCallExpression call))
             {
