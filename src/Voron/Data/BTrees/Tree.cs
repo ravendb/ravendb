@@ -17,11 +17,10 @@ using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using Constants = Voron.Global.Constants;
 using System.Diagnostics.CodeAnalysis;
-using Sparrow.Json;
 
 namespace Voron.Data.BTrees
 {
-    public unsafe partial class Tree : IDisposable
+    public unsafe partial class Tree
     {
         private int _directAddUsage;
 
@@ -31,9 +30,8 @@ namespace Voron.Data.BTrees
 
         private readonly TreeMutableState _state;
 
-        private static readonly ObjectPool<RecentlyFoundTreePages> FoundPagesPool = new(() => new RecentlyFoundTreePages(), 128);
-
-        private readonly RecentlyFoundTreePages _recentlyFoundPages;
+        private static readonly ObjectPool<RecentlyFoundTreePages> _currentRecentlyFoundPagesPool = new(() => new RecentlyFoundTreePages(), 128);
+        private RecentlyFoundTreePages _recentlyFoundPages;
 
         private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
         private Dictionary<Slice, FixedSizeTree<double>> _fixedSizeTreesForDouble;
@@ -67,17 +65,12 @@ namespace Voron.Data.BTrees
                 SetNewPageAllocator(newPageAllocator);
             }
 
-            _recentlyFoundPages = FoundPagesPool.Allocate();
+            _recentlyFoundPages = _currentRecentlyFoundPagesPool.Allocate();
 
             _state = new TreeMutableState(llt)
             {
                 RootPageNumber = root
             };
-
-            _recentlyFoundPages = FoundPagesPool.Allocate();
-            _state = new TreeMutableState(llt);
-
-            llt.RegisterDisposable(this);
         }
 
         public Tree(LowLevelTransaction llt, Transaction tx, Slice name, TreeMutableState state)
@@ -85,20 +78,11 @@ namespace Voron.Data.BTrees
             _llt = llt;
             _tx = tx;
             Name = name;
-
-            _recentlyFoundPages = FoundPagesPool.Allocate();
-
+            
+            _recentlyFoundPages = _currentRecentlyFoundPagesPool.Allocate();
 
             _state = new TreeMutableState(llt);
             _state = state;
-
-            llt.RegisterDisposable(this);
-        }
-
-        void IDisposable.Dispose()
-        {
-            _recentlyFoundPages.Clear();
-            FoundPagesPool.Free(_recentlyFoundPages);
         }
 
         public bool IsLeafCompressionSupported
@@ -172,7 +156,9 @@ namespace Voron.Data.BTrees
         [DoesNotReturn]
         private static void ThrowInvalidTreeCreateType()
         {
-            throw new ArgumentException($"Only valid types are {nameof(RootObjectType.VariableSizeTree)} or {nameof(RootObjectType.Table)}.");
+            throw new ArgumentException(
+                $"Only valid types are {nameof(RootObjectType.VariableSizeTree)} or {nameof(RootObjectType.Table)}.",
+                "type");
         }
 
         /// <summary>
@@ -287,15 +273,19 @@ namespace Voron.Data.BTrees
             throw new ArgumentNullException();
         }
 
-        public void Add(Slice key, ReadOnlySpan<byte> value)
+        public void Add(Slice key, byte[] value)
         {
             if (value == null)
                 ThrowNullReferenceException();
-
             Debug.Assert(value != null);
 
             using (DirectAdd(key, value.Length, out byte* ptr))
-                value.CopyTo(new Span<byte>(ptr, value.Length));
+            {
+                fixed (byte* src = value)
+                {
+                    Memory.Copy(ptr, src, value.Length);
+                }
+            }
         }
 
         public void Add(Slice key, Slice value)
@@ -671,7 +661,9 @@ namespace Voron.Data.BTrees
 
         internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node)
         {
-            if (TryUseRecentTransactionPage(key, out TreePage p, out node))
+            TreePage p;
+
+            if (TryUseRecentTransactionPage(key, out p, out node))
             {
                 return p;
             }
@@ -1249,6 +1241,7 @@ namespace Voron.Data.BTrees
             var root = GetReadOnlyTreePage(State.RootPageNumber);
             stack.Push(root);
 
+            Slice key = default(Slice);
             while (stack.Count > 0)
             {
                 var p = stack.Pop();
@@ -1272,7 +1265,7 @@ namespace Voron.Data.BTrees
                     }
                     else if (node->Flags == TreeNodeFlags.MultiValuePageRef)
                     {
-                        using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out Slice key))
+                        using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out key))
                         {
                             var tree = OpenMultiValueTree(key, node);
                             results.AddRange(tree.AllPages());
@@ -1630,7 +1623,7 @@ namespace Voron.Data.BTrees
                             {
                                 using (pageRef.GetNodeKey(_llt, j, out var key))
                                 {
-                                    if (key is { HasValue: true, Size: > 0 } && SliceComparer.Compare(key, refKey) < 0)
+                                    if (key.HasValue && key.Size > 0 && SliceComparer.Compare(key, refKey) < 0)
                                     {
                                         DebugStuff.RenderAndShow(this);
                                         throw new InvalidOperationException($"Found invalid reference in branch page: {p}. Reference key: {refKey}, key found in referenced {pageRef} page: {key}");
@@ -1645,7 +1638,9 @@ namespace Voron.Data.BTrees
 
         public void Forget(Slice name)
         {
-            _prepareLocator?.Remove(name);
+            if (_prepareLocator == null)
+                return;
+            _prepareLocator.Remove(name);
         }
     }
 }
