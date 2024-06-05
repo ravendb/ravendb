@@ -71,7 +71,11 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                 const node = nodesToUse.find((x) => x.tag === localState.location.nodeTag);
 
                 const uptime = localState.data ? DatabaseUtils.formatUptime(localState.data.upTime) : "";
-                const isOfflineOrDisabled = uptime === "Offline" || db.isDisabled;
+                const isInactive =
+                    localState.status === "idle" ||
+                    localState.status === "loading" ||
+                    uptime === "Offline" ||
+                    db.isDisabled;
 
                 return (
                     <DistributionItem
@@ -86,7 +90,7 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                     >
                         {isSharded && shard}
                         <div className={classNames("node", { top: !isSharded })}>
-                            <DatabaseNodeSetItem node={node} isOfflineOrDisabled={isOfflineOrDisabled} />
+                            <DatabaseNodeSetItem node={node} isInactive={isInactive} />
                         </div>
                         <div className="entries">
                             {localState.data?.loadError ? (
