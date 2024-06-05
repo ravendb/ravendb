@@ -34,20 +34,11 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
         using (OpenReadTransaction(context))
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
-            _collection = RequestHandler.GetStringQueryString("collection", required: false);
-
-            if (NotModified(context, out var etag))
-            {
-                RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                return;
-            }
-
-            if (etag != null)
-                HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
-
-            await InitializeAsync(context, token.Token);
+            await InitializeAsync(context);
 
             var count = await GetTotalCountAsync();
+
+            var revisions = GetRevisionsAsync(context);
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
@@ -58,7 +49,43 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(PreviewRevisionsResult.Results));
-                await WriteItems(context, writer);
+                writer.WriteStartArray();
+
+                var first = true;
+                await foreach (var revision in revisions)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    if (first)
+                        first = false;
+                    else
+                        writer.WriteComma();
+
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(nameof(Document.Id));
+                    writer.WriteString(revision.Id);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(Document.Etag));
+                    writer.WriteInteger(revision.Etag);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(Document.LastModified));
+                    writer.WriteDateTime(revision.LastModified, true);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(Document.ChangeVector));
+                    writer.WriteString(revision.ChangeVector);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(Document.Flags));
+                    writer.WriteString(revision.Flags.ToString());
+
+                    writer.WriteEndObject();
+                }
+
+                writer.WriteEndArray();
 
                 WriteAdditionalField(context, writer);
                 writer.WriteEndObject();
@@ -68,8 +95,6 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
     }
 
     protected abstract IDisposable OpenReadTransaction(TOperationContext context);
-
-    protected abstract Task WriteItems(TOperationContext context, AsyncBlittableJsonTextWriter writer);
 
     protected virtual void WriteAdditionalField(TOperationContext context, AsyncBlittableJsonTextWriter writer)
     {
@@ -83,7 +108,21 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
 
     protected abstract ValueTask<long> GetTotalCountAsync();
 
-    protected abstract ValueTask InitializeAsync(TOperationContext context, CancellationToken token);
+    protected abstract IAsyncEnumerable<Document> GetRevisionsAsync(TOperationContext context);
+
+    protected virtual ValueTask InitializeAsync(TOperationContext context)
+    {
+        _collection = RequestHandler.GetStringQueryString("collection", required: false);
+
+        if (NotModified(context, out var etag))
+        {
+            RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+        }
+        else if (etag != null)
+            HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
+
+        return ValueTask.CompletedTask;
+    }
 
     protected abstract bool NotModified(TOperationContext context, out string etag);
 }
