@@ -24,7 +24,7 @@ internal abstract class AbstractAdminSortersHandlerProcessorForDelete<TRequestHa
 
         if (LoggingSource.AuditLog.IsInfoEnabled)
         {
-           RequestHandler.LogAuditFor(databaseName, $"Sorter {name} DELETE");
+           RequestHandler.LogAuditFor(databaseName, "DELETE", $"Sorter '{name}'");
         }
 
         var command = new DeleteSorterCommand(name, databaseName, RequestHandler.GetRaftRequestIdFromQuery());

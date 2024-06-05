@@ -10,6 +10,8 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Logging;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
@@ -32,6 +34,11 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             List<string> errors = new ();
             if (connectionString.Validate(ref errors) == false)
                 throw new BadRequestException($"Invalid connection string configuration. Errors: {string.Join($"{Environment.NewLine}", errors)}");
+
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "PUT", $"Connection string '{connectionString.Name}'");
+            }
 
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             SecurityClearanceValidator.AssertSecurityClearance(connectionString, feature?.Status);

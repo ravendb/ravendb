@@ -94,7 +94,7 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
             
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
-                LogAuditFor(nameof(TwoFactorAuthenticationHandler), $"successfully authenticated with two factor auth for {period} (until: {DateTime.UtcNow.Add(period)}). Has limits: {hasLimits}");
+                LogAuditFor(nameof(TwoFactorAuthenticationHandler), "AUTH", $"2FA session open for {period} (until: {DateTime.UtcNow.Add(period)}). Has limits: {hasLimits}");
             }
 
             string expectedCookieValue = null;
@@ -139,7 +139,7 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
     {
         if (LoggingSource.AuditLog.IsInfoEnabled)
         {
-            LogAuditFor(nameof(TwoFactorAuthenticationHandler), $"Two factor auth failure: {err}");
+            LogAuditFor(nameof(TwoFactorAuthenticationHandler), "AUTH", $"2FA failure: {err}");
         }
 
         HttpContext.Response.StatusCode = (int)httpStatusCode;

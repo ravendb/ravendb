@@ -63,9 +63,9 @@ namespace Raven.Server.Web.System
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    LogAuditFor("DbMgmt", $"Database '{dbName}' topology is being modified " +
-                                          $"Old topology: {databaseRecord.Topology} " +
-                                          $"New topology: {databaseTopology}.");
+                    LogAuditFor("DbMgmt", "CHANGE", $"Database '{dbName}' topology. " +
+                                                    $"Old topology: {databaseRecord.Topology} " +
+                                                    $"New topology: {databaseTopology}.");
                 }
 
                 // Validate Topology

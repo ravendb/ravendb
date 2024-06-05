@@ -15,7 +15,7 @@ namespace Raven.Server.Web
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
                 DynamicJsonValue conf = GetCustomConfigurationAuditJson(description, configuration);
-                var line = $"Task: '{description}' with taskId: '{id}'";
+                var line = $"'{description}' with taskId: '{id}'";
 
                 if (conf != null)
                 {
@@ -28,7 +28,7 @@ namespace Raven.Server.Web
                     line += ($" Configuration: {confString}");
                 }
 
-                LogAuditFor(_context.DatabaseName ?? "Server", line);
+                LogAuditFor(_context.DatabaseName ?? "Server", "TASK", line);
             }
         }
 
@@ -51,7 +51,7 @@ namespace Raven.Server.Web
 
         public string RequestIp => IsLocalRequest() ? Environment.MachineName : HttpContext.Connection.RemoteIpAddress.ToString();
 
-        public void LogAuditFor(string logger, string message)
+        public void LogAuditFor(string logger, string action, string target)
         {
             var auditLog = LoggingSource.AuditLog.GetLogger(logger, "Audit");
             Debug.Assert(auditLog.IsInfoEnabled, $"auditlog info is disabled");
@@ -66,7 +66,7 @@ namespace Raven.Server.Web
             else
                 sb.Append("no certificate, ");
 
-            sb.Append(message);
+            sb.Append($"{action} {target}");
 
             auditLog.Info(sb.ToString());
         }

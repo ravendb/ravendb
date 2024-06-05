@@ -31,7 +31,7 @@ namespace Raven.Server.Web.System.Analyzers
 
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
-                        LogAuditFor("Server", $"Analyzer {analyzerDefinition.Name} PUT with definition: {analyzerToAdd}");
+                        LogAuditFor("Server", "PUT", $"Analyzer '{analyzerDefinition.Name}' with definition: {analyzerToAdd}");
                     }
 
                     analyzerDefinition.Validate();
@@ -61,7 +61,7 @@ namespace Raven.Server.Web.System.Analyzers
 
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
-                LogAuditFor("Server", $"Analyzer {name} DELETE");
+                LogAuditFor("Server", "DELETE", $"Analyzer '{name}'");
             }
 
             var command = new DeleteServerWideAnalyzerCommand(name, GetRaftRequestIdFromQuery());
