@@ -279,7 +279,8 @@ public sealed partial class ClusterStateMachine
             return;
 
         if (licenseStatus.CanSetupDefaultRevisionsConfiguration == false &&
-            databaseRecord.Revisions.Default != null)
+            databaseRecord.Revisions.Default != null &&
+            databaseRecord.Revisions.Default.Disabled == false)
         {
             throw new LicenseLimitException(LimitType.RevisionsConfiguration, "Your license doesn't allow the creation of a default configuration for revisions.");
         }
@@ -289,6 +290,9 @@ public sealed partial class ClusterStateMachine
 
         foreach (KeyValuePair<string, RevisionsCollectionConfiguration> revisionPerCollectionConfiguration in databaseRecord.Revisions.Collections)
         {
+            if (revisionPerCollectionConfiguration.Value.Disabled)
+                continue;
+
             if (revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep != null &&
                 maxRevisionsToKeep != null &&
                 revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep > maxRevisionsToKeep)
