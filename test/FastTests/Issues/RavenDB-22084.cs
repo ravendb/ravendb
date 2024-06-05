@@ -295,6 +295,38 @@ namespace FastTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void WithListAdderPatch()
+        {
+            using var store = GetDocumentStore(new()
+            {
+                ModifyDocumentStore = store =>
+                {
+                    store.Conventions.SaveEnumsAsIntegers = true;
+                    store.Conventions.SaveEnumsAsIntegersForPatching = true;
+                },
+            });
+
+            var entity = Stuff.Create();
+            string id;
+            using (var session = store.OpenSession())
+            {
+                session.Store(entity);
+                session.SaveChanges();
+                id = session.Advanced.GetDocumentId(entity);
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var item = session.Load<Stuff>(id);
+                session.Advanced.Patch(item, x => x.Parts, parts => parts.Add(Parts.Gears));
+                session.SaveChanges();
+            }
+
+            var patchedJson = GetRawJson(store, id);
+            Assert.Equal("""{"Parts":[42,102]}""", patchedJson);
+        }
+
         private string GetRawJson(DocumentStore store, string id)
         {
             using var session = store.OpenSession();
@@ -344,6 +376,19 @@ namespace FastTests.Issues
             };
 
             public Status Status { get; set; }
+        }
+
+        private class Stuff
+        {
+            public static Stuff Create() => new()
+            {
+                Parts = new()
+                {
+                    RavenDB_22084.Parts.Engine,
+                },
+            };
+
+            public List<Parts> Parts { get; set; }
         }
     }
 }

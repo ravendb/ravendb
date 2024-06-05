@@ -28,6 +28,7 @@ namespace Raven.Client.Util
         {
             public readonly Dictionary<string, object> Parameters = new Dictionary<string, object>();
             public int Suffix { get; set; }
+            public bool SaveEnumsAsIntegersForPatching { get; set; }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
@@ -99,7 +100,11 @@ namespace Raven.Client.Util
                         javascriptWriter.Write(name);
                         object val;
                         if (LinqPathProvider.GetValueFromExpressionWithoutConversion(args[i], out val))
+                        {
+                            if (SaveEnumsAsIntegersForPatching && val is Enum)
+                                val = Convert.ToInt32(val);
                             Parameters[name] = val;
+                        }
                     }
                 }
 

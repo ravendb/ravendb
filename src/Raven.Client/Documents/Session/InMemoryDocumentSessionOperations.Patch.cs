@@ -105,7 +105,11 @@ namespace Raven.Client.Documents.Session
 
         public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, List<TU>>> path, Expression<Func<JavaScriptArray<TU>, object>> arrayAdder)
         {
-            var extension = new JavascriptConversionExtensions.CustomMethods { Suffix = _customCount++ };
+            var extension = new JavascriptConversionExtensions.CustomMethods
+            {
+                Suffix = _customCount++,
+                SaveEnumsAsIntegersForPatching = DocumentStore.Conventions.SaveEnumsAsIntegersForPatching,
+            };
             var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
             var adderScript = arrayAdder.CompileToJavascript(
                 new JavascriptCompilationOptions(
@@ -215,7 +219,11 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, U>(string id, Expression<Func<T, IEnumerable<U>>> path,
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder)
         {
-            var extension = new JavascriptConversionExtensions.CustomMethods { Suffix = _customCount++ };
+            var extension = new JavascriptConversionExtensions.CustomMethods
+            {
+                Suffix = _customCount++,
+                SaveEnumsAsIntegersForPatching = DocumentStore.Conventions.SaveEnumsAsIntegersForPatching,
+            };
             var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
             var adderScript = arrayAdder.CompileToJavascript(
                 new JavascriptCompilationOptions(
