@@ -643,6 +643,18 @@ namespace Raven.Server.Monitoring.Snmp
                 [Description("Number of faulted databases")]
                 public const string FaultedCount = "5.1.10";
 
+                [Description("Number of enabled ongoing tasks for all databases")]
+                public const string TotalNumberOfOngoingTasks = "5.1.11.1";
+
+                [Description("Number of active ongoing tasks for all databases")]
+                public const string TotalNumberOfActiveOngoingTasks = "5.1.11.2";
+
+                [Description("Number of enabled replication tasks for all databases")]
+                public const string TotalNumberOfReplicationTasks = "5.1.11.3";
+
+                [Description("Number of active replication tasks for all databases")]
+                public const string TotalNumberOfActiveReplicationTasks = "5.1.11.4";
+
                 public static DynamicJsonArray ToJson()
                 {
                     var array = new DynamicJsonArray();

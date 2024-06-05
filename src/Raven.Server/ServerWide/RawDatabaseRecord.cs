@@ -110,7 +110,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public string _databaseName;
+        private string _databaseName;
 
         public string DatabaseName
         {
