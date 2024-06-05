@@ -440,8 +440,8 @@ namespace Voron.Debugging
         [Conditional("DEBUG")]
         public static void RenderAndShow(Tree tree, bool decompress = false)
         {
-            var headerData = $"<p>{tree.State}</p>";
-            RenderAndShowTree(tree, tree.State.Header.RootPageNumber, headerData, decompress);
+            var headerData = string.Format("<p>{0}</p>", tree.State);
+            RenderAndShowTree(tree, tree.State.RootPageNumber, headerData, decompress);
         }
 
         [Conditional("DEBUG")]
@@ -462,14 +462,14 @@ namespace Voron.Debugging
 
         public static Task DumpTreeToStreamAsync(Tree tree, Stream stream)
         {
-            var headerData = $"<p>{tree.State}</p>";
+            var headerData = string.Format("<p>{0}</p>", tree.State);
 
             return WriteHtmlAsync(new StreamWriter(stream), async writer =>
             {
                 await writer.WriteLineAsync(headerData);
                 await writer.WriteLineAsync("<div class='css-treeview'><ul>");
 
-                await RenderPageAsync(tree, tree.GetReadOnlyTreePage(tree.State.Header.RootPageNumber), writer, "Root", true, false);
+                await RenderPageAsync(tree, tree.GetReadOnlyTreePage(tree.State.RootPageNumber), writer, "Root", true, false);
 
                 await writer.WriteLineAsync("</ul></div>");
             });
