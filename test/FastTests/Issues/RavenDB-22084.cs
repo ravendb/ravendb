@@ -4,6 +4,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -219,6 +220,81 @@ namespace FastTests.Issues
             Assert.Equal("""{"Status":2}""", patchedJson);
         }
 
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void WithAddOrPatch()
+        {
+            using var store = GetDocumentStore(new()
+            {
+                ModifyDocumentStore = store =>
+                {
+                    store.Conventions.SaveEnumsAsIntegers = true;
+                    store.Conventions.SaveEnumsAsIntegersForPatching = true;
+                },
+            });
+
+            string id;
+            var entity = Machine.Create();
+            using (var session = store.OpenSession())
+            {
+                session.Store(entity);
+                session.SaveChanges();
+                id = session.Advanced.GetDocumentId(entity);
+            }
+
+            using (var session = store.OpenSession())
+            {
+                session.Advanced.AddOrPatch(id, entity, x => x.Checks[Parts.Breaks], Status.Good);
+                session.SaveChanges();
+            }
+
+            var patchedJson = GetRawJson(store, id);
+            Assert.Equal("""{"Checks":{"Engine":1,"Gears":1,"Breaks":1}}""", patchedJson);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void WithDictionaryAdderPatch()
+        {
+            using var store = GetDocumentStore(new()
+            {
+                ModifyDocumentStore = store =>
+                {
+                    store.Conventions.SaveEnumsAsIntegers = true;
+                    store.Conventions.SaveEnumsAsIntegersForPatching = true;
+                },
+            });
+
+            var entity = Machine.Create();
+            string id;
+            using (var session = store.OpenSession())
+            {
+                session.Store(entity);
+                session.SaveChanges();
+                id = session.Advanced.GetDocumentId(entity);
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var item = session.Load<Machine>(id);
+                session.Advanced.Patch(item, x => x.Checks, dict => dict.Add(Parts.Breaks, Status.Bad));
+                session.SaveChanges();
+            }
+            using (var commands = store.Commands())
+            {
+                var item = commands.Get(id).BlittableJson;
+                Assert.True(item.TryGet(nameof(Machine.Checks), out BlittableJsonReaderObject values));
+                Assert.Equal(3, values.Count);
+
+                Assert.True(values.TryGet(nameof(Parts.Engine), out int engineVal));
+                Assert.Equal(1, engineVal);
+
+                Assert.True(values.TryGet(nameof(Parts.Gears), out int gearsVal));
+                Assert.Equal(1, gearsVal);
+
+                Assert.True(values.TryGet(nameof(Parts.Breaks), out int breaksVal)); //fails, we get a string "Bad" instead of int 
+                Assert.Equal(2, breaksVal);
+            }
+        }
+
         private string GetRawJson(DocumentStore store, string id)
         {
             using var session = store.OpenSession();
@@ -250,6 +326,7 @@ namespace FastTests.Issues
         {
             Engine = 42,
             Gears = 102,
+            Breaks = 206,
         }
 
         private enum Status
