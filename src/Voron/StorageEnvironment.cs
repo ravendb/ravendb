@@ -305,7 +305,11 @@ namespace Voron
 
             var entry = _headerAccessor.CopyHeader();
             var nextPageNumber = (header->TransactionId == 0 ? entry.LastPageNumber : header->LastPageNumber) + 1;
-            State = new StorageEnvironmentState(nextPageNumber);
+            State = new StorageEnvironmentState(null, nextPageNumber)
+            {
+                NextPageNumber = nextPageNumber,
+                Options = Options
+            };
 
             Interlocked.Exchange(ref _transactionsCounter, header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
             var transactionPersistentContext = new TransactionPersistentContext(true);
@@ -442,7 +446,10 @@ namespace Voron
         private void CreateNewDatabase()
         {
             const int initialNextPageNumber = 0;
-            State = new StorageEnvironmentState(initialNextPageNumber);
+            State = new StorageEnvironmentState(null, initialNextPageNumber)
+            {
+                Options = Options
+            };
 
             if (Options.SimulateFailureOnDbCreation)
                 ThrowSimulateFailureOnDbCreation();
