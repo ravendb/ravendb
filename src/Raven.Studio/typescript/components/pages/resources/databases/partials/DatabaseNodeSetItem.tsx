@@ -5,14 +5,19 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import IconName from "typings/server/icons";
 import { TextColor } from "components/models/common";
 
-export function DatabaseNodeSetItem(props: { node: NodeInfo; isOfflineOrDisabled?: boolean }) {
-    const { node, isOfflineOrDisabled } = props;
+interface DatabaseNodeSetItemProps {
+    node: NodeInfo;
+    isInactive?: boolean;
+}
+
+export function DatabaseNodeSetItem(props: DatabaseNodeSetItemProps) {
+    const { node, isInactive } = props;
 
     return (
         <NodeSetItem
             key={node.tag}
             icon={iconForNodeType(node.type)}
-            color={colorForNodeType(node.type, isOfflineOrDisabled)}
+            color={colorForNodeType(node.type, isInactive)}
             title={node.type}
         >
             {node.tag}
@@ -20,8 +25,8 @@ export function DatabaseNodeSetItem(props: { node: NodeInfo; isOfflineOrDisabled
     );
 }
 
-function colorForNodeType(type: databaseGroupNodeType, isOfflineOrDisabled?: boolean): TextColor {
-    if (isOfflineOrDisabled) {
+function colorForNodeType(type: databaseGroupNodeType, isInactive?: boolean): TextColor {
+    if (isInactive) {
         return "muted";
     }
 

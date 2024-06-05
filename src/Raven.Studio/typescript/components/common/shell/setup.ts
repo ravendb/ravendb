@@ -57,15 +57,17 @@ function initRedux() {
                     serverUrl: x.serverUrl(),
                 })) ?? [];
 
-        globalDispatch(
-            clusterActions.serverStateLoaded({ passive: clusterTopologyManager.default.topology()?.isPassive() })
-        );
         globalDispatch(clusterActions.nodesLoaded(clusterNodes));
     };
 
     clusterTopologyManager.default.topology.subscribe((topology) => {
         onClusterTopologyChanged();
         topology.nodes.subscribe(onClusterTopologyChanged);
+
+        globalDispatch(clusterActions.serverStateLoaded({ passive: topology.isPassive() }));
+        topology.isPassive.subscribe((isPassive) => {
+            globalDispatch(clusterActions.serverStateLoaded({ passive: isPassive }));
+        });
     });
 
     viewModelBase.clientVersion.subscribe((version) => globalDispatch(clusterActions.clientVersionLoaded(version)));
