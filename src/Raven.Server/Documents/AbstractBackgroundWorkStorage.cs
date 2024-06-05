@@ -205,6 +205,9 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 
             dequeueCount++;
             docsTree.MultiDelete(info.Ticks, info.LowerId);
+
+            if (context.CanContinueTransaction == false)
+                break;
         }
 
         var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
