@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-using Voron.Data.BTrees;
-using Voron.Global;
+﻿using Voron.Data.BTrees;
 
 namespace Voron.Impl
 {
@@ -21,9 +19,9 @@ namespace Voron.Impl
             NextPageNumber = nextPage;
         }
 
-        public void Initialize(TreeMutableState rootObjectsState)
+        public void Initialize(TreeMutableState state)
         {
-            Root = rootObjectsState;
+            Root = state;
         }
 
         public void UpdateNextPage(long nextPage)
