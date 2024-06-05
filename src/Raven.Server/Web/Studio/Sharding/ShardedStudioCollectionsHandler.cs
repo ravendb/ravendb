@@ -24,6 +24,7 @@ namespace Raven.Server.Web.Studio.Sharding
         }
 
         [RavenShardedAction("/databases/*/studio/revisions/preview", "GET")]
+
         public async Task PreviewRevisions()
         {
             using (var processor = new ShardedStudioCollectionsHandlerProcessorForPreviewRevisions(this))
