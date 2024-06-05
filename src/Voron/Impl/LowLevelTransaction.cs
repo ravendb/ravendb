@@ -450,7 +450,7 @@ namespace Voron.Impl
             if (State.Root != null)
                 return;
 
-            State.Initialize(root.State);
+            State.Root = root.State;
 
             _root = root;
         }
@@ -735,7 +735,7 @@ namespace Voron.Impl
                 if (pageNumber == null) // allocate from end of file
                 {
                     pageNumber = State.NextPageNumber;
-                    State.UpdateNextPage(State.NextPageNumber + numberOfPages);
+                    State.NextPageNumber += numberOfPages;
                 }
             }
             return AllocatePage(numberOfPages, pageNumber.Value, previousPage, zeroPage);
