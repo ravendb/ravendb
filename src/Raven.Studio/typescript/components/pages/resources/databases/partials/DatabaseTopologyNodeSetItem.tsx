@@ -33,7 +33,7 @@ export default function DatabaseTopologyNodeSetItem({
 
     const isOffline = localInfo.data ? DatabaseUtils.formatUptime(localInfo.data.upTime) === "Offline" : false;
 
-    const isOfflineOrDisabled = isOffline || isDisabled;
+    const isInactive = localInfo.status === "idle" || localInfo.status === "loading" || isOffline || isDisabled;
 
-    return <DatabaseNodeSetItem node={node} isOfflineOrDisabled={isOfflineOrDisabled} />;
+    return <DatabaseNodeSetItem node={node} isInactive={isInactive} />;
 }
