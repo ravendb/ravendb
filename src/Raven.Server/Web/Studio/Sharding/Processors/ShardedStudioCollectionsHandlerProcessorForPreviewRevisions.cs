@@ -35,9 +35,9 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
     {
     }
 
-    protected override async Task WriteItemsAsync(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer)
+    protected override async Task WriteItems(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer)
     {
-        var shardItems = RequestHandler.DatabaseContext.Streaming.PagedShardedStream(
+        var shardItems = RequestHandler.DatabaseContext.Streaming.PagedShardedStream<BlittableJsonReaderObject>(
             _combinedReadState,
             "Results",
             x => x,

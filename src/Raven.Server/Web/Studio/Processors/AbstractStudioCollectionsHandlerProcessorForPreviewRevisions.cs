@@ -4,7 +4,6 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
 using Sparrow.Json;
@@ -40,7 +39,7 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
             }
 
             if (etag != null)
-                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + etag + "\"";
+                HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
 
             await InitializeAsync(context, token.Token);
 
@@ -55,8 +54,9 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(PreviewRevisionsResult.Results));
-                await WriteItemsAsync(context, writer);
+                await WriteItems(context, writer);
 
+                
                 writer.WriteEndObject();
             }
 
@@ -69,7 +69,7 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
 
     protected abstract bool NotModified(TOperationContext context, out string etag);
 
-    protected abstract Task WriteItemsAsync(TOperationContext context, AsyncBlittableJsonTextWriter writer);
+    protected abstract Task WriteItems(TOperationContext context, AsyncBlittableJsonTextWriter writer);
 
     protected virtual Task InitializeAsync(TOperationContext context, CancellationToken token)
     {
