@@ -54,6 +54,7 @@ public class RavenDB_14963 : RavenTestBase
                     throw new InvalidOperationException($"revision data ({result.ChangeVector}, {result.Id}) doesn't contains field 'Name'.");
 
                 return name;
+
             }
 
         };
