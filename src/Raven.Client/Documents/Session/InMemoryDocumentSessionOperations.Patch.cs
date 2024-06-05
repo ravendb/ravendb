@@ -140,6 +140,10 @@ namespace Raven.Client.Documents.Session
         {
             var patchScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
             var valueToUse = AddTypeNameToValueIfNeeded(path.Body.Type, value);
+            if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
+            {
+                valueToUse = Convert.ToInt32(value);
+            }
             var patchRequest = new PatchRequest
             {
                 Script = $"this.{patchScript} = args.val_{_valsCount};",
@@ -248,6 +252,10 @@ namespace Raven.Client.Documents.Session
                     object value;
                     (key, value) = GetKeyAndValue<TKey, TValue>(call);
                     patchRequest.Script = $"this.{pathScript}.{key} = args.val_{_valsCount};";
+                    if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
+                    {
+                        value = Convert.ToInt32(value);
+                    }
                     patchRequest.Values[$"val_{_valsCount}"] = value;
                     _valsCount++;
                     break;
