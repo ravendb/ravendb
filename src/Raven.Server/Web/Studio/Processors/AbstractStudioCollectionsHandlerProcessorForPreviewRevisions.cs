@@ -31,7 +31,7 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
         using (OpenReadTransaction(context))
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
-            await InitializeAsync(context, token.Token);
+            Collection = RequestHandler.GetStringQueryString("collection", required: false);
 
             if (NotModified(context, out var etag))
             {
@@ -41,6 +41,8 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
 
             if (etag != null)
                 HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + etag + "\"";
+
+            await InitializeAsync(context, token.Token);
 
             var count = await GetTotalCountAsync();
 
