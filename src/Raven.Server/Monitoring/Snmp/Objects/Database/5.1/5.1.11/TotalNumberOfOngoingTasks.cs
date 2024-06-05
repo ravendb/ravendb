@@ -1,9 +1,3 @@
-// -----------------------------------------------------------------------
-//  <copyright file="DatabaseOpenedCount.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
 using System.Linq;
 using Lextm.SharpSnmpLib;
 using Raven.Client.Documents.Subscriptions;
@@ -27,41 +21,41 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             {
                 foreach (var database in GetDatabases(context))
                 {
-                    count += GetNumberOfActiveElasticSearchEtls(database);
-                    count += GetNumberOfActiveExternalReplications(database);
-                    //count += GetNumberOfActiveHubPullReplications(database);
-                    count += GetNumberOfActiveOlapEtls(database);
-                    count += GetNumberOfActivePeriodicBackups(database);
-                    count += GetNumberOfActiveQueueEtls(database);
-                    count += GetNumberOfActiveRavenEtls(database);
-                    count += GetNumberOfActiveSinkPullReplications(database);
-                    count += GetNumberOfActiveSqlEtls(database);
-                    count += GetNumberOfActiveSubscriptions(context, database);
+                    count += GetNumberOfElasticSearchEtls(database);
+                    count += GetNumberOfExternalReplications(database);
+                    //count += GetNumberOfHubPullReplications(database);
+                    count += GetNumberOfOlapEtls(database);
+                    count += GetNumberOfPeriodicBackups(database);
+                    count += GetNumberOfQueueEtls(database);
+                    count += GetNumberOfRavenEtls(database);
+                    count += GetNumberOfSinkPullReplications(database);
+                    count += GetNumberOfSqlEtls(database);
+                    count += GetNumberOfSubscriptions(context, database);
                 }
             }
 
             return new Integer32(count);
         }
 
-        public static int GetNumberOfActiveElasticSearchEtls(RawDatabaseRecord database) => database.ElasticSearchEtls?.Count(x => x.Disabled == false) ?? 0;
+        public static int GetNumberOfElasticSearchEtls(RawDatabaseRecord database) => database.ElasticSearchEtls?.Count(x => x.Disabled == false) ?? 0;
 
-        public static int GetNumberOfActiveExternalReplications(RawDatabaseRecord database) => database.ExternalReplications?.Count(x => x.Disabled == false) ?? 0;
+        public static int GetNumberOfExternalReplications(RawDatabaseRecord database) => database.ExternalReplications?.Count(x => x.Disabled == false) ?? 0;
 
-        //public static int GetNumberOfActiveHubPullReplications(RawDatabaseRecord database) => database.HubPullReplications?.Count(x => x.Disabled == false) ?? 0;
+        //public static int GetNumberOfHubPullReplications(RawDatabaseRecord database) => database.HubPullReplications?.Count(x => x.Disabled == false) ?? 0;
 
-        public static int GetNumberOfActiveOlapEtls(RawDatabaseRecord database) => database.OlapEtls?.Count(x => x.Disabled == false) ?? 0;
+        public static int GetNumberOfOlapEtls(RawDatabaseRecord database) => database.OlapEtls?.Count(x => x.Disabled == false) ?? 0;
 
-        public static int GetNumberOfActivePeriodicBackups(RawDatabaseRecord database) => database.PeriodicBackups?.Count(x => x.Disabled == false) ?? 0;
+        public static int GetNumberOfPeriodicBackups(RawDatabaseRecord database) => database.PeriodicBackups?.Count(x => x.Disabled == false) ?? 0;
 
-        public static int GetNumberOfActiveQueueEtls(RawDatabaseRecord database) => database.QueueEtls?.Count(x => x.Disabled == false) ?? 0;
+        public static int GetNumberOfQueueEtls(RawDatabaseRecord database) => database.QueueEtls?.Count(x => x.Disabled == false) ?? 0;
 
-        public static int GetNumberOfActiveRavenEtls(RawDatabaseRecord database) => database.RavenEtls?.Count(x => x.Disabled == false) ?? 0;
+        public static int GetNumberOfRavenEtls(RawDatabaseRecord database) => database.RavenEtls?.Count(x => x.Disabled == false) ?? 0;
 
-        public static int GetNumberOfActiveSinkPullReplications(RawDatabaseRecord database) => database.SinkPullReplications?.Count(x => x.Disabled == false) ?? 0;
+        public static int GetNumberOfSinkPullReplications(RawDatabaseRecord database) => database.SinkPullReplications?.Count(x => x.Disabled == false) ?? 0;
 
-        public static int GetNumberOfActiveSqlEtls(RawDatabaseRecord database) => database.SqlEtls?.Count(x => x.Disabled == false) ?? 0;
+        public static int GetNumberOfSqlEtls(RawDatabaseRecord database) => database.SqlEtls?.Count(x => x.Disabled == false) ?? 0;
 
-        public static int GetNumberOfActiveSubscriptions(TransactionOperationContext context, RawDatabaseRecord database)
+        public static int GetNumberOfSubscriptions(TransactionOperationContext context, RawDatabaseRecord database)
         {
             var count = 0;
             foreach (var kvp in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(database.DatabaseName)))
