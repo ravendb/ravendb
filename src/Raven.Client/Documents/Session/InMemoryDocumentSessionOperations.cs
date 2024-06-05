@@ -254,7 +254,7 @@ namespace Raven.Client.Documents.Session
             if (shardedBatchOptions != null)
                 _saveChangesOptions = new BatchOptions { ShardedOptions = shardedBatchOptions };
 
-            _javascriptCompilationOptions = new Lazy<JavascriptCompilationOptions>(() => new JavascriptCompilationOptions(
+            _pathScriptCompilationOptions = new Lazy<JavascriptCompilationOptions>(() => new JavascriptCompilationOptions(
                 flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
                 extensions:
                 [
