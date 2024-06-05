@@ -200,7 +200,7 @@ namespace Voron.Impl
 
                 _scratchPagerStates = previous._scratchPagerStates;
 
-                _state = previous._state;
+                _state = previous._state.Clone();
 
                 InitializeRoots();
 
@@ -372,7 +372,7 @@ namespace Voron.Impl
                     // for write transactions, we can use the current one (which == null)
                     _scratchPagerStates = scratchPagerStates;
 
-                    _state = env.State;
+                    _state = env.State.Clone();
 
                     InitializeRoots();
 
