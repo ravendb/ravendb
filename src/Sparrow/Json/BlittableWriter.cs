@@ -48,7 +48,15 @@ namespace Sparrow.Json
         {
             get
             {
-                ThrowIfCachedPropertiesWereReset();
+                if (_documentNumber == -1)
+                {
+                    _documentNumber = _context.CachedProperties.DocumentNumber;
+                }
+                else if (_documentNumber != _context.CachedProperties.DocumentNumber)
+                {
+                    throw new InvalidOperationException($"The {_context.CachedProperties} were reset while building the document");
+                }
+                
                 return _context.CachedProperties;
             }
         }
@@ -758,18 +766,6 @@ namespace Sparrow.Json
             }
 
             return _compressionBuffer.Address;
-        }
-
-        internal void ThrowIfCachedPropertiesWereReset()
-        {
-            if (_documentNumber == -1)
-            {
-                _documentNumber = _context.CachedProperties.DocumentNumber;
-            }
-            else if (_documentNumber != _context.CachedProperties.DocumentNumber)
-            {
-                throw new InvalidOperationException($"The {_context.CachedProperties} were reset while building the document");
-            }
         }
 
         public void Dispose()

@@ -1125,25 +1125,29 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Reset()
-        {
-            Renew(null, null, 0, null);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Renew(string str, byte* buffer, int size, JsonOperationContext context)
         {
             Debug.Assert(size >= 0);
 
-            ReturnAllocatedMemory();
-
+            // PERF: Renewing a LazyStringValue that has been used by the current context, and it is still valid
+            // makes no sense, let's just use it and be done with it.
+            if (AllocatedMemoryData != null)
+            {
+                if (_context != context || _context.Generation != AllocatedMemoryData.ContextGeneration)
+                {
+                    // However it can happen that it is invalid. Either by being allocated by some other context OR
+                    // by the context have been renewed.
+                    AllocatedMemoryData = null;
+                }
+            }
+            
             _size = size;
             _buffer = buffer;
             _string = str;
             _length = -1;
             EscapePositions = null;
             IsDisposed = false;
-            AllocatedMemoryData = null;
+
             _hashCode = default;
             _context = context;
         }
