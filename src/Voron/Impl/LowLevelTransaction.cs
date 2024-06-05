@@ -7,6 +7,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq; // Needed in DEBUG
+using System.Text; // Needed in DEBUG
 using Sparrow;
 using Sparrow.Platform;
 using Sparrow.Server;
@@ -24,13 +26,8 @@ using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Debugging;
 using Voron.Util;
-
-#if DEBUG
-using System.Linq; // Needed in DEBUG
-using System.Text; // Needed in DEBUG
-#endif
-
 using Constants = Voron.Global.Constants;
+
 
 namespace Voron.Impl
 {
