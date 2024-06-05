@@ -43,11 +43,8 @@ namespace Voron.Data.BTrees
             if (value.Size == 0)
                 throw new ArgumentException("Cannot add empty value to child tree");
 
-            if ((State.Header.Flags & TreeFlags.MultiValueTrees) != TreeFlags.MultiValueTrees)
-            {
-                ref var state = ref State.Modify();
-                state.Flags |= TreeFlags.MultiValueTrees;
-            }
+            ref var state = ref State.Modify();
+            state.Flags |= TreeFlags.MultiValueTrees;
 
             var page = FindPageFor(key, out _);
             if (page == null || page.LastMatch != 0)
