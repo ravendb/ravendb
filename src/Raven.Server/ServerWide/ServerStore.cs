@@ -23,6 +23,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
@@ -3292,7 +3293,7 @@ namespace Raven.Server.ServerWide
                     var response = await SendToNodeAsync(context, cachedLeaderTag, cmd, reachedLeader, token);
                     return (response.Index, cmd.FromRemote(response.Result));
                 }
-                catch (ConcurrencyException ex) when(reachedLeader.Value)
+                catch (RachisMergedCommandConcurrencyException ex)
                 {
                     // RachisMergedCommand try to insert to leaders log, but its leader is outdated (with old term)
                     requestException = ex;
