@@ -39,6 +39,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
 {
     private readonly IndexFieldOptions _allFields;
     private readonly bool _ticksSupport;
+    private readonly bool _dynamicFieldsProperlyHandleDynamicConfiguration;
 
     protected CoraxJintDocumentConverterBase(Index index, IndexDefinition definition, bool storeValue, int numberOfBaseFields, string keyFieldName,
         string storeValueFieldName, ICollection<IndexField> fields = null, bool canContainSourceDocumentId = false) :
@@ -49,6 +50,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         Debug.Assert(index.Type.IsJavaScript());
 
         _ticksSupport = IndexDefinitionBaseServerSide.IndexVersion.IsTimeTicksInJavaScriptIndexesSupported(index.Definition.Version);
+        _dynamicFieldsProperlyHandleDynamicConfiguration = IndexDefinitionBaseServerSide.IndexVersion.JavaScriptProperlyHandleDynamicFieldsIndexFields <= index.Definition.Version;
     }
 
     protected override bool SetDocumentFields<TBuilder>(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, TBuilder builder,
@@ -341,9 +343,6 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         }
         else
         {
-#if DEBUG
-            throw new InvalidOperationException($"{nameof(nameProperty)} should not be a null.");
-#endif
             fieldName = property;
         }
 
@@ -386,7 +385,8 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
 
                 if (string.Equals(propertyNameAsString, nameof(CreateFieldOptions.TermVector), StringComparison.OrdinalIgnoreCase))
                 {
-                    //ignore
+                    //Ignore: Corax will build TermVector only for field with 'Search' analyzer and will do it automatically.
+                    //There is no need to parsing it since it will be unused anyway.
                     //field.TermVector = GetEnum<FieldTermVector>(optionValue, propertyNameAsString);
 
                     continue;
@@ -397,7 +397,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         scope.DynamicFields ??= new();
         if (scope.DynamicFields.TryGetValue(fieldName, out var persistedIndexField))
         {
-            if (persistedIndexField.Indexing != fieldIndexing)
+            if (persistedIndexField.Indexing != fieldIndexing && _dynamicFieldsProperlyHandleDynamicConfiguration)
                 throw new InvalidDataException($"Inconsistent dynamic field creation options were detected. Field '{fieldName}' was created with '{persistedIndexField.Indexing}' analyzer but now '{field.Indexing}' analyzer was specified. This is not supported");
             field = persistedIndexField;
         }
