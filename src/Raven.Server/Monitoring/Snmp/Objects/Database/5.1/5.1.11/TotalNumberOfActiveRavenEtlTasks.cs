@@ -4,10 +4,10 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class TotalNumberOfExternalReplicationTasks : OngoingTasksBase
+    public class TotalNumberOfActiveRavenEtlTasks : ActiveOngoingTasksBase
     {
-        public TotalNumberOfExternalReplicationTasks(ServerStore serverStore)
-            : base(serverStore, SnmpOids.Databases.General.TotalNumberOfExternalReplicationTasks)
+        public TotalNumberOfActiveRavenEtlTasks(ServerStore serverStore)
+            : base(serverStore, SnmpOids.Databases.General.TotalNumberOfActiveRavenEtlTasks)
         {
         }
 
@@ -17,12 +17,12 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
+                var rachisState = ServerStore.CurrentRachisState;
+                var nodeTag = ServerStore.NodeTag;
+
                 foreach (var database in GetDatabases(context))
                 {
-                    if (database.IsDisabled)
-                        continue;
-
-                    count += GetNumberOfExternalReplications(database);
+                    count += GetNumberOfActiveRavenEtls(rachisState, nodeTag, database);
                 }
             }
 
