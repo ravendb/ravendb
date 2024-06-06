@@ -330,7 +330,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             FieldStorage? fieldStorage = null;
             FieldTermVector? termVector = null;
             
-            if (nameProperty != null)
+            if (nameProperty.Value.IsUndefined() == false)
             {
                 var fieldNameObj = nameProperty.Value;
                 if (fieldNameObj.IsString() == false)
@@ -426,11 +426,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             scope.DynamicFields[field.Name] = field;
             scope.CreateFieldConverter ??= new LuceneDocumentConverter(scope.Index, new IndexField[] { });
 
-            using var i = scope.CreateFieldConverter.NestedField(scope.CreatedFieldsCount);
-            scope.IncrementDynamicFields();
-            var result = new List<AbstractField>();
-            scope.CreateFieldConverter.GetRegularFields(new AbstractStaticIndexBase.StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext, scope?.Source, out _);
-            return result;
+            using (scope.CreateFieldConverter.NestedField(scope.CreatedFieldsCount))
+            {
+                scope.IncrementDynamicFields();
+                var result = new List<AbstractField>();
+                scope.CreateFieldConverter.GetRegularFields(new AbstractStaticIndexBase.StaticIndexLuceneDocumentWrapper(result), field, value,
+                    CurrentIndexingScope.Current.IndexContext, scope?.Source, out _);
+                return result;
+            }
         }
     }
 }
