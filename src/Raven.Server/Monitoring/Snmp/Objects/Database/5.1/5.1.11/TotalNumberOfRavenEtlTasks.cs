@@ -4,10 +4,10 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class TotalNumberOfExternalReplicationTasks : OngoingTasksBase
+    public class TotalNumberOfRavenEtlTasks : OngoingTasksBase
     {
-        public TotalNumberOfExternalReplicationTasks(ServerStore serverStore)
-            : base(serverStore, SnmpOids.Databases.General.TotalNumberOfExternalReplicationTasks)
+        public TotalNumberOfRavenEtlTasks(ServerStore serverStore)
+            : base(serverStore, SnmpOids.Databases.General.TotalNumberOfRavenEtlTasks)
         {
         }
 
@@ -19,10 +19,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             {
                 foreach (var database in GetDatabases(context))
                 {
-                    if (database.IsDisabled)
-                        continue;
-
-                    count += GetNumberOfExternalReplications(database);
+                    count += GetNumberOfRavenEtls(database);
                 }
             }
 

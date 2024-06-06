@@ -10,7 +10,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class TotalNumberOfActiveExternalReplicationTasks : DatabaseBase<Integer32>
+    public class TotalNumberOfActiveExternalReplicationTasks : ActiveOngoingTasksBase
     {
         public TotalNumberOfActiveExternalReplicationTasks(ServerStore serverStore)
             : base(serverStore, SnmpOids.Databases.General.TotalNumberOfActiveExternalReplicationTasks)
@@ -28,10 +28,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 
                 foreach (var database in GetDatabases(context))
                 {
-                    if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(database.DatabaseName) == false)
-                        continue;
-
-                    count += TotalNumberOfActiveOngoingTasks.GetNumberOfActiveExternalReplications(rachisState, nodeTag, database);
+                    count += GetNumberOfActiveExternalReplications(rachisState, nodeTag, database);
                 }
             }
 
