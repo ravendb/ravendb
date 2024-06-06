@@ -432,6 +432,28 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new TotalDatabaseNumberOfErrorIndexes(server.ServerStore));
             store.Add(new TotalDatabaseNumberOfFaultyIndexes(server.ServerStore));
 
+            store.Add(new TotalNumberOfActiveBackupTasks(server.ServerStore));
+            store.Add(new TotalNumberOfActiveElasticSearchEtlTasks(server.ServerStore));
+            store.Add(new TotalNumberOfActiveExternalReplicationTasks(server.ServerStore));
+            store.Add(new TotalNumberOfActiveOlapEtlTasks(server.ServerStore));
+            store.Add(new TotalNumberOfActiveOngoingTasks(server.ServerStore));
+            store.Add(new TotalNumberOfActivePullReplicationAsSinkTasks(server.ServerStore));
+            store.Add(new TotalNumberOfActiveQueueEtlTasks(server.ServerStore));
+            store.Add(new TotalNumberOfActiveRavenEtlTasks(server.ServerStore));
+            store.Add(new TotalNumberOfActiveSqlEtlTasks(server.ServerStore));
+            store.Add(new TotalNumberOfActiveSubscriptionTasks(server.ServerStore));
+
+            store.Add(new TotalNumberOfBackupTasks(server.ServerStore));
+            store.Add(new TotalNumberOfElasticSearchEtlTasks(server.ServerStore));
+            store.Add(new TotalNumberOfExternalReplicationTasks(server.ServerStore));
+            store.Add(new TotalNumberOfOlapEtlTasks(server.ServerStore));
+            store.Add(new TotalNumberOfOngoingTasks(server.ServerStore));
+            store.Add(new TotalNumberOfPullReplicationAsSinkTasks(server.ServerStore));
+            store.Add(new TotalNumberOfQueueEtlTasks(server.ServerStore));
+            store.Add(new TotalNumberOfRavenEtlTasks(server.ServerStore));
+            store.Add(new TotalNumberOfSqlEtlTasks(server.ServerStore));
+            store.Add(new TotalNumberOfSubscriptionTasks(server.ServerStore));
+
             store.Add(new TotalDatabaseMapIndexIndexedPerSecond(server.ServerStore));
             store.Add(new TotalDatabaseMapReduceIndexMappedPerSecond(server.ServerStore));
             store.Add(new TotalDatabaseMapReduceIndexReducedPerSecond(server.ServerStore));

@@ -42,23 +42,23 @@ public abstract class OngoingTasksBase : DatabaseBase<Integer32>
         return new Integer32(count);
     }
 
-    protected static int GetNumberOfElasticSearchEtls(RawDatabaseRecord database) => database.ElasticSearchEtls?.Count(x => x.Disabled == false) ?? 0;
+    protected internal static int GetNumberOfElasticSearchEtls(RawDatabaseRecord database) => database.ElasticSearchEtls?.Count(x => x.Disabled == false) ?? 0;
 
-    protected static int GetNumberOfExternalReplications(RawDatabaseRecord database) => database.ExternalReplications?.Count(x => x.Disabled == false) ?? 0;
+    protected internal static int GetNumberOfExternalReplications(RawDatabaseRecord database) => database.ExternalReplications?.Count(x => x.Disabled == false) ?? 0;
 
-    protected static int GetNumberOfOlapEtls(RawDatabaseRecord database) => database.OlapEtls?.Count(x => x.Disabled == false) ?? 0;
+    protected internal static int GetNumberOfOlapEtls(RawDatabaseRecord database) => database.OlapEtls?.Count(x => x.Disabled == false) ?? 0;
 
-    protected static int GetNumberOfPeriodicBackups(RawDatabaseRecord database) => database.PeriodicBackups?.Count(x => x.Disabled == false) ?? 0;
+    protected internal static int GetNumberOfPeriodicBackups(RawDatabaseRecord database) => database.PeriodicBackups?.Count(x => x.Disabled == false) ?? 0;
 
-    protected static int GetNumberOfQueueEtls(RawDatabaseRecord database) => database.QueueEtls?.Count(x => x.Disabled == false) ?? 0;
+    protected internal static int GetNumberOfQueueEtls(RawDatabaseRecord database) => database.QueueEtls?.Count(x => x.Disabled == false) ?? 0;
 
-    protected static int GetNumberOfRavenEtls(RawDatabaseRecord database) => database.RavenEtls?.Count(x => x.Disabled == false) ?? 0;
+    protected internal static int GetNumberOfRavenEtls(RawDatabaseRecord database) => database.RavenEtls?.Count(x => x.Disabled == false) ?? 0;
 
-    protected static int GetNumberOfSinkPullReplications(RawDatabaseRecord database) => database.SinkPullReplications?.Count(x => x.Disabled == false) ?? 0;
+    protected internal static int GetNumberOfSinkPullReplications(RawDatabaseRecord database) => database.SinkPullReplications?.Count(x => x.Disabled == false) ?? 0;
 
-    protected static int GetNumberOfSqlEtls(RawDatabaseRecord database) => database.SqlEtls?.Count(x => x.Disabled == false) ?? 0;
+    protected internal static int GetNumberOfSqlEtls(RawDatabaseRecord database) => database.SqlEtls?.Count(x => x.Disabled == false) ?? 0;
 
-    protected static int GetNumberOfSubscriptions(TransactionOperationContext context, RawDatabaseRecord database)
+    protected internal static int GetNumberOfSubscriptions(TransactionOperationContext context, RawDatabaseRecord database)
     {
         var count = 0;
         foreach (var kvp in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(database.DatabaseName)))
