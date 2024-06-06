@@ -698,10 +698,10 @@ namespace Raven.Server.Monitoring.Snmp
                 public const string TotalNumberOfActiveSubscriptionTasks = "5.1.11.18";
 
                 [Description("Number of enabled Pull Replication As Sink tasks for all databases")]
-                public const string TotalNumberOfPullReplicationAsSinkTasks = "5.1.11.17";
+                public const string TotalNumberOfPullReplicationAsSinkTasks = "5.1.11.19";
 
                 [Description("Number of active Pull Replication As Sink tasks for all databases")]
-                public const string TotalNumberOfActivePullReplicationAsSinkTasks = "5.1.11.18";
+                public const string TotalNumberOfActivePullReplicationAsSinkTasks = "5.1.11.20";
 
                 public static DynamicJsonArray ToJson()
                 {
