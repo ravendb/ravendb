@@ -3,16 +3,16 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class TotalNumberOfRavenEtlTasks : OngoingTasksBase
+    public class TotalNumberOfSqlEtlTasks : OngoingTasksBase
     {
-        public TotalNumberOfRavenEtlTasks(ServerStore serverStore)
-            : base(serverStore, SnmpOids.Databases.General.TotalNumberOfRavenEtlTasks)
+        public TotalNumberOfSqlEtlTasks(ServerStore serverStore)
+            : base(serverStore, SnmpOids.Databases.General.TotalNumberOfSqlEtlTasks)
         {
         }
 
         protected override int GetCount(TransactionOperationContext context, RawDatabaseRecord database)
         {
-            return GetNumberOfRavenEtls(database);
+            return GetNumberOfSqlEtls(database);
         }
     }
 }

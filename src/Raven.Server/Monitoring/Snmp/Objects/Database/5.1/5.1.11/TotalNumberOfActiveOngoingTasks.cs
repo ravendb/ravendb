@@ -1,4 +1,5 @@
 using Lextm.SharpSnmpLib;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
@@ -11,30 +12,19 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
         {
         }
 
-        protected override Integer32 GetData()
+        protected override int GetCount(TransactionOperationContext context, RachisState rachisState, string nodeTag, RawDatabaseRecord database)
         {
-            var count = 0;
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var rachisState = ServerStore.CurrentRachisState;
-                var nodeTag = ServerStore.NodeTag;
+            var count = GetNumberOfActiveElasticSearchEtls(rachisState, nodeTag, database);
+            count += GetNumberOfActiveExternalReplications(rachisState, nodeTag, database);
+            count += GetNumberOfActiveOlapEtls(rachisState, nodeTag, database);
+            count += GetNumberOfActivePeriodicBackups(rachisState, nodeTag, database);
+            count += GetNumberOfActiveQueueEtls(rachisState, nodeTag, database);
+            count += GetNumberOfActiveRavenEtls(rachisState, nodeTag, database);
+            count += GetNumberOfActiveSinkPullReplications(rachisState, nodeTag, database);
+            count += GetNumberOfActiveSqlEtls(rachisState, nodeTag, database);
+            count += GetNumberOfActiveSubscriptions(context, rachisState, nodeTag, database);
 
-                foreach (var database in GetDatabases(context))
-                {
-                    count += GetNumberOfActiveElasticSearchEtls(rachisState, nodeTag, database);
-                    count += GetNumberOfActiveExternalReplications(rachisState, nodeTag, database);
-                    count += GetNumberOfActiveOlapEtls(rachisState, nodeTag, database);
-                    count += GetNumberOfActivePeriodicBackups(rachisState, nodeTag, database);
-                    count += GetNumberOfActiveQueueEtls(rachisState, nodeTag, database);
-                    count += GetNumberOfActiveRavenEtls(rachisState, nodeTag, database);
-                    count += GetNumberOfActiveSinkPullReplications(rachisState, nodeTag, database);
-                    count += GetNumberOfActiveSqlEtls(rachisState, nodeTag, database);
-                    count += GetNumberOfActiveSubscriptions(context, rachisState, nodeTag, database);
-                }
-            }
-
-            return new Integer32(count);
+            return count;
         }
     }
 }

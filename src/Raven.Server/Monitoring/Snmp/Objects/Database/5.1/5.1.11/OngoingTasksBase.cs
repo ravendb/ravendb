@@ -25,6 +25,23 @@ public abstract class OngoingTasksBase : DatabaseBase<Integer32>
         }
     }
 
+    protected abstract int GetCount(TransactionOperationContext context, RawDatabaseRecord database);
+
+    protected override Integer32 GetData()
+    {
+        var count = 0;
+        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            foreach (var database in GetDatabases(context))
+            {
+                count += GetCount(context, database);
+            }
+        }
+
+        return new Integer32(count);
+    }
+
     protected static int GetNumberOfElasticSearchEtls(RawDatabaseRecord database) => database.ElasticSearchEtls?.Count(x => x.Disabled == false) ?? 0;
 
     protected static int GetNumberOfExternalReplications(RawDatabaseRecord database) => database.ExternalReplications?.Count(x => x.Disabled == false) ?? 0;

@@ -661,6 +661,18 @@ namespace Raven.Server.Monitoring.Snmp
                 [Description("Number of active RavenDB ETL tasks for all databases")]
                 public const string TotalNumberOfActiveRavenEtlTasks = "5.1.11.6";
 
+                [Description("Number of enabled SQL ETL tasks for all databases")]
+                public const string TotalNumberOfSqlEtlTasks = "5.1.11.7";
+
+                [Description("Number of active SQL ETL tasks for all databases")]
+                public const string TotalNumberOfActiveSqlEtlTasks = "5.1.11.8";
+
+                [Description("Number of enabled OLAP ETL tasks for all databases")]
+                public const string TotalNumberOfOlapEtlTasks = "5.1.11.9";
+
+                [Description("Number of active OLAP ETL tasks for all databases")]
+                public const string TotalNumberOfActiveOlapEtlTasks = "5.1.11.10";
+
                 public static DynamicJsonArray ToJson()
                 {
                     var array = new DynamicJsonArray();

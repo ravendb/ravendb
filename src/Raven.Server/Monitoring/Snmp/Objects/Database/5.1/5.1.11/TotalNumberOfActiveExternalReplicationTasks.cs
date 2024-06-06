@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using Lextm.SharpSnmpLib;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
@@ -17,22 +18,9 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
         {
         }
 
-        protected override Integer32 GetData()
+        protected override int GetCount(TransactionOperationContext context, RachisState rachisState, string nodeTag, RawDatabaseRecord database)
         {
-            var count = 0;
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var rachisState = ServerStore.CurrentRachisState;
-                var nodeTag = ServerStore.NodeTag;
-
-                foreach (var database in GetDatabases(context))
-                {
-                    count += GetNumberOfActiveExternalReplications(rachisState, nodeTag, database);
-                }
-            }
-
-            return new Integer32(count);
+            return GetNumberOfActiveExternalReplications(rachisState, nodeTag, database);
         }
     }
 }

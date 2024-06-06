@@ -30,6 +30,26 @@ public abstract class ActiveOngoingTasksBase : DatabaseBase<Integer32>
         }
     }
 
+    protected abstract int GetCount(TransactionOperationContext context, RachisState rachisState, string nodeTag, RawDatabaseRecord database);
+
+    protected override Integer32 GetData()
+    {
+        var count = 0;
+        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            var rachisState = ServerStore.CurrentRachisState;
+            var nodeTag = ServerStore.NodeTag;
+
+            foreach (var database in GetDatabases(context))
+            {
+                count += GetCount(context, rachisState, nodeTag, database);
+            }
+        }
+
+        return new Integer32(count);
+    }
+
     protected static int GetNumberOfActiveElasticSearchEtls(RachisState rachisState, string nodeTag, RawDatabaseRecord database) => CountTasks(rachisState, nodeTag, database.Topology, database.ElasticSearchEtls.Where(x => x.Disabled == false));
 
     protected static int GetNumberOfActiveExternalReplications(RachisState rachisState, string nodeTag, RawDatabaseRecord database) => CountTasks(rachisState, nodeTag, database.Topology, database.ExternalReplications.Where(x => x.Disabled == false));
