@@ -673,6 +673,36 @@ namespace Raven.Server.Monitoring.Snmp
                 [Description("Number of active OLAP ETL tasks for all databases")]
                 public const string TotalNumberOfActiveOlapEtlTasks = "5.1.11.10";
 
+                [Description("Number of enabled Elasticsearch ETL tasks for all databases")]
+                public const string TotalNumberOfElasticSearchEtlTasks = "5.1.11.11";
+
+                [Description("Number of active Elasticsearch ETL tasks for all databases")]
+                public const string TotalNumberOfActiveElasticSearchEtlTasks = "5.1.11.12";
+
+                [Description("Number of enabled Queue ETL tasks for all databases")]
+                public const string TotalNumberOfQueueEtlTasks = "5.1.11.13";
+
+                [Description("Number of active Queue ETL tasks for all databases")]
+                public const string TotalNumberOfActiveQueueEtlTasks = "5.1.11.14";
+
+                [Description("Number of enabled Backup tasks for all databases")]
+                public const string TotalNumberOfBackupTasks = "5.1.11.15";
+
+                [Description("Number of active Backup tasks for all databases")]
+                public const string TotalNumberOfActiveBackupTasks = "5.1.11.16";
+
+                [Description("Number of enabled Subscription tasks for all databases")]
+                public const string TotalNumberOfSubscriptionTasks = "5.1.11.17";
+
+                [Description("Number of active Subscription tasks for all databases")]
+                public const string TotalNumberOfActiveSubscriptionTasks = "5.1.11.18";
+
+                [Description("Number of enabled Pull Replication As Sink tasks for all databases")]
+                public const string TotalNumberOfPullReplicationAsSinkTasks = "5.1.11.17";
+
+                [Description("Number of active Pull Replication As Sink tasks for all databases")]
+                public const string TotalNumberOfActivePullReplicationAsSinkTasks = "5.1.11.18";
+
                 public static DynamicJsonArray ToJson()
                 {
                     var array = new DynamicJsonArray();
