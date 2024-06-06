@@ -330,7 +330,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         FieldIndexing? fieldIndexing = null;
         FieldStorage? fieldStorage = null;
         
-        if (nameProperty != null)
+        if (nameProperty.Value.IsUndefined() == false)
         {
             var fieldNameObj = nameProperty.Value;
             if (fieldNameObj.IsString() == false)
