@@ -152,9 +152,9 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Core" Version="3.7.304.5" />
-    <PackageReference Include="AWSSDK.Glacier" Version="3.7.300.95" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.308.4" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.304.12" />
+    <PackageReference Include="AWSSDK.Glacier" Version="3.7.300.101" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.309" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.20.0" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.7.1" />
     <PackageReference Include="CloudNative.CloudEvents" Version="2.7.1" />
@@ -164,7 +164,7 @@
     <PackageReference Include="CsvHelper" Version="32.0.3" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageReference Include="FluentFTP" Version="50.0.1" />
-    <PackageReference Include="Elastic.Clients.Elasticsearch" Version="8.13.12" />
+    <PackageReference Include="Elastic.Clients.Elasticsearch" Version="8.14.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2023.3.0">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
