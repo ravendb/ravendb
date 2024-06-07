@@ -150,6 +150,16 @@ namespace Raven.Server.Documents
                     _addToInitLog("Creating db.lock file");
                     _fileLocker = new FileLocker(Configuration.Core.DataDirectory.Combine("db.lock").FullPath);
                     _fileLocker.TryAcquireWriteLock(_logger);
+
+                    var disableFileMarkerPath = Configuration.Core.DataDirectory.Combine("disable.tasks.marker").FullPath;
+                    DisableOngoingTasks = File.Exists(disableFileMarkerPath);
+                    if (DisableOngoingTasks)
+                    {
+                        var msg = $"MAINTENANCE WARNING: Found disable.tasks.marker file. All tasks will not start. Please remove the file and restart the '{Name}' database.";
+                        _addToInitLog(msg);
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations(msg);
+                }
                 }
 
                 Smuggler = new DatabaseSmugglerFactory(this);
@@ -195,6 +205,7 @@ namespace Raven.Server.Documents
             }
         }
 
+        public readonly bool DisableOngoingTasks;
         protected virtual DocumentsStorage CreateDocumentsStorage(Action<string> addToInitLog)
         {
             return new DocumentsStorage(this, addToInitLog);

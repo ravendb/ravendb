@@ -316,6 +316,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (periodicBackup.Disposed)
                     throw new InvalidOperationException("Backup task was already disposed");
 
+                if (_database.DisableOngoingTasks)
+                    throw new InvalidOperationException("Backup task is disabled via marker file");
+
                 var runningTask = periodicBackup.RunningTask;
                 if (runningTask != null)
                 {

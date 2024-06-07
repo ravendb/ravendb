@@ -99,6 +99,8 @@ namespace Raven.Server.Documents.ETL
 
         public abstract EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext);
 
+        internal abstract bool IsRunning { get; }
+
         public static EtlProcessState GetProcessState(DocumentDatabase database, string configurationName, string transformationName)
         {
             var databaseName = ShardHelper.ToDatabaseName(database.Name);
@@ -151,6 +153,8 @@ namespace Raven.Server.Documents.ETL
         private readonly ServerStore _serverStore;
 
         public readonly TConfiguration Configuration;
+
+        internal override bool IsRunning => _longRunningWork != null;
 
         protected EtlProcess(Transformation transformation, TConfiguration configuration, DocumentDatabase database, ServerStore serverStore, string tag)
         {
@@ -667,7 +671,7 @@ namespace Raven.Server.Documents.ETL
             if (_longRunningWork != null)
                 return;
 
-            if (Transformation.Disabled || Configuration.Disabled)
+            if (Transformation.Disabled || Configuration.Disabled || Database.DisableOngoingTasks)
                 return;
 
             _cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown);
