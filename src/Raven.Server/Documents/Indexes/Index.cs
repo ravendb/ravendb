@@ -3470,17 +3470,9 @@ namespace Raven.Server.Documents.Indexes
                                         while (enumerator.MoveNext())
                                         {
                                             var document = enumerator.Current;
-
-                                            resultToFill.TotalResults = totalResults.Value;
-
-                                            if (query.Offset != null || query.Limit != null)
-                                            {
-                                                resultToFill.CappedMaxResults = Math.Min(
-                                                    query.Limit ?? long.MaxValue,
-                                                    totalResults.Value - (query.Offset ?? 0)
-                                                );
-                                            }
-
+                                            //Streaming:
+                                            UpdateQueryStatistics();
+                                            
                                             await resultToFill.AddResultAsync(document.Result, token.Token);
 
                                             if (document.Highlightings != null)
@@ -3500,6 +3492,21 @@ namespace Raven.Server.Documents.Indexes
                                             includeTimeSeriesCommand?.Fill(document.Result);
 
                                             includeRevisionsCommand?.Fill(document.Result);
+                                        }
+                                        
+                                        // Corax: we have to update the statistics again (after all) due to take parameter in OrderBy clauses.
+                                        UpdateQueryStatistics();
+                                        void UpdateQueryStatistics()
+                                        {
+                                            resultToFill.TotalResults = totalResults.Value;
+
+                                            if (query.Offset != null || query.Limit != null)
+                                            {
+                                                resultToFill.CappedMaxResults = Math.Max(0, Math.Min(
+                                                    query.Limit ?? long.MaxValue,
+                                                    totalResults.Value - (query.Offset ?? 0)
+                                                ));
+                                            }
                                         }
                                     }
                                 }
