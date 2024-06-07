@@ -151,11 +151,18 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
             }
 
             var queryFormat = GetQueryResultFormat(format);
-            if (queryFormat != QueryResultFormat.Csv)
-                ThrowUnsupportedException($"You have selected \"{format}\" file format, which is not supported.");
-
-            //does not write query stats to stream
-            return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
+            switch (queryFormat)
+            {
+                case QueryResultFormat.Json:
+                    //does not write query stats to stream
+                    return new StreamJsonFileBlittableQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileNamePrefix);
+                case QueryResultFormat.Csv:
+                    //does not write query stats to stream
+                    return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
+                default:
+                    ThrowUnsupportedException($"You have selected \"{format}\" file format, which is not supported.");
+                    return null;
+            }
         }
     }
 }

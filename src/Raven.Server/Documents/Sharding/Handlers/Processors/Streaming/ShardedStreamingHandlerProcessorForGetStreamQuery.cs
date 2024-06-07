@@ -62,10 +62,15 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             string[] propertiesArray, string fileNamePrefix = null)
         {
             var queryFormat = GetQueryResultFormat(format);
-            if (queryFormat == QueryResultFormat.Csv)
+            switch (queryFormat)
             {
-                //does not write query stats to stream
-                return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
+                case QueryResultFormat.Json:
+                    //does not write query stats to stream
+                    return new StreamJsonFileBlittableQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileNamePrefix);
+                    break;
+                case QueryResultFormat.Csv:
+                    //does not write query stats to stream
+                    return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
             }
 
             if (isDebug)
