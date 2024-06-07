@@ -272,7 +272,7 @@ namespace Raven.Server.Documents.Subscriptions
                         RegisterConnectionDurationInTicks = registerConnectionDurationInTicks
                     };
                 }
-                if (subscription.Disabled)
+                if (subscription.Disabled || _db.DisableOngoingTasks)
                     throw new SubscriptionClosedException($"The subscription with id '{id}' and name '{name}' is disabled and cannot be used until enabled");
 
                 return subscription;
@@ -698,7 +698,7 @@ namespace Raven.Server.Documents.Subscriptions
                         continue;
 
                     var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
-                    if (subscriptionState.Disabled)
+                    if (subscriptionState.Disabled || _db.DisableOngoingTasks)
                     {
                         DropSubscriptionConnections(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} is disabled and cannot be used until enabled"));
                         continue;

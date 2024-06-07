@@ -1,13 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Utils;
+using Sparrow.Server;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -79,16 +83,46 @@ public class RavenDB_17604 : RavenTestBase
             Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
             var database = await GetDatabase(store.Database);
-            await WaitForValueAsync(() => database.PeriodicBackupRunner.PeriodicBackups.Count, 1);
+            Assert.Equal(1, await WaitForValueAsync(() => database.PeriodicBackupRunner.PeriodicBackups.Count, 1));
             await Backup.RunBackupAsync(Server, result.TaskId, store);
 
             Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
             File.Create(Path.Combine(path, "disable.tasks.marker"));
             database = await GetDatabase(store.Database);
-            await WaitForValueAsync(() => database.PeriodicBackupRunner.PeriodicBackups.Count, 1);
+            Assert.Equal(1, await WaitForValueAsync(() => database.PeriodicBackupRunner.PeriodicBackups.Count, 1));
 
             var e = await Assert.ThrowsAsync<InvalidOperationException>(() => Backup.RunBackupAsync(Server, result.TaskId, store));
             Assert.Contains("Backup task is disabled via marker file", e.Message);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Etl)]
+    public async Task Can_Disable_Subscription_With_Marker()
+    {
+        var path = NewDataPath();
+        IOExtensions.DeleteDirectory(path);
+
+        using (var store = GetDocumentStore(new Options { RunInMemory = false, Path = path }))
+        {
+            var name = await store.Subscriptions.CreateAsync<Order>();
+            var worker = store.Subscriptions.GetSubscriptionWorker<Order>(name);
+            
+            var task = worker.Run(_ => { });
+
+            var database = await GetDatabase(store.Database);
+            Assert.Equal(1, await WaitForValueAsync(() => database.SubscriptionStorage.GetRunningCount(), 1));
+
+            Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
+
+            database = await GetDatabase(store.Database);
+            Assert.Equal(1, await WaitForValueAsync(() => database.SubscriptionStorage.GetRunningCount(), 1));
+
+            Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
+            File.Create(Path.Combine(path, "disable.tasks.marker"));
+
+            await GetDatabase(store.Database);
+            var e = await Assert.ThrowsAsync<SubscriptionClosedException>(() => task.WaitAsync(TimeSpan.FromSeconds(30)));
+            Assert.Contains("disabled", e.Message);
         }
     }
 }
