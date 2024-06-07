@@ -958,7 +958,7 @@ namespace Raven.Server.Documents.Replication
 
                 var pullReplication = newRecord.HubPullReplications.Find(x => x.Name == instance.PullReplicationDefinitionName);
 
-                if (pullReplication != null && pullReplication.Disabled == false)
+                if (pullReplication != null && pullReplication.Disabled == false && Database.DisableOngoingTasks == false)
                 {
                     // update the destination
                     var current = (ExternalReplication)instance.Destination;
@@ -1104,7 +1104,7 @@ namespace Raven.Server.Documents.Replication
 
             var newDestinations = GetMyNewDestinations(newRecord, changes.AddedDestinations);
 
-            if (newDestinations.Count > 0)
+            if (newDestinations.Count > 0 && Database.DisableOngoingTasks == false)
             {
                 Task.Run(() =>
                 {

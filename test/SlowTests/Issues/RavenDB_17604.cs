@@ -1,23 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Threading;
+using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
+using FastTests.Server.Replication;
+using Orders;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Utils;
-using Sparrow.Server;
 using Tests.Infrastructure;
-using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_17604 : RavenTestBase
+public class RavenDB_17604 : ReplicationTestBase
 {
     public RavenDB_17604(ITestOutputHelper output) : base(output)
     {
@@ -64,7 +62,7 @@ public class RavenDB_17604 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task Can_Disable_Backup_With_Marker()
     {
         var path = NewDataPath();
@@ -96,7 +94,7 @@ public class RavenDB_17604 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.Subscriptions)]
     public async Task Can_Disable_Subscription_With_Marker()
     {
         var path = NewDataPath();
@@ -106,7 +104,7 @@ public class RavenDB_17604 : RavenTestBase
         {
             var name = await store.Subscriptions.CreateAsync<Order>();
             var worker = store.Subscriptions.GetSubscriptionWorker<Order>(name);
-            
+
             var task = worker.Run(_ => { });
 
             var database = await GetDatabase(store.Database);
@@ -123,6 +121,57 @@ public class RavenDB_17604 : RavenTestBase
             await GetDatabase(store.Database);
             var e = await Assert.ThrowsAsync<SubscriptionClosedException>(() => task.WaitAsync(TimeSpan.FromSeconds(30)));
             Assert.Contains("disabled", e.Message);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task Can_Disable_ExternalReplication_With_Marker()
+    {
+        var path = NewDataPath();
+        IOExtensions.DeleteDirectory(path);
+
+        using (var store1 = GetDocumentStore(new Options { RunInMemory = false, Path = path }))
+        using (var store2 = GetDocumentStore())
+        {
+            await SetupReplicationAsync(store1, store2);
+
+            var database = await GetDatabase(store1.Database);
+
+            using (var session = store1.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Company(), "companies/1");
+                await session.SaveChangesAsync();
+            }
+
+            Assert.NotNull(await WaitForDocumentToReplicateAsync<Company>(store2, "companies/1", TimeSpan.FromSeconds(15)));
+            Assert.Equal(1, database.ReplicationLoader.OutgoingConnections.Count());
+
+            Server.ServerStore.DatabasesLandlord.UnloadDirectly(store1.Database);
+
+            database = await GetDatabase(store1.Database);
+
+            using (var session = store1.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Company(), "companies/2");
+                await session.SaveChangesAsync();
+            }
+
+            Assert.NotNull(await WaitForDocumentToReplicateAsync<Company>(store2, "companies/2", TimeSpan.FromSeconds(15)));
+            Assert.Equal(1, database.ReplicationLoader.OutgoingConnections.Count());
+
+            Server.ServerStore.DatabasesLandlord.UnloadDirectly(store1.Database);
+            File.Create(Path.Combine(path, "disable.tasks.marker"));
+
+            await GetDatabase(store1.Database);
+
+            using (var session = store1.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Company(), "companies/3");
+                await session.SaveChangesAsync();
+            }
+
+            Assert.Null(await WaitForDocumentToReplicateAsync<Company>(store2, "companies/3", TimeSpan.FromSeconds(3)));
+            Assert.Equal(0, database.ReplicationLoader.OutgoingConnections.Count());
         }
     }
 }
