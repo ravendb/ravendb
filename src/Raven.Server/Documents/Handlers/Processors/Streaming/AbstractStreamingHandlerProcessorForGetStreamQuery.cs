@@ -27,10 +27,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
         {
             if (method != HttpMethod.Post && method != HttpMethod.Get)
                 throw new ArgumentException($"Expected method 'POST' or 'GET' but got '{method.Method}'");
-            
+
             _method = method;
         }
-        
+
         protected abstract RequestTimeTracker GetTimeTracker();
 
         protected abstract ValueTask<BlittableJsonReaderObject> GetDocumentDataAsync(TOperationContext context, string fromDocument);
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
             // ReSharper disable once ArgumentsStyleLiteral
             using (var tracker = GetTimeTracker())
             using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
-            using(AllocateContext(out TOperationContext context))
+            using (AllocateContext(out TOperationContext context))
             {
                 IndexQueryServerSide query;
                 string overrideQuery = null;
@@ -134,15 +134,25 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
             }
         }
 
-        protected static bool IsCsvFormat(string format)
+        protected static QueryResultFormat GetQueryResultFormat(string format)
         {
-            return string.IsNullOrEmpty(format) == false && string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase);
+            return Enum.TryParse<QueryResultFormat>(format, ignoreCase: true, out var queryFormat)
+                ? queryFormat
+                : QueryResultFormat.Default;
         }
 
         [DoesNotReturn]
         protected void ThrowUnsupportedException(string message)
         {
             throw new NotSupportedException(message);
+        }
+
+        protected enum QueryResultFormat
+        {
+            Default,
+            Json,
+            Jsonl,
+            Csv
         }
     }
 }
