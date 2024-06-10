@@ -417,7 +417,7 @@ class columnsSelector<T extends object> {
                 
                 if (item.virtualColumn() instanceof hyperlinkColumn) {
                     const href = item.virtualColumn() as hyperlinkColumn<T>;
-                    if (href.header === "Id" && href.valueAccessor.toString().includes("getId()")){
+                    if ((href.header === "Id" || href.header === "@id") && href.valueAccessor.toString().includes("getId()")){
                         columns.push("@id");
                         return;
                     }
