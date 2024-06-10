@@ -20,7 +20,8 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl.Paging
 {
-    public abstract unsafe class AbstractPager : IDisposable, ILowMemoryHandler
+    
+    public abstract unsafe class AbstractPager : IDisposable
     {
         public readonly Logger Log = LoggingSource.Instance.GetLogger<AbstractPager>("AbstractPager");
         private readonly StorageEnvironmentOptions _options;
@@ -37,7 +38,6 @@ namespace Voron.Impl.Paging
         private DateTime _lastIncrease;
         private readonly object _pagerStateModificationLocker = new object();
         public readonly bool UsePageProtection;
-        private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
         protected readonly bool CanPrefetchAhead;
 
         public Action<PagerState> PagerStateChanged;
@@ -75,8 +75,8 @@ namespace Voron.Impl.Paging
                                 continue;
 
                             Lock(info.BaseAddress, info.Size, state: null);
-                                }
-                            }
+                        }
+                    }
                     catch
                     {
                         // need to restore the state to the way it was, so we'll dispose the pager state
@@ -229,8 +229,6 @@ namespace Voron.Impl.Paging
 
         public string DebugInfo => _debugInfo;
 
-        public const int PageMaxSpace = Constants.Storage.PageSize - Constants.Tree.PageHeaderSize;
-
         public VoronPathSetting FileName { get; protected set; }
 
         protected AbstractPager(StorageEnvironmentOptions options, bool canPrefetchAhead, bool usePageProtection = false) : this()
@@ -255,31 +253,15 @@ namespace Voron.Impl.Paging
             _options = options;
             CanPrefetchAhead = canPrefetchAhead && _options.EnablePrefetching;
             UsePageProtection = usePageProtection;
-            Debug.Assert((Constants.Storage.PageSize - Constants.Tree.PageHeaderSize) / Constants.Tree.MinKeysInPage >= 1024);
-
-            NodeMaxSize = PageMaxSpace / 2 - 1;
-
-            // MaxNodeSize is usually persisted as an unsigned short. Therefore, we must ensure it is not possible to have an overflow.
-            Debug.Assert(NodeMaxSize < ushort.MaxValue);
 
             _increaseSize = MinIncreaseSize;
-            PageMinSpace = (int)(PageMaxSpace * 0.33);
 
             SetPagerState(new PagerState(this, options.PrefetchSegmentSize, options.PrefetchResetThreshold));
-
-            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
         public StorageEnvironmentOptions Options => _options;
 
-        public int PageMinSpace
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private set;
-        }
-
+        
         public bool DeleteOnClose
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -287,16 +269,6 @@ namespace Voron.Impl.Paging
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set;
         }
-
-        public int NodeMaxSize
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private set;
-        }
-
-        public const int RequiredSpaceForNewNode = Constants.Tree.NodeHeaderSize + Constants.Tree.NodeOffsetSize;
 
         protected PagerState _pagerState;
 
@@ -469,7 +441,7 @@ namespace Voron.Impl.Paging
                 return MinIncreaseSize;
             }
 
-            if (_lowMemoryFlag)
+            if (LowMemoryNotification.Instance.InLowMemory)
             {
                 _lastIncrease = now;
                 // cannot return less than the minRequested
@@ -557,17 +529,7 @@ namespace Voron.Impl.Paging
             Sodium.Unlock(baseAddress, (UIntPtr)size);
         }
 
-        // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
-        public const int MaxKeySize = 2038 - RequiredSpaceForNewNode;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsKeySizeValid(int keySize)
-        {
-            if (keySize > MaxKeySize)
-                return false;
-
-            return true;
-        }
+    
 
         public readonly Lazy<bool> CanPrefetch;
 
@@ -768,18 +730,6 @@ namespace Voron.Impl.Paging
 
         public virtual void TryReleasePage(IPagerLevelTransactionState tx, long page)
         {
-        }
-
-        public void LowMemory(LowMemorySeverity lowMemorySeverity)
-        {
-            // We could check for nested calls to LowMemory here, but we 
-            // probably don't want to error because of it.
-            _lowMemoryFlag.Raise();
-        }
-
-        public void LowMemoryOver()
-        {
-            _lowMemoryFlag.Lower();
         }
     }
 

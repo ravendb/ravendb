@@ -54,8 +54,6 @@ namespace Voron.Platform.Win32
             bool usePageProtection = false)
             : base(options, !fileAttributes.HasFlag(Win32NativeFileAttributes.Temporary), usePageProtection)
         {
-            SYSTEM_INFO systemInfo;
-            GetSystemInfo(out systemInfo);
             FileName = file;
             _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{file}");
 

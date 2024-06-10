@@ -54,8 +54,16 @@ namespace Voron.Data.BTrees
 
         public LowLevelTransaction Llt => _llt;
 
+        public const int PageMinSpace = (int)(PageMaxSpace * 0.33);
+        public const int PageMaxSpace = Constants.Storage.PageSize - Constants.Tree.PageHeaderSize;
+        public static int NodeMaxSize = PageMaxSpace / 2 - 1;
+        
         private Tree(LowLevelTransaction llt, Transaction tx, in TreeRootHeader header, Slice name, bool isIndexTree, NewPageAllocator newPageAllocator)
         {
+            Debug.Assert((Constants.Storage.PageSize - Constants.Tree.PageHeaderSize) / Constants.Tree.MinKeysInPage >= 1024);
+            // MaxNodeSize is usually persisted as an unsigned short. Therefore, we must ensure it is not possible to have an overflow.
+            Debug.Assert(NodeMaxSize < ushort.MaxValue);
+
             _llt = llt;
             _tx = tx;
             IsIndexTree = isIndexTree;
@@ -365,6 +373,19 @@ namespace Voron.Data.BTrees
         {
             return DirectAdd(key, len, TreeNodeFlags.Data, out ptr);
         }
+        
+        // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
+        public const int RequiredSpaceForNewNode = Constants.Tree.NodeHeaderSize + Constants.Tree.NodeOffsetSize;
+        public const int MaxKeySize = 2038 - RequiredSpaceForNewNode;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsKeySizeValid(int keySize)
+        {
+            if (keySize > MaxKeySize)
+                return false;
+
+            return true;
+        }
 
         public DirectAddScope DirectAdd(Slice key, int len, TreeNodeFlags nodeType, out byte* ptr)
         {
@@ -373,7 +394,7 @@ namespace Voron.Data.BTrees
             if (_llt.Flags is TransactionFlags.Read)
                 ThrowCannotAddInReadTx();
 
-            if (AbstractPager.IsKeySizeValid(key.Size) == false)
+            if (IsKeySizeValid(key.Size) == false)
                 ThrowInvalidKeySize(key);
 
             var foundPage = FindPageFor(key, node: out TreeNodeHeader* node, cursor: out TreeCursorConstructor cursorConstructor, allowCompressed: true);
@@ -535,7 +556,7 @@ namespace Voron.Data.BTrees
         private static void ThrowInvalidKeySize(Slice key)
         {
             throw new ArgumentException(
-                $"Key size is too big, must be at most {AbstractPager.MaxKeySize} bytes, but was {(key.Size + AbstractPager.RequiredSpaceForNewNode)}",
+                $"Key size is too big, must be at most {MaxKeySize} bytes, but was {(key.Size + RequiredSpaceForNewNode)}",
                 nameof(key));
         }
 
@@ -576,7 +597,7 @@ namespace Voron.Data.BTrees
 
         public bool ShouldGoToOverflowPage(int len)
         {
-            return len + Constants.Tree.NodeHeaderSize > _llt.DataPager.NodeMaxSize;
+            return len + Constants.Tree.NodeHeaderSize > NodeMaxSize;
         }
 
         private long WriteToOverflowPages(int overflowSize, out byte* dataPos)

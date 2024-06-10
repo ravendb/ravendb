@@ -5,6 +5,7 @@ using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
@@ -17,6 +18,8 @@ namespace Sparrow.LowMemory
 
         private readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> _lowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
 
+        public MultipleUseFlag InLowMemory = new MultipleUseFlag(false);
+        
         internal enum LowMemReason
         {
             None = 0,
@@ -84,9 +87,15 @@ namespace Sparrow.LowMemory
                         try
                         {
                             if (isLowMemory)
+                            {
+                                InLowMemory.Raise();
                                 handler.LowMemory(lowMemorySeverity);
+                            }
                             else if (_wasLowMemory)
+                            {
+                                InLowMemory.Lower();
                                 handler.LowMemoryOver();
+                            }
                         }
                         catch (Exception e)
                         {
