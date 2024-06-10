@@ -240,11 +240,10 @@ namespace Voron.Impl.Paging
                 if (FileName?.FullPath != null)
                     _options?.IoMetrics?.FileClosed(FileName.FullPath);
 
-                if (_pagerState != null)
-                {
+                if (_pagerState is { IsReleased: false })
                     _pagerState.Release();
-                    _pagerState = null;
-                }
+
+                _pagerState = null;
 
                 if (FileName?.FullPath != null)
                     NativeMemory.UnregisterFileMapping(FileName.FullPath);
@@ -311,35 +310,23 @@ namespace Voron.Impl.Paging
             var state = pagerState;
 
             if (DisposeOnceRunner.Disposed)
-                goto AlreadyDisposed;
+                ThrowAlreadyDisposedException();
 
             if (pageNumber > NumberOfAllocatedPages || pageNumber < 0)
-                goto InvalidPageNumber;
+                ThrowOnInvalidPageNumber(pageNumber);
 
             if (state == null)
             {
                 state = _pagerState;
-
                 if (state == null)
-                    goto AlreadyDisposed;
+                    ThrowAlreadyDisposedException();
             }
 
             tx?.EnsurePagerStateReference(ref state);
+
+            state.EnsurePageStateIsValid();
             
-            if (state._released)
-                goto InvalidPagerState;
-
             return state.MapBase + pageNumber * Constants.Storage.PageSize;
-
-        AlreadyDisposed:
-            ThrowAlreadyDisposedException();
-        InvalidPageNumber:
-            ThrowOnInvalidPageNumber(pageNumber);
-        InvalidPagerState:
-            // ReSharper disable once PossibleNullReferenceException
-            state.ThrowInvalidPagerState();
-
-            return null; // Will never happen. 
         }
 
         public virtual byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)

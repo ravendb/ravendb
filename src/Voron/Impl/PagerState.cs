@@ -26,7 +26,7 @@ namespace Voron.Impl
 
             public override string ToString()
             {
-                return $"{nameof(BaseAddress)}: {new IntPtr(BaseAddress).ToString("x")} - {new IntPtr(BaseAddress + Size).ToString("x")} {nameof(Size)}: {Size}";
+                return $"{nameof(BaseAddress)}: {new IntPtr(BaseAddress):x} - {new IntPtr(BaseAddress + Size):x} {nameof(Size)}: {Size}";
             }
         }
 
@@ -100,24 +100,96 @@ namespace Voron.Impl
 
         public readonly byte* MapBase; // { get; set; }
 
-        internal bool _released;
-
         public void Release()
         {
-            if (Interlocked.Decrement(ref _refs) != 0)
+            int currentRefCount;
+            int newRefCount;
+
+            // Uses atomic compare-and-swap to safely decrement the reference count,
+            // ensuring consistency even with concurrent modifications by other threads.
+            // This loop ensures that the reference count is decremented only if it has not
+            // been changed by another thread between reading and writing.
+            do
+            {
+                currentRefCount = _refs;
+
+                // Check for negative and zero reference counts to detect potential misuse or logical errors,
+                // such as double releases or illegal state transitions, preventing further incorrect decrements.
+                // This prevents the reference count from becoming negative.
+                if (currentRefCount <= 0)
+                    ThrowInvalidPagerState();
+
+                newRefCount = currentRefCount - 1;
+            }
+            while (Interlocked.CompareExchange(ref _refs, newRefCount, currentRefCount) != currentRefCount);
+
+            // Upon exiting the loop, the reference count is updated, and the sequence property
+            // (v(n) != v(n+1)) is maintained, ensuring that no two consecutive operations 
+            // can observe the same value for _refs due to the CAS guarantees.
+
+            // When reaching this line, we know:
+            // - _refs value was strictly positive before entering the compare and exchange loop
+            // - _refs is either positive or zero after the loop
+            // - _refs cannot be negative here because the loop bails with an exception if _refs is <= 0.
+
+            // If the reference count is still positive, there are active references.
+            if (newRefCount > 0)
                 return;
 
+            // Ensure reference count does not go negative, catching and preventing logical errors in reference management,
+            // thereby maintaining integrity in debug builds. This is a safeguard to ensure the reference count
+            // logic is correct and does not result in illegal states.
+            EnsureNoNegativeReferenceCount(newRefCount);
 
 #if DEBUG_PAGER_STATE
+            // In debug mode, removes the instance from tracking to help diagnose reference issues,
+            // ensuring the debug state is consistent and does not grow unbounded.
+
             String value;
             Instances.TryRemove(this, out value);
 #endif
-
+            
+            // The only way we can arrive here is when newRefCount is 0 as negative numbers would trigger the
+            // check inside the compare-exchange loop and positives would return in the early check. 
+            // This ensures that ReleaseInternal is only called when no more references are held.
             ReleaseInternal();
         }
 
+        [Conditional("DEBUG")]
+        [Conditional("VALIDATE")]
+        private void EnsureNoNegativeReferenceCount(int refCount)
+        {
+            // Validate that the reference count does not drop below zero,
+            // catching potential logical errors and preventing them from affecting reference management.
+            if (refCount < 0)
+                throw new InvalidOperationException("The ref count is negative. This can't happen");
+        }
+
+        public void EnsurePageStateIsValid()
+        {
+            // Ensure that the page state is valid by checking if the reference count is <= 0,
+            // which would indicate an invalid or already disposed state.
+            if (_refs <= 0)
+                ThrowInvalidPagerState();
+        }
+
+        public bool IsReleased
+        {
+            // Determine if the page is released by checking if the reference count is negative,
+            // indicating that the page has been marked as released.
+            get { return _refs < 0; }
+        }
+
+        private const int ReleasedReferenceCount = -1000000;
+        
         private void ReleaseInternal()
         {
+            // Signal that this pager state is done, ensuring that no thread can observe a reference count >= 0.
+            // After this instruction, any thread trying to add a reference will fail due to the negative reference count.
+            Volatile.Write(ref _refs, ReleasedReferenceCount);
+
+            // Release allocation info and dispose of the file if necessary,
+            // ensuring proper cleanup of resources associated with this pager state.
             if (AllocationInfos != null)
             {
                 foreach (var allocationInfo in AllocationInfos)
@@ -130,8 +202,6 @@ namespace Voron.Impl
                 File.Dispose();
                 File = null;
             }
-
-            _released = true;
         }
 
 #if DEBUG_PAGER_STATE
@@ -139,11 +209,28 @@ namespace Voron.Impl
 #endif
         public void AddRef()
         {
-            if (_released)
-                ThrowInvalidPagerState();
+            int currentRefCount;
+            int newRefCount;
 
-            Interlocked.Increment(ref _refs);
+            // Use atomic compare-and-swap to safely increment the reference count,
+            // ensuring consistency even with concurrent modifications by other threads.
+            do
+            {
+                currentRefCount = _refs;
+
+                // Prevent adding a reference to an invalid or already disposed state,
+                // protecting against undefined behavior and ensuring references are only added to valid, active objects.
+                if (currentRefCount < 0)
+                    ThrowInvalidPagerState();
+
+                newRefCount = currentRefCount + 1;
+            } 
+            while (Interlocked.CompareExchange(ref _refs, newRefCount, currentRefCount) != currentRefCount);
+
 #if DEBUG_PAGER_STATE
+            // Tracks the call stack for debugging reference additions,
+            // helping developers diagnose where and how references are being manipulated, aiding in debugging reference management issues.
+
             AddedRefs.Enqueue(Environment.StackTrace);
             while (AddedRefs.Count > 500)
             {

@@ -59,7 +59,7 @@ public unsafe class RavenDB_17997 : StorageTest
 
             dataPager.AllocateMorePages(16 * 1024 * 1024);
 
-            if (ptr == stateUsedDuringAcquirePagePointer.MapBase && stateUsedDuringAcquirePagePointer._released)
+            if (ptr == stateUsedDuringAcquirePagePointer.MapBase && stateUsedDuringAcquirePagePointer.IsReleased)
             {
                 throw new InvalidOperationException("Cannot read from already unmapped allocation of memory mapped file");
             }

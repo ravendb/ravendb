@@ -77,7 +77,7 @@ namespace SlowTests.Voron.Issues
 
             foreach (var state in pagerStates)
             {
-                Assert.True(state._released);
+                Assert.True(state.IsReleased);
             }
         }
     }
