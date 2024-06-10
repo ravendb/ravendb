@@ -47,7 +47,6 @@ function main(args) {
 	mergeAceWithCustomFiles();
 	
 	buildAce({
-            compress: false, //TODO: use true
             noconflict: true,
             shrinkwrap: false
         });
@@ -136,11 +135,6 @@ function buildAceModuleInternal(opts, callback) {
             return callback(err, result);
         
         var code = result.code;
-        if (opts.compress) {
-            if (!result.codeMin)
-                result.codeMin = compress(result.code);
-            code = result.codeMin;
-        }
             
         var targetDir = getTargetDir(opts);
         
@@ -182,7 +176,6 @@ function buildAceModuleInternal(opts, callback) {
         enableBrowser: true,
         keepDepArrays: "all",
         noArchitect: true,
-        compress: false,
         ignore: opts.ignore || [],
         withRequire: false,
         basepath: ACE_HOME,
@@ -404,14 +397,6 @@ function exportAce(ns, modules, requireBase, extModules) {
             .slice(13, -1)
         );
     };
-}
-
-
-function compress(text) {
-    var ujs = require("dryice").copy.filter.uglifyjs;
-    ujs.options.mangle_toplevel = {except: ["ACE_NAMESPACE", "requirejs"]};
-    ujs.options.beautify = {ascii_only: true, inline_script: true}
-    return ujs(text);
 }
 
 function extend(base, extra) {
