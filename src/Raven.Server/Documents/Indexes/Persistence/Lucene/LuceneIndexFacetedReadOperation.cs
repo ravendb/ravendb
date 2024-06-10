@@ -419,12 +419,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private sealed class IntArraysPool : ILowMemoryHandler
+        private sealed class IntArraysPool
         {
-            public static readonly IntArraysPool Instance = new IntArraysPool();
+            public static readonly IntArraysPool Instance = new();
 
-            private readonly ConcurrentDictionary<int, ObjectPool<int[]>> _arraysPoolBySize = new ConcurrentDictionary<int, ObjectPool<int[]>>();
-            //private readonly TimeSensitiveStore<ObjectPool<int[]>> _timeSensitiveStore = new TimeSensitiveStore<ObjectPool<int[]>>(TimeSpan.FromDays(1));
+            private readonly ConcurrentDictionary<int, ObjectPool<int[]>> _arraysPoolBySize = new();
 
             private IntArraysPool()
             {
@@ -436,8 +435,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 var matchingQueue = _arraysPoolBySize.GetOrAdd(roundedSize, x => new ObjectPool<int[]>(() => new int[roundedSize]));
 
                 var allocatedArray = matchingQueue.Allocate();
-
-                //_timeSensitiveStore.Seen(matchingQueue);
 
                 return allocatedArray;
             }
@@ -463,28 +460,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
 
                 return (size / roundSize + 1) * roundSize;
-            }
-
-            private static void RunIdleOperations()
-            {
-                //_timeSensitiveStore.ForAllExpired(x =>
-                //{
-                //    var matchingQueue = _arraysPoolBySize.FirstOrDefault(y => y.Value == x).Key;
-                //    if (matchingQueue != 0)
-                //    {
-                //        ObjectPool<int[]> removedQueue;
-                //        _arraysPoolBySize.TryRemove(matchingQueue, out removedQueue);
-                //    }
-                //});
-            }
-
-            public void LowMemory(LowMemorySeverity lowMemorySeverity)
-            {
-                RunIdleOperations();
-            }
-
-            public void LowMemoryOver()
-            {
             }
         }
 

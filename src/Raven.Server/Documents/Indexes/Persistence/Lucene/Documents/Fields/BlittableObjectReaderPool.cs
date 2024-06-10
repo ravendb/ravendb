@@ -4,15 +4,13 @@ using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 {
-    public sealed class BlittableObjectReaderPool : ILowMemoryHandler
+    public sealed class BlittableObjectReaderPool
     {
         public static BlittableObjectReaderPool Instance;
 
         private static readonly int PoolSize;
 
         private static readonly Size LowMemoryCapacityThreshold;
-
-        private bool _isLowMemory;
 
         private readonly ObjectPool<BlittableObjectReader> _pool;
 
@@ -35,8 +33,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
         private BlittableObjectReaderPool()
         {
             _pool = new ObjectPool<BlittableObjectReader>(() => new BlittableObjectReader(), PoolSize);
-
-            LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
         }
 
         public BlittableObjectReader Allocate()
@@ -46,23 +42,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 
         public void Free(BlittableObjectReader reader)
         {
-            if (_isLowMemory)
+            if (LowMemoryNotification.Instance.InLowMemory)
             {
                 if (reader.Capacity > LowMemoryCapacityThreshold.GetValue(SizeUnit.Bytes))
                     reader.ResetCapacity();
             }
 
             _pool.Free(reader);
-        }
-
-        public void LowMemory(LowMemorySeverity lowMemorySeverity)
-        {
-            _isLowMemory = true;
-        }
-
-        public void LowMemoryOver()
-        {
-            _isLowMemory = false;
         }
     }
 }

@@ -18,13 +18,11 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Changes;
 
-public abstract class AbstractChangesClientConnection<TOperationContext> : ILowMemoryHandler, IDisposable
+public abstract class AbstractChangesClientConnection<TOperationContext> : IDisposable
     where TOperationContext : JsonOperationContext
 {
     private readonly WebSocket _webSocket;
     private readonly AsyncQueue<SendQueueItem> _sendQueue = new();
-
-    private readonly MultipleUseFlag _lowMemoryFlag = new();
 
     private readonly CancellationTokenSource _cts;
     public CancellationToken DisposeToken => _cts.Token;
@@ -237,7 +235,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
                 return;
             }
 
-            var isLowMemory = _lowMemoryFlag.IsRaised();
+            var isLowMemory = LowMemoryNotification.Instance.InLowMemory.IsRaised();
             switch (isLowMemory)
             {
                 case true:
@@ -581,16 +579,6 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
             ["Age"] = Age,
             ["WatchAllOperations"] = _watchAllOperations > 0
         };
-    }
-
-    public void LowMemory(LowMemorySeverity lowMemorySeverity)
-    {
-        _lowMemoryFlag.Raise();
-    }
-
-    public void LowMemoryOver()
-    {
-        _lowMemoryFlag.Lower();
     }
 
     protected static DynamicJsonValue CreateValueToSend(string type, DynamicJsonValue value)
