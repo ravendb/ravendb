@@ -44,21 +44,21 @@ var BUILD_DIR = __dirname + "/../wwwroot/content/ace/";
 var CACHE = {};
 
 function main(args) {
-	mergeAceWithCustomFiles();
-	
-	buildAce({
+    mergeAceWithCustomFiles();
+    
+    buildAce({
             noconflict: true,
             shrinkwrap: false
         });
 }
 
 function mergeAceWithCustomFiles() {
-	// copy ACE_SOURCES to build folder
-	console.log("Copying " + ACE_SOURCES + " to " + ACE_HOME);
-	copydir.sync(ACE_SOURCES, ACE_HOME);
-	
-	console.log("Copying " + ACE_CUSTOMAZATIONS + " to " + ACE_HOME);
-	copydir.sync(ACE_CUSTOMAZATIONS, ACE_HOME);
+    // copy ACE_SOURCES to build folder
+    console.log("Copying " + ACE_SOURCES + " to " + ACE_HOME);
+    copydir.sync(ACE_SOURCES, ACE_HOME);
+    
+    console.log("Copying " + ACE_CUSTOMAZATIONS + " to " + ACE_HOME);
+    copydir.sync(ACE_CUSTOMAZATIONS, ACE_HOME);
 }
 
 function jsFileList(path, filter) {
@@ -73,12 +73,12 @@ function jsFileList(path, filter) {
 }
 
 function workers() {
-	return ["javascript", "json", "raven_document"];
+    return ["javascript", "json", "raven_document"];
 }
 
 function modeList() {
-	return ["csharp", "javascript", "json", "raven_document", "raven_document_diff", "json_newline_friendly", "raven_document_newline_friendly", 
-			"mysql", "ravenMapLinq", "ravenReduceLinq", "rql", "sql", "sqlserver", "text"];
+    return ["csharp", "javascript", "json", "raven_document", "raven_document_diff", "json_newline_friendly", "raven_document_newline_friendly", 
+            "mysql", "ravenMapLinq", "ravenReduceLinq", "rql", "sql", "sqlserver", "text"];
 }
 
 function buildAceModule(opts, callback) {
@@ -218,7 +218,7 @@ function buildAce(options, callback) {
             require: ["ace/mode/" + name]
         }, "mode-" + name, addCb());
     });
-   		
+           
     // themes
     ["ambiance", "raven"].forEach(function(name) {
         buildSubmodule(options, {
@@ -271,7 +271,7 @@ function getLoadedFileList(options, callback, result) {
         });
     }
     var deps = Object.create(null);
-	
+    
     result.sources.forEach(function(pkg) {
         pkg.deps && pkg.deps.forEach(function(p) {
             if (!deps[p]) deps[p] = 1;
@@ -407,7 +407,7 @@ function extend(base, extra) {
 }
 
 function getTargetDir(opts) {
-	return BUILD_DIR;
+    return BUILD_DIR;
 }
 
 function sanityCheck(opts, callback) {
