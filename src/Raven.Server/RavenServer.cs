@@ -143,7 +143,6 @@ namespace Raven.Server
             Conventions = conventions ?? DocumentConventions.DefaultForServer;
 
             JsonDeserializationValidator.Validate();
-            Raven.Server.Monitoring.OpenTelemetry.Constants.Scanner();
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             if (Configuration.Initialized == false)
                 throw new InvalidOperationException("Configuration must be initialized");
@@ -200,7 +199,7 @@ namespace Raven.Server
             Router = new RequestRouter(RouteScanner.AllRoutes, this);
             try
             {
-                ServerStore.Initialize_Phase_1();
+                ServerStore.PreInitialize();
             }
             catch (Exception e)
             {
@@ -363,7 +362,7 @@ namespace Raven.Server
 
                 try
                 {
-                    ServerStore.Initialize_Phase_2();
+                    ServerStore.Initialize();
                 }
                 catch (Exception e)
                 {
@@ -433,8 +432,9 @@ namespace Raven.Server
             using (context.OpenReadTransaction())
                 nodeTag = RachisConsensus.ReadNodeTag(context);
 
+            // First run: allow the server to exchange all necessary data through Rachis, and then start OpenTelemetry.
             if (nodeTag == RachisConsensus.InitialTag)
-                return false; // first run, let allow server to exchange all necesarry data through rachis and then start opentelemetry
+                return false;
 
             return true;
         }
@@ -459,8 +459,6 @@ namespace Raven.Server
             
             var openTelemetryBuilder = services.AddOpenTelemetry();
             
-            if (openTelemetryConfiguration.OltpExporter)
-                openTelemetryBuilder.UseOtlpExporter();
 
             openTelemetryBuilder.WithMetrics(ConfigureMetrics);
             void ConfigureMetrics(MeterProviderBuilder builder)
@@ -469,16 +467,25 @@ namespace Raven.Server
                 builder.SetResourceBuilder(
                     ResourceBuilder.CreateDefault()
                         .AddService("server", "ravendb", serviceInstanceId: nodeTag));
-                builder.AddAspNetCoreInstrumentation();
-                builder.AddRuntimeInstrumentation();
-                builder.AddMeter(Constants.ServerWideMeterName);
-                builder.AddMeter(Constants.ServerWideDatabasesMeterName);
-                builder.AddMeter(Constants.DatabaseStorageMeter);
-                builder.AddMeter(Constants.IndexMeter);
+
+                if (Configuration.Monitoring.OpenTelemetry.AspNetCoreInstrumentationMetricsEnabled)
+                    builder.AddAspNetCoreInstrumentation();
+                if (Configuration.Monitoring.OpenTelemetry.RuntimeInstrumentationMetricsEnabled)
+                    builder.AddRuntimeInstrumentation();
+                
+                builder.AddMeter(Constants.Meters.GeneralMeter);
+                builder.AddMeter(Constants.Meters.RequestsMeter);
+                builder.AddMeter(Constants.Meters.StorageMeter);
+                builder.AddMeter(Constants.Meters.GcMeter);
+                builder.AddMeter(Constants.Meters.TotalDatabasesMeter);
+
 
                 if (openTelemetryConfiguration.ConsoleExporter)
                     builder.AddConsoleExporter();
 
+                if (openTelemetryConfiguration.OpenTelemetryProtocolExporter)
+                    builder.AddOtlpExporter();
+                
                 _openTelemetryInitialized = true;
             }
         }

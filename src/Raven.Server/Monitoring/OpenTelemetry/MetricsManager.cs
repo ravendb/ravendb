@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.OpenTelemetry;
@@ -30,15 +31,10 @@ public class MetricsManager
         _locker.Wait();
         try
         {
-            var activate = _server.ServerStore.LicenseManager.CanUseOpenTelemetryMonitoring(withNotification: true);
+            var activate = _server.ServerStore.LicenseManager.CanUseOpenTelemetryMonitoring(withNotification: true, startUp: false);
             if (activate)
             {
                 Execute();
-                //turn on
-            }
-            else
-            {
-                //when we dispose meter all registered thing will die eventually however metrics still be exported but there will be no instruments
             }
         }
         catch (ObjectDisposedException)
@@ -61,7 +57,7 @@ public class MetricsManager
 
         try
         {
-            var activate = _server.ServerStore.LicenseManager.CanUseOpenTelemetryMonitoring(withNotification: true);
+            var activate = _server.ServerStore.LicenseManager.CanUseOpenTelemetryMonitoring(withNotification: true, startUp: true);
             if (activate)
             {
                 if (_serverMetrics != null)
@@ -71,12 +67,6 @@ public class MetricsManager
             }
 
             _server.ServerStore.DatabasesLandlord.OnDatabaseLoaded += AddDatabasesIfNecessary;
-        }
-        catch (Exception e)
-        {
-            Debugger.Launch();
-            Debugger.Break();
-            throw;
         }
         finally
         {
@@ -88,8 +78,9 @@ public class MetricsManager
 
     private async Task AddDatabases()
     {
-        if (_server.Configuration.Monitoring.OpenTelemetry.Databases == false)
+        if (_server.Configuration.Monitoring.OpenTelemetry.DatabasesEnabled == false)
             return;
+
 
         await _locker.WaitAsync();
         try
@@ -107,10 +98,9 @@ public class MetricsManager
             if (databases.Count == 0)
                 return;
 
-            var databaseNamesToShare = _server.Configuration.Monitoring.OpenTelemetry.ExposedDatabases;
             foreach (var database in databases)
             {
-                if ((databaseNamesToShare == null || databaseNamesToShare.Contains(database)) && _loadedDatabases.TryGetValue(database, out var databaseMetrics) == false)
+                if (_loadedDatabases.TryGetValue(database, out var databaseMetrics) == false)
                 {
                     _loadedDatabases[database] = new DatabaseWideMetrics(_server.ServerStore.DatabasesLandlord, database, _server.Configuration.Monitoring.OpenTelemetry);
                 }
@@ -124,11 +114,7 @@ public class MetricsManager
 
     private void AddDatabasesIfNecessary(string databaseName)
     {
-        if (_server.Configuration.Monitoring.OpenTelemetry.Databases == false)
-            return;
-
-        var exposedDatabases = _server.Configuration.Monitoring.OpenTelemetry.ExposedDatabases;
-        if (exposedDatabases != null && exposedDatabases.Contains(databaseName) == false)
+        if (_server.Configuration.Monitoring.OpenTelemetry.DatabasesEnabled == false)
             return;
 
         if (string.IsNullOrWhiteSpace(databaseName))

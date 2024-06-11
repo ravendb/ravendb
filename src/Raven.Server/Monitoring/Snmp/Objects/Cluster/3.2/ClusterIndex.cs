@@ -1,9 +1,10 @@
 using Lextm.SharpSnmpLib;
+using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Cluster
 {
-    public sealed class ClusterIndex : ScalarObjectBase<Integer32>
+    public sealed class ClusterIndex : ScalarObjectBase<Integer32>, IMetricInstrument<long>
     {
         private readonly ServerStore _store;
 
@@ -13,10 +14,13 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Cluster
             _store = store;
         }
 
+        private long Value => _store.LastRaftCommitIndex;
+
         protected override Integer32 GetData()
         {
-            var index = _store.LastRaftCommitIndex;
-            return new Integer32((int)index);
+            return new Integer32((int)Value);
         }
+
+        public long GetCurrentMeasurement() => Value;
     }
 }

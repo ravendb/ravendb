@@ -1449,7 +1449,7 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.DelayedExternalReplication, message, addNotification: true);
         }
 
-        public void AssertCanUseDocumentsCompression(DocumentsCompressionConfiguration documentsCompression)
+        public void  AssertCanUseDocumentsCompression(DocumentsCompressionConfiguration documentsCompression)
         {
             var hasDocumentsCompression = HasDocumentsCompression(documentsCompression);
 
@@ -1605,10 +1605,31 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.ReadOnlyCertificates, details);
         }
 
-        public bool CanUseOpenTelemetryMonitoring(bool withNotification)
+        public bool CanUseOpenTelemetryMonitoring(bool withNotification, bool startUp)
         {
-            //todo logic
-            return true;
+            if (IsValid(out _) == false)
+                return false;
+
+            if (LicenseStatus.HasMonitoringEndpoints)
+            {
+                if (startUp)
+                    return true;
+                else
+                {
+                    const string details = "Your license allows you to run OpenTelemetry meters but in order to run on meters you've to manually restart the RavenDB process.";
+                    throw GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: true);
+                }
+            }
+
+            {
+                const string details = "Your current license doesn't include the monitoring feature.";
+                var exception = GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: withNotification);
+
+                if (startUp)
+                    return false;
+                
+                throw exception;
+            }
         }
 
         public bool CanUseSnmpMonitoring(bool withNotification)
