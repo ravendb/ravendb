@@ -29,7 +29,7 @@ public class RDBC_622 : RavenTestBase
         using var store = await PrepareDataForTest();
         using var client = new HttpClient().WithConventions(store.Conventions);
         string jsonResult;
-        await using (var stream = await client.GetStreamAsync(UrlGenerator(store, "json")))
+        await using (var stream = await client.GetStreamAsync(UrlGenerator(store, "")))
         {
             using TextReader tr = new StreamReader(stream);
             jsonResult = await tr.ReadToEndAsync();
