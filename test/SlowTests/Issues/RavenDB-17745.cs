@@ -1,8 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Raven.Client.Documents.BulkInsert;
+using Raven.Client.Documents.Conventions;
+using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Server;
 using Tests.Infrastructure;
@@ -20,14 +25,53 @@ namespace SlowTests.Issues
         private readonly int _readTimeout = 500;
         private readonly TimeSpan _delay = TimeSpan.FromSeconds(1);
 
-        [RavenFact(RavenTestCategory.BulkInsert)]
-        public async Task BulkInsertWithDelay()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [InlineData(null)]
+        [InlineData(HttpProtocols.Http1)]
+        [InlineData(HttpProtocols.Http2)]
+        public async Task BulkInsertWithDelay(HttpProtocols? httpProtocols)
         {
-            DoNotReuseServer();
-
-            using (var store = GetDocumentStore())
+            Version httpVersion;
+            switch (httpProtocols)
             {
-                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                case null:
+                    httpVersion = null;
+                    break;
+                case HttpProtocols.Http1:
+                    httpVersion = new Version(1, 1);
+                    break;
+                case HttpProtocols.Http2:
+                    httpVersion = new Version(2, 0);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(httpProtocols));
+            }
+
+            DocumentConventions serverConventions = httpVersion != null
+                ? new DocumentConventions { HttpVersion = httpVersion, HttpVersionPolicy = HttpVersionPolicy.RequestVersionExact }
+                : null;
+
+            Dictionary<string, string> customSettings = httpVersion != null
+                ? new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Http.Protocols), httpProtocols.ToString() } }
+                : null;
+
+            var server = GetNewServer(new ServerCreationOptions
+            {
+                Conventions = serverConventions,
+                CustomSettings = customSettings
+            });
+
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = server,
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.HttpVersion = httpVersion;
+                    s.Conventions.HttpVersionPolicy = HttpVersionPolicy.RequestVersionExact;
+                }
+            }))
+            {
+                var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 db.ForTestingPurposesOnly().BulkInsertStreamReadTimeout = _readTimeout;
                 var bulkInsertOptions = new BulkInsertOptions();
                 bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = _readTimeout;
