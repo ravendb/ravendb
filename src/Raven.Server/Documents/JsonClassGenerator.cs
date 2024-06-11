@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents
                 [typeof(byte[])] = new FieldType("byte", true, true),
                 [typeof(int[])] = new FieldType("int", true, true),
                 [typeof(Guid)] = new FieldType(typeof(Guid)),
-                [typeof(DateTime)] = new FieldType(typeof(DateTimeOffset).Name, false, true),
+                [typeof(DateTime)] = new FieldType(typeof(DateTime).Name, false, true),
                 [typeof(DateTimeOffset)] = new FieldType(typeof(DateTimeOffset)),
                 [typeof(TimeSpan)] = new FieldType(typeof(TimeSpan)),
                 [typeof(Uri)] = new FieldType(typeof(Uri))
@@ -206,16 +207,16 @@ namespace Raven.Server.Documents
 
             document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
 
-            var @class = "Class";
-            var @namespace = "Unknown";
+            string @class = null;
+            string @namespace = "My.RavenDB";
             if (metadata != null)
             {
                 // retrieve the class and metadata if available.
                 // "Raven-Clr-Type": "Namespace.ClassName, AssemblyName"
 
-                if (metadata.TryGet(Constants.Documents.Metadata.RavenClrType, out LazyStringValue lazyStringValue))
+                if (metadata.TryGet(Constants.Documents.Metadata.RavenClrType, out LazyStringValue lsvClrType) && lsvClrType != null)
                 {
-                    var values = lazyStringValue.ToString().Split(',');
+                    var values = lsvClrType.ToString().Split(',');
                     if (values.Length == 2)
                     {
                         var data = values[0];
@@ -232,6 +233,9 @@ namespace Raven.Server.Documents
                         }
                     }
                 }
+
+                if (@class == null && metadata.TryGet(Constants.Documents.Metadata.Collection, out LazyStringValue lsvCollection) && lsvCollection != null)
+                    @class = Inflector.Singularize(lsvCollection);
             }
 
             var classes = GenerateClassesTypesFromObject(@class, document);
@@ -446,6 +450,8 @@ namespace Raven.Server.Documents
                 return KnownTypes[typeof(Guid)];
             if (ParseHelper.TryAction<TimeSpan>(x => TimeSpan.TryParse(content, out x)))
                 return KnownTypes[typeof(TimeSpan)];
+            if (ParseHelper.TryAction<DateTime>(x => DateTime.TryParse(content, out x)))
+                return KnownTypes[typeof(DateTime)];
             if (ParseHelper.TryAction<DateTimeOffset>(x => DateTimeOffset.TryParse(content, out x)))
                 return KnownTypes[typeof(DateTimeOffset)];
 
