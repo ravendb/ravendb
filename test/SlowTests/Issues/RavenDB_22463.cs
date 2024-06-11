@@ -58,15 +58,15 @@ public class RavenDB_22463 : RavenTestBase
                                           using System.Linq;
                                           using System.Text;
                                           using System.Threading.Tasks;
-
+                                          
                                           namespace My.RavenDB
                                           {
-                                          	public class Cat
-                                          	{
-                                          		public DateTime Birthday { get; set; } 
-                                          		public DateTimeOffset BirthdayOffset { get; set; } 
-                                          		public string Name { get; set; } 
-                                          	}
+                                              public class Cat
+                                              {
+                                                  public DateTime Birthday { get; set; } 
+                                                  public DateTimeOffset BirthdayOffset { get; set; } 
+                                                  public string Name { get; set; } 
+                                              }
                                           }
                                           """;
 }

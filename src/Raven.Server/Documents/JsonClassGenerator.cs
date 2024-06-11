@@ -257,19 +257,19 @@ namespace Raven.Server.Documents
             for (var i = 0; i < classes.Count; i++)
             {
                 var @class = classes[i];
-                codeBuilder.Append("\tpublic class " + @class.Name + Environment.NewLine);
-                codeBuilder.Append("\t{" + Environment.NewLine);
+                codeBuilder.Append("    public class " + @class.Name + Environment.NewLine);
+                codeBuilder.Append("    {" + Environment.NewLine);
 
                 foreach (var field in @class.Properties)
                 {
-                    codeBuilder.Append("\t\tpublic ");
+                    codeBuilder.Append("        public ");
                     codeBuilder.Append(field.Value.IsArray ? $"List<{field.Value.Name}>" : field.Value.Name);
                     codeBuilder.Append(" ");
                     codeBuilder.Append(field.Key + " { get; set; } ");
                     codeBuilder.Append(Environment.NewLine);
                 }
 
-                codeBuilder.Append("\t}");
+                codeBuilder.Append("    }");
 
                 if (i < classes.Count - 1)
                     codeBuilder.Append(Environment.NewLine + Environment.NewLine);
