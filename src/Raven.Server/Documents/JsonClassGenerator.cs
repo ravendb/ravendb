@@ -238,6 +238,8 @@ namespace Raven.Server.Documents
                     @class = Inflector.Singularize(lsvCollection);
             }
 
+            @class ??= "Class";
+
             var classes = GenerateClassesTypesFromObject(@class, document);
 
             var classCode = GenerateClassCodeFromSpec(classes);
@@ -424,14 +426,33 @@ namespace Raven.Server.Documents
                 case BlittableJsonToken.Integer: // could be integer or long               
                 case BlittableJsonToken.String: // could be anything
                 case BlittableJsonToken.CompressedString:
-                    return GuessTokenTypeFromContent(value);
+                    return GuessTokenTypeFromContent(value, token);
                 default:
                     throw new NotSupportedException("We shouldn't have hit this. This is a bug in the caller routine.");
             }
         }
 
-        private FieldType GuessTokenTypeFromContent(object value)
+        private unsafe FieldType GuessTokenTypeFromContent(object value, BlittableJsonToken token)
         {
+            LazyStringValue lsv = token switch
+            {
+                BlittableJsonToken.String => (LazyStringValue)value,
+                BlittableJsonToken.CompressedString => ((LazyCompressedStringValue)value).ToLazyStringValue(),
+                _ => null
+            };
+
+            if (lsv != null)
+            {
+                var result = LazyStringParser.TryParseDateTime(lsv.Buffer, lsv.Length, out var dt, out var dto, properlyParseThreeDigitsMilliseconds: true);
+                switch (result)
+                {
+                    case LazyStringParser.Result.DateTime:
+                        return KnownTypes[typeof(DateTime)];
+                    case LazyStringParser.Result.DateTimeOffset:
+                        return KnownTypes[typeof(DateTimeOffset)];
+                }
+            }
+
             var content = value.ToString();
 
             if (ParseHelper.TryAction<bool>(x => bool.TryParse(content, out x)))
@@ -448,6 +469,7 @@ namespace Raven.Server.Documents
 
             if (ParseHelper.TryAction<Guid>(x => Guid.TryParse(content, out x)))
                 return KnownTypes[typeof(Guid)];
+
             if (ParseHelper.TryAction<TimeSpan>(x => TimeSpan.TryParse(content, out x)))
                 return KnownTypes[typeof(TimeSpan)];
             if (ParseHelper.TryAction<DateTime>(x => DateTime.TryParse(content, out x)))
