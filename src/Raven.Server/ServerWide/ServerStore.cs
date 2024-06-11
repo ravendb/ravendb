@@ -614,7 +614,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public void Initialize_Phase_1()
+        public void PreInitialize()
         {
             Configuration.CheckDirectoryPermissions();
 
@@ -855,9 +855,13 @@ namespace Raven.Server.ServerWide
             }
 
             CheckSwapOrPageFileAndRaiseNotification();
+            
+            
+            LicenseManager.Initialize(_env, ContextPool);
+            LatestVersionCheck.Instance.Check(this);
         }
 
-        public void Initialize_Phase_2()
+        public void Initialize()
         {
             var clusterChanges = new ClusterChanges();
             _sharding = new ShardingStore(this);
@@ -879,8 +883,6 @@ namespace Raven.Server.ServerWide
             SorterCompilationCache.Instance.AddServerWideItems(this);
             AnalyzerCompilationCache.Instance.AddServerWideItems(this);
 
-            LicenseManager.Initialize(_env, ContextPool);
-            LatestVersionCheck.Instance.Check(this);
 
             ConcurrentBackupsCounter = new ConcurrentBackupsCounter(Configuration.Backup, LicenseManager);
 

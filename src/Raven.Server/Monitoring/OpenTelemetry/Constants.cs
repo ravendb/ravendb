@@ -1,200 +1,146 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using Lextm.SharpSnmpLib.Pipeline;
-
-namespace Raven.Server.Monitoring.OpenTelemetry;
+﻿namespace Raven.Server.Monitoring.OpenTelemetry;
 
 public static class Constants
 {
-    private const string Prefix = "ravendb.server";
-
-    public const string ServerWideMeterName = Prefix + ".serverwide";
-    public const string ServerWideDatabasesMeterName = ServerWideMeterName + ".databases";
-    public const string DatabaseStorageMeter = ServerWideDatabasesMeterName + ".storage";
-    public const string IndexMeter = ServerWideDatabasesMeterName + ".indexes";
+    public static class Meters
+    {
+        public const string GeneralMeter = "ravendb.serverwide.general";
+        public const string RequestsMeter = "ravendb.serverwide.requests";
+        public const string StorageMeter = "ravendb.serverwide.storage";
+        public const string GcMeter = "ravendb.serverwide.gc";
+        public const string Hardware = "ravendb.serverwide.hardware";
+        public const string TotalDatabasesMeter = "ravendb.serverwide.totaldatabases";
+ 
+    }
     
     public static class Tags
     {
         public const string Database = "database";
         public const string Index = "index";
-
-        public static KeyValuePair<string, object> CreateNodeTagLabel(string nodeTag) => new("node", nodeTag);
-        public const string NodeTag = "node";
     }
     
     public static class DatabaseWide
     {
         // ReSharper disable once MemberHidesStaticFromOuterClass
-        private const string Prefix = Constants.Prefix + ".database.";
-
-        public const string DatabaseCountOfIndexes = Prefix + "countofindexes";
-        public const string DatabaseDocumentsStorageAllocatedSize = Prefix + "documents.allocatedsize";
-        public const string DatabaseDocumentsStorageUsedSize = Prefix + "documents.usedsize";
-        public const string DatabaseIndexStorageAllocatedSize = Prefix + "index.allocatedsize";
-        public const string DatabaseIndexStorageUsedSize = Prefix + "index.usedsize";
-        public const string DatabaseTotalStorageSize = Prefix + "total.storagesize";
-        public const string DatabaseStorageDiskRemainingSpace = Prefix + "disk.remainingspace";
-        public const string DatabaseStorageDiskIosReadOperations = Prefix + "disk.ios.readoperations";
-        public const string DatabaseStorageDiskIosWriteOperations = Prefix + "disk.ios.writeoperations";
-        public const string DatabaseStorageDiskReadThroughput = Prefix + "disk.throughput.read";
-        public const string DatabaseStorageDiskWriteThroughput = Prefix + "disk.throughput.write";
-        public const string DatabaseStorageDiskQueueLength = Prefix + "disk.queuelength";
+        public const string DatabaseCountOfIndexes = "countofindexes";
+        public const string DatabaseDocumentsStorageAllocatedSize = "documents.allocatedsize";
+        public const string DatabaseDocumentsStorageUsedSize = "documents.usedsize";
+        public const string DatabaseIndexStorageAllocatedSize = "index.allocatedsize";
+        public const string DatabaseIndexStorageUsedSize = "index.usedsize";
+        public const string DatabaseTotalStorageSize = "total.storagesize";
+        public const string DatabaseStorageDiskRemainingSpace = "disk.remainingspace";
+        public const string DatabaseStorageDiskIosReadOperations = "disk.ios.readoperations";
+        public const string DatabaseStorageDiskIosWriteOperations = "disk.ios.writeoperations";
+        public const string DatabaseStorageDiskReadThroughput = "disk.throughput.read";
+        public const string DatabaseStorageDiskWriteThroughput = "disk.throughput.write";
+        public const string DatabaseStorageDiskQueueLength = "disk.queuelength";
         
         public static class IndexWide
         {
             // ReSharper disable once MemberHidesStaticFromOuterClass
-            private const string Prefix = DatabaseWide.Prefix + "index.";
-
-            public const string DatabaseIndexExists = Prefix + "exists";
-            public const string DatabaseIndexPriority = Prefix + "priority";
-            public const string DatabaseIndexState = Prefix + "state";
-            public const string DatabaseIndexErrors = Prefix + "errors";
-            public const string DatabaseIndexLastQueryTime = Prefix + "time.query.last";
-            public const string DatabaseIndexLastIndexingTime = Prefix + "time.indexing.last";
-            public const string DatabaseIndexTimeSinceLastQuery = Prefix + "time.since.lastquery";
-            public const string DatabaseIndexTimeSinceLastIndexing = Prefix + "time.since.lastindexing";
-            public const string DatabaseIndexLockMode = Prefix + "lockmode";
-            public const string DatabaseIndexIsInvalid = Prefix + "isinvalid";
-            public const string DatabaseIndexStatus = Prefix + "status";
-            public const string DatabaseIndexMapsPerSec = Prefix + "mapspersec";
-            public const string DatabaseIndexReducesPerSec = Prefix + "reducespersec";
-            public const string DatabaseIndexType = Prefix + "type";
+            public const string DatabaseIndexExists = "exists";
+            public const string DatabaseIndexPriority = "priority";
+            public const string DatabaseIndexState = "state";
+            public const string DatabaseIndexErrors = "errors";
+            public const string DatabaseIndexLastQueryTime = "time.query.last";
+            public const string DatabaseIndexLastIndexingTime = "time.indexing.last";
+            public const string DatabaseIndexTimeSinceLastQuery = "time.since.lastquery";
+            public const string DatabaseIndexTimeSinceLastIndexing = "time.since.lastindexing";
+            public const string DatabaseIndexLockMode = "lockmode";
+            public const string DatabaseIndexIsInvalid = "isinvalid";
+            public const string DatabaseIndexStatus = "status";
+            public const string DatabaseIndexMapsPerSec = "mapspersec";
+            public const string DatabaseIndexReducesPerSec = "reducespersec";
+            public const string DatabaseIndexType = "type";
         }
     }
-
-
-
-
+    
     public static class ServerWide
     {
-        private const string Prefix = Constants.Prefix + ".serverwide.";
-        
-        public const string ServerUrl = Prefix + "server.url";
-        public const string ServerPublicUrl = Prefix + "server.public.url";
-        public const string ServerTcpUrl = Prefix + "server.tcp.url";
-        public const string ServerPublicTcpUrl = Prefix + "server.public.tcp.url";
-        public const string ServerVersion = Prefix + "server.version";
-        public const string ServerFullVersion = Prefix + "server.full.version";
-        public const string ServerUpTime = Prefix + "server.up.time";
-        public const string ServerUpTimeGlobal = Prefix + "server.up.time.global";
-        public const string ServerPid = Prefix + "server.pid";
-        public const string ServerConcurrentRequests = Prefix + "server.concurrent.requests";
-        public const string ServerTotalRequests = Prefix + "server.total.requests";
-        public const string ServerRequestsPerSecond = Prefix + "server.requests.per.second";
-        public const string ServerRequestAverageDuration = Prefix + "server.request.average.duration";
-        public const string ProcessCpu = Prefix + "process.cpu";
-        public const string MachineCpu = Prefix + "machine.cpu";
-        public const string IoWait = Prefix + "io.wait";
-        public const string CpuCreditsBase = Prefix + "cpu.credits.base";
-        public const string CpuCreditsMax = Prefix + "cpu.credits.max";
-        public const string CpuCreditsRemaining = Prefix + "cpu.credits.remaining";
-        public const string CpuCreditsCurrentConsumption = Prefix + "cpu.credits.current.consumption";
-        public const string CpuCreditsBackgroundTasksAlertRaised = Prefix + "cpu.credits.background.tasks.alert.raised";
-        public const string CpuCreditsFailoverAlertRaised = Prefix + "cpu.credits.failover.alert.raised";
-        public const string CpuCreditsAlertRaised = Prefix + "cpu.credits.alert.raised";
-        public const string ServerTotalMemory = Prefix + "server.total.memory";
-        public const string ServerLowMemoryFlag = Prefix + "server.low.memory.flag";
-        public const string ServerTotalSwapSize = Prefix + "server.total.swap.size";
-        public const string ServerTotalSwapUsage = Prefix + "server.total.swap.usage";
-        public const string ServerWorkingSetSwapUsage = Prefix + "server.working.set.swap.usage";
-        public const string ServerDirtyMemory = Prefix + "server.dirty.memory";
-        public const string ServerManagedMemory = Prefix + "server.managed.memory";
-        public const string ServerUnmanagedMemory = Prefix + "server.unmanaged.memory";
-        public const string ServerEncryptionBuffersMemoryInUse = Prefix + "server.encryption.buffers.memory.in.use";
-        public const string ServerEncryptionBuffersMemoryInPool = Prefix + "server.encryption.buffers.memory.in.pool";
-        public const string ServerAvailableMemoryForProcessing = Prefix + "server.available.memory.for.processing";
-        public const string ServerLastRequestTime = Prefix + "server.last.request.time";
-        public const string ServerLastAuthorizedNonClusterAdminRequestTime = Prefix + "server.last.authorized.non.cluster.admin.request.time";
-        public const string DatabaseLoadedCount = Prefix + "database.loaded.count";
-        public const string DatabaseTotalCount = Prefix + "database.total.count";
-        public const string DatabaseOldestBackup = Prefix + "database.oldest.backup";
-        public const string DatabaseDisabledCount = Prefix + "database.disabled.count";
-        public const string DatabaseEncryptedCount = Prefix + "database.encrypted.count";
-        public const string DatabaseFaultedCount = Prefix + "database.faulted.count";
-        public const string DatabaseNodeCount = Prefix + "database.node.count";
-        public const string TotalDatabaseNumberOfIndexes = Prefix + "total.database.number.of.indexes";
-        public const string TotalDatabaseCountOfStaleIndexes = Prefix + "total.database.count.of.stale.indexes";
-        public const string TotalDatabaseNumberOfErrorIndexes = Prefix + "total.database.number.of.error.indexes";
-        public const string TotalDatabaseNumberOfFaultyIndexes = Prefix + "total.database.number.of.faulty.indexes";
-        public const string TotalDatabaseMapIndexIndexedPerSecond = Prefix + "total.database.map.index.indexed.per.second";
-        public const string TotalDatabaseMapReduceIndexMappedPerSecond = Prefix + "total.database.map.reduce.index.mapped.per.second";
-        public const string TotalDatabaseMapReduceIndexReducedPerSecond = Prefix + "total.database.map.reduce.index.reduced.per.second";
-        public const string TotalDatabaseWritesPerSecond = Prefix + "total.database.writes.per.second";
-        public const string TotalDatabaseDataWrittenPerSecond = Prefix + "total.database.data.written.per.second";
-        public const string ClusterNodeState = Prefix + "cluster.node.state";
-        public const string ClusterNodeTag = Prefix + "cluster.node.tag";
-        public const string ClusterId = Prefix + "cluster.id";
-        public const string ClusterIndex = Prefix + "cluster.index";
-        public const string ClusterTerm = Prefix + "cluster.term";
-        public const string ServerLicenseType = Prefix + "server.license.type";
-        public const string ServerLicenseExpiration = Prefix + "server.license.expiration";
-        public const string ServerLicenseExpirationLeft = Prefix + "server.license.expiration.left";
-        public const string ServerLicenseUtilizedCpuCores = Prefix + "server.license.utilized.cpu.cores";
-        public const string ServerLicenseMaxCpuCores = Prefix + "server.license.max.cpu.cores";
-        public const string ServerStorageUsedSize = Prefix + "server.storage.used.size";
-        public const string ServerStorageTotalSize = Prefix + "server.storage.total.size";
-        public const string ServerStorageDiskRemainingSpace = Prefix + "server.storage.disk.remaining.space";
-        public const string ServerStorageDiskRemainingSpacePercentage = Prefix + "server.storage.disk.remaining.space.percentage";
-        public const string ServerStorageDiskIosReadOperations = Prefix + "server.storage.disk.ios.read.operations";
-        public const string ServerStorageDiskIosWriteOperations = Prefix + "server.storage.disk.ios.write.operations";
-        public const string ServerStorageDiskReadThroughput = Prefix + "server.storage.disk.read.throughput";
-        public const string ServerStorageDiskWriteThroughput = Prefix + "server.storage.disk.write.throughput";
-        public const string ServerStorageDiskQueueLength = Prefix + "server.storage.disk.queue.length";
-        public const string ServerCertificateExpiration = Prefix + "server.certificate.expiration";
-        public const string ServerCertificateExpirationLeft = Prefix + "server.certificate.expiration.left";
-        public const string WellKnownAdminCertificates = Prefix + "well.known.admin.certificates";
-        public const string WellKnownAdminIssuers = Prefix + "well.known.admin.issuers";
-        public const string CertificateExpiringCount = Prefix + "certificate.expiring.count";
-        public const string CertificateExpiredCount = Prefix + "certificate.expired.count";
-        public const string MachineProcessorCount = Prefix + "machine.processor.count";
-        public const string MachineAssignedProcessorCount = Prefix + "machine.assigned.processor.count";
-        public const string ServerBackupsCurrent = Prefix + "server.backups.current";
-        public const string ServerBackupsMax = Prefix + "server.backups.max";
-        public const string ThreadPoolAvailableWorkerThreads = Prefix + "thread.pool.available.worker.threads";
-        public const string ThreadPoolAvailableCompletionPortThreads = Prefix + "thread.pool.available.completion.port.threads";
-        public const string TcpActiveConnections = Prefix + "tcp.active.connections";
-        public const string FeatureAnyExperimental = Prefix + "feature.any.experimental";
-        
+        public const string ServerConcurrentRequests = "requests.concurrent_requests";
+        public const string ServerTotalRequests = "total.requests";
+        public const string ServerRequestsPerSecond = "requests.per_second";
+        public const string ServerRequestAverageDuration = "requests.average_duration";
+        public const string ProcessCpu = "cpu.process";
+        public const string MachineCpu = "cpu.machine";
+        public const string IoWait = "io_wait";
+        public const string CpuCreditsBase = "cpu.credits.base";
+        public const string CpuCreditsMax = "cpu.credits.max";
+        public const string CpuCreditsRemaining = "cpu.credits.remaining";
+        public const string CpuCreditsCurrentConsumption = "cpu.credits.consumption_current";
+        public const string CpuCreditsBackgroundTasksAlertRaised = "cpu.credits.background.tasks.alert_raised";
+        public const string CpuCreditsFailoverAlertRaised = "cpu.credits.failover.alert_raised";
+        public const string CpuCreditsAlertRaised = "cpu.credits.alert_raised";
+        public const string ServerTotalMemory = "total_memory";
+        public const string ServerLowMemoryFlag = "low_memory_flag";
+        public const string ServerTotalSwapSize = "total.swap.size";
+        public const string ServerTotalSwapUsage = "total.swap_usage";
+        public const string ServerWorkingSetSwapUsage = "working_set_swap_usage";
+        public const string ServerDirtyMemory = "dirty_memory";
+        public const string ServerManagedMemory = "managed_memory";
+        public const string ServerUnmanagedMemory = "unmanaged_memory";
+        public const string ServerEncryptionBuffersMemoryInUse = "encryption_buffers.memory_in_use";
+        public const string ServerEncryptionBuffersMemoryInPool = "encryption_buffers.memory_in_pool";
+        public const string ServerAvailableMemoryForProcessing = "available_memory_for_processing";
+        public const string ServerLastRequestTime = "server.last_request_time";
+        public const string DatabaseLoadedCount = "database.loaded_count";
+        public const string DatabaseTotalCount = "database.total_count";
+        public const string DatabaseOldestBackup = "database.oldest_backup";
+        public const string DatabaseDisabledCount = "database.disabled_count";
+        public const string DatabaseEncryptedCount = "database.encrypted_count";
+        public const string DatabaseFaultedCount = "database.faulted_count";
+        public const string DatabaseNodeCount = "database.node_count";
+        public const string TotalDatabaseNumberOfIndexes = "number_of_indexes";
+        public const string TotalDatabaseCountOfStaleIndexes = "count_stale_indexes";
+        public const string TotalDatabaseNumberOfErrorIndexes = "number_error_indexes";
+        public const string TotalDatabaseNumberOfFaultyIndexes = "number.faulty_indexes";
+        public const string TotalDatabaseMapIndexIndexedPerSecond = "map.index.indexed_per_second";
+        public const string TotalDatabaseMapReduceIndexMappedPerSecond = "map_reduce.index.mapped_per_second";
+        public const string TotalDatabaseMapReduceIndexReducedPerSecond = "map_reduce.index.reduced_per_second";
+        public const string TotalDatabaseWritesPerSecond = "writes_per_second";
+        public const string TotalDatabaseDataWrittenPerSecond = "data.written.per_second";
+        public const string ClusterNodeState = "cluster.node.state";
+        public const string ClusterIndex = "cluster.index";
+        public const string ClusterTerm = "cluster.term";
+        public const string ServerStorageUsedSize = "storage.used_size";
+        public const string ServerStorageTotalSize = "storage.total_size";
+        public const string ServerStorageDiskRemainingSpace = "storage.disk.remaining.space";
+        public const string ServerStorageDiskRemainingSpacePercentage = "storage.disk.remaining.space_percentage";
+        public const string ServerStorageDiskIosReadOperations = "storage.disk.ios.read_operations";
+        public const string ServerStorageDiskIosWriteOperations = "storage.disk.ios.write_operations";
+        public const string ServerStorageDiskReadThroughput = "storage.disk.read+throughput";
+        public const string ServerStorageDiskWriteThroughput = "storage.disk.write_throughput";
+        public const string ServerStorageDiskQueueLength = "storage.disk.queue_length";
+        public const string MachineProcessorCount = "machine.processor_count";
+        public const string MachineAssignedProcessorCount = "machine.assigned_processor_count";
+        public const string ThreadPoolAvailableWorkerThreads = "thread_pool.available_worker_threads";
+        public const string ThreadPoolAvailableCompletionPortThreads = "thread_pool.available_completion_port_threads";
+        public const string TcpActiveConnections = "tcp.active.connections";
+        public const string ServerCertificateExpirationLeft = "certificate_server_certificate_expiration_left_seconds";
+        public const string ServerLicenseType = "license.type";
+        public const string ServerLicenseExpirationLeft = "license.expiration_left_seconds";
+        public const string ServerLicenseUtilizedCpuCores = "license.cpu.utilized";
+        public const string ServerLicenseMaxCpuCores = "license.cores.max";
+
         public class GC
         {
-            private const string Prefix = ServerWide.Prefix + "gc.";
-            public const string ServerGcCompacted = Prefix + "compacted";
-            public const string ServerGcConcurrent = Prefix + "concurrent";
-            public const string ServerGcFinalizationPendingCount = Prefix + "finalizationpendingcount";
-            public const string ServerGcFragmented = Prefix + "fragmented";
-            public const string ServerGcGeneration = Prefix + "generation";
-            public const string ServerGcHeapSize = Prefix + "heapsize";
-            public const string ServerGcHighMemoryLoadThreshold = Prefix + "highmemoryloadthreshold";
-            public const string ServerGcIndex = Prefix + "index";
-            public const string ServerGcMemoryLoad = Prefix + "memoryload";
-            public const string ServerGcPauseDurations1 = Prefix + "pausedurations1";
-            public const string ServerGcPauseDurations2 = Prefix + "pausedurations2";
-            public const string ServerGcPauseTimePercentage = Prefix + "timepercentage";
-            public const string ServerGcPinnedObjectsCount = Prefix + "pinnedobjectscount";
-            public const string ServerGcPromoted = Prefix + "promoted";
-            public const string ServerGcTotalAvailableMemory = Prefix + "totalavailablememory";
-            public const string ServerGcTotalCommitted = Prefix + "totalcommited";
-            public const string ServerGcLohSize = Prefix + "gclohsize";
+            public const string ServerGcCompacted = "compacted";
+            public const string ServerGcConcurrent = "concurrent";
+            public const string ServerGcFinalizationPendingCount = "finalizationpendingcount";
+            public const string ServerGcFragmented = "fragmented";
+            public const string ServerGcGeneration = "generation";
+            public const string ServerGcHeapSize = "heapsize";
+            public const string ServerGcHighMemoryLoadThreshold = "highmemoryloadthreshold";
+            public const string ServerGcIndex = "index";
+            public const string ServerGcMemoryLoad = "memoryload";
+            public const string ServerGcPauseDurations1 = "pausedurations1";
+            public const string ServerGcPauseDurations2 = "pausedurations2";
+            public const string ServerGcPauseTimePercentage = "timepercentage";
+            public const string ServerGcPinnedObjectsCount = "pinnedobjectscount";
+            public const string ServerGcPromoted = "promoted";
+            public const string ServerGcTotalAvailableMemory = "totalavailablememory";
+            public const string ServerGcTotalCommitted = "totalcommited";
+            public const string ServerGcLohSize = "gclohsize";
         }
-    }
-
-    public static void Scanner()
-    {
-        return;
-        var assembly = AppDomain.CurrentDomain.GetAssemblies();
-        var inheritingTypes = assembly.SelectMany(x => x.GetTypes()
-            .Where(t => t.IsClass && t.IsAbstract == false && t.IsSubclassOf(typeof(SnmpObjectBase)))).ToArray();
-
-        // Filter out types that do not implement interface Y
-        var nonConformingTypes = inheritingTypes
-            .Where(t => t.IsClass && t.IsAbstract == false)
-            .ToArray();
-
-        var x = nonConformingTypes.Where(t => !typeof(PlaceHolderReflection).IsAssignableFrom(t)).ToList();
-        foreach (var i in x)
-            Console.WriteLine(i.FullName);
-
     }
 }

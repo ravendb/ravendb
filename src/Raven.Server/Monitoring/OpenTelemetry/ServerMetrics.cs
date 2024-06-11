@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics.Metrics;
-using System.Linq;
+using Raven.Server.Monitoring.Snmp.Objects.Cluster;
 using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
 using Raven.Server.ServerWide;
@@ -9,14 +9,20 @@ namespace Raven.Server.Monitoring.OpenTelemetry;
 
 public class ServerMetrics : MetricsBase
 {
-    private static readonly Lazy<Meter> ServerStatisticsMeter = new(() => new(Constants.ServerWideMeterName, "1.0.0"));
+    private static readonly Lazy<Meter> GeneralMeter = new(() => new(Constants.Meters.GeneralMeter));
+    private static readonly Lazy<Meter> RequestsMeter = new(() => new(Constants.Meters.RequestsMeter));
+    private static readonly Lazy<Meter> StorageMeter = new(() => new(Constants.Meters.StorageMeter));
+    private static readonly Lazy<Meter> GcMeter = new(() => new(Constants.Meters.GcMeter));
+    private static readonly Lazy<Meter> Hardware = new(() => new(Constants.Meters.Hardware));
+    private static readonly Lazy<Meter> TotalDatabasesMeter = new(() => new(Constants.Meters.TotalDatabasesMeter));
     private readonly RavenServer _server;
     private ServerStore ServerStore => _server.ServerStore;
 
     public ServerMetrics(RavenServer server) : base(server.Configuration.Monitoring.OpenTelemetry)
     {
         _server = server;
-        RegisterRequestInstruments();
+        RegisterGeneralMeter();
+        RegisterRequestsInstruments();
         RegisterCpuCreditsInstruments();
         RegisterServerHardwareInstruments();
         RegisterTotalDatabaseInstruments();
@@ -27,7 +33,58 @@ public class ServerMetrics : MetricsBase
         RegisterGc(GCKind.FullBlocking);
     }
 
-    private void RegisterRequestInstruments()
+    private void RegisterGeneralMeter()
+    {
+        CreateObservableUpDownCounter<byte, ClusterNodeState>(
+            name: Constants.ServerWide.ClusterNodeState,
+            observeValueFactory: () => new ClusterNodeState(_server.ServerStore),
+            meter: GeneralMeter
+        );
+
+        CreateObservableUpDownCounter<long, ClusterTerm>(
+            name: Constants.ServerWide.ClusterTerm,
+            observeValueFactory: () => new ClusterTerm(_server.ServerStore),
+            meter: GeneralMeter
+        );
+        
+        CreateObservableUpDownCounter<long, ClusterIndex>(
+            name: Constants.ServerWide.ClusterIndex,
+            observeValueFactory: () => new ClusterIndex(_server.ServerStore),
+            meter: GeneralMeter
+        );
+        
+        CreateObservableGauge<int, ServerCertificateExpirationLeft>(
+            name: Constants.ServerWide.ServerCertificateExpirationLeft,
+            observeValueFactory: () => new ServerCertificateExpirationLeft(_server.ServerStore),
+            meter: GeneralMeter
+        );
+        
+        CreateObservableGauge<short, ServerLicenseType>(
+            name: Constants.ServerWide.ServerLicenseType,
+            observeValueFactory: () => new ServerLicenseType(_server.ServerStore),
+            meter: GeneralMeter
+        );
+        
+        CreateObservableGauge<int, ServerLicenseExpirationLeft>(
+            name: Constants.ServerWide.ServerLicenseExpirationLeft,
+            observeValueFactory: () => new ServerLicenseExpirationLeft(_server.ServerStore),
+            meter: GeneralMeter
+        );
+
+        CreateObservableGauge<int, ServerLicenseUtilizedCpuCores>(
+            name: Constants.ServerWide.ServerLicenseUtilizedCpuCores,
+            observeValueFactory: () => new ServerLicenseUtilizedCpuCores(_server.ServerStore),
+            meter: GeneralMeter
+        );
+
+        CreateObservableGauge<int, ServerLicenseMaxCpuCores>(
+            name: Constants.ServerWide.ServerLicenseMaxCpuCores,
+            observeValueFactory: () => new ServerLicenseMaxCpuCores(_server.ServerStore),
+            meter: GeneralMeter
+        );
+    }
+
+    private void RegisterRequestsInstruments()
     {
         if (Configuration.Requests == false)
             return;
@@ -36,46 +93,40 @@ public class ServerMetrics : MetricsBase
         CreateObservableUpDownCounter<int, ServerConcurrentRequests>(
             name: Constants.ServerWide.ServerConcurrentRequests,
             observeValueFactory: () => new ServerConcurrentRequests(metrics),
-            family: configuration => configuration.RequestsInstruments,
-            meter: ServerStatisticsMeter
+            meter: RequestsMeter
         );
-        
+
         CreateObservableUpDownCounter<int, ServerTotalRequests>(
             name: Constants.ServerWide.ServerTotalRequests,
             observeValueFactory: () => new ServerTotalRequests(metrics),
-            family: configuration => configuration.RequestsInstruments,
-            meter: ServerStatisticsMeter
+            meter: RequestsMeter
         );
 
-        const string ServerRequestsPerSecondDescription = "Number of requests per second.";
+        const string serverRequestsPerSecondDescription = "Number of requests per second.";
         CreateObservableGaugeWithTags<int, ServerRequestsPerSecond>(
             name: Constants.ServerWide.ServerRequestsPerSecond,
             observeValueFactory: () => new ServerRequestsPerSecond(metrics, ServerRequestsPerSecond.RequestRateType.OneMinute),
-            family: configuration => configuration.RequestsInstruments,
-            meter: ServerStatisticsMeter,
-            overridenDescription: ServerRequestsPerSecondDescription
+            meter: RequestsMeter,
+            overridenDescription: serverRequestsPerSecondDescription
         );
 
         CreateObservableGaugeWithTags<int, ServerRequestsPerSecond>(
             name: Constants.ServerWide.ServerRequestsPerSecond,
             observeValueFactory: () => new ServerRequestsPerSecond(metrics, ServerRequestsPerSecond.RequestRateType.FiveSeconds),
-            family: configuration => configuration.RequestsInstruments,
-            meter: ServerStatisticsMeter,
-            overridenDescription: ServerRequestsPerSecondDescription
+            meter: RequestsMeter,
+            overridenDescription: serverRequestsPerSecondDescription
         );
 
         CreateObservableGauge<int, ServerRequestAverageDuration>(
             name: Constants.ServerWide.ServerRequestAverageDuration,
             observeValueFactory: () => new ServerRequestAverageDuration(metrics),
-            family: configuration => configuration.RequestsInstruments,
-            meter: ServerStatisticsMeter
+            meter: RequestsMeter
         );
 
         CreateObservableGauge<long, TcpActiveConnections>(
             name: Constants.ServerWide.TcpActiveConnections,
             observeValueFactory: () => new TcpActiveConnections(),
-            family: configuration => configuration.RequestsInstruments,
-            meter: ServerStatisticsMeter
+            meter: RequestsMeter
         );
     }
 
@@ -87,44 +138,37 @@ public class ServerMetrics : MetricsBase
         CreateObservableUpDownCounter<int, CpuCreditsBase>(
             name: Constants.ServerWide.CpuCreditsBase,
             observeValueFactory: () => new CpuCreditsBase(ServerStore.Server.CpuCreditsBalance),
-            family: configuration => configuration.CPUCreditsInstruments,
-            meter: ServerStatisticsMeter);
+            meter: RequestsMeter);
 
         CreateObservableUpDownCounter<int, CpuCreditsMax>(
             name: Constants.ServerWide.CpuCreditsMax,
             observeValueFactory: () => new CpuCreditsMax(ServerStore.Server.CpuCreditsBalance),
-            family: configuration => configuration.CPUCreditsInstruments,
-            meter: ServerStatisticsMeter);
+            meter: RequestsMeter);
 
         CreateObservableGauge<int, CpuCreditsRemaining>(
             name: Constants.ServerWide.CpuCreditsRemaining,
             observeValueFactory: () => new CpuCreditsRemaining(ServerStore.Server.CpuCreditsBalance),
-            family: configuration => configuration.CPUCreditsInstruments,
-            meter: ServerStatisticsMeter);
+            meter: RequestsMeter);
 
         CreateObservableUpDownCounter<double, CpuCreditsCurrentConsumption>(
             name: Constants.ServerWide.CpuCreditsCurrentConsumption,
             observeValueFactory: () => new CpuCreditsCurrentConsumption(ServerStore.Server.CpuCreditsBalance),
-            family: configuration => configuration.CPUCreditsInstruments,
-            meter: ServerStatisticsMeter);
+            meter: RequestsMeter);
 
         CreateObservableGauge<byte, CpuCreditsBackgroundTasksAlertRaised>(
             name: Constants.ServerWide.CpuCreditsBackgroundTasksAlertRaised,
             observeValueFactory: () => new CpuCreditsBackgroundTasksAlertRaised(ServerStore.Server.CpuCreditsBalance),
-            family: configuration => configuration.CPUCreditsInstruments,
-            meter: ServerStatisticsMeter);
+            meter: RequestsMeter);
 
         CreateObservableGauge<byte, CpuCreditsFailoverAlertRaised>(
             name: Constants.ServerWide.CpuCreditsFailoverAlertRaised,
             observeValueFactory: () => new CpuCreditsFailoverAlertRaised(ServerStore.Server.CpuCreditsBalance),
-            family: configuration => configuration.CPUCreditsInstruments,
-            meter: ServerStatisticsMeter);
+            meter: RequestsMeter);
 
         CreateObservableGauge<byte, CpuCreditsAlertRaised>(
             name: Constants.ServerWide.CpuCreditsAlertRaised,
             observeValueFactory: () => new CpuCreditsAlertRaised(ServerStore.Server.CpuCreditsBalance),
-            family: configuration => configuration.CPUCreditsInstruments,
-            meter: ServerStatisticsMeter);
+            meter: RequestsMeter);
     }
 
     private void RegisterServerHardwareInstruments()
@@ -135,110 +179,92 @@ public class ServerMetrics : MetricsBase
         CreateObservableGauge<int, ProcessCpu>(
             name: Constants.ServerWide.ProcessCpu,
             observeValueFactory: () => new ProcessCpu(_server.MetricCacher, _server.CpuUsageCalculator),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableGauge<int, MachineCpu>(
             name: Constants.ServerWide.MachineCpu,
             observeValueFactory: () => new MachineCpu(_server.MetricCacher, _server.CpuUsageCalculator),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableGauge<int, IoWait>(
             name: Constants.ServerWide.IoWait,
             observeValueFactory: () => new IoWait(_server.MetricCacher, _server.CpuUsageCalculator),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableGauge<byte, ServerLowMemoryFlag>(
             name: Constants.ServerWide.ServerLowMemoryFlag,
             observeValueFactory: () => new ServerLowMemoryFlag(),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableGauge<long, ServerTotalMemory>(
             name: Constants.ServerWide.ServerTotalMemory,
             observeValueFactory: () => new ServerTotalMemory(_server.MetricCacher),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableGauge<long, ServerTotalSwapSize>(
             name: Constants.ServerWide.ServerTotalSwapSize,
             observeValueFactory: () => new ServerTotalSwapSize(_server.MetricCacher),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableGauge<long, ServerTotalSwapUsage>(
             name: Constants.ServerWide.ServerTotalSwapUsage,
             observeValueFactory: () => new ServerTotalSwapUsage(_server.MetricCacher),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableGauge<long, ServerDirtyMemory>(
             name: Constants.ServerWide.ServerDirtyMemory,
             observeValueFactory: () => new ServerDirtyMemory(),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableGauge<long, ServerWorkingSetSwapUsage>(
             name: Constants.ServerWide.ServerWorkingSetSwapUsage,
             observeValueFactory: () => new ServerWorkingSetSwapUsage(_server.MetricCacher),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableGauge<long, ServerManagedMemory>(
             name: Constants.ServerWide.ServerManagedMemory,
             observeValueFactory: () => new ServerManagedMemory(),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableGauge<long, ServerUnmanagedMemory>(
             name: Constants.ServerWide.ServerUnmanagedMemory,
             observeValueFactory: () => new ServerUnmanagedMemory(),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableGauge<long, ServerEncryptionBuffersMemoryInUse>(
             name: Constants.ServerWide.ServerEncryptionBuffersMemoryInUse,
             observeValueFactory: () => new ServerEncryptionBuffersMemoryInUse(),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableGauge<long, ServerEncryptionBuffersMemoryInPool>(
             name: Constants.ServerWide.ServerEncryptionBuffersMemoryInPool,
             observeValueFactory: () => new ServerEncryptionBuffersMemoryInPool(),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableGauge<long, ServerAvailableMemoryForProcessing>(
             name: Constants.ServerWide.ServerAvailableMemoryForProcessing,
             observeValueFactory: () => new ServerAvailableMemoryForProcessing(_server.MetricCacher),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableUpDownCounter<int, MachineProcessorCount>(
             name: Constants.ServerWide.MachineProcessorCount,
             observeValueFactory: () => new MachineProcessorCount(),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableUpDownCounter<int, MachineAssignedProcessorCount>(
             name: Constants.ServerWide.MachineAssignedProcessorCount,
             observeValueFactory: () => new MachineAssignedProcessorCount(),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableGauge<int, ThreadPoolAvailableWorkerThreads>(
             name: Constants.ServerWide.ThreadPoolAvailableWorkerThreads,
             observeValueFactory: () => new ThreadPoolAvailableWorkerThreads(),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
 
         CreateObservableGauge<int, ThreadPoolAvailableCompletionPortThreads>(
             name: Constants.ServerWide.ThreadPoolAvailableCompletionPortThreads,
             observeValueFactory: () => new ThreadPoolAvailableCompletionPortThreads(),
-            family: configuration => configuration.HardwareInstruments,
-            meter: ServerStatisticsMeter);
+            meter: Hardware);
     }
 
     private void RegisterTotalDatabaseInstruments()
@@ -249,98 +275,82 @@ public class ServerMetrics : MetricsBase
         CreateObservableUpDownCounter<int, DatabaseLoadedCount>(
             name: Constants.ServerWide.DatabaseLoadedCount,
             observeValueFactory: () => new DatabaseLoadedCount(_server.ServerStore.DatabasesLandlord),
-            family: configuration => configuration.TotalDatabasesInstruments,
-            meter: ServerStatisticsMeter);
+            meter: TotalDatabasesMeter);
 
         CreateObservableUpDownCounter<int, DatabaseTotalCount>(
             name: Constants.ServerWide.DatabaseTotalCount,
             observeValueFactory: () => new DatabaseTotalCount(_server.ServerStore),
-            family: configuration => configuration.TotalDatabasesInstruments,
-            meter: ServerStatisticsMeter);
+            meter: TotalDatabasesMeter);
 
         CreateObservableUpDownCounter<int, DatabaseDisabledCount>(
             name: Constants.ServerWide.DatabaseDisabledCount,
             observeValueFactory: () => new DatabaseDisabledCount(_server.ServerStore),
-            family: configuration => configuration.TotalDatabasesInstruments,
-            meter: ServerStatisticsMeter);
+            meter: TotalDatabasesMeter);
 
         CreateObservableUpDownCounter<int, DatabaseEncryptedCount>(
             name: Constants.ServerWide.DatabaseEncryptedCount,
             observeValueFactory: () => new DatabaseEncryptedCount(_server.ServerStore),
-            family: configuration => configuration.TotalDatabasesInstruments,
-            meter: ServerStatisticsMeter);
+            meter: TotalDatabasesMeter);
 
         CreateObservableUpDownCounter<int, DatabaseFaultedCount>(
             name: Constants.ServerWide.DatabaseFaultedCount,
             observeValueFactory: () => new DatabaseFaultedCount(_server.ServerStore),
-            family: configuration => configuration.TotalDatabasesInstruments,
-            meter: ServerStatisticsMeter);
+            meter: TotalDatabasesMeter);
 
         CreateObservableUpDownCounter<int, DatabaseNodeCount>(
             name: Constants.ServerWide.DatabaseNodeCount,
             observeValueFactory: () => new DatabaseNodeCount(_server.ServerStore),
-            family: configuration => configuration.TotalDatabasesInstruments,
-            meter: ServerStatisticsMeter);
+            meter: TotalDatabasesMeter);
 
         CreateObservableUpDownCounter<int, TotalDatabaseNumberOfIndexes>(
             name: Constants.ServerWide.TotalDatabaseNumberOfIndexes,
             observeValueFactory: () => new TotalDatabaseNumberOfIndexes(_server.ServerStore),
-            family: configuration => configuration.TotalDatabasesInstruments,
-            meter: ServerStatisticsMeter);
+            meter: TotalDatabasesMeter);
 
         CreateObservableUpDownCounter<int, TotalDatabaseCountOfStaleIndexes>(
             name: Constants.ServerWide.TotalDatabaseCountOfStaleIndexes,
             observeValueFactory: () => new TotalDatabaseCountOfStaleIndexes(_server.ServerStore),
-            family: configuration => configuration.TotalDatabasesInstruments,
-            meter: ServerStatisticsMeter);
+            meter: TotalDatabasesMeter);
 
         CreateObservableUpDownCounter<int, TotalDatabaseNumberOfErrorIndexes>(
             name: Constants.ServerWide.TotalDatabaseNumberOfErrorIndexes,
             observeValueFactory: () => new TotalDatabaseNumberOfErrorIndexes(_server.ServerStore),
-            family: configuration => configuration.TotalDatabasesInstruments,
-            meter: ServerStatisticsMeter);
+            meter: TotalDatabasesMeter);
 
         CreateObservableUpDownCounter<int, TotalDatabaseNumberOfFaultyIndexes>(
             name: Constants.ServerWide.TotalDatabaseNumberOfFaultyIndexes,
             observeValueFactory: () => new TotalDatabaseNumberOfFaultyIndexes(_server.ServerStore),
-            family: configuration => configuration.TotalDatabasesInstruments,
-            meter: ServerStatisticsMeter);
+            meter: TotalDatabasesMeter);
 
         CreateObservableUpDownCounter<int, TotalDatabaseNumberOfIndexes>(
             name: Constants.ServerWide.TotalDatabaseNumberOfIndexes,
             observeValueFactory: () => new TotalDatabaseNumberOfIndexes(_server.ServerStore),
-            family: configuration => configuration.TotalDatabasesInstruments,
-            meter: ServerStatisticsMeter);
+            meter: TotalDatabasesMeter);
 
         CreateObservableGauge<int, TotalDatabaseMapIndexIndexedPerSecond>(
             name: Constants.ServerWide.TotalDatabaseMapIndexIndexedPerSecond,
             observeValueFactory: () => new TotalDatabaseMapIndexIndexedPerSecond(_server.ServerStore),
-            family: configuration => configuration.TotalDatabasesInstruments,
-            meter: ServerStatisticsMeter);
+            meter: TotalDatabasesMeter);
 
         CreateObservableGauge<int, TotalDatabaseMapReduceIndexMappedPerSecond>(
             name: Constants.ServerWide.TotalDatabaseMapReduceIndexMappedPerSecond,
             observeValueFactory: () => new TotalDatabaseMapReduceIndexMappedPerSecond(_server.ServerStore),
-            family: configuration => configuration.TotalDatabasesInstruments,
-            meter: ServerStatisticsMeter);
+            meter: TotalDatabasesMeter);
 
         CreateObservableGauge<int, TotalDatabaseMapReduceIndexReducedPerSecond>(
             name: Constants.ServerWide.TotalDatabaseMapReduceIndexReducedPerSecond,
             observeValueFactory: () => new TotalDatabaseMapReduceIndexReducedPerSecond(_server.ServerStore),
-            family: configuration => configuration.TotalDatabasesInstruments,
-            meter: ServerStatisticsMeter);
+            meter: TotalDatabasesMeter);
 
         CreateObservableGauge<int, TotalDatabaseWritesPerSecond>(
             name: Constants.ServerWide.TotalDatabaseWritesPerSecond,
             observeValueFactory: () => new TotalDatabaseWritesPerSecond(_server.ServerStore),
-            family: configuration => configuration.TotalDatabasesInstruments,
-            meter: ServerStatisticsMeter);
+            meter: TotalDatabasesMeter);
 
         CreateObservableGauge<int, TotalDatabaseDataWrittenPerSecond>(
             name: Constants.ServerWide.TotalDatabaseDataWrittenPerSecond,
             observeValueFactory: () => new TotalDatabaseDataWrittenPerSecond(_server.ServerStore),
-            family: configuration => configuration.TotalDatabasesInstruments,
-            meter: ServerStatisticsMeter);
+            meter: TotalDatabasesMeter);
     }
 
     private void RegisterStorageInstruments()
@@ -351,184 +361,155 @@ public class ServerMetrics : MetricsBase
         CreateObservableGauge<long, ServerStorageUsedSize>(
             name: Constants.ServerWide.ServerStorageUsedSize,
             observeValueFactory: () => new ServerStorageUsedSize(_server.ServerStore),
-            family: configuration => configuration.ServerStorageInstruments,
-            meter: ServerStatisticsMeter);
+            meter: StorageMeter);
 
         CreateObservableGauge<long, ServerStorageTotalSize>(
             name: Constants.ServerWide.ServerStorageTotalSize,
             observeValueFactory: () => new ServerStorageTotalSize(_server.ServerStore),
-            family: configuration => configuration.ServerStorageInstruments,
-            meter: ServerStatisticsMeter);
+            meter: StorageMeter);
 
         CreateObservableGauge<long, ServerStorageDiskRemainingSpace>(
             name: Constants.ServerWide.ServerStorageDiskRemainingSpace,
             observeValueFactory: () => new ServerStorageDiskRemainingSpace(_server.ServerStore),
-            family: configuration => configuration.ServerStorageInstruments,
-            meter: ServerStatisticsMeter);
+            meter: StorageMeter);
 
         CreateObservableGauge<int, ServerStorageDiskRemainingSpacePercentage>(
             name: Constants.ServerWide.ServerStorageDiskRemainingSpacePercentage,
             observeValueFactory: () => new ServerStorageDiskRemainingSpacePercentage(_server.ServerStore),
-            family: configuration => configuration.ServerStorageInstruments,
-            meter: ServerStatisticsMeter);
+            meter: StorageMeter);
 
         CreateObservableGauge<int, ServerStorageDiskIosReadOperations>(
             name: Constants.ServerWide.ServerStorageDiskIosReadOperations,
             observeValueFactory: () => new ServerStorageDiskIosReadOperations(_server.ServerStore),
-            family: configuration => configuration.ServerStorageInstruments,
-            meter: ServerStatisticsMeter);
+            meter: StorageMeter);
 
         CreateObservableGauge<int, ServerStorageDiskIosWriteOperations>(
             name: Constants.ServerWide.ServerStorageDiskIosWriteOperations,
             observeValueFactory: () => new ServerStorageDiskIosWriteOperations(_server.ServerStore),
-            family: configuration => configuration.ServerStorageInstruments,
-            meter: ServerStatisticsMeter);
+            meter: StorageMeter);
 
         CreateObservableGauge<long, ServerStorageDiskReadThroughput>(
             name: Constants.ServerWide.ServerStorageDiskReadThroughput,
             observeValueFactory: () => new ServerStorageDiskReadThroughput(_server.ServerStore),
-            family: configuration => configuration.ServerStorageInstruments,
-            meter: ServerStatisticsMeter);
+            meter: StorageMeter);
 
         CreateObservableGauge<long, ServerStorageDiskWriteThroughput>(
             name: Constants.ServerWide.ServerStorageDiskWriteThroughput,
             observeValueFactory: () => new ServerStorageDiskWriteThroughput(_server.ServerStore),
-            family: configuration => configuration.ServerStorageInstruments,
-            meter: ServerStatisticsMeter);
+            meter: StorageMeter);
 
         CreateObservableGauge<long, ServerStorageDiskQueueLength>(
             name: Constants.ServerWide.ServerStorageDiskQueueLength,
             observeValueFactory: () => new ServerStorageDiskQueueLength(_server.ServerStore),
-            family: configuration => configuration.ServerStorageInstruments,
-            meter: ServerStatisticsMeter);
+            meter: StorageMeter);
     }
 
     private void RegisterGc(GCKind gcKind)
     {
-        if (Configuration.GC == false)
+        if (Configuration.GcEnabled == false)
             return;
-        
-        if (Configuration.GCKinds != null && Configuration.GCKinds.Contains(gcKind.ToString()) == false)
-            return;
-        
+
         var metrics = _server.MetricCacher;
         CreateObservableGaugeWithTags<byte, ServerGcCompacted>(
             name: Constants.ServerWide.GC.ServerGcCompacted,
             observeValueFactory: () => new ServerGcCompacted(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
+            meter: GcMeter,
             overridenDescription: "Specifies if this is a compacting GC or not.");
-        
+
         CreateObservableGaugeWithTags<byte, ServerGcConcurrent>(
             name: Constants.ServerWide.GC.ServerGcConcurrent,
             observeValueFactory: () => new ServerGcConcurrent(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
+            meter: GcMeter,
             overridenDescription: "Specifies if this is a concurrent GC or not.");
-        
+
         CreateObservableGaugeWithTags<long, ServerGcFinalizationPendingCount>(
             name: Constants.ServerWide.GC.ServerGcFinalizationPendingCount,
             observeValueFactory: () => new ServerGcFinalizationPendingCount(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
+            meter: GcMeter,
             overridenDescription: "Gets the number of objects ready for finalization this GC observed.");
-        
+
         CreateObservableGaugeWithTags<long, ServerGcFragmented>(
             name: Constants.ServerWide.GC.ServerGcFragmented,
             observeValueFactory: () => new ServerGcFragmented(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
+            meter: GcMeter,
             overridenDescription: "Gets the total fragmentation (in MB) when the last garbage collection occurred.");
-        
+
         CreateObservableGaugeWithTags<int, ServerGcGeneration>(
             name: Constants.ServerWide.GC.ServerGcGeneration,
             observeValueFactory: () => new ServerGcGeneration(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
+            meter: GcMeter,
             overridenDescription: "Gets the generation this GC collected.");
-        
+
         CreateObservableGaugeWithTags<long, ServerGcHeapSize>(
             name: Constants.ServerWide.GC.ServerGcHeapSize,
             observeValueFactory: () => new ServerGcHeapSize(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
+            meter: GcMeter,
             overridenDescription: "Gets the total heap size (in MB) when the last garbage collection occurred.");
-        
+
         CreateObservableGaugeWithTags<long, ServerGcHighMemoryLoadThreshold>(
             name: Constants.ServerWide.GC.ServerGcHighMemoryLoadThreshold,
             observeValueFactory: () => new ServerGcHighMemoryLoadThreshold(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
+            meter: GcMeter,
             overridenDescription: "Gets the high memory load threshold (in MB) when the last garbage collection occurred.");
-        
+
         CreateObservableGaugeWithTags<int, ServerGcIndex>(
             name: Constants.ServerWide.GC.ServerGcIndex,
             observeValueFactory: () => new ServerGcIndex(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
+            meter: GcMeter,
             overridenDescription: "The index of this GC.");
-        
+
         CreateObservableGaugeWithTags<long, ServerGcMemoryLoad>(
             name: Constants.ServerWide.GC.ServerGcMemoryLoad,
             observeValueFactory: () => new ServerGcMemoryLoad(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
+            meter: GcMeter,
             overridenDescription: "Gets the memory load (in MB) when the last garbage collection occurred.");
-        
+
         CreateObservableGaugeWithTags<long, ServerGcPauseDurations1>(
             name: Constants.ServerWide.GC.ServerGcPauseDurations1,
             observeValueFactory: () => new ServerGcPauseDurations1(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
+            meter: GcMeter,
             overridenDescription: "Gets the pause durations. First item in the array.");
-        
+
         CreateObservableGaugeWithTags<long, ServerGcPauseDurations2>(
             name: Constants.ServerWide.GC.ServerGcPauseDurations2,
             observeValueFactory: () => new ServerGcPauseDurations2(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
-            overridenDescription:"Gets the pause durations. Second item in the array.");
-        
+            meter: GcMeter,
+            overridenDescription: "Gets the pause durations. Second item in the array.");
+
         CreateObservableGaugeWithTags<int, ServerGcPauseTimePercentage>(
             name: Constants.ServerWide.GC.ServerGcPauseTimePercentage,
             observeValueFactory: () => new ServerGcPauseTimePercentage(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
+            meter: GcMeter,
             overridenDescription: "Gets the pause time percentage in the GC so far.");
-        
+
         CreateObservableGaugeWithTags<long, ServerGcPinnedObjectsCount>(
             name: Constants.ServerWide.GC.ServerGcPinnedObjectsCount,
             observeValueFactory: () => new ServerGcPinnedObjectsCount(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
+            meter: GcMeter,
             overridenDescription: "Gets the number of pinned objects this GC observed.");
-        
+
         CreateObservableGaugeWithTags<long, ServerGcPromoted>(
             name: Constants.ServerWide.GC.ServerGcPromoted,
             observeValueFactory: () => new ServerGcPromoted(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
+            meter: GcMeter,
             overridenDescription: "Gets the promoted MB for this GC.");
-        
+
         CreateObservableGaugeWithTags<long, ServerGcTotalAvailableMemory>(
             name: Constants.ServerWide.GC.ServerGcTotalAvailableMemory,
             observeValueFactory: () => new ServerGcTotalAvailableMemory(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
+            meter: GcMeter,
             overridenDescription: "Gets the total available memory (in MB) for the garbage collector to use when the last garbage collection occurred.");
-        
+
         CreateObservableGaugeWithTags<long, ServerGcTotalCommitted>(
             name: Constants.ServerWide.GC.ServerGcTotalCommitted,
             observeValueFactory: () => new ServerGcTotalCommitted(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
+            meter: GcMeter,
             overridenDescription: "Gets the total committed MB of the managed heap.");
-        
+
         CreateObservableGaugeWithTags<long, ServerGcLohSize>(
             name: Constants.ServerWide.GC.ServerGcLohSize,
             observeValueFactory: () => new ServerGcLohSize(metrics, gcKind),
-            family: configuration => configuration.GCInstruments,
-            meter: ServerStatisticsMeter,
+            meter: GcMeter,
             overridenDescription: "Gets the large object heap size (in MB) after the last garbage collection of given kind occurred.");
     }
 }

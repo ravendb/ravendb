@@ -539,6 +539,17 @@ namespace Raven.Server.Monitoring.Snmp
 
                     await writer.WriteObjectAsync(field.Name, "server", fieldValue.TypeCode.Value, fieldValue.Description, fieldValue.Oid);
                 }
+            
+            internal static Dictionary<string, string> CreateMapping()
+            {
+                var dictionary = new Dictionary<string, string>();
+                foreach (var field in typeof(Cluster).GetFields())
+                {
+                    var fieldValue = GetFieldValue(field);
+                    dictionary.Add(Root + fieldValue.Oid, fieldValue.Description);
+                }
+
+                return dictionary;
             }
         }
 
@@ -1054,6 +1065,7 @@ namespace Raven.Server.Monitoring.Snmp
         {
             return Server.CreateMapping()
                 .Union(Databases.CreateMapping())
+                .Union(Cluster.CreateMapping())
                 .ToDictionary();
         }
 
