@@ -1746,18 +1746,28 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 {
                     DocumentQuery.AndAlso();
                 }
+                
                 if (options.HasFlag(SearchOptions.Not))
                 {
-                    DocumentQuery.OpenSubclause();
-                    DocumentQuery.WhereExists(expressionInfo.Path);
-                    DocumentQuery.AndAlso();
-                    DocumentQuery.NegateNext();
-                }
+                    if (options.HasFlag(SearchOptions.And) && IsPreviousSearchOnSameField(target, expression))
+                    {
+                        DocumentQuery.NegateNext();
+                        DocumentQuery.Search(expressionInfo.Path, searchTerms, @operator);
+                    }
 
-                DocumentQuery.Search(expressionInfo.Path, searchTerms, @operator);
-                if (options.HasFlag(SearchOptions.Not))
+                    else
+                    {
+                        DocumentQuery.OpenSubclause();
+                        DocumentQuery.WhereExists(expressionInfo.Path);
+                        DocumentQuery.AndAlso();
+                        DocumentQuery.NegateNext();
+                        DocumentQuery.Search(expressionInfo.Path, searchTerms, @operator);
+                        DocumentQuery.CloseSubclause();
+                    }
+                }
+                else
                 {
-                    DocumentQuery.CloseSubclause();
+                    DocumentQuery.Search(expressionInfo.Path, searchTerms, @operator);
                 }
 
                 DocumentQuery.Boost(boost);
@@ -1780,6 +1790,19 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (((SearchOptions)value).HasFlag(SearchOptions.Guess))
                 _chainedWhere = true;
+        }
+
+        private bool IsPreviousSearchOnSameField(Expression target, Expression currentSearch)
+        {
+            if (target is MethodCallExpression targetMce && currentSearch is MethodCallExpression currentSearchMce)
+            {
+                var targetExpressionInfo = GetMember(targetMce.Arguments[1]);
+                var currentSearchExpressionInfo = GetMember(currentSearchMce.Arguments[1]);
+                
+                return targetExpressionInfo.Path == currentSearchExpressionInfo.Path;
+            }
+            
+            return false;
         }
 
         private void VisitListMethodCall(MethodCallExpression expression)
