@@ -10,9 +10,11 @@ using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -97,12 +99,15 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanIndexReferencedAndParentDocumentChange()
+        [RavenFact(RavenTestCategory.Indexes)]
+        public async Task CanIndexReferencedCompressedDocumentsAndParentDocumentChange()
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
+                ModifyDatabaseRecord = x =>
+                {
+                    x.DocumentsCompression = new DocumentsCompressionConfiguration(compressRevisions: false, compressAllCollections: true);
+                }
             }))
             {
                 var company = new Company
@@ -133,18 +138,6 @@ namespace SlowTests.Issues
                 Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
                 await AssertCount(store, _companyName1, _employeesCount);
 
-                var batchCount = 0;
-                var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-                store.Changes().ForIndex(index.IndexName).Subscribe(x =>
-                {
-                    if (x.Type == IndexChangeTypes.BatchCompleted)
-                    {
-                        if (Interlocked.Increment(ref batchCount) > 1)
-                            tcs.TrySetResult(null);
-                    }
-                });
-
                 using (var session = store.OpenAsyncSession())
                 {
                     company.Name = _companyName2;
@@ -164,8 +157,6 @@ namespace SlowTests.Issues
                 Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
                 await AssertCount(store, _companyName1, 0);
                 await AssertCount(store, _companyName2, _employeesCount);
-                Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
-                Assert.True(batchCount > 1);
 
                 var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(2 * _employeesCount, indexStats.MapAttempts);
