@@ -141,6 +141,14 @@ namespace Voron.Impl
             // logic is correct and does not result in illegal states.
             EnsureNoNegativeReferenceCount(newRefCount);
 
+            // Only proceed with cleanup if the CAS operation was successful, i.e., _refs was 0.
+            if (Interlocked.CompareExchange(ref _refs, ReleasedReferenceCount, 0) != 0)
+            {
+                // If _refs was not 0, it means another thread already set it to ReleasedReferenceCount
+                // or a new reference was added concurrently. Hence, no need to clean up yet.
+                return;
+            }
+
 #if DEBUG_PAGER_STATE
             // In debug mode, removes the instance from tracking to help diagnose reference issues,
             // ensuring the debug state is consistent and does not grow unbounded.
@@ -148,9 +156,8 @@ namespace Voron.Impl
             String value;
             Instances.TryRemove(this, out value);
 #endif
-            
-            // The only way we can arrive here is when newRefCount is 0 as negative numbers would trigger the
-            // check inside the compare-exchange loop and positives would return in the early check. 
+
+            // The only way we can arrive here is when newRefCount is when we are ready to release. 
             // This ensures that ReleaseInternal is only called when no more references are held.
             ReleaseInternal();
         }
@@ -184,10 +191,6 @@ namespace Voron.Impl
         
         private void ReleaseInternal()
         {
-            // Signal that this pager state is done, ensuring that no thread can observe a reference count >= 0.
-            // After this instruction, any thread trying to add a reference will fail due to the negative reference count.
-            Volatile.Write(ref _refs, ReleasedReferenceCount);
-
             // Release allocation info and dispose of the file if necessary,
             // ensuring proper cleanup of resources associated with this pager state.
             if (AllocationInfos != null)
