@@ -3293,19 +3293,19 @@ namespace Raven.Server.ServerWide
                     var response = await SendToNodeAsync(context, cachedLeaderTag, cmd, reachedLeader, token);
                     return (response.Index, cmd.FromRemote(response.Result));
                 }
-                catch (RachisMergedCommandConcurrencyException ex)
-                {
-                    // RachisMergedCommand try to insert to leaders log, but its leader is outdated (with old term)
-                    requestException = ex;
-                    continue;
-                }
                 catch (Exception ex)
                 {
+                    /*
+                        if reachedLeader.Value is true and ex is ConcurrencyException meaning The leader was changed during the PutAsync
+                        (RachisMergedCommand try to insert to leaders log, but its leader is outdated (has old term)) ,So we will retry.
+                        reachedLeader.Value is false we'll retry also, because this is not the leader
+                    */
+
+                    if (reachedLeader.Value && ex is not ConcurrencyException)
+                        throw;
+
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Tried to send message to leader (reached: {reachedLeader.Value}), retrying", ex);
-
-                    if (reachedLeader.Value)
-                        throw;
 
                     requestException = ex;
                 }
@@ -3884,7 +3884,6 @@ namespace Raven.Server.ServerWide
             internal Action RestoreDatabaseAfterSavingDatabaseRecord;
             internal Action AfterCommitInClusterTransaction;
             internal Action<string, List<ClusterTransactionCommand.SingleClusterDatabaseCommand>> BeforeExecuteClusterTransactionBatch;
-            internal Func<CommandBase, long, long> ModifyTermBeforeRachisMergedCommandInsertToLeaderLog;  // gets: command and term, returns: new term
         }
 
 #if DEBUG

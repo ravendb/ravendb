@@ -32,12 +32,14 @@ namespace SlowTests.Issues
             using var store = GetDocumentStore(options);
             using var followerStore = new DocumentStore
             {
-                Database = store.Database, Urls = new[] { follower.WebUrl }, Conventions = new DocumentConventions { DisableTopologyUpdates = true }
+                Database = store.Database, 
+                Urls = new[] { follower.WebUrl }, 
+                Conventions = new DocumentConventions { DisableTopologyUpdates = true }
             }.Initialize();
 
             // Fail RachisMergedCommand InsertToLeaderLog on execute once
             var first = 0;
-            leader.ServerStore.ForTestingPurposesOnly().ModifyTermBeforeRachisMergedCommandInsertToLeaderLog = (command, term) =>
+            leader.ServerStore.Engine.ForTestingPurposesOnly().ModifyTermBeforeRachisMergedCommandInsertToLeaderLog = (command, term) =>
             {
                 if (command is Raven.Server.ServerWide.Commands.ClusterTransactionCommand &&
                     Interlocked.CompareExchange(ref first, 1, 0) == 0)

@@ -127,12 +127,10 @@ namespace Raven.Server.Rachis
                 {
                     _engine.InvokeBeforeAppendToRaftLog(context, this);
                     var term = _leader.Term;
-                    if (_engine.ServerStore?.ForTestingPurposes?.ModifyTermBeforeRachisMergedCommandInsertToLeaderLog != null)
-                        term = _engine.ServerStore.ForTestingPurposes.ModifyTermBeforeRachisMergedCommandInsertToLeaderLog.Invoke(Command, term);
+                    if (_engine.ForTestingPurposes?.ModifyTermBeforeRachisMergedCommandInsertToLeaderLog != null)
+                        term = _engine.ForTestingPurposes.ModifyTermBeforeRachisMergedCommandInsertToLeaderLog.Invoke(Command, term);
 
-                    ValidateTerm(term);
-
-                    index = _engine.InsertToLeaderLog(context, term, Command.Raw, RachisEntryFlags.StateMachineCommand, validateTerm: false);
+                    index = _engine.InsertToLeaderLog(context, term, Command.Raw, RachisEntryFlags.StateMachineCommand);
                 }
                
                 if (_leader._entries.TryGetValue(index, out var state) == false)
@@ -160,14 +158,6 @@ namespace Raven.Server.Rachis
                     //https://issues.hibernatingrhinos.com/issue/RavenDB-20762
                     state.WriteResultAction += BlittableResultWriter.CopyResult;
 
-            }
-
-            private void ValidateTerm(long term)
-            {
-                if (term != _engine.CurrentTerm)
-                {
-                    throw new RachisMergedCommandConcurrencyException($"The term was changed from {term:#,#;;0} to {_engine.CurrentTerm:#,#;;0}");
-                }
             }
 
             private void AfterCommit(LowLevelTransaction tx)
