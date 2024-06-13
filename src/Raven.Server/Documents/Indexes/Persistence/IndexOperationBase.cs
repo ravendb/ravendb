@@ -119,7 +119,7 @@ public abstract class IndexOperationBase : IDisposable
             : DefaultBufferSizeForCorax;
     }
     
-    protected QueryFilter GetQueryFilter(Index index, IndexQueryServerSide query, DocumentsOperationContext documentsContext, Reference<long> skippedResults, Reference<long> scannedDocuments, IQueryResultRetriever<QueriedDocument> retriever, QueryTimingsScope queryTimings)
+    protected QueryFilter GetQueryFilter(Index index, IndexQueryServerSide query, DocumentsOperationContext documentsContext, Reference<long> skippedResults, Reference<long> scannedDocuments, IQueryResultRetriever retriever, QueryTimingsScope queryTimings)
     {
         if (query.Metadata.FilterScript is null)
             return null;

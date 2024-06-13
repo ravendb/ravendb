@@ -19,7 +19,7 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries
 {
-    public sealed class CollectionQueryEnumerable : IEnumerable<QueriedDocument>
+    public sealed class CollectionQueryEnumerable : IEnumerable<Document>
     {
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documents;
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Queries
 
         public DocumentFields Fields { get; set; } = DocumentFields.All;
 
-        public IEnumerator<QueriedDocument> GetEnumerator()
+        public IEnumerator<Document> GetEnumerator()
         {
             return new Enumerator(_database, _documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query,
                 _queryTimings, _context, _includeDocumentsCommand, _includeRevisionsCommand, _includeCompareExchangeValuesCommand, _totalResults, _scannedResults, 
@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private sealed class Enumerator : IEnumerator<QueriedDocument>
+        private sealed class Enumerator : IEnumerator<Document>
         {
             private readonly DocumentsStorage _documents;
             private readonly FieldsToFetch _fieldsToFetch;
@@ -130,11 +130,11 @@ namespace Raven.Server.Documents.Queries
             private int _returnedResults;
 
             private readonly HashSet<ulong> _alreadySeenProjections;
-            private IEnumerator<QueriedDocument> _inner;
+            private IEnumerator<Document> _inner;
             private bool _hasProjections;
-            private List<QueriedDocument>.Enumerator _projections;
+            private List<Document>.Enumerator _projections;
             private readonly List<Slice> _ids;
-            private readonly MapQueryResultRetriever<QueriedDocument> _resultsRetriever;
+            private readonly MapQueryResultRetriever _resultsRetriever;
             private readonly string _startsWith;
             private readonly Reference<long> _skippedResults;
             private readonly CancellationToken _token;
@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Queries
                 if (_fieldsToFetch.IsDistinct)
                     _alreadySeenProjections = new HashSet<ulong>();
 
-                _resultsRetriever = new MapQueryResultRetriever<QueriedDocument>(database, query, queryTimings, documents, context, SearchEngineType.None, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
+                _resultsRetriever = new MapQueryResultRetriever(database, query, queryTimings, documents, context, SearchEngineType.None, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
 
                 (_ids, _startsWith) = query.ExtractIdsFromQuery(database.ServerStore, context.Allocator, database.CompareExchangeStorage);
 
@@ -283,7 +283,7 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            private (bool HasNext, QueriedDocument Doc) GetNextDocument()
+            private (bool HasNext, Document Doc) GetNextDocument()
             {
                 if (_hasProjections)
                 {
@@ -317,14 +317,13 @@ namespace Raven.Server.Documents.Queries
                             return (true, null);
                     }
                 }
-                
-                RetrieverInput retrieverInput = new(null, QueryResultRetrieverCommon.ZeroScore, null);
 
                 if (_totalResultsCalculated == false)
                     _totalResults.Value++;
                 
                 if (_fieldsToFetch.IsProjection)
                 {
+                    RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase.ZeroScore, null);
                     var result = _resultsRetriever.GetProjectionFromDocument(_inner.Current, ref retrieverInput, _fieldsToFetch, _context, _token);
                     if (result.List != null)
                     {
@@ -348,9 +347,9 @@ namespace Raven.Server.Documents.Queries
                 return (true, _inner.Current);
             }
 
-            private IEnumerable<QueriedDocument> GetDocuments(out bool totalResultsCalculated, long? amountToSkip = null)
+            private IEnumerable<Document> GetDocuments(out bool totalResultsCalculated, long? amountToSkip = null)
             {
-                IEnumerable<QueriedDocument> documents;
+                IEnumerable<Document> documents;
                 var skip = amountToSkip ?? 0;
                 const long takeAll = long.MaxValue; // owner of enumerable decide when to stop, there is no reason to make paging at storage level.
                 totalResultsCalculated = false;
@@ -358,21 +357,21 @@ namespace Raven.Server.Documents.Queries
                 if (_startsWith != null)
                 {
                     documents = _isAllDocsCollection
-                        ? _documents.GetDocumentsStartingWith<QueriedDocument>(_context, _startsWith, null, null, _startAfterId, skip, takeAll, null, fields: _fields, _token) 
-                        : _documents.GetDocumentsStartingWith<QueriedDocument>(_context, _startsWith, _startAfterId, skip, takeAll, _collection, _skippedResults,  _fields, _token);
+                        ? _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, _startAfterId, skip, takeAll, null, fields: _fields, _token) 
+                        : _documents.GetDocumentsStartingWith(_context, _startsWith, _startAfterId, skip, takeAll, _collection, _skippedResults,  _fields, _token);
                 }
                 else if (_ids != null)
                 {
                     if (_ids.Count == 0)
                     {
-                        documents = Enumerable.Empty<QueriedDocument>();
+                        documents = Enumerable.Empty<Document>();
                     }
                     else if (_alreadySeenIdsCount != null)
                     {
                         var idsLeft = _ids.Count - _alreadySeenIdsCount.Value;
                         if (idsLeft == 0)
                         {
-                            documents = Enumerable.Empty<QueriedDocument>();
+                            documents = Enumerable.Empty<Document>();
                         }
                         else
                         {
@@ -381,21 +380,21 @@ namespace Raven.Server.Documents.Queries
                             _alreadySeenIdsCount.Value += count;
 
                             documents = _isAllDocsCollection
-                                ? _documents.GetDocuments<QueriedDocument>(_context, ids, 0, takeAll)
-                                : _documents.GetDocumentsForCollection<QueriedDocument>(_context, ids, _collection, 0, takeAll);
+                                ? _documents.GetDocuments(_context, ids, 0, takeAll)
+                                : _documents.GetDocumentsForCollection(_context, ids, _collection, 0, takeAll);
                         }
                     }
                     else
                     {
                         documents = _isAllDocsCollection
-                            ? _documents.GetDocuments<QueriedDocument>(_context, _ids, skip, takeAll)
-                            : _documents.GetDocumentsForCollection<QueriedDocument>(_context, _ids, _collection, skip, takeAll);
+                            ? _documents.GetDocuments(_context, _ids, skip, takeAll)
+                            : _documents.GetDocumentsForCollection(_context, _ids, _collection, skip, takeAll);
                         
                     }
                 }
                 else if (_isAllDocsCollection)
                 {
-                    documents = _documents.GetDocumentsFrom<QueriedDocument>(_context, 0, skip, takeAll);
+                    documents = _documents.GetDocumentsFrom(_context, 0, skip, takeAll);
                     if (_filterScriptRun == null)
                     {
                         totalResultsCalculated = true;
@@ -404,7 +403,7 @@ namespace Raven.Server.Documents.Queries
                 }
                 else
                 {
-                    documents = _documents.GetDocumentsFrom<QueriedDocument>(_context, _collection, 0, skip, takeAll);
+                    documents = _documents.GetDocumentsFrom(_context, _collection, 0, skip, takeAll);
                     if (_filterScriptRun == null)
                     {
                         totalResultsCalculated = true;
@@ -427,7 +426,7 @@ namespace Raven.Server.Documents.Queries
                     _totalResultsCalculated = true;
                 }
             }
-            
+
             private void Initialize(out bool processedAllDocuments)
             {
                 _initialized = true;
@@ -476,6 +475,7 @@ namespace Raven.Server.Documents.Queries
                         if (document != null)
                         {
                             document.Dispose();
+                            _context.Transaction.ForgetAbout(document);
                         }
                     }
                 }
@@ -494,13 +494,13 @@ namespace Raven.Server.Documents.Queries
                 if (count < _query.Start)
                     processedAllDocuments = true;
             }
-            
+
             public void Reset()
             {
                 throw new NotSupportedException();
             }
 
-            public QueriedDocument Current { get; private set; }
+            public Document Current { get; private set; }
 
             object IEnumerator.Current => Current;
 

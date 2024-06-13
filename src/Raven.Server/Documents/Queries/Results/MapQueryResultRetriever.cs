@@ -7,23 +7,23 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Results
 {
-    public sealed class MapQueryResultRetriever<TDocument> : QueryResultRetrieverBase<TDocument>
-    where TDocument : Document, new()
+    public sealed class MapQueryResultRetriever : QueryResultRetrieverBase
     {
+        private readonly DocumentsOperationContext _context;
         private QueryTimingsScope _storageScope;
 
         public MapQueryResultRetriever(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsStorage documentsStorage, DocumentsOperationContext context, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
-            : base(database.Scripts, query, queryTimings, searchEngineType, fieldsToFetch, documentsStorage, context, documentContext: context, false, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand: includeRevisionsCommand, database.IdentityPartsSeparator)
+            : base(database.Scripts, query, queryTimings, searchEngineType, fieldsToFetch, documentsStorage, context, false, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand: includeRevisionsCommand, database.IdentityPartsSeparator)
         {
+            _context = context;
         }
 
-        public override (TDocument Document, List<TDocument> List) Get(ref RetrieverInput retrieverInput, CancellationToken token)
+        public override (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token)
         {
 
             using (RetrieverScope?.Start())
@@ -65,10 +65,20 @@ namespace Raven.Server.Documents.Queries.Results
         {
             return searcher.TryGetRawTermFor(id, out key);
         }
-        
+
+        public override Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
+        {
+            return DocumentsStorage.Get(_context, id, fields);
+        }
+
+        protected override Document LoadDocument(string id)
+        {
+            return DocumentsStorage.Get(_context, id);
+        }
+
         protected override long? GetCounter(string docId, string name)
         {
-            var value = DocumentsStorage.CountersStorage.GetCounterValue(DocumentContext, docId, name);
+            var value = DocumentsStorage.CountersStorage.GetCounterValue(_context, docId, name);
             return value?.Value;
         }
 
@@ -76,7 +86,7 @@ namespace Raven.Server.Documents.Queries.Results
         {
             var djv = new DynamicJsonValue();
 
-            foreach (var partialValue in DocumentsStorage.CountersStorage.GetCounterPartialValues(DocumentContext, docId, name))
+            foreach (var partialValue in DocumentsStorage.CountersStorage.GetCounterPartialValues(_context, docId, name))
             {
                 djv[partialValue.ChangeVector] = partialValue.PartialValue;
             }

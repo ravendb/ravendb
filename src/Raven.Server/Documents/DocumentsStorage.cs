@@ -648,10 +648,9 @@ namespace Raven.Server.Documents
             using (Slice.External(context.Allocator, (byte*)&index, sizeof(long), out Slice indexSlice))
                 tree.Add(LastCompletedClusterTransactionIndexSlice, indexSlice);
         }
-        
-        public IEnumerable<TDocument> GetDocumentsStartingWith<TDocument>(DocumentsOperationContext context, string idPrefix, string startAfterId,
+
+        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string startAfterId,
             long start, long take, string collection, Reference<long> skippedResults, DocumentFields fields = DocumentFields.All, CancellationToken token = default)
-            where TDocument : Document, new()
         {
             var isAllDocs = collection == Constants.Documents.Collections.AllDocumentsCollection;
             var isEmptyCollection = collection == Constants.Documents.Collections.EmptyCollection;
@@ -662,7 +661,7 @@ namespace Raven.Server.Documents
             using (var collectionAsLazyString = context.GetLazyString(collection))
             {
                 // we request ALL documents that start with `idPrefix` and filter it here by the collection name
-                foreach (var doc in GetDocumentsStartingWith<TDocument>(context, idPrefix, null, null, startAfterId, start, take: long.MaxValue, fields: fields))
+                foreach (var doc in GetDocumentsStartingWith(context, idPrefix, null, null, startAfterId, start, take: long.MaxValue, fields: fields))
                 {
                     token.ThrowIfCancellationRequested();
 
@@ -723,12 +722,6 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
             long start, long take, Reference<long> skip = null, DocumentFields fields = DocumentFields.All, CancellationToken token = default)
-            => GetDocumentsStartingWith<Document>(context, idPrefix, matches, exclude, startAfterId, start, take, skip, fields, token);
-        
-        
-        public IEnumerable<TDocument> GetDocumentsStartingWith<TDocument>(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
-            long start, long take, Reference<long> skip = null, DocumentFields fields = DocumentFields.All, CancellationToken token = default)
-        where TDocument : Document, new()
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -743,7 +736,7 @@ namespace Raven.Server.Documents
                 {
                     token.ThrowIfCancellationRequested();
 
-                    var document = TableValueToDocument<TDocument>(context, ref result.Value.Reader, fields);
+                    var document = TableValueToDocument(context, ref result.Value.Reader, fields);
                     string documentId = document.Id;
                     if (documentId.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) == false)
                     {
@@ -859,13 +852,8 @@ namespace Raven.Server.Documents
                 return table.ForTestingPurposesOnly().IsTableValueCompressed(lowerDocumentId, out isLargeValue);
             }
         }
-
-        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, long start, long take, DocumentFields fields = DocumentFields.All,
-            EventHandler<InvalidOperationException> onCorruptedDataHandler = null)
-            => GetDocumentsFrom<Document>(context, etag, start, take, fields, onCorruptedDataHandler);
         
-        public IEnumerable<TDocument> GetDocumentsFrom<TDocument>(DocumentsOperationContext context, long etag, long start, long take, DocumentFields fields = DocumentFields.All, EventHandler<InvalidOperationException> onCorruptedDataHandler = null)
-        where TDocument : Document, new()
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, long start, long take, DocumentFields fields = DocumentFields.All, EventHandler<InvalidOperationException> onCorruptedDataHandler = null)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction, onCorruptedDataHandler);
 
@@ -877,7 +865,7 @@ namespace Raven.Server.Documents
                     yield break;
                 }
 
-                yield return TableValueToDocument<TDocument>(context, ref result.Reader, fields);
+                yield return TableValueToDocument(context, ref result.Reader, fields);
             }
         }
 
@@ -892,12 +880,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, long start, long take)
-            => GetDocuments<Document>(context, ids, start, take);
-        
-        public IEnumerable<TDocument> GetDocuments<TDocument>(DocumentsOperationContext context, IEnumerable<Slice> ids, long start, long take)
-            where TDocument : Document, new()
+        public IEnumerable<Document>  GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, long start, long take)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -916,16 +899,11 @@ namespace Raven.Server.Documents
                 if (take-- <= 0)
                     continue; // we need to calculate totalCount correctly
 
-                yield return TableValueToDocument<TDocument>(context, ref reader);
+                yield return TableValueToDocument(context, ref reader);
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<string> ids, long start, long take)
-            => GetDocuments<Document>(context, ids, start, take);
-        
-        public IEnumerable<TDocument> GetDocuments<TDocument>(DocumentsOperationContext context, IEnumerable<string> ids, long start, long take)
-            where TDocument : Document, new()
         {
             var listOfIds = new List<Slice>();
             foreach (var id in ids)
@@ -934,18 +912,13 @@ namespace Raven.Server.Documents
                 listOfIds.Add(slice);
             }
 
-            return GetDocuments<TDocument>(context, listOfIds, start, take);
+            return GetDocuments(context, listOfIds, start, take);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IEnumerable<Document> GetDocumentsForCollection(DocumentsOperationContext context, IEnumerable<Slice> ids, string collection, long start, long take) 
-            => GetDocumentsForCollection<Document>(context, ids, collection, start, take);
-        
-        public IEnumerable<TDocument> GetDocumentsForCollection<TDocument>(DocumentsOperationContext context, IEnumerable<Slice> ids, string collection, long start, long take)
-            where TDocument : Document, new()
+        public IEnumerable<Document> GetDocumentsForCollection(DocumentsOperationContext context, IEnumerable<Slice> ids, string collection, long start, long take)
         {
             // we'll fetch all documents and do the filtering here since we must check the collection name
-            foreach (var doc in GetDocuments<TDocument>(context, ids, start, int.MaxValue))
+            foreach (var doc in GetDocuments(context, ids, start, int.MaxValue))
             {
                 if (collection == Constants.Documents.Collections.AllDocumentsCollection)
                 {
@@ -973,12 +946,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, string collection, long etag, long start, long take, DocumentFields fields = DocumentFields.All)
-            => GetDocumentsFrom<Document>(context, collection, etag, start, take, fields);
-        
-        public IEnumerable<TDocument> GetDocumentsFrom<TDocument>(DocumentsOperationContext context, string collection, long etag, long start, long take, DocumentFields fields = DocumentFields.All)
-            where TDocument : Document, new()
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -998,7 +966,7 @@ namespace Raven.Server.Documents
 
                 _forTestingPurposes?.DelayDocumentLoad?.Wait(DocumentDatabase.DatabaseShutdown);
 
-                yield return TableValueToDocument<TDocument>(context, ref result.Reader, fields);
+                yield return TableValueToDocument(context, ref result.Reader, fields);
             }
         }
 
@@ -1101,12 +1069,6 @@ namespace Raven.Server.Documents
 
         public Document Get(DocumentsOperationContext context, string id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
         {
-            return Get<Document>(context, id, fields, throwOnConflict);
-        }        
-        
-        public TDocument Get<TDocument>(DocumentsOperationContext context, string id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
-            where TDocument : Document, new()
-        {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("Argument is null or whitespace", nameof(id));
             if (context.Transaction == null)
@@ -1114,29 +1076,22 @@ namespace Raven.Server.Documents
 
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             {
-                return Get<TDocument>(context, lowerId, fields, throwOnConflict);
+                return Get(context, lowerId, fields, throwOnConflict);
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Document Get(DocumentsOperationContext context, Slice lowerId, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true, bool skipValidationInDebug = false)
-        {
-            return Get<Document>(context, lowerId, fields, throwOnConflict, skipValidationInDebug);
-        }
-        
-        private TDocument Get<TDocument>(DocumentsOperationContext context, Slice lowerId, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true, bool skipValidationInDebug = false)
-            where TDocument : Document, new()
         {
             if (GetTableValueReaderForDocument(context, lowerId, throwOnConflict, out TableValueReader tvr) == false)
                 return null;
 
-            var doc = TableValueToDocument<TDocument>(context, ref tvr, fields, skipValidationInDebug);
+            var doc = TableValueToDocument(context, ref tvr, fields, skipValidationInDebug);
 
             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(doc);
 
             return doc;
         }
-        
+
         public Document GetByEtag(DocumentsOperationContext context, long etag)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
@@ -1497,14 +1452,7 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields = DocumentFields.All, bool skipValidationInDebug = false)
         {
-            return TableValueToDocument<Document>(context, ref tvr, fields, skipValidationInDebug);
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal TDocument TableValueToDocument<TDocument>(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields = DocumentFields.All, bool skipValidationInDebug = false)
-        where TDocument : Document, new()
-        {
-            var document = ParseDocument<TDocument>(context, ref tvr, fields);
+            var document = ParseDocument(context, ref tvr, fields);
 #if DEBUG
             if (skipValidationInDebug == false)
             {
@@ -1543,12 +1491,11 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static TDocument ParseDocument<TDocument>(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
-            where TDocument : Document, new()
+        private static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
         {
             if (fields == DocumentFields.All)
             {
-                return new TDocument
+                return new Document
                 {
                     StorageId = tvr.Id,
                     LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr),
@@ -1562,13 +1509,12 @@ namespace Raven.Server.Documents
                 };
             }
 
-            return ParseDocumentPartial<TDocument>(context, ref tvr, fields);
+            return ParseDocumentPartial(context, ref tvr, fields);
         }
 
-        private static TDocument ParseDocumentPartial<TDocument>(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
-        where TDocument : Document, new()
+        private static Document ParseDocumentPartial(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
         {
-            var result = new TDocument();
+            var result = new Document();
 
             if (fields.Contain(DocumentFields.LowerId))
                 result.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr);
@@ -1597,7 +1543,7 @@ namespace Raven.Server.Documents
             if (size > expectedSize || size <= 0)
                 throw new ArgumentException("Data size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
 
-            return ParseDocument<Document>(context, ref tvr, DocumentFields.All);
+            return ParseDocument(context, ref tvr, DocumentFields.All);
         }
 
         public static Tombstone TableValueToTombstone(JsonOperationContext context, ref TableValueReader tvr)

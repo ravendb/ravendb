@@ -11,13 +11,13 @@ public sealed class QueryFilter : AbstractQueryFilter
 {
     private readonly Reference<long> _skippedResults;
     private readonly Reference<long> _scannedDocuments;
-    private readonly IQueryResultRetriever<QueriedDocument> _retriever;
+    private readonly IQueryResultRetriever _retriever;
     private readonly DocumentsOperationContext _documentsContext;
 
     protected override long? ScannedDocuments => _scannedDocuments.Value;
 
     public QueryFilter(Index index, IndexQueryServerSide query, DocumentsOperationContext documentsContext, Reference<long> skippedResults,
-        Reference<long> scannedDocuments, IQueryResultRetriever<QueriedDocument> retriever, QueryTimingsScope queryTimings)
+        Reference<long> scannedDocuments, IQueryResultRetriever retriever, QueryTimingsScope queryTimings)
         : base(query, queryTimings, index.DocumentDatabase.Scripts, documentsContext)
     {
         _skippedResults = skippedResults;
