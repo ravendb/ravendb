@@ -45,7 +45,7 @@ namespace SlowTests.Issues
             {
                 var tree = tx.ReadTree("tree");
 
-                Assert.True(tree.State.Flags.HasFlag(TreeFlags.LeafsCompressed));
+                Assert.True(tree.State.Header.Flags.HasFlag(TreeFlags.LeafsCompressed));
                 for (int i = 0; i < treeKeys; i++)
                 {
                     random.NextBytes(bytes);
@@ -61,7 +61,7 @@ namespace SlowTests.Issues
             {
                 var tree = tx.ReadTree("tree");
 
-                Assert.True(tree.State.Flags.HasFlag(TreeFlags.LeafsCompressed));
+                Assert.True(tree.State.Header.Flags.HasFlag(TreeFlags.LeafsCompressed));
 
                 for (int i = 0; i < treeKeysToDel; i++)
                 {
@@ -75,7 +75,7 @@ namespace SlowTests.Issues
             {
                 var tree = tx.ReadTree("tree");
 
-                Assert.True(tree.State.Flags.HasFlag(TreeFlags.LeafsCompressed));
+                Assert.True(tree.State.Header.Flags.HasFlag(TreeFlags.LeafsCompressed));
 
                 using (var it = tree.Iterate(prefetch: false))
                 {

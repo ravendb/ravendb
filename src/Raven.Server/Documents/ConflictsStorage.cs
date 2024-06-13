@@ -700,7 +700,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
-            return conflictsTable.GetTree(ConflictsSchema.Indexes[ConflictsIdSlice]).State.NumberOfEntries;
+            return conflictsTable.GetTree(ConflictsSchema.Indexes[ConflictsIdSlice]).State.Header.NumberOfEntries;
         }
 
         public long GetNumberOfConflicts(DocumentsOperationContext context)
