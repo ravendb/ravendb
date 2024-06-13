@@ -20,7 +20,7 @@ namespace Voron.Exceptions
                 var lastTxState = tx.GetTxState();
                 tx.MarkTransactionAsFailed();
                 throw new VoronUnrecoverableErrorException($"{message}. LastTxState: {lastTxState}"
-                    + Environment.NewLine + " @ " + tx.Environment.Options.DataPager.FileName.FullPath);
+                    + Environment.NewLine + " @ " + tx.DataPager.FileName);
             }
             catch (Exception e)
             {
@@ -34,25 +34,11 @@ namespace Voron.Exceptions
         {
             try
             {
-                throw new VoronUnrecoverableErrorException(message + Environment.NewLine + " @ " + env.Options.DataPager.FileName.FullPath);
+                throw new VoronUnrecoverableErrorException(message + Environment.NewLine + " @ " + env.DataPager.FileName);
             }
             catch (Exception e)
             {
                 env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
-                throw;
-            }
-        }
-
-        public static void Raise(StorageEnvironmentOptions options, string message)
-        {
-            try
-            {
-                throw new VoronUnrecoverableErrorException(message
-                    + Environment.NewLine + " @ " + options.DataPager.FileName.FullPath);
-            }
-            catch (Exception e)
-            {
-                options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
                 throw;
             }
         }
@@ -62,7 +48,7 @@ namespace Voron.Exceptions
             try
             {
                 throw new VoronUnrecoverableErrorException(message
-                    + Environment.NewLine + " @ " + env.Options.DataPager.FileName.FullPath, inner);
+                    + Environment.NewLine + " @ " + env.DataPager.FileName, inner);
             }
             catch (Exception e)
             {
@@ -70,21 +56,6 @@ namespace Voron.Exceptions
                 throw;
             }
         }
-        
-        public static void Raise(StorageEnvironmentOptions options, string message, Exception inner)
-        {
-            try
-            {
-                throw new VoronUnrecoverableErrorException(message
-                    + Environment.NewLine + " @ " + options.DataPager.FileName.FullPath, inner);
-            }
-            catch (Exception e)
-            {
-                options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
-                throw;
-            }
-        }
-
 
         public static void Raise(string message, Exception inner)
         {
@@ -101,5 +72,18 @@ namespace Voron.Exceptions
         {
         }
 
+        [DoesNotReturn]
+        public static void Raise(StorageEnvironmentOptions options, string message)
+        {
+            try
+            {
+                throw new VoronUnrecoverableErrorException(message);
+            }
+            catch (Exception e)
+            {
+                options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+                throw;
+            }
+        }
     }
 }

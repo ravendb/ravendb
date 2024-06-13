@@ -442,7 +442,7 @@ namespace Voron.Data.Tables
                 if (it.Seek(long.MinValue) == false)
                     return;
 
-                llt.Environment.Options.DataPager.MaybePrefetchMemory(new SectionsIterator(it));
+                llt.Environment.DataPager.MaybePrefetchMemory(llt.DataPagerState,new SectionsIterator(it));
             }
         }
 

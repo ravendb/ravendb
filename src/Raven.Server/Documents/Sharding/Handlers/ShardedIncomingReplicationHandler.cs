@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public StreamsTempFile GetTempFile()
         {
             var name = $"attachment.{Guid.NewGuid():N}.shardedReplication";
-            var tempPath = _parent.Context.ServerStore._env.Options.DataPager.Options.TempPath.Combine(name);
+            var tempPath = _parent.Context.ServerStore._env.Options.TempPath.Combine(name);
             return new StreamsTempFile(tempPath.FullPath, _parent.Context.Encrypted);
         }
 

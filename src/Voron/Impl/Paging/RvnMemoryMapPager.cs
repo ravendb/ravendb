@@ -19,7 +19,14 @@ namespace Voron.Impl.Paging
     public sealed unsafe class RvnMemoryMapPager : AbstractPager
     {
         public override long TotalAllocationSize => _totalAllocationSize;
-        public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState) => CopyPageImpl(destwI4KbBatchWrites, p, pagerState);
+    
+
+        public override int CopyPage(Pager2 pager, long p, ref Pager2.State state, ref Pager2.PagerTransactionState txState)
+        {
+            return CopyPageImpl(pager, p, ref state, ref txState);
+        }
+
+        
         public override string ToString() => FileName?.FullPath ?? "";
         protected override string GetSourceName() => $"mmf64: {FileName?.FullPath}";
         private long _totalAllocationSize;

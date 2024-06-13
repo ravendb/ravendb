@@ -248,7 +248,7 @@ namespace Voron.Data.RawData
         /// </summary>
         private static ushort GetNumberOfPagesInSmallSection(LowLevelTransaction tx)
         {
-            return tx.DataPager.NumberOfAllocatedPages switch
+            return tx.DataPagerState.NumberOfAllocatedPages switch
             {
                 // all sizes are with 8 Kb page size
                 // 256 MB 

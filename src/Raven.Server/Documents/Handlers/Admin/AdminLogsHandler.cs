@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             HttpContext.Response.Headers["Content-Type"] = "application/zip";
 
             var adminLogsFileName = $"admin.logs.download.{Guid.NewGuid():N}";
-            var adminLogsFilePath = ServerStore._env.Options.DataPager.Options.TempPath.Combine(adminLogsFileName);
+            var adminLogsFilePath = ServerStore._env.Options.TempPath.Combine(adminLogsFileName);
 
             var startUtc = GetDateTimeQueryString("from", required: false);
             var endUtc = GetDateTimeQueryString("to", required: false);
