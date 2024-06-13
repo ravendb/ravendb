@@ -180,6 +180,12 @@ namespace Raven.Server.Documents
         {
             switch (name)
             {
+                case RevisionsHandler.ReadRevisionsConfigTag:
+                    return JsonDeserializationServer.RevisionsConfiguration(configuration).ToAuditJson();
+
+                case RevisionsHandler.ConflictedRevisionsConfigTag:
+                    return JsonDeserializationServer.RevisionsCollectionConfiguration(configuration).ToAuditJson();
+
                 case OngoingTasksHandler.BackupDatabaseOnceTag:
                     return JsonDeserializationServer.BackupConfiguration(configuration).ToAuditJson();
 
