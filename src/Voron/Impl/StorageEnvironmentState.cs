@@ -4,28 +4,34 @@ namespace Voron.Impl
 {
     public sealed class StorageEnvironmentState
     {
-        public TreeMutableState Root { get; set; }
-        public StorageEnvironmentOptions Options { get; set; }
+        public TreeMutableState Root { get; private set; }
 
-        public long NextPageNumber;
+        public long NextPageNumber { get; private set; }
 
-        public StorageEnvironmentState() { }
-
-        public StorageEnvironmentState(Tree root, long nextPageNumber)
+        private StorageEnvironmentState(TreeMutableState root, long nextPageNumber)
         {
-            if (root != null)
-                Root = root.State;
+            Root = root;
             NextPageNumber = nextPageNumber;
+        }
+
+        public StorageEnvironmentState(long nextPage)
+        {
+            NextPageNumber = nextPage;
+        }
+
+        public void Initialize(TreeMutableState state)
+        {
+            Root = state;
+        }
+
+        public void UpdateNextPage(long nextPage)
+        {
+            NextPageNumber = nextPage;
         }
 
         public StorageEnvironmentState Clone()
         {
-            return new StorageEnvironmentState
-                {
-                    Root = Root?.Clone(),
-                    NextPageNumber = NextPageNumber,
-                    Options = Options
-                };
+            return new StorageEnvironmentState(Root?.Clone(), NextPageNumber);
         }
     }
 }
