@@ -171,10 +171,11 @@ namespace Voron.Impl.Paging
             return Inner.CanPrefetch.Value;
         }
 
-        public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState)
+        public override int CopyPage(Pager2 pager, long p, ref Pager2.State state, ref Pager2.PagerTransactionState txState)
         {
-            return Inner.CopyPage(destwI4KbBatchWrites, p, pagerState);
+            return Inner.CopyPage(pager, p, ref state, ref txState);
         }
+
 
         internal override void ProtectPageRange(byte* start, ulong size, bool force = false)
         {

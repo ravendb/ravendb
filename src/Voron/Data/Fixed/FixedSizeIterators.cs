@@ -314,7 +314,7 @@ namespace Voron.Data.Fixed
                             if (_prefetch)
                             {
                                 var pager = _parent._tx.DataPager;
-                                pager.MaybePrefetchMemory(new TreePagePrefetcher(_currentPage));
+                                pager.MaybePrefetchMemory(_parent._tx.DataPagerState,new TreePagePrefetcher(_currentPage));
                             }
 
                             var childParentNumber = _currentPage.GetEntry(_currentPage.LastSearchPosition)->PageNumber;

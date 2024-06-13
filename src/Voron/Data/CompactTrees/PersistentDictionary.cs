@@ -78,7 +78,7 @@ namespace Voron.Data.CompactTrees
                 // We retrieve the embedded file from the assembly, copy and checksum the entire thing.             
                 var embeddedFile = typeof(PersistentDictionary).Assembly.GetManifestResourceStream($"Voron.Data.CompactTrees.dictionary.bin");
                 if (embeddedFile == null)
-                    VoronUnrecoverableErrorException.Raise(llt.Environment.Options, "The default dictionary has not been included in the build, the build process needs to be corrected.");
+                    VoronUnrecoverableErrorException.Raise(llt.Environment, "The default dictionary has not been included in the build, the build process needs to be corrected.");
 
                 var dictionary = new byte[embeddedFile.Length];
                 embeddedFile.Read(dictionary);
@@ -86,7 +86,7 @@ namespace Voron.Data.CompactTrees
                 var arrayAsInt = MemoryMarshal.Cast<byte, int>(dictionary.AsSpan());
                 int tableSize = arrayAsInt[0];
                 if (tableSize != DefaultDictionaryTableSize)
-                    VoronUnrecoverableErrorException.Raise(llt.Environment.Options, "There is an inconsistency between the expected size of the default compression dictionary and the one read from storage.");
+                    VoronUnrecoverableErrorException.Raise(llt.Environment, "There is an inconsistency between the expected size of the default compression dictionary and the one read from storage.");
 
                 dictionary.AsSpan()
                     .Slice(4) // Discard the table size.

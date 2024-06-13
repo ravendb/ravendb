@@ -44,7 +44,7 @@ namespace SlowTests.Voron.Storage
 
             Env.FlushLogToDataFile();
 
-            var old = Env.Options.DataPager.NumberOfAllocatedPages;
+            var old = Env.CurrentStateRecord.DataPagerState.NumberOfAllocatedPages;
 
             using (var tx = Env.WriteTransaction())
             {
@@ -137,7 +137,7 @@ namespace SlowTests.Voron.Storage
             if (restartCount >= 4)
                 RestartDatabase();
 
-            Assert.Equal(old, Env.Options.DataPager.NumberOfAllocatedPages);
+            Assert.Equal(old, Env.CurrentStateRecord.DataPagerState.NumberOfAllocatedPages);
 
             using (var tx = Env.ReadTransaction())
             {

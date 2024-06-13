@@ -129,7 +129,7 @@ namespace Voron
                 if (isSyncRun != 0)
                     continue;
 
-                var mpi = _mountPoints.GetOrAdd(env.Options.DataPager.UniquePhysicalDriveId,
+                var mpi = _mountPoints.GetOrAdd(env.DataPager.UniquePhysicalDriveId,
                     _ => new MountPointInfo());
 
                 mpi.StorageEnvironments.Enqueue(envSyncReq.Value);

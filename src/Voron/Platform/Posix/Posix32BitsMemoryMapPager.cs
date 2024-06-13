@@ -139,8 +139,8 @@ namespace Voron.Platform.Posix
             MapPages(state, allocationStartPosition, ammountToMapInBytes);
             return true;
         }
-
-        public override int CopyPage(I4KbBatchWrites destI4KbBatchWrites, long pageNumber, PagerState pagerState)
+        
+        public int CopyPage(I4KbBatchWrites destI4KbBatchWrites, long pageNumber, PagerState pagerState)
         {
             long sizeToMap = AllocationGranularity;
             var distanceFromStart = (pageNumber % NumberOfPagesInAllocationGranularity);

@@ -287,9 +287,9 @@ namespace Voron.Impl.Scratch
             throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);
         }
 
-        public int CopyPage(I4KbBatchWrites destI4KbBatchWrites, long p, PagerState pagerState)
+        public int CopyPage(Pager2 pager, long p, ref Pager2.State state, ref Pager2.PagerTransactionState txState)
         {
-            return _scratchPager.CopyPage(destI4KbBatchWrites, p, pagerState);
+            return _scratchPager.CopyPage(pager, p, ref state, ref txState);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

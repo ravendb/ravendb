@@ -1334,7 +1334,7 @@ namespace Raven.Server.Documents
         public StreamsTempFile GetTempFile(string prefix)
         {
             var name = $"attachment.{Guid.NewGuid():N}.{prefix}";
-            var tempPath = _documentsStorage.Environment.Options.DataPager.Options.TempPath.Combine(name);
+            var tempPath = _documentsStorage.Environment.Options.TempPath.Combine(name);
 
             return new StreamsTempFile(tempPath.FullPath, _documentDatabase.DocumentsStorage.Environment.Options.Encryption.IsEnabled);
         }

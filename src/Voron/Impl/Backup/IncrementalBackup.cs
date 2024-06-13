@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="IncrementalBackup.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -384,57 +384,59 @@ namespace Voron.Impl.Backup
                                     env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);
                             toDispose.Add(recoveryPager);
 
-                            using (var reader = new JournalReader(pager, env.Options.DataPager, recoveryPager, new HashSet<long>(), new JournalInfo
+                            using (var reader = new JournalReader(pager, env.DataPager, recoveryPager, new HashSet<long>(), new JournalInfo
                             {
                                 LastSyncedTransactionId = lastTxId
                             }, new FileHeader { HeaderRevision = -1 }, lastTxHeader))
                             {
-                                while (reader.ReadOneTransactionToDataFile(env.Options))
-                                {
-                                    lastTxHeader = reader.LastTransactionHeader;
-                                }
+                                throw new NotImplementedException();
+                                // while (reader.ReadOneTransactionToDataFile(env.Options))
+                                // {
+                                //     lastTxHeader = reader.LastTransactionHeader;
+                                // }
 
-                                reader.ZeroRecoveryBufferIfNeeded(reader, env.Options);
-                                if (lastTxHeader != null)
-                                {
-                                    *lastTxHeaderStackLocation = *lastTxHeader;
-                                    lastTxHeader = lastTxHeaderStackLocation;
-                                    lastTxId = lastTxHeader->TransactionId;
-                                }
+                                // reader.ZeroRecoveryBufferIfNeeded(reader, env.Options);
+                                // if (lastTxHeader != null)
+                                // {
+                                //     *lastTxHeaderStackLocation = *lastTxHeader;
+                                //     lastTxHeader = lastTxHeaderStackLocation;
+                                //     lastTxId = lastTxHeader->TransactionId;
+                                // }
                             }
 
-                            break;
+                            //break;
 
                         default:
                             throw new InvalidOperationException("Unknown file, cannot restore: " + entry);
                     }
                 }
 
-                if (lastTxHeader == null)
-                    return; // there was no valid transactions, nothing to do
-
-                env.Options.DataPager.Sync(0);
-
-
-                var root = Tree.Open(txw, null, Constants.RootTreeNameSlice, lastTxHeader->Root);
-
-                txw.UpdateRootsIfNeeded(root);
-                txw.State.UpdateNextPage(lastTxHeader->LastPageNumber + 1);
-
-                txw.Commit();
-
-                env.HeaderAccessor.Modify(header =>
-                {
-                    header->TransactionId = lastTxHeader->TransactionId;
-                    header->LastPageNumber = lastTxHeader->LastPageNumber;
-                    
-                    header->Journal.LastSyncedTransactionId = lastTxHeader->TransactionId;
-
-                    header->Root = lastTxHeader->Root;
-                    
-                    Sparrow.Memory.Set(header->Journal.Reserved, 0, JournalInfo.NumberOfReservedBytes);
-                    header->Journal.Flags = JournalInfoFlags.None;
-                });
+                // if (lastTxHeader == null)
+                //     return; // there was no valid transactions, nothing to do
+                //
+                // env.Options.DataPager.Sync(0);
+                //
+                //
+                // var root = Tree.Open(txw, null, Constants.RootTreeNameSlice, &lastTxHeader->Root);
+                //
+                // txw.UpdateRootsIfNeeded(root);
+                //
+                // txw.State.NextPageNumber = lastTxHeader->LastPageNumber + 1;
+                //
+                // txw.Commit();
+                //
+                // env.HeaderAccessor.Modify(header =>
+                // {
+                //     header->TransactionId = lastTxHeader->TransactionId;
+                //     header->LastPageNumber = lastTxHeader->LastPageNumber;
+                //     
+                //     header->Journal.LastSyncedTransactionId = lastTxHeader->TransactionId;
+                //
+                //     header->Root = lastTxHeader->Root;
+                //     
+                //     Sparrow.Memory.Set(header->Journal.Reserved, 0, JournalInfo.NumberOfReservedBytes);
+                //     header->Journal.Flags = JournalInfoFlags.None;
+                // });
             }
             finally
             {
