@@ -37,11 +37,12 @@ namespace Raven.Server.Documents.Patch
 
             try
             {
-                DocumentsOperationContext docsCtx = null;
+                DocumentsOperationContext databaseCtx = null;
                 using (_server.AdminScripts.GetScriptRunner(new AdminJsScriptKey(script.Script), false, out var run))
-                using (_server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
-                using (_database?.DocumentsStorage.ContextPool.AllocateOperationContext(out docsCtx))
-                using (var result = run.Run(ctx, docsCtx, "execute", new object[] {_server, _database}))
+                using (_server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverCtx))
+                using (_server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterCtx))
+                using (_database?.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseCtx))
+                using (var result = run.Run(serverCtx, databaseCtx, "execute", new object[] { _server, _database, serverCtx, clusterCtx, databaseCtx }))
                 {
                     var toJson = RavenCli.ConvertResultToString(result);
 
@@ -102,7 +103,7 @@ namespace Raven.Server.Documents.Patch
 
         public override void GenerateScript(ScriptRunner runner)
         {
-            runner.AddScript($@"function execute(server, database){{ 
+            runner.AddScript($@"function execute(server, database, serverCtx, clusterCtx, databaseCtx){{ 
 
 {_script}
 
