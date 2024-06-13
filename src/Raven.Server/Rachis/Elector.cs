@@ -253,7 +253,7 @@ namespace Raven.Server.Rachis
                                 continue;
                             }
 
-                            _engine.ForTestingPurposes?.ReleaseOnLeaderElect();
+                            _engine.ForTestingPurposes?.HoldOnLeaderElect?.ReleaseOnLeaderElect();
 
                             var castVoteInTermWithShouldGrantVoteCommand = new ElectorCastVoteInTermWithShouldGrantVoteCommand(_engine, rv, lastLogIndex);
                             _engine.TxMerger.EnqueueSync(castVoteInTermWithShouldGrantVoteCommand);
