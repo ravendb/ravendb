@@ -233,8 +233,11 @@ namespace Voron.Data.BTrees
             writer.Init(this, key, tag, initialNumberOfPagesPerChunk);
             writer.Write(stream);
 
-            ref var state = ref State.Modify();
-            state.Flags |= TreeFlags.Streams;
+            if ((State.Header.Flags & TreeFlags.Streams) != TreeFlags.Streams)
+            {
+                ref var state = ref State.Modify();
+                state.Flags |= TreeFlags.Streams;
+            }
         }
 
         public VoronStream ReadStream(string key)

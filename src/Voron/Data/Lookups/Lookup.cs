@@ -261,8 +261,11 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             if (llt.Flags != TransactionFlags.ReadWrite)
                 return null;
 
-            ref var state = ref parent.State.Modify();
-            state.Flags |= TreeFlags.Lookups;
+            if ((parent.State.Header.Flags & TreeFlags.Lookups) != TreeFlags.Lookups)
+            {
+                ref var state = ref parent.State.Modify();
+                state.Flags |= TreeFlags.Lookups;
+            }
 
             Create(llt, out header, dictionaryId, termsContainerId);
             using var _ = parent.DirectAdd(name, sizeof(LookupState), out var p);
