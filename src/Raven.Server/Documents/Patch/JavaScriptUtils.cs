@@ -20,6 +20,7 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.TimeSeries;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -444,9 +445,10 @@ namespace Raven.Server.Documents.Patch
                 return jsArray;
             }
             // for admin
-            if (o is RavenServer || o is DocumentDatabase)
+            if (o is RavenServer || o is DocumentDatabase || o is DocumentsOperationContext || o is TransactionOperationContext || o is ClusterOperationContext)
             {
                 AssertAdminScriptInstance();
+
                 return JsValue.FromObject(engine, o);
             }
             if (o is ObjectInstance j)
