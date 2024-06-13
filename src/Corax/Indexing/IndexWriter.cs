@@ -1560,7 +1560,8 @@ namespace Corax.Indexing
 
                 pagesToPrefetch.Count = Sorting.SortAndRemoveDuplicates(pagesToPrefetch.RawItems, pagesToPrefetch.Count);
 
-                _writer._transaction.LowLevelTransaction.DataPager.MaybePrefetchMemory(pagesToPrefetch.GetEnumerator());
+                var llt = _writer._transaction.LowLevelTransaction;
+                llt.DataPager.MaybePrefetchMemory(llt.DataPagerState,pagesToPrefetch.GetEnumerator());
             }
 
         }

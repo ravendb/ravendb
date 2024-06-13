@@ -42,7 +42,8 @@ namespace SlowTests.Voron
         public void Should_be_able_to_allocate_new_pages_with_apply_logs_to_data_file(int growthMultiplier)
         {
             Options.ManualFlushing = true;
-            Env.Options.DataPager.EnsureContinuous(0, growthMultiplier);
+            var state = Env.CurrentStateRecord.DataPagerState;
+            Env.DataPager.EnsureContinuous(ref state, 0,growthMultiplier);
             var testData = GenerateTestData().ToList();
             CreatTestSchema();
             using (var tx = Env.WriteTransaction())
@@ -100,11 +101,13 @@ namespace SlowTests.Voron
         [Fact]
         public void Should_be_able_to_allocate_new_pages_multiple_times()
         {
+            var state = Env.CurrentStateRecord.DataPagerState;
             var numberOfPages = PagerInitialSize / Constants.Storage.PageSize;
             for (int allocateMorePagesCount = 0; allocateMorePagesCount < 5; allocateMorePagesCount++)
             {
                 numberOfPages *= 2;
-                Env.Options.DataPager.EnsureContinuous(0, (int)(numberOfPages));
+                
+                Env.DataPager.EnsureContinuous(ref state, 0, (int)(numberOfPages));
             }
         }
     }

@@ -71,7 +71,7 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
 
             var gaps = new List<(long Start, long End)>();
 
-            long totalPages = tx.LowLevelTransaction.Environment.Options.DataPager.NumberOfAllocatedPages;
+            long totalPages = tx.LowLevelTransaction.DataPagerState.NumberOfAllocatedPages;
             for (long i = 0; i < totalPages; i++)
             {
                 if (owners.ContainsKey(i) == false)

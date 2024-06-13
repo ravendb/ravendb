@@ -60,7 +60,8 @@ namespace SlowTests.Voron.Storage
         [InlineData(250)]
         public void Should_be_able_to_allocate_new_pages(int growthMultiplier)
         {
-             Env.Options.DataPager.EnsureContinuous(0, growthMultiplier / Constants.Storage.PageSize);
+            throw new NotImplementedException();
+            //Env.Options.DataPager.EnsureContinuous(0, growthMultiplier / Constants.Storage.PageSize);
         }
 
         private void CreatTestSchema()
@@ -79,24 +80,26 @@ namespace SlowTests.Voron.Storage
             for (int allocateMorePagesCount = 0; allocateMorePagesCount < 5; allocateMorePagesCount++)
             {
                 numberOfPages *= 2;
-                Env.Options.DataPager.EnsureContinuous(0, (int)(numberOfPages));
+                //Env.Options.DataPager.EnsureContinuous(0, (int)(numberOfPages));
+                throw new NotImplementedException();
             }
         }
 
         byte* AllocateMemoryAtEndOfPager(long totalAllocationSize)
         {
-            if (StorageEnvironmentOptions.RunningOnPosix)
-            {
-                var p = Syscall.mmap64(new IntPtr(Env.Options.DataPager.PagerState.MapBase + totalAllocationSize), (UIntPtr)16,
-                    MmapProts.PROT_READ | MmapProts.PROT_WRITE, MmapFlags.MAP_ANONYMOUS, -1, 0L);
-                if (p.ToInt64() == -1)
-                {
-                    return null;
-                }
-                return (byte*)p.ToPointer();
-            }
-            return Win32MemoryProtectMethods.VirtualAlloc(Env.Options.DataPager.PagerState.MapBase + totalAllocationSize, new UIntPtr(16),
-                Win32MemoryProtectMethods.AllocationType.RESERVE, Win32MemoryProtectMethods.MemoryProtection.EXECUTE_READWRITE);
+            throw new NotImplementedException();
+            // if (StorageEnvironmentOptions.RunningOnPosix)
+            // {
+            //     var p = Syscall.mmap64(new IntPtr(Env.Options.DataPager.PagerState.MapBase + totalAllocationSize), (UIntPtr)16,
+            //         MmapProts.PROT_READ | MmapProts.PROT_WRITE, MmapFlags.MAP_ANONYMOUS, -1, 0L);
+            //     if (p.ToInt64() == -1)
+            //     {
+            //         return null;
+            //     }
+            //     return (byte*)p.ToPointer();
+            // }
+            // return Win32MemoryProtectMethods.VirtualAlloc(Env.Options.DataPager.PagerState.MapBase + totalAllocationSize, new UIntPtr(16),
+            //     Win32MemoryProtectMethods.AllocationType.RESERVE, Win32MemoryProtectMethods.MemoryProtection.EXECUTE_READWRITE);
         }
 
         static void FreeMemoryAtEndOfPager(byte* adjacentBlockAddress)
@@ -115,32 +118,33 @@ namespace SlowTests.Voron.Storage
         public void Should_be_able_to_allocate_new_pages_with_remapping()
         {
             var pagerSize = PagerInitialSize;
-
+            var dataPagerState = Env.CurrentStateRecord.DataPagerState;
             //first grow several times the pager
             for (int allocateMorePagesCount = 0; allocateMorePagesCount < 2; allocateMorePagesCount++)
             {
                 pagerSize *= 2;
-                Env.Options.DataPager.EnsureContinuous(0, (int)pagerSize);
+                Env.DataPager.EnsureContinuous(ref dataPagerState,0, (int)pagerSize);
             }
 
-            var totalAllocationSize = Env.Options.DataPager.PagerState.AllocationInfos.Sum(info => info.Size);
-
-            //prevent continuous allocation and force remapping on next pager growth			
-            byte* adjacentBlockAddress = null;
-            try
-            {
-                //if this fails and adjacentBlockAddress == 0 or null --> this means the remapping will occur anyway. 
-                //the allocation is here to make sure the remapping does happen in any case
-                adjacentBlockAddress = AllocateMemoryAtEndOfPager(totalAllocationSize);
-
-                pagerSize *= 2;
-                Env.Options.DataPager.EnsureContinuous(0, (int)(pagerSize / Constants.Storage.PageSize));
-
-            }
-            finally
-            {
-                FreeMemoryAtEndOfPager(adjacentBlockAddress);
-            }
+            // var totalAllocationSize = Env.Options.DataPager.PagerState.AllocationInfos.Sum(info => info.Size);
+            //
+            // //prevent continuous allocation and force remapping on next pager growth			
+            // byte* adjacentBlockAddress = null;
+            // try
+            // {
+            //     //if this fails and adjacentBlockAddress == 0 or null --> this means the remapping will occur anyway. 
+            //     //the allocation is here to make sure the remapping does happen in any case
+            //     adjacentBlockAddress = AllocateMemoryAtEndOfPager(totalAllocationSize);
+            //
+            //     pagerSize *= 2;
+            //     Env.Options.DataPager.EnsureContinuous(0, (int)(pagerSize / Constants.Storage.PageSize));
+            //
+            // }
+            // finally
+            // {
+            //     FreeMemoryAtEndOfPager(adjacentBlockAddress);
+            // }
+            throw new NotImplementedException();
         }
     }
 }

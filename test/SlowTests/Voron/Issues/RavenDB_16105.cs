@@ -32,7 +32,7 @@ namespace SlowTests.Voron.Issues
 
             using (var tx = Env.WriteTransaction())
             {
-                tx.LowLevelTransaction.DataPager.EnsureContinuous(20, 100);
+                tx.LowLevelTransaction.DataPager.EnsureContinuous(ref tx.LowLevelTransaction.DataPagerState, 20, 100);
 
                 tx.LowLevelTransaction.AllocatePage(50);
 

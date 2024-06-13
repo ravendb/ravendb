@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -45,6 +46,8 @@ namespace Voron
         private readonly CatastrophicFailureNotification _catastrophicFailureNotification;
         private readonly ConcurrentSet<CryptoPager> _activeCryptoPagers = new ConcurrentSet<CryptoPager>();
 
+        public abstract (Pager2 Pager, Pager2.State State) InitializeDataPager();
+        
         public VoronPathSetting TempPath { get; }
 
         public VoronPathSetting JournalPath { get; private set; }
@@ -210,8 +213,6 @@ namespace Voron
         public bool ManualFlushing { get; set; }
 
         public bool IncrementalBackupEnabled { get; set; }
-
-        public abstract AbstractPager DataPager { get; }
 
         public long MaxNumberOfPagesInJournalBeforeFlush { get; set; }
 
@@ -409,8 +410,6 @@ namespace Voron
 
             private readonly VoronPathSetting _basePath;
 
-            private readonly LazyWithExceptionRetry<AbstractPager> _dataPager;
-
             private readonly ConcurrentDictionary<string, LazyWithExceptionRetry<IJournalWriter>> _journals =
                 new ConcurrentDictionary<string, LazyWithExceptionRetry<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
 
@@ -433,12 +432,7 @@ namespace Voron
                 if (Equals(JournalPath, TempPath) == false && Directory.Exists(JournalPath.FullPath) == false)
                     Directory.CreateDirectory(JournalPath.FullPath);
 
-                _dataPager = new LazyWithExceptionRetry<AbstractPager>(() =>
-                {
-                    FilePath = _basePath.Combine(Constants.DatabaseFilename);
-
-                    return GetMemoryMapPager(this, InitialFileSize, FilePath, usePageProtection: true);
-                });
+                FilePath = _basePath.Combine(Constants.DatabaseFilename);
 
                 // have to be before the journal check, so we'll fail on files in use
                 DeleteAllTempFiles();
@@ -502,18 +496,31 @@ namespace Voron
                 }
                 catch (Exception)
                 {
-                    return new string[0];
+                    return [];
                 }
             }
 
-            public VoronPathSetting FilePath { get; private set; }
+            public VoronPathSetting FilePath { get; }
+
+            public override (Pager2 Pager, Pager2.State State) InitializeDataPager()
+            {
+                var openFileOptions = new Pager2.OpenFileOptions
+                {
+                    File = FilePath.FullPath,
+                    Temporary = false,
+                    DeleteOnClose = false,
+                    UsePageProtection = true,
+                    ReadOnly = false,
+                    SequentialScan = false,
+                    InitializeFileSize = InitialFileSize
+                };
+                return Pager2.Create(this, openFileOptions);
+            }
 
             public override string ToString()
             {
                 return _basePath.FullPath;
             }
-
-            public override AbstractPager DataPager => _dataPager.Value;
 
             public override VoronPathSetting BasePath => _basePath;
 
@@ -700,8 +707,7 @@ namespace Voron
                     return;
 
                 Disposed = true;
-                if (_dataPager.IsValueCreated)
-                    _dataPager.Value.Dispose();
+                
                 foreach (var journal in _journals)
                 {
                     if (journal.Value.IsValueCreated)
@@ -941,8 +947,6 @@ namespace Voron
             private readonly string _name;
             private static int _counter;
 
-            private readonly LazyWithExceptionRetry<AbstractPager> _dataPager;
-
             private readonly Dictionary<string, IJournalWriter> _logs =
                 new Dictionary<string, IJournalWriter>(StringComparer.OrdinalIgnoreCase);
 
@@ -951,6 +955,7 @@ namespace Voron
             private readonly int _instanceId;
 
 
+            private readonly string _filename;
 
             public PureMemoryStorageEnvironmentOptions(string name, VoronPathSetting tempPath,
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
@@ -961,22 +966,32 @@ namespace Voron
                 var guid = Guid.NewGuid();
                 using (var currentProcess = Process.GetCurrentProcess())
                 {
-                    var filename = $"ravendb-{currentProcess.Id}-{_instanceId}-data.pager-{guid}";
 
                     if (Directory.Exists(tempPath.FullPath) == false)
                         Directory.CreateDirectory(tempPath.FullPath);
-
-                    _dataPager = new LazyWithExceptionRetry<AbstractPager>(() => GetTempMemoryMapPager(this, TempPath.Combine(filename), InitialFileSize,
-                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
+                    _filename = tempPath.Combine($"ravendb-{currentProcess.Id}-{_instanceId}-data.pager-{guid}").FullPath;
                 }
+            }
+
+            public override (Pager2 Pager, Pager2.State State) InitializeDataPager()
+            {
+                var fileOptions = new Pager2.OpenFileOptions
+                {
+                    File = _filename,
+                    Temporary = true,
+                    DeleteOnClose = true,
+                    ReadOnly = false,
+                    SequentialScan = false,
+                    InitializeFileSize = InitialFileSize,
+                    UsePageProtection = false
+                };
+                return Pager2.Create(this, fileOptions);
             }
 
             public override string ToString()
             {
                 return "mem #" + _instanceId + " " + _name;
             }
-
-            public override AbstractPager DataPager => _dataPager.Value;
 
             public override VoronPathSetting BasePath { get; } = new MemoryVoronPathSetting();
 
@@ -1021,7 +1036,6 @@ namespace Voron
                     return;
                 Disposed = true;
 
-                _dataPager.Value.Dispose();
                 foreach (var virtualPager in _logs)
                 {
                     virtualPager.Value.Dispose();

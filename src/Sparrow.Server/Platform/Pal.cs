@@ -271,7 +271,7 @@ namespace Sparrow.Server.Platform
         );
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern Int32 rvn_discard_virtual_memory(
+        public static extern PalFlags.FailCodes rvn_discard_virtual_memory(
             void* address,
             Int64 size,
             out Int32 errorCode);

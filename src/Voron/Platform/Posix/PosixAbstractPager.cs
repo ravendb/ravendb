@@ -16,10 +16,11 @@ namespace Voron.Platform.Posix
         private readonly bool _supportsUnmapping;
 
         private readonly Logger _log = LoggingSource.Instance.GetLogger<PosixAbstractPager>("PosixAbstractPager");
+   
 
-        public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState)
+        public override int CopyPage(Pager2 pager, long p, ref Pager2.State state, ref Pager2.PagerTransactionState txState)
         {
-            return CopyPageImpl(destwI4KbBatchWrites, p, pagerState);
+            throw new NotImplementedException();
         }
 
         public override unsafe byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)

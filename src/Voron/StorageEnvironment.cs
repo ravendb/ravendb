@@ -86,7 +86,9 @@ namespace Voron
 
         public readonly ActiveTransactions ActiveTransactions = new ActiveTransactions();
 
-        private readonly AbstractPager _dataPager;
+        private readonly Pager2 _dataPager;
+
+        public Pager2 DataPager => _dataPager;
 
         internal readonly LowLevelTransaction.WriteTransactionPool WriteTransactionPool =
             new LowLevelTransaction.WriteTransactionPool();
@@ -139,12 +141,13 @@ namespace Voron
                 SelfReference.WeekReference = new WeakReference<StorageEnvironment>(this);
                 _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(options.BasePath.FullPath);
                 _options = options;
-                _dataPager = options.DataPager;
+                (_dataPager, var dataPagerState) = options.InitializeDataPager();
                 _freeSpaceHandling = new FreeSpaceHandling();
                 _headerAccessor = new HeaderAccessor(this);
                 TimeToSyncAfterFlushInSec = options.TimeToSyncAfterFlushInSec;
 
-                _lastValidPageAfterLoad = _dataPager.NumberOfAllocatedPages;
+                _currentStateRecordRecord = new EnvironmentStateRecord(dataPagerState);
+                _lastValidPageAfterLoad = dataPagerState.NumberOfAllocatedPages;
                 Debug.Assert(_lastValidPageAfterLoad != 0);
 
                 var remainingBits = _lastValidPageAfterLoad % (8 * sizeof(long));
@@ -484,7 +487,6 @@ namespace Voron
 
         public void Dispose()
         {
-
             if (_envDispose.IsSet)
                 return; // already disposed
 
@@ -547,6 +549,7 @@ namespace Voron
                     _scratchBufferPool,
                     _decompressionBuffers,
                     _options.OwnsPagers ? _options : null,
+                    _options.OwnsPagers ? _dataPager : null,
                 })
                 {
                     try
@@ -629,9 +632,6 @@ namespace Voron
                 {
                     _txCreation.ExitReadLock();
                 }
-
-                var state = _dataPager.PagerState;
-                tx.EnsurePagerStateReference(ref state);
 
                 return new Transaction(tx);
             }
@@ -741,9 +741,6 @@ namespace Voron
                 {
                     _txCreation.ExitReadLock();
                 }
-
-                var state = _dataPager.PagerState;
-                tx.EnsurePagerStateReference(ref state);
 
                 return tx;
             }
@@ -1038,7 +1035,7 @@ namespace Voron
 
         private long GetNumberOfAllocatedPages()
         {
-            return Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
+            return Math.Max(_currentStateRecordRecord.DataPagerState.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
         }
 
         public StorageReport GenerateReport(Transaction tx)
@@ -1119,7 +1116,7 @@ namespace Voron
         {
             var r = new Dictionary<long, string>();
             RegisterPages(_freeSpaceHandling.AllPages(tx.LowLevelTransaction), "Freed Page");
-            for (long pageNumber = NextPageNumber; pageNumber < _dataPager.NumberOfAllocatedPages; pageNumber++)
+            for (long pageNumber = NextPageNumber; pageNumber < tx.LowLevelTransaction.DataPagerState.NumberOfAllocatedPages; pageNumber++)
             {
                 r[pageNumber] = "Unused Page";
             }
@@ -1329,7 +1326,7 @@ namespace Voron
 
         public unsafe DetailedReportInput CreateDetailedReportInput(Transaction tx, bool includeDetails)
         {
-            var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
+            var numberOfAllocatedPages = Math.Max(tx.LowLevelTransaction.DataPagerState.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
             var numberOfFreePages = _freeSpaceHandling.AllPages(tx.LowLevelTransaction).Count;
 
             var totalCryptoBufferSize = GetTotalCryptoBufferSize();
@@ -1471,13 +1468,13 @@ namespace Voron
             var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read))
             {
-                var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
+                var numberOfAllocatedPages = Math.Max(tx.DataPagerState.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
 
                 return new EnvironmentStats
                 {
                     FreePagesOverhead = FreeSpaceHandling.GetFreePagesOverhead(tx),
                     RootPages = tx.RootObjects.State.Header.PageCount,
-                    UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
+                    UnallocatedPagesAtEndOfFile = tx.DataPagerState.NumberOfAllocatedPages - NextPageNumber,
                     UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * Constants.Storage.PageSize,
                     AllocatedDataFileSizeInBytes = numberOfAllocatedPages * Constants.Storage.PageSize,
                     NextWriteTransactionId = NextWriteTransactionId,
@@ -1600,7 +1597,7 @@ namespace Voron
         [DoesNotReturn]
         private unsafe void ThrowInvalidChecksum(long pageNumber, PageHeader* current, ulong checksum)
         {
-            var message = $"Invalid checksum for page {pageNumber}, data file {_options.DataPager} might be corrupted, expected hash to be {current->Checksum} but was {checksum}. ";
+            var message = $"Invalid checksum for page {pageNumber}, data file {_dataPager?.FileName ?? "unknown"} might be corrupted, expected hash to be {current->Checksum} but was {checksum}. ";
 
             message += $"Page flags: {current->Flags}. ";
 
@@ -1679,6 +1676,9 @@ namespace Voron
         }
 
         internal TestingStuff _forTestingPurposes;
+        private EnvironmentStateRecord _currentStateRecordRecord;
+
+        public EnvironmentStateRecord CurrentStateRecord => _currentStateRecordRecord;
 
         internal TestingStuff ForTestingPurposesOnly()
         {
@@ -1708,6 +1708,12 @@ namespace Voron
             DictionaryLocator.Set(dictionary.DictionaryId, dictionary);
 
             return dictionary;
+        }
+
+        public void UpdateState(EnvironmentStateRecord updatedRecord)
+        {
+            updatedRecord.DataPagerState.BeforePublishing();
+            Interlocked.Exchange(ref _currentStateRecordRecord, updatedRecord);
         }
     }
 

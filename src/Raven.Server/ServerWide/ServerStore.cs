@@ -3857,7 +3857,7 @@ namespace Raven.Server.ServerWide
         public StreamsTempFile GetTempFile(string fileTypeOrName, string suffix, bool? isEncrypted = null)
         {
             var name = $"{fileTypeOrName}.{Guid.NewGuid():N}.{suffix}";
-            var tempPath = _env.Options.DataPager.Options.TempPath.Combine(name);
+            var tempPath = _env.Options.TempPath.Combine(name);
 
             return new StreamsTempFile(tempPath.FullPath, isEncrypted ?? _env.Options.Encryption.IsEnabled);
         }

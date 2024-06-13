@@ -127,7 +127,7 @@ public partial class Follower
             var txw = context.Transaction.InnerTransaction;
 
             var fileName = $"snapshot.{Guid.NewGuid():N}";
-            var filePath = context.Environment.Options.DataPager.Options.TempPath.Combine(fileName);
+            var filePath = context.Environment.Options.TempPath.Combine(fileName);
 
             using (var temp = new StreamsTempFile(filePath.FullPath, context.Environment))
             using (var stream = temp.StartNewStream())

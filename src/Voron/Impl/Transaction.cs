@@ -18,6 +18,7 @@ using Voron.Data.PostingLists;
 using Constants = Voron.Global.Constants;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using Voron.Impl.Paging;
 
 namespace Voron.Impl
 {

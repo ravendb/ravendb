@@ -196,9 +196,10 @@ namespace SlowTests.Voron
 
             using (var tx = Env.ReadTransaction())
             {
-                Env.Options.DataPager.Dispose();
-
-                Assert.Throws<ObjectDisposedException>(() => Env.Options.DataPager.AcquirePagePointer(tx.LowLevelTransaction, 0));
+                throw new NotImplementedException();
+                // Env.Options.DataPager.Dispose();
+                //
+                // Assert.Throws<ObjectDisposedException>(() => Env.Options.DataPager.AcquirePagePointer(tx.LowLevelTransaction, 0));
             }
         }
 

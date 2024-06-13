@@ -147,7 +147,7 @@ namespace Voron.Recovery
                         }
 
                         //for encrypted database the pointer points to the buffer and this is not what we want.
-                        mem = se.Options.DataPager.PagerState.MapBase;
+                        mem = se.CurrentStateRecord.DataPagerState.BaseAddress;
                         writer.WriteLine(
                             $"Journal recovery has completed successfully within {sw.Elapsed.TotalSeconds:N1} seconds");
                     }
@@ -180,11 +180,12 @@ namespace Voron.Recovery
                     //for encrypted database the pointer points to the buffer and this is not what we want.
                     if (se == null /*journal recovery failed or copy on write is set to false*/)
                     {
-                        mem = _option.DataPager.PagerState.MapBase;
+                        //mem = _option.DataPager.PagerState.MapBase;
+                        throw new NotImplementedException();
                     }
                     else
                     {
-                        mem = se.Options.DataPager.PagerState.MapBase;
+                        mem = se.CurrentStateRecord.DataPagerState.BaseAddress;
                     }
                 }
                 long startOffset = (long)mem;
@@ -1711,7 +1712,7 @@ namespace Voron.Recovery
 
         private readonly string _output;
         private readonly int _pageSize;
-        private AbstractPager Pager => _option.DataPager;
+        private AbstractPager Pager => throw new NotImplementedException(); // _option.DataPager;
         private const string LogFileName = "recovery.log";
         private long _numberOfFaultedPages;
         private long _numberOfDocumentsRetrieved;

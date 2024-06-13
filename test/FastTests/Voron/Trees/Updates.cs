@@ -11,6 +11,32 @@ namespace FastTests.Voron.Trees
         public Updates(ITestOutputHelper output) : base(output)
         {
         }
+        
+        [Fact]
+        public void HandleReadingValuesWhenWeGrowTheFileSize()
+        {
+            Options.ManualFlushing = true;
+            var random = new Random();
+            var buffer = new byte[Constants.Storage.PageSize*128];
+            random.NextBytes(buffer);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("foo");
+                tree.Add("a", new MemoryStream(buffer));
+
+                tx.Commit();
+            }
+            
+            Env.FlushLogToDataFile();
+            
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.CreateTree("foo");
+                Span<byte> span = tree.Read("a").Reader.AsSpan();
+                Assert.True(span.SequenceEqual(buffer));
+            }
+        }
 
         [Fact]
         public void CanUpdateVeryLargeValueAndThenDeleteIt()

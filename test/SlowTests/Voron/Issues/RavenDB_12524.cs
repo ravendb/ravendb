@@ -27,7 +27,7 @@ namespace SlowTests.Voron.Issues
 
             using (var tx = Env.WriteTransaction())
             {
-                tx.LowLevelTransaction.DataPager.EnsureContinuous(20, 10);
+                tx.LowLevelTransaction.DataPager.EnsureContinuous(ref tx.LowLevelTransaction.DataPagerState,20, 10);
 
                 var page = tx.LowLevelTransaction.AllocatePage(50);
 
@@ -81,7 +81,7 @@ namespace SlowTests.Voron.Issues
 
             using (var tx = Env.WriteTransaction())
             {
-                tx.LowLevelTransaction.DataPager.EnsureContinuous(20, 10);
+                tx.LowLevelTransaction.DataPager.EnsureContinuous(ref tx.LowLevelTransaction.DataPagerState,20, 10);
 
                 var page = tx.LowLevelTransaction.AllocatePage(50);
 
