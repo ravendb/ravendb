@@ -804,6 +804,8 @@ namespace Raven.Server.Rachis
 
             internal List<string> NodeTagsToDisconnect;
 
+            internal Func<CommandBase, long, long> ModifyTermBeforeRachisMergedCommandInsertToLeaderLog;  // gets: command and term, returns: new term
+
             public void OnLeaderElect()
             {
                 if (HoldOnLeaderElect == null)
@@ -1448,7 +1450,7 @@ namespace Raven.Server.Rachis
         }
 
         public unsafe long InsertToLeaderLog(ClusterOperationContext context, long term, BlittableJsonReaderObject cmd,
-            RachisEntryFlags flags, bool validateTerm = true)
+            RachisEntryFlags flags)
         {
             if (MaxSizeOfSingleRaftCommandInBytes.HasValue)
             {
@@ -1458,8 +1460,7 @@ namespace Raven.Server.Rachis
 
             Debug.Assert(context.Transaction != null);
 
-            if(validateTerm)
-                ValidateTerm(term);
+            ValidateTerm(term);
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
 
