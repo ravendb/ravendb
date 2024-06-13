@@ -55,8 +55,8 @@ namespace RachisTests
             var mre1 = new ManualResetEventSlim(false);
             var mre2 = new ManualResetEventSlim(false);
 
-            leader.ForTestingPurposesOnly().HoldOnLeaderElect = mre1;
-            follower.ForTestingPurposesOnly().HoldOnLeaderElect = mre2;
+            leader.ForTestingPurposesOnly().CreateHoldOnLeaderElect(mre1);
+            follower.ForTestingPurposesOnly().CreateHoldOnLeaderElect(mre2);
 
             await leader.WaitForState(RachisState.Candidate, cts.Token);
             await follower.WaitForState(RachisState.Candidate, cts.Token);
