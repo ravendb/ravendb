@@ -31,12 +31,14 @@ where TNotification : RaftIndexNotification
 
     public async Task WaitForIndexNotification(long index, CancellationToken token)
     {
-        var indexWaitTask = await Task.WhenAny(_raftIndexWaiter.WaitAsync(index, token));
-        if (indexWaitTask.IsCanceled)
+        try
+        {
+            await _raftIndexWaiter.WaitAsync(index, token);
+        }
+        catch (OperationCanceledException)
         {
             ThrowCanceledException(index, _raftIndexWaiter.LastIndex);
         }
-        await indexWaitTask;
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         await using (token.Register(() => tcs.TrySetResult()))
@@ -50,12 +52,14 @@ where TNotification : RaftIndexNotification
 
     public async Task WaitForIndexNotification(long index, TimeSpan timeout)
     {
-        var indexWaitTask = await Task.WhenAny(_raftIndexWaiter.WaitAsync(index, timeout));
-        if (indexWaitTask.IsCanceled)
+        try
+        {
+            await Task.WhenAny(_raftIndexWaiter.WaitAsync(index, timeout));
+        }
+        catch (TimeoutException)
         {
             ThrowTimeoutException(timeout, index, _raftIndexWaiter.LastIndex);
         }
-        await indexWaitTask;
 
         if (await WaitForTaskCompletion(index, new Lazy<Task>(TimeoutManager.WaitFor(timeout))))
             return;

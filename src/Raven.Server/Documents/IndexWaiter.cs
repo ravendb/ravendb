@@ -36,16 +36,17 @@ public class IndexWaiter : IDisposable
         while (true)
         {
             var waitAsync = _notifiedListeners.WaitAsync(token);
-            long lastIndex = LastIndex;
-            if (index <= lastIndex)
+            if (index <= LastIndex)
                 break;
 
-            var waitTask = await Task.WhenAny(waitAsync);
-            if (waitTask.IsCanceled)
-            {
+            if (token.IsCancellationRequested)
                 ThrowCanceledException(index);
-            }
-            await waitTask;
+
+            await Task.WhenAny(waitAsync);
+            if(waitAsync.IsCanceled)
+                ThrowCanceledException(index);
+
+            await waitAsync;
         }
     }
     
@@ -53,17 +54,18 @@ public class IndexWaiter : IDisposable
     {
         while (true)
         {
-            Task waitAsync = _notifiedListeners.WaitAsync(timeout);
-            long lastIndex = LastIndex;
-            if (index <= lastIndex)
+            var waitAsync = _notifiedListeners.WaitAsync(timeout);
+            if (index <= LastIndex)
                 break;
 
-            var waitTask = await Task.WhenAny(waitAsync);
-            if (waitTask.IsCanceled)
+            if (await waitAsync == false)
             {
-                ThrowTimeoutException(timeout, index);
+                var copy = LastIndex;
+                if (index <= copy)
+                    break;
+
+                ThrowTimeoutException(timeout, index, copy);
             }
-            await waitTask;
         }
     }
 
@@ -72,9 +74,9 @@ public class IndexWaiter : IDisposable
         throw new OperationCanceledException($"Cancelled while waiting for task with index {index} to complete. Last commit index is: {LastIndex}.");
     }
     
-    private void ThrowTimeoutException(TimeSpan value, long index)
+    private void ThrowTimeoutException(TimeSpan value, long index, long lastIndex)
     {
-        throw new TimeoutException($"Waited for {value} for task with index {index} to complete. Last commit index is: {LastIndex}");
+        throw new TimeoutException($"Waited for {value} for task with index {index} to complete. Last commit index is: {lastIndex}");
     }
 
     public void Dispose()
