@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
         public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults,
-            Reference<int> scannedDocuments, IQueryResultRetriever<QueriedDocument> retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+            Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             ExplanationOptions explanationOptions = null;
 
@@ -380,7 +380,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
 
-        public override IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever<QueriedDocument> retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public override IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var method = query.Metadata.Query.Where as MethodExpression;
 
@@ -778,7 +778,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public override IEnumerable<QueryResult> MoreLikeThis(
             IndexQueryServerSide query,
-            IQueryResultRetriever<QueriedDocument> retriever,
+            IQueryResultRetriever retriever,
             DocumentsOperationContext context,
             CancellationToken token)
         {

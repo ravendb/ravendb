@@ -16,7 +16,7 @@ public sealed class LuceneIndexQueryingScope : IndexQueryingScopeBase<string>
 
     private readonly IState _state;
 
-    public LuceneIndexQueryingScope(IndexType indexType, IndexQueryServerSide query, FieldsToFetch fieldsToFetch, IndexSearcher searcher, IQueryResultRetriever<QueriedDocument> retriever,
+    public LuceneIndexQueryingScope(IndexType indexType, IndexQueryServerSide query, FieldsToFetch fieldsToFetch, IndexSearcher searcher, IQueryResultRetriever retriever,
         IState state) : base(indexType, query, fieldsToFetch, retriever, 
         new HashSet<string>(StringComparer.OrdinalIgnoreCase))
     {
