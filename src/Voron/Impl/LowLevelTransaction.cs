@@ -1,16 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq; // Needed in DEBUG
+using System.Text; // Needed in DEBUG
 using Sparrow;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Sparrow.Server.Utils;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Fixed;
@@ -23,10 +27,7 @@ using Voron.Impl.Scratch;
 using Voron.Debugging;
 using Voron.Util;
 using Constants = Voron.Global.Constants;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
-using Sparrow.Server.Utils;
+
 
 namespace Voron.Impl
 {
@@ -171,7 +172,7 @@ namespace Voron.Impl
             // the new transaction will create its own mapping, using the existing page translation
             // table and install itself as the same transaction id as the current one. 
 
-            Debug.Assert(previous.Flags == TransactionFlags.Read);
+            Debug.Assert(previous.Flags is TransactionFlags.Read);
 
             IsCloned = true;
 
@@ -200,6 +201,8 @@ namespace Voron.Impl
 
                 _scratchPagerStates = previous._scratchPagerStates;
 
+                // RavenDB-21926: We can just use the previous one without cloning because the transaction when constructed here
+                // is guaranteed to be ReadOnly.
                 _state = previous._state;
 
                 InitializeRoots();
@@ -226,7 +229,7 @@ namespace Voron.Impl
             // so it makes a lot of assumptions about the usage scenario
             // and what it can do
 
-            Debug.Assert(previous.Flags == TransactionFlags.ReadWrite);
+            Debug.Assert(previous.Flags is TransactionFlags.ReadWrite);
 
             var env = previous._env;
             env.Options.AssertNoCatastrophicFailure();
@@ -339,19 +342,19 @@ namespace Voron.Impl
                 env.Options.AssertNoCatastrophicFailure();
 
             DataPager = env.Options.DataPager;
+            PersistentContext = transactionPersistentContext;
+            Flags = flags;
+
             _env = env;
             _journal = env.Journal;
             _id = id;
             _freeSpaceHandling = freeSpaceHandling;
+
             _allocator = context ?? new ByteStringContext(SharedMultipleUseFlag.None);
-
             _allocator.AllocationFailed += MarkTransactionAsFailed;
-
             _disposeAllocator = context == null;
-            _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
 
-            PersistentContext = transactionPersistentContext;
-            Flags = flags;
+            _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
 
             var scratchPagerStates = env.ScratchBufferPool.GetPagerStatesOfAllScratches();
 
@@ -366,41 +369,44 @@ namespace Voron.Impl
 
                 _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
 
-                if (flags != TransactionFlags.ReadWrite)
+                switch (flags)
                 {
-                    // for read transactions, we need to keep the pager state frozen
-                    // for write transactions, we can use the current one (which == null)
-                    _scratchPagerStates = scratchPagerStates;
+                    case TransactionFlags.Read:
+                        // for read transactions, we need to keep the pager state frozen
+                        _scratchPagerStates = scratchPagerStates;
+                        _state = env.State;
 
-                    _state = env.State;
+                        JournalSnapshots = _journal.GetSnapshots();
 
-                    InitializeRoots();
+                        break;
+                    case TransactionFlags.ReadWrite:
+                        // for write transactions, we can use the current one (which == null)
+                        EnsureNoDuplicateTransactionId(id);
+                        _state = env.State.Clone();
 
-                    JournalSnapshots = _journal.GetSnapshots();
+                        // we keep this copy to make sure that if we use async commit, we have a stable copy of the journals
+                        // as they were at the time we started the original transaction, this is required because async commit
+                        // may modify the list of files we have available
+                        JournalFiles = _journal.Files;
+                        foreach (var journalFile in JournalFiles)
+                        {
+                            journalFile.AddRef();
+                        }
 
-                    return;
+                        _env.WriteTransactionPool.Reset();
+
+                        _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesInUse;
+                        _dirtyPages = _env.WriteTransactionPool.DirtyPagesPool;
+                        _freedPages = new HashSet<long>();
+                        _unusedScratchPages = new List<PageFromScratchBuffer>();
+                        _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
+                        _pagesToFreeOnCommit = new Stack<long>();
+
+                        InitTransactionHeader();
+                        break;
                 }
 
-                EnsureNoDuplicateTransactionId(id);
-                // we keep this copy to make sure that if we use async commit, we have a stable copy of the jounrals
-                // as they were at the time we started the original transaction, this is required because async commit
-                // may modify the list of files we have available
-                JournalFiles = _journal.Files;
-                foreach (var journalFile in JournalFiles)
-                {
-                    journalFile.AddRef();
-                }
-                _env.WriteTransactionPool.Reset();
-                _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesInUse;
-                _dirtyPages = _env.WriteTransactionPool.DirtyPagesPool;
-                _freedPages = new HashSet<long>();
-                _unusedScratchPages = new List<PageFromScratchBuffer>();
-                _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
-                _pagesToFreeOnCommit = new Stack<long>();
-
-                _state = env.State.Clone();
                 InitializeRoots();
-                InitTransactionHeader();
             }
             catch
             {
@@ -1448,6 +1454,7 @@ namespace Voron.Impl
         }
 
 #if DEBUG
+
         //overflowPageId, Parent
         private readonly Dictionary<long, long> _overflowPagesToBeRemoved = new();
         [Conditional("DEBUG")]
