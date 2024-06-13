@@ -11,16 +11,16 @@ using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Queries.Results
 {
-    public interface IQueryResultRetriever<TDocument> where TDocument : Document, new()
+    public interface IQueryResultRetriever
     {
-        (TDocument Document, List<TDocument> List) Get(ref RetrieverInput retrieverInput, CancellationToken token);
+        (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token);
 
         bool TryGetKeyLucene(ref RetrieverInput retrieverInput, out string key);
 
         bool TryGetKeyCorax(TermsReader searcher, long id, out UnmanagedSpan key);
 
-        TDocument DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
-        void ClearCache();
+        Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
+
     }
 
     public struct RetrieverInput

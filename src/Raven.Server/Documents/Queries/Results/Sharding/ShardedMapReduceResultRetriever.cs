@@ -6,17 +6,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Timings;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Queries.Results.Sharding;
 
-public sealed class ShardedMapReduceResultRetriever : QueryResultRetrieverBase<Document>
+public sealed class ShardedMapReduceResultRetriever : QueryResultRetrieverBase
 {
     public ShardedMapReduceResultRetriever(ScriptRunnerCache scriptRunnerCache, IndexQueryServerSide query, QueryTimingsScope queryTimings, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand, char identitySeparator)
-        : base(scriptRunnerCache, query, queryTimings, searchEngineType, fieldsToFetch, documentsStorage, context, documentContext: context as DocumentsOperationContext, reduceResults: true, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand, identitySeparator)
+        : base(scriptRunnerCache, query, queryTimings, searchEngineType, fieldsToFetch, documentsStorage, context, reduceResults: true, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand, identitySeparator)
     {
     }
 
@@ -40,13 +39,7 @@ public sealed class ShardedMapReduceResultRetriever : QueryResultRetrieverBase<D
         throw new NotImplementedException();
     }
 
-    protected override Document GetOrPersistDocumentInCache(Document doc)
-    {
-        // sharded retriever doesn't use LRU cache
-        return doc;
-    }
-
-    protected override Document LoadDocument(Document parentDocument, string id, ref RetrieverInput retrieverInput)
+    protected override Document LoadDocument(string id)
     {
         throw new NotImplementedException();
     }

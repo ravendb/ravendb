@@ -14,7 +14,7 @@ public abstract class IndexQueryingScopeBase<TKey> : IDisposable
 
     protected readonly FieldsToFetch _fieldsToFetch;
     
-    protected readonly IQueryResultRetriever<QueriedDocument> _retriever;
+    protected readonly IQueryResultRetriever _retriever;
 
     protected readonly bool _isSortingQuery;
 
@@ -24,7 +24,7 @@ public abstract class IndexQueryingScopeBase<TKey> : IDisposable
 
     protected int _alreadyScannedForDuplicates;
     
-    public IndexQueryingScopeBase(IndexType indexType, IndexQueryServerSide query, FieldsToFetch fieldsToFetch, IQueryResultRetriever<QueriedDocument> retriever, HashSet<TKey> alreadySeenDocumentKeysInPreviousPage)
+    public IndexQueryingScopeBase(IndexType indexType, IndexQueryServerSide query, FieldsToFetch fieldsToFetch, IQueryResultRetriever retriever, HashSet<TKey> alreadySeenDocumentKeysInPreviousPage)
     {
         _indexType = indexType;
         _query = query;

@@ -216,7 +216,7 @@ namespace Raven.Server.Documents.Patch
             if (arg.IsString() == false)
                 throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
 
-            return TimeSeriesRetrieverBase.ParseDateTime(arg.AsString());
+            return TimeSeriesRetriever.ParseDateTime(arg.AsString());
         }
 
         private static string GetTypes(JsValue value) => $"JintType({value.Type}) .NETType({value.GetType().Name})";
@@ -1628,7 +1628,7 @@ namespace Raven.Server.Documents.Patch
 
                 var queryParams = ((Document)tsFunctionArgs[^1]).Data;
 
-                var retriever = new TimeSeriesRetriever<Document>(_docsCtx, queryParams, loadedDocuments: null, token: _token);
+                var retriever = new TimeSeriesRetriever(_docsCtx, queryParams, loadedDocuments: null, token: _token);
 
                 var streamableResults = retriever.InvokeTimeSeriesFunction(func, docId, tsFunctionArgs, out var type);
                 var result = retriever.MaterializeResults(streamableResults, type, addProjectionToResult: false, fromStudio: false);

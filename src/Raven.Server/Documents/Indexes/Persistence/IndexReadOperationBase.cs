@@ -45,18 +45,18 @@ namespace Raven.Server.Documents.Indexes.Persistence
         }
         
         public abstract IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
-            Reference<long> totalResults, Reference<long> skippedResults, Reference<long> scannedDocuments, IQueryResultRetriever<QueriedDocument> retriever, DocumentsOperationContext documentsContext,
+            Reference<long> totalResults, Reference<long> skippedResults, Reference<long> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext,
             Func<string, SpatialField> getSpatialField, CancellationToken token);
 
         public abstract IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<long> totalResults,
-            Reference<long> skippedResults, Reference<long> scannedDocuments, IQueryResultRetriever<QueriedDocument> retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField,
+            Reference<long> skippedResults, Reference<long> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField,
             CancellationToken token);
 
         public abstract SortedSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token);
 
         public abstract IEnumerable<QueryResult> MoreLikeThis(
             IndexQueryServerSide query,
-            IQueryResultRetriever<QueriedDocument> retriever,
+            IQueryResultRetriever retriever,
             DocumentsOperationContext context,
             CancellationToken token);
 
