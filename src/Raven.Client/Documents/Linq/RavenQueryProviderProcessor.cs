@@ -1756,14 +1756,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     }
 
                     else
-                    {
-                        DocumentQuery.OpenSubclause();
-                        DocumentQuery.WhereExists(expressionInfo.Path);
-                        DocumentQuery.AndAlso();
-                        DocumentQuery.NegateNext();
-                        DocumentQuery.Search(expressionInfo.Path, searchTerms, @operator);
-                        DocumentQuery.CloseSubclause();
-                    }
+                        WhereExistsAndNegatedSearch(expressionInfo, searchTerms, @operator);
                 }
                 else
                 {
@@ -1790,19 +1783,31 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (((SearchOptions)value).HasFlag(SearchOptions.Guess))
                 _chainedWhere = true;
-        }
+            
+            return;
 
-        private bool IsPreviousSearchOnSameField(Expression target, Expression currentSearch)
-        {
-            if (target is MethodCallExpression targetMce && currentSearch is MethodCallExpression currentSearchMce)
+            void WhereExistsAndNegatedSearch(ExpressionInfo expressionInfo, string searchTerms, SearchOperator @operator)
             {
-                var targetExpressionInfo = GetMember(targetMce.Arguments[1]);
-                var currentSearchExpressionInfo = GetMember(currentSearchMce.Arguments[1]);
-                
-                return targetExpressionInfo.Path == currentSearchExpressionInfo.Path;
+                DocumentQuery.OpenSubclause();
+                DocumentQuery.WhereExists(expressionInfo.Path);
+                DocumentQuery.AndAlso();
+                DocumentQuery.NegateNext();
+                DocumentQuery.Search(expressionInfo.Path, searchTerms, @operator);
+                DocumentQuery.CloseSubclause();
             }
             
-            return false;
+            bool IsPreviousSearchOnSameField(Expression searchTargetExpression, Expression currentSearchExpression)
+            {
+                if (searchTargetExpression is MethodCallExpression targetMce && currentSearchExpression is MethodCallExpression currentSearchMce)
+                {
+                    var targetExpressionInfo = GetMember(targetMce.Arguments[1]);
+                    var currentSearchExpressionInfo = GetMember(currentSearchMce.Arguments[1]);
+                
+                    return targetExpressionInfo.Path == currentSearchExpressionInfo.Path;
+                }
+            
+                return false;
+            }
         }
 
         private void VisitListMethodCall(MethodCallExpression expression)
