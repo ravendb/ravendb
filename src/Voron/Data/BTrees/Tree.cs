@@ -1602,6 +1602,9 @@ namespace Voron.Data.BTrees
         public void Rename(Slice newName)
         {
             Name = newName;
+
+            // This is a special case, since we are renaming the tree we need the transaction to consider it as changed
+            // even though we are not going to be modifying the state per se. 
             State.Modify();
         }
 
