@@ -43,6 +43,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             MapReduceWorkContext.ReducePhaseTree = GetReducePhaseTree(indexContext.Transaction.InnerTransaction);
             MapReduceWorkContext.ResultsStoreTypes = MapReduceWorkContext.ReducePhaseTree.FixedTreeFor(ResultsStoreTypesTreeName, sizeof(byte));
 
+            ref var state = ref MapReduceWorkContext.MapPhaseTree.State.Modify();
+            state.Flags |= TreeFlags.FixedSizeTrees;
+
             MapReduceWorkContext.DocumentMapEntries = new FixedSizeTree(
                    indexContext.Transaction.InnerTransaction.LowLevelTransaction,
                    MapReduceWorkContext.MapPhaseTree,
