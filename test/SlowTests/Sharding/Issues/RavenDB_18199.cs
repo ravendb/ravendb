@@ -98,22 +98,24 @@ namespace SlowTests.Sharding.Issues
 
                     string commandResult = command.Result;
 
-                    RavenTestHelper.AssertEqualRespectingNewLines(@"using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+                    RavenTestHelper.AssertEqualRespectingNewLines("""
+                                                                  using System;
+                                                                  using System.Collections.Generic;
+                                                                  using System.Linq;
+                                                                  using System.Text;
+                                                                  using System.Threading.Tasks;
 
-namespace SlowTests.Core.Utils.Entities
-{
-	public class User
-	{
-		public object AddressId { get; set; } 
-		public int Count { get; set; } 
-		public object LastName { get; set; } 
-		public object Name { get; set; } 
-	}
-}", commandResult);
+                                                                  namespace SlowTests.Core.Utils.Entities
+                                                                  {
+                                                                      public class User
+                                                                      {
+                                                                          public object AddressId { get; set; } 
+                                                                          public int Count { get; set; } 
+                                                                          public object LastName { get; set; } 
+                                                                          public object Name { get; set; } 
+                                                                      }
+                                                                  }
+                                                                  """, commandResult);
                 }
             }
         }
