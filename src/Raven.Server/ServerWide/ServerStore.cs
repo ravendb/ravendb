@@ -1185,6 +1185,9 @@ namespace Raven.Server.ServerWide
                 case nameof(PutServerWideBackupConfigurationCommand):
                     RescheduleTimerIfDatabaseIdle(databaseName, state);
                     break;
+                case nameof(UpdateResponsibleNodeForTasksCommand):
+                    RescheduleTimerIfDatabaseIdleOnUpdatedResponsibleNode(databaseName, state);
+                    break;
             }
 
             return Task.CompletedTask;
@@ -1299,6 +1302,23 @@ namespace Raven.Server.ServerWide
             if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Rescheduling the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' which belongs to node '{Engine.Tag}', new timer is set to: '{nextIdleDatabaseActivity.DateTime}', with dueTime: {nextIdleDatabaseActivity.DueTime} ms.");
 
+        }
+
+        private void RescheduleTimerIfDatabaseIdleOnUpdatedResponsibleNode(string db, object state)
+        {
+            if (IdleDatabases.ContainsKey(db) == false)
+                return;
+
+            var nextIdleDatabaseActivity = BackupUtils.GetEarliestIdleDatabaseActivity(new BackupUtils.EarliestIdleDatabaseActivityParameters()
+            {
+                DatabaseName = db,
+                NotificationCenter = NotificationCenter,
+                Logger = Logger,
+                ServerStore = Server.ServerStore,
+                IsIdle = true
+            });
+
+            DatabasesLandlord.RescheduleNextIdleDatabaseActivity(db, nextIdleDatabaseActivity);
         }
 
         private void ConfirmCertificateReplacedValueChanged(long index, string type)

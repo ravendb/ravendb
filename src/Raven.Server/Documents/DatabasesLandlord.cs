@@ -249,6 +249,7 @@ namespace Raven.Server.Documents
             {
                 case nameof(PutServerWideBackupConfigurationCommand):
                 case nameof(UpdatePeriodicBackupStatusCommand):
+                case nameof(UpdateResponsibleNodeForTasksCommand):
                     return true;
 
                 default:
@@ -1133,7 +1134,8 @@ namespace Raven.Server.Documents
                                 DatabaseName = databaseName,
                                 LastEtag = nextIdleDatabaseActivity.LastEtag,
                                 Logger = _logger,
-                                ServerStore = _serverStore
+                                ServerStore = _serverStore,
+                                IsIdle = true
                             });
 
                             RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);

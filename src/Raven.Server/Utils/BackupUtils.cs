@@ -230,8 +230,9 @@ internal static class BackupUtils
     public static NextBackup GetNextBackupDetails(NextBackupDetailsParameters parameters)
     {
         var nowUtc = DateTime.UtcNow;
-        var lastFullBackupUtc = parameters.BackupStatus.LastFullBackupInternal ?? parameters.DatabaseWakeUpTimeUtc ?? parameters.Configuration.CreatedAt ?? nowUtc;
-        var lastIncrementalBackupUtc = parameters.BackupStatus.LastIncrementalBackupInternal ?? parameters.BackupStatus.LastFullBackupInternal ?? parameters.DatabaseWakeUpTimeUtc ?? nowUtc;
+        var lastFullBackupUtc = parameters.BackupStatus?.LastFullBackupInternal ?? parameters.DatabaseWakeUpTimeUtc ?? parameters.Configuration.CreatedAt ?? nowUtc;
+        var lastIncrementalBackupUtc = parameters.BackupStatus?.LastIncrementalBackupInternal ?? parameters.BackupStatus?.LastFullBackupInternal ?? parameters.DatabaseWakeUpTimeUtc ?? nowUtc;
+
         var nextFullBackup = GetNextBackupOccurrence(new NextBackupOccurrenceParameters
         {
             BackupFrequency = parameters.Configuration.FullBackupFrequency,
@@ -256,12 +257,12 @@ internal static class BackupUtils
         Debug.Assert(parameters.Configuration.TaskId != 0);
 
         var isFullBackup = IsFullBackup(parameters.BackupStatus, parameters.Configuration, nextFullBackup, nextIncrementalBackup, parameters.ResponsibleNodeTag);
-        var nextBackupTimeLocal = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup, parameters.BackupStatus.DelayUntil);
+        var nextBackupTimeLocal = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup, parameters.BackupStatus?.DelayUntil);
         var nextBackupTimeUtc = nextBackupTimeLocal.ToUniversalTime();
         var timeSpan = nextBackupTimeUtc - nowUtc;
 
         TimeSpan nextBackupTimeSpan;
-        if (timeSpan.Ticks <= 0)
+        if (timeSpan.Ticks <= 0 && parameters.BackupStatus != null)
         {
             // overdue backup of current node or first backup
             if (parameters.BackupStatus.NodeTag == parameters.NodeTag || parameters.BackupStatus.NodeTag == null)
@@ -286,7 +287,7 @@ internal static class BackupUtils
         {
             TimeSpan = nextBackupTimeSpan,
             DateTime = nextBackupTimeUtc,
-            OriginalBackupTime = parameters.BackupStatus.OriginalBackupTime,
+            OriginalBackupTime = parameters.BackupStatus?.OriginalBackupTime,
             IsFull = isFullBackup,
             TaskId = parameters.Configuration.TaskId
         };
@@ -335,7 +336,7 @@ internal static class BackupUtils
         PeriodicBackupConfiguration configuration,
         DateTime? nextFullBackup, DateTime? nextIncrementalBackup, string responsibleNodeTag)
     {
-        if (backupStatus.LastFullBackup == null ||
+        if (backupStatus?.LastFullBackup == null ||
             backupStatus.NodeTag != responsibleNodeTag ||
             backupStatus.BackupType != configuration.BackupType ||
             backupStatus.LastEtag == null)
@@ -423,12 +424,15 @@ internal static class BackupUtils
             return null;
 
         var backupStatus = GetBackupStatusFromCluster(parameters.ServerStore, parameters.Context, parameters.DatabaseName, parameters.Configuration.TaskId);
-        if (backupStatus == null)
+
+        if (backupStatus == null && parameters.IsIdle == false)
         {
-            // we want to wait for the backup occurrence
+            // we might reach here from periodic backup runner that check whether due time is far enough in the future to justify unloading the db
+            // if we never backed up the db then we want to do it now. returning the time now will prevent the unloading
+            
             if (parameters.Logger.IsOperationsEnabled)
                 parameters.Logger.Operations($"Backup Task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}' is never backed up yet.");
-
+            
             return new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, DateTime.UtcNow);
         }
 
@@ -438,8 +442,8 @@ internal static class BackupUtils
             // cluster is down
             if (parameters.Logger.IsOperationsEnabled)
                 parameters.Logger.Operations($"Could not find the responsible node for backup task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}'.");
-
-            return new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, DateTime.UtcNow);
+            
+            return null;
         }
 
         if (responsibleNodeTag != parameters.ServerStore.NodeTag)
@@ -467,6 +471,15 @@ internal static class BackupUtils
             if (parameters.Logger.IsOperationsEnabled)
                 parameters.Logger.Operations($"Backup Task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}' doesn't have next backup. Should not happen and likely a bug.");
             return null;
+        }
+
+        if (backupStatus == null)
+        {
+            // we want to wait for the backup occurrence
+            if (parameters.Logger.IsOperationsEnabled)
+                parameters.Logger.Operations($"Backup Task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}' is never backed up yet.");
+            
+            return new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, nextBackup.DateTime);
         }
 
         var nowUtc = DateTime.UtcNow;
@@ -609,6 +622,8 @@ internal static class BackupUtils
     {
         public string DatabaseName { get; set; }
 
+        public bool IsIdle { get; set; }
+
         public DateTime? DatabaseWakeUpTimeUtc { get; set; }
 
         public long LastEtag { get; set; }
@@ -642,6 +657,7 @@ internal static class BackupUtils
             OnParsingError = parameters.OnParsingError;
             OnMissingNextBackupInfo = parameters.OnMissingNextBackupInfo;
             ServerStore = parameters.ServerStore;
+            IsIdle = parameters.IsIdle;
         }
     }
 }
