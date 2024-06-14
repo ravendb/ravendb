@@ -22,41 +22,7 @@ using BlittableJsonTextWriterExtensions = Raven.Server.Json.BlittableJsonTextWri
 
 namespace Raven.Server.Documents.Queries.Results.TimeSeries
 {
-    public abstract class TimeSeriesRetrieverBase
-    {
-        public sealed class TimeSeriesStreamingRetrieverResult
-        {
-            public IEnumerable<DynamicJsonValue> Stream;
-            public DynamicJsonValue Metadata;
-        }
-        
-        public static DateTime ParseDateTime(string valueAsStr)
-        {
-            if (DateTime.TryParseExact(valueAsStr, SupportedDateTimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
-                throw new ArgumentException($"Unable to parse timeseries from/to values. Got: {valueAsStr}{Environment.NewLine}" +
-                                            $"The supported time formats are:{Environment.NewLine}" +
-                                            $"{string.Join(Environment.NewLine, SupportedDateTimeFormats.OrderBy(f => f.Length))}");
-
-            date = TimeSeriesStorage.EnsureMillisecondsPrecision(date);
-            return DateTime.SpecifyKind(date, DateTimeKind.Utc);
-        }
-
-        private static readonly string[] SupportedDateTimeFormats =
-        {
-            "yyyy-MM-ddTHH:mm:ss.fffffffZ",
-            "yyyy-MM-ddTHH:mm:ss.fffffff",
-            "yyyy-MM-ddTHH:mm:ss",
-            "yyyy-MM-dd",
-            "yyyy",
-            "yyyy-MM",
-            "yyyy-MM-ddTHH:mm",
-            "yyyy-MM-ddTHH:mm:ss.fffZ",
-            "yyyy-MM-ddTHH:mm:ss.fff"
-        };
-    }
-
-    public class TimeSeriesRetriever<TDocument> : TimeSeriesRetrieverBase
-        where TDocument : Document, new()
+    public sealed class TimeSeriesRetriever
     {
         private readonly Dictionary<ValueExpression, object> _valuesDictionary;
 
@@ -66,7 +32,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
         private readonly DocumentsOperationContext _context;
 
-        private LruDictionary<string, TDocument> _loadedDocuments;
+        private LruDictionary<string, Document> _loadedDocuments;
         private readonly CancellationToken _token;
 
         private Dictionary<LazyStringValue, object> _bucketByTag;
@@ -95,7 +61,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             [AggregationType.Average] = null
         };
 
-        public TimeSeriesRetriever(DocumentsOperationContext context, BlittableJsonReaderObject queryParameters, LruDictionary<string, TDocument> loadedDocuments,
+        public TimeSeriesRetriever(DocumentsOperationContext context, BlittableJsonReaderObject queryParameters, LruDictionary<string, Document> loadedDocuments,
             CancellationToken token)
         {
             _context = context;
@@ -117,7 +83,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
         public IEnumerable<DynamicJsonValue> InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args, out ResultType resultType)
         {
             var timeSeriesFunction = declaredFunction.TimeSeries;
-
+            
             _source = GetSourceAndId();
 
             resultType = ResultType.None;
@@ -126,7 +92,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             _stats = GetStatsAndRemoveQuotesIfNeeded(documentId);
             if (_stats.Count == 0)
                 return Enumerable.Empty<DynamicJsonValue>();
-
+            
             var (from, to) = GetFromAndTo(declaredFunction, documentId, args, timeSeriesFunction);
             var offset = GetOffset(timeSeriesFunction.Offset, declaredFunction.Name);
 
@@ -341,8 +307,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                     }
                     catch (Exception e)
                     {
-                        throw new InvalidQueryException(
-                            $"Time series function '{declaredFunction.Name}' failed to execute expression '{be}', got : left '{left}', right '{right}'", e);
+                        throw new InvalidQueryException($"Time series function '{declaredFunction.Name}' failed to execute expression '{be}', got : left '{left}', right '{right}'", e);
                     }
                 }
 
@@ -623,8 +588,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                     }
                     catch (Exception e)
                     {
-                        throw new InvalidQueryException(
-                            $"Time series function '{declaredFunction.Name}' failed to execute InExpression '{inExpression}' on : source '{src}', value '{val}'", e);
+                        throw new InvalidQueryException($"Time series function '{declaredFunction.Name}' failed to execute InExpression '{inExpression}' on : source '{src}', value '{val}'", e);
                     }
                 }
 
@@ -741,9 +705,8 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                 }
 
                 // shouldn't happen - query parser should have caught this
-                throw new InvalidQueryException(
-                    $"Failed to invoke time series function '{declaredFunction.Name}'. Unable to get the value of expression '{expression}'. " +
-                    $"Unsupported expression type : '{expression.Type}'");
+                throw new InvalidQueryException($"Failed to invoke time series function '{declaredFunction.Name}'. Unable to get the value of expression '{expression}'. " +
+                                                    $"Unsupported expression type : '{expression.Type}'");
             }
 
             string GetSourceAndId()
@@ -766,7 +729,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                 if (compound.Count == 1)
                 {
                     var paramIndex = GetParameterIndex(declaredFunction, compound[0]);
-                    if (paramIndex == -1 || paramIndex == declaredFunction.Parameters.Count)
+                    if (paramIndex == -1 || paramIndex == declaredFunction.Parameters.Count) 
                         return field.FieldValue; //not found
 
                     if (!(args[paramIndex] is string || args[paramIndex] is LazyStringValue))
@@ -777,11 +740,11 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
                 if (args == null)
                     throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{timeSeriesFunction.Source}'. " +
-                                                    $"'{compound[0]}' is unknown, and no arguments were provided to time series function '{declaredFunction.Name}'.");
+                                                        $"'{compound[0]}' is unknown, and no arguments were provided to time series function '{declaredFunction.Name}'.");
 
                 if (args.Length < declaredFunction.Parameters.Count)
                     throw new InvalidQueryException($"Incorrect number of arguments passed to time series function '{declaredFunction.Name}'." +
-                                                    $"Expected '{declaredFunction.Parameters.Count}' arguments, but got '{args.Length}'");
+                                                        $"Expected '{declaredFunction.Parameters.Count}' arguments, but got '{args.Length}'");
 
                 var index = GetParameterIndex(declaredFunction, compound[0]);
                 if (index == 0)
@@ -793,11 +756,11 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                 {
                     if (index == -1 || index == declaredFunction.Parameters.Count) // not found
                         throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{timeSeriesFunction.Source}'. " +
-                                                        $"'{compound[0]}' is unknown, and no matching argument was provided to time series function '{declaredFunction.Name}'.");
+                                                            $"'{compound[0]}' is unknown, and no matching argument was provided to time series function '{declaredFunction.Name}'.");
 
                     if (!(args[index] is Document document))
                         throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{timeSeriesFunction.Source}'. " +
-                                                        $"Expected argument '{compound[0]}' to be a Document instance, but got '{args[index].GetType()}'");
+                                                            $"Expected argument '{compound[0]}' to be a Document instance, but got '{args[index].GetType()}'");
 
                     documentId = document.Id;
                 }
@@ -812,7 +775,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
             if (groupByTimePeriod != null)
                 return RangeGroup.ParseRangeFromString(groupByTimePeriod, from);
-
+            
             var rangeSpec = new RangeGroup();
             rangeSpec.InitializeFullRange(from, to);
             return rangeSpec;
@@ -827,7 +790,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
         {
             var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, _source);
             Debug.Assert(stats == default || stats.Start.Kind == DateTimeKind.Utc);
-            if (stats.Count > 0 || _quoted == false)
+            if (stats.Count > 0 || _quoted == false) 
                 return stats;
 
             // quoted expression with no stats, 2 possible issues :
@@ -846,7 +809,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
         private static InterpolationType GetInterpolationType(MethodExpression groupByWith)
         {
             InterpolationType interpolationType = default;
-            if (groupByWith == null)
+            if (groupByWith == null) 
                 return interpolationType;
 
             if (string.Equals(groupByWith.Name.Value, nameof(TimeSeriesAggregationOptions.Interpolation), StringComparison.OrdinalIgnoreCase) == false)
@@ -936,18 +899,30 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                 results.Add(value);
                 count += GetCount(type, value);
             }
-
-            var result = new DynamicJsonValue { [nameof(TimeSeriesQueryResult.Count)] = count, [nameof(TimeSeriesAggregationResult.Results)] = results };
+            var result = new DynamicJsonValue
+            {
+                [nameof(TimeSeriesQueryResult.Count)] = count,
+                [nameof(TimeSeriesAggregationResult.Results)] = results
+            };
 
             if (addProjectionToResult)
             {
-                result[Constants.Documents.Metadata.Key] = new DynamicJsonValue { [Constants.Documents.Metadata.Projection] = true };
+                result[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Projection] = true
+                };
             }
 
             if (fromStudio)
                 AddNames(result);
 
             return _context.ReadObject(result, "timeseries/value");
+        }
+
+        public sealed class TimeSeriesStreamingRetrieverResult
+        {
+            public IEnumerable<DynamicJsonValue> Stream;
+            public DynamicJsonValue Metadata;
         }
 
         public TimeSeriesStreamingRetrieverResult PrepareForStreaming(IEnumerable<DynamicJsonValue> array, bool addProjectionToResult, bool fromStudio)
@@ -1022,7 +997,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             else if (timeSeriesFunction.First != null)
             {
                 from = DateTime.MinValue;
-
+                
                 var timeFromFirst = GetTimePeriodFromValueExpression(timeSeriesFunction.First, nameof(TimeSeriesFunction.First), declaredFunction.Name, documentId);
                 to = _stats.Start.Add(timeFromFirst);
             }
@@ -1069,11 +1044,11 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
         private string GetCollection(string documentId)
         {
-            _loadedDocuments ??= new LruDictionary<string, TDocument>(QueryResultRetrieverCommon.LoadedDocumentsCacheSize);
+            _loadedDocuments ??= new LruDictionary<string, Document>(QueryResultRetrieverBase.LoadedDocumentsCacheSize);
 
             if (_loadedDocuments.TryGetValue(documentId, out var doc) == false)
             {
-                _loadedDocuments[documentId] = doc = _context.DocumentDatabase.DocumentsStorage.Get<TDocument>(_context, documentId);
+                _loadedDocuments[documentId] = doc = _context.DocumentDatabase.DocumentsStorage.Get(_context, documentId);
             }
 
             return CollectionName.GetCollectionName(doc?.Data);
@@ -1082,18 +1057,17 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
         private static object GetValueFromArgument(DeclaredFunction declaredFunction, object[] args, FieldExpression fe)
         {
             if (args == null || declaredFunction.Parameters == null)
-                throw new InvalidQueryException(
-                    $"Unable to get the value of '{fe}'. '{fe.Compound[0]}' is unknown, and no arguments were provided to time series function '{declaredFunction.Name}'.");
+                throw new InvalidQueryException($"Unable to get the value of '{fe}'. '{fe.Compound[0]}' is unknown, and no arguments were provided to time series function '{declaredFunction.Name}'.");
 
             if (args.Length < declaredFunction.Parameters.Count)
                 throw new InvalidQueryException($"Incorrect number of arguments passed to time series function '{declaredFunction.Name}'. " +
-                                                $"Expected '{declaredFunction.Parameters.Count}', but got '{args.Length}.'");
+                                                    $"Expected '{declaredFunction.Parameters.Count}', but got '{args.Length}.'");
 
             var index = GetParameterIndex(declaredFunction, fe.Compound[0]);
 
             if (index == declaredFunction.Parameters.Count) // not found
                 throw new InvalidQueryException($"Unable to get the value of '{fe}'. '{fe.Compound[0]}' is unknown, " +
-                                                $"and no matching argument was provided to time series function '{declaredFunction.Name}'.");
+                                                    $"and no matching argument was provided to time series function '{declaredFunction.Name}'.");
 
             if (args[index] == null)
                 return null;
@@ -1144,11 +1118,10 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                     var id = currentPart == 1
                         ? document.Id
                         : data.TryGetId(out var nestedId)
-                            ? nestedId
-                            : null;
+                            ? nestedId : null;
 
                     throw new InvalidQueryException($"Unable to get the value of '{fe.FieldValueWithoutAlias}' from document '{document.Id}'. " +
-                                                    $"Document '{id}' does not have a property named '{fe.Compound[currentPart]}'.");
+                                                        $"Document '{id}' does not have a property named '{fe.Compound[currentPart]}'.");
                 }
 
                 if (!(val is BlittableJsonReaderObject nested))
@@ -1163,14 +1136,14 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
         private object GetValueFromLoadedTag(FieldExpression fe, SingleResult singleResult)
         {
-            _loadedDocuments ??= new LruDictionary<string, TDocument>(QueryResultRetrieverBase<TDocument>.LoadedDocumentsCacheSize);
+            _loadedDocuments ??= new LruDictionary<string, Document>(QueryResultRetrieverBase.LoadedDocumentsCacheSize);
 
             var tag = singleResult.Tag?.ToString();
             if (tag == null)
                 return null;
 
             if (_loadedDocuments.TryGetValue(tag, out var document) == false)
-                _loadedDocuments[tag] = document = _context.DocumentDatabase.DocumentsStorage.Get<TDocument>(_context, tag);
+                _loadedDocuments[tag] = document = _context.DocumentDatabase.DocumentsStorage.Get(_context, tag);
 
             if (fe.Compound.Count == 1)
                 return document;
@@ -1198,7 +1171,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
             foreach (var select in timeSeriesFunction.Select)
             {
-                if (!(select.QueryExpression is MethodExpression me))
+                if (!(select.QueryExpression is MethodExpression me)) 
                     throw new ArgumentException("Unknown method in timeseries query: " + select.QueryExpression);
 
                 var name = select.StringSegment?.ToString();
@@ -1226,7 +1199,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
                             _individualValuesOnly = true;
                             break;
-                        case AggregationType.Slope when timeSeriesFunction.GroupBy.TimePeriod == null &&
+                        case AggregationType.Slope when timeSeriesFunction.GroupBy.TimePeriod == null && 
                                                         timeSeriesFunction.GroupBy.HasGroupByTag == false:
                             throw new InvalidOperationException(
                                 $"Cannot use aggregation method '{nameof(AggregationType.Slope)}' without having a '{nameof(ITimeSeriesQueryable.GroupBy)}' clause ");
@@ -1286,5 +1259,29 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
             throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + qe);
         }
+
+        public static DateTime ParseDateTime(string valueAsStr)
+        {
+            if (DateTime.TryParseExact(valueAsStr, SupportedDateTimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
+                throw new ArgumentException($"Unable to parse timeseries from/to values. Got: {valueAsStr}{Environment.NewLine}" +
+                                            $"The supported time formats are:{Environment.NewLine}" +
+                                            $"{string.Join(Environment.NewLine, SupportedDateTimeFormats.OrderBy(f => f.Length))}");
+
+            date = TimeSeriesStorage.EnsureMillisecondsPrecision(date);
+            return DateTime.SpecifyKind(date, DateTimeKind.Utc);
+        }
+
+        private static readonly string[] SupportedDateTimeFormats =
+        {
+            "yyyy-MM-ddTHH:mm:ss.fffffffZ",
+            "yyyy-MM-ddTHH:mm:ss.fffffff",
+            "yyyy-MM-ddTHH:mm:ss",
+            "yyyy-MM-dd",
+            "yyyy",
+            "yyyy-MM",
+            "yyyy-MM-ddTHH:mm",
+            "yyyy-MM-ddTHH:mm:ss.fffZ",
+            "yyyy-MM-ddTHH:mm:ss.fff"
+        };
     }
 }

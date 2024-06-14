@@ -33,6 +33,7 @@ using Voron.Util;
 using Constants = Voron.Global.Constants;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Sparrow.Server.LowMemory;
 
 namespace Voron.Impl.Journal
@@ -1942,24 +1943,22 @@ namespace Voron.Impl.Journal
 
             var reportedCompressionLength = performCompression ? compressedLen : -1;
 
-            // Debug.Assert(txHeaderPtr != null);
-
-            var txHeader = tx.GetTransactionHeader();
-            txHeader->CompressedSize = reportedCompressionLength;
-            txHeader->UncompressedSize = totalSizeWritten;
-            txHeader->PageCount = numberOfPages;
+            ref var txHeader = ref tx.TransactionHeader;
+            txHeader.CompressedSize = reportedCompressionLength;
+            txHeader.UncompressedSize = totalSizeWritten;
+            txHeader.PageCount = numberOfPages;
             if (_env.Options.Encryption.IsEnabled == false)
             {
                 if (performCompression)
-                    txHeader->Hash = Hashing.XXHash64.Calculate(txHeaderPtr + sizeof(TransactionHeader), (ulong)compressedLen, (ulong)txHeader->TransactionId);
+                    txHeader.Hash = Hashing.XXHash64.Calculate(txHeaderPtr + sizeof(TransactionHeader), (ulong)compressedLen, (ulong)txHeader.TransactionId);
                 else
-                    txHeader->Hash = Hashing.XXHash64.Calculate(txPageInfoPtr, (ulong)totalSizeWritten, (ulong)txHeader->TransactionId);
+                    txHeader.Hash = Hashing.XXHash64.Calculate(txPageInfoPtr, (ulong)totalSizeWritten, (ulong)txHeader.TransactionId);
             }
             else
             {
                 // if encryption is enabled, we are already validating the tx using
                 // the AEAD method, so no need to do it twice
-                txHeader->Hash = 0;
+                txHeader.Hash = 0;
             }
 
             var prepareToWriteToJournal = new CompressedPagesResult
@@ -1969,7 +1968,7 @@ namespace Voron.Impl.Journal
                 NumberOfUncompressedPages = pagesCountIncludingAllOverflowPages,
             };
             // Copy the transaction header to the output buffer. 
-            Memory.Copy(txHeaderPtr, (byte*)txHeader, sizeof(TransactionHeader));
+            Unsafe.Copy(txHeaderPtr, ref txHeader);
             Debug.Assert(((long)txHeaderPtr % (4 * Constants.Size.Kilobyte)) == 0, "Memory must be 4kb aligned");
 
             if (_env.Options.Encryption.IsEnabled)

@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using Raven.Client;
 using Sparrow;
 using Sparrow.Json;
@@ -34,9 +32,11 @@ namespace Raven.Server.Documents
         public DocumentFlags Flags;
         public NonPersistentDocumentFlags NonPersistentFlags;
         public short TransactionMarker;
+        public bool IgnoreDispose;
+
         private bool _metadataEnsured;
         private bool _disposed;
-        
+
         public unsafe ulong DataHash
         {
             get
@@ -124,25 +124,15 @@ namespace Raven.Server.Documents
             var newData = Data.Clone(context);
             return CloneWith(context, newData);
         }
-        
-        public virtual TDocument Clone<TDocument>(JsonOperationContext context)
-            where TDocument : Document, new()
-        {
-            var newData = Data.Clone(context);
-            return CloneWith<TDocument>(context, newData);
-        }
 
-        public Document CloneWith(JsonOperationContext context, BlittableJsonReaderObject newData) => CloneWith<Document>(context, newData);
-        
-        public virtual TDocument CloneWith<TDocument>(JsonOperationContext context, BlittableJsonReaderObject newData)
-            where TDocument : Document, new()
+        public Document CloneWith(JsonOperationContext context, BlittableJsonReaderObject newData)
         {
             var newId = context.GetLazyString(Id);
             var newLowerId = context.GetLazyString(LowerId);
-            return new TDocument()
+            return new Document
             {
                 Etag = Etag,
-                StorageId = Voron.Global.Constants.Compression.NonReturnableStorageId,
+                StorageId = StorageId,
                 IndexScore = IndexScore,
                 Distance = Distance,
                 ChangeVector = ChangeVector,
@@ -153,13 +143,12 @@ namespace Raven.Server.Documents
                 Id = newId,
                 LowerId = newLowerId,
                 Data = newData,
-                TimeSeriesStream = TimeSeriesStream,
             };
         }
 
-        public virtual void Dispose()
+        public void Dispose()
         {
-            if (_disposed)
+            if (_disposed || IgnoreDispose)
                 return;
 
             Id?.Dispose();
@@ -177,12 +166,6 @@ namespace Raven.Server.Documents
         public override string ToString()
         {
             return $"id:{Id}, cv:{ChangeVector}";
-        }
-        
-        [Conditional("DEBUG")]
-        internal void AssertNotDisposed()
-        {
-            Debug.Assert(_disposed == false, $"{nameof(Document)}.{nameof(AssertNotDisposed)}()");
         }
     }
 

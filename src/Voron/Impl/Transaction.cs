@@ -102,7 +102,7 @@ namespace Voron.Impl
                 if (header->RootObjectType != type)
                     ThrowInvalidTreeType(treeName, type, header);
 
-                tree = Tree.Open(_lowLevelTransaction, this, treeName, header, type, isIndexTree, newPageAllocator);
+                tree = Tree.Open(_lowLevelTransaction, this, treeName, *header, isIndexTree, newPageAllocator);
 
                 _trees.Add(treeName, tree);
 
@@ -471,7 +471,6 @@ namespace Voron.Impl
                 fromTree.State.CopyTo((TreeRootHeader*)ptr);
 
             fromTree.Rename(toName);
-            fromTree.State.IsModified = true;
 
             // _trees already ensured created in ReadTree
             _trees.Remove(fromName);
@@ -498,12 +497,12 @@ namespace Voron.Impl
                                                     "' and cannot create trees in read transactions");
 
             tree = Tree.Create(_lowLevelTransaction, this, name, flags, type, isIndexTree, newPageAllocator);
-            tree.State.RootObjectType = type;
+            ref var state = ref tree.State.Modify();
+            state.RootObjectType = type;
 
             using (_lowLevelTransaction.RootObjects.DirectAdd(name, sizeof(TreeRootHeader), out byte* ptr))
                 tree.State.CopyTo((TreeRootHeader*)ptr);
 
-            tree.State.IsModified = true;
             AddTree(name, tree);
 
             return tree;
@@ -687,9 +686,6 @@ namespace Voron.Impl
             if (_cachedDecompressedBuffersByStorageId == null)
                 return;
 
-            if (storageId == Constants.Compression.NonReturnableStorageId)
-                return;
-         
             if (_cachedDecompressedBuffersByStorageId.Remove(storageId, out var t))
             {
                 Allocator.Release(ref t);

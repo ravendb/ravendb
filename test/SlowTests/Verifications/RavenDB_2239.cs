@@ -4,8 +4,6 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Config;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,6 +24,14 @@ namespace SlowTests.Verifications
 
         }
 
+        private class DocumentName
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public int Num { get; set; }
+
+        }
+
         private class Document_Index : AbstractIndexCreationTask<Document>
         {
             public Document_Index()
@@ -38,7 +44,19 @@ namespace SlowTests.Verifications
                               };
             }
         }
-
+        private class TestDocument_Index : AbstractIndexCreationTask<Document>
+        {
+            public TestDocument_Index()
+            {
+                Map = docs => from doc in docs
+                              select new
+                              {
+                                  doc.Id,
+                                  doc.Name,
+                                  doc.Num,
+                              };
+            }
+        }
         private void TestSetupData(IDocumentStore store)
         {
             new Document_Index().Execute(store);
@@ -144,19 +162,10 @@ select get(d)
             }
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Querying, RavenArchitecture.AllX64)]
-        public void FullLogTransformerDelayWithPulseOnX64() => FullLogTransformerDelayBase(new Options() { ModifyDatabaseRecord = record =>
-        {
-            record.Settings[RavenConfiguration.GetKey(x => x.Databases.PulseReadTransactionLimit)] = "0";
-        } });
-
         [Fact]
-        public void FullLogTransformerDelay() => FullLogTransformerDelayBase(Options.Default);
-
-        
-        private void FullLogTransformerDelayBase(Options options)
+        public void FullLogTransformerDelay()
         {
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore())
             {
                 var withTransformer = new Stopwatch();
                 var withoutTransformer = new Stopwatch();

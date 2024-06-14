@@ -316,6 +316,13 @@ public sealed partial class CompactTree : IPrepareForCommit
             if (llt.Flags != TransactionFlags.ReadWrite)
                 return null;
 
+            if ((parent.State.Header.Flags & TreeFlags.CompactTrees) != TreeFlags.CompactTrees)
+            {
+                // We will modify the parent tree state because there are Compact Trees in it.
+                ref var parentState = ref parent.State.Modify();
+                parentState.Flags |= TreeFlags.CompactTrees;
+            }
+
             long dictionaryId;
 
             // This will be created a single time and stored in the root page.

@@ -416,11 +416,10 @@ namespace Voron.Impl.Backup
                 env.Options.DataPager.Sync(0);
 
 
-                var root = Tree.Open(txw, null, Constants.RootTreeNameSlice, &lastTxHeader->Root);
+                var root = Tree.Open(txw, null, Constants.RootTreeNameSlice, lastTxHeader->Root);
 
                 txw.UpdateRootsIfNeeded(root);
-
-                txw.State.NextPageNumber = lastTxHeader->LastPageNumber + 1;
+                txw.State.UpdateNextPage(lastTxHeader->LastPageNumber + 1);
 
                 txw.Commit();
 
