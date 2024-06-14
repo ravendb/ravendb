@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.6</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.4</RuntimeFrameworkVersion>
     <AssemblyName>Indexing.Benchmark</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>Indexing.Benchmark</PackageId>
