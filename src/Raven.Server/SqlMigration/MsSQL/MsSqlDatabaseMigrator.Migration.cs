@@ -4,7 +4,7 @@ namespace Raven.Server.SqlMigration.MsSQL
 {
     internal partial class MsSqlDatabaseMigrator : GenericDatabaseMigrator
     {
-        protected override string FactoryName => "System.Data.SqlClient";
+        protected override string FactoryName => "Microsoft.Data.SqlClient";
         
         public MsSqlDatabaseMigrator(string connectionString) : base(connectionString)
         {
