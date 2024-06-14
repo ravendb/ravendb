@@ -21,6 +21,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             count += GetNumberOfSinkPullReplications(database);
             count += GetNumberOfSqlEtls(database);
             count += GetNumberOfSubscriptions(context, database);
+            count += GetNumberOfQueueSinks(database);
 
             return count;
         }
