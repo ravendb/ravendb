@@ -159,7 +159,7 @@ namespace Raven.Server.Documents
                         _addToInitLog(msg);
                         if (_logger.IsOperationsEnabled)
                             _logger.Operations(msg);
-                }
+                    }
                 }
 
                 Smuggler = new DatabaseSmugglerFactory(this);
@@ -186,7 +186,7 @@ namespace Raven.Server.Documents
                     configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
                 Operations = new DatabaseOperations(this);
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
-                
+
                 RachisLogIndexNotifications = new DatabaseRaftIndexNotifications(_serverStore.Engine.StateMachine._rachisLogIndexNotifications, DatabaseShutdown);
                 CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, environmentPath, e, stacktrace) =>
                 {
@@ -206,6 +206,7 @@ namespace Raven.Server.Documents
         }
 
         public readonly bool DisableOngoingTasks;
+
         protected virtual DocumentsStorage CreateDocumentsStorage(Action<string> addToInitLog)
         {
             return new DocumentsStorage(this, addToInitLog);
@@ -913,7 +914,7 @@ namespace Raven.Server.Documents
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
 
             var lockTaken = _databaseStateChange.Locker.Wait(TimeSpan.FromSeconds(5));
-            
+
             ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Acquired the update database record lock. Taken: {lockTaken}");
 
             if (lockTaken == false && _logger.IsOperationsEnabled)
@@ -1507,9 +1508,9 @@ namespace Raven.Server.Documents
         {
             if (MasterKey == null)
                 return fileStream;
-           
+
             var encryptingStream = new EncryptingXChaCha20Poly1305Stream(fileStream, MasterKey);
-            
+
             encryptingStream.Initialize();
 
             return encryptingStream;
@@ -1665,7 +1666,7 @@ namespace Raven.Server.Documents
                 case nameof(UpdateResponsibleNodeForTasksCommand):
                 case nameof(DelayBackupCommand):
                     // both commands cannot be skipped and must be executed
-                return false;
+                    return false;
             }
 
             if (LastValueChangeIndex > index)

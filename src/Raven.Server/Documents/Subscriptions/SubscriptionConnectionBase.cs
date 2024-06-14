@@ -569,7 +569,7 @@ namespace Raven.Server.Documents.Subscriptions
                     { RegisterConnectionDurationInTicks = registerConnectionDurationInTicks };
                 }
 
-                if (subscription.Disabled)
+                if (subscription.Disabled || _subscriptions.DisableSubscriptionTasks)
                     throw new SubscriptionClosedException($"The subscription with id '{id}' and name '{name}' is disabled and cannot be used until enabled");
 
                 return subscription;

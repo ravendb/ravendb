@@ -16,7 +16,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
-using static Raven.Server.Documents.Subscriptions.SubscriptionStorage;
 
 namespace Raven.Server.Documents.Subscriptions;
 
@@ -30,6 +29,8 @@ public abstract class AbstractSubscriptionStorage
     protected abstract string GetNodeFromState(SubscriptionState taskStatus);
     protected abstract DatabaseTopology GetTopology(ClusterOperationContext context);
     public abstract bool DropSingleSubscriptionConnection(long subscriptionId, string workerId, SubscriptionException ex);
+
+    public abstract bool DisableSubscriptionTasks { get; }
 
     protected AbstractSubscriptionStorage(ServerStore serverStore, int maxNumberOfConcurrentConnections)
     {
@@ -260,7 +261,7 @@ public abstract class AbstractSubscriptionStorage<TState> : AbstractSubscription
                     continue;
 
                 SubscriptionState subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionStateRaw);
-                if (subscriptionState.Disabled)
+                if (subscriptionState.Disabled || DisableSubscriptionTasks)
                 {
                     DropSubscriptionConnections(id, new SubscriptionClosedException($"The subscription {subscriptionName} is disabled and cannot be used until enabled"));
                     continue;
