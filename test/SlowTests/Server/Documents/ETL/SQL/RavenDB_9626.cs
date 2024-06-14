@@ -36,7 +36,7 @@ namespace SlowTests.Server.Documents.ETL.SQL
                 }
             };
 
-            config.Initialize(new SqlConnectionString { ConnectionString = @"Data Source=localhost\sqlexpress", FactoryName = "System.Data.SqlClient"});
+            config.Initialize(new SqlConnectionString { ConnectionString = @"Data Source=localhost\sqlexpress", FactoryName = "Microsoft.Data.SqlClient"});
 
             List<string> errors;
             config.Validate(out errors);
@@ -72,7 +72,7 @@ namespace SlowTests.Server.Documents.ETL.SQL
                 }
             };
 
-            config.Initialize(new SqlConnectionString { ConnectionString = @"Data Source=localhost\sqlexpress", FactoryName = "System.Data.SqlClient"});
+            config.Initialize(new SqlConnectionString { ConnectionString = @"Data Source=localhost\sqlexpress", FactoryName = "Microsoft.Data.SqlClient"});
 
             List<string> errors;
             config.Validate(out errors);

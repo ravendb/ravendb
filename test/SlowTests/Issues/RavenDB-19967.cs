@@ -331,7 +331,7 @@ namespace SlowTests.Issues
                         blockerType = ITombstoneAware.TombstoneDeletionBlockerType.RavenEtl;
                         break;
                     case EtlType.Sql:
-                        var sqlConnectionString = new SqlConnectionString { Name = store.Identifier, FactoryName = "System.Data.SqlClient", ConnectionString = "Server=127.0.0.1;Port=2345;Database=myDataBase;User Id=foo;Password=bar;" };
+                        var sqlConnectionString = new SqlConnectionString { Name = store.Identifier, FactoryName = "Microsoft.Data.SqlClient", ConnectionString = "Server=127.0.0.1;Port=2345;Database=myDataBase;User Id=foo;Password=bar;" };
                         var sqlConfiguration = new SqlEtlConfiguration { Name = _customTaskName, ConnectionStringName = sqlConnectionString.Name, Transforms = { transforms }, SqlTables = { new SqlEtlTable { TableName = "Orders", DocumentIdColumn = "Id" } } };
                         taskId = await AddEtlAndDisableIt(store, sqlConnectionString, sqlConfiguration, OngoingTaskType.SqlEtl);
                         blockerType = ITombstoneAware.TombstoneDeletionBlockerType.SqlEtl;

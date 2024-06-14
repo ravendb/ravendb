@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Data.Common;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using System.Diagnostics;
 using System.Threading;
 using Npgsql;
@@ -191,7 +191,7 @@ loadToTestGuidEtls(item);"
                 case MigrationProvider.Oracle:
                     return @"Oracle.ManagedDataAccess.Client";
                 case MigrationProvider.MsSQL:
-                    return @"System.Data.SqlClient";
+                    return @"Microsoft.Data.SqlClient";
 #pragma warning disable CS0618 // Type or member is obsolete
                 case MigrationProvider.MySQL_MySql_Data:
 #pragma warning restore CS0618 // Type or member is obsolete
