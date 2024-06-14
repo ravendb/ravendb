@@ -18,7 +18,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             ServerStore = serverStore;
         }
 
-        protected IEnumerable<RawDatabaseRecord> GetDatabases(TransactionOperationContext context)
+        protected virtual IEnumerable<RawDatabaseRecord> GetDatabases(TransactionOperationContext context)
         {
             foreach (var item in ServerStore.Cluster.ItemsStartingWith(context, Constants.Documents.Prefix, 0, int.MaxValue))
                 yield return new RawDatabaseRecord(context, item.Value);
