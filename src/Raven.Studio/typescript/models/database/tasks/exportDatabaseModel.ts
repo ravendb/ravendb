@@ -13,7 +13,6 @@ class exportDatabaseModel {
     includeCounters = ko.observable(true);
     includeAttachments = ko.observable(true);
     includeTimeSeries = ko.observable(true);
-    includeTimeSeriesDeletedRanges = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
     includeSubscriptions = ko.observable(true);
     
@@ -73,7 +72,7 @@ class exportDatabaseModel {
                 this.includeDocuments(true);
             }
         });
-        
+
         this.includeRevisionDocuments.subscribe(revisions => {
             if (revisions) {
                 this.includeDocuments(true);
@@ -164,9 +163,6 @@ class exportDatabaseModel {
         if (this.includeTimeSeries()) {
             operateOnTypes.push("TimeSeries");
         }
-        if (this.includeTimeSeriesDeletedRanges()) {
-            operateOnTypes.push("TimeSeriesDeletedRanges");
-        }
         if (this.includeSubscriptions()) {
             operateOnTypes.push("Subscriptions");
         }
@@ -204,7 +200,6 @@ class exportDatabaseModel {
                 || this.includeCounters() 
                 || this.includeRevisionDocuments()
                 || this.includeTimeSeries()
-                || this.includeTimeSeriesDeletedRanges()
                 || this.includeDocuments()
                 || this.includeArtificialDocuments();
         });

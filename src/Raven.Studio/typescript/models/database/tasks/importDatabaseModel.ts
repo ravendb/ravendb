@@ -15,7 +15,6 @@ class importDatabaseModel {
     includeLegacyAttachments = ko.observable(false);
     includeAttachments = ko.observable(true);
     includeTimeSeries = ko.observable(true);
-    includeTimeSeriesDeletedRanges = ko.observable(true);
     includeSubscriptions = ko.observable(true);
     includeDocumentsTombstones = ko.observable(true);
     includeCompareExchangeTombstones = ko.observable(true);
@@ -164,9 +163,6 @@ class importDatabaseModel {
         if (this.includeTimeSeries()) {
             operateOnTypes.push("TimeSeries");
         }
-        if (this.includeTimeSeriesDeletedRanges()) {
-            operateOnTypes.push("TimeSeriesDeletedRanges");
-        }
         if (this.includeSubscriptions()) {
             operateOnTypes.push("Subscriptions");
         }
@@ -203,7 +199,6 @@ class importDatabaseModel {
                 || this.includeCounters() 
                 || this.includeLegacyCounters()
                 || this.includeTimeSeries()
-                || this.includeTimeSeriesDeletedRanges()
                 || this.includeRevisionDocuments() 
                 || this.includeDocuments()
                 || this.includeAttachments()

@@ -29,6 +29,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
@@ -201,11 +202,6 @@ namespace Raven.Server.Smuggler.Documents
         public ITimeSeriesActions TimeSeries()
         {
             return new StreamTimeSeriesActions(_writer, _context, nameof(DatabaseItemType.TimeSeries));
-        }
-
-        public ITimeSeriesActions TimeSeriesDeletedRanges()
-        {
-            return new StreamTimeSeriesActions(_writer, _context, nameof(DatabaseItemType.TimeSeriesDeletedRanges));
         }
 
         public IIndexActions Indexes()
@@ -1137,46 +1133,6 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         Writer.WriteMemoryChunk(item.Segment.Ptr, item.Segment.NumberOfBytes);
                     }
-
-                    await Writer.MaybeFlushAsync();
-                }
-            }
-
-            public async ValueTask WriteTimeSeriesDeletedRangeAsync(TimeSeriesDeletedRangeItemForSmuggler deletedRangeItem)
-            {
-                using (deletedRangeItem)
-                {
-                    if (First == false)
-                        Writer.WriteComma();
-
-                    First = false;
-
-                    Writer.WriteStartObject();
-
-                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItemForSmuggler.DocId));
-                    Writer.WriteString(deletedRangeItem.DocId, skipEscaping: true);
-                    Writer.WriteComma();
-
-                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItemForSmuggler.Name));
-                    Writer.WriteString(deletedRangeItem.Name, skipEscaping: true);
-                    Writer.WriteComma();
-
-                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItemForSmuggler.Collection));
-                    Writer.WriteString(deletedRangeItem.Collection);
-                    Writer.WriteComma();
-
-                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItemForSmuggler.ChangeVector));
-                    Writer.WriteString(deletedRangeItem.ChangeVector);
-                    Writer.WriteComma();
-
-                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItemForSmuggler.From));
-                    Writer.WriteDateTime(deletedRangeItem.From, isUtc: true);
-                    Writer.WriteComma();
-
-                    Writer.WritePropertyName(nameof(TimeSeriesDeletedRangeItemForSmuggler.To));
-                    Writer.WriteDateTime(deletedRangeItem.To, isUtc: true);
-
-                    Writer.WriteEndObject();
 
                     await Writer.MaybeFlushAsync();
                 }

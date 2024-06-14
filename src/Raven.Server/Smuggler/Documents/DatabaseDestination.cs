@@ -169,11 +169,6 @@ namespace Raven.Server.Smuggler.Documents
             return new TimeSeriesActions(_database);
         }
 
-        public ITimeSeriesActions TimeSeriesDeletedRanges()
-        {
-            return new TimeSeriesActions(_database);
-        }
-
         public IIndexActions Indexes()
         {
             return new DatabaseIndexActions(_database);
@@ -2350,7 +2345,7 @@ namespace Raven.Server.Smuggler.Documents
             private TimeSeriesHandler.SmugglerTimeSeriesBatchCommand _cmd;
             private TimeSeriesHandler.SmugglerTimeSeriesBatchCommand _prevCommand;
             private Task _prevCommandTask = Task.CompletedTask;
-            private Size _batchSize;
+            private Size _segmentsSize;
             private readonly Size _maxBatchSize;
 
             public TimeSeriesActions(DocumentDatabase database)
@@ -2364,7 +2359,7 @@ namespace Raven.Server.Smuggler.Documents
                         : 16,
                     SizeUnit.Megabytes);
 
-                _batchSize = new Size();
+                _segmentsSize = new Size();
             }
 
             private void AddToBatch(TimeSeriesItem item)
@@ -2375,22 +2370,9 @@ namespace Raven.Server.Smuggler.Documents
                     // be accounted for that if we look at segment size alone. So we assume that any new item means
                     // updating the whole segment. This is especially important for encrypted databases, where we need
                     // to keep all the modified data in memory in one shot
-                    _batchSize.Add(2, SizeUnit.Kilobytes);
+                    _segmentsSize.Add(2, SizeUnit.Kilobytes);
                 }
-                _batchSize.Add(item.Segment.NumberOfBytes, SizeUnit.Bytes);
-            }
-
-            private void AddToBatch(TimeSeriesDeletedRangeItemForSmuggler item)
-            {
-                _cmd.AddToDeletedRanges(item);
-
-                var size = item.Name.Size + 
-                           item.DocId.Size + 
-                           item.Collection.Size + 
-                           item.ChangeVector.Size 
-                           + 3 * sizeof(long); // From, To, Etag
-
-                _batchSize.Add(size, SizeUnit.Bytes);
+                _segmentsSize.Add(item.Segment.NumberOfBytes, SizeUnit.Bytes);
             }
 
             public async ValueTask DisposeAsync()
@@ -2401,12 +2383,6 @@ namespace Raven.Server.Smuggler.Documents
             public async ValueTask WriteTimeSeriesAsync(TimeSeriesItem ts)
             {
                 AddToBatch(ts);
-                await HandleBatchOfTimeSeriesIfNecessaryAsync();
-            }
-
-            public async ValueTask WriteTimeSeriesDeletedRangeAsync(TimeSeriesDeletedRangeItemForSmuggler deletedRange)
-            {
-                AddToBatch(deletedRange);
                 await HandleBatchOfTimeSeriesIfNecessaryAsync();
             }
 
@@ -2422,7 +2398,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private async ValueTask HandleBatchOfTimeSeriesIfNecessaryAsync()
             {
-                if (_batchSize < _maxBatchSize)
+                if (_segmentsSize < _maxBatchSize)
                     return;
 
                 var prevCommand = _prevCommand;
@@ -2443,7 +2419,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 _cmd = new TimeSeriesHandler.SmugglerTimeSeriesBatchCommand(_database);
 
-                _batchSize.Set(0, SizeUnit.Bytes);
+                _segmentsSize.Set(0, SizeUnit.Bytes);
             }
 
             private async ValueTask FinishBatchOfTimeSeriesAsync()
@@ -2458,7 +2434,7 @@ namespace Raven.Server.Smuggler.Documents
                     _prevCommand = null;
                 }
 
-                if (_batchSize.GetValue(SizeUnit.Bytes) > 0)
+                if (_segmentsSize.GetValue(SizeUnit.Bytes) > 0)
                 {
                     await _database.TxMerger.Enqueue(_cmd);
                 }

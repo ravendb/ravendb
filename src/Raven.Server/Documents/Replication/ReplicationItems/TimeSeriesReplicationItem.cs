@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using Nest;
 using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Documents.TimeSeries;

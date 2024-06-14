@@ -444,11 +444,6 @@ namespace Raven.Server.Smuggler.Documents
             return SmugglerSourceType.Import;
         }
 
-        public IAsyncEnumerable<TimeSeriesDeletedRangeItemForSmuggler> GetTimeSeriesDeletedRangesAsync(ITimeSeriesActions action, List<string> collectionsToExport)
-        {
-            return AsyncEnumerable.Empty<TimeSeriesDeletedRangeItemForSmuggler>();
-        }
-
         public void Dispose()
         {
         }
