@@ -16,7 +16,6 @@ namespace Raven.Server.Utils.Enumerators
         private readonly TState _state;
 
         private IEnumerator<T> _innerEnumerator;
-        public Action OnPulse;
 
         public PulsedTransactionEnumerator(DocumentsOperationContext context, Func<TState, IEnumerable<T>> getEnumerable, TState state)
         {
@@ -39,7 +38,7 @@ namespace Raven.Server.Utils.Enumerators
             if (_state.ShouldPulseTransaction())
             {
                 Debug.Assert(_context.Transaction.InnerTransaction.IsWriteTransaction == false, $"{nameof(PulsedTransactionEnumerator<T, TState>)} is meant to be used with read transactions only");
-                OnPulse?.Invoke();
+
                 _context.CloneReadTransaction();
 
                 _innerEnumerator = _getEnumerator != null ? _getEnumerator(_state) : _getEnumerable(_state).GetEnumerator();

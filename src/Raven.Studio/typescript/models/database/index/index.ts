@@ -114,7 +114,7 @@ class index {
         this.state(dto.State);
         this.globalIndexingStatus = globalIndexingStatus;
         this.status(dto.Status); 
-        this.referencedCollections(dto.ReferencedCollections);
+        this.referencedCollections(dto.ReferencedCollections ?? []);
         this.initializeObservables();
     }
 

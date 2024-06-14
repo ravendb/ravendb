@@ -18,7 +18,7 @@ public class CoraxIndexQueryingScope : IndexQueryingScopeBase<UnmanagedSpan>
     private readonly IndexSearcher _searcher;
     private readonly IndexFieldsMapping _fieldsMapping;
 
-    public CoraxIndexQueryingScope(IndexType indexType, IndexQueryServerSide query, FieldsToFetch fieldsToFetch, IQueryResultRetriever<QueriedDocument> retriever, IndexSearcher searcher,
+    public CoraxIndexQueryingScope(IndexType indexType, IndexQueryServerSide query, FieldsToFetch fieldsToFetch, IQueryResultRetriever retriever, IndexSearcher searcher,
         IndexFieldsMapping fieldsMapping)
         : base(indexType, query, fieldsToFetch, retriever, new(UnmanagedSpanComparer.Instance))
     {

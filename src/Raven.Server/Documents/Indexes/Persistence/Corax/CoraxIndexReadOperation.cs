@@ -292,7 +292,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             private IndexQueryServerSide _query;
             private IndexSearcher _searcher;
             private IndexFieldsMapping _fieldsMapping;
-            private IQueryResultRetriever<QueriedDocument> _retriever;
+            private IQueryResultRetriever _retriever;
 
             private bool _isMap;
 
@@ -300,7 +300,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             private HashSet<ulong> _alreadySeenProjections;
             public int QueryStart;
 
-            public void Initialize(Index index, IndexQueryServerSide query, IndexSearcher searcher, IndexFieldsMapping fieldsMapping, FieldsToFetch fieldsToFetch, IQueryResultRetriever<QueriedDocument> retriever)
+            public void Initialize(Index index, IndexQueryServerSide query, IndexSearcher searcher, IndexFieldsMapping fieldsMapping, FieldsToFetch fieldsToFetch, IQueryResultRetriever retriever)
             {
                 _index = index;
                 _query = query;
@@ -465,7 +465,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private IEnumerable<QueryResult> QueryInternal<THighlighting, TQueryFilter, THasProjection, TDistinct>(
                     IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
                     Reference<int> totalResults, Reference<int> skippedResults, Reference<int> scannedDocuments,
-                    IQueryResultRetriever<QueriedDocument> retriever, DocumentsOperationContext documentsContext,
+                    IQueryResultRetriever retriever, DocumentsOperationContext documentsContext,
                     Func<string, SpatialField> getSpatialField,
                     CancellationToken token)
                 where TDistinct : struct, IHasDistinct
@@ -687,7 +687,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
             Reference<int> totalResults, Reference<int> skippedResults,
-            Reference<int> scannedDocuments, IQueryResultRetriever<QueriedDocument> retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField,
+            Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField,
             CancellationToken token)
         {
             if (query.Metadata.HasHighlightings)
@@ -1024,7 +1024,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         }
 
         public override IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults,
-            Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever<QueriedDocument> retriever,
+            Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever retriever,
             DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             throw new NotImplementedException($"{nameof(Corax)} does not support intersect queries.");
@@ -1058,7 +1058,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             return results;
         }
 
-        public override IEnumerable<QueryResult> MoreLikeThis(IndexQueryServerSide query, IQueryResultRetriever<QueriedDocument> retriever, DocumentsOperationContext context,
+        public override IEnumerable<QueryResult> MoreLikeThis(IndexQueryServerSide query, IQueryResultRetriever retriever, DocumentsOperationContext context,
             CancellationToken token)
         {
             IDisposable releaseServerContext = null;

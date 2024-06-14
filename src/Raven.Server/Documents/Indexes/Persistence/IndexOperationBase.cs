@@ -140,7 +140,7 @@ public abstract class IndexOperationBase : IDisposable
     }
     
     protected QueryFilter GetQueryFilter(Index index, IndexQueryServerSide query, DocumentsOperationContext documentsContext, Reference<int> skippedResults,
-        Reference<int> scannedDocuments, IQueryResultRetriever<QueriedDocument> retriever, QueryTimingsScope queryTimings)
+        Reference<int> scannedDocuments, IQueryResultRetriever retriever, QueryTimingsScope queryTimings)
 
     {
         if (query.Metadata.FilterScript is null)
