@@ -66,6 +66,8 @@ public abstract class ActiveOngoingTasksBase : DatabaseBase<Integer32>
 
     protected static int GetNumberOfActiveSqlEtls(RachisState rachisState, string nodeTag, RawDatabaseRecord database) => CountTasks(rachisState, nodeTag, database.Topology, database.SqlEtls.Where(x => x.Disabled == false));
 
+    protected static int GetNumberOfActiveQueueSinks(RachisState rachisState, string nodeTag, RawDatabaseRecord database) => CountTasks(rachisState, nodeTag, database.Topology, database.QueueSinks.Where(x => x.Disabled == false));
+    
     protected static int GetNumberOfActiveSubscriptions(TransactionOperationContext context, RachisState rachisState, string nodeTag, RawDatabaseRecord database)
     {
         var count = 0;
