@@ -150,6 +150,8 @@ namespace Raven.Server.Documents.Subscriptions
             return true;
         }
 
+        public override bool DisableSubscriptionTasks => _db.DisableOngoingTasks;
+
         public override ArchivedDataProcessingBehavior GetDefaultArchivedDataProcessingBehavior()
         {
             return _db.Configuration.Subscriptions.ArchivedDataProcessingBehavior;

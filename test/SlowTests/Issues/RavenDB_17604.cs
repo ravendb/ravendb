@@ -162,7 +162,7 @@ public class RavenDB_17604 : ReplicationTestBase
             Server.ServerStore.DatabasesLandlord.UnloadDirectly(store1.Database);
             File.Create(Path.Combine(path, "disable.tasks.marker"));
 
-            await GetDatabase(store1.Database);
+            database = await GetDatabase(store1.Database);
 
             using (var session = store1.OpenAsyncSession())
             {
