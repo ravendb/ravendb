@@ -1160,23 +1160,42 @@ namespace Raven.Server.Documents
                             break;
 
                         case IdleDatabaseActivityType.WakeUpDatabase:
-                            _ = TryGetOrCreateResourceStore(databaseName, nextIdleDatabaseActivity.DateTime).ContinueWith(t =>
+                            var startDatabaseForBackup = _serverStore.ConcurrentBackupsCounter.TryStartDatabaseForBackup();
+                            if (startDatabaseForBackup == null)
                             {
-                                var ex = t.Exception.ExtractSingleInnerException();
-                                if (ex is DatabaseConcurrentLoadTimeoutException e)
+                                // reached max concurrent backups, retry after 1 min
+
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we reached max concurrent backups, will retry the wakeup in '{_dueTimeOnRetry}' ms");
+
+                                RescheduleDatabaseWakeup();
+                            }
+                            else
+                            {
+                                _ = TryGetOrCreateResourceStore(databaseName, nextIdleDatabaseActivity.DateTime).ContinueWith(t =>
                                 {
-                                    // database failed to load, retry after 1 min
+                                    startDatabaseForBackup.Dispose();
 
-                                    if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Failed to start database '{databaseName}' on timer, will retry the wakeup in '{_dueTimeOnRetry}' ms", e);
+                                    var ex = t.Exception.ExtractSingleInnerException();
+                                    if (ex is DatabaseConcurrentLoadTimeoutException e)
+                                    {
+                                        // database failed to load, retry after 1 min
 
-                                    nextIdleDatabaseActivity.DateTime = DateTime.UtcNow.AddMilliseconds(_dueTimeOnRetry);
-                                    ForTestingPurposes?.RescheduleDatabaseWakeupMre?.Set();
+                                        if (_logger.IsInfoEnabled)
+                                            _logger.Info($"Failed to start database '{databaseName}' for running a backup, will retry the wakeup in '{_dueTimeOnRetry}' ms", e);
 
-                                    RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
-                                }
-                            }, TaskContinuationOptions.OnlyOnFaulted);
+                                        RescheduleDatabaseWakeup();
+                                    }
+                                });
+                            }
                             break;
+
+                            void RescheduleDatabaseWakeup()
+                            {
+                                ForTestingPurposes?.RescheduleDatabaseWakeupMre?.Set();
+                                nextIdleDatabaseActivity.DateTime = DateTime.UtcNow.AddMilliseconds(_dueTimeOnRetry);
+                                RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
+                            }
                     }
                 }
             }
