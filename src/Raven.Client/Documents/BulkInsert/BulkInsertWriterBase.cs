@@ -24,7 +24,7 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
     private JsonOperationContext.MemoryBuffer _backgroundMemoryBuffer;
     private bool _isInitialWrite = true;
 
-    internal Stream _requestBodyStream;
+    private Stream _requestBodyStream;
 
     internal readonly BulkInsertOperation.BulkInsertStreamExposerContent StreamExposer;
 
