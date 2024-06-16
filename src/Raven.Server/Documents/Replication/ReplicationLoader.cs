@@ -2025,9 +2025,9 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public int GetSizeOfMajority()
+        public int GetMinNumberOfReplicas()
         {
-            return (_numberOfSiblings + 1) / 2 + 1;
+            return (_numberOfSiblings + 1) / 2; // not "(_numberOfSiblings + 1) / 2 + 1" because 1 node already have got the data and only need to replicate
         }
 
         public async Task<int> WaitForReplicationAsync(int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, string lastChangeVector)
