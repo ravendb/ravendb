@@ -400,7 +400,7 @@ namespace Raven.Server.Documents.Handlers
 
             if (numberOfReplicasStr == "majority")
             {
-                numberOfReplicasToWaitFor = database.ReplicationLoader.GetSizeOfMajority();
+                numberOfReplicasToWaitFor = database.ReplicationLoader.GetMinNumberOfReplicas();
             }
             else
             {
