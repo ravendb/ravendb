@@ -258,17 +258,14 @@ namespace Raven.Client.Documents.BulkInsert
 
                 if (_first == false)
                 {
-
                     WriteComma();
                 }
 
                 _first = false;
                 _inProgressCommand = CommandType.None;
                 _writer.Write("{\"Type\":\"HeartBeat\"}");
-
                 
                 await FlushIfNeeded(force: true).ConfigureAwait(false);
-                await _writer._requestBodyStream.FlushAsync(_token).ConfigureAwait(false);
             }
             catch (Exception)
             {
