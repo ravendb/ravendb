@@ -1,5 +1,7 @@
 using System;
+using System.Threading;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Sparrow.Logging;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
@@ -15,6 +17,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private int _maxConcurrentBackups;
         private readonly TimeSpan _concurrentBackupsDelay;
         private readonly bool _skipModifications;
+        private SemaphoreSlim _concurrentDatabaseWakeup;
 
         public int MaxNumberOfConcurrentBackups
         {
@@ -56,6 +59,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             _concurrentBackups = numberOfCoresToUse;
             _maxConcurrentBackups = numberOfCoresToUse;
+            _concurrentDatabaseWakeup = new SemaphoreSlim(numberOfCoresToUse);
             _concurrentBackupsDelay = backupConfiguration.ConcurrentBackupsDelay.AsTimeSpan;
             _skipModifications = skipModifications;
         }
@@ -131,6 +135,18 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
+        public IDisposable TryStartDatabaseForBackup()
+        {
+            var sm = _concurrentDatabaseWakeup;
+            if (sm.Wait(TimeSpan.Zero) == false)
+                return null;
+
+            return new DisposableAction(() =>
+            {
+                sm.Release();
+            });
+        }
+
         public void ModifyMaxConcurrentBackups()
         {
             if (_skipModifications)
@@ -143,6 +159,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 var diff = newMaxConcurrentBackups - _maxConcurrentBackups;
                 _maxConcurrentBackups = newMaxConcurrentBackups;
+                _concurrentDatabaseWakeup = new SemaphoreSlim(newMaxConcurrentBackups);
                 _concurrentBackups += diff;
             }
         }
