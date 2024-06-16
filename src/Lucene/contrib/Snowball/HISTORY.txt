@@ -1,0 +1,10 @@
+Snowball.Net History
+--------------------
+
+
+08Jan07:
+	- Release:  Snowball.Net.2.0 "final" build 001
+
+
+14Dec05:
+	- Release:  Snowball.Net.1.4.3 "final" build 001

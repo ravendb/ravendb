@@ -1,0 +1,230 @@
+﻿/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+//using System;
+//using System.Collections.Generic;
+//using System.IO;
+//using System.Linq;
+//using Lucene.Net.Analysis.Compound.Hyphenation;
+
+//namespace Lucene.Net.Analysis.Compound
+//{
+//    /*
+// * A {@link TokenFilter} that decomposes compound words found in many Germanic languages.
+// * <p>
+// * "Donaudampfschiff" becomes Donau, dampf, schiff so that you can find
+// * "Donaudampfschiff" even when you only enter "schiff". It uses a hyphenation
+// * grammar and a word dictionary to achieve this.
+// * </p>
+// */
+//public class HyphenationCompoundWordTokenFilter : CompoundWordTokenFilterBase 
+//{
+//  private HyphenationTree hyphenator;
+
+//  /*
+//   * 
+//   * @param input the {@link TokenStream} to process
+//   * @param hyphenator the hyphenation pattern tree to use for hyphenation
+//   * @param dictionary the word dictionary to match against
+//   * @param minWordSize only words longer than this get processed
+//   * @param minSubwordSize only subwords longer than this get to the output
+//   *        stream
+//   * @param maxSubwordSize only subwords shorter than this get to the output
+//   *        stream
+//   * @param onlyLongestMatch Add only the longest matching subword to the stream
+//   */
+//  public HyphenationCompoundWordTokenFilter(TokenStream input, HyphenationTree hyphenator, String[] dictionary, int minWordSize, int minSubwordSize, int maxSubwordSize, bool onlyLongestMatch) 
+//      : this(input, hyphenator, MakeDictionary(dictionary), minWordSize, minSubwordSize, maxSubwordSize, onlyLongestMatch)
+//  {
+//  }
+
+//    /*
+//   * 
+//   * @param input the {@link TokenStream} to process
+//   * @param hyphenator the hyphenation pattern tree to use for hyphenation
+//   * @param dictionary the word dictionary to match against
+//   */
+//  public HyphenationCompoundWordTokenFilter(TokenStream input, HyphenationTree hyphenator, String[] dictionary) 
+//  : this(input, hyphenator, MakeDictionary(dictionary), DEFAULT_MIN_WORD_SIZE,
+//        DEFAULT_MIN_SUBWORD_SIZE, DEFAULT_MAX_SUBWORD_SIZE, false)
+//  {
+    
+//  }
+
+//  /*
+//   * 
+//   * @param input the {@link TokenStream} to process
+//   * @param hyphenator the hyphenation pattern tree to use for hyphenation
+//   * @param dictionary the word dictionary to match against. If this is a {@link org.apache.lucene.analysis.CharArraySet CharArraySet} it must have set ignoreCase=false and only contain
+//   *        lower case strings. 
+//   */
+//  public HyphenationCompoundWordTokenFilter(TokenStream input,
+//      HyphenationTree hyphenator, ISet<string> dictionary) 
+//  : this(input, hyphenator, dictionary, DEFAULT_MIN_WORD_SIZE, DEFAULT_MIN_SUBWORD_SIZE, DEFAULT_MAX_SUBWORD_SIZE, false)
+//  {
+    
+//  }
+
+//  /*
+//   * 
+//   * @param input the {@link TokenStream} to process
+//   * @param hyphenator the hyphenation pattern tree to use for hyphenation
+//   * @param dictionary the word dictionary to match against. If this is a {@link org.apache.lucene.analysis.CharArraySet CharArraySet} it must have set ignoreCase=false and only contain
+//   *        lower case strings. 
+//   * @param minWordSize only words longer than this get processed
+//   * @param minSubwordSize only subwords longer than this get to the output
+//   *        stream
+//   * @param maxSubwordSize only subwords shorter than this get to the output
+//   *        stream
+//   * @param onlyLongestMatch Add only the longest matching subword to the stream
+//   */
+//  public HyphenationCompoundWordTokenFilter(TokenStream input,
+//      HyphenationTree hyphenator, ISet<string> dictionary, int minWordSize,
+//      int minSubwordSize, int maxSubwordSize, bool onlyLongestMatch) 
+//  : base(input, dictionary, minWordSize, minSubwordSize, maxSubwordSize,
+//        onlyLongestMatch)
+//  {
+    
+
+//    this.hyphenator = hyphenator;
+//  }
+
+//  /*
+//   * Create a hyphenator tree
+//   * 
+//   * @param hyphenationFilename the filename of the XML grammar to load
+//   * @return An object representing the hyphenation patterns
+//   * @throws Exception
+//   */
+//  public static HyphenationTree GetHyphenationTree(String hyphenationFilename)
+//  {
+//    return GetHyphenationTree(new InputSource(hyphenationFilename));
+//  }
+
+//  /*
+//   * Create a hyphenator tree
+//   * 
+//   * @param hyphenationFile the file of the XML grammar to load
+//   * @return An object representing the hyphenation patterns
+//   * @throws Exception
+//   */
+//  public static HyphenationTree GetHyphenationTree(FileInfo hyphenationFile)
+//  {
+//    return GetHyphenationTree(new InputSource(hyphenationFile.toURL().toExternalForm()));
+//  }
+
+//  /*
+//   * Create a hyphenator tree
+//   * 
+//   * @param hyphenationReader the reader of the XML grammar to load from
+//   * @return An object representing the hyphenation patterns
+//   * @throws Exception
+//   */
+//  public static HyphenationTree GetHyphenationTree(TextReader hyphenationReader)
+//  {
+//    InputSource _is = new InputSource(hyphenationReader);
+//    // we need this to load the DTD in very old parsers (like the one in JDK 1.4).
+//    // The DTD itsself is provided via EntityResolver, so it should always load, but
+//    // some parsers still want to have a base URL (Crimson).
+//    _is.setSystemId("urn:java:" + HyphenationTree.class.getName());
+//    return getHyphenationTree(is);
+//  }
+
+//  /*
+//   * Create a hyphenator tree
+//   * 
+//   * @param hyphenationSource the InputSource pointing to the XML grammar
+//   * @return An object representing the hyphenation patterns
+//   * @throws Exception
+//   */
+//  public static HyphenationTree GetHyphenationTree(InputSource hyphenationSource)
+//{
+//    HyphenationTree tree = new HyphenationTree();
+//    tree.loadPatterns(hyphenationSource);
+//    return tree;
+//  }
+
+//  protected override void DecomposeInternal(Token token) 
+//{
+//    // get the hyphenation points
+//    Hyphenation.Hyphenation hyphens = hyphenator.hyphenate(token.TermBuffer(), 0, token.TermLength(), 1, 1);
+//    // No hyphen points found -> exit
+//    if (hyphens == null) {
+//      return;
+//    }
+
+//    int[] hyp = hyphens.GetHyphenationPoints();
+//    char[] lowerCaseTermBuffer=MakeLowerCaseCopy(token.TermBuffer());
+
+//    for (int i = 0; i < hyp.Length; ++i) {
+//      int remaining = hyp.Length - i;
+//      int start = hyp[i];
+//      Token longestMatchToken = null;
+//      for (int j = 1; j < remaining; j++) {
+//        int partLength = hyp[i + j] - start;
+
+//        // if the part is longer than maxSubwordSize we
+//        // are done with this round
+//        if (partLength > this.maxSubwordSize) {
+//          break;
+//        }
+
+//        // we only put subwords to the token stream
+//        // that are longer than minPartSize
+//        if (partLength < this.minSubwordSize) {
+//          continue;
+//        }
+
+//        // check the dictionary
+//        if (dictionary.Contains(lowerCaseTermBuffer, start, partLength)) {
+//          if (this.onlyLongestMatch) {
+//            if (longestMatchToken != null) {
+//              if (longestMatchToken.TermLength() < partLength) {
+//                longestMatchToken = CreateToken(start, partLength, token);
+//              }
+//            } else {
+//              longestMatchToken = CreateToken(start, partLength, token);
+//            }
+//          } else {
+//            tokens.AddLast(CreateToken(start, partLength, token));
+//          }
+//        } else if (dictionary.Contains(lowerCaseTermBuffer, start,
+//            partLength - 1)) {
+//          // check the dictionary again with a word that is one character
+//          // shorter
+//          // to avoid problems with genitive 's characters and other binding
+//          // characters
+//          if (this.onlyLongestMatch) {
+//            if (longestMatchToken != null) {
+//              if (longestMatchToken.TermLength() < partLength - 1) {
+//                longestMatchToken = CreateToken(start, partLength - 1, token);
+//              }
+//            } else {
+//              longestMatchToken = CreateToken(start, partLength - 1, token);
+//            }
+//          } else {
+//            tokens.AddLast(CreateToken(start, partLength - 1, token));
+//          }
+//        }
+//      }
+//      if (this.onlyLongestMatch && longestMatchToken!=null) {
+//        tokens.AddLast(longestMatchToken);
+//      }
+//    }
+//  }
+//}
+//}

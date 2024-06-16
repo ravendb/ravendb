@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyTitle>Lucene.Net Contrib Spatial NTS</AssemblyTitle>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>Lucene.Net.Contrib.Spatial.NTS</AssemblyName>
+    <PackageId>Lucene.Net.Contrib.Spatial.NTS</PackageId>
+  </PropertyGroup>
+  
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\Lucene.Net\Lucene.Net.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="Spatial4n" Version="0.4.1.1" />
+  </ItemGroup>
+
+</Project>

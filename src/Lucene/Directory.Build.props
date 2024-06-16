@@ -1,0 +1,29 @@
+<Project>
+  <PropertyGroup>
+    <Version>3.0.54011</Version>
+    <FileVersion>3.0.54011.0</FileVersion>
+    <LangVersion>latest</LangVersion>
+    <DebugType>embedded</DebugType>
+
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/ravendb/lucenenet</RepositoryUrl>
+
+    <WarningsAsErrors>true</WarningsAsErrors>
+
+    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
+    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+
+    <SignAssembly Condition="'$(OS)' == 'Windows_NT'">true</SignAssembly>
+    <AssemblyOriginatorKeyFile>Lucene.Net.snk</AssemblyOriginatorKeyFile>
+
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="SourceLink.Create.CommandLine" Version="2.8.3" PrivateAssets="All" /> 
+  </ItemGroup>
+</Project>

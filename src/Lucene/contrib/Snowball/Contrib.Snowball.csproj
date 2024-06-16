@@ -1,0 +1,280 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License.
+
+-->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <ProjectType>Local</ProjectType>
+    <ProductVersion>8.0.30319</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{8F9D7A92-F122-413E-9D8D-027E4ECD327C}</ProjectGuid>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ApplicationIcon />
+    <AssemblyKeyContainerName />
+    <AssemblyName>Lucene.Net.Contrib.Snowball</AssemblyName>
+    <AssemblyOriginatorKeyFile>Lucene.Net.snk</AssemblyOriginatorKeyFile>
+    <DefaultClientScript>JScript</DefaultClientScript>
+    <DefaultHTMLPageLayout>Grid</DefaultHTMLPageLayout>
+    <DefaultTargetSchema>IE50</DefaultTargetSchema>
+    <DelaySign>false</DelaySign>
+    <RootNamespace>Lucene.Net.Analysis.Snowball</RootNamespace>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <StartupObject />
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>0.0</OldToolsVersion>
+    <UpgradeBackupLocation />
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <Framework>$(TargetFrameworkVersion.Replace("v", "NET").Replace(".", ""))</Framework>
+    <OutputPath>..\..\..\build\bin\contrib\Snowball\$(Configuration.Replace("35", ""))\$(Framework)\</OutputPath>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile />
+    <DefineConstants>DEBUG;TRACE;$(Framework)</DefineConstants>
+    <DocumentationFile>
+    </DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <NoStdLib>false</NoStdLib>
+    <NoWarn>618</NoWarn>
+    <Optimize>false</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <DebugType>full</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug35|AnyCPU' ">
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <Framework>$(TargetFrameworkVersion.Replace("v", "NET").Replace(".", ""))</Framework>
+    <OutputPath>..\..\..\build\bin\contrib\Snowball\$(Configuration.Replace("35", ""))\$(Framework)\</OutputPath>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile />
+    <DefineConstants>DEBUG;TRACE;$(Framework)</DefineConstants>
+    <DocumentationFile>
+    </DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <NoStdLib>false</NoStdLib>
+    <NoWarn>618</NoWarn>
+    <Optimize>false</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <DebugType>full</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <Framework>$(TargetFrameworkVersion.Replace("v", "NET").Replace(".", ""))</Framework>
+    <OutputPath>..\..\..\build\bin\contrib\Snowball\$(Configuration.Replace("35", ""))\$(Framework)\</OutputPath>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile />
+    <DefineConstants>TRACE;$(Framework)</DefineConstants>
+    <DocumentationFile>..\..\..\build\bin\contrib\Snowball\$(Configuration.Replace("35", ""))\$(Framework)\Lucene.Net.Contrib.Snowball.XML</DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <NoStdLib>false</NoStdLib>
+    <NoWarn>618</NoWarn>
+    <Optimize>true</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <DebugType>pdbonly</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release35|AnyCPU' ">
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <Framework>$(TargetFrameworkVersion.Replace("v", "NET").Replace(".", ""))</Framework>
+    <OutputPath>..\..\..\build\bin\contrib\Snowball\$(Configuration.Replace("35", ""))\$(Framework)\</OutputPath>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile />
+    <DefineConstants>TRACE;$(Framework)</DefineConstants>
+    <DocumentationFile>..\..\..\build\bin\contrib\Snowball\$(Configuration.Replace("35", ""))\$(Framework)\Lucene.Net.Contrib.Snowball.XML</DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <NoStdLib>false</NoStdLib>
+    <NoWarn>618</NoWarn>
+    <Optimize>true</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <DebugType>pdbonly</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System">
+      <Name>System</Name>
+    </Reference>
+    <Reference Condition="'$(Framework)' == 'NET35'" Include="System.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Lucene.Net\Analysis\Snowball\SnowballAnalyzer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Lucene.Net\Analysis\Snowball\SnowballFilter.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Among.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\DanishStemmer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\DutchStemmer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\EnglishStemmer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\FinnishStemmer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\FrenchStemmer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\German2Stemmer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\GermanStemmer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\HungarianStemmer.cs" />
+    <Compile Include="SF\Snowball\Ext\ItalianStemmer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\KpStemmer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\LovinsStemmer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\NorwegianStemmer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\PorterStemmer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\PortugueseStemmer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\RomanianStemmer.cs" />
+    <Compile Include="SF\Snowball\Ext\RussianStemmer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\SpanishStemmer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\SwedishStemmer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\Ext\TurkishStemmer.cs" />
+    <Compile Include="SF\Snowball\SnowballProgram.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SF\Snowball\TestApp.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Content Include="Docs\Index.html" />
+    <Content Include="LICENSE.txt" />
+    <Content Include="Lucene.Net\Analysis\Snowball\Package.html" />
+    <Content Include="README.txt" />
+    <Content Include="SF\Overview.html" />
+    <Content Include="SF\Snowball\Ext\Package.html" />
+    <Content Include="SF\Snowball\Package.html" />
+    <Content Include="Xdocs\Index.xml" />
+    <Content Include="Xdocs\Stylesheets\Project.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\core\Lucene.Net.csproj">
+      <Project>{5D4AD9BE-1FFB-41AB-9943-25737971BF57}</Project>
+      <Name>Lucene.Net</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.0">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Windows.Installer.3.1">
+      <Visible>False</Visible>
+      <ProductName>Windows Installer 3.1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Lucene.Net.snk" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent />
+    <PostBuildEvent />
+  </PropertyGroup>
+</Project>

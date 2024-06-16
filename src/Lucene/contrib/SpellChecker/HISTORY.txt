@@ -1,0 +1,8 @@
+SpellChecker.Net History
+------------------------
+
+
+29Jan07:
+	- Release: SpellChecker.Net.2.0.0 build 001
+30May10:
+	- Release: SpellChecker.Net.2.9.2 build 001

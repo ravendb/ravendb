@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyTitle>Lucene.Net Contrib FastVectorHighlighter</AssemblyTitle>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>Lucene.Net.Contrib.FastVectorHighlighter</AssemblyName>
+    <DefineConstants>$(DefineConstants);LUCENENET_350</DefineConstants>
+    <PackageId>Lucene.Net.Contrib.FastVectorHighlighter</PackageId>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\Lucene.Net\Lucene.Net.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.1' ">
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+  </ItemGroup>
+
+</Project>

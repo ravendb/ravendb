@@ -145,6 +145,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Corax\Corax.csproj" />
+    <ProjectReference Include="..\Lucene\Lucene.Net\Lucene.Net.csproj" />
     <ProjectReference Include="..\Raven.Client\Raven.Client.csproj" />
     <ProjectReference Include="..\Sparrow.Server\Sparrow.Server.csproj" />
     <ProjectReference Include="..\Voron\Voron.csproj" />
@@ -170,7 +171,6 @@
     <PackageReference Include="Google.Cloud.Storage.V1" Version="4.10.0" />
     <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
     <PackageReference Include="librdkafka.redist" Version="2.4.0" />
-    <PackageReference Include="Lucene.Net" Version="3.0.54011" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.54011" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />

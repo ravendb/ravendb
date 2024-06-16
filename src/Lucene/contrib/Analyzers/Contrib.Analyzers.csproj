@@ -1,0 +1,224 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License.
+
+-->
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{4286E961-9143-4821-B46D-3D39D3736386}</ProjectGuid>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Lucene.Net.Analysis</RootNamespace>
+    <AssemblyName>Lucene.Net.Contrib.Analyzers</AssemblyName>
+    <FileAlignment>512</FileAlignment>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <UpgradeBackupLocation />
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <Framework>$(TargetFrameworkVersion.Replace("v", "NET").Replace(".", ""))</Framework>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\..\..\build\bin\contrib\Analyzers\$(Configuration.Replace("35", ""))\$(Framework)\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;$(Framework)</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>618</NoWarn>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug35|AnyCPU' ">
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <Framework>$(TargetFrameworkVersion.Replace("v", "NET").Replace(".", ""))</Framework>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\..\..\build\bin\contrib\Analyzers\$(Configuration.Replace("35", ""))\$(Framework)\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;$(Framework)</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>618</NoWarn>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <Framework>$(TargetFrameworkVersion.Replace("v", "NET").Replace(".", ""))</Framework>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\..\..\build\bin\contrib\Analyzers\$(Configuration.Replace("35", ""))\$(Framework)\</OutputPath>
+    <DefineConstants>TRACE;$(Framework)</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>..\..\..\build\bin\contrib\Analyzers\$(Configuration.Replace("35", ""))\$(Framework)\Lucene.Net.Contrib.Analyzers.XML</DocumentationFile>
+    <NoWarn>618</NoWarn>
+    <DebugSymbols>true</DebugSymbols>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release35|AnyCPU' ">
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <Framework>$(TargetFrameworkVersion.Replace("v", "NET").Replace(".", ""))</Framework>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\..\..\build\bin\contrib\Analyzers\$(Configuration.Replace("35", ""))\$(Framework)\</OutputPath>
+    <DefineConstants>TRACE;$(Framework)</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>..\..\..\build\bin\contrib\Analyzers\$(Configuration.Replace("35", ""))\$(Framework)\Lucene.Net.Contrib.Analyzers.XML</DocumentationFile>
+    <NoWarn>618</NoWarn>
+    <DebugSymbols>true</DebugSymbols>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>Lucene.Net.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Condition="'$(Framework)' == 'NET35'" Include="System.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AR\ArabicAnalyzer.cs" />
+    <Compile Include="AR\ArabicLetterTokenizer.cs" />
+    <Compile Include="AR\ArabicNormalizationFilter.cs" />
+    <Compile Include="AR\ArabicNormalizer.cs" />
+    <Compile Include="AR\ArabicStemFilter.cs" />
+    <Compile Include="AR\ArabicStemmer.cs" />
+    <Compile Include="BR\BrazilianAnalyzer.cs" />
+    <Compile Include="BR\BrazilianStemFilter.cs" />
+    <Compile Include="BR\BrazilianStemmer.cs" />
+    <Compile Include="CJK\CJKAnalyzer.cs" />
+    <Compile Include="CJK\CJKTokenizer.cs" />
+    <Compile Include="Cn\ChineseAnalyzer.cs" />
+    <Compile Include="Cn\ChineseFilter.cs" />
+    <Compile Include="Cn\ChineseTokenizer.cs" />
+    <Compile Include="Compound\CompoundWordTokenFilterBase.cs" />
+    <Compile Include="Compound\DictionaryCompoundWordTokenFilter.cs" />
+    <Compile Include="Compound\HyphenationCompoundWordTokenFilter.cs" />
+    <Compile Include="Compound\Hyphenation\ByteVector.cs" />
+    <Compile Include="Compound\Hyphenation\CharVector.cs" />
+    <Compile Include="Compound\Hyphenation\Hyphen.cs" />
+    <Compile Include="Compound\Hyphenation\Hyphenation.cs" />
+    <Compile Include="Compound\Hyphenation\HyphenationException.cs" />
+    <Compile Include="Compound\Hyphenation\HyphenationTree.cs" />
+    <Compile Include="Compound\Hyphenation\PatternConsumer.cs" />
+    <Compile Include="Compound\Hyphenation\PatternParser.cs" />
+    <Compile Include="Compound\Hyphenation\TernaryTree.cs" />
+    <Compile Include="Cz\CzechAnalyzer.cs" />
+    <Compile Include="De\GermanAnalyzer.cs" />
+    <Compile Include="De\GermanStemFilter.cs" />
+    <Compile Include="De\GermanStemmer.cs" />
+    <Compile Include="De\GermanDIN2Stemmer.cs" />
+    <Compile Include="El\GreekAnalyzer.cs" />
+    <Compile Include="El\GreekLowerCaseFilter.cs" />
+    <Compile Include="Fa\PersianAnalyzer.cs" />
+    <Compile Include="Fa\PersianNormalizationFilter.cs" />
+    <Compile Include="Fa\PersianNormalizer.cs" />
+    <Compile Include="Fr\ElisionFilter.cs" />
+    <Compile Include="Fr\FrenchAnalyzer.cs" />
+    <Compile Include="Fr\FrenchStemFilter.cs" />
+    <Compile Include="Fr\FrenchStemmer.cs" />
+    <Compile Include="Hunspell\HunspellAffix.cs" />
+    <Compile Include="Hunspell\HunspellDictionary.cs" />
+    <Compile Include="Hunspell\HunspellStem.cs" />
+    <Compile Include="Hunspell\HunspellStemFilter.cs" />
+    <Compile Include="Hunspell\HunspellStemmer.cs" />
+    <Compile Include="Hunspell\HunspellWord.cs" />
+    <Compile Include="Miscellaneous\EmptyTokenStream.cs" />
+    <Compile Include="Miscellaneous\InjectablePrefixAwareTokenFilter.cs" />
+    <Compile Include="Miscellaneous\PatternAnalyzer.cs" />
+    <Compile Include="Miscellaneous\PrefixAndSuffixAwareTokenFilter.cs" />
+    <Compile Include="Miscellaneous\PrefixAwareTokenStream.cs" />
+    <Compile Include="Miscellaneous\SingleTokenTokenStream.cs" />
+    <Compile Include="NGram\EdgeNGramTokenFilter.cs" />
+    <Compile Include="NGram\EdgeNGramTokenizer.cs" />
+    <Compile Include="NGram\NGramTokenFilter.cs" />
+    <Compile Include="NGram\NGramTokenizer.cs" />
+    <Compile Include="Nl\DutchAnalyzer.cs" />
+    <Compile Include="Nl\DutchStemFilter.cs" />
+    <Compile Include="Nl\DutchStemmer.cs" />
+    <Compile Include="Payloads\AbstractEncoder.cs" />
+    <Compile Include="Payloads\DelimitedPayloadTokenFilter.cs" />
+    <Compile Include="Payloads\FloatEncoder.cs" />
+    <Compile Include="Payloads\IdentityEncoder.cs" />
+    <Compile Include="Payloads\IntegerEncoder.cs" />
+    <Compile Include="Payloads\NumericPayloadTokenFilter.cs" />
+    <Compile Include="Payloads\PayloadEncoder.cs" />
+    <Compile Include="Payloads\PayloadHelper.cs" />
+    <Compile Include="Payloads\TokenOffsetPayloadTokenFilter.cs" />
+    <Compile Include="Payloads\TypeAsPayloadTokenFilter.cs" />
+    <Compile Include="Position\PositionFilter.cs" />
+    <Compile Include="Query\QueryAutoStopWordAnalyzer.cs" />
+    <Compile Include="Reverse\ReverseStringFilter.cs" />
+    <Compile Include="Ru\RussianAnalyzer.cs" />
+    <Compile Include="Ru\RussianLetterTokenizer.cs" />
+    <Compile Include="Ru\RussianLowerCaseFilter.cs" />
+    <Compile Include="Ru\RussianStemFilter.cs" />
+    <Compile Include="Ru\RussianStemmer.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Shingle\Matrix\Column.cs" />
+    <Compile Include="Shingle\Matrix\Matrix.cs" />
+    <Compile Include="Shingle\Matrix\MatrixPermutationIterator.cs" />
+    <Compile Include="Shingle\Matrix\Row.cs" />
+    <Compile Include="Shingle\ShingleAnalyzerWrapper.cs" />
+    <Compile Include="Shingle\ShingleFilter.cs" />
+    <Compile Include="Shingle\ShingleMatrixFilter.cs" />
+    <Compile Include="Shingle\TokenPositioner.cs" />
+    <Compile Include="Shingle\Codec\OneDimensionalNonWeightedTokenSettingsCodec.cs" />
+    <Compile Include="Shingle\Codec\SimpleThreeDimensionalTokenSettingsCodec.cs" />
+    <Compile Include="Shingle\Codec\TokenSettingsCodec.cs" />
+    <Compile Include="Shingle\Codec\TwoDimensionalNonWeightedSynonymTokenSettingsCodec.cs" />
+    <Compile Include="Sinks\DateRecognizerSinkFilter.cs" />
+    <Compile Include="Sinks\TokenRangeSinkFilter.cs" />
+    <Compile Include="Sinks\TokenTypeSinkFilter.cs" />
+    <Compile Include="Th\ThaiAnalyzer.cs" />
+    <Compile Include="Th\ThaiWordFilter.cs" />
+    <Compile Include="WordlistLoader.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="AR\ArabicStopWords.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\core\Lucene.Net.csproj">
+      <Project>{5D4AD9BE-1FFB-41AB-9943-25737971BF57}</Project>
+      <Name>Lucene.Net</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Compound\Hyphenation\hyphenation.dtd" />
+    <None Include="Lucene.Net.snk" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

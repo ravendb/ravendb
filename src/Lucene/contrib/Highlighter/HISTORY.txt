@@ -1,0 +1,22 @@
+Highlighter.Net History
+-----------------------
+
+
+29Jan08:
+	- Release: Highlighter.Net.2.3.2 build 001 "final"
+
+
+07Jan07:
+	- Release: Highlighter.Net.2.0.0 build 001 "final"
+	- Fix: Lucene.Net.Highlight.QueryTermExtractor.GetTerms -- was using the wrong integrator
+	- Fix: Lucene.Net.Highlight.TextFragment.ToString -- offset error
+	- Issue: TestEncoding() is failing because the test code is not fully ported to .NET
+
+
+27Dec06:
+	- Release: Highlighter.Net.2.0.0 build 000 "Alpha"
+	- Issue: Not fully tested / validated such that many of the NUnit tests are failing.
+
+
+05Jan05:
+	- Release: Highlighter.Net.1.4.0 RC1 build 001
