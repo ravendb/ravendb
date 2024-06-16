@@ -299,7 +299,7 @@ public sealed partial class ClusterStateMachine
             {
                 throw new LicenseLimitException(LimitType.RevisionsConfiguration,
                     $"The defined minimum revisions to keep '{revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep}' " +
-                    $"for collection {revisionPerCollectionConfiguration.Key} exceeds the licensed one '{maxRevisionsToKeep}'");
+                    $"for collection '{revisionPerCollectionConfiguration.Key}' exceeds the licensed one '{maxRevisionsToKeep}'");
             }
 
             if (revisionPerCollectionConfiguration.Value.MinimumRevisionAgeToKeep != null &&
@@ -308,7 +308,7 @@ public sealed partial class ClusterStateMachine
             {
                 throw new LicenseLimitException(LimitType.RevisionsConfiguration,
                     $"The defined minimum revisions age to keep '{revisionPerCollectionConfiguration.Value.MinimumRevisionAgeToKeep}' " +
-                    $"for collection {revisionPerCollectionConfiguration.Key} exceeds the licensed one '{maxRevisionAgeToKeepInDays}'");
+                    $"for collection '{revisionPerCollectionConfiguration.Key}' exceeds the licensed one '{maxRevisionAgeToKeepInDays}'");
             }
         }
     }
