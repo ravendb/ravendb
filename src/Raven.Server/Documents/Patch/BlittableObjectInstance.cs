@@ -45,6 +45,8 @@ namespace Raven.Server.Documents.Patch
 
         public ProjectionOptions Projection;
 
+        public BlittableObjectInstance Metadata;
+
         public SpatialResult? Distance => _doc?.Distance;
         public float? IndexScore => _doc?.IndexScore;
 
