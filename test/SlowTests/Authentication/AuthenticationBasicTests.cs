@@ -439,7 +439,8 @@ namespace SlowTests.Authentication
             {
                 "/monitoring/snmp/oids",
                 "/monitoring/snmp",
-                "/monitoring/snmp/bulk"
+                "/monitoring/snmp/bulk",
+                "/monitoring/snmp/mib"
             };
 
             var routes = RouteScanner.Scan(attr =>
