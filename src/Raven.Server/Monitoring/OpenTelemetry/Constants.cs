@@ -10,6 +10,7 @@ public static class Constants
         public const string GcMeter = "ravendb.serverwide.gc";
         public const string Hardware = "ravendb.serverwide.hardware";
         public const string TotalDatabasesMeter = "ravendb.serverwide.totaldatabases";
+        public const string CpuCreditsMeter = "ravendb.serverwide.cpucredits";
  
     }
     
@@ -64,13 +65,13 @@ public static class Constants
         public const string ProcessCpu = "cpu.process";
         public const string MachineCpu = "cpu.machine";
         public const string IoWait = "io_wait";
-        public const string CpuCreditsBase = "cpu.credits.base";
-        public const string CpuCreditsMax = "cpu.credits.max";
-        public const string CpuCreditsRemaining = "cpu.credits.remaining";
-        public const string CpuCreditsCurrentConsumption = "cpu.credits.consumption_current";
-        public const string CpuCreditsBackgroundTasksAlertRaised = "cpu.credits.background.tasks.alert_raised";
-        public const string CpuCreditsFailoverAlertRaised = "cpu.credits.failover.alert_raised";
-        public const string CpuCreditsAlertRaised = "cpu.credits.alert_raised";
+        public const string CpuCreditsBase = "base";
+        public const string CpuCreditsMax = "max";
+        public const string CpuCreditsRemaining = "remaining";
+        public const string CpuCreditsCurrentConsumption = "consumption_current";
+        public const string CpuCreditsBackgroundTasksAlertRaised = "background.tasks.alert_raised";
+        public const string CpuCreditsFailoverAlertRaised = "failover.alert_raised";
+        public const string CpuCreditsAlertRaised = "alert_raised";
         public const string ServerTotalMemory = "total_memory";
         public const string ServerLowMemoryFlag = "low_memory_flag";
         public const string ServerTotalSwapSize = "total.swap.size";

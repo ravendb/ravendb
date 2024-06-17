@@ -1014,11 +1014,11 @@ namespace Raven.Server.Monitoring.Snmp
 
             public static Dictionary<string, string> CreateMapping()
             {
-                var dict = General.CreateMapping().Concat(Indexes.CreateMapping(DatabaseWideMetrics.IgnoreIndex)).ToDictionary();
+                var dict = General.CreateMapping().Concat(Indexes.CreateMapping(0)).ToDictionary();
                 foreach (var field in typeof(Databases).GetFields())
                 {
                     var fieldValue = GetFieldValue(field);
-                    var oid = string.Format(fieldValue.Oid, DatabaseWideMetrics.IgnoreIndex);
+                    var oid = string.Format(fieldValue.Oid, 0);
                     dict.Add(Root + oid, fieldValue.Description);
                 }
 
