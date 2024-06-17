@@ -1,12 +1,11 @@
 using System.Linq;
 using Lextm.SharpSnmpLib;
-using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class DatabaseDisabledCount : DatabaseBase<Integer32>, IMetricInstrument<int>
+    public sealed class DatabaseDisabledCount : DatabaseBase<Integer32>
     {
         public DatabaseDisabledCount(ServerStore serverStore)
             : base(serverStore, SnmpOids.Databases.General.DisabledCount)
@@ -26,7 +25,5 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
                 return GetDatabases(context).Count(x => x.IsDisabled);
             }
         }
-
-        public int GetCurrentMeasurement() => GetCount();
     }
 }

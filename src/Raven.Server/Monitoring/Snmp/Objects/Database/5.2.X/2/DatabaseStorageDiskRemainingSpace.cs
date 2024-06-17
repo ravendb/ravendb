@@ -1,22 +1,19 @@
-using System;
-using System.Diagnostics.Metrics;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
-using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class DatabaseStorageDiskRemainingSpace : DatabaseScalarObjectBase<Gauge32>, ITaggedMetricInstrument<long>
+    public sealed class DatabaseStorageDiskRemainingSpace : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseStorageDiskRemainingSpace(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.StorageDiskRemainingSpace, index)
         {
         }
 
-        private long? Value(DocumentDatabase database)
+        protected override Gauge32 GetData(DocumentDatabase database)
         {
             if (database.Configuration.Core.RunInMemory)
                 return null;
@@ -25,23 +22,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             if (result == null)
                 return null;
 
-            return result.TotalFreeSpace.GetValue(SizeUnit.Megabytes);
-        }
-        
-        protected override Gauge32 GetData(DocumentDatabase database)
-        {
-            if (Value(database) is {} result)
-                return new Gauge32(result);
-
-            return null;
-        }
-        
-        public Measurement<long> GetCurrentMeasurement()
-        {
-            if (TryGetDatabase(out var database) && Value(database) is {} result)
-                return new(result, MeasurementTags);
-            
-            return new(default, MeasurementTags);
+            return new Gauge32(result.TotalFreeSpace.GetValue(SizeUnit.Megabytes));
         }
     }
 }

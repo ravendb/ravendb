@@ -96,7 +96,6 @@ namespace Raven.Server.Config.Categories
             [DefaultValue(true)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.TotalDatabases", ConfigurationEntryScope.ServerWideOnly)]
             public bool TotalDatabases { get; set; }
-
             
             [Description("Expose instruments related to requests.")]
             [DefaultValue(true)]
@@ -107,16 +106,6 @@ namespace Raven.Server.Config.Categories
             [DefaultValue(true)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.GC.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool GcEnabled { get; set; }
-            
-            [Description("Expose instruments related to database.")]
-            [DefaultValue(true)]
-            [ConfigurationEntry("Monitoring.OpenTelemetry.DatabaseWide.Databases.Enabled", ConfigurationEntryScope.ServerWideOnly)]
-            public bool DatabasesEnabled { get; set; }
-            
-            [Description("Expose instruments related to indexes.")]
-            [DefaultValue(true)]
-            [ConfigurationEntry("Monitoring.OpenTelemetry.DatabaseWide.Indexes.Enabled", ConfigurationEntryScope.ServerWideOnly)]
-            public bool IndexesEnabled { get; set; }
         }
 
         [ConfigurationCategory(ConfigurationCategoryType.Monitoring)]
