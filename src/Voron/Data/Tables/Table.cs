@@ -39,9 +39,9 @@ namespace Voron.Data.Tables
         private readonly byte _tableType;
         private int? _currentCompressionDictionaryId;
 
-        public long NumberOfEntries { get; private set; }
+        public long NumberOfEntries => _stats.NumberOfEntries;
 
-        private long _overflowPageCount;
+        private readonly TableSchemaStatsReference _stats;
         private readonly NewPageAllocator _tablePageAllocator;
         private readonly NewPageAllocator _globalPageAllocator;
 
@@ -108,24 +108,19 @@ namespace Voron.Data.Tables
         /// Using this constructor WILL NOT register the Table for commit in
         /// the Transaction, and hence changes WILL NOT be committed.
         /// </summary>
-        public Table(TableSchema schema, Slice name, Transaction tx, Tree tableTree, byte tableType, bool doSchemaValidation = false)
+        public Table(TableSchema schema, Slice name, Transaction tx, Tree tableTree, TableSchemaStatsReference stats, byte tableType, bool doSchemaValidation = false)
         {
             Name = name;
 
             _schema = schema;
             _tx = tx;
             _tableType = tableType;
+            _stats = stats;
 
             _tableTree = tableTree;
             if (_tableTree == null)
                 throw new ArgumentNullException(nameof(tableTree), "Cannot open table " + Name);
 
-            var stats = (TableSchemaStats*)_tableTree.DirectRead(TableSchema.StatsSlice);
-            if (stats == null)
-                throw new InvalidDataException($"Cannot find stats value for table {name}");
-
-            NumberOfEntries = stats->NumberOfEntries;
-            _overflowPageCount = stats->OverflowPageCount;
             _tablePageAllocator = new NewPageAllocator(_tx.LowLevelTransaction, _tableTree);
             _globalPageAllocator = new NewPageAllocator(_tx.LowLevelTransaction, _tx.LowLevelTransaction.RootObjects);
 
@@ -501,7 +496,7 @@ namespace Voron.Data.Tables
             {
                 var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
                 var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
-                _overflowPageCount -= numberOfPages;
+                _stats.OverflowPageCount -= numberOfPages;
 
                 for (var i = 0; i < numberOfPages; i++)
                 {
@@ -509,14 +504,14 @@ namespace Voron.Data.Tables
                 }
             }
 
-            NumberOfEntries--;
+            _stats.NumberOfEntries--;
 
             using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats), out byte* updatePtr))
             {
                 var stats = (TableSchemaStats*)updatePtr;
 
-                stats->NumberOfEntries = NumberOfEntries;
-                stats->OverflowPageCount = _overflowPageCount;
+                stats->NumberOfEntries = _stats.NumberOfEntries;
+                stats->OverflowPageCount = _stats.OverflowPageCount;
             }
 
             if (largeValue)
@@ -689,14 +684,14 @@ namespace Voron.Data.Tables
             var tvr = builder.CreateReader(pos);
             InsertIndexValuesFor(id, ref tvr);
 
-            NumberOfEntries++;
+            _stats.NumberOfEntries++;
 
             using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats), out byte* ptr))
             {
                 var stats = (TableSchemaStats*)ptr;
 
-                stats->NumberOfEntries = NumberOfEntries;
-                stats->OverflowPageCount = _overflowPageCount;
+                stats->NumberOfEntries = _stats.NumberOfEntries;
+                stats->OverflowPageCount = _stats.OverflowPageCount;
             }
 
             return id;
@@ -706,7 +701,7 @@ namespace Voron.Data.Tables
         {
             var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(size);
             var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
-            _overflowPageCount += numberOfOverflowPages;
+            _stats.OverflowPageCount += numberOfOverflowPages;
 
             page.Flags = PageFlags.Overflow | PageFlags.RawData;
             if (compressed)
@@ -919,8 +914,6 @@ namespace Voron.Data.Tables
 
             using var __ = Allocate(out var builder);
 
-            ByteStringContext<ByteStringMemoryCache>.ExternalScope rawCompressBufferScore = default;
-
             byte* dataPtr = reader.Pointer;
             int dataSize = reader.Size;
             bool compressed = false;
@@ -947,7 +940,7 @@ namespace Voron.Data.Tables
             {
                 var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(dataSize);
                 var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
-                _overflowPageCount += numberOfOverflowPages;
+                _stats.OverflowPageCount += numberOfOverflowPages;
 
                 page.Flags = PageFlags.Overflow | PageFlags.RawData;
                 page.OverflowSize = dataSize;
@@ -967,17 +960,16 @@ namespace Voron.Data.Tables
 
             InsertIndexValuesFor(id, ref reader);
 
-            NumberOfEntries++;
+            _stats.NumberOfEntries++;
 
             using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats), out byte* ptr))
             {
                 var stats = (TableSchemaStats*)ptr;
 
-                stats->NumberOfEntries = NumberOfEntries;
-                stats->OverflowPageCount = _overflowPageCount;
+                stats->NumberOfEntries = _stats.NumberOfEntries;
+                stats->OverflowPageCount = _stats.OverflowPageCount;
             }
 
-            rawCompressBufferScore.Dispose();
             return id;
         }
 
@@ -2164,7 +2156,7 @@ namespace Voron.Data.Tables
         {
             generatorInstance ??= new StorageReportGenerator(_tx.LowLevelTransaction);
 
-            var overflowSize = _overflowPageCount * Constants.Storage.PageSize;
+            var overflowSize = _stats.OverflowPageCount * Constants.Storage.PageSize;
             var report = new TableReport(overflowSize, overflowSize, includeDetails, generatorInstance)
             {
                 Name = Name.ToString(),
