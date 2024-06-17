@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -17,10 +18,11 @@ public unsafe partial class Pager2
 {
     public static class Win32
     {
-        public static readonly Functions Functions = new()
+        public static Functions CreateFunctions() => new()
         {
             Init = &Win32.Init,
             AcquirePagePointer = &Win32.AcquirePagePointer,
+            AcquireRawPagePointer = &Win32.AcquirePagePointer,
             AcquirePagePointerForNewPage = &Win32.AcquirePagePointerForNewPage,
             AllocateMorePages = &Win32.AllocateMorePages,
             Sync = &Win32.Sync,
@@ -34,6 +36,8 @@ public unsafe partial class Pager2
 
         public static void DirectWrite(Pager2 pager, ref State state, ref PagerTransactionState txState,long posBy4Kbs, int numberOf4Kbs, byte* source)
         {
+            Debug.Assert(txState.Sync == null || txState.Sync == SyncAfterDirectWrite);
+            
             txState.Sync = SyncAfterDirectWrite;
             const int pageSizeTo4KbRatio = (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte));
             var pageNumber = posBy4Kbs / pageSizeTo4KbRatio;
@@ -52,14 +56,14 @@ public unsafe partial class Pager2
             byte* destination = page + offsetBy4Kb * (4 * Constants.Size.Kilobyte);
 
             
-            Functions.UnprotectPageRange(destination, (ulong)toWrite);
+            pager._functions.UnprotectPageRange(destination, (ulong)toWrite);
 
             Memory.Copy(destination, source, toWrite);
 
-            Functions.ProtectPageRange(destination, (ulong)toWrite);
+            pager._functions.ProtectPageRange(destination, (ulong)toWrite);
         }
 
-        private static void SyncAfterDirectWrite(Pager2 pager, ref PagerTransactionState txState)
+        private static void SyncAfterDirectWrite(Pager2 pager, State state, ref PagerTransactionState txState)
         {
             var stateFor32Bits = GetTxState(pager, ref txState);
             foreach (var kvp in stateFor32Bits.LoadedPages)
@@ -96,7 +100,7 @@ public unsafe partial class Pager2
 
             var amountToMapInBytes = Win64.NearestSizeToAllocationGranularity((distanceFromStart + numberOfPages) * Constants.Storage.PageSize);
             MapPages(pager, state, pagerTxState, allocationStartPosition, amountToMapInBytes);
-            return false;
+            return true;
         }
 
         private static TxStateFor32Bits GetTxState(Pager2 pager, ref PagerTransactionState txState)
@@ -105,22 +109,27 @@ public unsafe partial class Pager2
             if (txState.For32Bits.TryGetValue(pager, out var pagerTxState) == false)
             {
                 txState.For32Bits[pager] = pagerTxState = new TxStateFor32Bits();
-                txState.OnDispose += () =>
-                {
-                    var canCleanup = false;
-                    foreach (var addr in pagerTxState.AddressesToUnload)
-                    {
-                        canCleanup |= Interlocked.Decrement(ref addr.Usages) == 0;
-                    }
-
-                    if (canCleanup)
-                    {
-                        CleanupMemory(pager, pagerTxState);
-                    }
-                };
+                txState.OnDispose += OnTxDispose;
             }
 
             return pagerTxState;
+        }
+
+        private static void OnTxDispose(Pager2 pager, State state, ref PagerTransactionState txState)
+        {
+            if (txState.For32Bits?.Remove(pager, out var pagerTxState) != true)
+                return;
+
+            var canCleanup = false;
+            foreach (var addr in pagerTxState.AddressesToUnload)
+            {
+                canCleanup |= Interlocked.Decrement(ref addr.Usages) == 0;
+            }
+
+            if (canCleanup)
+            {
+                CleanupMemory(pager, pagerTxState);
+            }
         }
         
         private static void CleanupMemory(Pager2 pager, TxStateFor32Bits txState)
@@ -179,7 +188,7 @@ public unsafe partial class Pager2
             try
             {
                 Win64.OpenFile(pager, openFileOptions, state);
-
+                Win64.MapFile(state);
                 pager.InstallState(state);
             }
             catch
@@ -214,6 +223,8 @@ public unsafe partial class Pager2
             
             newState.TotalAllocatedSize = state.TotalAllocatedSize + allocationSize;
             newState.NumberOfAllocatedPages = newState.TotalAllocatedSize / Constants.Storage.PageSize;
+            
+            Win64.MapFile(newState);
             
             pager.InstallState(newState);
             

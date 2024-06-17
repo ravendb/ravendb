@@ -186,6 +186,8 @@ namespace Voron.Impl
 
             TxStartTime = previous.TxStartTime;
             DataPager = previous.DataPager;
+            DataPagerState = previous.DataPagerState;
+            
             _txHeader = TxHeaderInitializerTemplate;
             _env = previous._env;
             _journal = previous._journal;

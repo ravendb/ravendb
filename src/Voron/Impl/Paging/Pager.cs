@@ -40,7 +40,8 @@ public unsafe partial class Pager2 : IDisposable
 
     private readonly Functions _functions;
     private readonly ConcurrentSet<WeakReference<State>> _states = [];
-    private bool _lockMemory;
+    private readonly EncryptionBuffersPool _encryptionBuffersPool;
+    private readonly byte[] _masterKey;
     private readonly PrefetchTableHint _prefetchState;
     private readonly Logger _logger;
     private DateTime _lastIncrease;
@@ -76,10 +77,16 @@ public unsafe partial class Pager2 : IDisposable
     {
         var funcs = options.RunningOn32Bits switch
         {
-            false when PlatformDetails.RunningOnWindows => Win64.Functions,
-            true when PlatformDetails.RunningOnWindows => Win32.Functions,
+            false when PlatformDetails.RunningOnWindows => Win64.CreateFunctions(),
+            true when PlatformDetails.RunningOnWindows => Win32.CreateFunctions(),
             _ => throw new NotSupportedException("Running " + RuntimeInformation.OSDescription)
         };
+
+        if (options.Encryption.IsEnabled)
+        {
+            funcs.AcquirePagePointer = &Crypto.AcquirePagePointer;
+            funcs.AcquirePagePointerForNewPage = &Crypto.AcquirePagePointerForNewPage;
+        }
         
         var pager = new Pager2(options, openFileOptions, funcs, canPrefetchAhead: true, usePageProtection: openFileOptions.UsePageProtection,
             out State state);
@@ -94,12 +101,15 @@ public unsafe partial class Pager2 : IDisposable
         bool usePageProtection,
         out State state)
     {
+        Options = options;
         FileName = openFileOptions.File;
+        
         _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{openFileOptions}");
         _canPrefetch = PlatformDetails.CanPrefetch && canPrefetchAhead && options.EnablePrefetching;
         _temporaryOrDeleteOnClose = openFileOptions.Temporary || openFileOptions.DeleteOnClose; 
         _usePageProtection = usePageProtection;
-        Options = options;
+        _encryptionBuffersPool = options.Encryption.EncryptionBuffersPool;
+        _masterKey = options.Encryption.MasterKey;
         _functions = functions;
         _increaseSize = MinIncreaseSize;
         state = functions.Init(this, openFileOptions);
@@ -122,7 +132,8 @@ public unsafe partial class Pager2 : IDisposable
         EnsureContinuous(ref state, pageNumber, numberOfPages);
 
         var toWrite = numberOf4Kbs * 4 * Constants.Size.Kilobyte;
-        byte* destination = AcquirePagePointer(state, ref txState, pageNumber)
+        EnsureMapped(state, ref txState, pageNumber, numberOfPages);
+        byte* destination = AcquireRawPagePointer(state, ref txState, pageNumber)
                             + (offsetBy4Kb * 4 * Constants.Size.Kilobyte);
 
         UnprotectPageRange(destination, (ulong)toWrite);
@@ -152,9 +163,9 @@ public unsafe partial class Pager2 : IDisposable
         MaybePrefetchMemory(state, 0, state.NumberOfAllocatedPages);
     }
 
-    public bool EnsureMapped(State state, long page, int numberOfPages)
+    public bool EnsureMapped(State state, ref PagerTransactionState txState, long page, int numberOfPages)
     {
-        return false;
+        return _functions.EnsureMapped(this, state, ref txState, page, numberOfPages);
     }
 
     
@@ -213,17 +224,44 @@ public unsafe partial class Pager2 : IDisposable
             return (byte*)pageHeader;
 
         // Case 2: Page is overflow and already mapped large enough ==> no problem, returning a pointer to existing mapping
-        if (EnsureMapped(state, pageNumber, VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize)) == false)
+        if (EnsureMapped(state, ref txState, pageNumber, VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize)) == false)
             return (byte*)pageHeader;
 
         // Case 3: Page is overflow and was ensuredMapped above, view was re-mapped so we need to acquire a pointer to the new mapping.
         return AcquirePagePointer(state, ref txState, pageNumber);
     }
     
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private byte* AcquireRawPagePointerWithOverflowHandling(State state, ref PagerTransactionState txState, long pageNumber)
+    {
+        // Case 1: Page is not overflow ==> no problem, returning a pointer to existing mapping
+        var pageHeader = (PageHeader*)AcquireRawPagePointer(state, ref txState, pageNumber);
+        if ((pageHeader->Flags & PageFlags.Overflow) != PageFlags.Overflow)
+            return (byte*)pageHeader;
+
+        // Case 2: Page is overflow and already mapped large enough ==> no problem, returning a pointer to existing mapping
+        if (EnsureMapped(state, ref txState, pageNumber, VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize)) == false)
+            return (byte*)pageHeader;
+
+        // Case 3: Page is overflow and was ensuredMapped above, view was re-mapped so we need to acquire a pointer to the new mapping.
+        return AcquireRawPagePointer(state, ref txState, pageNumber);
+    }
+    
     public byte* AcquirePagePointer(State state, ref PagerTransactionState txState, long pageNumber)
     {
         if (pageNumber <= state.NumberOfAllocatedPages && pageNumber >= 0)
             return _functions.AcquirePagePointer(this, state, ref txState, pageNumber);
+        
+        VoronUnrecoverableErrorException.Raise(Options,
+            "The page " + pageNumber + " was not allocated, allocated pages: " + state.NumberOfAllocatedPages + " in " + FileName);
+        return null;// never hit
+    }
+
+    private byte* AcquireRawPagePointer(State state, ref PagerTransactionState txState, long pageNumber)
+    {
+        if (pageNumber <= state.NumberOfAllocatedPages && pageNumber >= 0)
+            return _functions.AcquireRawPagePointer(this, state, ref txState, pageNumber);
         
         VoronUnrecoverableErrorException.Raise(Options,
             "The page " + pageNumber + " was not allocated, allocated pages: " + state.NumberOfAllocatedPages + " in " + FileName);

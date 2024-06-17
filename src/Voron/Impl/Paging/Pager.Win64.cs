@@ -23,7 +23,7 @@ namespace Voron.Impl.Paging;
 public unsafe partial class Pager2
 {
 #if VALIDATE
-        public const bool ProtectPages = true;
+    public const bool ProtectPages = true;
 #else 
     public const bool ProtectPages = false;
 #endif
@@ -31,6 +31,7 @@ public unsafe partial class Pager2
     {
         public delegate* <Pager2, OpenFileOptions, State> Init;
         public delegate* <Pager2, State, ref PagerTransactionState, long, byte*> AcquirePagePointer;
+        public delegate* <Pager2, State, ref PagerTransactionState, long, byte*> AcquireRawPagePointer;
         public delegate* <Pager2, long, int, State, ref PagerTransactionState, byte*> AcquirePagePointerForNewPage;
         public delegate* <Pager2, long, ref State, void> AllocateMorePages;
         public delegate* <Pager2, State, void> Sync;
@@ -48,13 +49,12 @@ public unsafe partial class Pager2
         {
             return ((size / AllocationGranularity) + 1) * AllocationGranularity;
         }
-        
 
-
-        public static readonly Functions Functions = new()
+        public static Functions CreateFunctions() => new()
         {
             Init = &Init,
             AcquirePagePointer = &AcquirePagePointer,
+            AcquireRawPagePointer = &AcquirePagePointer,
             AcquirePagePointerForNewPage = &AcquirePagePointerForNewPage,
             AllocateMorePages = &AllocateMorePages,
             Sync = &Sync,
@@ -63,7 +63,7 @@ public unsafe partial class Pager2
             EnsureMapped = &EnsureMapped
         };
 
-        public static bool EnsureMapped(Pager2 pager, State state, ref PagerTransactionState txState, long pageNumber, int numberOfPages)
+        private static bool EnsureMapped(Pager2 pager, State state, ref PagerTransactionState txState, long pageNumber, int numberOfPages)
         {
             _ = pager;
             _ = state;
@@ -104,7 +104,6 @@ public unsafe partial class Pager2
                 throw new Win32Exception(Marshal.GetLastWin32Error());
             }
         }
-
         public static void AllocateMorePages(Pager2 pager, long newLength, ref State state)
         {
             var newLengthAfterAdjustment = NearestSizeToAllocationGranularity(newLength);
@@ -121,6 +120,7 @@ public unsafe partial class Pager2
             newState.NumberOfAllocatedPages = newState.TotalAllocatedSize / Constants.Storage.PageSize;
             
             MapFile(newState);
+            CreateFileMapping(newState);
             
             pager.InstallState(newState);
             
@@ -184,6 +184,8 @@ public unsafe partial class Pager2
                 OpenFile(pager, openFileOptions, state);
 
                 MapFile(state);
+                CreateFileMapping(state);
+
                 if (openFileOptions.Temporary && pager.Options.DiscardVirtualMemory)
                 {
                     // RavenDB-22465 - TBD
@@ -306,7 +308,7 @@ public unsafe partial class Pager2
         }
 
 
-        private static void MapFile(State state)
+        public static void MapFile(State state)
         {
             var memAccessType = state.MemAccess switch
             {
@@ -315,12 +317,13 @@ public unsafe partial class Pager2
                 _ => MemoryMappedFileAccess.ReadWrite
             };
 
-            long mappedSize = state.TotalAllocatedSize;
-
-            state.MemoryMappedFile = MemoryMappedFile.CreateFromFile(state.FileStream!, null, mappedSize,
+            state.MemoryMappedFile = MemoryMappedFile.CreateFromFile(state.FileStream!, null, state.TotalAllocatedSize,
                 memAccessType, HandleInheritability.None, true);
+        }
 
-            var fileMappingHandle = state.MemoryMappedFile.SafeMemoryMappedFileHandle.DangerousGetHandle();
+        private static void CreateFileMapping(State state)
+        {
+            var fileMappingHandle = state.MemoryMappedFile!.SafeMemoryMappedFileHandle.DangerousGetHandle();
 
             state.BaseAddress = Win32MemoryMapNativeMethods.MapViewOfFileEx(fileMappingHandle,
                 state.MemAccess,
@@ -332,14 +335,14 @@ public unsafe partial class Pager2
             {
                 var innerException = new Win32Exception(Marshal.GetLastWin32Error(), "Failed to MapView of file " + state.Pager.FileName);
                 var errorMessage =
-                    $"Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size = {new Size(mappedSize, SizeUnit.Bytes)}";
+                    $"Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size = {new Size(state.TotalAllocatedSize, SizeUnit.Bytes)}";
                 throw new OutOfMemoryException(errorMessage, innerException);
             }
 
             // We don't need to manage size updates, we'll register a new allocation, instead
-            NativeMemory.RegisterFileMapping(state.Pager.FileName, (nint)(state.BaseAddress), mappedSize, null);
-            
-            Functions.ProtectPageRange(state.BaseAddress, (ulong)mappedSize);
+            NativeMemory.RegisterFileMapping(state.Pager.FileName, (nint)(state.BaseAddress), state.TotalAllocatedSize, null);
+
+            CreateFunctions().ProtectPageRange(state.BaseAddress, (ulong)state.TotalAllocatedSize);
         }
     }
 }

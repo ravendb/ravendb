@@ -1710,10 +1710,16 @@ namespace Voron
             return dictionary;
         }
 
-        public void UpdateState(EnvironmentStateRecord updatedRecord)
+        public void UpdateDataPagerState(Pager2.State dataPagerState)
         {
-            updatedRecord.DataPagerState.BeforePublishing();
-            Interlocked.Exchange(ref _currentStateRecordRecord, updatedRecord);
+            dataPagerState.BeforePublishing();
+            while (true)
+            {
+                var currentState = _currentStateRecordRecord!;
+                var updatedState = currentState with {DataPagerState = dataPagerState};
+                if (Interlocked.CompareExchange(ref _currentStateRecordRecord, updatedState, currentState) == currentState)
+                    break;
+            }
         }
     }
 

@@ -202,12 +202,7 @@ namespace Voron.Impl.Paging
             return true;
         }
 
-        public override int CopyPage(Pager2 pager, long p, ref Pager2.State state, ref Pager2.PagerTransactionState txState)
-        {
-            throw new NotImplementedException();
-        }
-
-        public int CopyPage(I4KbBatchWrites destI4KbBatchWrites, long pageNumber, PagerState pagerState)
+        public override int CopyPage(Pager2 pager, long pageNumber, ref Pager2.State state, ref Pager2.PagerTransactionState txState)
         {
             var distanceFromStart = (pageNumber % NumberOfPagesInAllocationGranularity);
             var allocationStartPosition = pageNumber - distanceFromStart;
@@ -255,7 +250,7 @@ namespace Voron.Impl.Paging
                 }
                 const int adjustPageSize = (Constants.Storage.PageSize) / (4 * Constants.Size.Kilobyte);
 
-                destI4KbBatchWrites.Write(pageHeader->PageNumber * adjustPageSize, numberOfPages * adjustPageSize, (byte*)pageHeader);
+                pager.DirectWrite(ref state, ref txState, pageHeader->PageNumber * adjustPageSize, numberOfPages * adjustPageSize, (byte*)pageHeader);
 
                 return numberOfPages;
             }

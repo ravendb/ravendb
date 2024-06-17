@@ -238,6 +238,8 @@ namespace Voron.Impl.Journal
 
                             lastProcessedJournal = journalNumber;
 
+                            journalReader.Complete(ref dataPagerState);
+                            
                             if (journalReader.RequireHeaderUpdate) //this should prevent further load of transactions
                             {
                                 requireHeaderUpdate = true;
@@ -246,7 +248,7 @@ namespace Voron.Impl.Journal
                         }
                         addToInitLog?.Invoke($"Journal {journalNumber} Recovered");
 
-                        _env.UpdateState(currentState with { DataPagerState = dataPagerState });
+                        _env.UpdateDataPagerState( dataPagerState );
                     }
                 }
                 catch (InvalidJournalException)
@@ -315,7 +317,7 @@ namespace Voron.Impl.Journal
                         }
                         finally
                         {
-                            state.OnDispose?.Invoke();
+                            state.InvokeDispose(dataPager, dataPagerState, ref state);
                         }
                     }
 
@@ -1460,7 +1462,7 @@ namespace Voron.Impl.Journal
             {
                 var scratchBufferPool = _waj._env.ScratchBufferPool;
                 var scratchPagerStates = new Dictionary<int, PagerState>();
-
+                
                 try
                 {
                     long written = 0;
@@ -1508,9 +1510,11 @@ namespace Voron.Impl.Journal
                             written += numberOfPages * Constants.Storage.PageSize;
                         }
 
-                        txState.Sync?.Invoke(dataPager, ref txState);
-                        txState.OnDispose?.Invoke();
-                        _waj._env.UpdateState(currentStateRecord with { DataPagerState = dataPagerState });
+                        txState.Sync?.Invoke(dataPager, dataPagerState, ref txState);
+                        
+                        txState.InvokeDispose(dataPager, dataPagerState, ref txState);
+                        
+                        _waj._env.UpdateDataPagerState(dataPagerState);
                         meter.SetFileSize(dataPagerState.TotalAllocatedSize);
                         meter.IncrementSize(written);
                     }
