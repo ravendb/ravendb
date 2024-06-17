@@ -15,6 +15,7 @@ using Voron.Data.Containers;
 using Voron.Data.RawData;
 using Voron.Data.PostingLists;
 using Constants = Voron.Global.Constants;
+using System.IO;
 
 namespace Voron.Impl
 {
@@ -39,6 +40,7 @@ namespace Voron.Impl
         private Dictionary<Slice, PostingList> _postingLists;
         
         private Dictionary<TableKey, Table> _tables;
+        private Dictionary<Slice, TableSchemaStatsReference> _tableSchemaStats;
 
         private Dictionary<Slice, Tree> _trees;
 
@@ -227,7 +229,22 @@ namespace Voron.Impl
             if (tableTree == null)
                 return null;
 
-            value = new Table(schema, clonedName, this, tableTree, schema.TableType);
+            _tableSchemaStats ??= new Dictionary<Slice, TableSchemaStatsReference>(SliceComparer.Instance);
+
+            if (_tableSchemaStats.TryGetValue(clonedName, out var tableStatsRef) == false)
+            {
+                var stats = (TableSchemaStats*)tableTree.DirectRead(TableSchema.StatsSlice);
+                if (stats == null)
+                    throw new InvalidDataException($"Cannot find stats value for table {name}");
+
+                _tableSchemaStats[clonedName] = tableStatsRef = new TableSchemaStatsReference()
+                {
+                    NumberOfEntries = stats->NumberOfEntries,
+                    OverflowPageCount = stats->OverflowPageCount
+                };
+            }
+
+            value = new Table(schema, clonedName, this, tableTree, tableStatsRef, schema.TableType);
             _tables[key] = value;
             return value;
         }
