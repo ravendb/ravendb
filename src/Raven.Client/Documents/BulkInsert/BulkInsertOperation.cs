@@ -122,7 +122,7 @@ namespace Raven.Client.Documents.BulkInsert
         private bool _onProgressInitialized = false;
 
         private readonly WeakReferencingTimer _timer;
-        private DateTime _lastWriteToStream;
+
         private readonly SemaphoreSlim _streamLock;
         private readonly TimeSpan _heartbeatCheckInterval = TimeSpan.FromSeconds(StreamWithTimeout.DefaultReadTimeout.TotalSeconds / 3);
 
@@ -165,7 +165,6 @@ namespace Raven.Client.Documents.BulkInsert
                 entity => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity));
 
             _streamLock = new SemaphoreSlim(1, 1);
-            _lastWriteToStream = DateTime.UtcNow;
 
             if (_options.ForTestingPurposes?.OverrideHeartbeatCheckInterval > 0)
                 _heartbeatCheckInterval = TimeSpan.FromMilliseconds(_options.ForTestingPurposes.OverrideHeartbeatCheckInterval / 3);
@@ -242,7 +241,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task SendHeartBeatAsync()
         {
-            if (DateTime.UtcNow.Ticks - _lastWriteToStream.Ticks < _heartbeatCheckInterval.Ticks)
+            if (IsHeartbeatIntervalExceeded() == false)
                 return;
 
             if (_streamLock.Wait(0) == false)
@@ -264,7 +263,7 @@ namespace Raven.Client.Documents.BulkInsert
                 _first = false;
                 _inProgressCommand = CommandType.None;
                 _writer.Write("{\"Type\":\"HeartBeat\"}");
-                
+
                 await FlushIfNeeded(force: true).ConfigureAwait(false);
             }
             catch (Exception)
@@ -662,12 +661,13 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task FlushIfNeeded(bool force = false)
         {
-            if (DateTime.UtcNow.Ticks - _lastWriteToStream.Ticks < _heartbeatCheckInterval.Ticks)
-            {
-                _lastWriteToStream = DateTime.UtcNow;
-                force = true;
-            }
+            force =  force || IsHeartbeatIntervalExceeded();
             await _writer.FlushIfNeeded(force).ConfigureAwait(false);
+        }
+
+        private bool IsHeartbeatIntervalExceeded()
+        {
+            return DateTime.UtcNow.Ticks - _writer.LastFlushToStream.Ticks >= _heartbeatCheckInterval.Ticks;
         }
 
         public readonly struct CountersBulkInsert
