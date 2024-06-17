@@ -27,8 +27,6 @@ namespace SlowTests.Voron.Issues
 
             using (var tx = Env.WriteTransaction())
             {
-                tx.LowLevelTransaction.DataPager.EnsureContinuous(ref tx.LowLevelTransaction.DataPagerState,20, 10);
-
                 var page = tx.LowLevelTransaction.AllocatePage(50);
 
                 pageNum = page.PageNumber;
@@ -81,8 +79,6 @@ namespace SlowTests.Voron.Issues
 
             using (var tx = Env.WriteTransaction())
             {
-                tx.LowLevelTransaction.DataPager.EnsureContinuous(ref tx.LowLevelTransaction.DataPagerState,20, 10);
-
                 var page = tx.LowLevelTransaction.AllocatePage(50);
 
                 pageNum = page.PageNumber;

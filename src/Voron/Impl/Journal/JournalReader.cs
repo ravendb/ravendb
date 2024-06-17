@@ -25,13 +25,13 @@ namespace Voron.Impl.Journal
         private readonly JournalInfo _journalInfo;
         private readonly FileHeader _currentFileHeader;
         private long _readAt4Kb;
-        private readonly DiffApplier _diffApplier = new DiffApplier();
+        private readonly DiffApplier _diffApplier = new();
         private readonly long _journalPagerNumberOfAllocated4Kb;
         private readonly List<EncryptionBuffer> _encryptionBuffers;
         private TransactionHeader* _firstValidTransactionHeader = null;
 
-        private long? _firstSkippedTx = null;
-        private long? _lastSkippedTx = null;
+        private long? _firstSkippedTx;
+        private long? _lastSkippedTx;
         private bool _skippedLastTx;
 
         public bool RequireHeaderUpdate { get; private set; }
@@ -140,7 +140,7 @@ namespace Voron.Impl.Journal
 
                 var numberOfPagesOnDestination = GetNumberOfPagesFor(pageInfoPtr[i].Size);
                 _dataPager.EnsureContinuous(ref state,pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
-                _dataPager.EnsureMapped(state, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
+                _dataPager.EnsureMapped(state, ref txState, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
 
 
                 // We are going to overwrite the page, so we don't care about its current content
@@ -219,7 +219,7 @@ namespace Voron.Impl.Journal
                 _dataPager.ProtectPageRange(pagePtr, (ulong)pageInfoPtr[i].Size);
             }
             
-            txState.OnDispose?.Invoke();
+            txState.InvokeDispose(_dataPager, state, ref txState);
 
             LastTransactionHeader = current;
 
@@ -728,47 +728,50 @@ namespace Voron.Impl.Journal
 
         public void Dispose()
         {
+        }
+
+        public void Complete(ref Pager2.State state)
+        {
             if (_encryptionBuffers != null) // Encryption enabled
             {
-                // foreach (var buffer in _encryptionBuffers)
-                //     PlatformSpecific.NativeMemory.Free4KbAlignedMemory(buffer.Pointer, buffer.Size, buffer.AllocatingThread);
-                //
-                // var cryptoPagerTransactionState = ((IPagerLevelTransactionState)this).CryptoPagerTransactionState;
-                //
-                // if (cryptoPagerTransactionState != null && cryptoPagerTransactionState.TryGetValue(_dataPager, out var state))
-                // {
-                //     // we need to iterate from the end in order to filter out pages that was overwritten by later transaction
-                //     var sortedState = state.OrderByDescending(x => x.Key);
-                //
-                //     var overflowDetector = new RecoveryOverflowDetector();
-                //
-                //     foreach (var buffer in sortedState)
-                //     {
-                //         if (buffer.Value.SkipOnTxCommit)
-                //             continue;
-                //
-                //         if (buffer.Value.Modified == false)
-                //             continue; // No modification
-                //
-                //         var pageHeader = (PageHeader*)buffer.Value.Pointer;
-                //         var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfPages(pageHeader);
-                //
-                //         long modifiedPage = buffer.Key;
-                //
-                //         if (overflowDetector.IsOverlappingAnotherPage(modifiedPage, numberOfPages))
-                //         {
-                //             // if page is overlapping an already seen page it means this one was freed, we must skip it on tx commit
-                //             state[modifiedPage].SkipOnTxCommit = true;
-                //             continue;
-                //         }
-                //
-                //         overflowDetector.SetPageChecked(modifiedPage);
-                //     }
-                // }
-
-                BeforeCommitFinalization?.Invoke(this);
-                throw new NotImplementedException();
+                foreach (var buffer in _encryptionBuffers)
+                    PlatformSpecific.NativeMemory.Free4KbAlignedMemory(buffer.Pointer, buffer.Size, buffer.AllocatingThread);
+                
+                if(_pagerTransactionState.ForCrypto?.TryGetValue(_dataPager, out var cryptoState) == true)
+                {
+                    // we need to iterate from the end in order to filter out pages that was overwritten by later transaction
+                    var sortedState = cryptoState.OrderByDescending(x => x.Key);
+                
+                    var overflowDetector = new RecoveryOverflowDetector();
+                
+                    foreach (var buffer in sortedState)
+                    {
+                        if (buffer.Value.SkipOnTxCommit)
+                            continue;
+                
+                        if (buffer.Value.Modified == false)
+                            continue; // No modification
+                
+                        var pageHeader = (PageHeader*)buffer.Value.Pointer;
+                        var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfPages(pageHeader);
+                
+                        long modifiedPage = buffer.Key;
+                
+                        if (overflowDetector.IsOverlappingAnotherPage(modifiedPage, numberOfPages))
+                        {
+                            // if page is overlapping an already seen page it means this one was freed, we must skip it on tx commit
+                            cryptoState[modifiedPage].SkipOnTxCommit = true;
+                            continue;
+                        }
+                
+                        overflowDetector.SetPageChecked(modifiedPage);
+                    }
+                }
             }
+            
+            _pagerTransactionState.InvokeBeforeCommitFinalization(_dataPager, state, ref _pagerTransactionState);
+            BeforeCommitFinalization?.Invoke(this);
+            _pagerTransactionState.InvokeDispose(_dataPager, state, ref _pagerTransactionState);
             OnDispose?.Invoke(this);
         }
 
@@ -785,6 +788,8 @@ namespace Voron.Impl.Journal
         Dictionary<AbstractPager, TransactionState> IPagerLevelTransactionState.PagerTransactionState32Bits { get; set; }
 
         Dictionary<AbstractPager, CryptoTransactionState> IPagerLevelTransactionState.CryptoPagerTransactionState { get; set; }
+
+        private Pager2.PagerTransactionState _pagerTransactionState = new Pager2.PagerTransactionState { IsWriteTransaction = true };
 
         public Size AdditionalMemoryUsageSize
         {

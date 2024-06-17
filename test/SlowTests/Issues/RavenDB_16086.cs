@@ -24,7 +24,6 @@ namespace SlowTests.Issues
 
             using (var tx = Env.WriteTransaction())
             {
-                tx.LowLevelTransaction.DataPager.EnsureContinuous(ref tx.LowLevelTransaction.DataPagerState, 0, 100);
                 tx.LowLevelTransaction.AllocatePage(50);
                 tx.Commit();
             }

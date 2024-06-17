@@ -28,14 +28,30 @@ public unsafe partial class Pager2
     public struct PagerTransactionState 
     {
         public Dictionary<Pager2, TxStateFor32Bits> For32Bits;
-        public Action OnDispose;
-        public SyncDelegate Sync;
+        public Dictionary<Pager2, CryptoTransactionState> ForCrypto;
+        public bool IsWriteTransaction;
+        
+        /// <summary>
+        /// These are events because we may have a single transaction deal
+        /// with multiple pagers 
+        /// </summary>
+        public event TxStateDelegate OnDispose;
+        public event TxStateDelegate OnBeforeCommitFinalization;
+        
+        /// <summary>
+        /// This is an action because in sync, we have a *single* pager invovled
+        /// </summary>
+        public TxStateDelegate Sync;
 
-        public delegate void SyncDelegate(Pager2 pager, ref PagerTransactionState txState);
+        public delegate void TxStateDelegate(Pager2 pager, State state, ref PagerTransactionState txState);
+
+        public void InvokeBeforeCommitFinalization(Pager2 pager, State state, ref PagerTransactionState txState) => OnBeforeCommitFinalization?.Invoke(pager, state, ref txState);
+        public void InvokeDispose(Pager2 pager, State state, ref PagerTransactionState txState) => OnDispose?.Invoke(pager, state, ref txState);
     }
     
     public class State: IDisposable
     {
+        string S = Environment.StackTrace;
         public readonly Pager2 Pager;
         
         /// <summary>
@@ -45,7 +61,7 @@ public unsafe partial class Pager2
         ///
         /// This is cleared upon committing the transaction state to the global state  
         /// </summary>
-        public State? _previous;
+        private State? _previous;
 
         public void BeforePublishing()
         {
@@ -73,11 +89,8 @@ public unsafe partial class Pager2
             return clone;
         }
 
-        public void MoveFileOwnership()
-        {
-            FileStream = null;
-            Handle = null;
-        }
+        public bool _fileOwnershipMoved;
+        
 
         public byte* BaseAddress;
         public long NumberOfAllocatedPages;
@@ -89,8 +102,8 @@ public unsafe partial class Pager2
         public Win32NativeFileAccess FileAccess;
         public Win32NativeFileAttributes FileAttributes;
         public Win32MemoryMapNativeMethods.NativeFileMapAccessType MemAccess;
-        public SafeFileHandle? Handle;
-        public FileStream? FileStream;
+        public SafeFileHandle Handle;
+        public FileStream FileStream;
 
         public void Dispose()
         {
@@ -106,9 +119,13 @@ public unsafe partial class Pager2
                 Disposed = true;
                 
                 Pager._states.TryRemove(WeakSelf);
-                
-                Handle?.Dispose();
-                FileStream?.Dispose();
+
+                if (_fileOwnershipMoved == false)
+                {
+                    Handle.Dispose();
+                    FileStream.Dispose();
+                }
+
                 MemoryMappedFile?.Dispose();
                 if (PlatformDetails.RunningOnWindows)
                 {
@@ -157,6 +174,11 @@ public unsafe partial class Pager2
                     // nothing we can do here
                 }
             }
+        }
+
+        public void MoveFileOwnership()
+        {
+            _fileOwnershipMoved = true;
         }
     }
 

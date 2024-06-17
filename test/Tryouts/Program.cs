@@ -8,6 +8,7 @@ using SlowTests.Corax;
 using SlowTests.Sharding.Cluster;
 using Xunit;
 using FastTests.Voron.Util;
+using FastTests.Sparrow;
 
 namespace Tryouts;
 
@@ -29,11 +30,11 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new PForEncoderTests(testOutputHelper))
+                using (var test = new EncryptionTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
                     //test.CanRoundTripSmallContainer("GreaterThan42B");
-                    test.CanRespectBufferBoundaryForPage2();
+                    test.RavenDB_15975();
                 }
             }
             catch (Exception e)
