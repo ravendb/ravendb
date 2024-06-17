@@ -847,69 +847,91 @@ namespace Raven.Server.Monitoring.Snmp
                 [Description("Number of faulted databases")]
                 public const string FaultedCount = "5.1.10";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of enabled ongoing tasks for all databases")]
                 public const string TotalNumberOfOngoingTasks = "5.1.11.1";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of active ongoing tasks for all databases")]
                 public const string TotalNumberOfActiveOngoingTasks = "5.1.11.2";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of enabled external replication tasks for all databases")]
                 public const string TotalNumberOfExternalReplicationTasks = "5.1.11.3";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of active external replication tasks for all databases")]
                 public const string TotalNumberOfActiveExternalReplicationTasks = "5.1.11.4";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of enabled RavenDB ETL tasks for all databases")]
                 public const string TotalNumberOfRavenEtlTasks = "5.1.11.5";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of active RavenDB ETL tasks for all databases")]
                 public const string TotalNumberOfActiveRavenEtlTasks = "5.1.11.6";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of enabled SQL ETL tasks for all databases")]
                 public const string TotalNumberOfSqlEtlTasks = "5.1.11.7";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of active SQL ETL tasks for all databases")]
                 public const string TotalNumberOfActiveSqlEtlTasks = "5.1.11.8";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of enabled OLAP ETL tasks for all databases")]
                 public const string TotalNumberOfOlapEtlTasks = "5.1.11.9";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of active OLAP ETL tasks for all databases")]
                 public const string TotalNumberOfActiveOlapEtlTasks = "5.1.11.10";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of enabled Elasticsearch ETL tasks for all databases")]
                 public const string TotalNumberOfElasticSearchEtlTasks = "5.1.11.11";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of active Elasticsearch ETL tasks for all databases")]
                 public const string TotalNumberOfActiveElasticSearchEtlTasks = "5.1.11.12";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of enabled Queue ETL tasks for all databases")]
                 public const string TotalNumberOfQueueEtlTasks = "5.1.11.13";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of active Queue ETL tasks for all databases")]
                 public const string TotalNumberOfActiveQueueEtlTasks = "5.1.11.14";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of enabled Backup tasks for all databases")]
                 public const string TotalNumberOfBackupTasks = "5.1.11.15";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of active Backup tasks for all databases")]
                 public const string TotalNumberOfActiveBackupTasks = "5.1.11.16";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of enabled Subscription tasks for all databases")]
                 public const string TotalNumberOfSubscriptionTasks = "5.1.11.17";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of active Subscription tasks for all databases")]
                 public const string TotalNumberOfActiveSubscriptionTasks = "5.1.11.18";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of enabled Pull Replication As Sink tasks for all databases")]
                 public const string TotalNumberOfPullReplicationAsSinkTasks = "5.1.11.19";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of active Pull Replication As Sink tasks for all databases")]
                 public const string TotalNumberOfActivePullReplicationAsSinkTasks = "5.1.11.20";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of enabled Queue Sink tasks for all databases")]
                 public const string TotalNumberOfQueueSinkTasks = "5.1.11.21";
 
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of active Queue Sink tasks for all databases")]
                 public const string TotalNumberOfActiveQueueSinkTasks = "5.1.11.22";
 
