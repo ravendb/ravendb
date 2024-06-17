@@ -62,7 +62,7 @@ namespace Voron.Util
                         cancellationToken.ThrowIfCancellationRequested();
 
                         var pagesToCopy = (int) (i + steps > numberOfPages ? numberOfPages - i : steps);
-                        src.EnsureMapped(txr.DataPagerState, i, pagesToCopy);
+                        src.EnsureMapped(txr.DataPagerState, ref txState, i, pagesToCopy);
                         var ptr = src.AcquirePagePointer(txr.DataPagerState, ref txState, i);
                         var copiedInBytes = pagesToCopy * Constants.Storage.PageSize;
                         Memory.Copy(pBuffer, ptr, copiedInBytes);
@@ -80,7 +80,7 @@ namespace Voron.Util
             }
             finally
             {
-                txState.OnDispose?.Invoke();
+                txState.InvokeDispose(src, txr.DataPagerState, ref txState);
             }
 
             var totalSecElapsed = Math.Max((double)totalSw.ElapsedMilliseconds / 1000, 0.0001);

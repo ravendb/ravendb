@@ -22,8 +22,6 @@ namespace SlowTests.Voron.Issues
             {
                 var dataFilePager = tx.LowLevelTransaction.DataPager;
 
-                dataFilePager.EnsureContinuous(ref tx.LowLevelTransaction.DataPagerState,1000, 1);
-
                 var testingStuff = tx.LowLevelTransaction.ForTestingPurposesOnly();
 
                 using (testingStuff.CallDuringEnsurePagerStateReference(() =>
