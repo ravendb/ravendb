@@ -13,8 +13,9 @@ public class ServerMetrics : MetricsBase
     private static readonly Lazy<Meter> RequestsMeter = new(() => new(Constants.Meters.RequestsMeter));
     private static readonly Lazy<Meter> StorageMeter = new(() => new(Constants.Meters.StorageMeter));
     private static readonly Lazy<Meter> GcMeter = new(() => new(Constants.Meters.GcMeter));
-    private static readonly Lazy<Meter> Hardware = new(() => new(Constants.Meters.Hardware));
-    private static readonly Lazy<Meter> TotalDatabasesMeter = new(() => new(Constants.Meters.TotalDatabasesMeter));
+    private static readonly Lazy<Meter> HardwareMeter = new(() => new(Constants.Meters.Hardware));
+    private static readonly Lazy<Meter> TotalDatabasesMeter = new(() => new(Constants.Meters.TotalDatabasesMeter));    
+    private static readonly Lazy<Meter> CpuCreditsMeter = new(() => new(Constants.Meters.TotalDatabasesMeter));
     private readonly RavenServer _server;
     private ServerStore ServerStore => _server.ServerStore;
 
@@ -138,37 +139,37 @@ public class ServerMetrics : MetricsBase
         CreateObservableUpDownCounter<int, CpuCreditsBase>(
             name: Constants.ServerWide.CpuCreditsBase,
             observeValueFactory: () => new CpuCreditsBase(ServerStore.Server.CpuCreditsBalance),
-            meter: RequestsMeter);
+            meter: CpuCreditsMeter);
 
         CreateObservableUpDownCounter<int, CpuCreditsMax>(
             name: Constants.ServerWide.CpuCreditsMax,
             observeValueFactory: () => new CpuCreditsMax(ServerStore.Server.CpuCreditsBalance),
-            meter: RequestsMeter);
+            meter: CpuCreditsMeter);
 
         CreateObservableGauge<int, CpuCreditsRemaining>(
             name: Constants.ServerWide.CpuCreditsRemaining,
             observeValueFactory: () => new CpuCreditsRemaining(ServerStore.Server.CpuCreditsBalance),
-            meter: RequestsMeter);
+            meter: CpuCreditsMeter);
 
         CreateObservableUpDownCounter<double, CpuCreditsCurrentConsumption>(
             name: Constants.ServerWide.CpuCreditsCurrentConsumption,
             observeValueFactory: () => new CpuCreditsCurrentConsumption(ServerStore.Server.CpuCreditsBalance),
-            meter: RequestsMeter);
+            meter: CpuCreditsMeter);
 
         CreateObservableGauge<byte, CpuCreditsBackgroundTasksAlertRaised>(
             name: Constants.ServerWide.CpuCreditsBackgroundTasksAlertRaised,
             observeValueFactory: () => new CpuCreditsBackgroundTasksAlertRaised(ServerStore.Server.CpuCreditsBalance),
-            meter: RequestsMeter);
+            meter: CpuCreditsMeter);
 
         CreateObservableGauge<byte, CpuCreditsFailoverAlertRaised>(
             name: Constants.ServerWide.CpuCreditsFailoverAlertRaised,
             observeValueFactory: () => new CpuCreditsFailoverAlertRaised(ServerStore.Server.CpuCreditsBalance),
-            meter: RequestsMeter);
+            meter: CpuCreditsMeter);
 
         CreateObservableGauge<byte, CpuCreditsAlertRaised>(
             name: Constants.ServerWide.CpuCreditsAlertRaised,
             observeValueFactory: () => new CpuCreditsAlertRaised(ServerStore.Server.CpuCreditsBalance),
-            meter: RequestsMeter);
+            meter: CpuCreditsMeter);
     }
 
     private void RegisterServerHardwareInstruments()
@@ -179,92 +180,92 @@ public class ServerMetrics : MetricsBase
         CreateObservableGauge<int, ProcessCpu>(
             name: Constants.ServerWide.ProcessCpu,
             observeValueFactory: () => new ProcessCpu(_server.MetricCacher, _server.CpuUsageCalculator),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableGauge<int, MachineCpu>(
             name: Constants.ServerWide.MachineCpu,
             observeValueFactory: () => new MachineCpu(_server.MetricCacher, _server.CpuUsageCalculator),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableGauge<int, IoWait>(
             name: Constants.ServerWide.IoWait,
             observeValueFactory: () => new IoWait(_server.MetricCacher, _server.CpuUsageCalculator),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableGauge<byte, ServerLowMemoryFlag>(
             name: Constants.ServerWide.ServerLowMemoryFlag,
             observeValueFactory: () => new ServerLowMemoryFlag(),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableGauge<long, ServerTotalMemory>(
             name: Constants.ServerWide.ServerTotalMemory,
             observeValueFactory: () => new ServerTotalMemory(_server.MetricCacher),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableGauge<long, ServerTotalSwapSize>(
             name: Constants.ServerWide.ServerTotalSwapSize,
             observeValueFactory: () => new ServerTotalSwapSize(_server.MetricCacher),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableGauge<long, ServerTotalSwapUsage>(
             name: Constants.ServerWide.ServerTotalSwapUsage,
             observeValueFactory: () => new ServerTotalSwapUsage(_server.MetricCacher),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableGauge<long, ServerDirtyMemory>(
             name: Constants.ServerWide.ServerDirtyMemory,
             observeValueFactory: () => new ServerDirtyMemory(),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableGauge<long, ServerWorkingSetSwapUsage>(
             name: Constants.ServerWide.ServerWorkingSetSwapUsage,
             observeValueFactory: () => new ServerWorkingSetSwapUsage(_server.MetricCacher),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableGauge<long, ServerManagedMemory>(
             name: Constants.ServerWide.ServerManagedMemory,
             observeValueFactory: () => new ServerManagedMemory(),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableGauge<long, ServerUnmanagedMemory>(
             name: Constants.ServerWide.ServerUnmanagedMemory,
             observeValueFactory: () => new ServerUnmanagedMemory(),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableGauge<long, ServerEncryptionBuffersMemoryInUse>(
             name: Constants.ServerWide.ServerEncryptionBuffersMemoryInUse,
             observeValueFactory: () => new ServerEncryptionBuffersMemoryInUse(),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableGauge<long, ServerEncryptionBuffersMemoryInPool>(
             name: Constants.ServerWide.ServerEncryptionBuffersMemoryInPool,
             observeValueFactory: () => new ServerEncryptionBuffersMemoryInPool(),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableGauge<long, ServerAvailableMemoryForProcessing>(
             name: Constants.ServerWide.ServerAvailableMemoryForProcessing,
             observeValueFactory: () => new ServerAvailableMemoryForProcessing(_server.MetricCacher),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableUpDownCounter<int, MachineProcessorCount>(
             name: Constants.ServerWide.MachineProcessorCount,
             observeValueFactory: () => new MachineProcessorCount(),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableUpDownCounter<int, MachineAssignedProcessorCount>(
             name: Constants.ServerWide.MachineAssignedProcessorCount,
             observeValueFactory: () => new MachineAssignedProcessorCount(),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableGauge<int, ThreadPoolAvailableWorkerThreads>(
             name: Constants.ServerWide.ThreadPoolAvailableWorkerThreads,
             observeValueFactory: () => new ThreadPoolAvailableWorkerThreads(),
-            meter: Hardware);
+            meter: HardwareMeter);
 
         CreateObservableGauge<int, ThreadPoolAvailableCompletionPortThreads>(
             name: Constants.ServerWide.ThreadPoolAvailableCompletionPortThreads,
             observeValueFactory: () => new ThreadPoolAvailableCompletionPortThreads(),
-            meter: Hardware);
+            meter: HardwareMeter);
     }
 
     private void RegisterTotalDatabaseInstruments()

@@ -48,7 +48,7 @@ namespace Raven.Server.Config.Categories
         public sealed class OpenTelemetryConfiguration : ConfigurationCategory
         {
             [Description("Indicates if OpenTelemetry is enabled or not. Default: false")]
-            [DefaultValue(true)]
+            [DefaultValue(false)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool Enabled { get; set; }
             
@@ -79,27 +79,27 @@ namespace Raven.Server.Config.Categories
             
             [Description("Expose server storage instruments.")]
             [DefaultValue(true)]
-            [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.Storage", ConfigurationEntryScope.ServerWideOnly)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.Storage.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool ServerStorage { get; set; }
             
             [Description("Expose instruments related to CPU credits.")]
             [DefaultValue(true)]
-            [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.CPUCredits", ConfigurationEntryScope.ServerWideOnly)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.CPUCredits.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool CPUCredits { get; set; }
             
             [Description("Expose instruments related to hardware usage.")]
             [DefaultValue(true)]
-            [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.Hardware", ConfigurationEntryScope.ServerWideOnly)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.Hardware.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool Hardware { get; set; }
 
             [Description("Expose instruments related to aggregated database statistics.")]
             [DefaultValue(true)]
-            [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.TotalDatabases", ConfigurationEntryScope.ServerWideOnly)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.TotalDatabases.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool TotalDatabases { get; set; }
             
             [Description("Expose instruments related to requests.")]
             [DefaultValue(true)]
-            [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.Requests", ConfigurationEntryScope.ServerWideOnly)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.Requests.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool Requests { get; set; }
             
             [Description("Expose instruments related to GC.")]
