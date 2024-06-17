@@ -3,31 +3,26 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using Lextm.SharpSnmpLib;
-using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class TotalDatabaseNumberOfErrorIndexes(ServerStore serverStore)
-        : DatabaseBase<Integer32>(serverStore, SnmpOids.Databases.General.TotalNumberOfErrorIndexes), IMetricInstrument<int>
+    public sealed class TotalDatabaseNumberOfErrorIndexes : DatabaseBase<Integer32>
     {
-        private int Value
+        public TotalDatabaseNumberOfErrorIndexes(ServerStore serverStore)
+            : base(serverStore, SnmpOids.Databases.General.TotalNumberOfErrorIndexes)
         {
-            get
-            {
-                var count = 0;
-                foreach (var database in GetLoadedDatabases())
-                    count += GetCountSafely(database, DatabaseNumberOfErrorIndexes.GetCount);
-                return count;
-            }
         }
 
         protected override Integer32 GetData()
         {
-            return new Integer32(Value);
-        }
+            var count = 0;
+            foreach (var database in GetLoadedDatabases())
+                count += GetCountSafely(database, DatabaseNumberOfErrorIndexes.GetCount);
 
-        public int GetCurrentMeasurement() => Value;
+            return new Integer32(count);
+        }
     }
 }

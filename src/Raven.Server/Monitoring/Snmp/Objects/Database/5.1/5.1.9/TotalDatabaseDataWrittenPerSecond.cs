@@ -1,30 +1,23 @@
-using System.Collections.Generic;
-using System.Diagnostics.Metrics;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
-using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class TotalDatabaseDataWrittenPerSecond(ServerStore serverStore)
-        : DatabaseBase<Gauge32>(serverStore, SnmpOids.Databases.General.TotalDataWrittenPerSecond), IMetricInstrument<int>
+    public sealed class TotalDatabaseDataWrittenPerSecond : DatabaseBase<Gauge32>
     {
-        private int Value
+        public TotalDatabaseDataWrittenPerSecond(ServerStore serverStore)
+            : base(serverStore, SnmpOids.Databases.General.TotalDataWrittenPerSecond)
         {
-            get
-            {
-                var count = 0;
-                foreach (var database in GetLoadedDatabases())
-                    count += GetCountSafely(database, GetCount);
-
-                return count;
-            }
         }
 
         protected override Gauge32 GetData()
         {
-            return new Gauge32(Value);
+            var count = 0;
+            foreach (var database in GetLoadedDatabases())
+                count += GetCountSafely(database, GetCount);
+
+            return new Gauge32(count);
         }
 
         private static int GetCount(DocumentDatabase database)
@@ -36,7 +29,5 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 
             return (int)value;
         }
-
-        public int GetCurrentMeasurement() => Value;
     }
 }

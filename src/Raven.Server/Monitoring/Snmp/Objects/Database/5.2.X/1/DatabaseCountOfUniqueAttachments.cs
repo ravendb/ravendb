@@ -1,12 +1,10 @@
-using System.Diagnostics.Metrics;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
-using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public sealed class DatabaseCountOfUniqueAttachments : DatabaseScalarObjectBase<Gauge32>, ITaggedMetricInstrument<long>
+    public sealed class DatabaseCountOfUniqueAttachments : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseCountOfUniqueAttachments(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.CountOfUniqueAttachments, index)
@@ -25,13 +23,6 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             {
                 return database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context).StreamsCount;
             }
-        }
-
-        public Measurement<long> GetCurrentMeasurement()
-        {
-            if (TryGetDatabase(out var db))
-                return new(GetCount(db), MeasurementTags);
-            return new(0, MeasurementTags);
         }
     }
 }
