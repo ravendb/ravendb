@@ -145,6 +145,9 @@ namespace Raven.Server.Documents.Patch
                 !(args[0].AsObject() is BlittableObjectInstance boi)) 
                 throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
 
+            if (boi.Metadata != null)
+                return boi.Metadata;
+
             var modifiedMetadata = new DynamicJsonValue();
 
             // we need to set the metadata on the blittable itself, because we are might get the actual blittable here instead of Document
@@ -173,8 +176,9 @@ namespace Raven.Server.Documents.Patch
                     Context.ReadObject(modifiedMetadata, boi.DocumentId) : 
                     Context.ReadObject(metadata, boi.DocumentId);
                 
-                JsValue metadataJs = TranslateToJs(_scriptEngine, Context, metadata);
+                var metadataJs = (BlittableObjectInstance)TranslateToJs(_scriptEngine, Context, metadata);
                 boi.Set(Constants.Documents.Metadata.Key, metadataJs);
+                boi.Metadata = metadataJs;
 
                 return metadataJs;
             }
