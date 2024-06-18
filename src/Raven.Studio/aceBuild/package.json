@@ -15,7 +15,7 @@
   },
   "overrides": {
     "architect-build": {
-      "uglify-js": "2.4.24"
+      "uglify-js": "2.6.0"
     }
   }
 }
