@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Sparrow.Utils;
 using Voron.Impl.Journal;
 
@@ -180,14 +181,13 @@ namespace Voron
         private void FlushEnvironments(HashSet<StorageEnvironment> avoidDuplicates)
         {
             avoidDuplicates.Clear();
-            EnvSyncReq req;
             var limit = _maybeNeedToFlush.Count;
             while (
                 // if there is high traffic into the queue, we want to abort after 
                 // we processed whatever was already in there, to avoid holding up
                 // the rest of the operations
                 limit > 0 &&
-                _maybeNeedToFlush.TryDequeue(out req))
+                _maybeNeedToFlush.TryDequeue(out EnvSyncReq req))
             {
                 var envToFlush = req.Env;
                 if (envToFlush == null)
@@ -217,11 +217,11 @@ namespace Voron
 
                     // At the same time, we want to avoid excessive flushes, so we'll limit it to once in a while if we don't
                     // have a lot to flush
-                    if ((DateTime.UtcNow - envToFlush.LastFlushTime).TotalSeconds < envToFlush.TimeToSyncAfterFlushInSec)
+                    if ((TimestampAccessor.GetTime() - envToFlush.LastFlushTime).TotalSeconds < envToFlush.TimeToSyncAfterFlushInSec)
                         continue;
                 }
 
-                envToFlush.LastFlushTime = DateTime.UtcNow;
+                envToFlush.LastFlushTime = TimestampAccessor.GetTime();
 
                 _concurrentFlushesAvailable.Wait();
                 limit--;

@@ -104,7 +104,7 @@ namespace Voron.Impl.Journal
 
         private JournalFile NextFile(int numberOf4Kbs = 1)
         {
-            var now = DateTime.UtcNow;
+            var now = TimestampAccessor.GetTime();
             if ((now - _lastFile).TotalSeconds < 90)
             {
                 _currentJournalFileSize = Math.Min(_env.Options.MaxLogFileSize, _currentJournalFileSize * 2);
@@ -657,7 +657,7 @@ namespace Voron.Impl.Journal
             {
                 Interlocked.Exchange(ref _lastFlushed, state);
 
-                _lastFlushTime = DateTime.UtcNow;
+                _lastFlushTime = TimestampAccessor.GetTime();
             }
 
             public void AddJournalToDelete(JournalFile journal)
@@ -1237,7 +1237,7 @@ namespace Voron.Impl.Journal
                         toDelete.Release();
                     }
 
-                    _parent._lastSyncTime = DateTime.UtcNow;
+                    _parent._lastSyncTime = TimestampAccessor.GetTime();
 
                     return true;
                 }
@@ -1793,7 +1793,7 @@ namespace Voron.Impl.Journal
 
                 _compressionPager.Dispose();
                 _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
-                _lastCompressionBufferReduceCheck = DateTime.UtcNow;
+                _lastCompressionBufferReduceCheck = TimestampAccessor.GetTime();
                 throw;
             }
 
@@ -1895,7 +1895,7 @@ namespace Voron.Impl.Journal
 
                     _compressionPager.Dispose();
                     _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
-                    _lastCompressionBufferReduceCheck = DateTime.UtcNow;
+                    _lastCompressionBufferReduceCheck = TimestampAccessor.GetTime();
                     throw;
                 }
 
@@ -2113,7 +2113,7 @@ namespace Voron.Impl.Journal
             return _env.Options.CreateTemporaryBufferPager($"compression.{_compressionPagerCounter++:D10}{StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.BuffersFileExtension}", initialSize);
         }
 
-        private DateTime _lastCompressionBufferReduceCheck = DateTime.UtcNow;
+        private DateTime _lastCompressionBufferReduceCheck = TimestampAccessor.GetTime();
         private readonly CompressionAccelerationStats _lastCompressionAccelerationInfo;
         private readonly bool _is32Bit;
 
@@ -2141,7 +2141,7 @@ namespace Voron.Impl.Journal
                     " consider raising the limit (MaxScratchBufferSize option control it), since it can cause performance issues");
             }
 
-            _lastCompressionBufferReduceCheck = DateTime.UtcNow;
+            _lastCompressionBufferReduceCheck = TimestampAccessor.GetTime();
 
             _compressionPager.Dispose();
            
@@ -2181,14 +2181,14 @@ namespace Voron.Impl.Journal
             if (forceReduce)
                 return true;
 
-            if ((DateTime.UtcNow - _lastCompressionBufferReduceCheck).TotalMinutes < 5)
+            if ((TimestampAccessor.GetTime() - _lastCompressionBufferReduceCheck).TotalMinutes < 5)
                 return false;
 
             // prevent resize if we recently used at least half of the compression buffer
             var preventResize = _maxNumberOfPagesRequiredForCompressionBuffer > _compressionPager.NumberOfAllocatedPages / 2;
 
             _maxNumberOfPagesRequiredForCompressionBuffer = 0;
-            _lastCompressionBufferReduceCheck = DateTime.UtcNow;
+            _lastCompressionBufferReduceCheck = TimestampAccessor.GetTime();
             return !preventResize;
         }
 

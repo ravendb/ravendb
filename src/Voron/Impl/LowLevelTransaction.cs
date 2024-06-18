@@ -244,8 +244,9 @@ namespace Voron.Impl
 
             FlushInProgressLockTaken = previous.FlushInProgressLockTaken;
             CurrentTransactionHolder = previous.CurrentTransactionHolder;
-            TxStartTime = DateTime.UtcNow;
+            TxStartTime = TimestampAccessor.GetApproximateTime();
             DataPager = env.Options.DataPager;
+            
             _txHeader = TxHeaderInitializerTemplate;
             _env = env;
             _journal = env.Journal;
@@ -339,7 +340,7 @@ namespace Voron.Impl
 
         public LowLevelTransaction(StorageEnvironment env, long id, TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null)
         {
-            TxStartTime = DateTime.UtcNow;
+            TxStartTime = TimestampAccessor.GetApproximateTime();
 
             if (flags == TransactionFlags.ReadWrite)
                 env.Options.AssertNoCatastrophicFailure();
@@ -492,7 +493,7 @@ namespace Voron.Impl
 
             _txHeader.TransactionId = _id;
             _txHeader.NextPageNumber = _state.NextPageNumber;
-            _txHeader.TimeStampTicksUtc = DateTime.UtcNow.Ticks;
+            _txHeader.TimeStampTicksUtc = TimestampAccessor.GetApproximateTimestamp();
         }
 
         internal HashSet<PageFromScratchBuffer> GetTransactionPages()
@@ -1109,7 +1110,7 @@ namespace Voron.Impl
 
             if (WriteToJournalIsRequired())
             {
-                Environment.LastWorkTime = DateTime.UtcNow;
+                Environment.LastWorkTime = TimestampAccessor.GetTime();
                 CommitStage2_WriteToJournal();
             }
             
@@ -1230,7 +1231,7 @@ namespace Voron.Impl
             }
 
             if (AsyncCommit.Result)
-                Environment.LastWorkTime = DateTime.UtcNow;
+                Environment.LastWorkTime = TimestampAccessor.GetTime();
 
             BeforeCommitFinalization?.Invoke(this);
             CommitStage3_DisposeTransactionResources();

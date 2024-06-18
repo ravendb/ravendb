@@ -11,6 +11,7 @@ using Sparrow.Binary;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Server;
 using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -462,7 +463,7 @@ namespace Voron.Impl.Paging
 
         private long GetNewLength(long current, long minRequested)
         {
-            DateTime now = DateTime.UtcNow;
+            DateTime now = TimestampAccessor.GetTime();
             if (_lastIncrease == DateTime.MinValue)
             {
                 _lastIncrease = now;

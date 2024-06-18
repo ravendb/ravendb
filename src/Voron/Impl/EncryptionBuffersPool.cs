@@ -10,6 +10,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Server;
 using Sparrow.Server.Debugging;
 using Sparrow.Server.Platform;
 using Sparrow.Threading;
@@ -59,7 +60,7 @@ namespace Voron.Impl
             _lastGlobalStackRebuilds = new DateTime[numberOfSlots];
             _numberOfAllocationsDisposedInGlobalStacks = new long[numberOfSlots];
 
-            var now = DateTime.UtcNow;
+            var now = TimestampAccessor.GetTime();
 
             for (int i = 0; i < _items.Length; i++)
             {
@@ -169,7 +170,7 @@ namespace Voron.Impl
             {
                 Ptr = ptr,
                 Size = size,
-                InPoolSince = DateTime.UtcNow
+                InPoolSince = TimestampAccessor.GetTime()
             };
 
             var addToPerCorePool = ForTestingPurposes == null || ForTestingPurposes.CanAddToPerCorePool;
@@ -319,7 +320,7 @@ namespace Voron.Impl
 
             try
             {
-                var currentTime = DateTime.UtcNow;
+                var currentTime = TimestampAccessor.GetTime();
                 var idleTime = TimeSpan.FromMinutes(10);
 
                 for (int i = 0; i < _items.Length; i++)

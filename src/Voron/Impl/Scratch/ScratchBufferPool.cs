@@ -269,8 +269,8 @@ namespace Voron.Impl.Scratch
             {
                 var recycledScratch = _recycleArea.First.Value;
 
-                if (IsLowMemory() == false && 
-                    DateTime.UtcNow - recycledScratch.RecycledAt <= RecycledScratchFileTimeout)
+                if (IsLowMemory() == false &&
+                    TimestampAccessor.GetTime() - recycledScratch.RecycledAt <= RecycledScratchFileTimeout)
                     break;
 
                 _recycleArea.RemoveFirst();
@@ -341,7 +341,7 @@ namespace Voron.Impl.Scratch
             if (IsLowMemory())
                 return;
 
-            scratch.RecycledAt = DateTime.UtcNow;
+            scratch.RecycledAt = TimestampAccessor.GetTime();
             _recycleArea.AddLast(scratch);
         }
 
@@ -704,7 +704,7 @@ namespace Voron.Impl.Scratch
                 CurrentFileNumber = currentFile.Number,
                 CurrentFileSizeInMB = currentFile.Size / 1024L / 1024L,
                 PerScratchFileSizeLimitInMB = _options.MaxScratchBufferSize / 1024L / 1024L,
-                CurrentUtcTime = DateTime.UtcNow
+                CurrentUtcTime = TimestampAccessor.GetTime()
             };
 
             foreach (var scratchBufferItem in _scratchBuffers.Values.OrderBy(x => x.Number))
@@ -757,12 +757,12 @@ namespace Voron.Impl.Scratch
             if (_lowMemoryFlag.IsRaised())
                 return true;
 
-            return DateTime.UtcNow.Ticks - _lastLowMemoryEventTicks <= _lowMemoryIntervalTicks;
+            return TimestampAccessor.GetTimestamp() - _lastLowMemoryEventTicks <= _lowMemoryIntervalTicks;
         }
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
-            _lastLowMemoryEventTicks = DateTime.UtcNow.Ticks;
+            _lastLowMemoryEventTicks = TimestampAccessor.GetTimestamp();
             _lowMemoryFlag.Raise();
         }
 

@@ -16,6 +16,7 @@ using Voron.Impl.Paging;
 using Sparrow.Server.Utils;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow.Server.LowMemory;
+using Sparrow.Server;
 
 namespace Voron.Impl.Scratch
 {
@@ -111,7 +112,7 @@ namespace Voron.Impl.Scratch
             _allocatedPagesCount = 0;
 
             DebugInfo.NumberOfResets++;
-            DebugInfo.LastResetTime = DateTime.UtcNow;
+            DebugInfo.LastResetTime = TimestampAccessor.GetApproximateTime();
         }
 
         public PagerState PagerState => _scratchPager.PagerState;
@@ -243,7 +244,7 @@ namespace Voron.Impl.Scratch
                 return; // never called
             }
 
-            DebugInfo.LastFreeTime = DateTime.UtcNow;
+            DebugInfo.LastFreeTime = TimestampAccessor.GetApproximateTime();
             DebugInfo.LastAsOfTxIdWhenFree = asOfTxId;
 
             _allocatedPagesCount -= value.NumberOfPages;
