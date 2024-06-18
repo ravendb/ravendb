@@ -46,6 +46,7 @@
     <None Remove="Data\RavenDB_16378\RavenDB-16401-NRE.ravendb-snapshot" />
     <None Remove="Data\RavenDB_18381\2022-03-27-12-38-05-8912792.ravendb-snapshot" />
     <None Remove="Data\RavenDB_21957\js_index_with_dates_601.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_22498\AutoIndexes.FastTests.json.gz" />
     <None Remove="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
     <None Remove="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
   </ItemGroup>
@@ -134,6 +135,7 @@
     <EmbeddedResource Include="Data\RavenDB_17070\Precorax\Orders_ByOrderBy.zip" />
     <EmbeddedResource Include="Data\RavenDB_18381\2022-03-27-12-38-05-8912792.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_21957\js_index_with_dates_601.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_22498\AutoIndexes.FastTests.json.gz" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />
