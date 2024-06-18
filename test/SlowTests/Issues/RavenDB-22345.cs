@@ -8,6 +8,9 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide;
+using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Commands;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -22,7 +25,7 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.Cluster)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task HandleOutdatedLeaderOnRachisMergedCommand(Options options)
+        public async Task Handle_Outdated_Leader_On_RachisMergedCommand(Options options)
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, watcherCluster: true);
             var follower = nodes.First(n => n.ServerStore.NodeTag != leader.ServerStore.NodeTag);
@@ -41,7 +44,7 @@ namespace SlowTests.Issues
             var first = 0;
             leader.ServerStore.Engine.ForTestingPurposesOnly().ModifyTermBeforeRachisMergedCommandInsertToLeaderLog = (command, term) =>
             {
-                if (command is Raven.Server.ServerWide.Commands.ClusterTransactionCommand &&
+                if (command is ClusterTransactionCommand &&
                     Interlocked.CompareExchange(ref first, 1, 0) == 0)
                     term--;
                 return term;
@@ -60,6 +63,25 @@ namespace SlowTests.Issues
                 var u1 = await session.LoadAsync<User>(user1.Id);
                 Assert.NotNull(u1);
             }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster)]
+        public async Task RachisConcurrencyException_On_Leader_PutAsync_Shouldnt_Make_Endless_Loop_On_SendToLeaderAsync()
+        {
+            var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true);
+
+            var follower = nodes.First(n => n.ServerStore.NodeTag != leader.ServerStore.NodeTag);
+
+            leader.ServerStore.Engine.ForTestingPurposesOnly().BeforeExecuteAddDatabaseCommand = () => throw new RachisConcurrencyException("For Testing");
+
+            // Should be ConcurrencyException, not TimeoutException (in SendToLeaderAsync)
+            var db = GetDatabaseName();
+            await Assert.ThrowsAsync<ConcurrencyException>( () => 
+                follower.ServerStore.SendToLeaderAsync(new AddDatabaseCommand(Guid.NewGuid().ToString())
+                {
+                    Record = new DatabaseRecord(db) { Topology = new DatabaseTopology { Members = new List<string> { "A", "B" } } }, Name = db
+                })
+            );
         }
 
         private class User

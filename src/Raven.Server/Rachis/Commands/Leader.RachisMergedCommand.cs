@@ -50,16 +50,27 @@ namespace Raven.Server.Rachis
 
             public async Task<(long Index, object Result)> Result()
             {
-                var inner = await _tcs.Task;
+                await WaitForInsertToLeaderLog();
+                return await WaitForCommit();
+            }
 
-                if (await inner.WaitWithTimeout(_timeout) == false)
+            private Task<(long Index, object Result)> _waitForCommit;
+
+            public async Task WaitForInsertToLeaderLog()
+            {
+                _waitForCommit = await _tcs.Task; // succeeded to insert to log
+            }
+
+            public async Task<(long Index, object Result)> WaitForCommit()
+            {
+                if (await _waitForCommit.WaitWithTimeout(_timeout) == false) // succeeded to commit (raft - can fail on ClusterStateMachine.Apply)
                 {
                     throw new TimeoutException($"Waited for {_timeout} but the command {Command.RaftCommandIndex} was not applied in this time.");
                 }
 
-                var r = await inner;
+                var r = await _waitForCommit;
                 return BlittableResultWriter == null ? r : (r.Index, BlittableResultWriter.Result);
-            } 
+            }
 
             protected override long ExecuteCmd(ClusterOperationContext context)
             {
@@ -77,7 +88,8 @@ namespace Raven.Server.Rachis
 
                     _leader._errorOccurred.TrySetException(e);
 
-                    _tcs.TrySetResult(Task.FromException<(long, object)>(e));
+                    _tcs.TrySetException(e);
+                    // _tcs.TrySetResult(Task.FromException<(long, object)>(e));
                 }
 
                 return 1;

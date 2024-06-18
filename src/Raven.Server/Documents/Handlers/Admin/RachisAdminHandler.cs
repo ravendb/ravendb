@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     throw new NoLeaderException("Not a leader, cannot accept commands.");
                 }
 
-                HttpContext.Response.Headers["Reached-Leader"] = "true";
+                HttpContext.Response.Headers["Reached-Leader"] = "false";
 
                 var commandJson = await context.ReadForMemoryAsync(RequestBodyStream(), "external/rachis/command");
                 try
@@ -59,7 +59,15 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var isClusterAdmin = IsClusterAdmin();
                     command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
 
-                    var (etag, result) = await ServerStore.Engine.PutAsync(command);
+                    long etag;
+                    object result;
+                    using (var rachisMergedCmd = await ServerStore.Engine.PutAndGetRachisMergedCommandAsync(command))
+                    {
+                        await rachisMergedCmd.WaitForInsertToLeaderLog();
+                        HttpContext.Response.Headers["Reached-Leader"] = "true";
+                        (etag, result) = await rachisMergedCmd.WaitForCommit();
+                    }
+
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                     var ms = context.CheckoutMemoryStream();
                     try
