@@ -49,7 +49,7 @@ else
     else
         # Show dependencies for amd64 since that's the only platform Microsoft ships package for,
         # however the dependencies are the same at the moment.
-        DOTNET_RUNTIME_DEPS_PKG="dotnet-runtime-$DOTNET_RUNTIME_VERSION:amd64"
+        DOTNET_RUNTIME_DEPS_PKG="dotnet-runtime-deps-$DOTNET_RUNTIME_VERSION:amd64"
     fi
     
     # get depenencies and remove dotnet-host* dependencies

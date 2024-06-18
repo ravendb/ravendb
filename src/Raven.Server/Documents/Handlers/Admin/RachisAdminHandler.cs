@@ -29,6 +29,7 @@ using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -452,6 +453,11 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology: true, asWatcher: watcher ?? false);
 
+                    if (LoggingSource.AuditLog.IsInfoEnabled)
+                        LogAuditFor("Server", "ADD", $"Node {nodeTag} to cluster. Term: {ServerStore.Engine.CurrentTerm}.");
+
+
+
                     using (ctx.OpenReadTransaction())
                     {
                         clusterTopology = ServerStore.GetClusterTopology(ctx);
@@ -551,6 +557,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
 
                 await ServerStore.RemoveFromClusterAsync(nodeTag);
+
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                    LogAuditFor("Server", "DELETE", $"Node {nodeTag} from cluster. Term: {ServerStore.Engine.CurrentTerm}.");
+
                 NoContentStatus();
                 return;
             }
