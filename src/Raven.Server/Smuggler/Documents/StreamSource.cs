@@ -28,7 +28,6 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
-using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Data;
@@ -1042,6 +1041,8 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.LegacyDocumentDeletions:
                 case DatabaseItemType.LegacyAttachmentDeletions:
                 case DatabaseItemType.CounterGroups:
+                case DatabaseItemType.TimeSeriesDeletedRanges:
+                case DatabaseItemType.ReplicationHubCertificates:
                     return await SkipArrayAsync(onSkipped, null, token);
 
                 case DatabaseItemType.TimeSeries:
@@ -1049,9 +1050,6 @@ namespace Raven.Server.Smuggler.Documents
 
                 case DatabaseItemType.DatabaseRecord:
                     return await SkipObjectAsync(onSkipped);
-
-                case DatabaseItemType.ReplicationHubCertificates:
-                    return await SkipArrayAsync(onSkipped, null, token);
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -1061,6 +1059,41 @@ namespace Raven.Server.Smuggler.Documents
         public SmugglerSourceType GetSourceType()
         {
             return SmugglerSourceType.Import;
+        }
+
+        public async IAsyncEnumerable<TimeSeriesDeletedRangeItemForSmuggler> GetTimeSeriesDeletedRangesAsync(ITimeSeriesActions action, List<string> collectionsToExport)
+        {
+            var collectionsHashSet = new HashSet<string>(collectionsToExport, StringComparer.OrdinalIgnoreCase);
+
+            await foreach (var reader in ReadArrayAsync(action))
+            {
+                if (reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.Collection), out LazyStringValue collection) == false ||
+                    reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.DocId), out LazyStringValue docId) == false ||
+                    reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.Name), out LazyStringValue name) == false ||
+                    reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.ChangeVector), out LazyStringValue cv) == false ||
+                    reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.From), out DateTime from) == false ||
+                    reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.To), out DateTime to) == false)
+                {
+                    _result.TimeSeriesDeletedRanges.ErroredCount++;
+                    _result.AddWarning("Could not read timeseries deleted range entry.");
+                    continue;
+                }
+
+                if (collectionsHashSet.Count > 0 && collectionsHashSet.Contains(collection) == false)
+                    continue;
+
+                action.RegisterForDisposal(reader);
+
+                yield return new TimeSeriesDeletedRangeItemForSmuggler
+                {
+                    DocId = docId,
+                    Name = name,
+                    Collection = collection,
+                    ChangeVector = cv,
+                    From = from,
+                    To = to
+                };
+            }
         }
 
         public IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToOperate, INewDocumentActions actions)
@@ -1989,6 +2022,9 @@ namespace Raven.Server.Smuggler.Documents
 
             if (type.Equals("AttachmentsDeletions", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.LegacyAttachmentDeletions;
+
+            if (type.Equals(nameof(DatabaseItemType.TimeSeriesDeletedRanges), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.TimeSeriesDeletedRanges;
 
             return DatabaseItemType.Unknown;
         }

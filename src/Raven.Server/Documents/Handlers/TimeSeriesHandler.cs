@@ -277,6 +277,8 @@ namespace Raven.Server.Documents.Handlers
 
             private readonly Dictionary<string, List<TimeSeriesItem>> _dictionary;
 
+            private readonly Dictionary<string, List<TimeSeriesDeletedRangeItemForSmuggler>> _deletedRanges;
+
             private readonly DocumentsOperationContext _context;
 
             public DocumentsOperationContext Context => _context;
@@ -297,7 +299,8 @@ namespace Raven.Server.Documents.Handlers
             public SmugglerTimeSeriesBatchCommand(DocumentDatabase database)
             {
                 _database = database;
-                _dictionary = new Dictionary<string, List<TimeSeriesItem>>();
+                _dictionary = new Dictionary<string, List<TimeSeriesItem>>(StringComparer.OrdinalIgnoreCase);
+                _deletedRanges = new Dictionary<string, List<TimeSeriesDeletedRangeItemForSmuggler>>(StringComparer.OrdinalIgnoreCase);
                 _toDispose = new();
                 _toReturn = new();
                 _releaseContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
@@ -308,6 +311,27 @@ namespace Raven.Server.Documents.Handlers
                 var tss = _database.DocumentsStorage.TimeSeriesStorage;
 
                 var changes = 0L;
+
+                foreach (var (docId, items) in _deletedRanges)
+                {
+                    foreach (var item in items)
+                    {
+                        using (item)
+                        {
+                            var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
+                            {
+                                DocumentId = docId,
+                                Collection = item.Collection,
+                                Name = item.Name,
+                                From = item.From,
+                                To = item.To
+                            };
+                            tss.DeleteTimestampRange(context, deletionRangeRequest, remoteChangeVector: null, updateMetadata: false);
+                        }
+                    }
+
+                    changes += items.Count;
+                }
 
                 foreach (var (docId, items) in _dictionary)
                 {
@@ -350,6 +374,21 @@ namespace Raven.Server.Documents.Handlers
                 itemsList.Add(item);
                 return newItem;
             }
+
+            public bool AddToDeletedRanges(TimeSeriesDeletedRangeItemForSmuggler item)
+            {
+                bool newItem = false;
+
+                if (_deletedRanges.TryGetValue(item.DocId, out var deletedRangesList) == false)
+                {
+                    _deletedRanges[item.DocId] = deletedRangesList = [];
+                    newItem = true;
+                }
+
+                deletedRangesList.Add(item);
+                return newItem;
+            }
+
 
             public void AddToDisposal(IDisposable disposable)
             {
