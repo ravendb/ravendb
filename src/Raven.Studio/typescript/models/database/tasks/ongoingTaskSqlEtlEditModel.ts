@@ -127,7 +127,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             Disabled: this.taskState() === "Disabled",
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             PinToMentorNode: this.pinMentorNode(),
-            FactoryName: "Microsoft.Data.SqlClient",
+            FactoryName: "System.Data.SqlClient",
             ForceQueryRecompile: this.forceRecompileQuery(),
             ParameterizeDeletes: this.parameterizedDeletes(),
             CommandTimeout: this.commandTimeout() || null,

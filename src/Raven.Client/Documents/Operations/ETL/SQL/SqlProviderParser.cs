@@ -8,6 +8,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
         {
             switch (factoryName)
             {
+                case "System.Data.SqlClient":
                 case "Microsoft.Data.SqlClient":
                     return SqlProvider.SqlClient;
                 case "Npgsql":

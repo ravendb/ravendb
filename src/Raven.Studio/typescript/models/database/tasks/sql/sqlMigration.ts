@@ -161,7 +161,7 @@ class sqlMigration {
     labelForProvider(type: Raven.Server.SqlMigration.MigrationProvider) {
         switch (type) {
             case "MsSQL":
-                return "Microsoft SQL Server (Microsoft.Data.SqlClient)";
+                return "Microsoft SQL Server (System.Data.SqlClient)";
             case "MySQL_MySql_Data":
                 return "DEPRECATED: MySQL Server (MySql.Data.MySqlClient)";
             case "MySQL_MySqlConnector":
@@ -305,7 +305,7 @@ class sqlMigration {
             case "MySQL_MySqlConnector":
                 return "MySqlConnector.MySqlConnectorFactory";
             case "MsSQL":
-                return "Microsoft.Data.SqlClient";
+                return "System.Data.SqlClient";
             case "NpgSQL":
                 return "Npgsql";
             case "Oracle":
