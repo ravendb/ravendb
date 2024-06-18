@@ -47,6 +47,8 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         ITimeSeriesActions TimeSeries();
 
+        ITimeSeriesActions TimeSeriesDeletedRanges();
+
         ILegacyActions LegacyDocumentDeletions();
 
         ILegacyActions LegacyAttachmentDeletions();
@@ -126,7 +128,9 @@ namespace Raven.Server.Smuggler.Documents.Data
     public interface ITimeSeriesActions : IAsyncDisposable, INewItemActions
     {
         ValueTask WriteTimeSeriesAsync(TimeSeriesItem ts);
-        
+
+        ValueTask WriteTimeSeriesDeletedRangeAsync(TimeSeriesDeletedRangeItemForSmuggler deletedRange);
+
         void RegisterForDisposal(IDisposable data);
 
         void RegisterForReturnToTheContext(AllocatedMemoryData data);

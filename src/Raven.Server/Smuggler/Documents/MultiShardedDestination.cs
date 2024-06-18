@@ -137,6 +137,9 @@ namespace Raven.Server.Smuggler.Documents
         public ITimeSeriesActions TimeSeries() =>
             new ShardedTimeSeriesActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.TimeSeries()), _options);
 
+        public ITimeSeriesActions TimeSeriesDeletedRanges() =>
+            new ShardedTimeSeriesActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.TimeSeriesDeletedRanges()), _options);
+
         public ILegacyActions LegacyDocumentDeletions() =>
             new ShardedLegacyActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.LegacyDocumentDeletions()), _options);
 
@@ -353,6 +356,12 @@ namespace Raven.Server.Smuggler.Documents
             {
                 var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, ts.DocId);
                 await _actions[shardNumber].WriteTimeSeriesAsync(ts);
+            }
+
+            public async ValueTask WriteTimeSeriesDeletedRangeAsync(TimeSeriesDeletedRangeItemForSmuggler deletedRange)
+            {
+                var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, deletedRange.DocId);
+                await _actions[shardNumber].WriteTimeSeriesDeletedRangeAsync(deletedRange);
             }
 
             public void RegisterForDisposal(IDisposable data)
