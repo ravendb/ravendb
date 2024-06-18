@@ -250,9 +250,10 @@ namespace Sparrow.Json
         {
             get
             {
-                if (TryGetMember(name, out object result) == false)
-                    throw new ArgumentException($"Member named {name} does not exist");
-                return result;
+                if (TryGetMember(name, out object result)) 
+                    return result;
+                
+                throw new ArgumentException($"Member named {name} does not exist");
             }
         }
 
@@ -726,7 +727,7 @@ namespace Sparrow.Json
             ThrowIf<ObjectDisposedException>(_mem == null, "blittable object has been disposed");
 
             if (index < 0 || index >= _propCount)
-                ThrowOutOfRangeException(index);
+                throw new ArgumentOutOfRangeException(nameof(index), index, "Unexpected index argument value: " + index);
 
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
 
@@ -749,16 +750,10 @@ namespace Sparrow.Json
 
             if (NoCache == false && addObjectToCache)
             {
-                AddToCache(stringValue.ToString(), value, index);
+                AddToCache(stringValue.ToString(CultureInfo.InvariantCulture), value, index);
             }
 
             prop.Value = value;
-        }
-
-        private static void ThrowOutOfRangeException(int indexValue)
-        {
-            // ReSharper disable once NotResolvedInText
-            throw new ArgumentOutOfRangeException("index", indexValue, "Unexpected index argument value: " + indexValue);
         }
 
         public int GetPropertyIndex(string name)
@@ -838,9 +833,9 @@ namespace Sparrow.Json
 
         public struct InsertionOrderProperties : IDisposable
         {
-            internal int* Properties;
-            internal int* Offsets;
-            internal int Size;
+            internal readonly int* Properties;
+            internal readonly int* Offsets;
+            internal readonly int Size;
 
             private readonly JsonOperationContext _context;
             private AllocatedMemoryData _allocation;
