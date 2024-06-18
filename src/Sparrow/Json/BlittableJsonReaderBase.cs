@@ -112,27 +112,16 @@ namespace Sparrow.Json
         {
             int returnValue = *value;
             if (sizeOfValue == sizeof(byte))
-                goto Successful;
+                return returnValue;
 
             returnValue |= *(value + 1) << 8;
             if (sizeOfValue == sizeof(short))
-                goto Successful;
+                return returnValue;
 
             returnValue |= *(short*)(value + 2) << 16;
             if (sizeOfValue == sizeof(int))
-                goto Successful;
+                return returnValue;
 
-            goto Error;
-            
-            Successful:
-            return returnValue;
-
-            Error:
-            return ThrowInvalidSizeForNumber(sizeOfValue);
-        }
-
-        private static int ThrowInvalidSizeForNumber(long sizeOfValue)
-        {
             throw new ArgumentException($"Unsupported size {sizeOfValue}");
         }
 
