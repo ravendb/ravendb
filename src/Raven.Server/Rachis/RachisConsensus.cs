@@ -840,6 +840,8 @@ namespace Raven.Server.Rachis
 
             internal HoldOnLeaderElectDebug HoldOnLeaderElect;
 
+            internal Action BeforeExecuteAddDatabaseCommand;
+
             public static unsafe void InsertToLogDirectlyForDebug(ClusterOperationContext context, RachisConsensus node, long term, long index, CommandBase cmd, RachisEntryFlags flags)
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
@@ -1100,6 +1102,16 @@ namespace Raven.Server.Rachis
 
             Validator.AssertPutCommandToLeader(cmd);
             return leader.PutAsync(cmd, cmd.Timeout ?? OperationTimeout);
+        }
+
+        public Task<Leader.RachisMergedCommand> PutAndGetRachisMergedCommandAsync(CommandBase cmd)
+        {
+            var leader = _currentLeader;
+            if (leader == null)
+                throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
+
+            Validator.AssertPutCommandToLeader(cmd);
+            return leader.PutAndGetRachisMergedCommandAsync(cmd, cmd.Timeout ?? OperationTimeout);
         }
 
         public void SwitchToCandidateStateOnTimeout()

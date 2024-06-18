@@ -1757,6 +1757,8 @@ namespace Raven.Server.ServerWide
 
         private unsafe List<string> AddDatabase(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
+            _parent.ForTestingPurposes?.BeforeExecuteAddDatabaseCommand?.Invoke();
+
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
             Exception exception = null;
             try
