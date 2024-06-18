@@ -8,6 +8,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
         private static readonly string[] SqlServerFactoryNames =
         {
+            "System.Data.SqlClient",
             "Microsoft.Data.SqlClient",
             "System.Data.SqlServerCe.4.0",
             "MySql.Data.MySqlClient",
