@@ -112,8 +112,23 @@ internal sealed class IndexedField
 
     public IndexedField CreateVirtualIndexedField(IndexFieldBinding dynamicField)
     {
-        return new IndexedField(dynamicField.FieldId, dynamicField.FieldName, dynamicField.FieldNameLong, dynamicField.FieldNameDouble,
-            dynamicField.FieldTermTotalSumField, dynamicField.Analyzer, dynamicField.FieldIndexingMode, dynamicField.HasSuggestions, dynamicField.ShouldStore,
+        Analyzer analyzer;
+        FieldIndexingMode fieldIndexingMode;
+        //backward compatibility
+        switch (dynamicField.FieldIndexingMode)
+        {
+            case FieldIndexingMode.No:
+                analyzer = null;
+                fieldIndexingMode = FieldIndexingMode.No;
+                break;
+            default:
+                analyzer = Analyzer ?? dynamicField.Analyzer;
+                fieldIndexingMode = Analyzer is null ? dynamicField.FieldIndexingMode : FieldIndexingMode;
+                break;
+        }
+        
+        return new IndexedField(Constants.IndexWriter.DynamicField, dynamicField.FieldName, dynamicField.FieldNameLong, dynamicField.FieldNameDouble,
+            dynamicField.FieldTermTotalSumField, analyzer, fieldIndexingMode, dynamicField.HasSuggestions, dynamicField.ShouldStore,
             SupportedFeatures, dynamicField.FieldNameForStatistics, FieldRootPage, TermsVectorFieldRootPage, Storage, Textual, Longs, Doubles, this);
     }
 
