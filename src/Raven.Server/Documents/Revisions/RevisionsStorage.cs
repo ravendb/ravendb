@@ -2018,6 +2018,53 @@ namespace Raven.Server.Documents.Revisions
             return await RevertRevisions(before, window, onProgress, collections: null, token);
         }
 
+        public async Task<IOperationResult> RevertRevisions(Action<IOperationProgress> onProgress, string id, string cv,
+            OperationCancelToken token)
+        {
+            var result = new RevertResult();
+
+            if (id == null)
+                throw new ArgumentException("Document id is null");
+
+            if (id == string.Empty)
+                throw new ArgumentException("Document id is an empty string");
+
+            if (cv == null)
+                throw new ArgumentException("Change Vector is null");
+
+            if (id == string.Empty)
+                throw new ArgumentException("Change Vector is an empty string");
+
+
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+                using (Slice.From(context.Allocator, cv, out var cvSlice))
+                {
+                    if (table.ReadByKey(cvSlice, out TableValueReader tvr) == false)
+                        throw new InvalidOperationException($"There is no revision with the cv {cv}");
+
+                    var revision = TableValueToRevision(context, ref tvr, DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector | DocumentFields.Data);
+
+                    if (revision.Id != id)
+                        throw new InvalidOperationException($"Revision with the cv {cv} doesn't belong to the doc \"{id}\" but to the doc \"{revision.Id}\"");
+
+                    // send initial progress
+                    onProgress?.Invoke(result);
+
+                    result.RevertedDocuments++;
+
+                    var list = new List<Document>() { revision };
+
+                    await WriteRevertedRevisions(list, token);
+                }
+            }
+
+            return result;
+        }
+
+
         public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, HashSet<string> collections, OperationCancelToken token)
         {
             var result = new RevertResult();
