@@ -81,7 +81,7 @@ public class RavenDB_17097 : RavenTestBase
                 from inn in documentItself.Inners
                 let x = 1
                 let z = 2
-                select new {Inner = inn, xx = x, zz = z, _ = CreateField("SourceDoc", documentItself)};
+                select new {Inner = inn, xx = x, zz = z, _ = CreateField("SourceDoc", documentItself, new() { Indexing = FieldIndexing.No, Storage = FieldStorage.Yes })};
 
             if (skipIndexingComplexField)
             {

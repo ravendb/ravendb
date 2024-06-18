@@ -432,24 +432,20 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected IEnumerable<CoraxDynamicItem> CoraxCreateField(CurrentIndexingScope scope, string name, object value, CreateFieldOptions options)
         {
-            IndexFieldOptions explicitField = null;
             IndexFieldOptions allFields = null;
             if (scope.IndexDefinition is MapIndexDefinition mapIndexDefinition)
             {
                 mapIndexDefinition.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out allFields);
-                mapIndexDefinition.IndexDefinition.Fields.TryGetValue(name, out explicitField);
             }
             
             var field = IndexField.Create(name, new IndexFieldOptions
             {
-                Storage = options?.Storage ?? explicitField?.Storage ?? CreateFieldOptions.Default.Storage,
-                TermVector = options?.TermVector ?? explicitField?.TermVector ?? CreateFieldOptions.Default.TermVector,
-                Indexing = options?.Indexing ?? explicitField?.Indexing ?? CreateFieldOptions.Default.Indexing,
+                Storage = options?.Storage,
+                TermVector = options?.TermVector,
+                Indexing = options?.Indexing,
             }, allFields, Corax.Constants.IndexWriter.DynamicField);
 
-            if (scope.DynamicFields == null)
-                scope.DynamicFields = new Dictionary<string, IndexField>();
-
+            scope.DynamicFields ??= new Dictionary<string, IndexField>();
             if (scope.DynamicFields.TryGetValue(name, out var existing) == false)
             {
                 scope.DynamicFields[name] = field;
@@ -461,14 +457,16 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
 
-            var result = new List<CoraxDynamicItem>();
-            result.Add(new CoraxDynamicItem()
+            var result = new List<CoraxDynamicItem>
             {
-                Field = field,
-                FieldName = name,
-                Value = value
-            });
-           
+                new()
+                {
+                    Field = field,
+                    FieldName = name,
+                    Value = value
+                }
+            };
+
             return result;
         }
         
