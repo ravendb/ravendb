@@ -17,7 +17,6 @@ using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -648,6 +647,35 @@ namespace FastTests
                 {
                     tcs.TrySetResult(null);
                 }
+            }
+
+            public async Task<long> RunBackupForDatabaseModeAsync(RavenServer server, PeriodicBackupConfiguration config, IDocumentStore store, RavenDatabaseMode databaseMode, bool isFullBackup = true, long? taskId = null)
+            {
+                if (taskId == null)
+                {
+                    taskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+
+                    if (databaseMode == RavenDatabaseMode.Sharded)
+                        _parent.Sharding.Backup.WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, taskId.Value);
+                    else
+                        WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, taskId.Value);
+                }
+
+                WaitHandle[] waitHandles;
+                if (databaseMode == RavenDatabaseMode.Sharded)
+                {
+                    waitHandles = await _parent.Sharding.Backup.WaitForBackupsToComplete(new[] { store });
+                    await _parent.Sharding.Backup.RunBackupAsync(store.Database, taskId.Value, isFullBackup);
+                }
+                else
+                {
+                    waitHandles = await WaitForBackupToComplete(store);
+                    await RunBackupAsync(server, taskId.Value, store, isFullBackup);
+                }
+
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)), "backups failed to complete within 60 seconds");
+
+                return taskId.Value;
             }
         }
     }

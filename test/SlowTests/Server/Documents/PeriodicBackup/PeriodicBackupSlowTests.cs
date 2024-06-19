@@ -3999,7 +3999,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -4019,20 +4019,29 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Null(ts);
                 }
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
-
-                Assert.True(WaitForValue(() =>
-                {
-                    var dir = Directory.GetDirectories(backupPath).First();
-                    var files = Directory.GetFiles(dir);
-                    return files.Length == 2;
-                }, expectedVal: true));
+                await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode, isFullBackup: false, backupTaskId);
             }
 
             using (var store = GetDocumentStore(options))
             {
-                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(),
-                    Directory.GetDirectories(backupPath).First());
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    // import from each shard backup dir
+                    var dirs = Directory.GetDirectories(backupPath);
+                    Assert.Equal(3, dirs.Length);
+
+                    foreach (var dir in dirs)
+                    {
+                        await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                    }
+                }
+                else
+                {
+                    var dir = Directory.GetDirectories(backupPath).First();
+                    Assert.Equal(2, Directory.GetFiles(dir).Length);
+
+                    await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                }
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -4069,7 +4078,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+                var backupTaskId = await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -4095,20 +4105,29 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(1, ts.Length);
                 }
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
-
-                Assert.True(WaitForValue(() =>
-                {
-                    var dir = Directory.GetDirectories(backupPath).First();
-                    var files = Directory.GetFiles(dir);
-                    return files.Length == 2;
-                }, expectedVal: true));
+                await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode, isFullBackup: false, backupTaskId);
             }
 
             using (var store = GetDocumentStore(options))
             {
-                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(),
-                    Directory.GetDirectories(backupPath).First());
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    // import from each shard backup dir
+                    var dirs = Directory.GetDirectories(backupPath);
+                    Assert.Equal(3, dirs.Length);
+
+                    foreach (var dir in dirs)
+                    {
+                        await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                    }
+                }
+                else
+                {
+                    var dir = Directory.GetDirectories(backupPath).First();
+                    Assert.Equal(2, Directory.GetFiles(dir).Length);
+
+                    await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                }
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -4146,7 +4165,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -4187,20 +4206,29 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Null(ts);
                 }
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
-
-                Assert.True(WaitForValue(() =>
-                {
-                    var dir = Directory.GetDirectories(backupPath).First();
-                    var files = Directory.GetFiles(dir);
-                    return files.Length == 2;
-                }, expectedVal: true));
+                await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode, isFullBackup: false, backupTaskId);
             }
 
             using (var store = GetDocumentStore(options))
             {
-                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(),
-                    Directory.GetDirectories(backupPath).First());
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    // import from each shard backup dir
+                    var dirs = Directory.GetDirectories(backupPath);
+                    Assert.Equal(3, dirs.Length);
+
+                    foreach (var dir in dirs)
+                    {
+                        await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                    }
+                }
+                else
+                {
+                    var dir = Directory.GetDirectories(backupPath).First();
+                    Assert.Equal(2, Directory.GetFiles(dir).Length);
+
+                    await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                }
 
                 using (var session = store.OpenAsyncSession())
                 {
