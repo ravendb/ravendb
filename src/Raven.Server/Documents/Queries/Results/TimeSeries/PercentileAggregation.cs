@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             if (percentile.Value <= 0 || percentile.Value > 100)
                 throw new ArgumentOutOfRangeException(
                     $"Invalid argument passed to '{nameof(AggregationType.Percentile)}' aggregation method: '{percentile}'. " +
-                    "Argument must be a number between 0 and 100");
+                    "Argument must be a number greater than 0 and less than or equal to 100");
 
             _percentileFactor = percentile.Value / 100;
             _rankedValues = new List<SortedDictionary<double, int>>();
