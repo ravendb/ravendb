@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Amqp.Types;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
@@ -31,6 +32,7 @@ using Voron.Exceptions;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Schemas.Revisions;
+using static Raven.Server.Utils.MetricCacher.Keys;
 using static Voron.Data.Tables.Table;
 using Constants = Raven.Client.Constants;
 using Size = Sparrow.Size;
@@ -2018,11 +2020,8 @@ namespace Raven.Server.Documents.Revisions
             return await RevertRevisions(before, window, onProgress, collections: null, token);
         }
 
-        public async Task<IOperationResult> RevertRevisions(Action<IOperationProgress> onProgress, string id, string cv,
-            OperationCancelToken token)
+        public (Document Revision, TableValueReader TableValueReader) VerifyCvAndGetRevision(DocumentsOperationContext context, string id, string cv)
         {
-            var result = new RevertResult();
-
             if (id == null)
                 throw new ArgumentException("Document id is null");
 
@@ -2035,33 +2034,51 @@ namespace Raven.Server.Documents.Revisions
             if (id == string.Empty)
                 throw new ArgumentException("Change Vector is an empty string");
 
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            using (Slice.From(context.Allocator, cv, out var cvSlice))
+            {
+                if (table.ReadByKey(cvSlice, out TableValueReader tvr) == false)
+                {
+                    throw new InvalidOperationException($"Revision with the cv {cv} doesn't belong to the doc \"{id}\"");
+                }
 
+                var revision = TableValueToRevision(context, ref tvr, DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector);
+
+                if (revision.Id != id)
+                {
+                    throw new InvalidOperationException($"Revision with the cv {cv} doesn't belong to the doc \"{id}\" but to the doc \"{revision.Id}\"");
+                }
+
+                return (revision, tvr);
+            }
+        }
+
+        public async Task RevertDocumentsToRevisions(Dictionary<string, string> idsToChangevectors, OperationCancelToken token)
+        {
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
-                using (Slice.From(context.Allocator, cv, out var cvSlice))
+                var revisions = new List<Document>();
+                var tvrs = new List<TableValueReader>();
+
+                // Verify matching for all ids and cvs
+                foreach (var (id, cv) in idsToChangevectors)
                 {
-                    if (table.ReadByKey(cvSlice, out TableValueReader tvr) == false)
-                        throw new InvalidOperationException($"There is no revision with the cv {cv}");
-
-                    var revision = TableValueToRevision(context, ref tvr, DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector | DocumentFields.Data);
-
-                    if (revision.Id != id)
-                        throw new InvalidOperationException($"Revision with the cv {cv} doesn't belong to the doc \"{id}\" but to the doc \"{revision.Id}\"");
-
-                    // send initial progress
-                    onProgress?.Invoke(result);
-
-                    result.RevertedDocuments++;
-
-                    var list = new List<Document>() { revision };
-
-                    await WriteRevertedRevisions(list, token);
+                    var (revision, tvr) = _database.DocumentsStorage.RevisionsStorage.VerifyCvAndGetRevision(context, id, cv);
+                    revisions.Add(revision);
+                    tvrs.Add(tvr);
                 }
-            }
 
-            return result;
+                // Get Data After Verification
+                for (int i = 0; i < revisions.Count; i++)
+                {
+                    var revision = revisions[i];
+                    var tvr = tvrs[i];
+                    revision.Data = GetRevisionData(context, ref tvr);
+                }
+
+                await WriteRevertedRevisions(revisions, token);
+            }
         }
 
 
@@ -2128,7 +2145,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private async Task WriteRevertedRevisions(List<Document> list, OperationCancelToken token)
+        public async Task WriteRevertedRevisions(List<Document> list, OperationCancelToken token)
         {
             if (list.Count == 0)
                 return;
@@ -2604,6 +2621,11 @@ namespace Raven.Server.Documents.Revisions
             }
 
             return ParseRevisionPartial(context, ref tvr, fields);
+        }
+
+        internal static unsafe BlittableJsonReaderObject GetRevisionData(JsonOperationContext context, ref TableValueReader tvr)
+        {
+            return new BlittableJsonReaderObject(tvr.Read((int)RevisionsTable.Document, out var size), size, context);
         }
 
         private static unsafe Document ParseRevisionPartial(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
