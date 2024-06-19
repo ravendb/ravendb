@@ -1035,6 +1035,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Counters:
 #pragma warning restore 618
                 case DatabaseItemType.CounterGroups:
+                case DatabaseItemType.TimeSeriesDeletedRanges:
                     return await SkipArrayAsync(onSkipped, null, token);
 
                 case DatabaseItemType.TimeSeries:
