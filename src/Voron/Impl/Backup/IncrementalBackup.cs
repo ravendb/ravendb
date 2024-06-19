@@ -17,6 +17,7 @@ using Voron.Exceptions;
 using Voron.Impl.Journal;
 using Voron.Global;
 using Voron.Impl.FileHeaders;
+using Voron.Impl.Paging;
 using Voron.Util;
 using Voron.Util.Settings;
 
@@ -233,13 +234,10 @@ namespace Voron.Impl.Backup
             }
             try
             {
-                using (var pager = env.Options.OpenJournalPager(journalNum, journalInfo))
-                {
-                    long journalSize = Bits.PowerOf2(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
-                    journalFile = new JournalFile(env, env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
-                    journalFile.AddRef();
-                    return journalFile;
-                }
+                long journalSize = Bits.PowerOf2(env.Options.GetJournalFileSize(journalNum, journalInfo));
+                journalFile = new JournalFile(env, env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
+                journalFile.AddRef();
+                return journalFile;
             }
             catch (InvalidJournalException e)
             {
@@ -384,25 +382,26 @@ namespace Voron.Impl.Backup
                                     env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);
                             toDispose.Add(recoveryPager);
 
-                            using (var reader = new JournalReader(pager, env.DataPager, recoveryPager, new HashSet<long>(), new JournalInfo
-                            {
-                                LastSyncedTransactionId = lastTxId
-                            }, new FileHeader { HeaderRevision = -1 }, lastTxHeader))
-                            {
-                                throw new NotImplementedException();
-                                // while (reader.ReadOneTransactionToDataFile(env.Options))
-                                // {
-                                //     lastTxHeader = reader.LastTransactionHeader;
-                                // }
-
-                                // reader.ZeroRecoveryBufferIfNeeded(reader, env.Options);
-                                // if (lastTxHeader != null)
-                                // {
-                                //     *lastTxHeaderStackLocation = *lastTxHeader;
-                                //     lastTxHeader = lastTxHeaderStackLocation;
-                                //     lastTxId = lastTxHeader->TransactionId;
-                                // }
-                            }
+                            throw new NotImplementedException();
+                            // using (var reader = new JournalReader(pager, env.DataPager, recoveryPager, new HashSet<long>(), new JournalInfo
+                            //        {
+                            //            LastSyncedTransactionId = lastTxId
+                            //        }, new FileHeader { HeaderRevision = -1 }, lastTxHeader))
+                            // {
+                            //     throw new NotImplementedException();
+                            //     // while (reader.ReadOneTransactionToDataFile(env.Options))
+                            //     // {
+                            //     //     lastTxHeader = reader.LastTransactionHeader;
+                            //     // }
+                            //
+                            //     // reader.ZeroRecoveryBufferIfNeeded(reader, env.Options);
+                            //     // if (lastTxHeader != null)
+                            //     // {
+                            //     //     *lastTxHeaderStackLocation = *lastTxHeader;
+                            //     //     lastTxHeader = lastTxHeaderStackLocation;
+                            //     //     lastTxId = lastTxHeader->TransactionId;
+                            //     // }
+                            // }
 
                             //break;
 
