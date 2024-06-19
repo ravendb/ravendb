@@ -15,7 +15,7 @@ using Voron.Util.Settings;
 
 namespace Voron.Impl.Journal
 {
-    public sealed unsafe class JournalWriter : IJournalWriter
+    public sealed unsafe class JournalWriter : IDisposable
     {
         private const int ERROR_WORKING_SET_QUOTA = 0x5AD;
 
@@ -68,20 +68,12 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public AbstractPager CreatePager()
+        public (Pager2 Pager, Pager2.State State) CreatePager()
         {
-            if (PlatformDetails.RunningOnPosix)
+            return Pager2.Create(_options, new Pager2.OpenFileOptions
             {
-                if (_options.RunningOn32Bits)
-                    return new Posix32BitsMemoryMapPager(_options, FileName);
-
-                return new RvnMemoryMapPager(_options, FileName);
-            }
-
-            if (_options.RunningOn32Bits)
-                return new Windows32BitsMemoryMapPager(_options, FileName);
-
-            return new WindowsMemoryMapPager(_options, FileName);
+                File = FileName.FullPath
+            });
         }
 
         public void Read(byte* buffer, long numOfBytes, long offsetInFile)

@@ -59,19 +59,9 @@ public unsafe partial class Pager2 : IDisposable
         public bool ReadOnly;
         public bool SequentialScan;
         public bool UsePageProtection;
+        public bool Encrypted;
     }
 
-    public static (Pager2 Pager, State State) Create(StorageEnvironmentOptions options, string file)
-    {
-        return Create(options, new OpenFileOptions
-        {
-            File =  file,
-            Temporary = false,
-            DeleteOnClose = false,
-            SequentialScan = true,
-            ReadOnly = false,
-        });
-    }
     
     public static (Pager2 Pager, State State) Create(StorageEnvironmentOptions options, OpenFileOptions openFileOptions)
     {
@@ -82,7 +72,7 @@ public unsafe partial class Pager2 : IDisposable
             _ => throw new NotSupportedException("Running " + RuntimeInformation.OSDescription)
         };
 
-        if (options.Encryption.IsEnabled)
+        if (openFileOptions.Encrypted)
         {
             funcs.AcquirePagePointer = &Crypto.AcquirePagePointer;
             funcs.AcquirePagePointerForNewPage = &Crypto.AcquirePagePointerForNewPage;
