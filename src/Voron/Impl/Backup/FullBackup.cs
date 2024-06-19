@@ -148,11 +148,7 @@ namespace Voron.Impl.Backup
                         // first check journal files currently being in use
                         if (journalFile == null)
                         {
-                            long journalSize;
-                            using (var pager = env.Options.OpenJournalPager(journalNum, journalInfo))
-                            {
-                                journalSize = Bits.PowerOf2(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
-                            }
+                            long journalSize = Bits.PowerOf2(env.Options.GetJournalFileSize(journalNum, journalInfo));
 
                             journalFile = new JournalFile(env, env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
                         }

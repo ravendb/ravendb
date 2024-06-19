@@ -5,6 +5,7 @@ using Sparrow;
 using Tests.Infrastructure;
 using Voron.Global;
 using Voron.Impl.Journal;
+using Voron.Impl.Paging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -50,10 +51,11 @@ public class RavenDB_19273 : StorageTest
             Marshal.FreeHGlobal(ptr);
         }
 
-        using (var pager = Env.Options.OpenJournalPager(10, default(JournalInfo)))
+        var (pager,state) = Env.Options.OpenJournalPager(10, default);
+        using (pager)
         using (var tx = Env.ReadTransaction())
         {
-            var readPtr = pager.AcquirePagePointer(tx.LowLevelTransaction, 0);
+            var readPtr = pager.AcquirePagePointer(state,ref tx.LowLevelTransaction.PagerTransactionState, 0);
 
             readPtr += _4Kb;
 

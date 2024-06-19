@@ -189,17 +189,19 @@ namespace Voron.Impl.Journal
                 var journalRecoveryName = StorageEnvironmentOptions.JournalRecoveryName(journalNumber);
                 try
                 {
+                    (Pager2 journalPager, Pager2.State journalPagerState) = _env.Options.OpenJournalPager(journalNumber, logInfo);
+                    using(journalPager)
                     using (var recoveryPager = _env.Options.CreateTemporaryBufferPager(journalRecoveryName, initialSize))
-                    using (var pager = _env.Options.OpenJournalPager(journalNumber, logInfo))
                     {
-                        RecoverCurrentJournalSize(pager, out var isMoreThanMaxFileSize);
+                        RecoverCurrentJournalSize(journalPagerState, out var isMoreThanMaxFileSize);
                         if (journalNumber == logInfo.CurrentJournal)
                             deleteLastJournal = isMoreThanMaxFileSize;
 
+                        Pager2.PagerTransactionState txState = default;
                         var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
-                        using (var journalReader = new JournalReader(pager, dataPager, recoveryPager, modifiedPages, logInfo, currentFileHeader, transactionHeader))
+                        using (var journalReader = new JournalReader(journalPager, journalPagerState, dataPager, recoveryPager, modifiedPages, logInfo, currentFileHeader, transactionHeader))
                         {
-                            var transactionHeaders = journalReader.RecoverAndValidate(ref dataPagerState, _env.Options);
+                            var transactionHeaders = journalReader.RecoverAndValidate(ref dataPagerState, ref txState, _env.Options);
 
                             var lastReadHeaderPtr = journalReader.LastTransactionHeader;
 
@@ -208,7 +210,7 @@ namespace Voron.Impl.Journal
                                 if (lastFlushedJournal != -1 && lastReadHeaderPtr->TransactionId < lastFlushedTxId)
                                 {
                                     throw new InvalidOperationException(
-                                        $"After recovering {pager} file we got tx {lastReadHeaderPtr->TransactionId} as the last one but it's lower than last flushed transaction - tx {lastFlushedTxId} (from {StorageEnvironmentOptions.JournalName(lastFlushedJournal)})");
+                                        $"After recovering {journalPager.FileName} file we got tx {lastReadHeaderPtr->TransactionId} as the last one but it's lower than last flushed transaction - tx {lastFlushedTxId} (from {StorageEnvironmentOptions.JournalName(lastFlushedJournal)})");
                                 }
 
                                 *txHeader = *lastReadHeaderPtr;
@@ -227,9 +229,9 @@ namespace Voron.Impl.Journal
                                 }
                             }
 
-                            pager.Dispose(); // need to close it before we open the journal writer
+                            journalPager.Dispose(); // need to close it before we open the journal writer
 
-                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.TotalAllocationSize);
+                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize);
                             var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
                             jrnlFile.InitFrom(journalReader, transactionHeaders);
                             jrnlFile.AddRef(); // creator reference - write ahead log
@@ -238,7 +240,7 @@ namespace Voron.Impl.Journal
 
                             lastProcessedJournal = journalNumber;
 
-                            journalReader.Complete(ref dataPagerState);
+                            journalReader.Complete(ref dataPagerState, ref txState);
                             
                             if (journalReader.RequireHeaderUpdate) //this should prevent further load of transactions
                             {
@@ -458,9 +460,9 @@ namespace Voron.Impl.Journal
             }
         }
 
-        private void RecoverCurrentJournalSize(AbstractPager pager, out bool isMoreThanMaxFileSize)
+        private void RecoverCurrentJournalSize(Pager2.State state, out bool isMoreThanMaxFileSize)
         {
-            var journalSize = Bits.PowerOf2(pager.TotalAllocationSize);
+            var journalSize = Bits.PowerOf2(state.TotalAllocatedSize);
             if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
             {
                 isMoreThanMaxFileSize = true;

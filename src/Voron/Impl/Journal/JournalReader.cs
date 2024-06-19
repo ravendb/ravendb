@@ -18,7 +18,8 @@ namespace Voron.Impl.Journal
 {
     public sealed unsafe class JournalReader : IPagerLevelTransactionState
     {
-        private readonly AbstractPager _journalPager;
+        private readonly Pager2 _journalPager;
+        private readonly Pager2.State _journalPagerState;
         private readonly Pager2 _dataPager;
         private readonly AbstractPager _recoveryPager;
         private readonly HashSet<long> _modifiedPages;
@@ -38,10 +39,11 @@ namespace Voron.Impl.Journal
 
         public long Next4Kb => _readAt4Kb;
 
-        public JournalReader(AbstractPager journalPager, Pager2 dataPager, AbstractPager recoveryPager, HashSet<long> modifiedPages, JournalInfo journalInfo, FileHeader currentFileHeader, TransactionHeader* previous)
+        public JournalReader(Pager2 journalPager, Pager2.State journalPagerState, Pager2 dataPager, AbstractPager recoveryPager, HashSet<long> modifiedPages, JournalInfo journalInfo, FileHeader currentFileHeader, TransactionHeader* previous)
         {
             RequireHeaderUpdate = false;
             _journalPager = journalPager;
+            _journalPagerState = journalPagerState;
             _dataPager = dataPager;
             _recoveryPager = recoveryPager;
             _modifiedPages = modifiedPages;
@@ -49,8 +51,7 @@ namespace Voron.Impl.Journal
             _currentFileHeader = currentFileHeader;
             _readAt4Kb = 0;
             LastTransactionHeader = previous;
-            _journalPagerNumberOfAllocated4Kb = 
-                _journalPager.TotalAllocationSize /(4*Constants.Size.Kilobyte);
+            _journalPagerNumberOfAllocated4Kb =  _journalPagerState.TotalAllocatedSize /(4*Constants.Size.Kilobyte);
 
             if (journalPager.Options.Encryption.IsEnabled)
                 _encryptionBuffers = new List<EncryptionBuffer>();
@@ -58,15 +59,15 @@ namespace Voron.Impl.Journal
 
         public TransactionHeader* LastTransactionHeader { get; private set; }
 
-        public bool ReadOneTransactionToDataFile(ref Pager2.State state,StorageEnvironmentOptions options)
+        private bool ReadOneTransactionToDataFile(ref Pager2.State state, ref Pager2.PagerTransactionState txState , StorageEnvironmentOptions options)
         {
             if (_readAt4Kb >= _journalPagerNumberOfAllocated4Kb)
                 return false;
-
-            if (TryReadAndValidateHeader(options, ReadExpectation.ValidTransaction, out TransactionHeader* current) == false)
-            {
-                return false;
-            }
+            
+            if (TryReadAndValidateHeader(options, ref txState, ReadExpectation.ValidTransaction, out TransactionHeader* current) == false)
+                {
+                    return false;
+                }
 
             if (IsAlreadySyncTransaction(current))
             {
@@ -128,13 +129,12 @@ namespace Voron.Impl.Journal
                     throw new InvalidDataException($"Transaction {current->TransactionId} contains reference to page {pageInfoPtr[i].PageNumber} which is after the last allocated page {current->LastPageNumber}");
             }
 
-            Pager2.PagerTransactionState txState = default;
             for (var i = 0; i < current->PageCount; i++)
             {
                 if (totalRead > current->UncompressedSize)
                     throw new InvalidDataException($"Attempted to read position {totalRead} from transaction data while the transaction is size {current->UncompressedSize}");
 
-                Debug.Assert(_journalPager.Disposed == false);
+                Debug.Assert(_journalPagerState.Disposed == false);
                 if (performDecompression)
                     Debug.Assert(_recoveryPager.Disposed == false);
 
@@ -218,11 +218,8 @@ namespace Voron.Impl.Journal
 
                 _dataPager.ProtectPageRange(pagePtr, (ulong)pageInfoPtr[i].Size);
             }
-            
-            txState.InvokeDispose(_dataPager, state, ref txState);
-
             LastTransactionHeader = current;
-
+            
             return true;
         }
 
@@ -275,10 +272,10 @@ namespace Voron.Impl.Journal
             throw new InvalidDataException(message);
         }
 
-        public List<TransactionHeader> RecoverAndValidate(ref Pager2.State state, StorageEnvironmentOptions options)
+        public List<TransactionHeader> RecoverAndValidate(ref Pager2.State dataPagerState, ref Pager2.PagerTransactionState txState, StorageEnvironmentOptions options)
         {
             var transactionHeaders = new List<TransactionHeader>();
-            while (ReadOneTransactionToDataFile(ref state, options))
+            while (ReadOneTransactionToDataFile(ref dataPagerState, ref txState, options))
             {
                 Debug.Assert(transactionHeaders.Count == 0 || LastTransactionHeader->TransactionId > transactionHeaders.Last().TransactionId);
 
@@ -345,7 +342,7 @@ namespace Voron.Impl.Journal
             ZerosOrGarbage
         }
 
-        private bool TryReadAndValidateHeader(StorageEnvironmentOptions options, ReadExpectation readExpectation, out TransactionHeader* current)
+        private bool TryReadAndValidateHeader(StorageEnvironmentOptions options, ref Pager2.PagerTransactionState txState, ReadExpectation readExpectation, out TransactionHeader* current)
         {
             if (_readAt4Kb > _journalPagerNumberOfAllocated4Kb)
             {
@@ -358,7 +355,7 @@ namespace Voron.Impl.Journal
             var positionInsidePage = (_readAt4Kb % pageTo4KbRatio) * (4 * Constants.Size.Kilobyte);
 
             current = (TransactionHeader*)
-                (_journalPager.AcquirePagePointer(this, pageNumber) + positionInsidePage);
+                (_journalPager.AcquirePagePointer(_journalPagerState, ref txState, pageNumber) + positionInsidePage);
             
             if (current->HeaderMarker != Constants.TransactionHeaderMarker || IsOldTransactionFromRecycledJournal(current))
             {
@@ -396,7 +393,7 @@ namespace Voron.Impl.Journal
                             {
                                 try
                                 {
-                                    if (TryReadAndValidateHeader(options, ReadExpectation.ZerosOrGarbage, out unexpectedValidHeader))
+                                    if (TryReadAndValidateHeader(options, ref txState, ReadExpectation.ZerosOrGarbage, out unexpectedValidHeader))
                                     {
                                         // found a valid transaction header - that isn't expected since we already got garbage
 
@@ -469,7 +466,7 @@ namespace Voron.Impl.Journal
                     return false;
             }
 
-            current = EnsureTransactionMapped(current, pageNumber, positionInsidePage);
+            current = EnsureTransactionMapped(current,ref txState, pageNumber, positionInsidePage);
             bool hashIsValid;
             if (options.Encryption.IsEnabled)
             {
@@ -665,13 +662,13 @@ namespace Voron.Impl.Journal
             return false;
         }
 
-        private TransactionHeader* EnsureTransactionMapped(TransactionHeader* current, long pageNumber, long positionInsidePage)
+        private TransactionHeader* EnsureTransactionMapped(TransactionHeader* current, ref Pager2.PagerTransactionState txState, long pageNumber, long positionInsidePage)
         {
             var size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
             var numberOfPages = GetNumberOfPagesFor(positionInsidePage + sizeof(TransactionHeader) + size);
-            _journalPager.EnsureMapped(this, pageNumber, numberOfPages);
+            _journalPager.EnsureMapped(_journalPagerState, ref txState, pageNumber, numberOfPages);
 
-            var pageHeader = _journalPager.AcquirePagePointer(this, pageNumber)
+            var pageHeader = _journalPager.AcquirePagePointer(_journalPagerState, ref txState, pageNumber)
                              + positionInsidePage;
 
             return (TransactionHeader*)pageHeader;
@@ -730,14 +727,14 @@ namespace Voron.Impl.Journal
         {
         }
 
-        public void Complete(ref Pager2.State state)
+        public void Complete(ref Pager2.State state, ref Pager2.PagerTransactionState txState)
         {
             if (_encryptionBuffers != null) // Encryption enabled
             {
                 foreach (var buffer in _encryptionBuffers)
                     PlatformSpecific.NativeMemory.Free4KbAlignedMemory(buffer.Pointer, buffer.Size, buffer.AllocatingThread);
                 
-                if(_pagerTransactionState.ForCrypto?.TryGetValue(_dataPager, out var cryptoState) == true)
+                if(txState.ForCrypto?.TryGetValue(_dataPager, out var cryptoState) == true)
                 {
                     // we need to iterate from the end in order to filter out pages that was overwritten by later transaction
                     var sortedState = cryptoState.OrderByDescending(x => x.Key);
@@ -769,9 +766,9 @@ namespace Voron.Impl.Journal
                 }
             }
             
-            _pagerTransactionState.InvokeBeforeCommitFinalization(_dataPager, state, ref _pagerTransactionState);
+            txState.InvokeBeforeCommitFinalization(_dataPager, state, ref txState);
             BeforeCommitFinalization?.Invoke(this);
-            _pagerTransactionState.InvokeDispose(_dataPager, state, ref _pagerTransactionState);
+            txState.InvokeDispose(_dataPager, state, ref txState);
             OnDispose?.Invoke(this);
         }
 
@@ -788,8 +785,6 @@ namespace Voron.Impl.Journal
         Dictionary<AbstractPager, TransactionState> IPagerLevelTransactionState.PagerTransactionState32Bits { get; set; }
 
         Dictionary<AbstractPager, CryptoTransactionState> IPagerLevelTransactionState.CryptoPagerTransactionState { get; set; }
-
-        private Pager2.PagerTransactionState _pagerTransactionState = new Pager2.PagerTransactionState { IsWriteTransaction = true };
 
         public Size AdditionalMemoryUsageSize
         {

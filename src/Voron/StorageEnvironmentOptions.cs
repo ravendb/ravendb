@@ -227,7 +227,7 @@ namespace Voron
         /// </summary>
         internal bool CopyOnWriteMode { get; set; }
 
-        public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize);
+        public abstract JournalWriter CreateJournalWriter(long journalNumber, long journalSize);
 
         public abstract VoronPathSetting GetJournalPath(long journalNumber);
 
@@ -241,7 +241,7 @@ namespace Voron
 
         public event Action<StorageEnvironmentOptions> OnDirectoryInitialize;
 
-        protected StorageEnvironmentOptions(VoronPathSetting tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
+        private StorageEnvironmentOptions(VoronPathSetting tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
         {
             DisposeWaitTime = TimeSpan.FromSeconds(15);
 
@@ -410,8 +410,7 @@ namespace Voron
 
             private readonly VoronPathSetting _basePath;
 
-            private readonly ConcurrentDictionary<string, LazyWithExceptionRetry<IJournalWriter>> _journals =
-                new ConcurrentDictionary<string, LazyWithExceptionRetry<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
+            private readonly ConcurrentDictionary<string, LazyWithExceptionRetry<JournalWriter>> _journals = new(StringComparer.OrdinalIgnoreCase);
 
             public DirectoryStorageEnvironmentOptions(VoronPathSetting basePath, VoronPathSetting tempPath, VoronPathSetting journalPath,
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
@@ -512,7 +511,8 @@ namespace Voron
                     UsePageProtection = true,
                     ReadOnly = false,
                     SequentialScan = false,
-                    InitializeFileSize = InitialFileSize
+                    InitializeFileSize = InitialFileSize,
+                    Encrypted = Encryption.IsEnabled
                 };
                 return Pager2.Create(this, openFileOptions);
             }
@@ -529,7 +529,7 @@ namespace Voron
                 return GetMemoryMapPagerInternal(this, null, filename);
             }
 
-            public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
+            public override JournalWriter CreateJournalWriter(long journalNumber, long journalSize)
             {
                 var name = JournalName(journalNumber);
                 var path = JournalPath.Combine(name);
@@ -537,11 +537,11 @@ namespace Voron
                     AttemptToReuseJournal(path, journalSize);
 
                 var result = _journals.GetOrAdd(name, _ =>
-                    new LazyWithExceptionRetry<IJournalWriter>(() => new JournalWriter(this, path, journalSize)));
+                    new LazyWithExceptionRetry<JournalWriter>(() => new JournalWriter(this, path, journalSize)));
 
                 if (result.Value.Disposed)
                 {
-                    var newWriter = new LazyWithExceptionRetry<IJournalWriter>(() => new JournalWriter(this, path, journalSize));
+                    var newWriter = new LazyWithExceptionRetry<JournalWriter>(() => new JournalWriter(this, path, journalSize));
                     if (_journals.TryUpdate(name, newWriter, result) == false)
                         throw new InvalidOperationException("Could not update journal pager");
                     result = newWriter;
@@ -894,37 +894,40 @@ namespace Voron
                 return new WindowsMemoryMapPager(options, file, initialSize, attributes, usePageProtection: usePageProtection);
             }
 
-            public override AbstractPager OpenJournalPager(long journalNumber, JournalInfo journalInfo)
+            public override long GetJournalFileSize(long journalNumber, JournalInfo journalInfo)
+            {
+                var fileInfo = GetJournalFileInfo(journalNumber, journalInfo);
+                return fileInfo.Length;
+            }
+
+            public override (Pager2 Pager, Pager2.State State) OpenJournalPager(long journalNumber, JournalInfo journalInfo)
+            {
+                var fileInfo = GetJournalFileInfo(journalNumber, journalInfo);
+
+                if (fileInfo.Length < InitialLogFileSize)
+                {
+                    EnsureMinimumSize(fileInfo);
+                }
+
+                return Pager2.Create(this, new Pager2.OpenFileOptions
+                {
+                    File = fileInfo.FullName,
+                    ReadOnly = true,
+                    Encrypted = false, // for Journals, we want to read the raw data
+                });
+            }
+
+            private FileInfo GetJournalFileInfo(long journalNumber, JournalInfo journalInfo)
             {
                 var name = JournalName(journalNumber);
                 var path = JournalPath.Combine(name);
                 var fileInfo = new FileInfo(path.FullPath);
                 if (fileInfo.Exists == false)
                     throw new InvalidJournalException(journalNumber, path.FullPath, journalInfo);
-
-                if (fileInfo.Length < InitialLogFileSize)
-                {
-                    EnsureMinimumSize(fileInfo, path);
-                }
-
-                if (RunningOnPosix)
-                {
-                    if (RunningOn32Bits)
-                        return new Posix32BitsMemoryMapPager(this, path);
-                    return new RvnMemoryMapPager(this, path);
-                }
-
-                if (RunningOn32Bits)
-                    return new Windows32BitsMemoryMapPager(this, path, access: Win32NativeFileAccess.GenericRead,
-                        fileAttributes: Win32NativeFileAttributes.SequentialScan);
-
-                var windowsMemoryMapPager = new WindowsMemoryMapPager(this, path, access: Win32NativeFileAccess.GenericRead,
-                    fileAttributes: Win32NativeFileAttributes.SequentialScan);
-                windowsMemoryMapPager.TryPrefetchingWholeFile();
-                return windowsMemoryMapPager;
+                return fileInfo;
             }
 
-            private void EnsureMinimumSize(FileInfo fileInfo, VoronPathSetting path)
+            private void EnsureMinimumSize(FileInfo fileInfo)
             {
                 try
                 {
@@ -936,7 +939,7 @@ namespace Voron
                 catch (Exception e)
                 {
                     throw new InvalidOperationException(
-                        "Journal file " + path + " could not be opened because it's size is too small and we couldn't increase it",
+                        $"Journal file {fileInfo.FullName} could not be opened because it's size is too small and we couldn't increase it",
                         e);
                 }
             }
@@ -947,8 +950,7 @@ namespace Voron
             private readonly string _name;
             private static int _counter;
 
-            private readonly Dictionary<string, IJournalWriter> _logs =
-                new Dictionary<string, IJournalWriter>(StringComparer.OrdinalIgnoreCase);
+            private readonly Dictionary<string, JournalWriter> _logs = new(StringComparer.OrdinalIgnoreCase);
 
             private readonly Dictionary<string, IntPtr> _headers =
                 new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
@@ -983,7 +985,8 @@ namespace Voron
                     ReadOnly = false,
                     SequentialScan = false,
                     InitializeFileSize = InitialFileSize,
-                    UsePageProtection = false
+                    UsePageProtection = false,
+                    Encrypted = Encryption.IsEnabled
                 };
                 return Pager2.Create(this, fileOptions);
             }
@@ -995,11 +998,10 @@ namespace Voron
 
             public override VoronPathSetting BasePath { get; } = new MemoryVoronPathSetting();
 
-            public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
+            public override JournalWriter CreateJournalWriter(long journalNumber, long journalSize)
             {
                 var name = JournalName(journalNumber);
-                IJournalWriter value;
-                if (_logs.TryGetValue(name, out value))
+                if (_logs.TryGetValue(name, out JournalWriter value))
                     return value;
 
                 var path = GetJournalPath(journalNumber);
@@ -1058,10 +1060,8 @@ namespace Voron
             public override bool TryDeleteJournal(long number)
             {
                 var name = JournalName(number);
-                IJournalWriter value;
-                if (_logs.TryGetValue(name, out value) == false)
+                if (_logs.Remove(name, out JournalWriter value) == false)
                     return false;
-                _logs.Remove(name);
                 value.Dispose();
                 return true;
             }
@@ -1166,12 +1166,19 @@ namespace Voron
                 return new WindowsMemoryMapPager(this, filename);
             }
 
-            public override AbstractPager OpenJournalPager(long journalNumber, JournalInfo journalInfo)
+            public override (Pager2 Pager, Pager2.State State) OpenJournalPager(long journalNumber, JournalInfo journalInfo)
             {
                 var name = JournalName(journalNumber);
-                IJournalWriter value;
-                if (_logs.TryGetValue(name, out value))
+                if (_logs.TryGetValue(name, out JournalWriter value))
                     return value.CreatePager();
+                throw new InvalidJournalException(journalNumber, journalInfo);
+            }
+            
+            public override long GetJournalFileSize(long journalNumber, JournalInfo journalInfo)
+            {
+                var name = JournalName(journalNumber);
+                if (_logs.TryGetValue(name, out JournalWriter value))
+                    return new FileInfo(value.FileName.FullPath).Length;
                 throw new InvalidJournalException(journalNumber, journalInfo);
             }
         }
@@ -1231,7 +1238,9 @@ namespace Voron
         // Used for special temporary pagers (compression, recovery, lazyTX...) which should not be wrapped by the crypto pager.
         public abstract AbstractPager CreateTemporaryBufferPager(string name, long initialSize);
 
-        public abstract AbstractPager OpenJournalPager(long journalNumber, JournalInfo journalInfo);
+        public abstract (Pager2 Pager, Pager2.State State) OpenJournalPager(long journalNumber, JournalInfo journalInfo);
+
+        public abstract long GetJournalFileSize(long journalNumber, JournalInfo journalInfo);
 
         public abstract AbstractPager OpenPager(VoronPathSetting filename);
 
