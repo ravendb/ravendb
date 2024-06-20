@@ -1,19 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.Documents.Session;
-using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using static SlowTests.RavenDB_20425;
 
 namespace SlowTests.Issues
 {
@@ -91,7 +85,7 @@ namespace SlowTests.Issues
             }
         }
 
-        /*
+        
         [RavenTheory(RavenTestCategory.Revisions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task RevertByDocumentEP(Options options)
@@ -142,8 +136,7 @@ namespace SlowTests.Issues
                 user1revertCv = u1Metadata[5].GetString(Constants.Documents.Metadata.ChangeVector);
             }
 
-            var operation = await store.Maintenance.SendAsync(new RevertDocumentRevisionsOperation(id: user1.Id, cv: user1revertCv));
-            await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5));
+            await store.Maintenance.SendAsync(new RevertDocumentsToRevisionsOperation(new Dictionary<string, string>() { { user1.Id, user1revertCv } }));
 
             using (var session = store.OpenAsyncSession())
             {
@@ -156,7 +149,7 @@ namespace SlowTests.Issues
                 Assert.Equal(11, count2);
             }
         }
-        */
+        
 
         private class User
         {

@@ -5,7 +5,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Amqp.Types;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
@@ -32,7 +31,6 @@ using Voron.Exceptions;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Schemas.Revisions;
-using static Raven.Server.Utils.MetricCacher.Keys;
 using static Voron.Data.Tables.Table;
 using Constants = Raven.Client.Constants;
 using Size = Sparrow.Size;
@@ -2145,7 +2143,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public async Task WriteRevertedRevisions(List<Document> list, OperationCancelToken token)
+        private async Task WriteRevertedRevisions(List<Document> list, OperationCancelToken token)
         {
             if (list.Count == 0)
                 return;

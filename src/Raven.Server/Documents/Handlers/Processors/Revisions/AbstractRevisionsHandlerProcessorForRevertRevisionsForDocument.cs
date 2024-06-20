@@ -2,7 +2,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.Documents.Revisions;
+using Raven.Client.Documents.Commands;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
