@@ -298,7 +298,7 @@ namespace Voron.Impl.Scratch
             int numberOfPages = 1;
             if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
             {
-                numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+                numberOfPages = Paging.Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize);
             }
             const int adjustPageSize = (Constants.Storage.PageSize) / (4 * Constants.Size.Kilobyte);
             pager.DirectWrite(ref state,  ref txState,pageHeader->PageNumber * (long)adjustPageSize, numberOfPages * adjustPageSize, src);

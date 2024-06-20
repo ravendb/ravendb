@@ -339,7 +339,7 @@ namespace Voron.Data.Tables
             {
                 var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
 
-                var allocated = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
+                var allocated = Pager.GetNumberOfOverflowPages(page.OverflowSize);
 
                 return (allocated * Constants.Storage.PageSize, page.Flags.HasFlag(PageFlags.Compressed));
             }
@@ -396,8 +396,8 @@ namespace Voron.Data.Tables
             {
                 var pageNumber = id / Constants.Storage.PageSize;
                 var page = _tx.LowLevelTransaction.GetPage(pageNumber);
-                var existingNumberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
-                var newNumberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(builder.Size);
+                var existingNumberOfPages = Pager.GetNumberOfOverflowPages(page.OverflowSize);
+                var newNumberOfPages = Pager.GetNumberOfOverflowPages(builder.Size);
 
                 if (existingNumberOfPages == newNumberOfPages)
                 {
@@ -517,8 +517,7 @@ namespace Voron.Data.Tables
             if (largeValue)
             {
                 var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
-                var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
-                _stats.OverflowPageCount -= numberOfPages;
+                var numberOfPages = Pager.GetNumberOfOverflowPages(page.OverflowSize);
 
                 for (var i = 0; i < numberOfPages; i++)
                 {
@@ -735,7 +734,7 @@ namespace Voron.Data.Tables
 
         private Page AllocatePageForLargeValue(int size, bool compressed)
         {
-            var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(size);
+            var numberOfOverflowPages = Pager.GetNumberOfOverflowPages(size);
             var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
             _stats.OverflowPageCount += numberOfOverflowPages;
 
@@ -1026,7 +1025,7 @@ namespace Voron.Data.Tables
             }
             else
             {
-                var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(dataSize);
+                var numberOfOverflowPages = Pager.GetNumberOfOverflowPages(dataSize);
                 var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
                 _stats.OverflowPageCount += numberOfOverflowPages;
 

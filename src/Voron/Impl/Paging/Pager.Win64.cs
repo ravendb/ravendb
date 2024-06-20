@@ -293,7 +293,7 @@ public unsafe partial class Pager2
             {
                 uint id = 0;
                 if (drive is not null)
-                    AbstractPager.PhysicalDrivePerMountCache.TryGetValue(drive, out id);
+                    Pager.PhysicalDrivePerMountCache.TryGetValue(drive, out id);
 
                 if (logger.IsInfoEnabled)
                     logger.Info($"Physical drive '{drive}' unique id = '{id}' for file '{file}'");

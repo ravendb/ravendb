@@ -41,9 +41,9 @@ namespace SlowTests.Voron.Issues
                 page = tx.LowLevelTransaction.AllocateOverflowRawPage(38888, out _, 3);
                 page.DataPointer[0] = 13;
 
-                var cryptoTxState = ((IPagerLevelTransactionState)tx.LowLevelTransaction).CryptoPagerTransactionState.Single().Value;
+                var cryptoTxState = tx.LowLevelTransaction.PagerTransactionState.ForCrypto.Single().Value;
 
-                Dictionary<long, EncryptionBuffer> loadedBuffers = new Dictionary<long, EncryptionBuffer>();
+                Dictionary<long, Pager2.EncryptionBuffer> loadedBuffers = new();
 
                 var reversed = cryptoTxState.ToList();
                 reversed.Reverse();

@@ -302,7 +302,7 @@ namespace Voron.Impl.Journal
                         {
                             var ptr = (PageHeader*)dataPager.AcquirePagePointerWithOverflowHandling(dataPagerState, ref state, modifiedPage);
 
-                            int numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfPages(ptr);
+                            int numberOfPages = Pager.GetNumberOfPages(ptr);
 
                             if (overflowDetector.IsOverlappingAnotherPage(modifiedPage, numberOfPages))
                             {

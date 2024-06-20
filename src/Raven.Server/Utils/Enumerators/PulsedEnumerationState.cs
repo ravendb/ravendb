@@ -30,7 +30,7 @@ namespace Raven.Server.Utils.Enumerators
         {
             if (ReadCount > 0 && ReadCount % _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded == 0)
             {
-                var size = Context.Transaction.InnerTransaction.LowLevelTransaction.GetTotal32BitsMappedSize() +
+                var size = Context.Transaction.InnerTransaction.LowLevelTransaction.PagerTransactionState.GetTotal32BitsMappedSize() +
                            Context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize;
 
                 if (size >= _pulseLimit)

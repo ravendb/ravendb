@@ -1,42 +1,32 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Voron.Global;
 
 namespace Voron.Impl.Paging
 {
-    public static unsafe class VirtualPagerLegacyExtensions
-    {
+    public static unsafe class Pager
+    {        
+        public static ConcurrentDictionary<string, uint> PhysicalDrivePerMountCache = new();
+
+        public const int PageMaxSpace = Constants.Storage.PageSize - Constants.Tree.PageHeaderSize;
+        // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
+        public const int MaxKeySize = 2038 - RequiredSpaceForNewNode;
+
+        public const int RequiredSpaceForNewNode = Constants.Tree.NodeHeaderSize + Constants.Tree.NodeOffsetSize;
+
+        public const int PageMinSpace = (int)(PageMaxSpace * 0.33);
+        public const int NodeMaxSize = PageMaxSpace / 2 - 1;
+
+      
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static byte* AcquirePagePointerWithOverflowHandling<T>(this AbstractPager pager, T tx, long pageNumber, PagerState pagerState) where T : IPagerLevelTransactionState
+        public static bool IsKeySizeValid(int keySize)
         {
-            // Case 1: Page is not overflow ==> no problem, returning a pointer to existing mapping
-            var pageHeader = (PageHeader*)pager.AcquirePagePointer(tx, pageNumber, pagerState);
-            if ((pageHeader->Flags & PageFlags.Overflow) != PageFlags.Overflow)
-                return (byte*)pageHeader;
+            if (keySize > MaxKeySize)
+                return false;
 
-            // Case 2: Page is overflow and already mapped large enough ==> no problem, returning a pointer to existing mapping
-            if (pager.EnsureMapped(tx, pageNumber, GetNumberOfOverflowPages(pageHeader->OverflowSize)) == false)
-                return (byte*)pageHeader;
-
-            // Case 3: Page is overflow and was ensuredMapped above, view was re-mapped so we need to acquire a pointer to the new mapping.
-            return pager.AcquirePagePointer(tx, pageNumber, pagerState);
+            return true;
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static byte* AcquirePagePointerWithOverflowHandling<T>(this AbstractPager pager, T tx, long pageNumber) where T : IPagerLevelTransactionState
-        {
-            // Case 1: Page is not overflow ==> no problem, returning a pointer to existing mapping
-            var pageHeader = (PageHeader*)pager.AcquirePagePointer(tx, pageNumber);
-            if ((pageHeader->Flags & PageFlags.Overflow) != PageFlags.Overflow)
-                return (byte*)pageHeader;
-
-            // Case 2: Page is overflow and already mapped large enough ==> no problem, returning a pointer to existing mapping
-            if (pager.EnsureMapped(tx, pageNumber, GetNumberOfOverflowPages(pageHeader->OverflowSize)) == false)
-                return (byte*)pageHeader;
-
-            // Case 3: Page is overflow and was ensuredMapped above, view was re-mapped so we need to acquire a pointer to the new mapping.
-            return pager.AcquirePagePointer(tx, pageNumber);
-        }
-
+   
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetNumberOfOverflowPages(long overflowSize)
         {

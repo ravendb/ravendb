@@ -56,7 +56,7 @@ public unsafe partial class Pager2
 
             var pageHeader = (PageHeader*)pagePointer;
 
-            int numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfPages(pageHeader);
+            int numberOfPages = Pager.GetNumberOfPages(pageHeader);
 
             buffer = GetBufferAndAddToTxState(pager, pageNumber, cryptoState, numberOfPages);
 
@@ -98,7 +98,7 @@ public unsafe partial class Pager2
                 if (Sodium.crypto_kdf_derive_from_key(subKey, subKeyLen, (ulong)num, ctx, mk) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
 
-                var dataSize = VirtualPagerLegacyExtensions.GetNumberOfPages(page) * Constants.Storage.PageSize;
+                var dataSize = Pager.GetNumberOfPages(page) * Constants.Storage.PageSize;
 
                 var npub = (byte*)page + PageHeader.NonceOffset;
                 // here we generate 128(!) bits of random data, but xchacha20poly1305 needs
@@ -144,7 +144,7 @@ public unsafe partial class Pager2
                 if (Sodium.crypto_kdf_derive_from_key(subKey, subKeyLen, (ulong)num, ctx, mk) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
 
-                var dataSize = (ulong)VirtualPagerLegacyExtensions.GetNumberOfPages(page) * Constants.Storage.PageSize;
+                var dataSize = (ulong)Pager.GetNumberOfPages(page) * Constants.Storage.PageSize;
                 var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(
                     destination + PageHeader.SizeOf,
                     null,
@@ -223,12 +223,12 @@ public unsafe partial class Pager2
                 // Encrypt the local buffer, then copy the encrypted value to the pager
                 var pageHeader = (PageHeader*)buffer.Value.Pointer;
                 var dataSize = EncryptPage(pager, pageHeader);
-                var numPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(dataSize);
+                var numPages = Pager.GetNumberOfOverflowPages(dataSize);
 
                 pager.EnsureContinuous(ref state, buffer.Key, numPages);
                 pager.EnsureMapped(state, ref txState, buffer.Key, numPages);
 
-                var pagePointer = pager.AcquirePagePointer(state, ref txState, buffer.Key);
+                var pagePointer = pager.AcquireRawPagePointer(state, ref txState, buffer.Key);
 
                 Memory.Copy(pagePointer, buffer.Value.Pointer, dataSize);
             }
@@ -256,7 +256,7 @@ public unsafe partial class Pager2
         {
             var pagePointer = pager.AcquirePagePointerWithOverflowHandling(state, ref txState, pageNumber);
             var pageHeader = (PageHeader*)pagePointer;
-            int numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfPages(pageHeader);
+            int numberOfPages = Pager.GetNumberOfPages(pageHeader);
 
             PageHeader* bufferPointer = ((PageHeader*)buffer.Pointer);
             if (pageHeader->PageNumber != bufferPointer->PageNumber || 

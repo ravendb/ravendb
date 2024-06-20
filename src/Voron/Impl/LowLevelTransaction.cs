@@ -33,7 +33,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl
 {
-    public sealed unsafe class LowLevelTransaction : IPagerLevelTransactionState
+    public sealed unsafe class LowLevelTransaction : IDisposable 
     {
         
         public readonly Pager2 DataPager;
@@ -61,16 +61,6 @@ namespace Voron.Impl
         private readonly WriteAheadJournal _journal;
         internal readonly List<JournalSnapshot> JournalSnapshots = new();
 
-        bool IPagerLevelTransactionState.IsWriteTransaction => Flags == TransactionFlags.ReadWrite;
-
-        Dictionary<AbstractPager, TransactionState> IPagerLevelTransactionState.PagerTransactionState32Bits
-        {
-            get;
-            set;
-        }
-
-        Dictionary<AbstractPager, CryptoTransactionState> IPagerLevelTransactionState.CryptoPagerTransactionState { get; set; }
-
         internal sealed class WriteTransactionPool
         {
 #if DEBUG
@@ -95,11 +85,10 @@ namespace Voron.Impl
         private readonly HashSet<long> _dirtyPages;
         private readonly Stack<long> _pagesToFreeOnCommit;
         private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable;
-        private readonly HashSet<PagerState> _pagerStates;
         private readonly Dictionary<int, (Pager2, Pager2.State)> _scratchPagerStates;
         // END: Structures that are safe to pool.
 
-        public event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
+        public event Action<LowLevelTransaction> BeforeCommitFinalization;
 
         public event Action<LowLevelTransaction> LastChanceToReadFromWriteTransactionBeforeCommit;
 
@@ -109,7 +98,8 @@ namespace Voron.Impl
         {
             get
             {
-                var cryptoTransactionStates = ((IPagerLevelTransactionState)this).CryptoPagerTransactionState;
+                
+                var cryptoTransactionStates = PagerTransactionState.ForCrypto;
                 
                 var total = DecompressedBufferBytes;
 
@@ -124,14 +114,14 @@ namespace Voron.Impl
                 return new Size(total, SizeUnit.Bytes);
             }
         }
-        public event Action<IPagerLevelTransactionState> OnDispose;
+        public event Action<LowLevelTransaction> OnDispose;
 
         /// <summary>
         /// This is called *under the write transaction lock* and will
         /// allow us to clean up any in memory state that shouldn't be preserved
         /// passed the transaction rollback
         /// </summary>
-        public event Action<IPagerLevelTransactionState> OnRollBack;
+        public event Action<LowLevelTransaction> OnRollBack;
         public event Action<LowLevelTransaction> AfterCommitWhenNewTransactionsPrevented;
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
@@ -195,39 +185,19 @@ namespace Voron.Impl
             _allocator = allocator ?? new ByteStringContext(SharedMultipleUseFlag.None);
             _allocator.AllocationFailed += MarkTransactionAsFailed;
             _disposeAllocator = allocator == null;
-            _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
 
             Flags = TransactionFlags.Read;
             ImmutableExternalState = previous.ImmutableExternalState;
 
-            try
-            {
-                CopyPagerStatesFromPreviousTx(previous);
+            _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
 
-                _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
+            _scratchPagerStates = previous._scratchPagerStates;
 
-                _scratchPagerStates = previous._scratchPagerStates;
+            _state = previous._state.Clone();
 
-                // RavenDB-21926: We can just use the previous one without cloning because the transaction when constructed here
-                // is guaranteed to be ReadOnly.
-                _state = previous._state;
+            InitializeRoots();
 
-                InitializeRoots();
-
-                JournalSnapshots = previous.JournalSnapshots;
-            }
-            catch
-            {
-                // need to restore ref counts of already added pager states
-
-                foreach (var pagerState in _pagerStates)
-                {
-                    pagerState.Release();
-                }
-
-                throw;
-            }
-
+            JournalSnapshots = previous.JournalSnapshots;
         }
 
         private LowLevelTransaction(LowLevelTransaction previous, TransactionPersistentContext persistentContext, long txId)
@@ -242,9 +212,9 @@ namespace Voron.Impl
             env.Options.AssertNoCatastrophicFailure();
 
             Debug.Assert(env.Options.Encryption.IsEnabled == false,
-                $"Async commit isn't supported in encrypted environments. We don't carry {nameof(IPagerLevelTransactionState.CryptoPagerTransactionState)} from previous tx");
+                $"Async commit isn't supported in encrypted environments. We don't carry encrypted state from previous tx");
             Debug.Assert((PlatformDetails.Is32Bits || env.Options.ForceUsing32BitsPager) == false,
-                $"Async commit isn't supported in 32bits environments. We don't carry {nameof(IPagerLevelTransactionState.PagerTransactionState32Bits)} from previous tx");
+                $"Async commit isn't supported in 32bits environments. We don't carry 32 bits state from previous tx");
 
             FlushInProgressLockTaken = previous.FlushInProgressLockTaken;
             CurrentTransactionHolder = previous.CurrentTransactionHolder;
@@ -267,81 +237,41 @@ namespace Voron.Impl
 
             Flags = TransactionFlags.ReadWrite;
 
-            _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
-
             JournalFiles = previous.JournalFiles;
 
             foreach (var journalFile in JournalFiles)
             {
                 journalFile.AddRef();
             }
+            EnsureNoDuplicateTransactionId(_id);
 
-            try
+            // we can reuse those instances, not calling Reset on the pool
+            // because we are going to need to scratch buffer pool
+
+            _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesReadyForNextTx;
+
+            foreach (var kvp in previous._scratchPagesTable)
             {
-                CopyPagerStatesFromPreviousTx(previous);
-
-                EnsureNoDuplicateTransactionId(_id);
-
-                // we can reuse those instances, not calling Reset on the pool
-                // because we are going to need to scratch buffer pool
-
-                _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesReadyForNextTx;
-
-                foreach (var kvp in previous._scratchPagesTable)
-                {
-                    if (previous._dirtyPages.Contains(kvp.Key))
-                        _scratchPagesTable.Add(kvp.Key, kvp.Value);
-                }
-                previous._scratchPagesTable.Clear();
-                _env.WriteTransactionPool.ScratchPagesInUse = _scratchPagesTable;
-                _env.WriteTransactionPool.ScratchPagesReadyForNextTx = previous._scratchPagesTable;
-
-                _dirtyPages = previous._dirtyPages;
-                _dirtyPages.Clear();
-
-                _freedPages = new HashSet<long>();
-                _unusedScratchPages = new List<PageFromScratchBuffer>();
-                _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
-                _pagesToFreeOnCommit = new Stack<long>();
-
-                _state = previous._state.Clone();
-
-                _pageLocator = PersistentContext.AllocatePageLocator(this);
-                InitializeRoots();
-                InitTransactionHeader();
+                if (previous._dirtyPages.Contains(kvp.Key))
+                    _scratchPagesTable.Add(kvp.Key, kvp.Value);
             }
-            catch
-            {
-                // need to restore ref counts of already added pager states
+            previous._scratchPagesTable.Clear();
+            _env.WriteTransactionPool.ScratchPagesInUse = _scratchPagesTable;
+            _env.WriteTransactionPool.ScratchPagesReadyForNextTx = previous._scratchPagesTable;
 
-                foreach (var pagerState in _pagerStates)
-                {
-                    pagerState.Release();
-                }
+            _dirtyPages = previous._dirtyPages;
+            _dirtyPages.Clear();
 
-                throw;
-            }
-        }
+            _freedPages = new HashSet<long>();
+            _unusedScratchPages = new List<PageFromScratchBuffer>();
+            _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
+            _pagesToFreeOnCommit = new Stack<long>();
 
-        private void CopyPagerStatesFromPreviousTx(LowLevelTransaction previous)
-        {
-            var pagers = new HashSet<AbstractPager>();
+            _state = previous._state.Clone();
 
-            foreach (var scratchOrDataPagerState in previous._pagerStates)
-            {
-                // in order to avoid "dragging" pager state ref on non-active scratch - we will not copy disposed scratches from previous async tx. RavenDB-6766
-                if (scratchOrDataPagerState.DiscardOnTxCopy)
-                    continue;
-
-                // copy the "current pager" which is the last pager used, and by that do not "drag" old non-used pager state refs to the next async commit (i.e. older views of data file). RavenDB-6949
-                var currentPager = scratchOrDataPagerState.CurrentPager;
-                if (pagers.Add(currentPager) == false)
-                    continue;
-
-                var pagerState = scratchOrDataPagerState;
-
-                EnsurePagerStateReference(ref pagerState);
-            }
+            _pageLocator = PersistentContext.AllocatePageLocator(this);
+            InitializeRoots();
+            InitTransactionHeader();
         }
 
         public LowLevelTransaction(StorageEnvironment env, long id, TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null)
@@ -364,64 +294,47 @@ namespace Voron.Impl
             _allocator.AllocationFailed += MarkTransactionAsFailed;
             _disposeAllocator = context == null;
 
-            _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
+            _disposeAllocator = context == null;
 
             var scratchPagerStates = env.ScratchBufferPool.GetPagerStatesOfAllScratches();
 
-            try
+            _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
+
+            if (flags != TransactionFlags.ReadWrite)
             {
-                _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
+                // for read transactions, we need to keep the pager state frozen
+                // for write transactions, we can use the current one (which == null)
+                _scratchPagerStates = scratchPagerStates;
 
-                switch (flags)
-                {
-                    case TransactionFlags.Read:
-                        // for read transactions, we need to keep the pager state frozen
-                        _scratchPagerStates = scratchPagerStates;
-                        _state = env.State;
-
-                        JournalSnapshots = _journal.GetSnapshots();
-
-                        break;
-                    case TransactionFlags.ReadWrite:
-                        // for write transactions, we can use the current one (which == null)
-                        EnsureNoDuplicateTransactionId(id);
-                        _state = env.State.Clone();
-
-                        // we keep this copy to make sure that if we use async commit, we have a stable copy of the journals
-                        // as they were at the time we started the original transaction, this is required because async commit
-                        // may modify the list of files we have available
-                        JournalFiles = _journal.Files;
-                        foreach (var journalFile in JournalFiles)
-                        {
-                            journalFile.AddRef();
-                        }
-
-                        _env.WriteTransactionPool.Reset();
-
-                        _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesInUse;
-                        _dirtyPages = _env.WriteTransactionPool.DirtyPagesPool;
-                        _freedPages = new HashSet<long>();
-                        _unusedScratchPages = new List<PageFromScratchBuffer>();
-                        _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
-                        _pagesToFreeOnCommit = new Stack<long>();
-
-                        InitTransactionHeader();
-                        break;
-                }
+                _state = env.State.Clone();
 
                 InitializeRoots();
+
+                JournalSnapshots = _journal.GetSnapshots();
+
+                return;
             }
-            catch
+
+            EnsureNoDuplicateTransactionId(id);
+            // we keep this copy to make sure that if we use async commit, we have a stable copy of the jounrals
+            // as they were at the time we started the original transaction, this is required because async commit
+            // may modify the list of files we have available
+            JournalFiles = _journal.Files;
+            foreach (var journalFile in JournalFiles)
             {
-                // need to restore ref counts of already added pager states
-
-                foreach (var pagerState in _pagerStates)
-                {
-                    pagerState.Release();
-                }
-
-                throw;
+                journalFile.AddRef();
             }
+            _env.WriteTransactionPool.Reset();
+            _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesInUse;
+            _dirtyPages = _env.WriteTransactionPool.DirtyPagesPool;
+            _freedPages = new HashSet<long>();
+            _unusedScratchPages = new List<PageFromScratchBuffer>();
+            _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
+            _pagesToFreeOnCommit = new Stack<long>();
+
+            _state = env.State.Clone();
+            InitializeRoots();
+            InitTransactionHeader();
         }
 
         [Conditional("DEBUG")]
@@ -693,7 +606,7 @@ namespace Voron.Impl
                 return;
             }
 
-            //DataPager.TryReleasePage(this, pageNumber);
+            DataPager.TryReleasePage(ref PagerTransactionState, pageNumber);
             throw new NotImplementedException();
         }
 
@@ -756,7 +669,7 @@ namespace Voron.Impl
 
             Debug.Assert(overflowSize >= 0);
 
-            numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(overflowSize);
+            numberOfPages = Pager.GetNumberOfOverflowPages(overflowSize);
 
             var overflowPage = AllocatePage(numberOfPages, pageNumber, previousPage, zeroPage);
             overflowPage.Flags = PageFlags.Overflow;
@@ -855,9 +768,9 @@ namespace Voron.Impl
             if (page.IsOverflow == false || page.OverflowSize < newSize)
                 throw new InvalidOperationException($"The page {pageNumber} was is not an overflow page greater than {newSize}");
 
-            var prevNumberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
+            var prevNumberOfPages = Pager.GetNumberOfOverflowPages(page.OverflowSize);
             page.OverflowSize = newSize;
-            var lowerNumberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(newSize);
+            var lowerNumberOfPages = Pager.GetNumberOfOverflowPages(newSize);
 
             Debug.Assert(lowerNumberOfPages != 0);
 
@@ -934,11 +847,6 @@ namespace Voron.Impl
                 _env.TransactionCompleted(this);
 
                 _disposableScope.Dispose();
-
-                foreach (var pagerState in _pagerStates)
-                {
-                    pagerState.Release();
-                }
 
                 if (JournalFiles != null)
                 {
@@ -1367,8 +1275,6 @@ namespace Voron.Impl
             return _txState.ToString();
         }
 
-        private PagerState _lastState;
-
         internal bool FlushInProgressLockTaken;
 
         internal ImmutableAppendOnlyList<JournalFile> JournalFiles;
@@ -1378,31 +1284,6 @@ namespace Voron.Impl
         internal long? LocalPossibleOldestReadTransaction;
         internal RacyConcurrentBag.Node ActiveTransactionNode;
         public Transaction Transaction;
-
-        public void EnsurePagerStateReference(ref PagerState state)
-        {
-            if (state == _lastState || state == null)
-                return;
-
-            _forTestingPurposes?.ActionToCallDuringEnsurePagerStateReference?.Invoke();
-
-            if (_pagerStates.Contains(state))
-            {
-                _lastState = state;
-                return;
-            }
-
-            state = state.CurrentPager.GetPagerStateAndAddRefAtomically(); // state might hold released pagerState, and we want to add ref to the current (i.e. data file was re-allocated and a new state is now available). RavenDB-6950
-
-            _lastState = state;
-
-            if (_pagerStates.Add(state) == false)
-            {
-                // the state is already on the list but we already added a reference to it so now we need to release it
-
-                state.Release();
-            }
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void OnAfterCommitWhenNewTransactionsPrevented()
@@ -1458,7 +1339,7 @@ namespace Voron.Impl
             if (page.IsOverflow == false)
                 return;
             
-            int numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
+            int numberOfOverflowPages = Pager.GetNumberOfOverflowPages(page.OverflowSize);
             for (int pageOffset = 1; pageOffset < numberOfOverflowPages; ++pageOffset)
             {
                 _overflowPagesToBeRemoved.Add(pageId + pageOffset, pageId);
@@ -1640,11 +1521,6 @@ namespace Voron.Impl
                 ActionToCallOnTransactionAfterCommit = action;
 
                 return new DisposableAction(() => ActionToCallOnTransactionAfterCommit = null);
-            }
-
-            internal HashSet<PagerState> GetPagerStates()
-            {
-                return _tx._pagerStates;
             }
         }
 

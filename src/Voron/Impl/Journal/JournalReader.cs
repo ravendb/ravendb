@@ -28,7 +28,7 @@ namespace Voron.Impl.Journal
         private long _readAt4Kb;
         private readonly DiffApplier _diffApplier = new();
         private readonly long _journalPagerNumberOfAllocated4Kb;
-        private readonly List<EncryptionBuffer> _encryptionBuffers;
+        private readonly List<Pager2.EncryptionBuffer> _encryptionBuffers;
         private TransactionHeader* _firstValidTransactionHeader = null;
 
         private long? _firstSkippedTx;
@@ -54,7 +54,7 @@ namespace Voron.Impl.Journal
             _journalPagerNumberOfAllocated4Kb =  _journalPagerState.TotalAllocatedSize /(4*Constants.Size.Kilobyte);
 
             if (journalPager.Options.Encryption.IsEnabled)
-                _encryptionBuffers = new List<EncryptionBuffer>();
+                _encryptionBuffers = new List<Pager2.EncryptionBuffer>();
         }
 
         public TransactionHeader* LastTransactionHeader { get; private set; }
@@ -474,7 +474,7 @@ namespace Voron.Impl.Journal
                 var size = (4 * Constants.Size.Kilobyte) * GetNumberOf4KbFor(sizeof(TransactionHeader) + pagesSize);
 
                 var ptr = PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out var thread);
-                var buffer = new EncryptionBuffer(options.Encryption.EncryptionBuffersPool)
+                var buffer = new Pager2.EncryptionBuffer(options.Encryption.EncryptionBuffersPool)
                 {
                     Pointer = ptr,
                     Size = size,
@@ -749,7 +749,7 @@ namespace Voron.Impl.Journal
                             continue; // No modification
                 
                         var pageHeader = (PageHeader*)buffer.Value.Pointer;
-                        var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfPages(pageHeader);
+                        var numberOfPages = Pager.GetNumberOfPages(pageHeader);
                 
                         long modifiedPage = buffer.Key;
                 
