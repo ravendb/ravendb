@@ -41,5 +41,10 @@ namespace Raven.Client.Exceptions.Documents.Indexes
         {
             throw new IndexDoesNotExistException($"There is no index with '{indexName}' name.");
         }
+
+        public static IndexDoesNotExistException ThrowForAuto(string indexName)
+        {
+            throw new IndexDoesNotExistException($"There is no auto index with '{indexName}' name.");
+        }
     }
 }
