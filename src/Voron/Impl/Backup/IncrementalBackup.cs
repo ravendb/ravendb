@@ -368,16 +368,16 @@ namespace Voron.Impl.Backup
                                 output.Position = output.Length;
                                 input.CopyTo(output);
                             }
-
-                            var pager = env.Options.OpenPager(jounalFileName);
-                            toDispose.Add(pager);
-
-                            if (long.TryParse(Path.GetFileNameWithoutExtension(entry.Name), out journalNumber) == false)
-                            {
-                                throw new InvalidOperationException("Cannot parse journal file number");
-                            }
-
                             throw new NotImplementedException();
+
+                            // var pager = env.Options.OpenPager(jounalFileName);
+                            // toDispose.Add(pager);
+                            //
+                            // if (long.TryParse(Path.GetFileNameWithoutExtension(entry.Name), out journalNumber) == false)
+                            // {
+                            //     throw new InvalidOperationException("Cannot parse journal file number");
+                            // }
+
                             // var recoveryPager =
                             //     env.Options.CreateTemporaryBufferPager(Path.Combine(tempDir.Combine(StorageEnvironmentOptions.JournalRecoveryName(journalNumber)).FullPath),
                             //         env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);

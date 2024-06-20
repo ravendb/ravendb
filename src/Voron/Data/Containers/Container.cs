@@ -906,7 +906,7 @@ namespace Voron.Data.Containers
 
             if (page.IsOverflow)
             {
-                var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
+                var numberOfOverflowPages = Pager.GetNumberOfOverflowPages(page.OverflowSize);
                 rootContainer.Header.NumberOfOverflowPages -= numberOfOverflowPages;
                 long pageLevelMetadata = ((ContainerPageHeader*)page.Pointer)->PageLevelMetadata;
                 RemoveFromAllPagesList(llt, rootContainer, pageNum, pageLevelMetadata);

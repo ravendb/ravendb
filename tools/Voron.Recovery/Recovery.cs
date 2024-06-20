@@ -101,13 +101,13 @@ namespace Voron.Recovery
             }
 
             StorageEnvironment se = null;
-            TempPagerTransaction tx = null;
+            //TempPagerTransaction tx = null;
             try
             {
                 if (IsEncrypted)
                 {
                     //We need a tx for the encryption pager and we can't dispose of it while reading the page.
-                    tx = new TempPagerTransaction();
+              //      tx = new TempPagerTransaction();
                 }
                 var sw = new Stopwatch();
                 sw.Start();
@@ -226,7 +226,10 @@ namespace Voron.Recovery
                     {
                         try
                         {
-                            var page = DecryptPageIfNeeded(mem, startOffset, ref tx, maybePulseTransaction: true);
+                            var page = mem;
+                            if (IsEncrypted)
+                                throw new NotImplementedException();
+                            //var page = DecryptPageIfNeeded(mem, startOffset, ref tx, maybePulseTransaction: true);
 
                             if (ct.IsCancellationRequested)
                             {
@@ -273,7 +276,7 @@ namespace Voron.Recovery
                                 if (ValidateOverflowPage(pageHeader, eof, startOffset, ref mem) == false)
                                     continue;
 
-                                var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+                                var numberOfPages = Impl.Paging.Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize);
 
                                 if (pageHeader->Flags.HasFlag(PageFlags.Stream))
                                 {
@@ -337,7 +340,10 @@ namespace Voron.Recovery
                                             }
 
                                             var nextStreamHeader = (byte*)(streamPageHeader->StreamNextPageNumber * _pageSize) + startOffset;
-                                            nextPage = (PageHeader*)DecryptPageIfNeeded(nextStreamHeader, startOffset, ref tx, false);
+                                            nextPage = (PageHeader*)nextStreamHeader;
+                                            if (IsEncrypted)
+                                                throw new NotImplementedException();
+                                            //nextPage = (PageHeader*)DecryptPageIfNeeded(nextStreamHeader, startOffset, ref tx, false);
 
                                             //This is the case that the next page isn't a stream page
                                             if (nextPage->Flags.HasFlag(PageFlags.Stream) == false || nextPage->Flags.HasFlag(PageFlags.Overflow) == false)
@@ -574,7 +580,7 @@ namespace Voron.Recovery
             }
             finally
             {
-                tx?.Dispose();
+                //tx?.Dispose();
                 se?.Dispose();
                 if (_config.LoggingMode != LogMode.None)
                     LoggingSource.Instance.EndLogging();
@@ -747,22 +753,23 @@ namespace Voron.Recovery
 
         private Size _maxTransactionSize = new Size(64, SizeUnit.Megabytes);
 
-        private byte* DecryptPageIfNeeded(byte* mem, long start, ref TempPagerTransaction tx, bool maybePulseTransaction = false)
+        private byte* DecryptPageIfNeeded(byte* mem, long start, ref object tx, bool maybePulseTransaction = false)
         {
-            if (IsEncrypted == false)
-                return mem;
-
-            //We must make sure we can close the transaction since it may hold buffers for memory we still need e.g. attachments chunks.
-            if (maybePulseTransaction && tx?.AdditionalMemoryUsageSize > _maxTransactionSize)
-            {
-                tx.Dispose();
-                tx = new TempPagerTransaction();
-            }
-
-            long pageNumber = (long)((PageHeader*)mem)->PageNumber;
-            var res = Pager.AcquirePagePointer(tx, pageNumber);
-
-            return res;
+            throw new NotImplementedException();
+            // if (IsEncrypted == false)
+            //     return mem;
+            //
+            // //We must make sure we can close the transaction since it may hold buffers for memory we still need e.g. attachments chunks.
+            // if (maybePulseTransaction && tx?.AdditionalMemoryUsageSize > _maxTransactionSize)
+            // {
+            //     tx.Dispose();
+            //     tx = new TempPagerTransaction();
+            // }
+            //
+            // long pageNumber = (long)((PageHeader*)mem)->PageNumber;
+            // var res = Pager.AcquirePagePointer(tx, pageNumber);
+            //
+            // return res;
         }
 
         private static void ExtractTagFromLastPage(PageHeader* nextPage, StreamPageHeader* streamPageHeader, ref string tag)
@@ -1230,7 +1237,7 @@ namespace Voron.Recovery
         {
             ulong checksum;
             //pageHeader might be a buffer address we need to verify we don't exceed the original memory boundary here
-            var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+            var numberOfPages = Impl.Paging.Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize);
             var sizeOfPages = numberOfPages * _pageSize;
             var endOfOverflow = (long)mem + sizeOfPages;
             // the endOfOverflow can be equal to eof if the last page is overflow
@@ -1712,7 +1719,7 @@ namespace Voron.Recovery
 
         private readonly string _output;
         private readonly int _pageSize;
-        private AbstractPager Pager => throw new NotImplementedException(); // _option.DataPager;
+        private Pager2 Pager => throw new NotImplementedException(); // _option.DataPager;
         private const string LogFileName = "recovery.log";
         private long _numberOfFaultedPages;
         private long _numberOfDocumentsRetrieved;

@@ -164,7 +164,7 @@ namespace FastTests.Voron.Containers
                 (pageId, _) = Math.DivRem(containerItemId, Constants.Storage.PageSize);
                 var page = wtx.LowLevelTransaction.ModifyPage(pageId);
                 Assert.True(page.IsOverflow);
-                overflowPageCount = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
+                overflowPageCount = Pager.GetNumberOfOverflowPages(page.OverflowSize);
                 Container.Delete(wtx.LowLevelTransaction, containerId, containerItemId);
                 wtx.Commit();
             }

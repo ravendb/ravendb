@@ -51,14 +51,15 @@ namespace SlowTests.Voron
                 {
                     using (var tx = startWriteTransaction ? Env.WriteTransaction() : Env.ReadTransaction())
                     {
-                        var pagerStates = tx.LowLevelTransaction.ForTestingPurposesOnly().GetPagerStates();
-
-                        Assert.Equal(2, pagerStates.Count); // data file, and one scratch file
-
-                        foreach (PagerState pagerState in pagerStates)
-                        {
-                            Assert.False(pagerState.CurrentPager.Disposed);
-                        }
+                        Assert.Fail("need to think how to test this");
+                        // var pagerStates = tx.LowLevelTransaction.ForTestingPurposesOnly().GetPagerStates();
+                        //
+                        // Assert.Equal(2, pagerStates.Count); // data file, and one scratch file
+                        //
+                        // foreach (PagerState pagerState in pagerStates)
+                        // {
+                        //     Assert.False(pagerState.CurrentPager.Disposed);
+                        // }
                     }
                 }
                 catch (Exception e)
@@ -133,14 +134,15 @@ namespace SlowTests.Voron
                 {
                     using (var tx = Env.ReadTransaction())
                     {
-                        var pagerStates = tx.LowLevelTransaction.ForTestingPurposesOnly().GetPagerStates();
-
-                        Assert.Equal(2, pagerStates.Count); // data file, and one scratch file
-
-                        foreach (PagerState pagerState in pagerStates)
-                        {
-                            Assert.False(pagerState.CurrentPager.Disposed);
-                        }
+                        Assert.Fail("Need to think how to test this");
+                        // var pagerStates = tx.LowLevelTransaction.ForTestingPurposesOnly().GetPagerStates();
+                        //
+                        // Assert.Equal(2, pagerStates.Count); // data file, and one scratch file
+                        //
+                        // foreach (PagerState pagerState in pagerStates)
+                        // {
+                        //     Assert.False(pagerState.CurrentPager.Disposed);
+                        // }
                     }
                 }
                 catch (Exception e)

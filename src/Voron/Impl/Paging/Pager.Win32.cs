@@ -309,6 +309,19 @@ public unsafe partial class Pager2
         }
         
         
+        [StructLayout(LayoutKind.Explicit)]
+        public struct SplitValue
+        {
+            [FieldOffset(0)]
+            public ulong Value;
+
+            [FieldOffset(0)]
+            public uint Low;
+
+            [FieldOffset(4)]
+            public uint High;
+        }
+        
         private static LoadedPage MapPages(Pager2 pager, State state, TxStateFor32Bits pagerTxState, long startPage, long size)
         {
             pager._32BitsState!.AllocationLock.EnterReadLock();
@@ -327,7 +340,7 @@ public unsafe partial class Pager2
                 }
 
 
-                var offset = new WindowsMemoryMapPager.SplitValue
+                var offset = new SplitValue
                 {
                     Value = (ulong)startPage * Constants.Storage.PageSize
                 };

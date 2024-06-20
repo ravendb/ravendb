@@ -269,9 +269,9 @@ namespace Voron.Data.Tables
 
         public static readonly byte[] EncryptionContext = Encoding.UTF8.GetBytes("Compress");
 
-        private static void RecreateRecoveryDictionaries(IPagerLevelTransactionState obj)
+        private static void RecreateRecoveryDictionaries(LowLevelTransaction obj)
         {
-            if (obj is not LowLevelTransaction { Committed: true } ||
+            if (obj is not { Committed: true } ||
                 obj.Environment.Options is StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions)
                 return;
 

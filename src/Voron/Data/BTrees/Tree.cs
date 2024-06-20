@@ -373,7 +373,7 @@ namespace Voron.Data.BTrees
             if (_llt.Flags is TransactionFlags.Read)
                 ThrowCannotAddInReadTx();
 
-            if (AbstractPager.IsKeySizeValid(key.Size) == false)
+            if (Pager.IsKeySizeValid(key.Size) == false)
                 ThrowInvalidKeySize(key);
 
             var foundPage = FindPageFor(key, node: out TreeNodeHeader* node, cursor: out TreeCursorConstructor cursorConstructor, allowCompressed: true);
@@ -535,7 +535,7 @@ namespace Voron.Data.BTrees
         private static void ThrowInvalidKeySize(Slice key)
         {
             throw new ArgumentException(
-                $"Key size is too big, must be at most {AbstractPager.MaxKeySize} bytes, but was {(key.Size + AbstractPager.RequiredSpaceForNewNode)}",
+                $"Key size is too big, must be at most {Pager.MaxKeySize} bytes, but was {(key.Size + Pager.RequiredSpaceForNewNode)}",
                 nameof(key));
         }
 
@@ -576,12 +576,12 @@ namespace Voron.Data.BTrees
 
         public bool ShouldGoToOverflowPage(int len)
         {
-            return len + Constants.Tree.NodeHeaderSize > (AbstractPager.PageMaxSpace / 2 - 1); // merge toward the v6.0 branch, temp code!
+            return len + Constants.Tree.NodeHeaderSize > (Pager.PageMaxSpace / 2 - 1); // merge toward the v6.0 branch, temp code!
         }
 
         private long WriteToOverflowPages(int overflowSize, out byte* dataPos)
         {
-            var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(overflowSize);
+            var numberOfPages = Pager.GetNumberOfOverflowPages(overflowSize);
             var newPage = _llt.AllocatePage(numberOfPages);
 
             TreePage overflowPageStart = PrepareTreePage(TreePageFlags.Value, numberOfPages, newPage);
@@ -1045,7 +1045,7 @@ namespace Voron.Data.BTrees
 
             if (p.IsOverflow)
             {
-                var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(p.OverflowSize);
+                var numberOfPages = Pager.GetNumberOfOverflowPages(p.OverflowSize);
                 for (int i = 0; i < numberOfPages; i++)
                 {
                     _llt.FreePage(p.PageNumber + i);
@@ -1306,7 +1306,7 @@ namespace Voron.Data.BTrees
                     {
                         // This is an overflow page
                         var overflowPage = GetReadOnlyTreePage(pageNumber);
-                        var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(overflowPage.OverflowSize);
+                        var numberOfPages = Pager.GetNumberOfOverflowPages(overflowPage.OverflowSize);
                         for (long j = 0; j < numberOfPages; ++j)
                             results.Add(overflowPage.PageNumber + j);
                     }
@@ -1387,11 +1387,11 @@ namespace Voron.Data.BTrees
             {
                 var readOnlyOverflowPage = GetReadOnlyTreePage(updatedNode->PageNumber);
 
-                var availableOverflows = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(readOnlyOverflowPage.OverflowSize);
+                var availableOverflows = Pager.GetNumberOfOverflowPages(readOnlyOverflowPage.OverflowSize);
 
                 if (len <= (availableOverflows * Constants.Storage.PageSize - Constants.Tree.PageHeaderSize))
                 {
-                    var requestedOverflows = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(len);
+                    var requestedOverflows = Pager.GetNumberOfOverflowPages(len);
 
                     var overflowsToFree = availableOverflows - requestedOverflows;
 

@@ -65,10 +65,11 @@ namespace SlowTests.Voron
 
             // Lets corrupt something
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
-            using (var pager = LinuxTestUtils.GetNewPager(options, DataDir, "Raven.Voron"))
-            using (var tempTX = new TempPagerTransaction())
             {
-                var writePtr = pager.AcquirePagePointer(tempTX, 2) + PageHeader.SizeOf + 43; // just some random place on page #2
+                var (pager,state) = Pager2.Create(options, new Pager2.OpenFileOptions { File = Path.Combine(DataDir, "Raven.Voron") });
+                using var _ = pager;
+                Pager2.PagerTransactionState txState = default;
+                var writePtr = pager.AcquirePagePointer(state, ref txState, 2) + PageHeader.SizeOf + 43; // just some random place on page #2
                 for (byte i = 0; i < 8; i++)
                 {
                     writePtr[i] = i;
