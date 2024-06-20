@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using FastTests.Voron;
 using Voron.Impl;
+using Voron.Impl.Paging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -40,42 +41,26 @@ namespace SlowTests.Voron.Issues
         [Fact]
         public void MustReleaseAllReferencesToPagerState()
         {
-            var tempPager = Env.Options.CreateTemporaryBufferPager($"temp-{Guid.NewGuid()}", 16 * 1024);
+            var (tempPager, state) = Env.Options.CreateTemporaryBufferPager($"temp-{Guid.NewGuid()}", 16 * 1024, encrypted: false);
 
-            var pagerStates = new HashSet<PagerState>();
+            var pagerStates = new HashSet<Pager2.State> { state };
 
-            try
+            using(tempPager)
             {
                 using (var readTx = Env.ReadTransaction())
                 {
-                    var state1 = tempPager.PagerState;
-
-                    pagerStates.Add(state1);
-
-                    tempPager.EnsureContinuous(1000, 1);
-
-                    var state2 = tempPager.PagerState;
-
-                    pagerStates.Add(state2);
-
-                    tempPager.EnsureContinuous(3000, 1);
-
-                    readTx.LowLevelTransaction.EnsurePagerStateReference(ref state1);
-                    readTx.LowLevelTransaction.EnsurePagerStateReference(ref state2);
+                    tempPager.EnsureContinuous(ref state, 1000, 1);
+                    pagerStates.Add(state);
+                    tempPager.EnsureContinuous(ref state, 3000, 1);
+                    pagerStates.Add(state);
                 }
-            }
-            finally
-            {
-                pagerStates.Add(tempPager.PagerState);
-
-                tempPager.Dispose();
             }
 
             Assert.Equal(3, pagerStates.Count);
 
-            foreach (var state in pagerStates)
+            foreach (var s in pagerStates)
             {
-                Assert.True(state._released);
+                Assert.True(s.Disposed);
             }
         }
     }

@@ -34,7 +34,7 @@ namespace SlowTests.Voron.Issues
                 {
                     using (var tx = Env.WriteTransaction())
                     {
-                        Env.Journal.ZeroCompressionBuffer(tx.LowLevelTransaction); // this can be called by an index e.g. when forceMemoryCleanup is true 
+                        Env.Journal.ZeroCompressionBuffer(ref tx.LowLevelTransaction.PagerTransactionState); // this can be called by an index e.g. when forceMemoryCleanup is true 
                     }
                 }
                 catch (Exception e)

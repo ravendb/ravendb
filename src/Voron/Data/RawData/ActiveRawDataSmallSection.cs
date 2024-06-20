@@ -208,10 +208,9 @@ namespace Voron.Data.RawData
             var numberOfPagesInSmallSection = Math.Min(sizeInPages ?? dbPagesInSmallSection, dbPagesInSmallSection);
             Debug.Assert((numberOfPagesInSmallSection * 2) + ReservedHeaderSpace <= Constants.Storage.PageSize);
 
-            var sectionStart = llt.AllocatePage(numberOfPagesInSmallSection);
+            var sectionStart = llt.AllocateMultiplePageAndReturnFirst(numberOfPagesInSmallSection);
             numberOfPagesInSmallSection--; // we take one page for the active section header
             Debug.Assert(numberOfPagesInSmallSection > 0);
-            llt.BreakLargeAllocationToSeparatePages(sectionStart.PageNumber);
 
             var sectionHeader = (RawDataSmallSectionPageHeader*)sectionStart.Pointer;
             sectionHeader->RawDataFlags = RawDataPageFlags.Header;
@@ -226,7 +225,9 @@ namespace Voron.Data.RawData
 
             for (ushort i = 0; i < numberOfPagesInSmallSection; i++)
             {
-                var pageHeader = (RawDataSmallPageHeader*)(sectionStart.Pointer + (i + 1) * Constants.Storage.PageSize);
+                var curPage = llt.ModifyPage(sectionStart.PageNumber + 1 + i);
+                var pageHeader = (RawDataSmallPageHeader*)curPage.Pointer;
+
                 Debug.Assert(pageHeader->PageNumber == sectionStart.PageNumber + i + 1);
                 pageHeader->NumberOfEntries = 0;
                 pageHeader->PageNumberInSection = i;

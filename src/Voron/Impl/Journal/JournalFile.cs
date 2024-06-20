@@ -212,7 +212,9 @@ namespace Voron.Impl.Journal
                 long pageNumber = txPage.ScratchPageNumber;
                 if (pageNumber == -1) // if we don't already have it from TX preparing then ReadPage
                 {
-                    var scratchPage = scratchBufferPool.ReadPage(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
+                    var (pager, state) = scratchBufferPool.GetScratchBufferFile(txPage.ScratchFileNumber).File.GetPagerAndState();
+
+                    var scratchPage = new Page(pager.AcquirePagePointerWithOverflowHandling(state, ref tx.PagerTransactionState, txPage.PositionInScratchBuffer));
                     pageNumber = scratchPage.PageNumber;
                 }
 

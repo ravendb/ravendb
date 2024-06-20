@@ -51,7 +51,6 @@ public unsafe partial class Pager2
     
     public class State: IDisposable
     {
-        string S = Environment.StackTrace;
         public readonly Pager2 Pager;
         
         /// <summary>
@@ -62,6 +61,7 @@ public unsafe partial class Pager2
         /// This is cleared upon committing the transaction state to the global state  
         /// </summary>
         private State? _previous;
+        private bool _fileOwnershipMoved;
 
         public void BeforePublishing()
         {
@@ -89,8 +89,6 @@ public unsafe partial class Pager2
             return clone;
         }
 
-        public bool _fileOwnershipMoved;
-        
 
         public byte* BaseAddress;
         public long NumberOfAllocatedPages;

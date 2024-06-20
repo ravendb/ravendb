@@ -24,6 +24,7 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Global;
 using Voron.Impl;
+using Voron.Impl.Journal;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.TransactionMerger
@@ -170,7 +171,10 @@ namespace Raven.Server.Documents.TransactionMerger
                                 {
                                     using (ctx.OpenWriteTransaction())
                                     {
-                                        ctx.Environment.Options.Encryption.JournalCompressionBufferHandler.ZeroCompressionBuffer(ctx.Transaction.InnerTransaction.LowLevelTransaction);
+                                        var llt = ctx.Transaction.InnerTransaction.LowLevelTransaction;
+                                        var waj = ctx.Environment.Options.Encryption.WriteAheadJournal;
+                                        
+                                        waj.ZeroCompressionBuffer(ref llt.PagerTransactionState);
                                     }
                                 }
                             }

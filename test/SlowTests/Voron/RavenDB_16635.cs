@@ -181,17 +181,13 @@ namespace SlowTests.Voron
         {
             RequireFileBasedPager();
 
-            var tempPager = Env.Options.CreateTemporaryBufferPager($"temp-{Guid.NewGuid()}", 16 * 1024);
-
-            var state = tempPager.PagerState;
-
-            state.AddRef();
+            var (tempPager, state) = Env.Options.CreateTemporaryBufferPager($"temp-{Guid.NewGuid()}", 16 * 1024, encrypted: false);
 
             tempPager.Dispose();
-
+          
             using (var tx = Env.ReadTransaction())
             {
-                Assert.Throws<ObjectDisposedException>(() => tempPager.AcquirePagePointer(tx.LowLevelTransaction, 0, state));
+                Assert.Throws<ObjectDisposedException>(() => tempPager.AcquirePagePointer(state, ref tx.LowLevelTransaction.PagerTransactionState, 0));
             }
 
             using (var tx = Env.ReadTransaction())

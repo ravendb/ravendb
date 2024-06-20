@@ -151,77 +151,81 @@ namespace StressTests.Voron
                     long inputSize = 3L * gb;
                     var guid = Guid.NewGuid();
 
+                    Pager2.PagerTransactionState txState = default;
+
                     var outputSize = LZ4.MaximumOutputLength(inputSize);
-                    using (var outputPager = CreateScratchFile($"output-{divider}-{guid}", env, outputSize, out byte* outputBuffer))
-                    using (var inputPager = CreateScratchFile($"input-{divider}-{guid}", env, inputSize, out byte* inputBuffer))
-                    using (var checkedPager = CreateScratchFile($"checked-{divider}-{guid}", env, inputSize, out byte* checkedBuffer))
+                    var (outputPager, outputPagerState) = CreateScratchFile($"output-{divider}-{guid}", env, ref txState, outputSize, out byte* outputBuffer);
+                    using var _ = outputPager;
+                    var (inputPager, inputPagerState) = CreateScratchFile($"input-{divider}-{guid}", env, ref txState, inputSize, out byte* inputBuffer);
+                    using var __ = inputPager;
+                    var (checkedPager, checkedPagerState) = CreateScratchFile($"checked-{divider}-{guid}", env, ref txState, inputSize, out byte* checkedBuffer);
+                    using var ___ = checkedPager;
+                    
+                    var random = new Random(123);
+
+                    if (divider != 0)
                     {
-                        var random = new Random(123);
-
-                        if (divider != 0)
-                        {
-                            for (long p = 0; p < inputSize / divider; p++)
-                            {
-                                cts.Token.ThrowIfCancellationRequested();
-
-                                (*(byte*)((long)inputBuffer + p)) = Convert.ToByte(random.Next(0, 255));
-                            }
-                        }
-                        else
-                        {
-                            inputSize = int.MaxValue / 2 - 1; // MAX_INPUT_LENGTH_PER_SEGMENT
-                            for (long p = 0; p < inputSize; p++)
-                            {
-                                cts.Token.ThrowIfCancellationRequested();
-
-                                (*(byte*)((long)inputBuffer + p)) = Convert.ToByte(random.Next(0, 255));
-                            }
-                        }
-
-                        Console.WriteLine("Calculating LZ4 MaximumOutputLength...");
-                        var outputBufferSize = LZ4.MaximumOutputLength(inputSize);
-                        Console.WriteLine("...done");
-
-                        // write some data in known places in inputBuffer
-                        byte testNum = 0;
-                        for (long testPoints = 0; testPoints < inputSize; testPoints += gb)
+                        for (long p = 0; p < inputSize / divider; p++)
                         {
                             cts.Token.ThrowIfCancellationRequested();
 
-                            var testPointer = (byte*)((long)inputBuffer + testPoints);
-                            *testPointer = ++testNum;
+                            (*(byte*)((long)inputBuffer + p)) = Convert.ToByte(random.Next(0, 255));
                         }
+                    }
+                    else
+                    {
+                        inputSize = int.MaxValue / 2 - 1; // MAX_INPUT_LENGTH_PER_SEGMENT
+                        for (long p = 0; p < inputSize; p++)
+                        {
+                            cts.Token.ThrowIfCancellationRequested();
 
-                        Console.WriteLine("Encoding LZ4 LongBuffer...");
-                        // encode inputBuffer into outputBuffer
-                        var compressedLenTask = Task.Factory.StartNew(() => LZ4.Encode64LongBuffer(inputBuffer, outputBuffer, inputSize, outputBufferSize), cts.Token);
-                        compressedLenTask.Wait(cts.Token);
-                        var compressedLen = compressedLenTask.Result;
-                        Console.WriteLine("...done");
+                            (*(byte*)((long)inputBuffer + p)) = Convert.ToByte(random.Next(0, 255));
+                        }
+                    }
 
-                        Console.WriteLine("Decoding LZ4 LongBuffers...");
-                        // decode outputBuffer into checkedBuffer
-                        var totalOutputSizeTask = Task.Factory.StartNew(() => LZ4.Decode64LongBuffers(outputBuffer, compressedLen, checkedBuffer, inputSize, true), cts.Token);
-                        totalOutputSizeTask.Wait(cts.Token);
-                        var totalOutputSize = totalOutputSizeTask.Result;
-                        Console.WriteLine("...done");
+                    Console.WriteLine("Calculating LZ4 MaximumOutputLength...");
+                    var outputBufferSize = LZ4.MaximumOutputLength(inputSize);
+                    Console.WriteLine("...done");
 
-                        Assert.Equal(compressedLen, totalOutputSize);
+                    // write some data in known places in inputBuffer
+                    byte testNum = 0;
+                    for (long testPoints = 0; testPoints < inputSize; testPoints += gb)
+                    {
+                        cts.Token.ThrowIfCancellationRequested();
 
-                        testNum = 0;
-                        for (long testPoints = 0; testPoints < inputSize; testPoints += gb)
+                        var testPointer = (byte*)((long)inputBuffer + testPoints);
+                        *testPointer = ++testNum;
+                    }
+
+                    Console.WriteLine("Encoding LZ4 LongBuffer...");
+                    // encode inputBuffer into outputBuffer
+                    var compressedLenTask = Task.Factory.StartNew(() => LZ4.Encode64LongBuffer(inputBuffer, outputBuffer, inputSize, outputBufferSize), cts.Token);
+                    compressedLenTask.Wait(cts.Token);
+                    var compressedLen = compressedLenTask.Result;
+                    Console.WriteLine("...done");
+
+                    Console.WriteLine("Decoding LZ4 LongBuffers...");
+                    // decode outputBuffer into checkedBuffer
+                    var totalOutputSizeTask = Task.Factory.StartNew(() => LZ4.Decode64LongBuffers(outputBuffer, compressedLen, checkedBuffer, inputSize, true), cts.Token);
+                    totalOutputSizeTask.Wait(cts.Token);
+                    var totalOutputSize = totalOutputSizeTask.Result;
+                    Console.WriteLine("...done");
+
+                    Assert.Equal(compressedLen, totalOutputSize);
+
+                    testNum = 0;
+                    for (long testPoints = 0; testPoints < inputSize; testPoints += gb)
                         {
                             cts.Token.ThrowIfCancellationRequested();
 
                             var testPointer = (byte*)((long)checkedBuffer + testPoints);
                             Assert.Equal(++testNum, *testPointer);
                         }
-                    }
                 }
             }
         }
 
-        private static unsafe AbstractPager CreateScratchFile(string scratchName, StorageEnvironment env, long inputSize, out byte* buffer)
+        private static unsafe (Pager2, Pager2.State) CreateScratchFile(string scratchName, StorageEnvironment env, ref Pager2.PagerTransactionState txState, long inputSize, out byte* buffer)
         {
             Console.WriteLine($"Creating Scratch File: {scratchName}");
 
@@ -231,15 +235,15 @@ namespace StressTests.Voron
             int bufferSizeInPages = checked((int)(bufferSize / Constants.Storage.PageSize));
 
             Console.WriteLine($"CreateScratchPager. Size: {bufferSize}. Pages: {bufferSizeInPages}. Name: {scratchName}");
-            var pager = env.Options.CreateScratchPager(filename, (long)bufferSizeInPages * Constants.Storage.PageSize);
+            var (pager, state) = env.Options.CreateScratchPager(filename, (long)bufferSizeInPages * Constants.Storage.PageSize);
 
             Console.WriteLine($"EnsureContinuous. Pages: {bufferSizeInPages}. Name: {scratchName}");
-            pager.EnsureContinuous(0, bufferSizeInPages);
+            pager.EnsureContinuous(ref state, 0, bufferSizeInPages);
 
             Console.WriteLine($"AcquirePagePointer. Name: {scratchName}");
-            buffer = pager.AcquirePagePointer(null, 0);
+            buffer = pager.AcquirePagePointer(state, ref txState, 0);
 
-            return pager;
+            return (pager, state);
         }
     }
 }
