@@ -1217,10 +1217,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             if (moreLikeThisQuery.BaseDocument == null)
             {
-
                 Span<long> docsIds = stackalloc long[16];
-
-
+                
                 // get the current Lucene docid for the given RavenDB doc ID
                 if (moreLikeThisQuery.BaseDocumentQuery.Fill(docsIds) == 0)
                     throw new InvalidOperationException("Given filtering expression did not yield any documents that could be used as a base of comparison");
@@ -1271,16 +1269,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 mltQuery = IndexSearcher.And(mltQuery, moreLikeThisQuery.FilterQuery);
             }
 
-
-
             var ravenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             long[] ids = QueryPool.Rent(pageSize);
             var read = 0;
+            long returnedDocs = 0;
             Page page = default;
             while ((read = mltQuery.Fill(ids.AsSpan())) != 0)
             {
                 for (int i = 0; i < read; i++)
                 {
+                    if (returnedDocs >= query.Limit)
+                        yield break;
+                    
                     var hit = ids[i];
                     token.ThrowIfCancellationRequested();
 
@@ -1295,14 +1295,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                     var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, termsReader, id, _index.IndexFieldsPersistence.HasTimeValues);
                     var result = retriever.Get(ref retrieverInput, token);
+                    
                     if (result.Document != null)
                     {
+                        returnedDocs++;
                         yield return new QueryResult { Result = result.Document };
                     }
                     else if (result.List != null)
                     {
                         foreach (Document item in result.List)
                         {
+                            returnedDocs++;
                             yield return new QueryResult { Result = item };
                         }
                     }
