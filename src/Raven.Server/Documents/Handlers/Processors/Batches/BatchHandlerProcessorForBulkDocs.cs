@@ -125,7 +125,7 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
     protected override async ValueTask WaitForReplicationAsync(DocumentsOperationContext context, ReplicationBatchOptions options, string lastChangeVector)
     {
         var numberOfReplicasToWaitFor = options.Majority
-            ? RequestHandler.Database.ReplicationLoader.GetSizeOfMajority()
+            ? RequestHandler.Database.ReplicationLoader.GetMinNumberOfReplicas()
             : options.NumberOfReplicasToWaitFor;
 
         var changeVector = context.GetChangeVector(lastChangeVector);
