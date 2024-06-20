@@ -121,10 +121,7 @@ namespace Voron.Data.Tables
 
         private unsafe Page AllocateMoreSpace(FixedSizeTree fst)
         {
-            
-
-            var allocatePage = _llt.AllocatePage(_numberOfPagesToAllocate);
-            _llt.BreakLargeAllocationToSeparatePages(allocatePage.PageNumber);
+            var allocatePage = _llt.AllocateMultiplePageAndReturnFirst(_numberOfPagesToAllocate);
 
             var initialPageNumber = allocatePage.PageNumber;
 

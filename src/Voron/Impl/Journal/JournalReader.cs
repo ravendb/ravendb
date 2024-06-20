@@ -16,12 +16,12 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Voron.Impl.Journal
 {
-    public sealed unsafe class JournalReader : IPagerLevelTransactionState
+    public sealed unsafe class JournalReader : IDisposable
     {
         private readonly Pager2 _journalPager;
         private readonly Pager2.State _journalPagerState;
         private readonly Pager2 _dataPager;
-        private readonly AbstractPager _recoveryPager;
+        private readonly Pager2 _recoveryPager;
         private readonly HashSet<long> _modifiedPages;
         private readonly JournalInfo _journalInfo;
         private readonly FileHeader _currentFileHeader;
@@ -39,7 +39,7 @@ namespace Voron.Impl.Journal
 
         public long Next4Kb => _readAt4Kb;
 
-        public JournalReader(Pager2 journalPager, Pager2.State journalPagerState, Pager2 dataPager, AbstractPager recoveryPager, HashSet<long> modifiedPages, JournalInfo journalInfo, FileHeader currentFileHeader, TransactionHeader* previous)
+        public JournalReader(Pager2 journalPager, Pager2.State journalPagerState, Pager2 dataPager, Pager2 recoveryPager, HashSet<long> modifiedPages, JournalInfo journalInfo, FileHeader currentFileHeader, TransactionHeader* previous)
         {
             RequireHeaderUpdate = false;
             _journalPager = journalPager;
@@ -59,15 +59,15 @@ namespace Voron.Impl.Journal
 
         public TransactionHeader* LastTransactionHeader { get; private set; }
 
-        private bool ReadOneTransactionToDataFile(ref Pager2.State state, ref Pager2.PagerTransactionState txState , StorageEnvironmentOptions options)
+        private bool ReadOneTransactionToDataFile(ref Pager2.State dataPagerState, ref Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState, StorageEnvironmentOptions options)
         {
             if (_readAt4Kb >= _journalPagerNumberOfAllocated4Kb)
                 return false;
-            
+
             if (TryReadAndValidateHeader(options, ref txState, ReadExpectation.ValidTransaction, out TransactionHeader* current) == false)
-                {
-                    return false;
-                }
+            {
+                return false;
+            }
 
             if (IsAlreadySyncTransaction(current))
             {
@@ -89,9 +89,9 @@ namespace Voron.Impl.Journal
             if (performDecompression)
             {
                 var numberOfPages = GetNumberOfPagesFor(current->UncompressedSize);
-                _recoveryPager.EnsureContinuous(0, numberOfPages);
-                _recoveryPager.EnsureMapped(this, 0, numberOfPages);
-                outputPage = _recoveryPager.AcquirePagePointer(this, 0);
+                _recoveryPager.EnsureContinuous(ref recoveryPagerState, 0, numberOfPages);
+                _recoveryPager.EnsureMapped(recoveryPagerState, ref txState, 0, numberOfPages);
+                outputPage = _recoveryPager.AcquirePagePointer(recoveryPagerState, ref txState, 0);
                 Memory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
 
                 try
@@ -111,9 +111,9 @@ namespace Voron.Impl.Journal
             else
             {
                 var numberOfPages = GetNumberOfPagesFor(current->UncompressedSize);
-                _recoveryPager.EnsureContinuous(0, numberOfPages);
-                _recoveryPager.EnsureMapped(this, 0, numberOfPages);
-                outputPage = _recoveryPager.AcquirePagePointer(this, 0);
+                _recoveryPager.EnsureContinuous(ref recoveryPagerState, 0, numberOfPages);
+                _recoveryPager.EnsureMapped(recoveryPagerState, ref txState, 0, numberOfPages);
+                outputPage = _recoveryPager.AcquirePagePointer(recoveryPagerState, ref txState, 0);
                 Memory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
                 Memory.Copy(outputPage, (byte*)current + sizeof(TransactionHeader), current->UncompressedSize);
                 pageInfoPtr = (TransactionHeaderPageInfo*)outputPage;
@@ -135,17 +135,16 @@ namespace Voron.Impl.Journal
                     throw new InvalidDataException($"Attempted to read position {totalRead} from transaction data while the transaction is size {current->UncompressedSize}");
 
                 Debug.Assert(_journalPagerState.Disposed == false);
-                if (performDecompression)
-                    Debug.Assert(_recoveryPager.Disposed == false);
+                Debug.Assert(performDecompression == false || recoveryPagerState.Disposed == false);
 
                 var numberOfPagesOnDestination = GetNumberOfPagesFor(pageInfoPtr[i].Size);
-                _dataPager.EnsureContinuous(ref state,pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
-                _dataPager.EnsureMapped(state, ref txState, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
+                _dataPager.EnsureContinuous(ref dataPagerState,pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
+                _dataPager.EnsureMapped(dataPagerState, ref txState, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
 
 
                 // We are going to overwrite the page, so we don't care about its current content
-                var pagePtr = _dataPager.AcquirePagePointerForNewPage(state, ref txState, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
-                _dataPager.MaybePrefetchMemory(state, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
+                var pagePtr = _dataPager.AcquirePagePointerForNewPage(dataPagerState, ref txState, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
+                _dataPager.MaybePrefetchMemory(dataPagerState, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
                 
                 var pageNumber = *(long*)(outputPage + totalRead);
                 if (pageInfoPtr[i].PageNumber != pageNumber)
@@ -272,28 +271,28 @@ namespace Voron.Impl.Journal
             throw new InvalidDataException(message);
         }
 
-        public List<TransactionHeader> RecoverAndValidate(ref Pager2.State dataPagerState, ref Pager2.PagerTransactionState txState, StorageEnvironmentOptions options)
+        public List<TransactionHeader> RecoverAndValidate(ref Pager2.State dataPagerState, ref Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState, StorageEnvironmentOptions options)
         {
             var transactionHeaders = new List<TransactionHeader>();
-            while (ReadOneTransactionToDataFile(ref dataPagerState, ref txState, options))
+            while (ReadOneTransactionToDataFile(ref dataPagerState, ref recoveryPagerState, ref txState, options))
             {
                 Debug.Assert(transactionHeaders.Count == 0 || LastTransactionHeader->TransactionId > transactionHeaders.Last().TransactionId);
 
                 if (LastTransactionHeader != null)
                     transactionHeaders.Add(*LastTransactionHeader);
             }
-            ZeroRecoveryBufferIfNeeded(this, options);
+            ZeroRecoveryBufferIfNeeded(recoveryPagerState, ref txState, options);
 
             return transactionHeaders;
         }
 
-        public void ZeroRecoveryBufferIfNeeded(IPagerLevelTransactionState tx, StorageEnvironmentOptions options)
+        private void ZeroRecoveryBufferIfNeeded(Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState, StorageEnvironmentOptions options)
         {
             if (options.Encryption.IsEnabled == false)
                 return;
-            var recoveryBufferSize = _recoveryPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
-            _recoveryPager.EnsureMapped(tx, 0, checked((int)_recoveryPager.NumberOfAllocatedPages));
-            var pagePointer = _recoveryPager.AcquirePagePointer(tx, 0);
+            var recoveryBufferSize = recoveryPagerState.NumberOfAllocatedPages * Constants.Storage.PageSize;
+            _recoveryPager.EnsureMapped(recoveryPagerState, ref txState, 0, checked((int)recoveryPagerState.NumberOfAllocatedPages));
+            var pagePointer = _recoveryPager.AcquirePagePointer(recoveryPagerState, ref txState, 0);
             Sodium.sodium_memzero(pagePointer, (UIntPtr)recoveryBufferSize);
         }
 
@@ -767,9 +766,7 @@ namespace Voron.Impl.Journal
             }
             
             txState.InvokeBeforeCommitFinalization(_dataPager, state, ref txState);
-            BeforeCommitFinalization?.Invoke(this);
             txState.InvokeDispose(_dataPager, state, ref txState);
-            OnDispose?.Invoke(this);
         }
 
         private static int GetNumberOfPagesFor(long size)
@@ -781,43 +778,6 @@ namespace Voron.Impl.Journal
         {
             return checked(size / (4 * Constants.Size.Kilobyte) + (size % (4 * Constants.Size.Kilobyte) == 0 ? 0 : 1));
         }
-
-        Dictionary<AbstractPager, TransactionState> IPagerLevelTransactionState.PagerTransactionState32Bits { get; set; }
-
-        Dictionary<AbstractPager, CryptoTransactionState> IPagerLevelTransactionState.CryptoPagerTransactionState { get; set; }
-
-        public Size AdditionalMemoryUsageSize
-        {
-            get
-            {
-                var cryptoTransactionStates = ((IPagerLevelTransactionState)this).CryptoPagerTransactionState;
-                if (cryptoTransactionStates == null)
-                {
-                    return new Size(0,SizeUnit.Bytes);
-                }
-
-                var total = 0L;
-                foreach (var state in cryptoTransactionStates.Values)
-                {
-                    total += state.TotalCryptoBufferSize;
-                }
-
-                return new Size(total, SizeUnit.Bytes);
-            }
-        }
-        
-        public event Action<IPagerLevelTransactionState> OnDispose;
-        public event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
-
-        void IPagerLevelTransactionState.EnsurePagerStateReference(ref PagerState state)
-        {
-            //nothing to do
-        }
-
-        StorageEnvironment IPagerLevelTransactionState.Environment => null;
-
-        // JournalReader actually writes to the data file
-        bool IPagerLevelTransactionState.IsWriteTransaction => true;
 
         private string AddSkipTxInfoDetails()
         {

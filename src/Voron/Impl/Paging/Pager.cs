@@ -24,6 +24,9 @@ namespace Voron.Impl.Paging;
 
 public unsafe partial class Pager2 : IDisposable
 {
+    private static readonly object WorkingSetIncreaseLocker = new object();
+
+    
     public readonly string FileName;
     public uint UniquePhysicalDriveId;
     public readonly StorageEnvironmentOptions Options;
@@ -46,9 +49,20 @@ public unsafe partial class Pager2 : IDisposable
     private readonly Logger _logger;
     private DateTime _lastIncrease;
     private long _increaseSize;
-    
-    public const int MinIncreaseSize = 16 * Constants.Size.Kilobyte;
-    public const int MaxIncreaseSize = Constants.Size.Gigabyte;
+    /// <summary>
+    /// Control whatever we should treat memory lock errors as catastrophic errors
+    /// or not. By default, we consider them catastrophic and fail immediately to
+    /// avoid leaking any data. 
+    /// </summary>
+    private readonly bool _doNotConsiderMemoryLockFailureAsCatastrophicError;
+    /// <summary>
+    /// This determines whatever we'll attempt to lock the memory,
+    /// so it will not go to the swap / core dumps
+    /// </summary>
+    private readonly bool _lockMemory;
+
+    private const int MinIncreaseSize = 16 * Constants.Size.Kilobyte;
+    private const int MaxIncreaseSize = Constants.Size.Gigabyte;
 
     public struct OpenFileOptions
     {
@@ -60,6 +74,8 @@ public unsafe partial class Pager2 : IDisposable
         public bool SequentialScan;
         public bool UsePageProtection;
         public bool Encrypted;
+        public bool LockMemory;
+        public bool DoNotConsiderMemoryLockFailureAsCatastrophicError; 
     }
 
     
@@ -93,7 +109,8 @@ public unsafe partial class Pager2 : IDisposable
     {
         Options = options;
         FileName = openFileOptions.File;
-        
+        _lockMemory = openFileOptions.LockMemory;
+        _doNotConsiderMemoryLockFailureAsCatastrophicError = openFileOptions.DoNotConsiderMemoryLockFailureAsCatastrophicError;
         _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{openFileOptions}");
         _canPrefetch = PlatformDetails.CanPrefetch && canPrefetchAhead && options.EnablePrefetching;
         _temporaryOrDeleteOnClose = openFileOptions.Temporary || openFileOptions.DeleteOnClose; 
@@ -506,5 +523,56 @@ public unsafe partial class Pager2 : IDisposable
                 v.Dispose();
             }
         }
+    }
+    
+    protected void Lock(byte* address, long sizeToLock)
+    {
+        var lockTaken = false;
+        try
+        {
+            if (Sodium.Lock(address, (UIntPtr)sizeToLock) == 0) 
+                return;
+
+            if (_doNotConsiderMemoryLockFailureAsCatastrophicError)
+                return;
+
+            if (PlatformDetails.RunningOnPosix == false)
+                // when running on linux we can't do anything from within the process, so let's avoid the locking entirely
+                Monitor.Enter(WorkingSetIncreaseLocker, ref lockTaken);
+
+            TryHandleFailureToLockMemory(address, sizeToLock);
+        }
+        finally
+        {
+            if (lockTaken)
+                Monitor.Exit(WorkingSetIncreaseLocker);
+        }
+    }
+
+    private void TryHandleFailureToLockMemory(byte* addressToLock, long sizeToLock)
+    {
+
+        if (_functions.RecoverFromMemoryLockFailure(this, addressToLock, sizeToLock))
+            return;
+        
+        using var currentProcess = Process.GetCurrentProcess();
+
+        var msg =
+            $"Unable to lock memory for {FileName} with size {new Size(sizeToLock, SizeUnit.Bytes)}), with encrypted databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error and aborting the current operation.{Environment.NewLine}";
+        if (PlatformDetails.RunningOnPosix)
+        {
+            msg +=
+                $"The admin may configure higher limits using: 'sudo prlimit --pid {currentProcess.Id} --memlock={sizeToLock}' to increase the limit. (It's recommended to do that as part of the startup script){Environment.NewLine}";
+        }
+        else
+        {
+            msg +=
+                $"Already tried to raise the the process min working set to {new Size(currentProcess.MinWorkingSet.ToInt64(), SizeUnit.Bytes)} but still got a failure.{Environment.NewLine}";
+        }
+
+        msg +=
+            "This behavior is controlled by the 'Security.DoNotConsiderMemoryLockFailureAsCatastrophicError' setting (expert only, modifications of this setting is not recommended).";
+
+        throw new InsufficientMemoryException(msg);
     }
 }

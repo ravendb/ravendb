@@ -53,28 +53,30 @@ namespace Voron.Data.Compression
                 {
                     _compressionPager.DisposePager();
 
-                    _scratchSpaceMonitor.Decrease(_compressionPager.Pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                    _scratchSpaceMonitor.Decrease(_compressionPager.PagerState.NumberOfAllocatedPages * Constants.Storage.PageSize);
                 }
 
                 foreach (var pager in _oldPagers)
                 {
-                    if (pager.Pager.Disposed == false)
+                    if (pager.PagerState.Disposed == false)
                     {
                         pager.DisposePager();
 
-                        _scratchSpaceMonitor.Decrease(pager.Pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                        _scratchSpaceMonitor.Decrease(pager.PagerState.NumberOfAllocatedPages * Constants.Storage.PageSize);
                     }
                 }
             });
         }
 
-        private AbstractPager CreateDecompressionPager(long initialSize)
+        private (Pager2 Pager, Pager2.State State) CreateDecompressionPager(long initialSize)
         {
-            var pager = _options.CreateTemporaryBufferPager($"decompression.{_decompressionPagerCounter++:D10}{StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.BuffersFileExtension}", initialSize);
+            var (pager, state) = _options.CreateTemporaryBufferPager(
+                $"decompression.{_decompressionPagerCounter++:D10}{StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.BuffersFileExtension}", 
+                initialSize, encrypted: _options.Encryption.IsEnabled);
 
-            _scratchSpaceMonitor.Increase(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+            _scratchSpaceMonitor.Increase(state.NumberOfAllocatedPages * Constants.Storage.PageSize);
 
-            return pager;
+            return (pager, state);
         }
 
         public DecompressedLeafPage GetPage(LowLevelTransaction tx, int pageSize, DecompressionUsage usage, TreePage original)
@@ -150,12 +152,12 @@ namespace Voron.Data.Compression
 
                     try
                     {
-                        var numberOfPagesBeforeAllocate = _compressionPager.Pager.NumberOfAllocatedPages;
+                        var numberOfPagesBeforeAllocate = _compressionPager.PagerState.NumberOfAllocatedPages;
 
-                        _compressionPager.Pager.EnsureContinuous(_lastUsedPage, allocationInPages);
+                        _compressionPager.Pager.EnsureContinuous(ref _compressionPager.PagerState, _lastUsedPage, allocationInPages);
 
-                        if (_compressionPager.Pager.NumberOfAllocatedPages > numberOfPagesBeforeAllocate)
-                            _scratchSpaceMonitor.Increase((_compressionPager.Pager.NumberOfAllocatedPages - numberOfPagesBeforeAllocate) * Constants.Storage.PageSize);
+                        if (_compressionPager.PagerState.NumberOfAllocatedPages > numberOfPagesBeforeAllocate)
+                            _scratchSpaceMonitor.Increase((_compressionPager.PagerState.NumberOfAllocatedPages - numberOfPagesBeforeAllocate) * Constants.Storage.PageSize);
                     }
                     catch (InsufficientMemoryException)
                     {
@@ -174,7 +176,8 @@ namespace Voron.Data.Compression
                     void CreateNewBuffersPager(long size)
                     {
                         _oldPagers = _oldPagers.Append(_compressionPager);
-                        _compressionPager = new PagerInfo(CreateDecompressionPager(size));
+                        var (pager, state) = CreateDecompressionPager(size);
+                        _compressionPager = new PagerInfo(pager,state);
                         _lastUsedPage = 0;
                     }
                 }
@@ -212,7 +215,8 @@ namespace Voron.Data.Compression
                     return;
 
                 _pool = new[] { new ConcurrentQueue<DecompressionBuffer>() };
-                _compressionPager = new PagerInfo(CreateDecompressionPager(DecompressedPagesCache.Size * Constants.Compression.MaxPageSize));
+                var (pager, state) = CreateDecompressionPager(DecompressedPagesCache.Size * Constants.Compression.MaxPageSize);
+                _compressionPager = new PagerInfo(pager, state);
                 _oldPagers = ImmutableAppendOnlyList<PagerInfo>.Empty;
                 _initialized = true;
             }
@@ -253,7 +257,7 @@ namespace Voron.Data.Compression
 
             var necessaryPages = Interlocked.Read(ref _currentlyUsedBytes) / Constants.Storage.PageSize;
 
-            var availablePages = _compressionPager.Pager.NumberOfAllocatedPages;
+            var availablePages = _compressionPager.PagerState.NumberOfAllocatedPages;
 
             var pagers = _oldPagers;
 
@@ -266,18 +270,18 @@ namespace Voron.Data.Compression
                 if (availablePages >= necessaryPages)
                 {
                     old.DisposePager();
-                    _scratchSpaceMonitor.Decrease(old.Pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                    _scratchSpaceMonitor.Decrease(old.PagerState.NumberOfAllocatedPages * Constants.Storage.PageSize);
                     disposedCount++;
                     continue;
                 }
 
                 // PERF: We dont care about the pager data content anymore. So we can discard the whole context to
                 //       clean up the modified bit.
-                old.Pager.DiscardWholeFile();
-                availablePages += old.Pager.NumberOfAllocatedPages;
+                old.Pager.DiscardWholeFile(old.PagerState);
+                availablePages += old.PagerState.NumberOfAllocatedPages;
             }
 
-            _oldPagers = _oldPagers.RemoveWhile(x => x.Pager.Disposed);
+            _oldPagers = _oldPagers.RemoveWhile(x => x.PagerState.Disposed);
             return disposedCount;
         }
 
@@ -306,8 +310,8 @@ namespace Voron.Data.Compression
 
             public void EnsureValidPointer(LowLevelTransaction tx)
             {
-                PagerInfo.Pager.EnsureMapped(tx, _position, _size / Constants.Storage.PageSize);
-                Pointer = PagerInfo.Pager.AcquirePagePointer(tx, _position);
+                PagerInfo.Pager.EnsureMapped(PagerInfo.PagerState, ref tx.PagerTransactionState, _position, _size / Constants.Storage.PageSize);
+                Pointer = PagerInfo.Pager.AcquirePagePointer(PagerInfo.PagerState, ref tx.PagerTransactionState, _position);
                 _isDisposed = false;
             }
 
@@ -316,7 +320,7 @@ namespace Voron.Data.Compression
                 if (_isDisposed)
                     throw new InvalidOperationException("Double disposing is disallowed.");
 
-                if (PagerInfo.Pager.Disposed)
+                if (PagerInfo.PagerState.Disposed)
                     throw new InvalidOperationException("Pager has been disposed already.");
 
                 if (PagerInfo.Pager.Options.Encryption.IsEnabled)
@@ -334,13 +338,15 @@ namespace Voron.Data.Compression
 
         private sealed class PagerInfo
         {
-            internal readonly AbstractPager Pager;
+            internal readonly Pager2 Pager;
+            internal Pager2.State PagerState;
             private long _numberOfUsages;
 
-            public PagerInfo(AbstractPager pager)
+            public PagerInfo(Pager2 pager, Pager2.State pagerState)
             {
                 Pager = pager;
-    }
+                PagerState = pagerState;
+            }
 
             public bool TryUse()
             {

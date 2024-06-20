@@ -377,12 +377,12 @@ namespace Voron.Impl.Backup
                                 throw new InvalidOperationException("Cannot parse journal file number");
                             }
 
-                            var recoveryPager =
-                                env.Options.CreateTemporaryBufferPager(Path.Combine(tempDir.Combine(StorageEnvironmentOptions.JournalRecoveryName(journalNumber)).FullPath),
-                                    env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);
-                            toDispose.Add(recoveryPager);
-
                             throw new NotImplementedException();
+                            // var recoveryPager =
+                            //     env.Options.CreateTemporaryBufferPager(Path.Combine(tempDir.Combine(StorageEnvironmentOptions.JournalRecoveryName(journalNumber)).FullPath),
+                            //         env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);
+                            // toDispose.Add(recoveryPager);
+
                             // using (var reader = new JournalReader(pager, env.DataPager, recoveryPager, new HashSet<long>(), new JournalInfo
                             //        {
                             //            LastSyncedTransactionId = lastTxId

@@ -78,6 +78,7 @@ using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Compaction;
+using Voron.Impl.Journal;
 using AsyncManualResetEvent = Sparrow.Server.AsyncManualResetEvent;
 using Constants = Raven.Client.Constants;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
@@ -1877,7 +1878,9 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     using (var tx = _environment.WriteTransaction())
                                     {
-                                        _environment.Options.Encryption.JournalCompressionBufferHandler.ZeroCompressionBuffer(tx.LowLevelTransaction);
+                                        var llt = tx.LowLevelTransaction;
+                                        var waj = _environment.Options.Encryption.WriteAheadJournal;
+                                        waj.ZeroCompressionBuffer(ref llt.PagerTransactionState);
                                     }
                                 }
 

@@ -40,11 +40,11 @@ namespace Voron.Impl.Scratch
         // Local writable state. Can perform multiple reads, but must never do multiple writes simultaneously.
         private int _currentScratchNumber = -1;
 
-        private Dictionary<int, PagerState> _pagerStatesAllScratchesCache;
-
         private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers = new();
 
-        private readonly LinkedList<ScratchBufferItem> _recycleArea = new LinkedList<ScratchBufferItem>();
+        private Dictionary<int, (Pager2, Pager2.State)> _pagerStatesAllScratchesCache = new();
+
+        private readonly LinkedList<ScratchBufferItem> _recycleArea = new();
 
         private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
 
@@ -63,14 +63,6 @@ namespace Voron.Impl.Scratch
 
             _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
             {
-                if (_pagerStatesAllScratchesCache != null)
-                {
-                    foreach (var pagerState in _pagerStatesAllScratchesCache)
-                    {
-                        pagerState.Value.Release();
-                    }
-                }
-
                 foreach (var scratch in _scratchBuffers)
                 {
                     scratch.Value.File.Dispose();
@@ -106,41 +98,20 @@ namespace Voron.Impl.Scratch
 
         internal TimeSpan RecycledScratchFileTimeout { get; set; } = TimeSpan.FromMinutes(1);
 
-        public Dictionary<int, PagerState> GetPagerStatesOfAllScratches()
+        public Dictionary<int, (Pager2, Pager2.State)> GetPagerStatesOfAllScratches()
         {
             return _pagerStatesAllScratchesCache;
         }
 
         public void UpdateCacheForPagerStatesOfAllScratches()
         {
-            var dic = new Dictionary<int, PagerState>();
+            var dic = new Dictionary<int, (Pager2, Pager2.State)>();
             foreach (var scratchBufferItem in _scratchBuffers)
             {
-                if (scratchBufferItem.Value.File.IsDisposed) // precaution
-                    continue;
-
-                dic[scratchBufferItem.Key] = scratchBufferItem.Value.File.PagerState;
+                var file = scratchBufferItem.Value.File;
+                dic[scratchBufferItem.Key] = file.GetPagerAndState();
             }
-
-            // for the lifetime of this cache, we have to hold a reference to the 
-            // pager state, to avoid handing out garbage to transactions
-            // note that this call is protected from running concurrently with the 
-            // call to GetPagerStatesOfAllScratches()
-
-            foreach (var pagerState in dic)
-            {
-                pagerState.Value.AddRef();
-            }
-            var old = _pagerStatesAllScratchesCache;
             _pagerStatesAllScratchesCache = dic;
-            if (old == null)
-                return;
-
-            // release the references for the previous instance
-            foreach (var pagerState in old)
-            {
-                pagerState.Value.Release();
-            }
         }
 
         internal long GetNumberOfAllocations(int scratchNumber)
@@ -176,12 +147,13 @@ namespace Voron.Impl.Scratch
             }
             
             _currentScratchNumber++;
-            AbstractPager scratchPager;
+            Pager2 scratchPager;
+            Pager2.State scratchPagerState;
             if (requestedSize != null)
             {
                 try
                 {
-                    scratchPager =
+                    (scratchPager, scratchPagerState) =
                         _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber),
                             requestedSize.Value);
                 }
@@ -194,11 +166,11 @@ namespace Voron.Impl.Scratch
             }
             else
             {
-                scratchPager = _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber),
+                (scratchPager, scratchPagerState) = _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber),
                     Math.Max(_options.InitialLogFileSize, minSize));
             }
 
-            var scratchFile = new ScratchBufferFile(scratchPager, _currentScratchNumber);
+            var scratchFile = new ScratchBufferFile(scratchPager, scratchPagerState, _currentScratchNumber);
             var item = new ScratchBufferItem(scratchFile.Number, scratchFile);
 
             AddScratchBufferFile(item);
@@ -216,8 +188,7 @@ namespace Voron.Impl.Scratch
 
             var current = _current;
 
-            PageFromScratchBuffer result;
-            if (current.File.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out result))
+            if (current.File.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out PageFromScratchBuffer result))
                 return result;
 
             // we can allocate from the end of the file directly
@@ -243,10 +214,6 @@ namespace Voron.Impl.Scratch
 
             try
             {
-                var scratchPagerState = current.File.PagerState;
-
-                tx.EnsurePagerStateReference(ref scratchPagerState);
-
                 return current.File.Allocate(tx, numberOfPages, size);
             }
             finally
@@ -294,12 +261,7 @@ namespace Voron.Impl.Scratch
 
             if (recycledScratchesToDispose != null)
             {
-                using (_env.PreventNewTransactions())
-                {
-                    // we're about to dispose recycled scratch pagers, we need to update the cache so next transactions won't attempt to EnsurePagerStateReference() on them
-
-                    UpdateCacheForPagerStatesOfAllScratches();
-                }
+                UpdateCacheForPagerStatesOfAllScratches();
 
                 foreach (var recycledScratch in recycledScratchesToDispose)
                 {
@@ -326,7 +288,6 @@ namespace Voron.Impl.Scratch
 
                 // this is the current one, but the size is too big, let us trim it
                 var newCurrent = NextFile(_options.InitialLogFileSize, _options.MaxScratchBufferSize);
-                newCurrent.File.PagerState.AddRef();
                 _current = newCurrent;
             }
 
@@ -350,45 +311,22 @@ namespace Voron.Impl.Scratch
             _disposeOnceRunner.Dispose();
         }
 
-        internal sealed class ScratchBufferItem
+        internal sealed class ScratchBufferItem(int number, ScratchBufferFile file)
         {
-            public readonly int Number;
-            public readonly ScratchBufferFile File;
-
-            public ScratchBufferItem(int number, ScratchBufferFile file)
-            {
-                Number = number;
-                File = file;
-            }
+            public readonly int Number = number;
+            public readonly ScratchBufferFile File = file;
 
             public DateTime RecycledAt;
         }
 
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int CopyPage(Pager2 pager, int scratchNumber, long p, ref Pager2.State state, ref Pager2.PagerTransactionState txState)
+        public Page ReadPage(Pager2.State pagerState, LowLevelTransaction tx, int scratchNumber, long p)
         {
             var item = GetScratchBufferFile(scratchNumber);
 
             ScratchBufferFile bufferFile = item.File;
-            return bufferFile.CopyPage(pager, p, ref state, ref txState);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Page ReadPage(LowLevelTransaction tx, int scratchNumber, long p, PagerState pagerState = null)
-        {
-            var item = GetScratchBufferFile(scratchNumber);
-
-            ScratchBufferFile bufferFile = item.File;
-            return bufferFile.ReadPage(tx, p, pagerState);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public T ReadPageHeaderForDebug<T>(LowLevelTransaction tx, int scratchNumber, long p, PagerState pagerState = null) where T : unmanaged
-        {
-            var item = GetScratchBufferFile(scratchNumber);
-
-            ScratchBufferFile bufferFile = item.File;
-            return bufferFile.ReadPageHeaderForDebug<T>(tx, p, pagerState);
+            return bufferFile.ReadPage(pagerState, tx, p);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -398,25 +336,7 @@ namespace Voron.Impl.Scratch
 
             return item.File.ShrinkOverflowPage(value, newNumberOfPages);
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public byte* AcquirePagePointerForNewPage(LowLevelTransaction tx, int scratchNumber, long p, int numberOfPages)
-        {
-            var item = GetScratchBufferFile(scratchNumber);
-
-            ScratchBufferFile bufferFile = item.File;
-            return bufferFile.AcquirePagePointerForNewPage(tx, p, numberOfPages);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public byte* AcquirePagePointerWithOverflowHandling(IPagerLevelTransactionState tx, int scratchNumber, long p, PagerState pagerState)
-        {
-            var item = GetScratchBufferFile(scratchNumber);
-
-            ScratchBufferFile bufferFile = item.File;
-            return bufferFile.AcquirePagePointerWithOverflowHandling(tx, p, pagerState);
-        }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal ScratchBufferItem GetScratchBufferFile(int scratchNumber)
         {
@@ -467,12 +387,7 @@ namespace Voron.Impl.Scratch
             
             if (updateCacheBeforeDisposingScratch)
             {
-                using (_env.PreventNewTransactions())
-                {
-                    // we're about to dispose scratch pagers, we need to update the cache so next transactions won't attempt to EnsurePagerStateReference() on them
-
-                    UpdateCacheForPagerStatesOfAllScratches();
-                }
+                UpdateCacheForPagerStatesOfAllScratches();
             }
 
             foreach (var scratch in scratchesToDispose)
@@ -492,17 +407,6 @@ namespace Voron.Impl.Scratch
         {
             throw new InvalidOperationException(
                 $"Could not remove a scratch file from the scratch buffers collection. Number: {scratchBufferItem.Number}");
-        }
-
-        public void BreakLargeAllocationToSeparatePages(LowLevelTransaction tx, PageFromScratchBuffer value)
-        {
-            var item = GetScratchBufferFile(value.ScratchFileNumber);
-            item.File.BreakLargeAllocationToSeparatePages(tx, value);
-        }
-
-        public long GetAvailablePagesCount()
-        {
-            return _current.File.NumberOfAllocatedPages - _current.File.AllocatedPagesCount;
         }
 
         public void Cleanup()
@@ -567,25 +471,19 @@ namespace Voron.Impl.Scratch
 
                     using (_env.WriteTransaction())
                     {
-                        // additionally we must not allow to start any transaction (even read one) to start because it uses GetPagerStatesOfAllScratches() which
-                        // returns _pagerStatesAllScratchesCache that we're updating here
-                        
-                        if (_env.TryPreventNewTransactions(TimeSpan.Zero, out exitPreventNewTransactions))
+                        var removedInactive = RemoveInactiveScratches(_current, updateCacheBeforeDisposingScratch: false); // no need to update cache because we're going do to it here anyway
+
+                        var removedInactiveRecycled = RemoveInactiveRecycledScratches();
+
+                        if (_logger.IsInfoEnabled)
                         {
-                            var removedInactive = RemoveInactiveScratches(_current, updateCacheBeforeDisposingScratch: false); // no need to update cache because we're going do to it here anyway
-
-                            var removedInactiveRecycled = RemoveInactiveRecycledScratches();
-
-                            if (_logger.IsInfoEnabled)
-                            {
-                                _logger.Info(
-                                    $"Cleanup of {nameof(ScratchBufferPool)} removed: {removedInactive} inactive scratches and {removedInactiveRecycled} inactive from the recycle area");
-                            }
-
-                            _forTestingPurposes?.ActionToCallDuringCleanupRightAfterRemovingInactiveScratches?.Invoke();
-                            
-                            UpdateCacheForPagerStatesOfAllScratches(); // it's going to be called by Rollback() of the write tx but let's call it explicitly so we can easily find this usage
+                            _logger.Info(
+                                $"Cleanup of {nameof(ScratchBufferPool)} removed: {removedInactive} inactive scratches and {removedInactiveRecycled} inactive from the recycle area");
                         }
+
+                        _forTestingPurposes?.ActionToCallDuringCleanupRightAfterRemovingInactiveScratches?.Invoke();
+                            
+                        UpdateCacheForPagerStatesOfAllScratches(); // it's going to be called by Rollback() of the write tx but let's call it explicitly so we can easily find this usage
                     }
                 }
                 catch (TimeoutException)
@@ -683,15 +581,6 @@ namespace Voron.Impl.Scratch
             }
 
             return removed;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnsureMapped(LowLevelTransaction tx,int scratchNumber, long positionInScratchBuffer, int numberOfPages)
-        {
-            var item = GetScratchBufferFile(scratchNumber);
-
-            ScratchBufferFile bufferFile = item.File;
-            bufferFile.EnsureMapped(tx, positionInScratchBuffer, numberOfPages);
         }
 
         public ScratchBufferPoolInfo InfoForDebug(long oldestActiveTransaction)
