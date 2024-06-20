@@ -2037,14 +2037,14 @@ namespace Raven.Server.Documents.Revisions
             {
                 if (table.ReadByKey(cvSlice, out TableValueReader tvr) == false)
                 {
-                    throw new InvalidOperationException($"Revision with the cv {cv} doesn't belong to the doc \"{id}\"");
+                    throw new InvalidOperationException($"Revision with the cv \"{cv}\" doesn't belong to the doc \"{id}\"");
                 }
 
                 var revision = TableValueToRevision(context, ref tvr, DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector);
 
                 if (revision.Id != id)
                 {
-                    throw new InvalidOperationException($"Revision with the cv {cv} doesn't belong to the doc \"{id}\" but to the doc \"{revision.Id}\"");
+                    throw new InvalidOperationException($"Revision with the cv \"{cv}\" doesn't belong to the doc \"{id}\" but to the doc \"{revision.Id}\"");
                 }
 
                 return (revision, tvr);
@@ -2062,7 +2062,7 @@ namespace Raven.Server.Documents.Revisions
                 // Verify matching for all ids and cvs
                 foreach (var (id, cv) in idsToChangevectors)
                 {
-                    var (revision, tvr) = _database.DocumentsStorage.RevisionsStorage.VerifyCvAndGetRevision(context, id, cv);
+                    var (revision, tvr) = VerifyCvAndGetRevision(context, id, cv);
                     revisions.Add(revision);
                     tvrs.Add(tvr);
                 }

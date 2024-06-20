@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Exceptions;
 using Raven.Server.ServerWide;
 using Tests.Infrastructure;
 using Xunit;
@@ -85,7 +87,7 @@ namespace SlowTests.Issues
             }
         }
 
-        
+
         [RavenTheory(RavenTestCategory.Revisions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task RevertByDocumentEP(Options options)
@@ -149,9 +151,209 @@ namespace SlowTests.Issues
                 Assert.Equal(11, count2);
             }
         }
-        
+
+
+        [RavenTheory(RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevertByDocumentEpMultipleDocs(Options options)
+        {
+            var user1 = new User { Id = "Users/1-A", Name = "Shahar1" };
+            var user2 = new User { Id = "Users/2-B", Name = "Shahar2" };
+            var company1 = new User { Id = "Companies/1-A", Name = "RavenDB1" };
+            var company2 = new User { Id = "Companies/2-B", Name = "RavenDB2" };
+
+            using var store = GetDocumentStore(options);
+
+            var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false } };
+            await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(user1);
+                await session.StoreAsync(user2);
+                await session.StoreAsync(company1);
+                await session.StoreAsync(company2);
+                await session.SaveChangesAsync();
+            }
+
+            for (int i = 0; i < 10; i++)
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var u1 = await session.LoadAsync<User>(user1.Id);
+                    u1.Name = $"Shahar1_{i}";
+
+                    var u2 = await session.LoadAsync<User>(user2.Id);
+                    u2.Name = $"Shahar2_{i}";
+
+                    var c1 = await session.LoadAsync<User>(company1.Id);
+                    c1.Name = $"RavenDB1_{i}";
+
+                    var c2 = await session.LoadAsync<User>(company2.Id);
+                    c2.Name = $"RavenDB2_{i}";
+
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            var user1revertCv = string.Empty;
+            var company1revertCv = string.Empty;
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var count1 = await session.Advanced.Revisions.GetCountForAsync(user1.Id);
+                Assert.Equal(11, count1);
+                var count2 = await session.Advanced.Revisions.GetCountForAsync(user2.Id);
+                Assert.Equal(11, count2);
+
+                var u1Metadata = await session
+                    .Advanced
+                    .Revisions
+                    .GetMetadataForAsync(id: user1.Id);
+
+                user1revertCv = u1Metadata[5].GetString(Constants.Documents.Metadata.ChangeVector);
+
+                var c1Metadata = await session
+                    .Advanced
+                    .Revisions
+                    .GetMetadataForAsync(id: company1.Id);
+
+                company1revertCv = c1Metadata[5].GetString(Constants.Documents.Metadata.ChangeVector);
+            }
+
+            await store.Maintenance.SendAsync(
+                new RevertDocumentsToRevisionsOperation(new Dictionary<string, string>() { { user1.Id, user1revertCv }, { company1.Id, company1revertCv } }));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var u1 = await session.LoadAsync<User>(user1.Id);
+                Assert.Equal(u1.Name, "Shahar1_4");
+
+                var u1Count = await session.Advanced.Revisions.GetCountForAsync(user1.Id);
+                Assert.Equal(12, u1Count);
+
+
+                var c1 = await session.LoadAsync<User>(company1.Id);
+                Assert.Equal(c1.Name, "RavenDB1_4");
+
+                var c1Count = await session.Advanced.Revisions.GetCountForAsync(company1.Id);
+                Assert.Equal(12, c1Count);
+
+
+                var u2 = await session.LoadAsync<User>(user2.Id);
+                Assert.Equal(u2.Name, "Shahar2_9");
+
+                var u2Count = await session.Advanced.Revisions.GetCountForAsync(user2.Id);
+                Assert.Equal(11, u2Count);
+
+                var c2 = await session.LoadAsync<User>(company2.Id);
+                Assert.Equal(c2.Name, "RavenDB2_9");
+
+                var c2Count = await session.Advanced.Revisions.GetCountForAsync(company2.Id);
+                Assert.Equal(11, c2Count);
+            }
+        }
+
+
+        [RavenTheory(RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevertByDocumentEpFail(Options options)
+        {
+            var user1 = new User { Id = "Users/1-A", Name = "Shahar1" };
+            var user2 = new User { Id = "Users/2-B", Name = "Shahar2" };
+
+            using var store = GetDocumentStore(options);
+
+            var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false } };
+            await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(user1);
+                await session.StoreAsync(user2);
+                await session.SaveChangesAsync();
+            }
+
+            for (int i = 0; i < 10; i++)
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var u1 = await session.LoadAsync<User>(user1.Id);
+                    u1.Name = $"Shahar1_{i}";
+                    var u2 = await session.LoadAsync<User>(user2.Id);
+                    u2.Name = $"Shahar2_{i}";
+                    await session.SaveChangesAsync();
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var count1 = await session.Advanced.Revisions.GetCountForAsync(user1.Id);
+                Assert.Equal(11, count1);
+            }
+
+            var user2revertCv = string.Empty;
+            using (var session = store.OpenAsyncSession())
+            {
+                var count1 = await session.Advanced.Revisions.GetCountForAsync(user1.Id);
+                Assert.Equal(11, count1);
+                var count2 = await session.Advanced.Revisions.GetCountForAsync(user2.Id);
+                Assert.Equal(11, count2);
+
+                var u2Metadata = await session
+                    .Advanced
+                    .Revisions
+                    .GetMetadataForAsync(id: user2.Id);
+
+                user2revertCv = u2Metadata[5].GetString(Constants.Documents.Metadata.ChangeVector);
+            }
+
+
+            Exception e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
+                new RevertDocumentsToRevisionsOperation(new Dictionary<string, string>() { { user1.Id, "A:253-jyJQ+3eQ5kuHIGZ+aqSVow" } })));
+
+            if (options.DatabaseMode == RavenDatabaseMode.Single)
+            {
+                e = e.InnerException;
+            }
+
+            Assert.Contains(
+                "Revision with the cv \"A:253-jyJQ+3eQ5kuHIGZ+aqSVow\" doesn't belong to the doc \"Users/1-A\"",
+                e.Message);
+
+            e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
+                new RevertDocumentsToRevisionsOperation(new Dictionary<string, string>() { { user1.Id, user2revertCv } })));
+
+            if (options.DatabaseMode == RavenDatabaseMode.Single)
+            {
+                e = e.InnerException;
+                Assert.Contains(
+                    $"Revision with the cv \"{user2revertCv}\" doesn't belong to the doc \"Users/1-A\" but to the doc \"Users/2-B\"",
+                    e.Message);
+            }
+            else
+            {
+                Assert.Contains(
+                    $"Revision with the cv \"{user2revertCv}\" doesn't belong to the doc \"Users/1-A\"",
+                    e.Message); // if users/1-A and Users/2-B are in a separate shards, the shard won't find the cv at all
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var count1 = await session.Advanced.Revisions.GetCountForAsync(user1.Id);
+                Assert.Equal(11, count1);
+            }
+        }
+
 
         private class User
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+        }
+
+        private class Company
         {
             public string Id { get; set; }
             public string Name { get; set; }
