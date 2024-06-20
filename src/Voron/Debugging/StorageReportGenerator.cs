@@ -193,7 +193,7 @@ namespace Voron.Debugging
                 Page page = _tx.GetPage(dic.PageNumber);
                 var header = (PersistentDictionaryHeader*)page.DataPointer;
 
-                int usedPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
+                int usedPages = Pager.GetNumberOfOverflowPages(page.OverflowSize);
                 trees.Add(new TreeReport
                 {
                     Name = "Dictionary #" + dic.PageNumber,
@@ -517,7 +517,7 @@ namespace Voron.Debugging
                     Page cur = _tx.GetPage(pageNum);
                     if (cur.IsOverflow)
                     {
-                        int numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(cur.OverflowSize);
+                        int numberOfOverflowPages = Pager.GetNumberOfOverflowPages(cur.OverflowSize);
                         pageDensities.Add((double)cur.OverflowSize / (numberOfOverflowPages * Constants.Storage.PageSize));
                     }
                     else
@@ -643,7 +643,7 @@ namespace Voron.Debugging
                     if (info.HasValue == false)
                         continue;
 
-                    long numberOfAllocatedPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(info.Value.TotalSize + info.Value.TagSize + Tree.StreamInfo.SizeOf);
+                    long numberOfAllocatedPages = Pager.GetNumberOfOverflowPages(info.Value.TotalSize + info.Value.TagSize + Tree.StreamInfo.SizeOf);
 
                     var chunksTree = tree.GetStreamChunksTree(it.CurrentKey);
 
@@ -789,7 +789,7 @@ namespace Voron.Debugging
 
                 if ((pageHeaderUnion.PageHeader.Flags & PageFlags.Overflow) == PageFlags.Overflow)
                 {
-                    var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeaderUnion.PageHeader.OverflowSize);
+                    var numberOfPages = Pager.GetNumberOfOverflowPages(pageHeaderUnion.PageHeader.OverflowSize);
 
                     densities.Add(((double)(pageHeaderUnion.PageHeader.OverflowSize + Constants.Tree.PageHeaderSize)) / PagesToBytes(numberOfPages));
 

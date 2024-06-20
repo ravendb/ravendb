@@ -1243,7 +1243,7 @@ namespace Voron
                             case RootObjectType.PersistentDictionary:
                                 var header = *(PersistentDictionaryRootHeader*)rootIterator.CreateReaderForCurrent().Base;
                                 Page dicPage = tx.LowLevelTransaction.GetPage(header.PageNumber);
-                                var pages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(dicPage.OverflowSize);
+                                var pages = Pager.GetNumberOfOverflowPages(dicPage.OverflowSize);
                                 for (long i = 0; i < pages; i++)
                                 {
                                     r.Add(header.PageNumber + i, name);
@@ -1308,7 +1308,7 @@ namespace Voron
                         continue;
 
 
-                    var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageObject.OverflowSize);
+                    var numberOfOverflowPages = Pager.GetNumberOfOverflowPages(pageObject.OverflowSize);
                     for (int overflowPage = 1; overflowPage < numberOfOverflowPages; ++overflowPage)
                         r.Add(page + overflowPage, overflowName);
                 }

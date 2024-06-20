@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -26,11 +27,11 @@ public unsafe partial class Pager2 : IDisposable
 {
     private static readonly object WorkingSetIncreaseLocker = new object();
 
-    
+
     public readonly string FileName;
     public uint UniquePhysicalDriveId;
     public readonly StorageEnvironmentOptions Options;
-    
+
     private readonly bool _canPrefetch, _temporaryOrDeleteOnClose, _usePageProtection;
 
     private readonly StateFor32Bits? _32BitsState;
@@ -49,12 +50,14 @@ public unsafe partial class Pager2 : IDisposable
     private readonly Logger _logger;
     private DateTime _lastIncrease;
     private long _increaseSize;
+
     /// <summary>
     /// Control whatever we should treat memory lock errors as catastrophic errors
     /// or not. By default, we consider them catastrophic and fail immediately to
     /// avoid leaking any data. 
     /// </summary>
     private readonly bool _doNotConsiderMemoryLockFailureAsCatastrophicError;
+
     /// <summary>
     /// This determines whatever we'll attempt to lock the memory,
     /// so it will not go to the swap / core dumps
@@ -75,10 +78,10 @@ public unsafe partial class Pager2 : IDisposable
         public bool UsePageProtection;
         public bool Encrypted;
         public bool LockMemory;
-        public bool DoNotConsiderMemoryLockFailureAsCatastrophicError; 
+        public bool DoNotConsiderMemoryLockFailureAsCatastrophicError;
     }
 
-    
+
     public static (Pager2 Pager, State State) Create(StorageEnvironmentOptions options, OpenFileOptions openFileOptions)
     {
         var funcs = options.RunningOn32Bits switch
@@ -93,16 +96,16 @@ public unsafe partial class Pager2 : IDisposable
             funcs.AcquirePagePointer = &Crypto.AcquirePagePointer;
             funcs.AcquirePagePointerForNewPage = &Crypto.AcquirePagePointerForNewPage;
         }
-        
+
         var pager = new Pager2(options, openFileOptions, funcs, canPrefetchAhead: true, usePageProtection: openFileOptions.UsePageProtection,
             out State state);
 
         return (pager, state);
     }
 
-    private Pager2(StorageEnvironmentOptions options, 
+    private Pager2(StorageEnvironmentOptions options,
         OpenFileOptions openFileOptions,
-        Functions functions, 
+        Functions functions,
         bool canPrefetchAhead,
         bool usePageProtection,
         out State state)
@@ -113,7 +116,7 @@ public unsafe partial class Pager2 : IDisposable
         _doNotConsiderMemoryLockFailureAsCatastrophicError = openFileOptions.DoNotConsiderMemoryLockFailureAsCatastrophicError;
         _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{openFileOptions}");
         _canPrefetch = PlatformDetails.CanPrefetch && canPrefetchAhead && options.EnablePrefetching;
-        _temporaryOrDeleteOnClose = openFileOptions.Temporary || openFileOptions.DeleteOnClose; 
+        _temporaryOrDeleteOnClose = openFileOptions.Temporary || openFileOptions.DeleteOnClose;
         _usePageProtection = usePageProtection;
         _encryptionBuffersPool = options.Encryption.EncryptionBuffersPool;
         _masterKey = options.Encryption.MasterKey;
@@ -126,8 +129,8 @@ public unsafe partial class Pager2 : IDisposable
             _32BitsState = new StateFor32Bits();
         }
     }
-    
-    public void DirectWrite(ref State state, ref PagerTransactionState txState,long posBy4Kbs, int numberOf4Kbs, byte* source)
+
+    public void DirectWrite(ref State state, ref PagerTransactionState txState, long posBy4Kbs, int numberOf4Kbs, byte* source)
     {
         const int pageSizeTo4KbRatio = (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte));
         var pageNumber = posBy4Kbs / pageSizeTo4KbRatio;
@@ -149,16 +152,17 @@ public unsafe partial class Pager2 : IDisposable
 
         ProtectPageRange(destination, (ulong)toWrite);
     }
-    
+
     public void DiscardWholeFile(State state)
     {
         DiscardPages(state, 0, state.NumberOfAllocatedPages);
     }
+
     public void DiscardPages(State state, long pageNumber, long numberOfPages)
     {
         if (Options.DiscardVirtualMemory == false)
             return;
-            
+
         byte* baseAddress = state.BaseAddress;
         long offset = pageNumber * Constants.Storage.PageSize;
 
@@ -175,13 +179,51 @@ public unsafe partial class Pager2 : IDisposable
         return _functions.EnsureMapped(this, state, ref txState, page, numberOfPages);
     }
 
-    
+
+
+    public struct PageIterator : IEnumerator<long>
+    {
+        private readonly long _startPage;
+        private readonly long _endPage;
+        private long _currentPage;
+
+        public PageIterator(long pageNumber, long pagesToPrefetch)
+        {
+            this._startPage = pageNumber;
+            this._endPage = pageNumber + pagesToPrefetch;
+            this._currentPage = pageNumber;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool MoveNext()
+        {
+            this._currentPage++;
+            return _currentPage < _endPage;
+        }
+
+        public void Reset()
+        {
+            this._currentPage = this._startPage;
+        }
+
+        object IEnumerator.Current => Current;
+
+        public long Current
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _currentPage;
+        }
+
+        public void Dispose() { }
+    }
+
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void MaybePrefetchMemory(State state, long pageNumber, long pagesToPrefetch)
     {
-        MaybePrefetchMemory(state, new AbstractPager.PageIterator(pageNumber, pagesToPrefetch));
+        MaybePrefetchMemory(state, new PageIterator(pageNumber, pagesToPrefetch));
     }
-    
+
     public void MaybePrefetchMemory<T>(State state, T pagesToPrefetch) where T : struct, IEnumerator<long>
     {
         if (!_canPrefetch)
@@ -195,16 +237,11 @@ public unsafe partial class Pager2 : IDisposable
         do
         {
             long pageNumber = pagesToPrefetch.Current;
-            if (!_prefetchState.ShouldPrefetchSegment(pageNumber, out var offset, out long bytes)) 
+            if (!_prefetchState.ShouldPrefetchSegment(pageNumber, out var offset, out long bytes))
                 continue;
-            
-            prefetcher.CommandQueue.TryAdd(new PalDefinitions.PrefetchRanges
-            {
-                VirtualAddress = state.BaseAddress + offset,
-                NumberOfBytes = (nint)bytes
-            }, 0);
-        }
-        while (pagesToPrefetch.MoveNext());
+
+            prefetcher.CommandQueue.TryAdd(new PalDefinitions.PrefetchRanges { VirtualAddress = state.BaseAddress + offset, NumberOfBytes = (nint)bytes }, 0);
+        } while (pagesToPrefetch.MoveNext());
 
         _prefetchState.CheckResetPrefetchTable();
     }
@@ -214,14 +251,14 @@ public unsafe partial class Pager2 : IDisposable
     {
         if (state.Disposed || _temporaryOrDeleteOnClose)
             return; // nothing to do here
-        
+
         using var metric = Options.IoMetrics.MeterIoRate(FileName, IoMetrics.MeterType.DataSync, 0);
         metric.IncrementFileSize(state.TotalAllocatedSize);
         _functions.Sync(this, state);
         metric.IncrementSize(totalUnsynced);
     }
-    
-    
+
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public byte* AcquirePagePointerWithOverflowHandling(State state, ref PagerTransactionState txState, long pageNumber)
     {
@@ -231,14 +268,14 @@ public unsafe partial class Pager2 : IDisposable
             return (byte*)pageHeader;
 
         // Case 2: Page is overflow and already mapped large enough ==> no problem, returning a pointer to existing mapping
-        if (EnsureMapped(state, ref txState, pageNumber, VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize)) == false)
+        if (EnsureMapped(state, ref txState, pageNumber, Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize)) == false)
             return (byte*)pageHeader;
 
         // Case 3: Page is overflow and was ensuredMapped above, view was re-mapped so we need to acquire a pointer to the new mapping.
         return AcquirePagePointer(state, ref txState, pageNumber);
     }
-    
-    
+
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private byte* AcquireRawPagePointerWithOverflowHandling(State state, ref PagerTransactionState txState, long pageNumber)
     {
@@ -248,36 +285,36 @@ public unsafe partial class Pager2 : IDisposable
             return (byte*)pageHeader;
 
         // Case 2: Page is overflow and already mapped large enough ==> no problem, returning a pointer to existing mapping
-        if (EnsureMapped(state, ref txState, pageNumber, VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize)) == false)
+        if (EnsureMapped(state, ref txState, pageNumber, Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize)) == false)
             return (byte*)pageHeader;
 
         // Case 3: Page is overflow and was ensuredMapped above, view was re-mapped so we need to acquire a pointer to the new mapping.
         return AcquireRawPagePointer(state, ref txState, pageNumber);
     }
-    
+
     public byte* AcquirePagePointer(State state, ref PagerTransactionState txState, long pageNumber)
     {
         if (pageNumber <= state.NumberOfAllocatedPages && pageNumber >= 0)
             return _functions.AcquirePagePointer(this, state, ref txState, pageNumber);
-        
+
         VoronUnrecoverableErrorException.Raise(Options,
             "The page " + pageNumber + " was not allocated, allocated pages: " + state.NumberOfAllocatedPages + " in " + FileName);
-        return null;// never hit
+        return null; // never hit
     }
 
     private byte* AcquireRawPagePointer(State state, ref PagerTransactionState txState, long pageNumber)
     {
         if (pageNumber <= state.NumberOfAllocatedPages && pageNumber >= 0)
             return _functions.AcquireRawPagePointer(this, state, ref txState, pageNumber);
-        
+
         VoronUnrecoverableErrorException.Raise(Options,
             "The page " + pageNumber + " was not allocated, allocated pages: " + state.NumberOfAllocatedPages + " in " + FileName);
-        return null;// never hit
+        return null; // never hit
     }
 
     public byte* AcquirePagePointerForNewPage(State state, ref PagerTransactionState txState, long pageNumber, int numberOfPages)
     {
-        return _functions.AcquirePagePointer(this, state, ref txState, pageNumber);
+        return _functions.AcquirePagePointerForNewPage(this, pageNumber, numberOfPages, state, ref txState);
     }
 
     public void ProtectPageRange(byte* start, ulong size)
@@ -287,7 +324,7 @@ public unsafe partial class Pager2 : IDisposable
 
         _functions.ProtectPageRange(start, size);
     }
-    
+
     public void UnprotectPageRange(byte* start, ulong size)
     {
         if (_usePageProtection == false || size == 0)
@@ -295,15 +332,15 @@ public unsafe partial class Pager2 : IDisposable
 
         _functions.UnprotectPageRange(start, size);
     }
-    
+
     public void EnsureContinuous(ref State state, long requestedPageNumber, int numberOfPages)
     {
         if (state.Disposed)
             throw new ObjectDisposedException("PagerState was already disposed");
-        
+
         if (requestedPageNumber + numberOfPages <= state.NumberOfAllocatedPages)
             return;
-        
+
         // this ensures that if we want to get a range that is more than the current expansion
         // we will increase as much as needed in one shot
         var minRequested = (requestedPageNumber + numberOfPages) * Constants.Storage.PageSize;
@@ -418,8 +455,8 @@ public unsafe partial class Pager2 : IDisposable
             long numberOfAllocatedSegments = (initialFileSize / _prefetchSegmentSize) + 1;
             _prefetchTable = new byte[(numberOfAllocatedSegments / 2) + 1];
         }
-        
-        
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int GetSegmentState(long segment)
         {
@@ -492,7 +529,7 @@ public unsafe partial class Pager2 : IDisposable
 
                     // Prepare the segment information. 
                     sizeInBytes = _prefetchSegmentSize;
-                    offsetFromFileBase =  segmentNumber * _prefetchSegmentSize;
+                    offsetFromFileBase = segmentNumber * _prefetchSegmentSize;
                     return true;
                 }
             }
@@ -501,7 +538,7 @@ public unsafe partial class Pager2 : IDisposable
             offsetFromFileBase = 0;
             return false;
         }
-        
+
         public void CheckResetPrefetchTable()
         {
             if (_refreshCounter > _prefetchResetThreshold)
@@ -524,13 +561,13 @@ public unsafe partial class Pager2 : IDisposable
             }
         }
     }
-    
+
     protected void Lock(byte* address, long sizeToLock)
     {
         var lockTaken = false;
         try
         {
-            if (Sodium.Lock(address, (UIntPtr)sizeToLock) == 0) 
+            if (Sodium.Lock(address, (UIntPtr)sizeToLock) == 0)
                 return;
 
             if (_doNotConsiderMemoryLockFailureAsCatastrophicError)
@@ -554,7 +591,7 @@ public unsafe partial class Pager2 : IDisposable
 
         if (_functions.RecoverFromMemoryLockFailure(this, addressToLock, sizeToLock))
             return;
-        
+
         using var currentProcess = Process.GetCurrentProcess();
 
         var msg =
@@ -574,5 +611,24 @@ public unsafe partial class Pager2 : IDisposable
             "This behavior is controlled by the 'Security.DoNotConsiderMemoryLockFailureAsCatastrophicError' setting (expert only, modifications of this setting is not recommended).";
 
         throw new InsufficientMemoryException(msg);
+    }
+
+    public void TryReleasePage(ref PagerTransactionState txState, long pageNumber)
+    {
+        if (txState.ForCrypto?.TryGetValue(this, out var cyprtoState) is not true)
+            return;
+        if (cyprtoState.TryGetValue(pageNumber, out var buffer) is not true)
+            return;
+
+        if (buffer.Modified)
+            return;
+
+        buffer.ReleaseRef();
+
+        if (!buffer.CanRelease) 
+            return;
+        
+        cyprtoState.RemoveBuffer(pageNumber);
+        _encryptionBuffersPool.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread, buffer.Generation);
     }
 }

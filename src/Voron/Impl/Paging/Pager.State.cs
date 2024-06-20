@@ -1,13 +1,16 @@
 ﻿#nullable enable
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Reflection.Metadata;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
+using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Platform;
@@ -25,10 +28,116 @@ public unsafe partial class Pager2
         public long TotalLoadedSize;
     }
 
+    
+    public sealed class CryptoTransactionState : IEnumerable<KeyValuePair<long, EncryptionBuffer>> 
+    {
+        private Dictionary<long, EncryptionBuffer> _loadedBuffers = new Dictionary<long, EncryptionBuffer>();
+        private long _totalCryptoBufferSize;
+
+        /// <summary>
+        /// Used for computing the total memory used by the transaction crypto buffers
+        /// </summary>
+        public long TotalCryptoBufferSize => _totalCryptoBufferSize;
+
+        public void SetBuffers(Dictionary<long, EncryptionBuffer> loadedBuffers)
+        {
+            var total = 0L;
+            foreach (var buffer in loadedBuffers.Values)
+            {
+                total += buffer.Size;
+            }
+
+            _loadedBuffers = loadedBuffers;
+            _totalCryptoBufferSize = total;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetValue(long pageNumber, out EncryptionBuffer value)
+        {
+            return _loadedBuffers.TryGetValue(pageNumber, out value);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool RemoveBuffer(long pageNumber)
+        {
+            return _loadedBuffers.Remove(pageNumber);
+        }
+
+        public EncryptionBuffer this[long index]
+        {
+            get => _loadedBuffers[index];
+            //This assumes that we don't replace buffers just set them.
+            set
+            {
+                _loadedBuffers[index] = value;
+                _totalCryptoBufferSize += value.Size;
+            }
+        }
+
+        
+        public IEnumerator<KeyValuePair<long, EncryptionBuffer>> GetEnumerator()
+        {
+            return _loadedBuffers.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+    }
+    
+    
+
+    public sealed class MappedAddresses
+    {
+        public string File;
+        public IntPtr Address;
+        public long StartPage;
+        public long Size;
+        public int Usages;
+    }
+
+    public sealed unsafe class LoadedPage
+    {
+        public byte* Pointer;
+        public int NumberOfPages;
+        public long StartPage;
+    }
+    
+    public sealed unsafe class EncryptionBuffer(EncryptionBuffersPool pool)
+    {
+        public static readonly UIntPtr HashSize = Sodium.crypto_generichash_bytes();
+        public static readonly int HashSizeInt = (int)Sodium.crypto_generichash_bytes();
+        
+        public readonly long Generation = pool.Generation;
+        public long Size;
+        public long OriginalSize;
+        public byte* Pointer;
+
+        public NativeMemory.ThreadStats AllocatingThread;
+        public bool SkipOnTxCommit;
+        public bool ExcessStorageFromAllocationBreakup;
+        public bool Modified;
+        public bool PartOfLargerAllocation;
+        public int Usages;
+
+        public bool CanRelease => Usages == 0;
+
+        public void AddRef()
+        {
+            Usages++;
+        }
+
+        public void ReleaseRef()
+        {
+            Usages--;
+        }
+    }
+
     public struct PagerTransactionState 
     {
-        public Dictionary<Pager2, TxStateFor32Bits> For32Bits;
-        public Dictionary<Pager2, CryptoTransactionState> ForCrypto;
+        public Dictionary<Pager2, TxStateFor32Bits>? For32Bits;
+        public Dictionary<Pager2, CryptoTransactionState>? ForCrypto;
         public bool IsWriteTransaction;
         
         /// <summary>
@@ -47,6 +156,19 @@ public unsafe partial class Pager2
 
         public void InvokeBeforeCommitFinalization(Pager2 pager, State state, ref PagerTransactionState txState) => OnBeforeCommitFinalization?.Invoke(pager, state, ref txState);
         public void InvokeDispose(Pager2 pager, State state, ref PagerTransactionState txState) => OnDispose?.Invoke(pager, state, ref txState);
+
+        public Size GetTotal32BitsMappedSize()
+        {
+            if (For32Bits == null)
+                return new Size(0, SizeUnit.Bytes);
+            var result = 0L;
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var state in For32Bits)
+            {
+                result += state.Value.TotalLoadedSize;
+            }
+            return new Size(result, SizeUnit.Bytes);
+        }
     }
     
     public class State: IDisposable
@@ -178,6 +300,7 @@ public unsafe partial class Pager2
         {
             _fileOwnershipMoved = true;
         }
+
     }
 
 }

@@ -196,7 +196,7 @@ namespace FastTests.Voron
         {
             var encryptionBuffersPool = new EncryptionBuffersPool(registerLowMemory: false, registerCleanup: false);
 
-            var ptr = encryptionBuffersPool.Get(null, 1, out var initialSize, out var threadStats);
+            var ptr = encryptionBuffersPool.Get(1, out var initialSize, out var threadStats);
 
             var size = initialSize;
             var free4KbAlignedMemoryCount = 0;

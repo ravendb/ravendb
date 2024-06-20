@@ -32,7 +32,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
 
     private readonly ShardedDocumentDatabase _documentDatabase;
 
-    public Action<IPagerLevelTransactionState> OnFailure { get; }
+    public Action<LowLevelTransaction> OnFailure { get; }
 
     static ShardedDocumentsStorage()
     {

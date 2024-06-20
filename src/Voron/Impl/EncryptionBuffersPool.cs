@@ -78,11 +78,6 @@ namespace Voron.Impl
 
         public byte* Get(int numberOfPages, out long size, out NativeMemory.ThreadStats thread)
         {
-            return Get(null, numberOfPages, out size, out thread);
-        }
-
-        public byte* Get(CryptoPager pager, int numberOfPages, out long size, out NativeMemory.ThreadStats thread)
-        {
             var numberOfPagesPowerOfTwo = Bits.PowerOf2(numberOfPages);
 
             size = numberOfPagesPowerOfTwo * Constants.Storage.PageSize;
@@ -136,11 +131,6 @@ namespace Voron.Impl
         }
 
         public void Return(byte* ptr, long size, NativeMemory.ThreadStats allocatingThread, long generation)
-        {
-            Return(null, ptr, size, allocatingThread, generation);
-        }
-
-        public void Return(CryptoPager pager, byte* ptr, long size, NativeMemory.ThreadStats allocatingThread, long generation)
         {
             if (ptr == null)
                 return;

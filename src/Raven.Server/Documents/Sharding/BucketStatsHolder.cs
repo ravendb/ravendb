@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Sharding
             _mergedChangeVectors.Clear();
         }
 
-        public void ClearBucketStatsOnFailure(IPagerLevelTransactionState _)
+        public void ClearBucketStatsOnFailure(LowLevelTransaction _)
         {
             _values.Clear();
             _mergedChangeVectors.Clear();

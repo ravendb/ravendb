@@ -4641,16 +4641,16 @@ namespace Raven.Server.Documents.Indexes
 
             if (DocumentDatabase.Is32Bits)
             {
-                IPagerLevelTransactionState pagerLevelTransactionState = parameters.QueryContext.Documents.Transaction?.InnerTransaction?.LowLevelTransaction;
-                var total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
+                var llt = parameters.QueryContext.Documents.Transaction?.InnerTransaction?.LowLevelTransaction;
+                var total32BitsMappedSize = llt?.PagerTransactionState.GetTotal32BitsMappedSize();
                 if (total32BitsMappedSize > MappedSizeLimitOn32Bits)
                 {
                     parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"Running in 32 bits and have {total32BitsMappedSize} mapped in docs ctx");
                     return CanContinueBatchResult.False;
                 }
 
-                pagerLevelTransactionState = parameters.IndexingContext.Transaction?.InnerTransaction?.LowLevelTransaction;
-                total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
+                llt = parameters.IndexingContext.Transaction?.InnerTransaction?.LowLevelTransaction;
+                total32BitsMappedSize = llt?.PagerTransactionState.GetTotal32BitsMappedSize();
                 if (total32BitsMappedSize > MappedSizeLimitOn32Bits)
                 {
                     parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"Running in 32 bits and have {total32BitsMappedSize} mapped in index ctx");
