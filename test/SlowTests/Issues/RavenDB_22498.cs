@@ -3,8 +3,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Threading.Tasks;
 using FastTests;
-using Hl7.Fhir.Model;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Raven.Client.Documents;
@@ -19,7 +19,6 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
-using Task = System.Threading.Tasks.Task;
 
 namespace SlowTests.Issues;
 
@@ -29,7 +28,7 @@ public class RavenDB_22498 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes)]
     public async Task Can_Convert_Simple_Auto_Map_Index()
     {
         using (var store = GetDocumentStore())
@@ -63,7 +62,7 @@ public class RavenDB_22498 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes)]
     public async Task Can_Convert_Simple_Auto_Map_Reduce_Index()
     {
         using (var store = GetDocumentStore())
@@ -102,6 +101,7 @@ public class RavenDB_22498 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Indexes)]
     [InlineData("SlowTests.Data.RavenDB_22498.AutoIndexes.FastTests.json.gz")]
+    [InlineData("SlowTests.Data.RavenDB_22498.AutoIndexes.SlowTests.json.gz")]
     public async Task Can_Convert_Auto_Indexes(string inputFile)
     {
         using (var store = GetDocumentStore())
