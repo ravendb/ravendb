@@ -277,7 +277,13 @@ public class AutoToStaticIndexConverter
         var className = Inflector.Singularize(autoIndex.Collection);
 
         sb
-            .AppendLine($"public class {csharpClassName} : {typeof(AbstractIndexCreationTask).FullName}<{className}>") // TODO handle reduce
+            .Append($"public class {csharpClassName} : {typeof(AbstractIndexCreationTask).FullName}<{className}");
+
+        if (autoIndex.Type == IndexType.AutoMapReduce)
+            sb.Append($", {csharpClassName}.Result");
+
+        sb
+            .AppendLine(">")
             .AppendLine("{")
             .AppendLine($"public {csharpClassName}()")
             .AppendLine("{");
@@ -287,8 +293,50 @@ public class AutoToStaticIndexConverter
         ConstructFieldOptions(autoIndex, sb, context);
 
         sb
-        .AppendLine("}")
-        .AppendLine("}");
+            .AppendLine("}");
+
+        if (autoIndex.Type == IndexType.AutoMapReduce)
+        {
+            sb
+                .AppendLine()
+                .AppendLine("public class Result")
+                .AppendLine("{");
+
+            foreach (var kvp in autoIndex.MapFields)
+            {
+                var fieldNames = GenerateFieldName(kvp.Key, kvp.Value.Indexing);
+
+                foreach (var f in fieldNames)
+                {
+                    switch (kvp.Value.Aggregation)
+                    {
+                        case AggregationOperation.Sum:
+                        case AggregationOperation.Count:
+                        {
+                            sb.AppendLine($"public int {f.FieldName} {{ get; set; }}");
+                            break;
+                        }
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+            }
+
+            foreach (var kvp in autoIndex.GroupByFields)
+            {
+                var fieldNames = GenerateFieldName(kvp.Key, kvp.Value.Indexing);
+
+                foreach (var f in fieldNames)
+                {
+                    sb.AppendLine($"public object {f.FieldName} {{ get; set; }}");
+                }
+            }
+
+            sb.AppendLine("}");
+        }
+
+        sb
+            .AppendLine("}");
 
         using (var workspace = new AdhocWorkspace())
         {
@@ -317,7 +365,9 @@ public class AutoToStaticIndexConverter
             if (autoIndex.GroupByFields == null || autoIndex.GroupByFields.Count == 0)
                 return;
 
-            sb.Append("Reduce = results => ");
+            sb
+                .AppendLine()
+                .Append("Reduce = results => ");
 
             ConstructReduceInternal(sb, autoIndex);
         }
@@ -517,7 +567,7 @@ public class AutoToStaticIndexConverter
                 {
                     case AggregationOperation.Count:
                         {
-                            var fieldPath = $"g.Count(x => x.{kvp.Key})";
+                            var fieldPath = $"g.Sum(x => x.{kvp.Key})";
 
                             sb.AppendLine($"{f.FieldName} = {fieldPath},");
                             break;
@@ -575,7 +625,7 @@ public class AutoToStaticIndexConverter
 
         if (indexing.Value.HasFlag(AutoFieldIndexing.Search))
         {
-            if (indexing.Value.HasFlag(AutoFieldIndexing.Search))
+            if (indexing.Value.HasFlag(AutoFieldIndexing.Highlighting))
                 yield return ($"{name}_Search", AutoFieldIndexing.Search | AutoFieldIndexing.Highlighting);
             else
                 yield return ($"{name}_Search", AutoFieldIndexing.Search);

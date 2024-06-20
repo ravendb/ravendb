@@ -3,8 +3,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
-using System.Threading.Tasks;
 using FastTests;
+using Hl7.Fhir.Model;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Raven.Client.Documents;
@@ -19,6 +19,7 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Task = System.Threading.Tasks.Task;
 
 namespace SlowTests.Issues;
 
@@ -29,7 +30,7 @@ public class RavenDB_22498 : RavenTestBase
     }
 
     [Fact]
-    public async Task Can_Convert_Simple_Auto_Index()
+    public async Task Can_Convert_Simple_Auto_Map_Index()
     {
         using (var store = GetDocumentStore())
         {
@@ -39,6 +40,43 @@ public class RavenDB_22498 : RavenTestBase
                     .Where(x => x.Employee == "HR" && x.ShipTo.City == "NY")
                     .Search(x => x.Company, "abc")
                     .ToListAsync();
+            }
+
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+
+            var autoIndex = record.AutoIndexes.Values.First();
+
+            var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex, out _);
+            var def = AutoToStaticIndexConverter.Instance.ConvertToIndexDefinition(autoIndex);
+
+            await store.Maintenance.SendAsync(new PutIndexesOperation(def));
+            await store.Maintenance.SendAsync(new DeleteIndexOperation(def.Name));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var command = new ConvertAutoIndexCommand(autoIndex.Name);
+                await store.GetRequestExecutor().ExecuteAsync(command, session.Advanced.Context);
+
+                var def2 = command.Result;
+                Assert.Equal(IndexDefinitionCompareDifferences.None, def.Compare(def2));
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Can_Convert_Simple_Auto_Map_Reduce_Index()
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.Query<Order>()
+                    .GroupBy(x => x.Company)
+                    .Select(x => new
+                    {
+                        Count = x.Count(),
+                        Company = x.Key
+                    }).ToListAsync();
             }
 
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
@@ -94,7 +132,7 @@ public class RavenDB_22498 : RavenTestBase
                         throw new InvalidOperationException($"Failed to convert index {Environment.NewLine}{s}", e);
                     }
 
-                    if (def == null) 
+                    if (def == null)
                         continue;
 
                     await store.Maintenance.SendAsync(new PutIndexesOperation(def));
