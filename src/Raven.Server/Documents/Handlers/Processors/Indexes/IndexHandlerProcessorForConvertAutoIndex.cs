@@ -174,12 +174,15 @@ public class AutoToStaticIndexConverter
             {
                 foreach (var kvp in autoIndex.MapFields)
                 {
-                    var fieldName = GenerateFieldName(kvp.Key);
+                    var fieldNames = GenerateFieldName(kvp.Key, kvp.Value.Indexing);
 
-                    HandleFieldIndexing(fieldName, kvp.Value.Indexing);
-                    HandleSpatial(fieldName, kvp.Value.Spatial, context);
-                    HandleStorage(fieldName, kvp.Value.Storage);
-                    HandleSuggestions(fieldName, kvp.Value.Suggestions);
+                    foreach (var f in fieldNames)
+                    {
+                        HandleFieldIndexing(f.FieldName, f.Indexing);
+                        HandleSpatial(f.FieldName, kvp.Value.Spatial, context);
+                        HandleStorage(f.FieldName, kvp.Value.Storage);
+                        HandleSuggestions(f.FieldName, kvp.Value.Suggestions);
+                    }
                 }
             }
 
@@ -324,12 +327,15 @@ public class AutoToStaticIndexConverter
             sb.AppendLine();
             foreach (var kvp in autoIndex.MapFields)
             {
-                var fieldName = GenerateFieldName(kvp.Key);
+                var fieldNames = GenerateFieldName(kvp.Key, kvp.Value.Indexing);
 
-                HandleFieldIndexing(fieldName, kvp.Value.Indexing);
-                HandleStorage(fieldName, kvp.Value.Storage);
-                HandleSuggestions(fieldName, kvp.Value.Suggestions);
-                HandleSpatial(fieldName, kvp.Value.Spatial, context);
+                foreach (var f in fieldNames)
+                {
+                    HandleFieldIndexing(f.FieldName, f.Indexing);
+                    HandleStorage(f.FieldName, kvp.Value.Storage);
+                    HandleSuggestions(f.FieldName, kvp.Value.Suggestions);
+                    HandleSpatial(f.FieldName, kvp.Value.Spatial, context);
+                }
             }
 
             return;
@@ -340,7 +346,15 @@ public class AutoToStaticIndexConverter
                     return;
 
                 if (indexing.Value.HasFlag(AutoFieldIndexing.Search))
+                {
                     sb.AppendLine($"Index(\"{fieldName}\", {typeof(FieldIndexing).FullName}.{nameof(FieldIndexing.Search)});");
+
+                    if (indexing.Value.HasFlag(AutoFieldIndexing.Highlighting))
+                        sb.AppendLine($"TermVector(\"{fieldName}\", {typeof(FieldTermVector).FullName}.{nameof(FieldTermVector.WithPositionsAndOffsets)});");
+                }
+
+                if (indexing.Value.HasFlag(AutoFieldIndexing.Exact))
+                    sb.AppendLine($"Index(\"{fieldName}\", {typeof(FieldIndexing).FullName}.{nameof(FieldIndexing.Exact)});");
             }
 
             void HandleStorage(string fieldName, FieldStorage? fieldStorage)
@@ -424,46 +438,49 @@ public class AutoToStaticIndexConverter
         var spatialCounter = 0;
         foreach (var kvp in autoIndex.MapFields)
         {
-            var fieldName = GenerateFieldName(kvp.Key);
+            var fieldNames = GenerateFieldName(kvp.Key, kvp.Value.Indexing);
 
-            if (fieldName.Contains("[]"))
-                throw new NotSupportedException($"Invalid field name '{fieldName}'.");
-
-            if (kvp.Value.Spatial == null)
+            foreach (var f in fieldNames)
             {
-                switch (kvp.Value.Aggregation)
-                {
-                    case AggregationOperation.None:
-                        {
-                            var fieldPath = $"item.{kvp.Key}";
+                if (f.FieldName.Contains("[]"))
+                    throw new NotSupportedException($"Invalid field name '{f.FieldName}'.");
 
-                            sb.AppendLine($"{fieldName} = {fieldPath},");
+                if (kvp.Value.Spatial == null)
+                {
+                    switch (kvp.Value.Aggregation)
+                    {
+                        case AggregationOperation.None:
+                            {
+                                var fieldPath = $"item.{kvp.Key}";
+
+                                sb.AppendLine($"{f.FieldName} = {fieldPath},");
+                                break;
+                            }
+                        case AggregationOperation.Count:
+                        case AggregationOperation.Sum:
+                            sb.AppendLine($"{f.FieldName} = 1,");
                             break;
-                        }
-                    case AggregationOperation.Count:
-                    case AggregationOperation.Sum:
-                        sb.AppendLine($"{fieldName} = 1,");
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
                 }
-            }
-            else
-            {
-                var newFieldName = spatialCounter == 0 ? "Coordinates" : $"Coordinates{spatialCounter}";
-                context.FieldNameMapping.Add(fieldName, newFieldName);
-
-                switch (kvp.Value.Spatial.MethodType)
+                else
                 {
-                    case AutoSpatialOptions.AutoSpatialMethodType.Point:
-                    case AutoSpatialOptions.AutoSpatialMethodType.Wkt:
-                        sb.AppendLine($"{newFieldName} = {nameof(AbstractIndexCreationTask.CreateSpatialField)}({string.Join(", ", kvp.Value.Spatial.MethodArguments.Select(x => $"item.{x}"))}),");
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
+                    var newFieldName = spatialCounter == 0 ? "Coordinates" : $"Coordinates{spatialCounter}";
+                    context.FieldNameMapping.Add(f.FieldName, newFieldName);
 
-                spatialCounter++;
+                    switch (kvp.Value.Spatial.MethodType)
+                    {
+                        case AutoSpatialOptions.AutoSpatialMethodType.Point:
+                        case AutoSpatialOptions.AutoSpatialMethodType.Wkt:
+                            sb.AppendLine($"{newFieldName} = {nameof(AbstractIndexCreationTask.CreateSpatialField)}({string.Join(", ", kvp.Value.Spatial.MethodArguments.Select(x => $"item.{x}"))}),");
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    spatialCounter++;
+                }
             }
         }
 
@@ -471,10 +488,13 @@ public class AutoToStaticIndexConverter
         {
             foreach (var kvp in autoIndex.GroupByFields)
             {
-                var fieldName = GenerateFieldName(kvp.Key);
-                var fieldPath = $"item.{kvp.Key}";
+                var fieldNames = GenerateFieldName(kvp.Key, kvp.Value.Indexing);
+                foreach (var f in fieldNames)
+                {
+                    var fieldPath = $"item.{kvp.Key}";
 
-                sb.AppendLine($"{fieldName} = {fieldPath},");
+                    sb.AppendLine($"{f.FieldName} = {fieldPath},");
+                }
             }
         }
     }
@@ -489,35 +509,42 @@ public class AutoToStaticIndexConverter
 
         foreach (var kvp in autoIndex.MapFields)
         {
-            var fieldName = GenerateFieldName(kvp.Key);
+            var fieldNames = GenerateFieldName(kvp.Key, kvp.Value.Indexing);
 
-            switch (kvp.Value.Aggregation)
+            foreach (var f in fieldNames)
             {
-                case AggregationOperation.Count:
-                    {
-                        var fieldPath = $"g.Count(x => x.{kvp.Key})";
+                switch (kvp.Value.Aggregation)
+                {
+                    case AggregationOperation.Count:
+                        {
+                            var fieldPath = $"g.Count(x => x.{kvp.Key})";
 
-                        sb.AppendLine($"{fieldName} = {fieldPath},");
-                        break;
-                    }
-                case AggregationOperation.Sum:
-                    {
-                        var fieldPath = $"g.Sum(x => x.{kvp.Key})";
+                            sb.AppendLine($"{f.FieldName} = {fieldPath},");
+                            break;
+                        }
+                    case AggregationOperation.Sum:
+                        {
+                            var fieldPath = $"g.Sum(x => x.{kvp.Key})";
 
-                        sb.AppendLine($"{fieldName} = {fieldPath},");
-                        break;
-                    }
-                default:
-                    throw new ArgumentOutOfRangeException();
+                            sb.AppendLine($"{f.FieldName} = {fieldPath},");
+                            break;
+                        }
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
             }
         }
 
         foreach (var kvp in autoIndex.GroupByFields)
         {
-            var fieldName = GenerateFieldName(kvp.Key);
-            var fieldPath = $"g.Key.{kvp.Key}";
+            var fieldNames = GenerateFieldName(kvp.Key, kvp.Value.Indexing);
 
-            sb.AppendLine($"{fieldName} = {fieldPath},");
+            foreach (var f in fieldNames)
+            {
+                var fieldPath = $"g.Key.{kvp.Key}";
+
+                sb.AppendLine($"{f.FieldName} = {fieldPath},");
+            }
         }
 
         sb.AppendLine("};");
@@ -530,10 +557,32 @@ public class AutoToStaticIndexConverter
         }
     }
 
-    private static string GenerateFieldName(string name)
+    private static IEnumerable<(string FieldName, AutoFieldIndexing Indexing)> GenerateFieldName(string name, AutoFieldIndexing? indexing)
     {
-        return name
+        name = name
             .Replace(".", "_");
+
+        if (indexing.HasValue == false)
+        {
+            yield return (name, AutoFieldIndexing.Default);
+            yield break;
+        }
+
+        if (indexing.Value.HasFlag(AutoFieldIndexing.No))
+            yield return (name, AutoFieldIndexing.No);
+        else
+            yield return (name, AutoFieldIndexing.Default);
+
+        if (indexing.Value.HasFlag(AutoFieldIndexing.Search))
+        {
+            if (indexing.Value.HasFlag(AutoFieldIndexing.Search))
+                yield return ($"{name}_Search", AutoFieldIndexing.Search | AutoFieldIndexing.Highlighting);
+            else
+                yield return ($"{name}_Search", AutoFieldIndexing.Search);
+        }
+
+        if (indexing.Value.HasFlag(AutoFieldIndexing.Exact))
+            yield return ($"{name}_Exact", AutoFieldIndexing.Exact);
     }
 
     public class AutoIndexConversionContext
