@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Platform.Win32;
@@ -24,21 +25,9 @@ public unsafe partial class Pager2
 {
 #if VALIDATE
     public const bool ProtectPages = true;
-#else 
+#else
     public const bool ProtectPages = false;
 #endif
-    public class Functions
-    {
-        public delegate* <Pager2, OpenFileOptions, State> Init;
-        public delegate* <Pager2, State, ref PagerTransactionState, long, byte*> AcquirePagePointer;
-        public delegate* <Pager2, State, ref PagerTransactionState, long, byte*> AcquireRawPagePointer;
-        public delegate* <Pager2, long, int, State, ref PagerTransactionState, byte*> AcquirePagePointerForNewPage;
-        public delegate* <Pager2, long, ref State, void> AllocateMorePages;
-        public delegate* <Pager2, State, void> Sync;
-        public delegate* <byte*, ulong, void> ProtectPageRange;
-        public delegate* <byte*, ulong, void> UnprotectPageRange;
-        public delegate* <Pager2, State, ref PagerTransactionState, long, int, bool> EnsureMapped;
-    }
 
     public static class Win64
     {
@@ -60,7 +49,8 @@ public unsafe partial class Pager2
             Sync = &Sync,
             ProtectPageRange = ProtectPages ? &ProtectPageRange : &ProtectPageNoop,
             UnprotectPageRange = ProtectPages ? &UnprotectPageRange : &ProtectPageNoop,
-            EnsureMapped = &EnsureMapped
+            EnsureMapped = &EnsureMapped,
+            RecoverFromMemoryLockFailure = &RecoverFromMemoryLockFailure,
         };
 
         private static bool EnsureMapped(Pager2 pager, State state, ref PagerTransactionState txState, long pageNumber, int numberOfPages)
@@ -104,6 +94,7 @@ public unsafe partial class Pager2
                 throw new Win32Exception(Marshal.GetLastWin32Error());
             }
         }
+
         public static void AllocateMorePages(Pager2 pager, long newLength, ref State state)
         {
             var newLengthAfterAdjustment = NearestSizeToAllocationGranularity(newLength);
@@ -112,20 +103,28 @@ public unsafe partial class Pager2
                 return;
 
             var allocationSize = newLengthAfterAdjustment - state.TotalAllocatedSize;
- 
+
             Win32NativeFileMethods.SetFileLength(state.Handle, state.TotalAllocatedSize + allocationSize, pager.FileName);
 
             var newState = state.Clone();
-            newState.TotalAllocatedSize = state.TotalAllocatedSize + allocationSize;
-            newState.NumberOfAllocatedPages = newState.TotalAllocatedSize / Constants.Storage.PageSize;
-            
-            MapFile(newState);
-            CreateFileMapping(newState);
+            try
+            {
+                newState.TotalAllocatedSize = state.TotalAllocatedSize + allocationSize;
+                newState.NumberOfAllocatedPages = newState.TotalAllocatedSize / Constants.Storage.PageSize;
+
+                MapFile(newState);
+                CreateFileMapping(pager, newState);
+            }
+            catch
+            {
+                newState.Dispose();
+                throw;
+            }
             
             pager.InstallState(newState);
-            
+
             state.MoveFileOwnership();
-            
+
             state = newState;
         }
 
@@ -148,12 +147,12 @@ public unsafe partial class Pager2
                 var command = new PalDefinitions.PrefetchRanges(state.BaseAddress + offsetFromFileBase, bytes);
                 GlobalPrefetchingBehavior.GlobalPrefetcher.Value.CommandQueue.TryAdd(command, 0);
             }
-            
+
             return state.BaseAddress + pageNumber * Constants.Storage.PageSize;
 
             InvalidPage:
             VoronUnrecoverableErrorException.Raise(pager.Options, $"The page {pageNumber} was not allocated in {pager.FileName}");
-            
+
             AlreadyDisposed:
             throw new ObjectDisposedException("PagerState was already disposed");
         }
@@ -175,7 +174,9 @@ public unsafe partial class Pager2
                                  (copyOnWriteMode ? Win32NativeFileAttributes.Readonly : Win32NativeFileAttributes.None),
                 MemAccess = copyOnWriteMode
                     ? Win32MemoryMapNativeMethods.NativeFileMapAccessType.Copy
-                    : (openFileOptions.ReadOnly ? Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read : Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read | Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write)
+                    : (openFileOptions.ReadOnly
+                        ? Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read
+                        : Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read | Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write)
             };
 
 
@@ -184,7 +185,7 @@ public unsafe partial class Pager2
                 OpenFile(pager, openFileOptions, state);
 
                 MapFile(state);
-                CreateFileMapping(state);
+                CreateFileMapping(pager, state);
 
                 if (openFileOptions.Temporary && pager.Options.DiscardVirtualMemory)
                 {
@@ -193,7 +194,7 @@ public unsafe partial class Pager2
                     // if (result != PalFlags.FailCodes.Success)
                     //     PalHelper.ThrowLastError(result, errorCode, $"Attempted to discard file memory. Path: {openFileOptions.File} Size: {state.TotalAllocatedSize}.");
                 }
-                
+
                 pager.InstallState(state);
             }
             catch
@@ -293,7 +294,7 @@ public unsafe partial class Pager2
                 uint id = 0;
                 if (drive is not null)
                     AbstractPager.PhysicalDrivePerMountCache.TryGetValue(drive, out id);
-                
+
                 if (logger.IsInfoEnabled)
                     logger.Info($"Physical drive '{drive}' unique id = '{id}' for file '{file}'");
 
@@ -321,7 +322,7 @@ public unsafe partial class Pager2
                 memAccessType, HandleInheritability.None, true);
         }
 
-        private static void CreateFileMapping(State state)
+        private static void CreateFileMapping(Pager2 pager, State state)
         {
             var fileMappingHandle = state.MemoryMappedFile!.SafeMemoryMappedFileHandle.DangerousGetHandle();
 
@@ -339,10 +340,78 @@ public unsafe partial class Pager2
                 throw new OutOfMemoryException(errorMessage, innerException);
             }
 
+            
+            if (pager._lockMemory)
+            {
+                pager.Lock(state.BaseAddress, state.TotalAllocatedSize);
+            }
+            
             // We don't need to manage size updates, we'll register a new allocation, instead
             NativeMemory.RegisterFileMapping(state.Pager.FileName, (nint)(state.BaseAddress), state.TotalAllocatedSize, null);
 
             CreateFunctions().ProtectPageRange(state.BaseAddress, (ulong)state.TotalAllocatedSize);
+        }
+
+        public static bool RecoverFromMemoryLockFailure(Pager2 pager, byte* addressToLock, long sizeToLock)
+        {
+
+            using var currentProcess = Process.GetCurrentProcess();
+
+            var retries = 10;
+            while (retries > 0)
+            {
+                // From: https://msdn.microsoft.com/en-us/library/windows/desktop/ms686234(v=vs.85).aspx
+                // "The maximum number of pages that a process can lock is equal to the number of pages in its minimum working set minus a small overhead"
+                // let's increase the max size of memory we can lock by increasing the MinWorkingSet. On Windows, that is available for all users
+                var nextWorkingSetSize = GetNearestFileSize(currentProcess.MinWorkingSet.ToInt64() + sizeToLock);
+
+                if (nextWorkingSetSize > int.MaxValue && PlatformDetails.Is32Bits)
+                {
+                    nextWorkingSetSize = int.MaxValue;
+                }
+
+                // Minimum working set size must be less than or equal to the maximum working set size.
+                // Let's increase the max as well.
+                if (nextWorkingSetSize > currentProcess.MaxWorkingSet)
+                {
+                    try
+                    {
+#pragma warning disable CA1416 // Validate platform compatibility
+                        currentProcess.MaxWorkingSet = new IntPtr(nextWorkingSetSize);
+#pragma warning restore CA1416 // Validate platform compatibility
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InsufficientMemoryException(
+                            $"Need to increase the min working set size from {new Size(currentProcess.MinWorkingSet.ToInt64(), SizeUnit.Bytes)} to {new Size(nextWorkingSetSize, SizeUnit.Bytes)} but the max working set size was too small: {new Size(currentProcess.MaxWorkingSet.ToInt64(), SizeUnit.Bytes)}. " +
+                            $"Failed to increase the max working set size so we can lock {new Size(sizeToLock, SizeUnit.Bytes)} for {pager.FileName}. With encrypted " +
+                            "databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error " +
+                            "and aborting the current operation.", e);
+                    }
+                }
+
+                try
+                {
+#pragma warning disable CA1416 // Validate platform compatibility
+                    currentProcess.MinWorkingSet = new IntPtr(nextWorkingSetSize);
+#pragma warning restore CA1416 // Validate platform compatibility
+                }
+                catch (Exception e)
+                {
+                    throw new InsufficientMemoryException(
+                        $"Failed to increase the min working set size to {new Size(nextWorkingSetSize, SizeUnit.Bytes)} so we can lock {new Size(sizeToLock, SizeUnit.Bytes)} for {pager.FileName}. With encrypted " +
+                        "databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error " +
+                        "and aborting the current operation.", e);
+                }
+
+                if (Sodium.Lock(addressToLock, (UIntPtr)sizeToLock) == 0)
+                    return true;
+
+                // let's retry, since we increased the WS, but other thread might have locked the memory
+                retries--;
+            }
+
+            return false;
         }
     }
 }

@@ -27,7 +27,8 @@ namespace Voron.Impl.Scratch
             public long ValidAfterTransactionId;
         }
 
-        private readonly AbstractPager _scratchPager;
+        private readonly Pager2 _scratchPager;
+        private Pager2.State _scratchPagerState;
         private readonly int _scratchNumber;
 
         private readonly Dictionary<long, LinkedList<PendingPage>> _freePagesBySize = new();
@@ -42,28 +43,32 @@ namespace Voron.Impl.Scratch
 
         public long LastUsedPage => _lastUsedPage;
 
-        public ScratchBufferFile(AbstractPager scratchPager, int scratchNumber)
+        public ScratchBufferFile(Pager2 scratchPager,  Pager2.State scratchPagerState, int scratchNumber)
         {
             _scratchPager = scratchPager;
+            _scratchPagerState = scratchPagerState;
             _scratchNumber = scratchNumber;
             _allocatedPagesCount = 0;
 
-            scratchPager.AllocatedInBytesFunc = () => AllocatedPagesCount * Constants.Storage.PageSize;
-            _strongRefToAllocateInBytesFunc = new StrongReference<Func<long>> { Value = scratchPager.AllocatedInBytesFunc };
+            _strongRefToAllocateInBytesFunc = new StrongReference<Func<long>>
+            {
+                Value = () => AllocatedPagesCount * Constants.Storage.PageSize
+            };
             MemoryInformation.DirtyMemoryObjects.TryAdd(_strongRefToAllocateInBytesFunc);
 
             DebugInfo = new ScratchFileDebugInfo(this);
 
-            _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
-            {
-                _strongRefToAllocateInBytesFunc.Value = null; // remove ref (so if there's a left over refs in DirtyMemoryObjects but also function as _disposed = true for racy func invoke)
-                MemoryInformation.DirtyMemoryObjects.TryRemove(_strongRefToAllocateInBytesFunc);
-                _strongRefToAllocateInBytesFunc = null;
+            _disposeOnceRunner = new DisposeOnce<SingleAttempt>(DisposeImpl);
+        }
 
-                _scratchPager.PagerState.DiscardOnTxCopy = true;
-                _scratchPager.Dispose();
-                ClearDictionaries();
-            });
+        private void DisposeImpl()
+        {
+            _strongRefToAllocateInBytesFunc.Value = null; // remove ref (so if there's a left over refs in DirtyMemoryObjects but also function as _disposed = true for racy func invoke)
+            MemoryInformation.DirtyMemoryObjects.TryRemove(_strongRefToAllocateInBytesFunc);
+            _strongRefToAllocateInBytesFunc = null;
+
+            _scratchPager.Dispose();
+            ClearDictionaries();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -89,7 +94,7 @@ namespace Voron.Impl.Scratch
                 }
             }
 #endif
-            _scratchPager.DiscardWholeFile();
+            _scratchPager.DiscardWholeFile(_scratchPagerState);
 
 
 #if VALIDATE
@@ -114,17 +119,17 @@ namespace Voron.Impl.Scratch
             DebugInfo.LastResetTime = DateTime.UtcNow;
         }
 
-        public PagerState PagerState => _scratchPager.PagerState;
-
-        internal AbstractPager Pager => _scratchPager;
+        internal (Pager2, Pager2.State) GetPagerAndState() => (_scratchPager, _scratchPagerState);
+        
+        public Pager2 Pager => _scratchPager;
 
         public int Number => _scratchNumber;
 
         public int NumberOfAllocations => _allocatedPages.Count;
 
-        public long Size => _scratchPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
+        public long Size => _scratchPagerState.NumberOfAllocatedPages * Constants.Storage.PageSize;
 
-        public long NumberOfAllocatedPages => _scratchPager.NumberOfAllocatedPages;
+        public long NumberOfAllocatedPages => _scratchPagerState.NumberOfAllocatedPages;
 
         public long AllocatedPagesCount => _allocatedPagesCount;
 
@@ -134,8 +139,7 @@ namespace Voron.Impl.Scratch
 
         public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, int sizeToAllocate)
         {
-            var pagerState = _scratchPager.EnsureContinuous(_lastUsedPage, sizeToAllocate);
-            tx?.EnsurePagerStateReference(ref pagerState);
+            _scratchPager.EnsureContinuous(ref _scratchPagerState, _lastUsedPage, sizeToAllocate);
 
             var result = new PageFromScratchBuffer(_scratchNumber, _lastUsedPage, sizeToAllocate, numberOfPages);
             _allocatedPagesCount += numberOfPages;
@@ -289,31 +293,35 @@ namespace Voron.Impl.Scratch
 
         public int CopyPage(Pager2 pager, long p, ref Pager2.State state, ref Pager2.PagerTransactionState txState)
         {
-            return _scratchPager.CopyPage(pager, p, ref state, ref txState);
+            var src = _scratchPager.AcquirePagePointer(_scratchPagerState, ref txState, p);
+            var pageHeader = (PageHeader*)src;
+            int numberOfPages = 1;
+            if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
+            {
+                numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+            }
+            const int adjustPageSize = (Constants.Storage.PageSize) / (4 * Constants.Size.Kilobyte);
+            pager.DirectWrite(ref state,  ref txState,pageHeader->PageNumber * (long)adjustPageSize, numberOfPages * adjustPageSize, src);
+
+            return numberOfPages;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Page ReadPage(LowLevelTransaction tx, long p, PagerState pagerState = null)
+        public Page ReadPage(Pager2.State scratchPagerState, LowLevelTransaction tx, long p)
         {
-            return new Page(_scratchPager.AcquirePagePointerWithOverflowHandling(tx, p, pagerState));
+            return new Page(_scratchPager.AcquirePagePointerWithOverflowHandling(scratchPagerState, ref tx.PagerTransactionState, p));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public T ReadPageHeaderForDebug<T>(LowLevelTransaction tx, long p, PagerState pagerState = null) where T : unmanaged
+        public byte* AcquirePagePointerWithOverflowHandling(Pager2.State scratchPagerState, ref Pager2.PagerTransactionState txState, long p)
         {
-            return _scratchPager.AcquirePagePointerHeaderForDebug<T>(tx, p, pagerState);
+            return _scratchPager.AcquirePagePointerWithOverflowHandling(scratchPagerState, ref txState, p);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public byte* AcquirePagePointerWithOverflowHandling(IPagerLevelTransactionState tx, long p, PagerState pagerState)
+        public byte* AcquirePagePointerForNewPage(Pager2.State scratchPagerState, LowLevelTransaction tx, long p, int numberOfPages)
         {
-            return _scratchPager.AcquirePagePointerWithOverflowHandling(tx, p, pagerState);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public byte* AcquirePagePointerForNewPage(LowLevelTransaction tx, long p, int numberOfPages)
-        {
-            return _scratchPager.AcquirePagePointerForNewPage(tx, p, numberOfPages);
+            return _scratchPager.AcquirePagePointerForNewPage(scratchPagerState, ref tx.PagerTransactionState, p, numberOfPages);
         }
 
         public void Dispose()
@@ -323,32 +331,9 @@ namespace Voron.Impl.Scratch
 
         public bool IsDisposed => _disposeOnceRunner.Disposed;
 
-        public void BreakLargeAllocationToSeparatePages(IPagerLevelTransactionState tx, PageFromScratchBuffer value)
+        public void EnsureMapped(Pager2.State scratchPagerState, LowLevelTransaction tx, long p, int numberOfPages)
         {
-            if (_allocatedPages.Remove(value.PositionInScratchBuffer) == false)
-                InvalidAttemptToBreakupPageThatWasntAllocated(value);
-
-            _allocatedPages.Add(value.PositionInScratchBuffer,
-                       new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer, 1, 1));
-
-            for (int i = 1; i < value.NumberOfPages; i++)
-            {
-                _allocatedPages.Add(value.PositionInScratchBuffer + i,
-                    new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer + i, 1, 1));
-            }
-
-            _scratchPager.BreakLargeAllocationToSeparatePages(tx, value.PositionInScratchBuffer, value.NumberOfPages);
-        }
-
-        private static void InvalidAttemptToBreakupPageThatWasntAllocated(PageFromScratchBuffer value)
-        {
-            throw new InvalidOperationException("Attempt to break up a page that wasn't currently allocated: " +
-                                                value.PositionInScratchBuffer);
-        }
-
-        public void EnsureMapped(LowLevelTransaction tx, long p, int numberOfPages)
-        {
-            _scratchPager.EnsureMapped(tx, p, numberOfPages);
+            _scratchPager.EnsureMapped(scratchPagerState, ref tx.PagerTransactionState, p, numberOfPages);
         }
 
         public PageFromScratchBuffer ShrinkOverflowPage(PageFromScratchBuffer value, int newNumberOfPages)

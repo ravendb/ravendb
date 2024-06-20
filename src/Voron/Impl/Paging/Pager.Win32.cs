@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Platform;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Platform.Win32;
@@ -28,7 +29,9 @@ public unsafe partial class Pager2
             Sync = &Win32.Sync,
             ProtectPageRange = ProtectPages ? &Win64.ProtectPageRange : &Win64.ProtectPageNoop,
             UnprotectPageRange = ProtectPages ? &Win64.UnprotectPageRange : &Win64.ProtectPageNoop,
-            EnsureMapped = &Win32.EnsureMapped
+            EnsureMapped = &Win32.EnsureMapped,
+            RecoverFromMemoryLockFailure = &Win64.RecoverFromMemoryLockFailure,
+
         };
         
         private const int NumberOfPagesInAllocationGranularity = Win64.AllocationGranularity / Constants.Storage.PageSize;
@@ -149,6 +152,18 @@ public unsafe partial class Pager2
                     if (!set.TryRemove(addr))
                         continue;
 
+                    if (pager._lockMemory && addr.Size > 0)
+                    {
+                        try
+                        {
+                            Sodium.Unlock((byte*)addr.Address, (UIntPtr)addr.Size);
+                        }
+                        catch (Exception e)
+                        {
+                            throw new InvalidOperationException("Failed to unlock memory in 32-bit mode", e);
+                        }            
+                    }
+
                     Win32MemoryMapNativeMethods.UnmapViewOfFile((byte*)addr.Address);
                     NativeMemory.UnregisterFileMapping(addr.File, addr.Address, addr.Size);
 
@@ -221,10 +236,18 @@ public unsafe partial class Pager2
 
             var newState = state.Clone();
             
-            newState.TotalAllocatedSize = state.TotalAllocatedSize + allocationSize;
-            newState.NumberOfAllocatedPages = newState.TotalAllocatedSize / Constants.Storage.PageSize;
-            
-            Win64.MapFile(newState);
+            try
+            {
+                newState.TotalAllocatedSize = state.TotalAllocatedSize + allocationSize;
+                newState.NumberOfAllocatedPages = newState.TotalAllocatedSize / Constants.Storage.PageSize;
+
+                Win64.MapFile(newState);
+            }
+            catch
+            {
+                newState.Dispose();
+                throw;
+            }
             
             pager.InstallState(newState);
             
@@ -250,13 +273,14 @@ public unsafe partial class Pager2
                 throw new Win32Exception(Marshal.GetLastWin32Error());
             }
         }
-        public static byte* AcquirePagePointerForNewPage(Pager2 pager, long pageNumber, int numberOfPages, State state, ref PagerTransactionState txState)
+
+        private static byte* AcquirePagePointerForNewPage(Pager2 pager, long pageNumber, int numberOfPages, State state, ref PagerTransactionState txState)
         {
             _ = numberOfPages;
             return AcquirePagePointer(pager, state, ref txState, pageNumber);
         }
 
-        public static byte* AcquirePagePointer(Pager2 pager, State state, ref PagerTransactionState txState, long pageNumber)
+        private static byte* AcquirePagePointer(Pager2 pager, State state, ref PagerTransactionState txState, long pageNumber)
         {
             var pagerTxState = GetTxState(pager, ref txState);
             
@@ -330,6 +354,18 @@ public unsafe partial class Pager2
                 if (result == null)
                 {
                     ThrowOnInvalidMapping(pager, state, startPage, size);
+                }
+
+                if (pager._lockMemory && size > 0)
+                {
+                    try
+                    {
+                        pager.Lock(result, size);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Failed to lock memory in 32-bit mode", e);
+                    }
                 }
 
                 NativeMemory.RegisterFileMapping(pager.FileName, new IntPtr(result), size, null);

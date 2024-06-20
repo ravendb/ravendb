@@ -37,20 +37,18 @@ namespace SlowTests.Voron.Issues
                 tx.Commit();
             }
 
-            var pageNumber = 10;
             var numberOfAllocatedPages = 58;
             int dataSizeOnSinglePage = Constants.Storage.PageSize - PageHeader.SizeOf;
-
+            long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
                 // this will allocate encryption buffer of size 64 pages because we use Bits.PowerOf2(numberOfPages) under the covers
                 // in the scratch file the allocation will start at position 66
-                var p = tx.LowLevelTransaction.AllocatePage(numberOfAllocatedPages, pageNumber); 
-
+                var p = tx.LowLevelTransaction.AllocateMultiplePageAndReturnFirst(numberOfAllocatedPages);
+                pageNumber = p.PageNumber;
                 p.Flags |= PageFlags.Overflow;
                 p.OverflowSize = 8 * Constants.Storage.PageSize;
 
-                tx.LowLevelTransaction.BreakLargeAllocationToSeparatePages(pageNumber); // this must not mark extra 6 pages (64 - 58 == 6) as valid for encryption on CryptoPager.TxOnCommit
 
                 for (int i = 0; i < numberOfAllocatedPages; i++)
                 {
@@ -59,11 +57,11 @@ namespace SlowTests.Voron.Issues
                     Memory.Set(page.DataPointer, (byte)i, dataSizeOnSinglePage);
                 }
 
-                var cryptoPagerTransactionState = ((IPagerLevelTransactionState)tx.LowLevelTransaction).CryptoPagerTransactionState;
+                
 
                 var scratchFile = Env.ScratchBufferPool.GetScratchBufferFile(0);
 
-                var state = cryptoPagerTransactionState[scratchFile.File.Pager];
+                var state = tx.LowLevelTransaction.PagerTransactionState.ForCrypto[scratchFile.File.Pager];
 
                 Assert.False(state[124].Modified); // starting position 66 in the scratch file + 58 pages of actual allocation
                 Assert.False(state[125].Modified);
