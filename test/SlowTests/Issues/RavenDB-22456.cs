@@ -138,7 +138,7 @@ namespace SlowTests.Issues
                 user1revertCv = u1Metadata[5].GetString(Constants.Documents.Metadata.ChangeVector);
             }
 
-            await store.Maintenance.SendAsync(new RevertDocumentsToRevisionsOperation(new Dictionary<string, string>() { { user1.Id, user1revertCv } }));
+            await store.Operations.SendAsync(new RevertDocumentsToRevisionsOperation(user1.Id, user1revertCv));
 
             using (var session = store.OpenAsyncSession())
             {
@@ -221,7 +221,7 @@ namespace SlowTests.Issues
                 company1revertCv = c1Metadata[5].GetString(Constants.Documents.Metadata.ChangeVector);
             }
 
-            await store.Maintenance.SendAsync(
+            await store.Operations.SendAsync(
                 new RevertDocumentsToRevisionsOperation(new Dictionary<string, string>() { { user1.Id, user1revertCv }, { company1.Id, company1revertCv } }));
 
             using (var session = store.OpenAsyncSession())
@@ -310,8 +310,8 @@ namespace SlowTests.Issues
             }
 
 
-            Exception e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
-                new RevertDocumentsToRevisionsOperation(new Dictionary<string, string>() { { user1.Id, "A:253-jyJQ+3eQ5kuHIGZ+aqSVow" } })));
+            Exception e = await Assert.ThrowsAsync<RavenException>(() => store.Operations.SendAsync(
+                new RevertDocumentsToRevisionsOperation(user1.Id, "A:253-jyJQ+3eQ5kuHIGZ+aqSVow")));
 
             if (options.DatabaseMode == RavenDatabaseMode.Single)
             {
@@ -322,8 +322,8 @@ namespace SlowTests.Issues
                 "Revision with the cv \"A:253-jyJQ+3eQ5kuHIGZ+aqSVow\" doesn't belong to the doc \"Users/1-A\"",
                 e.Message);
 
-            e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
-                new RevertDocumentsToRevisionsOperation(new Dictionary<string, string>() { { user1.Id, user2revertCv } })));
+            e = await Assert.ThrowsAsync<RavenException>(() => store.Operations.SendAsync(
+                new RevertDocumentsToRevisionsOperation(user1.Id, user2revertCv)));
 
             if (options.DatabaseMode == RavenDatabaseMode.Single)
             {

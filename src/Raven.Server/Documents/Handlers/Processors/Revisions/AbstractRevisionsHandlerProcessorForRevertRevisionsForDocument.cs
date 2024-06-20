@@ -22,20 +22,18 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
 
         public override async ValueTask ExecuteAsync()
         {
-            RevertDocumentsToRevisionsRequest configuration;
+            RevertDocumentsToRevisionsRequest request;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "revisions/revert");
 
-                configuration = JsonDeserializationServer.RevertDocumentToRevision(json);
+                request = JsonDeserializationServer.RevertDocumentToRevision(json);
             }
 
-            var token = RequestHandler.CreateTimeLimitedBackgroundOperationToken();
+            var token = RequestHandler.CreateHttpRequestBoundOperationToken();
 
-            await RevertDocuments(configuration.IdToChangeVector, token);
-
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+            await RevertDocuments(request.IdToChangeVector, token);
         }
     }
 }

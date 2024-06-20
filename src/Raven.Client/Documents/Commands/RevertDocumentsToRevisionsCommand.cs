@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public sealed class RevertDocumentsToRevisionsCommand : RavenCommand
+    internal sealed class RevertDocumentsToRevisionsCommand : RavenCommand
     {
         private readonly Dictionary<string, string> _idToChangeVector;
 
@@ -30,8 +30,6 @@ namespace Raven.Client.Documents.Commands
                     DocumentConventions.Default)
             };
         }
-
-        public override bool IsReadRequest => true;
     }
 
     internal class RevertDocumentsToRevisionsRequest

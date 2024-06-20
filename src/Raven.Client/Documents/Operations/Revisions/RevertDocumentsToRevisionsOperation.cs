@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Revisions
 {
-    internal class RevertDocumentsToRevisionsOperation : IMaintenanceOperation
+    public class RevertDocumentsToRevisionsOperation : IOperation
     {
         private readonly Dictionary<string, string> _idToChangeVector;
 
@@ -15,7 +15,12 @@ namespace Raven.Client.Documents.Operations.Revisions
             _idToChangeVector = idToChangeVector;
         }
 
-        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context) => new RevertDocumentsToRevisionsCommand(_idToChangeVector);
+        public RevertDocumentsToRevisionsOperation(string id, string cv)
+        {
+            _idToChangeVector = new Dictionary<string, string>() { { id, cv } };
+        }
+
+        public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache) => new RevertDocumentsToRevisionsCommand(_idToChangeVector);
     }
 
 }
