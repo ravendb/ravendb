@@ -2,6 +2,7 @@
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
@@ -9,8 +10,11 @@ using Newtonsoft.Json.Converters;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Http;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
@@ -45,6 +49,16 @@ public class RavenDB_22498 : RavenTestBase
             var def = AutoToStaticIndexConverter.Instance.ConvertToIndexDefinition(autoIndex);
 
             await store.Maintenance.SendAsync(new PutIndexesOperation(def));
+            await store.Maintenance.SendAsync(new DeleteIndexOperation(def.Name));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var command = new ConvertAutoIndexCommand(autoIndex.Name);
+                await store.GetRequestExecutor().ExecuteAsync(command, session.Advanced.Context);
+
+                var def2 = command.Result;
+                Assert.Equal(IndexDefinitionCompareDifferences.None, def.Compare(def2));
+            }
         }
     }
 
@@ -90,7 +104,33 @@ public class RavenDB_22498 : RavenTestBase
         }
     }
 
+    private class ConvertAutoIndexCommand : RavenCommand<IndexDefinition>
+    {
+        private readonly string _name;
+        public override bool IsReadRequest => false;
 
+        public ConvertAutoIndexCommand(string name)
+        {
+            _name = name ?? throw new ArgumentNullException(nameof(name));
+        }
+
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+        {
+            url = $"{node.Url}/databases/{node.Database}/indexes/auto/convert?name={Uri.EscapeDataString(_name)}&type=export";
+
+            var request = new HttpRequestMessage
+            {
+                Method = HttpMethod.Get
+            };
+
+            return request;
+        }
+
+        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+        {
+            response.TryGet("Indexes", out BlittableJsonReaderArray indexes);
+
+            Result = JsonDeserializationClient.IndexDefinition((BlittableJsonReaderObject)indexes[0]);
+        }
+    }
 }
-
-
