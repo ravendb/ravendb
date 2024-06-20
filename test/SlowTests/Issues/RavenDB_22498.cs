@@ -106,6 +106,8 @@ public class RavenDB_22498 : RavenTestBase
     {
         using (var store = GetDocumentStore())
         {
+            var count = 0;
+
             await using (var fileStream = new GZipStream(typeof(RavenDB_22498).Assembly.GetManifestResourceStream(inputFile), CompressionMode.Decompress))
             using (var sr = new StreamReader(fileStream))
             {
@@ -137,8 +139,12 @@ public class RavenDB_22498 : RavenTestBase
 
                     await store.Maintenance.SendAsync(new PutIndexesOperation(def));
                     await store.Maintenance.SendAsync(new DeleteIndexOperation(def.Name));
+
+                    count++;
                 }
             }
+
+            Output.WriteLine($"Converted '{count}' auto indexes");
         }
     }
 
