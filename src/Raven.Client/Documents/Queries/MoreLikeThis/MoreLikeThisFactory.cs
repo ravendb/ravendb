@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
     public interface IMoreLikeThisOperations<T>
     {
         /// <summary>
-        /// Add custom parameters to your MoreLikeThis query./>
+        /// Add custom parameters to your MoreLikeThis query
         /// </summary>
         /// <param name="options">Configure custom options for your query. See more at: <see cref="MoreLikeThisOptions"/></param>
         /// <returns></returns>
