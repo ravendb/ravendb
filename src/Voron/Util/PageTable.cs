@@ -140,8 +140,7 @@ namespace Voron.Util
                 if (valueBuffer.Count != 0)
                     continue;
 
-                PagesBuffer _;
-                _values.TryRemove(kvp.Key,out _);
+                _values.TryRemove(kvp.Key, out _);
             }
 
             lock (_transactionPages)

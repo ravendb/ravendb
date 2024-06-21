@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Voron.Impl.Paging;
 using Voron.Util;
 
 namespace Voron.Impl.Journal
@@ -11,7 +13,7 @@ namespace Voron.Impl.Journal
         public long LastTransaction;
         public JournalFile FileInstance;
         public long WritePosIn4KbPosition;
-
+        
         public int CompareTo(JournalSnapshot other)
         {
             return Number.CompareTo(other.Number);

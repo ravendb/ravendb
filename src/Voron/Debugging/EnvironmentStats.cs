@@ -7,7 +7,7 @@ namespace Voron.Debugging
         public long UnallocatedPagesAtEndOfFile;
         public long UsedDataFileSizeInBytes;
         public long AllocatedDataFileSizeInBytes;
-        public long NextWriteTransactionId;
+        public long CommittedTransactionId;
     }
 
     public sealed class ActiveTransaction

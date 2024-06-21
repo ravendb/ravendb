@@ -13,10 +13,12 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanAddDuplicate()
         {
-            Slice treeId;
-            Slice.From(Allocator, "test", out treeId);
+            Slice.From(Allocator, "test", out Slice treeId);
+            long txId;
             using (var tx = Env.WriteTransaction())
             {
+                Assert.Equal(tx.LowLevelTransaction.Id , Env.CurrentStateRecord.TransactionId+ 1);
+                txId = tx.LowLevelTransaction.Id;
                 var fst = tx.FixedTreeFor(treeId, valSize: 8);
 
                 fst.Add(2, new byte[8]);
@@ -24,9 +26,13 @@ namespace FastTests.Voron.FixedSize
 
                 tx.Commit();
             }
+            Assert.Equal(txId, Env.CurrentStateRecord.TransactionId);
 
             using (var tx = Env.WriteTransaction())
             {
+                Assert.Equal(tx.LowLevelTransaction.Id , Env.CurrentStateRecord.TransactionId+ 1);
+                txId = tx.LowLevelTransaction.Id;
+
                 var fst = tx.FixedTreeFor(treeId, valSize: 8);
                 fst.DebugRenderAndShow();
                 fst.Add(1, new byte[8]);
@@ -35,9 +41,12 @@ namespace FastTests.Voron.FixedSize
 
                 tx.Commit();
             }
+            Assert.Equal(txId, Env.CurrentStateRecord.TransactionId);
 
             using (var tx = Env.WriteTransaction())
             {
+                Assert.Equal(tx.LowLevelTransaction.Id , Env.CurrentStateRecord.TransactionId+ 1);
+
                 var fst = tx.FixedTreeFor(treeId, valSize: 8);
 
                 Assert.Equal(3, fst.NumberOfEntries);
@@ -52,6 +61,7 @@ namespace FastTests.Voron.FixedSize
                     Assert.False(it.MoveNext());
                 }
             }
+
         }
 
         [Fact]

@@ -32,7 +32,7 @@ namespace Voron.Impl.Scratch
         private readonly int _scratchNumber;
 
         private readonly Dictionary<long, LinkedList<PendingPage>> _freePagesBySize = new();
-        private readonly Dictionary<long, LinkedList<long>> _freePagesBySizeAvailableImmediately = new();
+        private readonly Dictionary<int, LinkedList<long>> _freePagesBySizeAvailableImmediately = new();
         private readonly Dictionary<long, PageFromScratchBuffer> _allocatedPages = new();
         private readonly DisposeOnce<SingleAttempt> _disposeOnceRunner;
 
@@ -140,8 +140,11 @@ namespace Voron.Impl.Scratch
         public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, int sizeToAllocate)
         {
             _scratchPager.EnsureContinuous(ref _scratchPagerState, _lastUsedPage, sizeToAllocate);
+            tx.RegisterPagerState(_scratchPagerState);
+            
+            var p = _scratchPager.AcquirePagePointer(_scratchPagerState, ref tx.PagerTransactionState, _lastUsedPage);
+            var result = new PageFromScratchBuffer(_lastUsedPage,new Page(p), numberOfPages,  _scratchNumber, sizeToAllocate);
 
-            var result = new PageFromScratchBuffer(_scratchNumber, _lastUsedPage, sizeToAllocate, numberOfPages);
             _allocatedPagesCount += numberOfPages;
             _allocatedPages.Add(_lastUsedPage, result);
             _lastUsedPage += sizeToAllocate;
@@ -149,16 +152,16 @@ namespace Voron.Impl.Scratch
             return result;
         }
 
-        public bool TryGettingFromAllocatedBuffer(LowLevelTransaction tx, int numberOfPages, long size, out PageFromScratchBuffer result)
+        public bool TryGettingFromAllocatedBuffer(LowLevelTransaction tx, int numberOfPages, int size, out PageFromScratchBuffer result)
         {
             result = null;
 
-            LinkedList<long> listOfAvailableImmediately;
-            if (_freePagesBySizeAvailableImmediately.TryGetValue(size, out listOfAvailableImmediately) && listOfAvailableImmediately.Count > 0)
+            if (_freePagesBySizeAvailableImmediately.TryGetValue(size, out LinkedList<long> listOfAvailableImmediately) && listOfAvailableImmediately.Count > 0)
             {
-                var freeAndAvailablePageNumber = listOfAvailableImmediately.Last.Value;
+                var freeAndAvailablePageNumber = listOfAvailableImmediately.Last!.Value;
 
                 listOfAvailableImmediately.RemoveLast();
+                byte* freeAndAvailablePagePointer = _scratchPager.AcquirePagePointer(_scratchPagerState, ref tx.PagerTransactionState, freeAndAvailablePageNumber);
 
 #if VALIDATE
                 byte* freeAndAvailablePagePointer = _scratchPager.AcquirePagePointer(tx, freeAndAvailablePageNumber, PagerState);
@@ -168,7 +171,9 @@ namespace Voron.Impl.Scratch
                 _scratchPager.UnprotectPageRange(freeAndAvailablePagePointer, freeAndAvailablePageSize, true);
 #endif
 
-                result = new PageFromScratchBuffer(_scratchNumber, freeAndAvailablePageNumber, size, numberOfPages);
+                
+                result = new PageFromScratchBuffer(freeAndAvailablePageNumber, new Page(freeAndAvailablePagePointer),
+                    numberOfPages, _scratchNumber,  size);
 
                 _allocatedPagesCount += numberOfPages;
                 _allocatedPages.Add(freeAndAvailablePageNumber, result);
@@ -180,12 +185,13 @@ namespace Voron.Impl.Scratch
             if (!_freePagesBySize.TryGetValue(size, out list) || list.Count <= 0)
                 return false;
 
-            var val = list.Last.Value;
+            var val = list.Last!.Value;
 
             if (val.ValidAfterTransactionId >= tx.Environment.PossibleOldestReadTransaction(tx))
                 return false;
 
             list.RemoveLast();
+            byte* freePageBySizePointer = _scratchPager.AcquirePagePointer(_scratchPagerState, ref tx.PagerTransactionState, val.Page);
 
 #if VALIDATE
             byte* freePageBySizePointer = _scratchPager.AcquirePagePointer(tx, val.Page, PagerState);
@@ -195,7 +201,8 @@ namespace Voron.Impl.Scratch
             _scratchPager.UnprotectPageRange(freePageBySizePointer, freePageBySizeSize, true);
 #endif
 
-            result = new PageFromScratchBuffer(_scratchNumber, val.Page, size, numberOfPages);
+            result = new PageFromScratchBuffer(val.Page, new Page(freePageBySizePointer),
+                numberOfPages, _scratchNumber,  size);
 
             _allocatedPagesCount += numberOfPages;
             _allocatedPages.Add(val.Page, result);
@@ -306,35 +313,12 @@ namespace Voron.Impl.Scratch
             return numberOfPages;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Page ReadPage(Pager2.State scratchPagerState, LowLevelTransaction tx, long p)
-        {
-            return new Page(_scratchPager.AcquirePagePointerWithOverflowHandling(scratchPagerState, ref tx.PagerTransactionState, p));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public byte* AcquirePagePointerWithOverflowHandling(Pager2.State scratchPagerState, ref Pager2.PagerTransactionState txState, long p)
-        {
-            return _scratchPager.AcquirePagePointerWithOverflowHandling(scratchPagerState, ref txState, p);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public byte* AcquirePagePointerForNewPage(Pager2.State scratchPagerState, LowLevelTransaction tx, long p, int numberOfPages)
-        {
-            return _scratchPager.AcquirePagePointerForNewPage(scratchPagerState, ref tx.PagerTransactionState, p, numberOfPages);
-        }
-
         public void Dispose()
         {
             _disposeOnceRunner.Dispose();
         }
 
         public bool IsDisposed => _disposeOnceRunner.Disposed;
-
-        public void EnsureMapped(Pager2.State scratchPagerState, LowLevelTransaction tx, long p, int numberOfPages)
-        {
-            _scratchPager.EnsureMapped(scratchPagerState, ref tx.PagerTransactionState, p, numberOfPages);
-        }
 
         public PageFromScratchBuffer ShrinkOverflowPage(PageFromScratchBuffer value, int newNumberOfPages)
         {
@@ -344,7 +328,11 @@ namespace Voron.Impl.Scratch
             Debug.Assert(value.NumberOfPages > 1);
             Debug.Assert(value.NumberOfPages > newNumberOfPages);
 
-            var shrinked = new PageFromScratchBuffer(Number, value.PositionInScratchBuffer, value.Size, newNumberOfPages);
+            var shrinked = value with
+            {
+                NumberOfPages = newNumberOfPages, 
+                PreviousVersion = value.PreviousVersion
+            }; 
 
             _allocatedPages.Add(shrinked.PositionInScratchBuffer, shrinked);
 
