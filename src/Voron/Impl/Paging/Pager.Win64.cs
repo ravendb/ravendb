@@ -51,6 +51,7 @@ public unsafe partial class Pager2
             UnprotectPageRange = ProtectPages ? &UnprotectPageRange : &ProtectPageNoop,
             EnsureMapped = &EnsureMapped,
             RecoverFromMemoryLockFailure = &RecoverFromMemoryLockFailure,
+            DirectWrite = &DirectWrite
         };
 
         private static bool EnsureMapped(Pager2 pager, State state, ref PagerTransactionState txState, long pageNumber, int numberOfPages)
@@ -413,5 +414,30 @@ public unsafe partial class Pager2
 
             return false;
         }
+
+
+        private static void DirectWrite(Pager2 pager,ref State state, ref PagerTransactionState txState, long posBy4Kbs, int numberOf4Kbs, byte* source)
+        {
+            const int pageSizeTo4KbRatio = (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte));
+            var pageNumber = posBy4Kbs / pageSizeTo4KbRatio;
+            var offsetBy4Kb = posBy4Kbs % pageSizeTo4KbRatio;
+            var numberOfPages = numberOf4Kbs / pageSizeTo4KbRatio;
+            if (numberOf4Kbs % pageSizeTo4KbRatio != 0)
+                numberOfPages++;
+
+            pager.EnsureContinuous(ref state, pageNumber, numberOfPages);
+
+            var toWrite = numberOf4Kbs * 4 * Constants.Size.Kilobyte;
+            pager.EnsureMapped(state, ref txState, pageNumber, numberOfPages);
+            byte* destination = pager.AcquireRawPagePointer(state, ref txState, pageNumber)
+                                + (offsetBy4Kb * 4 * Constants.Size.Kilobyte);
+
+            UnprotectPageRange(destination, (ulong)toWrite);
+
+            Memory.Copy(destination, source, toWrite);
+
+            ProtectPageRange(destination, (ulong)toWrite);
+        }
+
     }
 }

@@ -161,7 +161,7 @@ namespace Voron.Impl.Scratch
             return item;
         }
 
-        public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages)
+        public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, long pageNumber)
         {
             if (tx == null)
                 throw new ArgumentNullException(nameof(tx));
@@ -169,18 +169,18 @@ namespace Voron.Impl.Scratch
 
             var current = _current;
 
-            if (current.File.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out PageFromScratchBuffer result))
+            if (current.File.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, pageNumber, out PageFromScratchBuffer result))
                 return result;
 
             // we can allocate from the end of the file directly
             if (current.File.LastUsedPage + size <= current.File.NumberOfAllocatedPages)
-                return current.File.Allocate(tx, numberOfPages, size);
+                return current.File.Allocate(tx, numberOfPages, size, pageNumber);
 
             if (current.File.Size < _options.MaxScratchBufferSize)
             {
                 var numberOfPagesBeforeAllocate = current.File.NumberOfAllocatedPages;
 
-                var page = current.File.Allocate(tx, numberOfPages, size);
+                var page = current.File.Allocate(tx, numberOfPages, size, pageNumber);
 
                 if (current.File.NumberOfAllocatedPages > numberOfPagesBeforeAllocate)
                     _scratchSpaceMonitor.Increase((current.File.NumberOfAllocatedPages - numberOfPagesBeforeAllocate) * Constants.Storage.PageSize);
@@ -195,7 +195,7 @@ namespace Voron.Impl.Scratch
 
             try
             {
-                return current.File.Allocate(tx, numberOfPages, size);
+                return current.File.Allocate(tx, numberOfPages, size, pageNumber);
             }
             finally
             {
@@ -207,7 +207,7 @@ namespace Voron.Impl.Scratch
         public void Free(LowLevelTransaction tx, int scratchNumber, long page, long? txId)
         {
             var scratch = _scratchBuffers[scratchNumber];
-            scratch.File.Free(page, txId);
+            scratch.File.Free(tx, page, txId);
             if (scratch.File.AllocatedPagesCount != 0)
                 return;
 

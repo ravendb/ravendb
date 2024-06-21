@@ -14,6 +14,6 @@ public unsafe partial class Pager2
         public delegate* <byte*, ulong, void> UnprotectPageRange;
         public delegate* <Pager2, State, ref PagerTransactionState, long, int, bool> EnsureMapped;
         public delegate* <Pager2, byte*, long, bool> RecoverFromMemoryLockFailure;
+        public delegate* <Pager2, ref State, ref PagerTransactionState, long, int, byte*, void> DirectWrite;
     }
-
 }
