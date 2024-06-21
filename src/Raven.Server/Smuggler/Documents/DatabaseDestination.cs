@@ -378,6 +378,17 @@ namespace Raven.Server.Smuggler.Documents
                 return _command.Context;
             }
 
+            public BlittableJsonDocumentBuilder GetBuilderForNewDocument(UnmanagedJsonParser parser, JsonParserState state, BlittableMetadataModifier modifier = null)
+            {
+                return _command.GetOrCreateBuilder(parser, state, "import/object", modifier);
+            }
+
+            public BlittableMetadataModifier GetMetadataModifierForNewDocument(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false,
+                bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+            {
+                return _command.GetOrCreateMetadataModifier(firstEtagOfLegacyRevision, legacyRevisionsCount, legacyImport, readLegacyEtag, operateOnTypes);
+            }
+
             public async ValueTask DisposeAsync()
             {
                 await FinishBatchOfDocumentsAsync();
@@ -752,7 +763,7 @@ namespace Raven.Server.Smuggler.Documents
                 while (true)
                 {
                     _token.ThrowIfCancellationRequested();
-                
+
                     using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                     using (serverContext.OpenReadTransaction())
                     {
@@ -760,7 +771,7 @@ namespace Raven.Server.Smuggler.Documents
                         var executed = _database.ExecuteClusterTransaction(serverContext, batchSize: 1);
                         if (executed.Count == 0)
                             break;
-                
+
                         totalExecutedCommands += executed.Sum(x => x.Commands.Count);
                         if (_result != null)
                         {
@@ -1509,6 +1520,9 @@ namespace Raven.Server.Smuggler.Documents
             private readonly DocumentsOperationContext _context;
             private long _attachmentsStreamSizeOverhead;
 
+            private BlittableJsonDocumentBuilder _builder;
+            private BlittableMetadataModifier _metadataModifier;
+
             public MergedBatchPutCommand(DocumentDatabase database, BuildVersionType buildType,
                 Logger log,
                 ConcurrentDictionary<string, CollectionName> missingDocumentsForRevisions = null,
@@ -1536,6 +1550,21 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             public DocumentsOperationContext Context => _context;
+
+            public BlittableJsonDocumentBuilder GetOrCreateBuilder(UnmanagedJsonParser parser, JsonParserState state, string debugTag, BlittableMetadataModifier modifier = null)
+            {
+                return _builder ??= new BlittableJsonDocumentBuilder(_context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag, parser, state, modifier: modifier);
+            }
+
+            public BlittableMetadataModifier GetOrCreateMetadataModifier(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false,
+                bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+            {
+                _metadataModifier ??= new BlittableMetadataModifier(_context, legacyImport, readLegacyEtag, operateOnTypes);
+                _metadataModifier.FirstEtagOfLegacyRevision = firstEtagOfLegacyRevision;
+                _metadataModifier.LegacyRevisionsCount = legacyRevisionsCount;
+
+                return _metadataModifier;
+            }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
@@ -1618,7 +1647,7 @@ namespace Raven.Server.Smuggler.Documents
                         if ((document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler)) &&
                             (_missingDocumentsForRevisions != null))
                         {
-                            if (_database.DocumentsStorage.Get(context, document.Id) == null && 
+                            if (_database.DocumentsStorage.Get(context, document.Id) == null &&
                                 document.ChangeVector.Contains(ChangeVectorParser.TrxnTag) == false)
                             {
                                 var collection = _database.DocumentsStorage.ExtractCollectionName(context, document.Data);
@@ -1822,6 +1851,12 @@ namespace Raven.Server.Smuggler.Documents
 
                 AttachmentStreamsTempFile?.Dispose();
                 AttachmentStreamsTempFile = null;
+
+                _metadataModifier?.Dispose();
+                _metadataModifier = null;
+
+                _builder?.Dispose();
+                _builder = null;
             }
 
             /// <summary>
@@ -2244,6 +2279,16 @@ namespace Raven.Server.Smuggler.Documents
                 return _cmd.Context;
             }
 
+            public BlittableJsonDocumentBuilder GetBuilderForNewDocument(UnmanagedJsonParser parser, JsonParserState state, BlittableMetadataModifier modifier = null)
+            {
+                return _cmd.GetOrCreateBuilder(parser, state, "counters/object", modifier);
+            }
+
+            public BlittableMetadataModifier GetMetadataModifierForNewDocument(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false, bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+            {
+                return _cmd.GetOrCreateMetadataModifier(firstEtagOfLegacyRevision, legacyRevisionsCount, legacyImport, readLegacyEtag, operateOnTypes);
+            }
+
             public Stream GetTempStream()
             {
                 throw new NotSupportedException("GetTempStream is never used in CounterActions. Shouldn't happen");
@@ -2384,10 +2429,10 @@ namespace Raven.Server.Smuggler.Documents
             {
                 _cmd.AddToDeletedRanges(item);
 
-                var size = item.Name.Size + 
-                           item.DocId.Size + 
-                           item.Collection.Size + 
-                           item.ChangeVector.Size 
+                var size = item.Name.Size +
+                           item.DocId.Size +
+                           item.Collection.Size +
+                           item.ChangeVector.Size
                            + 3 * sizeof(long); // From, To, Etag
 
                 _batchSize.Add(size, SizeUnit.Bytes);
@@ -2470,6 +2515,17 @@ namespace Raven.Server.Smuggler.Documents
             {
                 _cmd.Context.CachedProperties.NewDocument();
                 return _cmd.Context;
+            }
+
+            public BlittableJsonDocumentBuilder GetBuilderForNewDocument(UnmanagedJsonParser parser, JsonParserState state, BlittableMetadataModifier modifier = null)
+            {
+                return _cmd.GetOrCreateBuilder(parser, state, "timeseries/object", modifier);
+            }
+
+            public BlittableMetadataModifier GetMetadataModifierForNewDocument(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false,
+                bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+            {
+                return _cmd.GetOrCreateMetadataModifier(firstEtagOfLegacyRevision, legacyRevisionsCount, legacyImport, readLegacyEtag, operateOnTypes);
             }
         }
     }

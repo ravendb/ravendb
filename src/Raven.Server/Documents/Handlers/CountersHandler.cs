@@ -284,6 +284,9 @@ namespace Raven.Server.Documents.Handlers
 
             public long ErrorCount;
 
+            private BlittableJsonDocumentBuilder _builder;
+            private BlittableMetadataModifier _metadataModifier;
+
             public SmugglerCounterBatchCommand(DocumentDatabase database, SmugglerResult result)
             {
                 _database = database;
@@ -352,6 +355,21 @@ namespace Raven.Server.Documents.Handlers
             public void RegisterForDisposal(IDisposable data)
             {
                 _toDispose.Add(data);
+            }
+
+            public BlittableJsonDocumentBuilder GetOrCreateBuilder(UnmanagedJsonParser parser, JsonParserState state, string debugTag, BlittableMetadataModifier modifier = null)
+            {
+                return _builder ??= new BlittableJsonDocumentBuilder(_context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag, parser, state, modifier: modifier);
+            }
+
+            public BlittableMetadataModifier GetOrCreateMetadataModifier(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false,
+                bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+            {
+                _metadataModifier ??= new BlittableMetadataModifier(_context, legacyImport, readLegacyEtag, operateOnTypes);
+                _metadataModifier.FirstEtagOfLegacyRevision = firstEtagOfLegacyRevision;
+                _metadataModifier.LegacyRevisionsCount = legacyRevisionsCount;
+
+                return _metadataModifier;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -580,6 +598,9 @@ namespace Raven.Server.Documents.Handlers
                 _resetContext = null;
 
                 _result.Counters.ErroredCount += ErrorCount;
+
+                _builder?.Dispose();
+                _metadataModifier?.Dispose();
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
