@@ -439,7 +439,7 @@ namespace Raven.Server.Documents.Indexes
                         tryFindIndexDefinition = TryFindIndexDefinition(name, rawRecord, out staticDef, out autoDef);
                     }
 
-                    if (environment.NextWriteTransactionId == 2 && tryFindIndexDefinition)
+                    if (environment.CurrentReadTransactionId == 1 && tryFindIndexDefinition)
                     {
                         // initial transaction creating the schema hasn't completed
                         // let's try to create it again

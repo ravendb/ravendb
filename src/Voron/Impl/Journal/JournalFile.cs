@@ -33,7 +33,7 @@ namespace Voron.Impl.Journal
 
         private readonly FastList<PagePosition> _unusedPages;
         private readonly ContentionLoggingLocker _locker2;
-        private Logger _logger;
+        private readonly Logger _logger;
 
         public JournalFile(StorageEnvironment env, JournalWriter journalWriter, long journalNumber)
         {
@@ -205,29 +205,18 @@ namespace Voron.Impl.Journal
                 ptt[freedPageNumber] = new PagePosition(-1, tx.Id, journalNumber, -1, true);
             }
 
-            var scratchBufferPool = tx.Environment.ScratchBufferPool;
             var txPages = tx.GetTransactionPages();
             foreach (var txPage in txPages)
             {
-                long pageNumber = txPage.ScratchPageNumber;
-                if (pageNumber == -1) // if we don't already have it from TX preparing then ReadPage
-                {
-                    var (pager, state) = scratchBufferPool.GetScratchBufferFile(txPage.ScratchFileNumber).File.GetPagerAndState();
-
-                    var scratchPage = new Page(pager.AcquirePagePointerWithOverflowHandling(state, ref tx.PagerTransactionState, txPage.PositionInScratchBuffer));
-                    pageNumber = scratchPage.PageNumber;
-                }
-
+                long pageNumber = txPage.Page.PageNumber;
                 Debug.Assert(pageNumber >= 0);
-                PagePosition value;
-                if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
+                if (_pageTranslationTable.TryGetValue(tx, pageNumber, out PagePosition value))
                 {
                     value.UnusedInPTT = true;
                     unused.Add(value);
                 }
 
-                PagePosition pagePosition;
-                if (ptt.TryGetValue(pageNumber, out pagePosition) && pagePosition.IsFreedPageMarker == false)
+                if (ptt.TryGetValue(pageNumber, out PagePosition pagePosition) && pagePosition.IsFreedPageMarker == false)
                 {
                     unused.Add(pagePosition);
                 }

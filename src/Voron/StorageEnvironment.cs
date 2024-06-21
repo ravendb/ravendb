@@ -1,5 +1,6 @@
 using Sparrow;
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -101,7 +102,6 @@ namespace Voron
         private readonly ReaderWriterLockSlim _txCreation = new ReaderWriterLockSlim();
         private readonly CountdownEvent _envDispose = new CountdownEvent(1);
 
-        private long _transactionsCounter;
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         private readonly HeaderAccessor _headerAccessor;
         private readonly DecompressionBuffersPool _decompressionBuffers;
@@ -146,7 +146,12 @@ namespace Voron
                 _headerAccessor = new HeaderAccessor(this);
                 TimeToSyncAfterFlushInSec = options.TimeToSyncAfterFlushInSec;
 
-                _currentStateRecordRecord = new EnvironmentStateRecord(dataPagerState);
+                _currentStateRecordRecord = new EnvironmentStateRecord(
+                    dataPagerState, 
+                    0, 
+                    FrozenSet<Pager2.State>.Empty, 
+                    FrozenDictionary<long, Page>.Empty);
+                
                 _lastValidPageAfterLoad = dataPagerState.NumberOfAllocatedPages;
                 Debug.Assert(_lastValidPageAfterLoad != 0);
 
@@ -309,7 +314,10 @@ namespace Voron
             var nextPageNumber = (header->TransactionId == 0 ? entry.LastPageNumber : header->LastPageNumber) + 1;
             State = new StorageEnvironmentState(nextPageNumber);
 
-            Interlocked.Exchange(ref _transactionsCounter, header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
+            _currentStateRecordRecord = _currentStateRecordRecord with
+            {
+                TransactionId = header->TransactionId == 0 ? entry.TransactionId : header->TransactionId
+            };
             var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             using (var writeTx = new Transaction(tx))
@@ -716,8 +724,7 @@ namespace Voron
                 {
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                    long txId = flags == TransactionFlags.ReadWrite ? NextWriteTransactionId : CurrentReadTransactionId;
-                    tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling,
+                    tx = new LowLevelTransaction(this, transactionPersistentContext, flags, _freeSpaceHandling,
                         context)
                     {
                         FlushInProgressLockTaken = flushInProgressReadLockTaken,
@@ -863,8 +870,7 @@ namespace Voron
             throw new TimeoutException(message);
         }
 
-        public long CurrentReadTransactionId => Interlocked.Read(ref _transactionsCounter);
-        public long NextWriteTransactionId => Interlocked.Read(ref _transactionsCounter) + 1;
+        public long CurrentReadTransactionId => _currentStateRecordRecord.TransactionId;
         public CancellationToken Token => _cancellationTokenSource.Token;
 
         public long PossibleOldestReadTransaction(LowLevelTransaction tx)
@@ -936,12 +942,13 @@ namespace Voron
             using (PreventNewTransactions())
             {
                 if (tx.Committed && tx.FlushedToJournal)
-                    Interlocked.Exchange(ref _transactionsCounter, tx.Id);
+                {
+                    UpdateStateOnCommit(tx);
+                }
 
                 State = tx.State;
 
                 Journal.Applicator.OnTransactionCommitted(tx);
-                ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
                 Journal.UpdateCacheForJournalSnapshots();
 
                 tx.OnAfterCommitWhenNewTransactionsPrevented();
@@ -985,8 +992,7 @@ namespace Voron
             }
             finally
             {
-                if (tx.AlreadyAllowedDisposeWithLazyTransactionRunning == false)
-                    _envDispose.Signal();
+                _envDispose.Signal();
             }
         }
 
@@ -1429,7 +1435,6 @@ namespace Voron
             var state = new InMemoryStorageState
             {
                 CurrentReadTransactionId = CurrentReadTransactionId,
-                NextWriteTransactionId = NextWriteTransactionId,
                 PossibleOldestReadTransaction = PossibleOldestReadTransaction(tx),
                 ActiveTransactions = ActiveTransactions.AllTransactions,
                 FlushState = new InMemoryStorageState.FlushStateDetails
@@ -1477,7 +1482,7 @@ namespace Voron
                     UnallocatedPagesAtEndOfFile = tx.DataPagerState.NumberOfAllocatedPages - NextPageNumber,
                     UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * Constants.Storage.PageSize,
                     AllocatedDataFileSizeInBytes = numberOfAllocatedPages * Constants.Storage.PageSize,
-                    NextWriteTransactionId = NextWriteTransactionId,
+                    CommittedTransactionId = CurrentReadTransactionId,
                 };
             }
         }
@@ -1662,13 +1667,6 @@ namespace Voron
             LastWorkTime = DateTime.MinValue;
         }
 
-        internal void AllowDisposeWithLazyTransactionRunning(LowLevelTransaction tx)
-        {
-            Debug.Assert(tx.Flags == TransactionFlags.Read);
-            _envDispose.Signal();
-            tx.AlreadyAllowedDisposeWithLazyTransactionRunning = true;
-        }
-
         [DoesNotReturn]
         private static void ThrowSimulateFailureOnDbCreation()
         {
@@ -1717,6 +1715,24 @@ namespace Voron
             {
                 var currentState = _currentStateRecordRecord!;
                 var updatedState = currentState with {DataPagerState = dataPagerState};
+                if (Interlocked.CompareExchange(ref _currentStateRecordRecord, updatedState, currentState) == currentState)
+                    break;
+            }
+        }
+        
+        public void UpdateStateOnCommit(LowLevelTransaction tx)
+        {
+            var pagerStates = tx.GetReferencedPagerStates();
+            long transactionId = tx.Id;
+            while (true)
+            {
+                var currentState = _currentStateRecordRecord!;
+                Debug.Assert(currentState.TransactionId == transactionId - 1);
+                var updatedState = currentState with
+                {
+                    TransactionId = transactionId,
+                    StatesStrongRefs = pagerStates
+                };
                 if (Interlocked.CompareExchange(ref _currentStateRecordRecord, updatedState, currentState) == currentState)
                     break;
             }

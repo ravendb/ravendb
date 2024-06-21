@@ -9,6 +9,7 @@ using SlowTests.Sharding.Cluster;
 using Xunit;
 using FastTests.Voron.Util;
 using FastTests.Sparrow;
+using FastTests.Voron.FixedSize;
 
 namespace Tryouts;
 
@@ -30,11 +31,11 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new EncryptionTests(testOutputHelper))
+                using (var test = new FixedSizeBugs(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
                     //test.CanRoundTripSmallContainer("GreaterThan42B");
-                    test.RavenDB_15975();
+                    test.CanAddDuplicate();
                 }
             }
             catch (Exception e)
