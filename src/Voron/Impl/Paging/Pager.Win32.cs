@@ -31,13 +31,13 @@ public unsafe partial class Pager2
             UnprotectPageRange = ProtectPages ? &Win64.UnprotectPageRange : &Win64.ProtectPageNoop,
             EnsureMapped = &Win32.EnsureMapped,
             RecoverFromMemoryLockFailure = &Win64.RecoverFromMemoryLockFailure,
-
+            DirectWrite = &Win32.DirectWrite
         };
         
         private const int NumberOfPagesInAllocationGranularity = Win64.AllocationGranularity / Constants.Storage.PageSize;
 
 
-        public static void DirectWrite(Pager2 pager, ref State state, ref PagerTransactionState txState,long posBy4Kbs, int numberOf4Kbs, byte* source)
+        private static void DirectWrite(Pager2 pager, ref State state, ref PagerTransactionState txState,long posBy4Kbs, int numberOf4Kbs, byte* source)
         {
             Debug.Assert(txState.Sync == null || txState.Sync == SyncAfterDirectWrite);
             

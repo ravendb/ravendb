@@ -23,12 +23,6 @@ namespace Voron
             return new Span<T>(Pointer + offset, length);
         }
 
-        public readonly Span<T> AsSpan<T>(int length = 1) where T : struct
-        {
-            Debug.Assert(length < (IsOverflow ? OverflowSize + PageHeader.SizeOf : Constants.Storage.PageSize));
-            return new Span<T>(DataPointer, length);
-        }
-
         public Page(byte* pointer)
         {
             Pointer = pointer;

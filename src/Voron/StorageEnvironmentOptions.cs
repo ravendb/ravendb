@@ -345,9 +345,9 @@ namespace Voron
             return new PureMemoryStorageEnvironmentOptions(name, tempPathSetting, ioChangesNotifications, catastrophicFailureNotification);
         }
 
-        public static StorageEnvironmentOptions CreateMemoryOnly()
+        public static StorageEnvironmentOptions CreateMemoryOnly([CallerMemberName] string caller = null)
         {
-            return CreateMemoryOnly(null, null, null, null);
+            return CreateMemoryOnly(caller, null, null, null);
         }
 
         public static StorageEnvironmentOptions ForPath(string path, string tempPath, string journalPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)

@@ -217,12 +217,14 @@ namespace FastTests.Voron.Tables
         [Fact]
         public void CanSeekByPrefix()
         {
+            Options.ManualFlushing = true;
             using (var tx = Env.WriteTransaction())
             {
                 DocsSchema.Create(tx, "docs", 16);
 
                 tx.Commit();
             }
+            Env.FlushLogToDataFile();
 
             const string idPrefix = "users/";
             const int bucketToCheck = 20;
@@ -242,6 +244,7 @@ namespace FastTests.Voron.Tables
 
                     tx.Commit();
                 }
+                Env.FlushLogToDataFile();
             }
 
             void AddToDictionaryIfNeeded(string s, long etag)

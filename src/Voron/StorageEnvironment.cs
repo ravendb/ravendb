@@ -150,7 +150,7 @@ namespace Voron
                     dataPagerState, 
                     0, 
                     FrozenSet<Pager2.State>.Empty, 
-                    FrozenDictionary<long, Page>.Empty);
+                    FrozenDictionary<long, PageFromScratchBuffer>.Empty);
                 
                 _lastValidPageAfterLoad = dataPagerState.NumberOfAllocatedPages;
                 Debug.Assert(_lastValidPageAfterLoad != 0);
@@ -1710,6 +1710,9 @@ namespace Voron
 
         public void UpdateDataPagerState(Pager2.State dataPagerState)
         {
+            if (_currentStateRecordRecord.DataPagerState == dataPagerState)
+                return;
+            
             dataPagerState.BeforePublishing();
             while (true)
             {
@@ -1719,10 +1722,11 @@ namespace Voron
                     break;
             }
         }
-        
-        public void UpdateStateOnCommit(LowLevelTransaction tx)
+
+        private void UpdateStateOnCommit(LowLevelTransaction tx)
         {
             var pagerStates = tx.GetReferencedPagerStates();
+            var pagesInScratch = tx.GetPagesInScratch();
             long transactionId = tx.Id;
             while (true)
             {
@@ -1731,7 +1735,8 @@ namespace Voron
                 var updatedState = currentState with
                 {
                     TransactionId = transactionId,
-                    StatesStrongRefs = pagerStates
+                    StatesStrongRefs = pagerStates,
+                    ScratchPagesTable = pagesInScratch
                 };
                 if (Interlocked.CompareExchange(ref _currentStateRecordRecord, updatedState, currentState) == currentState)
                     break;

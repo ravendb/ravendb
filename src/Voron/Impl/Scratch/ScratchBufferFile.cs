@@ -137,13 +137,13 @@ namespace Voron.Impl.Scratch
 
         public ScratchFileDebugInfo DebugInfo { get; }
 
-        public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, int sizeToAllocate)
+        public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, int sizeToAllocate, long pageNumber)
         {
             _scratchPager.EnsureContinuous(ref _scratchPagerState, _lastUsedPage, sizeToAllocate);
             tx.RegisterPagerState(_scratchPagerState);
             
             var p = _scratchPager.AcquirePagePointer(_scratchPagerState, ref tx.PagerTransactionState, _lastUsedPage);
-            var result = new PageFromScratchBuffer(_lastUsedPage,new Page(p), numberOfPages,  _scratchNumber, sizeToAllocate);
+            var result = new PageFromScratchBuffer(_lastUsedPage, pageNumber, new Page(p), numberOfPages, _scratchNumber, sizeToAllocate);
 
             _allocatedPagesCount += numberOfPages;
             _allocatedPages.Add(_lastUsedPage, result);
@@ -152,7 +152,7 @@ namespace Voron.Impl.Scratch
             return result;
         }
 
-        public bool TryGettingFromAllocatedBuffer(LowLevelTransaction tx, int numberOfPages, int size, out PageFromScratchBuffer result)
+        public bool TryGettingFromAllocatedBuffer(LowLevelTransaction tx, int numberOfPages, int size, long pageNumber, out PageFromScratchBuffer result)
         {
             result = null;
 
@@ -172,7 +172,7 @@ namespace Voron.Impl.Scratch
 #endif
 
                 
-                result = new PageFromScratchBuffer(freeAndAvailablePageNumber, new Page(freeAndAvailablePagePointer),
+                result = new PageFromScratchBuffer(freeAndAvailablePageNumber, pageNumber, new Page(freeAndAvailablePagePointer),
                     numberOfPages, _scratchNumber,  size);
 
                 _allocatedPagesCount += numberOfPages;
@@ -181,8 +181,7 @@ namespace Voron.Impl.Scratch
                 return true;
             }
 
-            LinkedList<PendingPage> list;
-            if (!_freePagesBySize.TryGetValue(size, out list) || list.Count <= 0)
+            if (!_freePagesBySize.TryGetValue(size, out LinkedList<PendingPage> list) || list.Count <= 0)
                 return false;
 
             var val = list.Last!.Value;
@@ -201,7 +200,7 @@ namespace Voron.Impl.Scratch
             _scratchPager.UnprotectPageRange(freePageBySizePointer, freePageBySizeSize, true);
 #endif
 
-            result = new PageFromScratchBuffer(val.Page, new Page(freePageBySizePointer),
+            result = new PageFromScratchBuffer(val.Page, pageNumber, new Page(freePageBySizePointer),
                 numberOfPages, _scratchNumber,  size);
 
             _allocatedPagesCount += numberOfPages;
@@ -221,7 +220,7 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Free(long pageNumber, long? txId)
+        public void Free(LowLevelTransaction tx, long pageNumber, long? txId)
         {
             long asOfTxId = txId ?? -1;
 
@@ -243,10 +242,10 @@ namespace Voron.Impl.Scratch
             }
 #endif
 
-            Free(pageNumber, asOfTxId);
+            Free(tx, pageNumber, asOfTxId);
         }
 
-        internal void Free(long page, long asOfTxId)
+        internal void Free(LowLevelTransaction tx, long page, long asOfTxId)
         {
             if (_allocatedPages.TryGetValue(page, out PageFromScratchBuffer value) == false)
             {
@@ -254,6 +253,7 @@ namespace Voron.Impl.Scratch
                 return; // never called
             }
 
+            tx.ForgetAboutScratchPage(value);
             DebugInfo.LastFreeTime = DateTime.UtcNow;
             DebugInfo.LastAsOfTxIdWhenFree = asOfTxId;
 
