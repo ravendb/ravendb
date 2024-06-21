@@ -165,13 +165,26 @@ public class RavenDB_22498 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Indexes)]
-    //[InlineData("SlowTests.Data.RavenDB_22498.AutoIndexes.FastTests.json.gz")]
-    [InlineData("SlowTests.Data.RavenDB_22498.AutoIndexes.SlowTests.json.gz")]
-    public async Task Can_Convert_Auto_Indexes(string inputFile)
+    [InlineData("SlowTests.Data.RavenDB_22498.AutoIndexes.FastTests.json.gz", 678, 10, 0)]
+    public Task Can_Convert_Auto_Indexes_Fast(string inputFile, int expectedCount, int expectedNotSupportedCount, int expectedErrorCount)
+    {
+        return Can_Convert_Auto_Indexes_Internal(inputFile, expectedCount, expectedNotSupportedCount, expectedErrorCount);
+    }
+
+    [RavenTheory(RavenTestCategory.Indexes, NightlyBuildRequired = true)]
+    [InlineData("SlowTests.Data.RavenDB_22498.AutoIndexes.SlowTests.json.gz", 3319, 451, 8)]
+    public Task Can_Convert_Auto_Indexes_Slow(string inputFile, int expectedCount, int expectedNotSupportedCount, int expectedErrorCount)
+    {
+        return Can_Convert_Auto_Indexes_Internal(inputFile, expectedCount, expectedNotSupportedCount, expectedErrorCount);
+    }
+
+    private async Task Can_Convert_Auto_Indexes_Internal(string inputFile, int expectedCount, int expectedNotSupportedCount, int expectedErrorCount)
     {
         using (var store = GetDocumentStore())
         {
             var count = 0;
+            var notSupportedCount = 0;
+            var errorCount = 0;
 
             await using (var fileStream = new GZipStream(typeof(RavenDB_22498).Assembly.GetManifestResourceStream(inputFile), CompressionMode.Decompress))
             using (var sr = new StreamReader(fileStream))
@@ -193,6 +206,7 @@ public class RavenDB_22498 : RavenTestBase
                     catch (NotSupportedException)
                     {
                         // ignore
+                        notSupportedCount++;
                     }
                     catch (Exception e)
                     {
@@ -209,14 +223,18 @@ public class RavenDB_22498 : RavenTestBase
                     }
                     catch
                     {
-                        throw;
+                        errorCount++;
                     }
 
                     count++;
                 }
             }
 
-            Output.WriteLine($"Converted '{count}' auto indexes");
+            Output.WriteLine($"Converted '{count}' auto indexes. Not supported: {notSupportedCount}. Error: {errorCount}");
+
+            Assert.Equal(expectedCount, count);
+            Assert.Equal(expectedErrorCount, errorCount);
+            Assert.Equal(expectedNotSupportedCount, notSupportedCount);
         }
     }
 
