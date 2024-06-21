@@ -298,21 +298,6 @@ namespace Voron.Impl.Scratch
             throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);
         }
 
-        public int CopyPage(Pager2 pager, long p, ref Pager2.State state, ref Pager2.PagerTransactionState txState)
-        {
-            var src = _scratchPager.AcquirePagePointer(_scratchPagerState, ref txState, p);
-            var pageHeader = (PageHeader*)src;
-            int numberOfPages = 1;
-            if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
-            {
-                numberOfPages = Paging.Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize);
-            }
-            const int adjustPageSize = (Constants.Storage.PageSize) / (4 * Constants.Size.Kilobyte);
-            pager.DirectWrite(ref state,  ref txState,pageHeader->PageNumber * (long)adjustPageSize, numberOfPages * adjustPageSize, src);
-
-            return numberOfPages;
-        }
-
         public void Dispose()
         {
             _disposeOnceRunner.Dispose();
