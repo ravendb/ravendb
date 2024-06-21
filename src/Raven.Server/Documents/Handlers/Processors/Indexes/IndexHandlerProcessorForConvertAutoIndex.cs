@@ -485,6 +485,10 @@ public class AutoToStaticIndexConverter
 
     private static void HandleMapFields(StringBuilder sb, AutoIndexDefinition autoIndex, AutoIndexConversionContext context)
     {
+        var countOfFields = autoIndex.MapFields.Count + autoIndex.GroupByFields.Count;
+        if (countOfFields == 0)
+            throw new NotSupportedException("Cannot convert auto index with 0 fields");
+
         var spatialCounter = 0;
         foreach (var kvp in autoIndex.MapFields)
         {
@@ -591,7 +595,7 @@ public class AutoToStaticIndexConverter
 
             foreach (var f in fieldNames)
             {
-                var fieldPath = $"g.Key.{kvp.Key}";
+                var fieldPath = $"g.Key.{f.FieldName}";
 
                 sb.AppendLine($"{f.FieldName} = {fieldPath},");
             }
@@ -603,13 +607,15 @@ public class AutoToStaticIndexConverter
 
         static string GenerateGroupBy(AutoIndexDefinition autoIndex)
         {
-            return string.Join(", ", autoIndex.GroupByFieldNames.Select(x => "result." + x));
+            return string.Join(", ", autoIndex.GroupByFieldNames.Select(x => "result." + GenerateFieldName(x, indexing: null).Single().FieldName));
         }
     }
 
     private static IEnumerable<(string FieldName, AutoFieldIndexing Indexing)> GenerateFieldName(string name, AutoFieldIndexing? indexing)
     {
         name = name
+            .Replace("@", "")
+            .Replace("-", "_")
             .Replace(".", "_");
 
         if (indexing.HasValue == false)
