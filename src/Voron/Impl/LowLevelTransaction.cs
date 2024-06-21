@@ -50,7 +50,7 @@ namespace Voron.Impl
         private Tree _root;
         public Tree RootObjects => _root;
 
-        public bool FlushedToJournal;
+        public long FlushedToJournal = -1;
 
         private long _numberOfModifiedPages;
 
@@ -58,7 +58,6 @@ namespace Voron.Impl
 
         public Pager2.PagerTransactionState PagerTransactionState;
         private readonly WriteAheadJournal _journal;
-        internal readonly List<JournalSnapshot> JournalSnapshots = new();
 
         internal sealed class WriteTransactionPool
         {
@@ -198,8 +197,6 @@ namespace Voron.Impl
             _state = previous._state.Clone();
 
             InitializeRoots();
-
-            JournalSnapshots = previous.JournalSnapshots;
         }
 
         private LowLevelTransaction(LowLevelTransaction previous, TransactionPersistentContext persistentContext)
@@ -241,14 +238,6 @@ namespace Voron.Impl
             _allocator.AllocationFailed += MarkTransactionAsFailed;
 
             Flags = TransactionFlags.ReadWrite;
-
-            _journalFiles = previous._journalFiles;
-
-            foreach (var journalFile in _journalFiles)
-            {
-                journalFile.AddRef();
-            }
-            EnsureNoDuplicateTransactionId(_envRecord.TransactionId);
 
             _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesInUse;
 
@@ -299,22 +288,11 @@ namespace Voron.Impl
 
                 InitializeRoots();
 
-                JournalSnapshots = _journal.GetSnapshots();
-
                 return;
             }
 
             _envRecord = _envRecord with { TransactionId = _envRecord.TransactionId + 1 };
 
-            EnsureNoDuplicateTransactionId(_envRecord.TransactionId);
-            // we keep this copy to make sure that if we use async commit, we have a stable copy of the jounrals
-            // as they were at the time we started the original transaction, this is required because async commit
-            // may modify the list of files we have available
-            _journalFiles = _journal.Files;
-            foreach (var journalFile in _journalFiles)
-            {
-                journalFile.AddRef();
-            }
             _env.WriteTransactionPool.Reset();
             _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesInUse;
             _dirtyPages = _env.WriteTransactionPool.DirtyPagesPool;
@@ -327,35 +305,6 @@ namespace Voron.Impl
             _state = env.State.Clone();
             InitializeRoots();
             InitTransactionHeader();
-        }
-
-        [Conditional("DEBUG")]
-        private void EnsureNoDuplicateTransactionId(long id)
-        {
-            EnsureNoDuplicateTransactionId_Forced(id);
-        }
-
-        internal void EnsureNoDuplicateTransactionId_Forced(long id)
-        {
-            foreach (var journalFile in _journal.Files)
-            {
-                var lastSeenTxIdByJournal = journalFile.PageTranslationTable.GetLastSeenTransactionId();
-
-                if (id <= lastSeenTxIdByJournal)
-                    VoronUnrecoverableErrorException.Raise(this,
-                        $"PTT of journal {journalFile.Number} already contains records for a new write tx. " +
-                        $"Tx id = {id}, last seen by journal = {lastSeenTxIdByJournal}");
-
-                if (journalFile.PageTranslationTable.IsEmpty)
-                    continue;
-
-                var maxTxIdInJournal = journalFile.PageTranslationTable.MaxTransactionId();
-
-                if (id <= maxTxIdInJournal)
-                    VoronUnrecoverableErrorException.Raise(this,
-                        $"PTT of journal {journalFile.Number} already contains records for a new write tx. " +
-                        $"Tx id = {id}, max id in journal = {maxTxIdInJournal}");
-            }
         }
 
         internal void UpdateRootsIfNeeded(Tree root)
@@ -554,21 +503,14 @@ namespace Voron.Impl
 
         public void TryReleasePage(long pageNumber)
         {
-            if (_scratchPagesTable?.TryGetValue(pageNumber, out _) == false)
+            if (_scratchPagesTable?.ContainsKey(pageNumber) == true || 
+                _envRecord.ScratchPagesTable.ContainsKey( pageNumber))
             {
                 // we don't release pages from the scratch buffers
                 return;
             }
 
-            var pageFromJournalExists = _journal.PageExists(this, pageNumber);
-            if (pageFromJournalExists)
-            {
-                // we don't release pages from the scratch buffers that we found through the journals
-                return;
-            }
-
             DataPager.TryReleasePage(ref PagerTransactionState, pageNumber);
-            throw new NotImplementedException();
         }
 
         private void ThrowObjectDisposed()
@@ -795,14 +737,6 @@ namespace Voron.Impl
                 _env.TransactionCompleted(this);
 
                 _disposableScope.Dispose();
-
-                if (_journalFiles != null)
-                {
-                    foreach (var journalFile in _journalFiles)
-                    {
-                        journalFile.Release();
-                    }
-                }
 
                 _allocator.AllocationFailed -= MarkTransactionAsFailed;
               
@@ -1061,7 +995,6 @@ namespace Voron.Impl
             try
             {
                 var numberOfWrittenPages = _journal.WriteToJournal(this);
-                FlushedToJournal = true;
                 _updatePageTranslationTableAndUnusedPages = numberOfWrittenPages.UpdatePageTranslationTableAndUnusedPages;
 
                 if (_forTestingPurposes?.SimulateThrowingOnCommitStage2 == true)
@@ -1125,23 +1058,9 @@ namespace Voron.Impl
 
                 Committed = true;
 
-                _updatePageTranslationTableAndUnusedPages?.ExecuteAfterCommit();
+                _updatePageTranslationTableAndUnusedPages?.ExecuteAfterCommit(this);
 
                 _env.TransactionAfterCommit(this);
-
-                if (_asyncCommitNextTransaction != null)
-                {
-                    var old = _asyncCommitNextTransaction._journalFiles;
-                    _asyncCommitNextTransaction._journalFiles = _env.Journal.Files;
-                    foreach (var journalFile in _asyncCommitNextTransaction._journalFiles)
-                    {
-                        journalFile.AddRef();
-                    }
-                    foreach (var journalFile in old)
-                    {
-                        journalFile.Release();
-                    }
-                }
             }
             catch (Exception e)
             {
@@ -1219,8 +1138,6 @@ namespace Voron.Impl
 
         internal bool FlushInProgressLockTaken;
         private readonly EnvironmentStateRecord _envRecord;
-        internal ImmutableAppendOnlyList<JournalFile> _journalFiles;
-        internal bool AlreadyAllowedDisposeWithLazyTransactionRunning;
         public DateTime TxStartTime;
         public bool IsCloned;
         internal long? LocalPossibleOldestReadTransaction;

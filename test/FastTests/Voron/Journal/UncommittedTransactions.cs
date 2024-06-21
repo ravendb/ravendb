@@ -38,13 +38,7 @@ namespace FastTests.Voron.Journal
                 
                 // tx.Commit(); do not commit
             }
-            using (var tx2 = Env.ReadTransaction())
-            {
-                // tx was not committed so in the log should not apply
-                var readPage = Env.Journal.ReadPage(tx2.LowLevelTransaction,pageAllocatedInUncommittedTransaction);
-
-                Assert.Null(readPage);
-            }
+            Assert.False(Env.WriteTransactionPool.ScratchPagesInUse.ContainsKey(pageAllocatedInUncommittedTransaction));
         }
     }
 }

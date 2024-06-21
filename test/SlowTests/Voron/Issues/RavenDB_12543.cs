@@ -42,8 +42,6 @@ namespace SlowTests.Voron.Issues
 
             using (var tx = Env.WriteTransaction())
             {
-                tx.LowLevelTransaction.EnsureNoDuplicateTransactionId_Forced(tx.LowLevelTransaction.Id);
-
                 var tree = tx.CreateTree("test");
 
                 for (int i = 0; i < 100; i++)

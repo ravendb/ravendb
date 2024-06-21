@@ -55,14 +55,8 @@ namespace FastTests.Voron.Bugs
 
             Env.FlushLogToDataFile(); // this will flush all journals, the issue was that it also marked all of them as unused so they were removed from _files list, but didn't free the allocations in scratch buffers to ensure we don't free pages that can be still read
 
-            using (var readTx = Env.ReadTransaction())
-            {
-                var journalSnapshots = readTx.LowLevelTransaction.JournalSnapshots;
-
-                Assert.Equal(0, journalSnapshots.Count); // _files collection was cleaned during the flush
-
-                Assert.Equal(0, Env.Journal.Files.Count);
-            }
+            Assert.Equal(0, Env.Journal.GetSnapshots().Count);
+            Assert.Equal(0, Env.Journal.Files.Count);
 
             Env.FlushLogToDataFile();
 
@@ -117,18 +111,11 @@ namespace FastTests.Voron.Bugs
 
             Env.Journal.Applicator.ForTestingPurposesOnly().OnUpdateJournalStateUnderWriteTransactionLock = null;
 
-            using (var tx = Env.ReadTransaction())
-            {
-                var journalSnapshots = tx.LowLevelTransaction.JournalSnapshots;
+            Assert.Equal(1, Env.Journal.GetSnapshots().Count);
 
-                Assert.Equal(1, journalSnapshots.Count);
+            Assert.Equal(1, Env.Journal.Files.Count);
 
-                Assert.Equal(1, Env.Journal.Files.Count);
-
-                Assert.False(Env.Journal.Files[0].PageTranslationTable.IsEmpty);
-
-                Assert.Equal(3, Env.Journal.Files[0].PageTranslationTable.MaxTransactionId());
-            }
+            Assert.Equal(3, Env.Journal.Files[0].LastTransactionId);
         }
     }
 }
