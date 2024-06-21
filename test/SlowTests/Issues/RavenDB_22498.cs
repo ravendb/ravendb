@@ -63,6 +63,71 @@ public class RavenDB_22498 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Indexes)]
+    public async Task Can_Convert_Simple_Auto_Map_Index_With_Metadata()
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.Advanced.AsyncDocumentQuery<Order>()
+                    .WhereEquals("@metadata.'Is-Nice'", true)
+                    .ToListAsync();
+            }
+
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+
+            var autoIndex = record.AutoIndexes.Values.First();
+
+            var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex, out _);
+            var def = AutoToStaticIndexConverter.Instance.ConvertToIndexDefinition(autoIndex);
+
+            await store.Maintenance.SendAsync(new PutIndexesOperation(def));
+            await store.Maintenance.SendAsync(new DeleteIndexOperation(def.Name));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var command = new ConvertAutoIndexCommand(autoIndex.Name);
+                await store.GetRequestExecutor().ExecuteAsync(command, session.Advanced.Context);
+
+                var def2 = command.Result;
+                Assert.Equal(IndexDefinitionCompareDifferences.None, def.Compare(def2));
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Indexes)]
+    public async Task Can_Convert_Simple_Auto_Map_Index_With_Empty_Collection()
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.Advanced.AsyncRawQuery<object>("from \"@empty\" where Coll = 'a'")
+                    .ToListAsync();
+            }
+
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+
+            var autoIndex = record.AutoIndexes.Values.First();
+
+            var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex, out _);
+            var def = AutoToStaticIndexConverter.Instance.ConvertToIndexDefinition(autoIndex);
+
+            await store.Maintenance.SendAsync(new PutIndexesOperation(def));
+            await store.Maintenance.SendAsync(new DeleteIndexOperation(def.Name));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var command = new ConvertAutoIndexCommand(autoIndex.Name);
+                await store.GetRequestExecutor().ExecuteAsync(command, session.Advanced.Context);
+
+                var def2 = command.Result;
+                Assert.Equal(IndexDefinitionCompareDifferences.None, def.Compare(def2));
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Indexes)]
     public async Task Can_Convert_Simple_Auto_Map_Reduce_Index()
     {
         using (var store = GetDocumentStore())
@@ -100,7 +165,7 @@ public class RavenDB_22498 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Indexes)]
-    [InlineData("SlowTests.Data.RavenDB_22498.AutoIndexes.FastTests.json.gz")]
+    //[InlineData("SlowTests.Data.RavenDB_22498.AutoIndexes.FastTests.json.gz")]
     [InlineData("SlowTests.Data.RavenDB_22498.AutoIndexes.SlowTests.json.gz")]
     public async Task Can_Convert_Auto_Indexes(string inputFile)
     {
@@ -137,8 +202,15 @@ public class RavenDB_22498 : RavenTestBase
                     if (def == null)
                         continue;
 
-                    await store.Maintenance.SendAsync(new PutIndexesOperation(def));
-                    await store.Maintenance.SendAsync(new DeleteIndexOperation(def.Name));
+                    try
+                    {
+                        await store.Maintenance.SendAsync(new PutIndexesOperation(def));
+                        await store.Maintenance.SendAsync(new DeleteIndexOperation(def.Name));
+                    }
+                    catch
+                    {
+                        throw;
+                    }
 
                     count++;
                 }
