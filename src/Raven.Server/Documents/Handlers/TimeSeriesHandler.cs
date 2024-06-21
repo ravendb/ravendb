@@ -1338,12 +1338,12 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var returnable in _toReturn)
                     _context.ReturnMemory(returnable);
                 _toReturn.Clear();
-                
-                _releaseContext?.Dispose();
-                _releaseContext = null;
 
                 _builder?.Dispose();
                 _metadataModifier?.Dispose();
+
+                _releaseContext?.Dispose();
+                _releaseContext = null;
             }
         }
 

@@ -1846,17 +1846,18 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
                 Documents.Clear();
-                _resetContext?.Dispose();
-                _resetContext = null;
-
-                AttachmentStreamsTempFile?.Dispose();
-                AttachmentStreamsTempFile = null;
 
                 _metadataModifier?.Dispose();
                 _metadataModifier = null;
 
                 _builder?.Dispose();
                 _builder = null;
+
+                _resetContext?.Dispose();
+                _resetContext = null;
+
+                AttachmentStreamsTempFile?.Dispose();
+                AttachmentStreamsTempFile = null;
             }
 
             /// <summary>
