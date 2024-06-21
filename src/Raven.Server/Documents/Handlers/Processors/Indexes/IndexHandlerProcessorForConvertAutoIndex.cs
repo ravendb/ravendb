@@ -126,7 +126,7 @@ public class AutoToStaticIndexConverter
         static string GenerateName(string name)
         {
             name = name[AutoIndexNameFinder.AutoIndexPrefix.Length..];
-            name = Regex.Replace(name, @"[^\w\d]", "/");
+            name = "Index/" + Regex.Replace(name, @"[^\w\d]", "/");
 
             while (true)
             {
@@ -137,14 +137,19 @@ public class AutoToStaticIndexConverter
                 name = newName;
             }
 
-            return "Index/" + name;
+            return name;
         }
 
         static HashSet<string> ConstructMaps(AutoIndexDefinition autoIndex, AutoIndexConversionContext context)
         {
             var sb = new StringBuilder();
+            sb.Append("from item in docs");
+
+            if (autoIndex.Collection != Constants.Documents.Collections.AllDocumentsCollection && autoIndex.Collection != Constants.Documents.Collections.EmptyCollection)
+                sb.Append($".{autoIndex.Collection}");
+
             sb
-                .AppendLine($"from item in docs.{autoIndex.Collection}")
+                .AppendLine()
                 .AppendLine("select new")
                 .AppendLine("{");
 
@@ -248,7 +253,8 @@ public class AutoToStaticIndexConverter
                 if (suggestions.HasValue == false || suggestions == false)
                     return;
 
-                throw new NotImplementedException();
+                var options = GetFieldOptions(fieldName);
+                options.Suggestions = true;
             }
 
             void HandleSpatial(string fieldName, AutoSpatialOptions spatialOptions, AutoIndexConversionContext context)
@@ -274,7 +280,9 @@ public class AutoToStaticIndexConverter
         var sb = new StringBuilder();
 
         csharpClassName = GenerateClassName(autoIndex);
-        var className = Inflector.Singularize(autoIndex.Collection);
+        var className = autoIndex.Collection is Constants.Documents.Collections.AllDocumentsCollection or Constants.Documents.Collections.EmptyCollection
+            ? "object"
+            : Inflector.Singularize(autoIndex.Collection);
 
         sb
             .Append($"public class {csharpClassName} : {typeof(AbstractIndexCreationTask).FullName}<{className}");
@@ -312,10 +320,10 @@ public class AutoToStaticIndexConverter
                     {
                         case AggregationOperation.Sum:
                         case AggregationOperation.Count:
-                        {
-                            sb.AppendLine($"public int {f.FieldName} {{ get; set; }}");
-                            break;
-                        }
+                            {
+                                sb.AppendLine($"public int {f.FieldName} {{ get; set; }}");
+                                break;
+                            }
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
@@ -420,7 +428,7 @@ public class AutoToStaticIndexConverter
                 if (suggestions.HasValue == false || suggestions == false)
                     return;
 
-                throw new NotImplementedException();
+                sb.AppendLine($"Suggestion(x => x.{fieldName});");
             }
 
             void HandleSpatial(string fieldName, AutoSpatialOptions spatial, AutoIndexConversionContext context)
@@ -501,17 +509,23 @@ public class AutoToStaticIndexConverter
 
                 if (kvp.Value.Spatial == null)
                 {
+                    if (f.FieldName.StartsWith("spatial_"))
+                        throw new NotSupportedException($"Invalid field name '{f.FieldName}' with no spatial information.");
+
                     switch (kvp.Value.Aggregation)
                     {
                         case AggregationOperation.None:
+                        case AggregationOperation.Sum:
                             {
-                                var fieldPath = $"item.{kvp.Key}";
+                                var key = kvp.Key;
+                                var fieldPath = key.StartsWith(Constants.Documents.Metadata.Key)
+                                    ? $"MetadataFor(item)[\"{key[(Constants.Documents.Metadata.Key.Length + 1)..]}\"]"
+                                    : $"item.{kvp.Key}";
 
                                 sb.AppendLine($"{f.FieldName} = {fieldPath},");
                                 break;
                             }
                         case AggregationOperation.Count:
-                        case AggregationOperation.Sum:
                             sb.AppendLine($"{f.FieldName} = 1,");
                             break;
                         default:
@@ -545,6 +559,9 @@ public class AutoToStaticIndexConverter
                 var fieldNames = GenerateFieldName(kvp.Key, kvp.Value.Indexing);
                 foreach (var f in fieldNames)
                 {
+                    if (f.FieldName.Contains("[]"))
+                        throw new NotSupportedException($"Invalid field name '{f.FieldName}'.");
+
                     var fieldPath = $"item.{kvp.Key}";
 
                     sb.AppendLine($"{f.FieldName} = {fieldPath},");
@@ -584,18 +601,19 @@ public class AutoToStaticIndexConverter
                             break;
                         }
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        throw new NotSupportedException($"Field '{kvp.Key}' has unsupported aggregation type '{kvp.Value.Aggregation}'.");
                 }
             }
         }
 
         foreach (var kvp in autoIndex.GroupByFields)
         {
+            var groupByField = GenerateFieldName(kvp.Key, AutoFieldIndexing.Default).Single().FieldName;
             var fieldNames = GenerateFieldName(kvp.Key, kvp.Value.Indexing);
 
             foreach (var f in fieldNames)
             {
-                var fieldPath = $"g.Key.{f.FieldName}";
+                var fieldPath = $"g.Key.{groupByField}";
 
                 sb.AppendLine($"{f.FieldName} = {fieldPath},");
             }
@@ -624,9 +642,13 @@ public class AutoToStaticIndexConverter
             yield break;
         }
 
-        if (indexing.Value.HasFlag(AutoFieldIndexing.No))
+        if (indexing.Value == AutoFieldIndexing.No)
+        {
             yield return (name, AutoFieldIndexing.No);
-        else
+            yield break;
+        }
+
+        if (indexing.Value.HasFlag(AutoFieldIndexing.Default))
             yield return (name, AutoFieldIndexing.Default);
 
         if (indexing.Value.HasFlag(AutoFieldIndexing.Search))
