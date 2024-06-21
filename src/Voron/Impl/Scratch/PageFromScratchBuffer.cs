@@ -29,6 +29,7 @@ namespace Voron.Impl.Scratch
 
     public sealed record PageFromScratchBuffer(
         long PositionInScratchBuffer,
+        long PageNumberInDataFile,
         Page Page,
         int NumberOfPages,
         int ScratchFileNumber,

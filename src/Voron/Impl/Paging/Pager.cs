@@ -21,8 +21,6 @@ using Voron.Global;
 
 namespace Voron.Impl.Paging;
 
-
-
 public unsafe partial class Pager2 : IDisposable
 {
     private static readonly object WorkingSetIncreaseLocker = new object();
@@ -128,29 +126,6 @@ public unsafe partial class Pager2 : IDisposable
         {
             _32BitsState = new StateFor32Bits();
         }
-    }
-
-    public void DirectWrite(ref State state, ref PagerTransactionState txState, long posBy4Kbs, int numberOf4Kbs, byte* source)
-    {
-        const int pageSizeTo4KbRatio = (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte));
-        var pageNumber = posBy4Kbs / pageSizeTo4KbRatio;
-        var offsetBy4Kb = posBy4Kbs % pageSizeTo4KbRatio;
-        var numberOfPages = numberOf4Kbs / pageSizeTo4KbRatio;
-        if (numberOf4Kbs % pageSizeTo4KbRatio != 0)
-            numberOfPages++;
-
-        EnsureContinuous(ref state, pageNumber, numberOfPages);
-
-        var toWrite = numberOf4Kbs * 4 * Constants.Size.Kilobyte;
-        EnsureMapped(state, ref txState, pageNumber, numberOfPages);
-        byte* destination = AcquireRawPagePointer(state, ref txState, pageNumber)
-                            + (offsetBy4Kb * 4 * Constants.Size.Kilobyte);
-
-        UnprotectPageRange(destination, (ulong)toWrite);
-
-        Memory.Copy(destination, source, toWrite);
-
-        ProtectPageRange(destination, (ulong)toWrite);
     }
 
     public void DiscardWholeFile(State state)
@@ -560,7 +535,7 @@ public unsafe partial class Pager2 : IDisposable
         }
     }
 
-    protected void Lock(byte* address, long sizeToLock)
+    private void Lock(byte* address, long sizeToLock)
     {
         var lockTaken = false;
         try
@@ -628,5 +603,10 @@ public unsafe partial class Pager2 : IDisposable
         
         cyprtoState.RemoveBuffer(pageNumber);
         _encryptionBuffersPool.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread, buffer.Generation);
+    }
+
+    public void DirectWrite(ref State state, ref PagerTransactionState txState, long posBy4Kbs, int numberOf4Kbs, byte* source)
+    {
+        _functions.DirectWrite(this,ref state, ref txState, posBy4Kbs, numberOf4Kbs, source);
     }
 }

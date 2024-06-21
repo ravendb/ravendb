@@ -31,17 +31,17 @@ namespace FastTests.Voron.ScratchBuffer
                 {
                     Assert.False(file.HasActivelyUsedBytes(2));
                     
-                    file.Allocate(tx.LowLevelTransaction, 1, 1);
-                    file.Allocate(tx.LowLevelTransaction, 1, 1);
-                    file.Allocate(tx.LowLevelTransaction, 1, 1);
-                    file.Allocate(tx.LowLevelTransaction, 1, 1);
-                    file.Allocate(tx.LowLevelTransaction, 1, 1);
+                    file.Allocate(tx.LowLevelTransaction, 1, 1, 8);
+                    file.Allocate(tx.LowLevelTransaction, 1, 1, 9);
+                    file.Allocate(tx.LowLevelTransaction, 1, 1, 10);
+                    file.Allocate(tx.LowLevelTransaction, 1, 1, 11);
+                    file.Allocate(tx.LowLevelTransaction, 1, 1, 12);
 
-                    file.Free(0, 1);
-                    file.Free(1, 3);
-                    file.Free(2, 4);
-                    file.Free(3, 7);
-                    file.Free(4, 9);
+                    file.Free(tx.LowLevelTransaction, 0, 1);
+                    file.Free(tx.LowLevelTransaction, 1, 3);
+                    file.Free(tx.LowLevelTransaction, 2, 4);
+                    file.Free(tx.LowLevelTransaction, 3, 7);
+                    file.Free(tx.LowLevelTransaction, 4, 9);
 
                     for (int i = 0; i <= 9; i++)
                     {

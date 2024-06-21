@@ -36,7 +36,6 @@ namespace Voron.Impl
 {
     public sealed unsafe class LowLevelTransaction : IDisposable 
     {
-        
         public readonly Pager2 DataPager;
         private readonly StorageEnvironment _env;
         private readonly ByteStringContext _allocator;
@@ -68,14 +67,16 @@ namespace Voron.Impl
 #endif
             public readonly TableValueBuilder TableValueBuilder = new();
 
-            public Dictionary<long, PageFromScratchBuffer> ScratchPagesInUse = new ();
-            public Dictionary<long, PageFromScratchBuffer> ScratchPagesReadyForNextTx = new ();
+            public readonly Dictionary<long, PageFromScratchBuffer> ScratchPagesInUse = new ();
             public readonly HashSet<long> DirtyPagesPool = new ();
 
             public void Reset()
             {
-                ScratchPagesReadyForNextTx.Clear();
-                ScratchPagesInUse.Clear();
+                // We are _explicitly_ not clearing this, we rely on the 
+                // state here to carry all the modified pages between write
+                // transactions.
+                
+                // -- ScratchPagesInUse.Clear(); --
                 DirtyPagesPool.Clear();
                 TableValueBuilder.Reset();
             }
@@ -135,6 +136,7 @@ namespace Voron.Impl
         private readonly HashSet<long> _freedPages;
         private readonly List<PageFromScratchBuffer> _unusedScratchPages;
 
+        private const int RevertedScratchPageMarker = -0xDEAD;
 
         private readonly StorageEnvironmentState _state;
 
@@ -248,19 +250,7 @@ namespace Voron.Impl
             }
             EnsureNoDuplicateTransactionId(_envRecord.TransactionId);
 
-            // we can reuse those instances, not calling Reset on the pool
-            // because we are going to need to scratch buffer pool
-
-            _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesReadyForNextTx;
-
-            foreach (var kvp in previous._scratchPagesTable)
-            {
-                if (previous._dirtyPages.Contains(kvp.Key))
-                    _scratchPagesTable.Add(kvp.Key, kvp.Value);
-            }
-            previous._scratchPagesTable.Clear();
-            _env.WriteTransactionPool.ScratchPagesInUse = _scratchPagesTable;
-            _env.WriteTransactionPool.ScratchPagesReadyForNextTx = previous._scratchPagesTable;
+            _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesInUse;
 
             _dirtyPages = previous._dirtyPages;
             _dirtyPages.Clear();
@@ -529,32 +519,27 @@ namespace Voron.Impl
         {
             // Check if we can hit the lowest level locality cache.
             Page p;
-            if (_scratchPagesTable != null && _scratchPagesTable.TryGetValue(pageNumber, out PageFromScratchBuffer value)) // Scratch Pages Table will be null in read transactions
+            if (_scratchPagesTable?.TryGetValue(pageNumber, out PageFromScratchBuffer value) == true) // Scratch Pages Table will be null in read transactions
             {
-                Debug.Assert(value != null);
                 Debug.Assert(Flags == TransactionFlags.ReadWrite);
 
                 p = value.Page;
                 Debug.Assert(p.PageNumber == pageNumber, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from scratch");
             }
+            else if (_envRecord.ScratchPagesTable.TryGetValue(pageNumber, out value))
+            {
+                p = value.Page;
+                Debug.Assert(p.PageNumber == pageNumber, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from journal");
+            }
             else
             {
-                var pageFromJournal = _journal.ReadPage(this, pageNumber);
-                if (pageFromJournal != null)
-                {
-                    p = pageFromJournal.Value;
-                    Debug.Assert(p.PageNumber == pageNumber, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from journal");
-                }
-                else
-                {
-                    p = new Page(DataPager.AcquirePagePointerWithOverflowHandling(DataPagerState, ref PagerTransactionState, pageNumber));
+                p = new Page(DataPager.AcquirePagePointerWithOverflowHandling(DataPagerState, ref PagerTransactionState, pageNumber));
 
-                    Debug.Assert(p.PageNumber == pageNumber, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from data file");
+                Debug.Assert(p.PageNumber == pageNumber, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from data file");
 
-                    // When encryption is off, we do validation by checksum
-                    if (_env.Options.Encryption.IsEnabled == false)
-                        _env.ValidatePageChecksum(pageNumber, (PageHeader*)p.Pointer);
-                }
+                // When encryption is off, we do validation by checksum
+                if (_env.Options.Encryption.IsEnabled == false)
+                    _env.ValidatePageChecksum(pageNumber, (PageHeader*)p.Pointer);
             }
 
             TrackReadOnlyPage(p);
@@ -569,7 +554,7 @@ namespace Voron.Impl
 
         public void TryReleasePage(long pageNumber)
         {
-            if (_scratchPagesTable != null && _scratchPagesTable.TryGetValue(pageNumber, out _))
+            if (_scratchPagesTable?.TryGetValue(pageNumber, out _) == false)
             {
                 // we don't release pages from the scratch buffers
                 return;
@@ -672,12 +657,9 @@ namespace Voron.Impl
 #if VALIDATE
             VerifyNoDuplicateScratchPages();
 #endif
-                var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
+                var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages, pageNumber);
                 pageFromScratchBuffer.PreviousVersion = previousVersion ?? new Page();
-                var newPage = pageFromScratchBuffer.Page with
-                {
-                    Flags = PageFlags.Single
-                };
+              
                 _transactionPages.Add(pageFromScratchBuffer);
 
                 _numberOfModifiedPages += numberOfPages;
@@ -688,10 +670,13 @@ namespace Voron.Impl
 
                 TrackDirtyPage(pageNumber);
 
-
                 if (zeroPage)
-                    Memory.Set(newPage.Pointer, 0, Constants.Storage.PageSize * numberOfPages);
-                newPage.PageNumber = pageNumber;
+                    Memory.Set(pageFromScratchBuffer.Page.Pointer, 0, Constants.Storage.PageSize * numberOfPages);
+                var newPage = pageFromScratchBuffer.Page with
+                {
+                    Flags = PageFlags.Single,
+                    PageNumber = pageNumber
+                };
                 _pageLocator.SetWritable(newPage);
 
                 TrackWritablePage(newPage);
@@ -848,12 +833,10 @@ namespace Voron.Impl
 
         internal void DiscardScratchModificationOn(long pageNumber)
         {
-            if (_scratchPagesTable.TryGetValue(pageNumber, out var scratchPage))
+            if (_scratchPagesTable.Remove(pageNumber, out var scratchPage))
             {
                 if (_transactionPages.Remove(scratchPage))
                     _unusedScratchPages.Add(scratchPage);
-
-                _scratchPagesTable.Remove(pageNumber);
 
                 if (_env.Options.Encryption.IsEnabled)
                 {
@@ -1515,6 +1498,27 @@ namespace Voron.Impl
         public void RegisterPagerState(Pager2.State state)
         {
             _usedPagerStates.Add(state);
+        }
+
+        public FrozenDictionary<long, PageFromScratchBuffer> GetPagesInScratch()
+        {
+            return _scratchPagesTable.ToFrozenDictionary();
+        }
+
+        public void ForgetAboutScratchPage(PageFromScratchBuffer value)
+        {
+            Debug.Assert(value.ScratchFileNumber != RevertedScratchPageMarker);
+
+            if (_scratchPagesTable.TryGetValue(value.PageNumberInDataFile, out var existing) == false)
+            {
+                // page may have been freed, that is expected
+                return; 
+            }
+
+            if (value != existing)
+                return; // transaction scratch page is different
+
+            _scratchPagesTable.Remove(value.PageNumberInDataFile);
         }
     }
 }

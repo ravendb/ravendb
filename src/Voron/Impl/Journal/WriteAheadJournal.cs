@@ -252,7 +252,7 @@ namespace Voron.Impl.Journal
                     }
                     addToInitLog?.Invoke(LogMode.Information, $"Journal {journalNumber} Recovered");
 
-                    _env.UpdateDataPagerState( dataPagerState );
+                    _env.UpdateDataPagerState(dataPagerState);
                 }
                 catch (InvalidJournalException)
                 {
@@ -482,6 +482,7 @@ namespace Voron.Impl.Journal
                     if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out PagePosition value))
                     {
                         var (pager, state) = _env.ScratchBufferPool.GetScratchBufferFile(value.ScratchNumber).File.GetPagerAndState();
+                        tx.RegisterPagerState(state);
                         var page = new Page(
                             pager.AcquirePagePointerWithOverflowHandling(state, ref tx.PagerTransactionState, value.ScratchPage)
                         );
@@ -502,7 +503,7 @@ namespace Voron.Impl.Journal
                 if (files[i].PageTranslationTable.TryGetValue(tx, pageNumber, out PagePosition value))
                 {
                     var (pager, state) = _env.ScratchBufferPool.GetScratchBufferFile(value.ScratchNumber).File.GetPagerAndState();
-                    
+                    tx.RegisterPagerState(state);
                     var page = new Page(
                         pager.AcquirePagePointerWithOverflowHandling(state, ref tx.PagerTransactionState, value.ScratchPage)
                         );
