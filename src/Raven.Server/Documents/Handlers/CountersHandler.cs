@@ -594,13 +594,13 @@ namespace Raven.Server.Documents.Handlers
 
                 _legacyDictionary?.Clear();
 
+                _builder?.Dispose();
+                _metadataModifier?.Dispose();
+
                 _resetContext?.Dispose();
                 _resetContext = null;
 
                 _result.Counters.ErroredCount += ErrorCount;
-
-                _builder?.Dispose();
-                _metadataModifier?.Dispose();
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
