@@ -336,6 +336,9 @@ public class AutoToStaticIndexConverter
 
                 foreach (var f in fieldNames)
                 {
+                    if (f.IsConstant)
+                        continue;
+
                     sb.AppendLine($"public object {f.FieldName} {{ get; set; }}");
                 }
             }
@@ -557,8 +560,12 @@ public class AutoToStaticIndexConverter
             foreach (var kvp in autoIndex.GroupByFields)
             {
                 var fieldNames = GenerateFieldName(kvp.Key, kvp.Value.Indexing);
+
                 foreach (var f in fieldNames)
                 {
+                    if (f.IsConstant)
+                        continue;
+
                     if (f.FieldName.Contains("[]"))
                         throw new NotSupportedException($"Invalid field name '{f.FieldName}'.");
 
@@ -574,7 +581,7 @@ public class AutoToStaticIndexConverter
     {
         sb
             .AppendLine("from result in results")
-            .AppendLine($"group result by new {{ {GenerateGroupBy(autoIndex)} }} into g")
+            .AppendLine($"group result by {GenerateGroupBy(autoIndex)} into g")
             .AppendLine("select new")
             .AppendLine("{");
 
@@ -608,12 +615,15 @@ public class AutoToStaticIndexConverter
 
         foreach (var kvp in autoIndex.GroupByFields)
         {
-            var groupByField = GenerateFieldName(kvp.Key, AutoFieldIndexing.Default).Single().FieldName;
+            var groupByField = GenerateFieldName(kvp.Key, AutoFieldIndexing.Default).Single();
             var fieldNames = GenerateFieldName(kvp.Key, kvp.Value.Indexing);
 
             foreach (var f in fieldNames)
             {
-                var fieldPath = $"g.Key.{groupByField}";
+                if (f.IsConstant)
+                    continue;
+
+                var fieldPath = $"g.Key.{groupByField.FieldName}";
 
                 sb.AppendLine($"{f.FieldName} = {fieldPath},");
             }
@@ -625,42 +635,78 @@ public class AutoToStaticIndexConverter
 
         static string GenerateGroupBy(AutoIndexDefinition autoIndex)
         {
-            return string.Join(", ", autoIndex.GroupByFieldNames.Select(x => "result." + GenerateFieldName(x, indexing: null).Single().FieldName));
+            var seenConst = false;
+            var sb = new StringBuilder();
+            foreach (var fieldName in autoIndex.GroupByFieldNames)
+            {
+                if (sb.Length > 0)
+                    sb.Append(", ");
+
+                var f = GenerateFieldName(fieldName, indexing: null).Single();
+                if (f.IsConstant)
+                {
+                    sb.Append(f.FieldName);
+                    seenConst = true;
+                }
+                else
+                {
+                    if (seenConst)
+                        throw new InvalidOperationException("Cannot generate complex group by because const was encountered.");
+
+                    sb
+                        .Append("result.")
+                        .Append(f.FieldName);
+                }
+            }
+
+            if (seenConst)
+                return sb.ToString();
+
+            return $"new {{ {sb} }}";
         }
     }
 
-    private static IEnumerable<(string FieldName, AutoFieldIndexing Indexing)> GenerateFieldName(string name, AutoFieldIndexing? indexing)
+    private static IEnumerable<(string FieldName, AutoFieldIndexing Indexing, bool IsConstant)> GenerateFieldName(string name, AutoFieldIndexing? indexing)
     {
         name = name
             .Replace("@", "")
             .Replace("-", "_")
             .Replace(".", "_");
 
+        if (name == "null")
+            throw new NotSupportedException("Field name 'null' is not supported.");
+
+        if (int.TryParse(name, out _)) // const
+        {
+            yield return (name, AutoFieldIndexing.Default, true);
+            yield break;
+        }
+
         if (indexing.HasValue == false)
         {
-            yield return (name, AutoFieldIndexing.Default);
+            yield return (name, AutoFieldIndexing.Default, false);
             yield break;
         }
 
         if (indexing.Value == AutoFieldIndexing.No)
         {
-            yield return (name, AutoFieldIndexing.No);
+            yield return (name, AutoFieldIndexing.No, false);
             yield break;
         }
 
         if (indexing.Value.HasFlag(AutoFieldIndexing.Default))
-            yield return (name, AutoFieldIndexing.Default);
+            yield return (name, AutoFieldIndexing.Default, false);
 
         if (indexing.Value.HasFlag(AutoFieldIndexing.Search))
         {
             if (indexing.Value.HasFlag(AutoFieldIndexing.Highlighting))
-                yield return ($"{name}_Search", AutoFieldIndexing.Search | AutoFieldIndexing.Highlighting);
+                yield return ($"{name}_Search", AutoFieldIndexing.Search | AutoFieldIndexing.Highlighting, false);
             else
-                yield return ($"{name}_Search", AutoFieldIndexing.Search);
+                yield return ($"{name}_Search", AutoFieldIndexing.Search, false);
         }
 
         if (indexing.Value.HasFlag(AutoFieldIndexing.Exact))
-            yield return ($"{name}_Exact", AutoFieldIndexing.Exact);
+            yield return ($"{name}_Exact", AutoFieldIndexing.Exact, false);
     }
 
     public class AutoIndexConversionContext
