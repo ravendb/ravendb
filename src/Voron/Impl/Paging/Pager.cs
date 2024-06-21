@@ -179,8 +179,6 @@ public unsafe partial class Pager2 : IDisposable
         return _functions.EnsureMapped(this, state, ref txState, page, numberOfPages);
     }
 
-
-
     public struct PageIterator : IEnumerator<long>
     {
         private readonly long _startPage;

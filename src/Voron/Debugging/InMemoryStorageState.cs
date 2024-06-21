@@ -7,8 +7,6 @@ namespace Voron.Debugging
     {
         public long CurrentReadTransactionId { get; set; }
 
-        public long NextWriteTransactionId { get; set; }
-
         public long PossibleOldestReadTransaction { get; set; }
 
         public List<ActiveTransaction> ActiveTransactions { get; set; }

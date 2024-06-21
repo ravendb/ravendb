@@ -496,7 +496,7 @@ namespace Voron.Impl.Journal
             }
 
             // write transactions can read directly from journals that they got when they started up
-            var files = tx.JournalFiles;
+            var files = tx._journalFiles;
             for (var i = files.Count - 1; i >= 0; i--)
             {
                 if (files[i].PageTranslationTable.TryGetValue(tx, pageNumber, out PagePosition value))
@@ -532,7 +532,7 @@ namespace Voron.Impl.Journal
             }
 
             // write transactions can read directly from journals that they got when they started up
-            var files = tx.JournalFiles;
+            var files = tx._journalFiles;
             for (var i = files.Count - 1; i >= 0; i--)
             {
                 if (files[i].PageTranslationTable.TryGetValue(tx, pageNumber, out _))
@@ -1652,7 +1652,7 @@ namespace Voron.Impl.Journal
                     throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile?.Number ?? -1, _lastFlushed.JournalId));
 
 
-                if (_waj._env.NextWriteTransactionId - 1 != logInfo.LastSyncedTransactionId)
+                if (_waj._env.CurrentReadTransactionId < logInfo.LastSyncedTransactionId)
                     throw new InvalidOperationException("Cannot delete current journal because it hasn't synced everything up to the last write transaction");
 
                 _waj._files = _waj._files.RemoveFront(1);
@@ -1782,11 +1782,9 @@ namespace Voron.Impl.Journal
             var write = txPageInfoPtr + sizeOfPagesHeader;
             var pageSequentialNumber = 0;
             var pagesEncountered = 0;
-            var scratchBufferPool = tx.Environment.ScratchBufferPool;
             foreach (var txPage in txPages)
             {
-                var (scratchPager, scratchState) = scratchBufferPool.GetScratchBufferFile(txPage.ScratchFileNumber).File.GetPagerAndState();
-                var scratchPage =scratchPager.AcquirePagePointerWithOverflowHandling(scratchState, ref tx.PagerTransactionState, txPage.PositionInScratchBuffer);
+                var scratchPage =txPage.Page.Pointer;
                 var pageHeader = (PageHeader*)scratchPage;
 
                 // When encryption is off, we do validation by checksum
@@ -1797,7 +1795,6 @@ namespace Voron.Impl.Journal
 
                 ref TransactionHeaderPageInfo transactionHeaderPageInfo = ref pagesInfo[pageSequentialNumber];
                 transactionHeaderPageInfo.PageNumber = pageHeader->PageNumber;
-                txPage.ScratchPageNumber = pageHeader->PageNumber;
 
                 *(long*)write = pageHeader->PageNumber;
                 write += sizeof(long);
@@ -1809,9 +1806,9 @@ namespace Voron.Impl.Journal
                     int diffPageSize = txPage.NumberOfPages * Constants.Storage.PageSize;
                     pagesEncountered += txPage.NumberOfPages;
                     Debug.Assert(pagesEncountered <= pagesCountIncludingAllOverflowPages);
-                    if (txPage.PreviousVersion != null)
+                    if (txPage.PreviousVersion.IsValid)
                     {
-                        _diffPage.ComputeDiff(txPage.PreviousVersion.Value.Pointer, scratchPage, diffPageSize);
+                        _diffPage.ComputeDiff(txPage.PreviousVersion.Pointer, scratchPage, diffPageSize);
                     }
                     else
                     {
@@ -1820,7 +1817,7 @@ namespace Voron.Impl.Journal
 
                     write += _diffPage.OutputSize;
                     transactionHeaderPageInfo.Size = _diffPage.OutputSize == 0 ? 0 : diffPageSize;
-                    transactionHeaderPageInfo.IsNewDiff = txPage.PreviousVersion == null;
+                    transactionHeaderPageInfo.IsNewDiff = txPage.PreviousVersion.IsValid == false;
                     transactionHeaderPageInfo.DiffSize = _diffPage.IsDiff ? _diffPage.OutputSize : 0;
                     Debug.Assert(Math.Max(transactionHeaderPageInfo.Size, transactionHeaderPageInfo.DiffSize) <= diffPageSize);
                 }
@@ -1951,7 +1948,7 @@ namespace Voron.Impl.Journal
             return prepareToWriteToJournal;
         }
 
-        private static int _pagesIn1Mb = Constants.Size.Megabyte / Constants.Storage.PageSize;
+        private const int PagesIn1Mb = Constants.Size.Megabyte / Constants.Storage.PageSize;
 
         /// <summary>
         /// The idea of this function is to calculate page sizes that will cause less fragmentation in 32 bit mode
@@ -1969,7 +1966,7 @@ namespace Voron.Impl.Journal
             }
             else
             {
-                pagesRequired = pagesRequired - pagesRequired % _pagesIn1Mb + _pagesIn1Mb;
+                pagesRequired = pagesRequired - pagesRequired % PagesIn1Mb + PagesIn1Mb;
             }
 
             return pagesRequired;

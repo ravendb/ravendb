@@ -21,19 +21,21 @@ namespace FastTests.Voron.ScratchBuffer
             var handle = NativeMemory.AllocateMemory(numberOfPages * Constants.Storage.PageSize);
 
 
-            using (var env = StorageEnvironmentOptions.CreateMemoryOnly())
+            using (var options = StorageEnvironmentOptions.CreateMemoryOnly())
+            using(var env = new StorageEnvironment(options))
             {
-                var (pager, state) = env.CreateScratchPager("temp", 65*1024);
+                var (pager, state) = options.CreateScratchPager("temp", 65*1024);
                 using var _ = pager;
                 using (var file = new ScratchBufferFile(pager, state, 0))
+                using(var tx = env.WriteTransaction())
                 {
                     Assert.False(file.HasActivelyUsedBytes(2));
-
-                    file.Allocate(null, 1, 1);
-                    file.Allocate(null, 1, 1);
-                    file.Allocate(null, 1, 1);
-                    file.Allocate(null, 1, 1);
-                    file.Allocate(null, 1, 1);
+                    
+                    file.Allocate(tx.LowLevelTransaction, 1, 1);
+                    file.Allocate(tx.LowLevelTransaction, 1, 1);
+                    file.Allocate(tx.LowLevelTransaction, 1, 1);
+                    file.Allocate(tx.LowLevelTransaction, 1, 1);
+                    file.Allocate(tx.LowLevelTransaction, 1, 1);
 
                     file.Free(0, 1);
                     file.Free(1, 3);

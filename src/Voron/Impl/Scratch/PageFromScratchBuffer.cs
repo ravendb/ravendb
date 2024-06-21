@@ -27,39 +27,14 @@ namespace Voron.Impl.Scratch
     }
 
 
-    public sealed class PageFromScratchBuffer
+    public sealed record PageFromScratchBuffer(
+        long PositionInScratchBuffer,
+        Page Page,
+        int NumberOfPages,
+        int ScratchFileNumber,
+        int Size
+    )
     {
-        public readonly int ScratchFileNumber;
-        public readonly long PositionInScratchBuffer;
-        public readonly long Size;
-        public readonly int NumberOfPages;
-        public Page? PreviousVersion;
-        public long ScratchPageNumber;
-
-        public PageFromScratchBuffer( int scratchFileNumber, long positionInScratchBuffer, long size, int numberOfPages )
-        {
-            this.ScratchFileNumber = scratchFileNumber;
-            this.PositionInScratchBuffer = positionInScratchBuffer;
-            this.Size = size;
-            this.NumberOfPages = numberOfPages;
-            this.ScratchPageNumber = -1;
-        }
-
-
-        public override bool Equals(object obj)
-        {
-            return PageFromScratchBufferEqualityComparer.Instance.Equals(this, obj as PageFromScratchBuffer);
-        }
-
-        public override int GetHashCode()
-        {
-            return PageFromScratchBufferEqualityComparer.Instance.GetHashCode(this);
-        }
-
-        public override string ToString()
-        {
-            return
-                $"PositionInScratchBuffer: {PositionInScratchBuffer}, ScratchFileNumber: {ScratchFileNumber},  Size: {Size}, NumberOfPages: {NumberOfPages}";
-        }
+        public Page PreviousVersion = new();
     }
 }
