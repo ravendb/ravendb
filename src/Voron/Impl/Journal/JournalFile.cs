@@ -19,33 +19,12 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl.Journal
 {
-    public sealed unsafe class JournalFile : IDisposable
+    public sealed unsafe class JournalFile(StorageEnvironment env, JournalWriter journalWriter, long journalNumber) : IDisposable
     {
-        private readonly StorageEnvironment _env;
-        private JournalWriter _journalWriter;
-        private long _writePosIn4Kb;
+        private long _writePosIn4Kb = 0;
+        public long LastTransactionId;
 
-        internal List<TransactionHeader> _transactionHeaders;
-
-        private readonly PageTable _pageTranslationTable = new PageTable();
-
-        private readonly HashSet<PagePosition> _unusedPagesHashSetPool = new HashSet<PagePosition>();
-
-        private readonly FastList<PagePosition> _unusedPages;
-        private readonly ContentionLoggingLocker _locker2;
-        private readonly Logger _logger;
-
-        public JournalFile(StorageEnvironment env, JournalWriter journalWriter, long journalNumber)
-        {
-            Number = journalNumber;
-            _env = env;
-            _transactionHeaders = new List<TransactionHeader>();
-            _journalWriter = journalWriter;
-            _writePosIn4Kb = 0;
-            _unusedPages = new FastList<PagePosition>();
-            _logger = LoggingSource.Instance.GetLogger<JournalFile>(JournalWriter.FileName.FullPath);
-            _locker2 = new ContentionLoggingLocker(_logger, JournalWriter.FileName.FullPath);
-        }
+        internal List<TransactionHeader> _transactionHeaders = new();
 
         public override string ToString()
         {
@@ -54,20 +33,18 @@ namespace Voron.Impl.Journal
 
         internal long WritePosIn4KbPosition => Interlocked.Read(ref _writePosIn4Kb);
 
-        public long Number { get; }
+        public long Number { get; } = journalNumber;
 
 
-        public long Available4Kbs => _journalWriter?.NumberOfAllocated4Kb - _writePosIn4Kb ?? 0;
+        public long Available4Kbs => journalWriter?.NumberOfAllocated4Kb - _writePosIn4Kb ?? 0;
 
-        public Size JournalSize => new Size(_journalWriter?.NumberOfAllocated4Kb * 4 ?? 0, SizeUnit.Kilobytes); 
+        public Size JournalSize => new Size(journalWriter?.NumberOfAllocated4Kb * 4 ?? 0, SizeUnit.Kilobytes); 
         
-        internal JournalWriter JournalWriter => _journalWriter;
-
-        public PageTable PageTranslationTable => _pageTranslationTable;
+        internal JournalWriter JournalWriter => journalWriter;
 
         public void Release()
         {
-            if (_journalWriter?.Release() != true)
+            if (journalWriter?.Release() != true)
                 return;
 
             Dispose();
@@ -75,30 +52,24 @@ namespace Voron.Impl.Journal
 
         public void AddRef()
         {
-            _journalWriter?.AddRef();
+            journalWriter?.AddRef();
         }
 
         public void Dispose()
         {
             _transactionHeaders = null;
-            _unusedPagesHashSetPool.Clear();
-            _unusedPages.Clear();
-            _pageTranslationTable.Clear();
-            _journalWriter = null;
+            journalWriter = null;
         }
 
         public JournalSnapshot GetSnapshot()
         {
-            var lastTxId = _pageTranslationTable.GetLastSeenTransactionId();
-
             return new JournalSnapshot
             {
                 FileInstance = this,
                 Number = Number,
                 Available4Kbs = Available4Kbs,
                 WritePosIn4KbPosition = WritePosIn4KbPosition,
-                PageTranslationTable = _pageTranslationTable,
-                LastTransaction = lastTxId
+                LastTransaction = LastTransactionId
             };
         }
 
@@ -172,202 +143,56 @@ namespace Voron.Impl.Journal
         /// </summary>
         public UpdatePageTranslationTableAndUnusedPagesAction Write(LowLevelTransaction tx, CompressedPagesResult pages)
         {
-            var ptt = new Dictionary<long, PagePosition>();
             var cur4KbPos = _writePosIn4Kb;
 
             Debug.Assert(pages.NumberOf4Kbs > 0);
 
-            UpdatePageTranslationTable(tx, _unusedPagesHashSetPool, ptt);
-
             try
             {
                 Write(cur4KbPos, pages.Base, pages.NumberOf4Kbs);
+                LastTransactionId = tx.Id;
             }
             catch (Exception e)
             {
-                _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+                env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
                 throw;
             }
 
-            return new UpdatePageTranslationTableAndUnusedPagesAction(this, tx, ptt, pages.NumberOf4Kbs);
-        }
-
-        private void UpdatePageTranslationTable(LowLevelTransaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
-        {
-            // REVIEW: This number do not grow easily. There is no way we can go higher than int.MaxValue
-            //         Make sure that we upgrade later upwards so journal numbers are always ints.
-            long journalNumber = Number;
-
-            foreach (var freedPageNumber in tx.GetFreedPagesNumbers())
-            {
-                // set freed page marker - note it can be overwritten below by later allocation
-
-                ptt[freedPageNumber] = new PagePosition(-1, tx.Id, journalNumber, -1, true);
-            }
-
-            var txPages = tx.GetTransactionPages();
-            foreach (var txPage in txPages)
-            {
-                long pageNumber = txPage.Page.PageNumber;
-                Debug.Assert(pageNumber >= 0);
-                if (_pageTranslationTable.TryGetValue(tx, pageNumber, out PagePosition value))
-                {
-                    value.UnusedInPTT = true;
-                    unused.Add(value);
-                }
-
-                if (ptt.TryGetValue(pageNumber, out PagePosition pagePosition) && pagePosition.IsFreedPageMarker == false)
-                {
-                    unused.Add(pagePosition);
-                }
-
-                ptt[pageNumber] = new PagePosition(txPage.PositionInScratchBuffer, tx.Id, journalNumber, txPage.ScratchFileNumber);
-            }
-
-            foreach (var freedPage in tx.GetUnusedScratchPages())
-            {
-                unused.Add(new PagePosition(freedPage.PositionInScratchBuffer, tx.Id, journalNumber, freedPage.ScratchFileNumber));
-            }
+            return new UpdatePageTranslationTableAndUnusedPagesAction(this, pages.NumberOf4Kbs);
         }
 
         public void InitFrom(JournalReader journalReader, List<TransactionHeader> transactionHeaders)
         {
             _writePosIn4Kb = journalReader.Next4Kb;
-            _transactionHeaders = new List<TransactionHeader>(transactionHeaders);
+            _transactionHeaders = [..transactionHeaders];
         }
 
         public bool DeleteOnClose
         {
             set
             {
-                var writer = _journalWriter;
+                var writer = journalWriter;
 
                 if (writer != null)
                     writer.DeleteOnClose = value;
             }
         }
 
-
-        private static readonly ObjectPool<FastList<PagePosition>, FastList<PagePosition>.ResetBehavior> _scratchPagesPositionsPool = new ObjectPool<FastList<PagePosition>, FastList<PagePosition>.ResetBehavior>(() => new FastList<PagePosition>(), 10);
-
-        public void FreeScratchPagesOlderThan(LowLevelTransaction tx, long lastSyncedTransactionId)
+        public readonly struct UpdatePageTranslationTableAndUnusedPagesAction(
+            JournalFile parent,
+            int numberOfWritten4Kbs)
         {
-            var unusedPages = _scratchPagesPositionsPool.Allocate();
-            var unusedAndFree = _scratchPagesPositionsPool.Allocate();
-
-            using (_locker2.Lock())
+            public void ExecuteAfterCommit(LowLevelTransaction tx)
             {
-                int count = _unusedPages.Count;
-                int originalCount = count;
+                Debug.Assert(tx.Committed);
 
-                for (int i = 0; i < count; i++)
-                {
-                    var page = _unusedPages[i];
-                    if (page.TransactionId <= lastSyncedTransactionId)
-                    {
-                        unusedAndFree.Add(page);
-
-                        count--;
-
-                        if (i < count)
-                            _unusedPages[i] = _unusedPages[count];
-
-                        _unusedPages.RemoveAt(count);
-
-                        i--;
-                    }
-                }
-
-                // This must hold true, if not we have leakage of memory and disk.
-                Debug.Assert(_unusedPages.Count + unusedAndFree.Count == originalCount);
-
-                _pageTranslationTable.RemoveKeysWhereAllPagesOlderThan(lastSyncedTransactionId, unusedPages);
-            }
-
-            // use current write tx id to prevent from overriding a scratch page by write tx 
-            // while there might be old read tx looking at it by using PTT from the journal snapshot
-            var availableForAllocationAfterTx = tx.Id;
-
-            int length = unusedPages.Count;
-            for (int i = 0; i < length; i++)
-            {
-                var page = unusedPages[i];
-
-                if (page.IsFreedPageMarker)
-                    continue;
-
-                if (page.UnusedInPTT) // to prevent freeing a page that was already freed as unused and free
-                {
-                    // the page could be either freed in the current run, then just skip it to avoid freeing an unallocated page, or
-                    // it could be released in an earlier run, but it still resided in PTT because a under a relevant page number of PTT 
-                    // there were overwrites by newer transactions (> lastSyncedTransactionId) and we didn't remove it from there
-                    continue;
-                }
-
-                unusedAndFree.Add(page);
-            }
-
-            length = unusedAndFree.Count;
-
-            int totalFreed = 0;
-
-            for (int i = 0; i < length; i++)
-            {
-                var unusedPage = unusedAndFree[i];
-                if (unusedPage.IsFreedPageMarker)
-                    continue;
-
-                _env.ScratchBufferPool.Free(tx, unusedPage.ScratchNumber, unusedPage.ScratchPage, availableForAllocationAfterTx);
-
-                totalFreed++;
-            }
-
-            if (_logger.IsInfoEnabled)
-            {
-                _logger.Info($"Freed {totalFreed} scratch pages used by journal that will be available after transaction {availableForAllocationAfterTx}. There were {unusedPages.Count} unused pages and {unusedAndFree.Count} unused and free.");
-            }
-
-            _scratchPagesPositionsPool.Free(unusedPages);
-            _scratchPagesPositionsPool.Free(unusedAndFree);
-        }
-
-        public struct UpdatePageTranslationTableAndUnusedPagesAction
-        {
-            private readonly JournalFile _parent;
-            private readonly LowLevelTransaction _tx;
-            private readonly Dictionary<long, PagePosition> _ptt;
-            private readonly int _numberOfWritten4Kbs;
-
-            public UpdatePageTranslationTableAndUnusedPagesAction(JournalFile parent, LowLevelTransaction tx, Dictionary<long, PagePosition> ptt, int numberOfWritten4Kbs)
-            {
-                _parent = parent;
-                _tx = tx;
-                _ptt = ptt;
-                _numberOfWritten4Kbs = numberOfWritten4Kbs;
-            }
-
-            public void ExecuteAfterCommit()
-            {
-                Debug.Assert(_tx.Committed);
-
-                using (_parent._locker2.Lock())
-                {
-                    Debug.Assert(!_parent._unusedPages.Any(_parent._unusedPagesHashSetPool.Contains)); // We ensure there cannot be duplicates here (disjoint sets). 
-
-                    foreach (var item in _parent._unusedPagesHashSetPool)
-                        _parent._unusedPages.Add(item);
-
-                    _parent._pageTranslationTable.SetItems(_tx, _ptt);
-                    // it is important that the last write position will be set
-                    // _after_ the PTT update, because a flush that is concurrent 
-                    // with the write will first get the WritePosIn4KB and then 
-                    // do the flush based on the PTT. Worst case, we'll flush 
-                    // more then we need, but won't get into a position where we
-                    // think we flushed, and then realize that we didn't.
-                    Interlocked.Add(ref _parent._writePosIn4Kb, _numberOfWritten4Kbs);
-                }
-
-                _parent._unusedPagesHashSetPool.Clear();
+                // it is important that the last write position will be set
+                // _after_ the PTT update, because a flush that is concurrent 
+                // with the write will first get the WritePosIn4KB and then 
+                // do the flush based on the PTT. Worst case, we'll flush 
+                // more then we need, but won't get into a position where we
+                // think we flushed, and then realize that we didn't.
+                Interlocked.Add(ref parent._writePosIn4Kb, numberOfWritten4Kbs);
             }
         }
     }

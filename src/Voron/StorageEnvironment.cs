@@ -1,5 +1,6 @@
 using Sparrow;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -147,10 +148,11 @@ namespace Voron
                 TimeToSyncAfterFlushInSec = options.TimeToSyncAfterFlushInSec;
 
                 _currentStateRecordRecord = new EnvironmentStateRecord(
-                    dataPagerState, 
-                    0, 
-                    FrozenSet<Pager2.State>.Empty, 
-                    FrozenDictionary<long, PageFromScratchBuffer>.Empty);
+                    dataPagerState,
+                    0,
+                    FrozenSet<Pager2.State>.Empty,
+                    FrozenDictionary<long, PageFromScratchBuffer>.Empty,
+                    0);
                 
                 _lastValidPageAfterLoad = dataPagerState.NumberOfAllocatedPages;
                 Debug.Assert(_lastValidPageAfterLoad != 0);
@@ -933,7 +935,7 @@ namespace Voron
 
             if (ActiveTransactions.Contains(tx) == false)
             {
-                if (tx.Committed && tx.FlushedToJournal)
+                if (tx.Committed && tx.FlushedToJournal >= 0)
                     ThrowCommittedAndFlushedTransactionNotFoundInActiveOnes(tx);
 
                 return;
@@ -941,7 +943,7 @@ namespace Voron
 
             using (PreventNewTransactions())
             {
-                if (tx.Committed && tx.FlushedToJournal)
+                if (tx.Committed && tx.FlushedToJournal >= 0)
                 {
                     UpdateStateOnCommit(tx);
                 }
@@ -964,10 +966,9 @@ namespace Voron
                 if (tx.Flags != (TransactionFlags.ReadWrite))
                     return;
 
-                if (tx.FlushedToJournal)
+                if (tx.FlushedToJournal >= 0)
                 {
                     var totalPages = 0;
-                    // ReSharper disable once LoopCanBeConvertedToQuery
                     foreach (var page in tx.GetTransactionPages())
                     {
                         totalPages += page.NumberOfPages;
@@ -1443,7 +1444,6 @@ namespace Voron
                     ShouldFlush = Journal.Applicator.ShouldFlush,
                     LastFlushedTransactionId = Journal.Applicator.LastFlushedJournalId,
                     LastFlushedJournalId = Journal.Applicator.LastFlushedJournalId,
-                    LastTransactionIdUsedToReleaseScratches = Journal.Applicator.LastTransactionIdUsedToReleaseScratches,
                     JournalsToDelete = Journal.Applicator.JournalsToDelete.Select(x => x.Number).ToList()
                 },
                 SyncState = new InMemoryStorageState.SyncStateDetails
@@ -1675,6 +1675,7 @@ namespace Voron
 
         internal TestingStuff _forTestingPurposes;
         private EnvironmentStateRecord _currentStateRecordRecord;
+        private ConcurrentQueue<EnvironmentStateRecord> _transactionsToFlush = new();
 
         public EnvironmentStateRecord CurrentStateRecord => _currentStateRecordRecord;
 
@@ -1727,6 +1728,7 @@ namespace Voron
         {
             var pagerStates = tx.GetReferencedPagerStates();
             var pagesInScratch = tx.GetPagesInScratch();
+            // ensure that we have disjointed sets and not a case of both free & used at once
             long transactionId = tx.Id;
             while (true)
             {
@@ -1736,10 +1738,31 @@ namespace Voron
                 {
                     TransactionId = transactionId,
                     StatesStrongRefs = pagerStates,
-                    ScratchPagesTable = pagesInScratch
+                    ScratchPagesTable = pagesInScratch,
+                    FlushedToJournal = tx.FlushedToJournal
                 };
                 if (Interlocked.CompareExchange(ref _currentStateRecordRecord, updatedState, currentState) == currentState)
+                {
+                    _transactionsToFlush.Enqueue(updatedState);
                     break;
+                }
+            }
+        }
+
+        public bool GetLatestTransactionToFlush(long uptoTxId, out EnvironmentStateRecord record)
+        {
+            record = default;
+            bool found = false;
+            while (true)
+            {
+                if (_transactionsToFlush.TryPeek(out var maybe) == false || 
+                    maybe.TransactionId >= uptoTxId)
+                    return found;
+                if (_transactionsToFlush.TryDequeue(out record) == false)
+                    throw new InvalidOperationException("Failed to get transaction to flush after already peeked successfully");
+                // single thread is reading from this, so we can be sure that peek + take gets the same value
+                Debug.Assert(ReferenceEquals(record, maybe));
+                found = true;
             }
         }
     }

@@ -24,8 +24,6 @@ namespace Voron.Debugging
 
             public long LastFlushedJournalId { get; set; }
 
-            public long LastTransactionIdUsedToReleaseScratches { get; set; }
-
             public bool ShouldFlush { get; set; }
 
             public List<long> JournalsToDelete { get; set; }
