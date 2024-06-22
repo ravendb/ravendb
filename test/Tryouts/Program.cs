@@ -10,6 +10,8 @@ using Xunit;
 using FastTests.Voron.Util;
 using FastTests.Sparrow;
 using FastTests.Voron.FixedSize;
+using FastTests.Client.Indexing;
+using FastTests;
 
 namespace Tryouts;
 
@@ -31,11 +33,11 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new FixedSizeBugs(testOutputHelper))
+                using (var test = new JavaScriptIndexTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
                     //test.CanRoundTripSmallContainer("GreaterThan42B");
-                    test.CanAddDuplicate();
+                    test.CanIndexMapWithFanout(options: RavenTestBase.Options.ForSearchEngine(RavenSearchEngineMode.Corax));
                 }
             }
             catch (Exception e)

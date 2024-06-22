@@ -28,6 +28,7 @@ namespace Voron.Impl.Scratch
 
 
     public sealed record PageFromScratchBuffer(
+        long AllocatedInTransactionId,
         long PositionInScratchBuffer,
         long PageNumberInDataFile,
         Page Page,

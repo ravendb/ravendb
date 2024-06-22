@@ -66,8 +66,13 @@ namespace Voron.Impl
 #endif
             public readonly TableValueBuilder TableValueBuilder = new();
 
-            public readonly Dictionary<long, PageFromScratchBuffer> ScratchPagesInUse = new ();
             public readonly HashSet<long> DirtyPagesPool = new ();
+            
+
+            // These two are not just about pooling memory, but about actually holding
+            // on to the values _across_ transactions
+            public readonly Dictionary<long, PageFromScratchBuffer> ScratchPagesInUse = new ();
+            public HashSet<Pager2.State> UsedPagerStates = new();
 
             public void Reset()
             {
@@ -76,6 +81,14 @@ namespace Voron.Impl
                 // transactions.
                 
                 // -- ScratchPagesInUse.Clear(); --
+                
+                // We are _explicitly_ not clearing this, we rely on the 
+                // state here to ensure correct references to all the 
+                // states for the pages held by ScratchPagesInUse
+
+                // -- UsedPagerStates.Clear(); --
+                
+                
                 DirtyPagesPool.Clear();
                 TableValueBuilder.Reset();
             }
@@ -85,8 +98,9 @@ namespace Voron.Impl
         private readonly HashSet<long> _dirtyPages;
         private readonly Stack<long> _pagesToFreeOnCommit;
         private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable;
-        private readonly HashSet<Pager2.State> _usedPagerStates;
+        private HashSet<Pager2.State> _usedPagerStates;
         // END: Structures that are safe to pool.
+        
 
         public event Action<LowLevelTransaction> BeforeCommitFinalization;
 
@@ -296,7 +310,7 @@ namespace Voron.Impl
             _env.WriteTransactionPool.Reset();
             _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesInUse;
             _dirtyPages = _env.WriteTransactionPool.DirtyPagesPool;
-            _usedPagerStates = new HashSet<Pager2.State>();
+            _usedPagerStates = env.WriteTransactionPool.UsedPagerStates;
             _freedPages = new HashSet<long>();
             _unusedScratchPages = new List<PageFromScratchBuffer>();
             _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
@@ -1110,12 +1124,12 @@ namespace Voron.Impl
 
             foreach (var pageFromScratch in _transactionPages)
             {
-                _env.ScratchBufferPool.Free(this, pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, null);
+                _env.ScratchBufferPool.Free(this, pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer);
             }
 
             foreach (var pageFromScratch in _unusedScratchPages)
             {
-                _env.ScratchBufferPool.Free(this, pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, null);
+                _env.ScratchBufferPool.Free(this, pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer);
             }
 
             using (_env.PreventNewTransactions())
@@ -1436,6 +1450,28 @@ namespace Voron.Impl
                 return; // transaction scratch page is different
 
             _scratchPagesTable.Remove(value.PageNumberInDataFile);
+        }
+
+        public void DropPageStatesBefore(long transactionId)
+        {
+            // most often, no changes, so we'll double check to avoid allocations
+            foreach (var maybe in _usedPagerStates)
+            {
+                if (maybe.SupersededAfterTransactionId < transactionId)
+                {
+                    var updated = new HashSet<Pager2.State>();
+                    foreach (var s in _usedPagerStates)
+                    {
+                        if (s.SupersededAfterTransactionId > transactionId)
+                        {
+                            updated.Add(s);
+                        }
+                    }
+
+                    _usedPagerStates = _env.WriteTransactionPool.UsedPagerStates = updated;
+                    return;
+                }
+            }
         }
     }
 }
