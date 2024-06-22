@@ -306,7 +306,7 @@ public unsafe partial class Pager2 : IDisposable
         _functions.UnprotectPageRange(start, size);
     }
 
-    public void EnsureContinuous(ref State state, long requestedPageNumber, int numberOfPages)
+    public void EnsureContinuous(ref State state, long requestedPageNumber, int numberOfPages, long transactionId)
     {
         if (state.Disposed)
             throw new ObjectDisposedException("PagerState was already disposed");
@@ -326,7 +326,7 @@ public unsafe partial class Pager2 : IDisposable
         if (Options.CopyOnWriteMode && state.Pager.FileName.EndsWith(Constants.DatabaseFilename))
             throw new IncreasingDataFileInCopyOnWriteModeException(state.Pager.FileName, allocationSize);
 
-        _functions.AllocateMorePages(this, allocationSize, ref state);
+        _functions.AllocateMorePages(this, allocationSize, ref state, transactionId);
     }
 
 
@@ -605,8 +605,8 @@ public unsafe partial class Pager2 : IDisposable
         _encryptionBuffersPool.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread, buffer.Generation);
     }
 
-    public void DirectWrite(ref State state, ref PagerTransactionState txState, long posBy4Kbs, int numberOf4Kbs, byte* source)
+    public void DirectWrite(ref State state, ref PagerTransactionState txState, long transactionId, long posBy4Kbs, int numberOf4Kbs, byte* source)
     {
-        _functions.DirectWrite(this,ref state, ref txState, posBy4Kbs, numberOf4Kbs, source);
+        _functions.DirectWrite(this,ref state, ref txState, transactionId, posBy4Kbs, numberOf4Kbs, source);
     }
 }

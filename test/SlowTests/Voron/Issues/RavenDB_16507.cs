@@ -27,7 +27,7 @@ namespace SlowTests.Voron.Issues
 
                 using (testingStuff.CallDuringEnsurePagerStateReference(() =>
                 {
-                    dataFilePager.EnsureContinuous(ref tx.LowLevelTransaction.DataPagerState, 5000, 1);
+                    dataFilePager.EnsureContinuous(ref tx.LowLevelTransaction.DataPagerState, 5000, 1, 0x0ff);
                 }))
                 {
                     // under the covers this was using the pager state that has been disposed by above call dataFilePager.EnsureContinuous(5000, 1);
@@ -49,9 +49,9 @@ namespace SlowTests.Voron.Issues
             {
                 using (var readTx = Env.ReadTransaction())
                 {
-                    tempPager.EnsureContinuous(ref state, 1000, 1);
+                    tempPager.EnsureContinuous(ref state, 1000, 1, 0x0ff);
                     pagerStates.Add(state);
-                    tempPager.EnsureContinuous(ref state, 3000, 1);
+                    tempPager.EnsureContinuous(ref state, 3000, 1, 0x0ff);
                     pagerStates.Add(state);
                 }
             }

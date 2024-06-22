@@ -123,7 +123,7 @@ namespace SlowTests.Voron.Storage
             for (int allocateMorePagesCount = 0; allocateMorePagesCount < 2; allocateMorePagesCount++)
             {
                 pagerSize *= 2;
-                Env.DataPager.EnsureContinuous(ref dataPagerState,0, (int)pagerSize);
+                Env.DataPager.EnsureContinuous(ref dataPagerState,0, (int)pagerSize, 0x0ff);
             }
 
             // var totalAllocationSize = Env.Options.DataPager.PagerState.AllocationInfos.Sum(info => info.Size);

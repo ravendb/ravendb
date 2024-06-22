@@ -139,11 +139,11 @@ namespace Voron.Impl.Scratch
 
         public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, int sizeToAllocate, long pageNumber)
         {
-            _scratchPager.EnsureContinuous(ref _scratchPagerState, _lastUsedPage, sizeToAllocate);
+            _scratchPager.EnsureContinuous(ref _scratchPagerState, _lastUsedPage, sizeToAllocate, tx.Id);
             tx.RegisterPagerState(_scratchPagerState);
             
             var p = _scratchPager.AcquirePagePointer(_scratchPagerState, ref tx.PagerTransactionState, _lastUsedPage);
-            var result = new PageFromScratchBuffer(_lastUsedPage, pageNumber, new Page(p), numberOfPages, _scratchNumber, sizeToAllocate);
+            var result = new PageFromScratchBuffer(tx.Id, _lastUsedPage, pageNumber, new Page(p), numberOfPages, _scratchNumber, sizeToAllocate);
 
             _allocatedPagesCount += numberOfPages;
             _allocatedPages.Add(_lastUsedPage, result);
@@ -172,7 +172,7 @@ namespace Voron.Impl.Scratch
 #endif
 
                 
-                result = new PageFromScratchBuffer(freeAndAvailablePageNumber, pageNumber, new Page(freeAndAvailablePagePointer),
+                result = new PageFromScratchBuffer(tx.Id, freeAndAvailablePageNumber, pageNumber, new Page(freeAndAvailablePagePointer),
                     numberOfPages, _scratchNumber,  size);
 
                 _allocatedPagesCount += numberOfPages;
@@ -200,7 +200,7 @@ namespace Voron.Impl.Scratch
             _scratchPager.UnprotectPageRange(freePageBySizePointer, freePageBySizeSize, true);
 #endif
 
-            result = new PageFromScratchBuffer(val.Page, pageNumber, new Page(freePageBySizePointer),
+            result = new PageFromScratchBuffer(tx.Id, val.Page, pageNumber, new Page(freePageBySizePointer),
                 numberOfPages, _scratchNumber,  size);
 
             _allocatedPagesCount += numberOfPages;
@@ -210,20 +210,11 @@ namespace Voron.Impl.Scratch
 
         public bool HasActivelyUsedBytes(long oldestActiveTransaction)
         {
-            if (_allocatedPagesCount > 0)
-                return true;
-
-            if (oldestActiveTransaction > _txIdAfterWhichLatestFreePagesBecomeAvailable)
-                return false;
-
-            return true;
+            return _allocatedPagesCount > 0 || oldestActiveTransaction <= _txIdAfterWhichLatestFreePagesBecomeAvailable;
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Free(LowLevelTransaction tx, long pageNumber, long? txId)
+        
+        public void Free(LowLevelTransaction tx, long page)
         {
-            long asOfTxId = txId ?? -1;
-
 #if VALIDATE
             // If we have encryption enabled, then VALIDATE calls are handled by the EncryptionBufferPool
             if (Pager.Options.Encryption.IsEnabled == false)
@@ -241,12 +232,7 @@ namespace Voron.Impl.Scratch
                 }
             }
 #endif
-
-            Free(tx, pageNumber, asOfTxId);
-        }
-
-        internal void Free(LowLevelTransaction tx, long page, long asOfTxId)
-        {
+            
             if (_allocatedPages.TryGetValue(page, out PageFromScratchBuffer value) == false)
             {
                 ThrowInvalidFreeOfUnusedPage(page);
@@ -255,41 +241,31 @@ namespace Voron.Impl.Scratch
 
             tx.ForgetAboutScratchPage(value);
             DebugInfo.LastFreeTime = DateTime.UtcNow;
-            DebugInfo.LastAsOfTxIdWhenFree = asOfTxId;
+            // use current write tx id to prevent from overriding a scratch page by write tx 
+            // while there might be old read tx looking at it, so we'll only allocate from it
+            // _after_ all transactions are past the _current_ write transaction
+            DebugInfo.LastAsOfTxIdWhenFree = tx.Id;
 
             _allocatedPagesCount -= value.NumberOfPages;
             _allocatedPages.Remove(page);
 
             Debug.Assert(value.Size > 0);
 
-            if (asOfTxId == -1)
+        
+            // We are freeing with the pages being 'visible' to any party (for ex. commits)
+            if (_freePagesBySize.TryGetValue(value.Size, out LinkedList<PendingPage> list) == false)
             {
-                // We are freeing without the pages being 'visible' to any party (for ex. rollbacks)
-                if (_freePagesBySizeAvailableImmediately.TryGetValue(value.Size, out LinkedList<long> list) == false)
-                {
-                    list = new LinkedList<long>();
-                    _freePagesBySizeAvailableImmediately[value.Size] = list;
-                }
-                list.AddFirst(value.PositionInScratchBuffer);
+                list = new LinkedList<PendingPage>();
+                _freePagesBySize[value.Size] = list;
             }
-            else
+
+            list.AddFirst(new PendingPage
             {
-                // We are freeing with the pages being 'visible' to any party (for ex. commits)
-                if (_freePagesBySize.TryGetValue(value.Size, out LinkedList<PendingPage> list) == false)
-                {
-                    list = new LinkedList<PendingPage>();
-                    _freePagesBySize[value.Size] = list;
-                }
+                Page = value.PositionInScratchBuffer,
+                ValidAfterTransactionId = tx.Id
+            });
 
-                list.AddFirst(new PendingPage
-                {
-                    Page = value.PositionInScratchBuffer,
-                    ValidAfterTransactionId = asOfTxId
-                });
-
-                if (asOfTxId > _txIdAfterWhichLatestFreePagesBecomeAvailable)
-                    _txIdAfterWhichLatestFreePagesBecomeAvailable = asOfTxId;
-            }
+            _txIdAfterWhichLatestFreePagesBecomeAvailable = tx.Id;
         }
 
         [DoesNotReturn]

@@ -134,7 +134,7 @@ public unsafe partial class Pager2
         }
     }
 
-    public struct PagerTransactionState 
+    public struct PagerTransactionState
     {
         public Dictionary<Pager2, TxStateFor32Bits>? For32Bits;
         public Dictionary<Pager2, CryptoTransactionState>? ForCrypto;
@@ -152,10 +152,10 @@ public unsafe partial class Pager2
         /// </summary>
         public TxStateDelegate Sync;
 
-        public delegate void TxStateDelegate(Pager2 pager, State state, ref PagerTransactionState txState);
+        public delegate void TxStateDelegate(Pager2 pager, State state, ref PagerTransactionState txState, long transactionId);
 
-        public void InvokeBeforeCommitFinalization(Pager2 pager, State state, ref PagerTransactionState txState) => OnBeforeCommitFinalization?.Invoke(pager, state, ref txState);
-        public void InvokeDispose(Pager2 pager, State state, ref PagerTransactionState txState) => OnDispose?.Invoke(pager, state, ref txState);
+        public void InvokeBeforeCommitFinalization(Pager2 pager, State state, ref PagerTransactionState txState, long transactionId) => OnBeforeCommitFinalization?.Invoke(pager, state, ref txState, transactionId);
+        public void InvokeDispose(Pager2 pager, State state, ref PagerTransactionState txState, long transactionId) => OnDispose?.Invoke(pager, state, ref txState, transactionId);
 
         public Size GetTotal32BitsMappedSize()
         {
@@ -198,7 +198,7 @@ public unsafe partial class Pager2
             WeakSelf = new WeakReference<State>(this);
         }
 
-        public State Clone()
+        public State Clone(long transactionId)
         {
             State clone = new State(Pager, this)
             {
@@ -207,6 +207,7 @@ public unsafe partial class Pager2
                 Handle = Handle,
                 MemAccess = MemAccess,
                 FileAttributes = FileAttributes,
+                SupersededAfterTransactionId = transactionId
             };
             return clone;
         }
@@ -216,6 +217,7 @@ public unsafe partial class Pager2
         public long NumberOfAllocatedPages;
         public long TotalAllocatedSize;
         public MemoryMappedFile? MemoryMappedFile;
+        public long SupersededAfterTransactionId = long.MaxValue;
 
         public bool Disposed;
 
