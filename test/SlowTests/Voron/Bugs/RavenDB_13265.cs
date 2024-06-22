@@ -30,7 +30,7 @@ namespace SlowTests.Voron.Bugs
                 
                 using (testingStuff.CallDuringEnsurePagerStateReference(() =>
                 {
-                    dataFilePager.EnsureContinuous(ref tx.LowLevelTransaction.DataPagerState,5000, 1);
+                    dataFilePager.EnsureContinuous(ref tx.LowLevelTransaction.DataPagerState,5000, 1, 0x0ff);
                 }))
                 {
                     throw new NotImplementedException();
