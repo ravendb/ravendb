@@ -1,9 +1,27 @@
 #!/bin/bash
 COMMAND="./Raven.Server"
-[ -z "$RAVEN_ServerUrl" ] && export RAVEN_ServerUrl="http://$(hostname):8080"
 
-if [ ! -z "$RAVEN_SETTINGS" ]; then
+if [ -n "$RAVEN_SETTINGS" ]; then
     echo "$RAVEN_SETTINGS" > settings.json
+fi
+
+check_for_certificates() {
+    if grep -q "Server.Certificate.Path" settings.json || \
+       grep -q "Server.Certificate.Load.Exec" settings.json || \
+       [ -n "$RAVEN_Server_Certificate_Path" ] || \
+       [ -n "$RAVEN_Server_Certificate_Load_Exec" ] || \
+       [[ "$RAVEN_ARGS" == *"--Server.Certificate.Path"* ]] || \
+       [[ "$RAVEN_ARGS" == *"--Server.Certificate.Load.Exec"* ]]; then
+        RAVEN_SERVER_SCHEME="https"
+    else
+        RAVEN_SERVER_SCHEME="http"
+    fi
+}
+
+if [ -z "$RAVEN_ServerUrl" ]; then
+    check_for_certificates
+    RAVEN_ServerUrl="${RAVEN_SERVER_SCHEME}://$(hostname):8080"
+    export RAVEN_ServerUrl
 fi
 
 if [ ! -z "$RAVEN_ARGS" ]; then
