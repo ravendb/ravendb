@@ -60,7 +60,7 @@ namespace Voron.Data.BTrees
                 node = _currentPage.Search(_tx, key);
             }
 
-            _cursor = constructor.Build(key);
+            constructor.Build(key, out _cursor);
             _cursor.Pop();
 
             if (node != null)

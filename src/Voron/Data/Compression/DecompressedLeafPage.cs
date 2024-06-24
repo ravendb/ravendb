@@ -113,7 +113,9 @@ namespace Voron.Data.Compression
 
                     Search(tx, key);
 
-                    using (var cursor = cursorConstructor.Build(key))
+                    // This can cause a double dispose.
+                    using (cursorConstructor)
+                    using (cursorConstructor.Build(key, out var cursor))
                     {
                         cursor.Update(cursor.Pages, this); // we need to use uncompressed page here because it might have some modifications (e.g. deleted node)
 

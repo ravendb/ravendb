@@ -9,17 +9,11 @@ namespace Voron.Data.BTrees
 {
     public sealed class TreeCursor : IDisposable
     {
-        private sealed class TreeCursorState
+        private sealed class TreeCursorState(int pageCapacity, int stackCapacity)
         {
-            public readonly Dictionary<long, TreePage> PageByNum;
-            public readonly FastStack<TreePage> Pages;
-            
-            public TreeCursorState(int pageCapacity, int stackCapacity)
-            {
-                PageByNum = new(pageCapacity);
-                Pages = new(stackCapacity);
-            }
-            
+            public readonly Dictionary<long, TreePage> PageByNum = new(pageCapacity);
+            public readonly FastStack<TreePage> Pages = new(stackCapacity);
+
             public void Clear()
             {
                 PageByNum.Clear();
@@ -27,20 +21,15 @@ namespace Voron.Data.BTrees
             }
         }
         
-        private static readonly ObjectPool<TreeCursorState> _pagesByNumPool = new ObjectPool<TreeCursorState>(() => new TreeCursorState(50, 16));
-        private bool _anyOverrides;
-        private readonly TreeCursorState _state;
+        private static readonly ObjectPool<TreeCursorState> _pagesByNumPool = new(() => new TreeCursorState(50, 16));
+        private TreeCursorState _state = _pagesByNumPool.Allocate();
         public FastStack<TreePage> Pages => _state.Pages;
-
-        public TreeCursor()
-        {
-            _state = _pagesByNumPool.Allocate();
-        }
-
+        
+        private bool _anyOverrides;
+        
         public void Dispose()
         {
             Dispose(true);
-            GC.SuppressFinalize(this);
         }
 
         // The bulk of the clean-up code is implemented in Dispose(bool)
@@ -48,8 +37,13 @@ namespace Voron.Data.BTrees
         {
             if (disposing)
             {
-                _state.Clear();
-                _pagesByNumPool.Free(_state);
+                if (_state == null)
+                    return;
+                
+                var state = _state;
+                _state = null;
+                state.Clear();
+                _pagesByNumPool.Free(state);
             }
         }
 

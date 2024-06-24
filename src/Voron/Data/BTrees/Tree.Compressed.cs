@@ -307,7 +307,7 @@ namespace Voron.Data.BTrees
 
                 RemoveLeafNode(decompressed);
 
-                using (var cursor = cursorConstructor.Build(keyToDelete))
+                using (cursorConstructor.Build(keyToDelete, out var cursor))
                 {
                     var treeRebalancer = new TreeRebalancer(_llt, this, cursor);
                     var changedPage = (TreePage)decompressed;
@@ -338,8 +338,11 @@ namespace Voron.Data.BTrees
             }
             else
             {
-                var page = SearchForPage(key, true, out _, out node, addToRecentlyFoundPages: false);
-
+                var (page, cursor) = SearchForPage(key, true, out node, addToRecentlyFoundPages: false);
+                
+                // PERF: We don't need the cursor at all, returning it to the pool.
+                cursor.Dispose();
+                
                 if (page.IsCompressed)
                 {
                     page = decompressed = DecompressPage(page, DecompressionUsage.Read, skipCache: false);

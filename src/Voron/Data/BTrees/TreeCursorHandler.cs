@@ -1,47 +1,63 @@
-﻿using System;
+﻿#nullable enable
+
+using System;
 using Voron.Impl;
 
 namespace Voron.Data.BTrees
 {
-    public unsafe struct TreeCursorConstructor
+    public readonly unsafe struct TreeCursorConstructor : IDisposable
     {
-        private readonly Tree _tree;
-        private readonly LowLevelTransaction _llt;
-        private readonly long[] _cursorPath;
+        public readonly struct DisposeContext(TreeCursor? context) : IDisposable
+        {
+            private readonly TreeCursor? _context = context;
+
+            public void Dispose()
+            {
+                _context?.Dispose();
+            }
+        }
+        
+        private readonly Tree? _tree;
+        private readonly LowLevelTransaction? _llt;
+        private readonly long[]? _cursorPath;
         private readonly long _lastFoundPageNumber;
-        private readonly TreePage _pageCopy;
-        private readonly TreeCursor _current;
+        private readonly TreePage? _pageCopy;
+        private readonly TreeCursor? _current;
+
+        public TreeCursor? Cursor => _current;
 
         public TreeCursorConstructor(TreeCursor cursor)
         {
-            this._current = cursor;
+            _current = cursor;
 
-            this._llt = null;
-            this._tree = null;
-            this._pageCopy = null;
-            this._cursorPath = null;
-            this._lastFoundPageNumber = 0;
-
+            _llt = null;
+            _tree = null;
+            _pageCopy = null;
+            _cursorPath = null;
+            _lastFoundPageNumber = 0;
         }
 
         public TreeCursorConstructor(LowLevelTransaction llt, Tree tree, TreePage pageCopy, long[] cursorPath, long lastFoundPageNumber)
         {
-            this._llt = llt;
-            this._tree = tree;
-            this._pageCopy = pageCopy;
-            this._cursorPath = cursorPath;
-            this._lastFoundPageNumber = lastFoundPageNumber;
+            _llt = llt;
+            _tree = tree;
+            _pageCopy = pageCopy;
+            _cursorPath = cursorPath;
+            _lastFoundPageNumber = lastFoundPageNumber;
 
-            this._current = null;
+            _current = null;
         }
 
-        public TreeCursor Build(Slice key)
+        public DisposeContext Build(Slice key, out TreeCursor cursor)
         {
             if (_current != null)
-                return _current;
+            {
+                cursor = _current;
+                return new DisposeContext(null);
+            }
 
             var c = new TreeCursor();
-            foreach (var p in _cursorPath)
+            foreach (var p in _cursorPath!)
             {
                 if (p == _lastFoundPageNumber)
                 {
@@ -49,7 +65,7 @@ namespace Voron.Data.BTrees
                 }
                 else
                 {
-                    var cursorPage = _tree.GetReadOnlyTreePage(p);
+                    var cursorPage = _tree!.GetReadOnlyTreePage(p);
                     if (key.Options == SliceOptions.Key)
                     {
                         cursorPage.Search(_llt, key);
@@ -69,7 +85,14 @@ namespace Voron.Data.BTrees
                     c.Push(cursorPage);
                 }
             }
-            return c;
+
+            cursor = c;
+            return new DisposeContext(cursor);
+        }
+
+        public void Dispose()
+        {
+            _current?.Dispose();
         }
     }
 }
