@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Linq;
@@ -29,7 +30,7 @@ public abstract class MetricsBase(MonitoringConfiguration.OpenTelemetryConfigura
         where T : struct
     {
         var observableValue = observeValueFactory.Invoke();
-        RegisterInstrumentForDocumentation(name, observableValue);
+        RegisterInstrumentForDocumentation($"{meter.Value.Name}.{name}", observableValue, overridenDescription: overridenDescription ?? GetDescription(observableValue), instrumentType: InstrumentType.Gauge);
 
         meter.Value.CreateObservableGauge(name: $"{meter.Value.Name}.{name}", observeValue: observableValue.GetCurrentMeasurement,
             description: overridenDescription ?? GetDescription(observableValue));
@@ -41,27 +42,17 @@ public abstract class MetricsBase(MonitoringConfiguration.OpenTelemetryConfigura
         where T : struct
     {
         var observableValue = observeValueFactory.Invoke();
-        RegisterInstrumentForDocumentation(name, observableValue);
+        RegisterInstrumentForDocumentation($"{meter.Value.Name}.{name}", observableValue, InstrumentType.Gauge);
 
         meter.Value.CreateObservableGauge(name: $"{meter.Value.Name}.{name}", observeValue: observableValue.GetCurrentMeasurement, description: GetDescription(observableValue));
     }
-
-    protected void CreateObservableUpDownCounterWithTags<T, TObservable>(string name, Func<TObservable> observeValueFactory, Lazy<Meter> meter)
-        where T : struct
-        where TObservable : ScalarObject, ITaggedMetricInstrument<T>
-    {
-        var observableValue = observeValueFactory.Invoke();
-        RegisterInstrumentForDocumentation(name, observableValue);
-
-        meter.Value.CreateObservableUpDownCounter(name: $"{meter.Value.Name}.{name}", observeValue: observableValue.GetCurrentMeasurement, description: GetDescription(observableValue));
-    }
-
+    
     protected void CreateObservableUpDownCounter<T, TObservable>(string name, Func<TObservable> observeValueFactory, Lazy<Meter> meter)
         where T : struct
         where TObservable : ScalarObject, IMetricInstrument<T>
     {
         var observableValue = observeValueFactory.Invoke();
-        RegisterInstrumentForDocumentation(name, observableValue);
+        RegisterInstrumentForDocumentation($"{meter.Value.Name}.{name}", observableValue, InstrumentType.UpDownCounter);
 
         meter.Value.CreateObservableUpDownCounter(name: $"{meter.Value.Name}.{name}", observeValue: observableValue.GetCurrentMeasurement, description: GetDescription(observableValue));
     }
@@ -80,17 +71,17 @@ public abstract class MetricsBase(MonitoringConfiguration.OpenTelemetryConfigura
     }
 
 #if DEBUG
-    public static readonly ConcurrentDictionary<string, string> InstrumentDescriptionHolder = new();
+    private static readonly ConcurrentDictionary<string, (string Description, InstrumentType instrumentType)> InstrumentDescriptionHolder = new();
 
     public static string GenerateTableOfInstrumentationMarkdown()
     {
         var table = new StringBuilder();
-        var source = InstrumentDescriptionHolder.OrderBy(x => x.Key);
-        table.AppendLine($"| Name | Description |");
-        table.AppendLine(@"| :--- | :--- |");
+        IOrderedEnumerable<KeyValuePair<string, (string Description, InstrumentType InstrumentType)>> source = InstrumentDescriptionHolder.OrderBy(x => x.Key);
+        table.AppendLine($"| Name | Description | Instrument type |");
+        table.AppendLine(@"| :--- | :--- | :--- |");
         foreach (var instrument in source)
         {
-            table.AppendLine($"| {instrument.Key} | {instrument.Value} |");
+            table.AppendLine($"| {instrument.Key} | {instrument.Value.Description} | {instrument.Value.InstrumentType} |");
         }
 
         return table.ToString();
@@ -98,13 +89,19 @@ public abstract class MetricsBase(MonitoringConfiguration.OpenTelemetryConfigura
 #endif
 
     [Conditional("DEBUG")]
-    private static void RegisterInstrumentForDocumentation(string name, ScalarObject scalarObject, string overridenDescription = null)
+    private static void RegisterInstrumentForDocumentation(string name, ScalarObject scalarObject, InstrumentType instrumentType, string overridenDescription = null)
     {
 #if DEBUG
         var description = (overridenDescription ?? GetDescription(scalarObject))
             .Replace("(", @"\(")
             .Replace(")", @"\)");
-        InstrumentDescriptionHolder.TryAdd(name, overridenDescription ?? description );
+        InstrumentDescriptionHolder.TryAdd(name, (overridenDescription ?? description, instrumentType));
 #endif
+    }
+
+    private enum InstrumentType
+    {
+        Gauge,
+        UpDownCounter
     }
 }

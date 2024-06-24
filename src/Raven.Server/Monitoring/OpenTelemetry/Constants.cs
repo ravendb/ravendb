@@ -14,48 +14,6 @@ public static class Constants
  
     }
     
-    public static class Tags
-    {
-        public const string Database = "database";
-        public const string Index = "index";
-    }
-    
-    public static class DatabaseWide
-    {
-        // ReSharper disable once MemberHidesStaticFromOuterClass
-        public const string DatabaseCountOfIndexes = "countofindexes";
-        public const string DatabaseDocumentsStorageAllocatedSize = "documents.allocatedsize";
-        public const string DatabaseDocumentsStorageUsedSize = "documents.usedsize";
-        public const string DatabaseIndexStorageAllocatedSize = "index.allocatedsize";
-        public const string DatabaseIndexStorageUsedSize = "index.usedsize";
-        public const string DatabaseTotalStorageSize = "total.storagesize";
-        public const string DatabaseStorageDiskRemainingSpace = "disk.remainingspace";
-        public const string DatabaseStorageDiskIosReadOperations = "disk.ios.readoperations";
-        public const string DatabaseStorageDiskIosWriteOperations = "disk.ios.writeoperations";
-        public const string DatabaseStorageDiskReadThroughput = "disk.throughput.read";
-        public const string DatabaseStorageDiskWriteThroughput = "disk.throughput.write";
-        public const string DatabaseStorageDiskQueueLength = "disk.queuelength";
-        
-        public static class IndexWide
-        {
-            // ReSharper disable once MemberHidesStaticFromOuterClass
-            public const string DatabaseIndexExists = "exists";
-            public const string DatabaseIndexPriority = "priority";
-            public const string DatabaseIndexState = "state";
-            public const string DatabaseIndexErrors = "errors";
-            public const string DatabaseIndexLastQueryTime = "time.query.last";
-            public const string DatabaseIndexLastIndexingTime = "time.indexing.last";
-            public const string DatabaseIndexTimeSinceLastQuery = "time.since.lastquery";
-            public const string DatabaseIndexTimeSinceLastIndexing = "time.since.lastindexing";
-            public const string DatabaseIndexLockMode = "lockmode";
-            public const string DatabaseIndexIsInvalid = "isinvalid";
-            public const string DatabaseIndexStatus = "status";
-            public const string DatabaseIndexMapsPerSec = "mapspersec";
-            public const string DatabaseIndexReducesPerSec = "reducespersec";
-            public const string DatabaseIndexType = "type";
-        }
-    }
-    
     public static class ServerWide
     {
         public const string ServerConcurrentRequests = "requests.concurrent_requests";
@@ -83,10 +41,8 @@ public static class Constants
         public const string ServerEncryptionBuffersMemoryInUse = "encryption_buffers.memory_in_use";
         public const string ServerEncryptionBuffersMemoryInPool = "encryption_buffers.memory_in_pool";
         public const string ServerAvailableMemoryForProcessing = "available_memory_for_processing";
-        public const string ServerLastRequestTime = "server.last_request_time";
         public const string DatabaseLoadedCount = "database.loaded_count";
         public const string DatabaseTotalCount = "database.total_count";
-        public const string DatabaseOldestBackup = "database.oldest_backup";
         public const string DatabaseDisabledCount = "database.disabled_count";
         public const string DatabaseEncryptedCount = "database.encrypted_count";
         public const string DatabaseFaultedCount = "database.faulted_count";
@@ -109,7 +65,7 @@ public static class Constants
         public const string ServerStorageDiskRemainingSpacePercentage = "storage.disk.remaining.space_percentage";
         public const string ServerStorageDiskIosReadOperations = "storage.disk.ios.read_operations";
         public const string ServerStorageDiskIosWriteOperations = "storage.disk.ios.write_operations";
-        public const string ServerStorageDiskReadThroughput = "storage.disk.read+throughput";
+        public const string ServerStorageDiskReadThroughput = "storage.disk.read_throughput";
         public const string ServerStorageDiskWriteThroughput = "storage.disk.write_throughput";
         public const string ServerStorageDiskQueueLength = "storage.disk.queue_length";
         public const string MachineProcessorCount = "machine.processor_count";

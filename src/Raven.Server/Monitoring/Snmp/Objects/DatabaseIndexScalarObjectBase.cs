@@ -18,7 +18,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects
         protected readonly string IndexName;
 
         protected DatabaseIndexScalarObjectBase(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex, string dots)
-            : base(databaseName, landlord, string.Format(dots, databaseIndex), indexIndex, [new (Constants.Tags.Index, indexName)])
+            : base(databaseName, landlord, string.Format(dots, databaseIndex), indexIndex)
         {
             IndexName = indexName;
         }
