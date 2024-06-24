@@ -4,7 +4,25 @@
 /usr/lib/ravendb/scripts/link-legacy-datadir.sh 
 
 COMMAND="/usr/lib/ravendb/server/Raven.Server -c /etc/ravendb/settings.json"
-[ -z "$RAVEN_ServerUrl" ] && export RAVEN_ServerUrl="http://$(hostname):8080"
+
+check_for_certificates() {
+    if grep -q "Server.Certificate.Path" /etc/ravendb/settings.json || \
+       grep -q "Server.Certificate.Load.Exec" /etc/ravendb/settings.json || \
+       [ -n "$RAVEN_Server_Certificate_Path" ] || \
+       [ -n "$RAVEN_Server_Certificate_Load_Exec" ] || \
+       [[ "$RAVEN_ARGS" == *"--Server.Certificate.Path"* ]] || \
+       [[ "$RAVEN_ARGS" == *"--Server.Certificate.Load.Exec"* ]]; then
+        RAVEN_SERVER_SCHEME="https"
+    else
+        RAVEN_SERVER_SCHEME="http"
+    fi
+}
+
+if [ -z "$RAVEN_ServerUrl" ]; then
+    check_for_certificates
+    RAVEN_ServerUrl="${RAVEN_SERVER_SCHEME}://$(hostname):8080"
+    export RAVEN_ServerUrl
+fi
 
 if [ ! -z "$RAVEN_SETTINGS" ]; then
     echo "$RAVEN_SETTINGS" > /etc/ravendb/settings.json
