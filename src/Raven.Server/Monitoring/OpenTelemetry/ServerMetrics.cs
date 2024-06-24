@@ -15,7 +15,7 @@ public class ServerMetrics : MetricsBase
     private static readonly Lazy<Meter> GcMeter = new(() => new(Constants.Meters.GcMeter));
     private static readonly Lazy<Meter> HardwareMeter = new(() => new(Constants.Meters.Hardware));
     private static readonly Lazy<Meter> TotalDatabasesMeter = new(() => new(Constants.Meters.TotalDatabasesMeter));    
-    private static readonly Lazy<Meter> CpuCreditsMeter = new(() => new(Constants.Meters.TotalDatabasesMeter));
+    private static readonly Lazy<Meter> CpuCreditsMeter = new(() => new(Constants.Meters.CpuCreditsMeter));
     private readonly RavenServer _server;
     private ServerStore ServerStore => _server.ServerStore;
 

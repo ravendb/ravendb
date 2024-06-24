@@ -62,22 +62,22 @@ namespace Raven.Server.Config.Categories
             [ConfigurationEntry("Monitoring.OpenTelemetry.Metrics.AspNetCoreInstrumentation.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool AspNetCoreInstrumentationMetricsEnabled { get; set; }
             
-            [Description("Indicates if AspNetCoreInstrumentation metrics are enabled or not. Default: true")]
+            [Description("Indicates if RuntimeInstrumentation metrics are enabled or not. Default: true")]
             [DefaultValue(true)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.Metrics.RuntimeInstrumentation.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool RuntimeInstrumentationMetricsEnabled { get; set; }
             
-            [Description("Indicates if should use OpenTelementry protocol.")]
+            [Description("Indicates if metrics should be exported with the OpenTelemetry protocol.")]
             [DefaultValue(true)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.OpenTelemetryProtocol.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool OpenTelemetryProtocolExporter { get; set; }
             
-            [Description("Indicates meters should be exposed to console.")]
+            [Description("Indicates if metrics should be exported to the console output.")]
             [DefaultValue(false)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.ConsoleExporter", ConfigurationEntryScope.ServerWideOnly)]
             public bool ConsoleExporter { get; set; }
             
-            [Description("Expose server storage instruments.")]
+            [Description("Expose instruments related to server storage.")]
             [DefaultValue(true)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.Storage.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool ServerStorage { get; set; }

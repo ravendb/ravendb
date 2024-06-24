@@ -11,23 +11,13 @@ namespace Raven.Server.Monitoring.Snmp.Objects
         where TData : ISnmpData
     {
         protected readonly string DatabaseName;
-        protected readonly KeyValuePair<string, object>[] MeasurementTags;
         protected readonly DatabasesLandlord Landlord;
 
-        protected DatabaseScalarObjectBase(string databaseName, DatabasesLandlord landlord, string dots, int index, KeyValuePair<string, object>[] measurementTags = null)
+        protected DatabaseScalarObjectBase(string databaseName, DatabasesLandlord landlord, string dots, int index)
             : base(dots, index)
         {
             DatabaseName = databaseName;
             Landlord = landlord;
-            MeasurementTags = new[]
-                {
-                    new KeyValuePair<string, object>(Constants.Tags.Database, databaseName),
-                }
-                .Concat(measurementTags ?? Enumerable.Empty<KeyValuePair<string, object>>())
-                .ToArray();
-           
-            Debug.Assert(MeasurementTags.Select(x => x.Key).Distinct().Count() == MeasurementTags.Count()
-               , "MeasurementTags.Select(x => x.Key).Distinct().Count() == MeasurementTags.Count()");     
         }
 
         protected abstract TData GetData(DocumentDatabase database);
