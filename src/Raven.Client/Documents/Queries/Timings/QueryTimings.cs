@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Queries.Timings
     ///     Representation of query timings.
     ///     Consists of total time spent on server-side execution of query, and time spent on each query part.
     /// </summary>
-    /// <see ref="https://ravendb.net/docs/article-page/6.0/Csharp/client-api/session/querying/debugging/query-timings"/>
+    /// <see ref="https://ravendb.net/docs/article-page/6.1/Csharp/client-api/session/querying/debugging/query-timings"/>
     public sealed class QueryTimings : IFillFromBlittableJson, IDynamicJson
     {
         /// <summary>
