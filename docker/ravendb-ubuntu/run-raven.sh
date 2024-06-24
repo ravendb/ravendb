@@ -5,6 +5,10 @@
 
 COMMAND="/usr/lib/ravendb/server/Raven.Server -c /etc/ravendb/settings.json"
 
+if [ -n "$RAVEN_SETTINGS" ]; then
+    echo "$RAVEN_SETTINGS" > /etc/ravendb/settings.json
+fi
+
 check_for_certificates() {
     if grep -q "Server.Certificate.Path" /etc/ravendb/settings.json || \
        grep -q "Server.Certificate.Load.Exec" /etc/ravendb/settings.json || \
@@ -22,10 +26,6 @@ if [ -z "$RAVEN_ServerUrl" ]; then
     check_for_certificates
     RAVEN_ServerUrl="${RAVEN_SERVER_SCHEME}://$(hostname):8080"
     export RAVEN_ServerUrl
-fi
-
-if [ ! -z "$RAVEN_SETTINGS" ]; then
-    echo "$RAVEN_SETTINGS" > /etc/ravendb/settings.json
 fi
 
 if [ ! -z "$RAVEN_ARGS" ]; then
