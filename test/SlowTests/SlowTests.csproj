@@ -101,6 +101,7 @@
     <None Remove="Data\RavenDB_21889\RavenDB_21889_BackwardCompatibility.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_21889\RavenDB_21889_BackwardCompatibility.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_22363\RavenDB_22363.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_22406\RavenDB_22406.ravendb-snapshot" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />
