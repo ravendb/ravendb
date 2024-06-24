@@ -477,12 +477,12 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             exceptionMessage =
                 $"The value of '{fieldName}' field is a complex object. Indexing it as a text isn't supported and it's supposed to have \\\"Indexing\\\" option set to \\\"No\\\". " +
                 $"Note that you can still store it and use it in projections.{Environment.NewLine}" +
-                "If you need to use it for searching purposes, you have to call ToString() on the field value in the index definition. Read more at: https://ravendb.net/l/OB9XW4/6.0/Csharp";
+                "If you need to use it for searching purposes, you have to call ToString() on the field value in the index definition. Read more at: https://ravendb.net/l/OB9XW4/6.1/Csharp";
         }
         else
         {
             exceptionMessage =
-                $"The value of '{fieldName}' field is a complex object. Indexing it as a text isn't supported. You should consider querying on individual fields of that object. Read more at: https://ravendb.net/l/OB9XW4/6.0/Csharp";
+                $"The value of '{fieldName}' field is a complex object. Indexing it as a text isn't supported. You should consider querying on individual fields of that object. Read more at: https://ravendb.net/l/OB9XW4/6.1/Csharp";
         }
         throw new NotSupportedInCoraxException(exceptionMessage);
     }

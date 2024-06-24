@@ -25,7 +25,7 @@ namespace Raven.Server.ServerWide
         public static string AssemblyVersion =>
             _assemblyVersion ?? (_assemblyVersion = RavenVersionAttribute.Instance.AssemblyVersion);
 
-        public const int DevBuildNumber = 60;
+        public const int DevBuildNumber = 61;
 
         public static bool IsNightlyOrDev(long buildVersion)
         {

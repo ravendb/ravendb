@@ -56,7 +56,7 @@ public interface IQueryBase<T, out TSelf>
     ///     Timings are not enabled by default.
     /// </summary>
     /// <param name="timings">An out param that will be filled with the timings results.</param>
-    /// <seealso ref="https://ravendb.net/docs/article-page/6.0/csharp/client-api/session/querying/debugging/query-timings"/>
+    /// <seealso ref="https://ravendb.net/docs/article-page/6.1/csharp/client-api/session/querying/debugging/query-timings"/>
     TSelf Timings(out QueryTimings timings);
 
     /// <summary>
