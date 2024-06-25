@@ -23,6 +23,8 @@ export function VersionsSummary(props: VersionsSummaryProps) {
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
     const { asyncLatestVersion } = props;
 
+    const showLatestVersionInfo = !isCloud && !!asyncLatestVersion.result;
+
     const [refreshing, setRefreshing] = useState<boolean>(false);
 
     const { showChangeLogModal, showWhatsNewModal, refreshLatestVersion } = props;
@@ -50,7 +52,7 @@ export function VersionsSummary(props: VersionsSummaryProps) {
                         </Button>
                     </Col>
                 </Row>
-                {!isCloud && (
+                {showLatestVersionInfo && (
                     <Row>
                         <OverallInfoItem icon="global" label="Updates">
                             <LatestVersion
