@@ -502,7 +502,8 @@ namespace Raven.Server.Documents
                     continue;
                 }
 
-                _hasClusterTransaction.Wait(DatabaseShutdown);
+                //To make sure we mark compare exchange tombstone for cleaning  
+                _hasClusterTransaction.Wait(TimeSpan.FromMinutes(5), DatabaseShutdown);
                 if (DatabaseShutdown.IsCancellationRequested)
                     return;
 
@@ -634,6 +635,7 @@ namespace Raven.Server.Documents
                 }
                 catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
                 {
+                    ClusterWideTransactionIndexWaiter.NotifyListenersAboutError(e);
                     OnClusterTransactionCompletion(command, exception: e);
                     NotificationCenter.Add(AlertRaised.Create(
                         Name,
@@ -650,11 +652,6 @@ namespace Raven.Server.Documents
                     _clusterTransactionDelayOnFailure = Math.Min(_clusterTransactionDelayOnFailure * 2, 15000);
 
                     return;
-                }
-                catch (Exception e)
-                {
-                    ClusterWideTransactionIndexWaiter.NotifyListenersAboutError(e);
-                    throw;
                 }
             }
         }

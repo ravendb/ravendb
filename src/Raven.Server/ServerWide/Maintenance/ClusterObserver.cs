@@ -643,14 +643,14 @@ namespace Raven.Server.ServerWide.Maintenance
                         return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
 
                     var tryGetValue = nodeReport.Report.TryGetValue(state.Name, out var report);
-                    Debug.Assert(tryGetValue, $"Could not find state for node '{nodeTag}' for database '{state.Name}'.");
+                    Debug.Assert(tryGetValue, $"Could not find report for node '{nodeTag}' for database '{state.Name}'.");
                     if (tryGetValue == false)
                     {
                         return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
                     }
 
                     var clusterWideTransactionIndex = report.LastClusterWideTransactionRaftIndex;
-                    if (clusterWideTransactionIndex < maxEtag)
+                    if (clusterWideTransactionIndex > maxEtag)
                         maxEtag = clusterWideTransactionIndex;
                     
                     foreach (var kvp in report.LastIndexStats)

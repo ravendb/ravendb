@@ -1499,8 +1499,8 @@ namespace SlowTests.Cluster
         }
         
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
-        [InlineData(true)]
-        [InlineData(false)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task ClusterTransaction_WhenLoadReturnEmptyAndCompareExchangeExit_ShouldStillThrowConcurrency(bool clusterTrxBefore)
         {
             const string id = "testObjs/1";
@@ -1553,7 +1553,8 @@ namespace SlowTests.Cluster
             }
         }
         
-        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task LoadAndIncludeClusterTrxCmpxchg_WhenCmpxchgIsFromLastClusterTransactionWithNoDatabaseCommand_ShouldGetCmpxchg()
         {
             const string cmpxchgId = "cmpxchg/0";
@@ -1583,7 +1584,8 @@ namespace SlowTests.Cluster
             }
         }
         
-        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task QueryAndIncludeClusterTrxCmpxchg_WhenDocumentsCommandsDidntFinished_ShouldNotReturnNull()
         {
             const string id1 = "testObjs/0";
@@ -1647,7 +1649,8 @@ select incl(c)"
             }
         }
         
-        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task QueryIndexAndIncludeClusterTrxCmpxchg_WhenModifiedButDocumentsCommandsDidntFinished_ShouldNotBeNull()
         {
             const string id1 = "testObjs/0";
@@ -1714,7 +1717,8 @@ select incl(c)"
             }
         }
 
-        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task QueryAndIncludeClusterTrxCmpxchg_WhenModifiedButDocumentsCommandsDidntFinished_ShouldNotBeNull()
         {
             const string id1 = "testObjs/0";
@@ -1778,7 +1782,8 @@ select incl(c)"
             }
         }
         
-        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task QueryIncludeCmpxchg_WhenEmpty_ShouldNotCreateAdditionalRequest()
         {
             const string notExistCmpxchgId = "not-exist";
@@ -1814,7 +1819,8 @@ select incl(c)"
             }
         }
         
-        [RavenFact(RavenTestCategory.CompareExchange | RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.CompareExchange | RavenTestCategory.ClusterTransactions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void LoadIncludeCmpxchg_WhenGet_ShouldNotTriggerAdditionalRequest()
         {
             const string docId = "testObjs/0";
@@ -1844,7 +1850,8 @@ select incl(c)"
             }
         }
         
-        [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task LoadClusterWideSession_WhenDeletedWithoutClusterWideSessionAndClusterWideTransactionInProcess_ShouldNotReturnAtomicGuard()
         {
             using var store = GetDocumentStore();
@@ -1911,8 +1918,8 @@ select incl(c)"
         }
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
-        [InlineData(true)]
-        [InlineData(false)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task DatabaseRequest_WhenHasLastClusterTransaction_ShouldWaitForIndex(bool withClusterTrxBefore)
         {
             var cmpXchgKey = "cmpXchgKey";
@@ -1964,8 +1971,8 @@ select incl(c)"
         }
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
-        [InlineData(true)]
-        [InlineData(false)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task DatabaseRequest_WhenLastClusterTrxWasDeleteCmpxchg_ShouldNotHang(bool withClusterTrxBefore)
         {
             var cmpXchgKey = "cmpXchgKey";
@@ -2049,7 +2056,8 @@ select incl(c)"
             }
         }
         
-        [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task DatabaseRequest_WhenWaitForIndexAndClusterTransactionHasError_ShouldThrow()
         {
             const string id = "testObjs/0";

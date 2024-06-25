@@ -523,10 +523,10 @@ namespace Raven.Server.Documents.Handlers
                     writer.WritePropertyName(nameof(GetDocumentsResult.CompareExchangeValueIncludes));
                     if (clusterWideTx)
                     {
-                        foreach (var (k,v) in compareExchangeValues)
+                        foreach (var (k, v) in compareExchangeValues)
                         {
                             if (v.Index >= 0)
-                                v.ChangeVector = ChangeVectorUtils.NewChangeVector(ChangeVectorParser.TrxnTag,v.Index,Database.ClusterTransactionId);
+                                v.ChangeVector = ChangeVectorUtils.NewChangeVector(ChangeVectorParser.TrxnTag, v.Index, Database.ClusterTransactionId);
                         }
                     }
                     await writer.WriteCompareExchangeValuesAsync(compareExchangeValues, Database.DatabaseShutdown);
