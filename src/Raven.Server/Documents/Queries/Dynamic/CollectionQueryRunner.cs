@@ -244,7 +244,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     includeDocumentsCommand.Fill(resultToFill.Includes);
 
-                    includeCompareExchangeValuesCommand.Materialize(null);
+                    includeCompareExchangeValuesCommand.Materialize(maxAllowedAtomicGuardIndex: null);
                 }
 
                 if (includeCompareExchangeValuesCommand != null)

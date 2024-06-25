@@ -3365,7 +3365,7 @@ namespace Raven.Server.Documents.Indexes
                                 using (fillScope?.Start())
                                 {
                                     includeDocumentsCommand.Fill(resultToFill.Includes);
-                                    includeCompareExchangeValuesCommand?.Materialize(null);
+                                    includeCompareExchangeValuesCommand?.Materialize(maxAllowedAtomicGuardIndex: null);
                                 }
 
                                 if (includeCountersCommand != null)

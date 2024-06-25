@@ -54,7 +54,7 @@ where TNotification : RaftIndexNotification
     {
         try
         {
-            await Task.WhenAny(_raftIndexWaiter.WaitAsync(index, timeout));
+            await _raftIndexWaiter.WaitAsync(index, timeout);
         }
         catch (TimeoutException)
         {
