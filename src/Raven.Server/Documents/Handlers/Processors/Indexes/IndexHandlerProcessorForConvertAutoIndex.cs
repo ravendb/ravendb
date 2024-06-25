@@ -85,7 +85,7 @@ internal class IndexHandlerProcessorForConvertAutoIndex<TRequestHandler, TOperat
                     }
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(nameof(type), $"Not supported conversion type '{type}'.");
 
             }
         }
@@ -244,7 +244,7 @@ public class AutoToStaticIndexConverter
                         options.Storage = FieldStorage.Yes;
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        throw new ArgumentOutOfRangeException(nameof(fieldStorage), $"Not supported field storage value '{fieldStorage.Value}'.");
                 }
             }
 
@@ -325,7 +325,7 @@ public class AutoToStaticIndexConverter
                                 break;
                             }
                         default:
-                            throw new ArgumentOutOfRangeException();
+                            throw new ArgumentOutOfRangeException(nameof(kvp.Value.Aggregation), $"Not supported aggregation operation '{kvp.Value.Aggregation}'.");
                     }
                 }
             }
@@ -456,7 +456,7 @@ public class AutoToStaticIndexConverter
                                 sb.Append($"{nameof(CartesianSpatialOptionsFactory.BoundingBoxIndex)}()");
                                 break;
                             default:
-                                throw new ArgumentOutOfRangeException();
+                                throw new ArgumentOutOfRangeException(nameof(spatial.Strategy), $"Not supported spatial search strategy '{spatial.Strategy}'.");
                         }
 
                         break;
@@ -474,12 +474,12 @@ public class AutoToStaticIndexConverter
                                 sb.Append($"{nameof(GeographySpatialOptionsFactory.BoundingBoxIndex)}({typeof(SpatialUnits).FullName}.{spatial.Units})");
                                 break;
                             default:
-                                throw new ArgumentOutOfRangeException();
+                                throw new ArgumentOutOfRangeException(nameof(spatial.Strategy), $"Not supported spatial search strategy '{spatial.Strategy}'.");
                         }
 
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        throw new ArgumentOutOfRangeException(nameof(spatial.Type), $"Not supported spatial field type '{spatial.Type}'.");
                 }
 
                 sb.AppendLine(");");
@@ -532,7 +532,7 @@ public class AutoToStaticIndexConverter
                             sb.AppendLine($"{f.FieldName} = 1,");
                             break;
                         default:
-                            throw new ArgumentOutOfRangeException();
+                            throw new ArgumentOutOfRangeException(nameof(kvp.Value.Aggregation), $"Not supported aggregation operation '{kvp.Value.Aggregation}'.");
                     }
                 }
                 else
@@ -547,7 +547,7 @@ public class AutoToStaticIndexConverter
                             sb.AppendLine($"{newFieldName} = {nameof(AbstractIndexCreationTask.CreateSpatialField)}({string.Join(", ", kvp.Value.Spatial.MethodArguments.Select(x => $"item.{x}"))}),");
                             break;
                         default:
-                            throw new ArgumentOutOfRangeException();
+                            throw new ArgumentOutOfRangeException(nameof(kvp.Value.Spatial.MethodType), $"Not supported spatial method type '{kvp.Value.Spatial.MethodType}'.");
                     }
 
                     spatialCounter++;
