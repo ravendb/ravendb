@@ -15,7 +15,7 @@ namespace Tests.Infrastructure.ConnectionString
 
         protected override string VerifiedConnectionStringFactory(string cs)
         {
-            const string localConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3";
+            const string localConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3;Encrypt=Optional";
             if (TryConnect(localConnectionString, out var errorMessage))
                 return localConnectionString;
 
