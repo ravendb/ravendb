@@ -32,7 +32,7 @@ type SqlEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSqlEtlInfo>;
 function Details(props: SqlEtlPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
     const { appUrl } = useAppUrls();
-    const connectionStringDefined = !!data.shared.destinationDatabase;
+    const connectionStringDefined = data.shared.connectionStringDefined;
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Sql", data.shared.connectionStringName);
 
@@ -44,7 +44,7 @@ function Details(props: SqlEtlPanelProps & { canEdit: boolean }) {
                 </RichPanelDetailItem>
             )}
             <ConnectionStringItem
-                connectionStringDefined={!!data.shared.destinationDatabase}
+                connectionStringDefined={connectionStringDefined}
                 canEdit={canEdit}
                 connectionStringName={data.shared.connectionStringName}
                 connectionStringsUrl={connectionStringsUrl}
