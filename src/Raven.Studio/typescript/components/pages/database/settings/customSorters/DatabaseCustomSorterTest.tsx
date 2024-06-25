@@ -41,6 +41,7 @@ export default function DatabaseCustomSorterTest(props: DatabaseCustomSorterTest
 
     const { databasesService } = useServices();
 
+    // Changing the database causes re-mount
     const asyncGetIndexNames = useAsync(async () => {
         const dto = await databasesService.getEssentialStats(db.name);
         return dto?.Indexes?.map((x) => x.Name);

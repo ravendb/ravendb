@@ -21,6 +21,8 @@ export default function TombstonesState({ location }: { location?: databaseLocat
     const { databasesService } = useServices();
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
+    // Changing the database causes re-mount
     const asyncGetTombstonesState = useAsync(() => databasesService.getTombstonesState(databaseName, location), []);
     const asyncForceTombstonesCleanup = useAsyncCallback(() =>
         databasesService.forceTombstonesCleanup(databaseName, location)

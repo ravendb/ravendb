@@ -41,7 +41,9 @@ export default function ConnectionStrings(props: ConnectionStringsUrlParameters)
         return () => {
             dispatch(connectionStringsActions.reset());
         };
-    }, [databaseName, dispatch, nameFromUrl, typeFromUrl]);
+        // Changing the database causes re-mount
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const loadStatus = useAppSelector(connectionStringSelectors.loadStatus);
     const connections = useAppSelector(connectionStringSelectors.connections);
