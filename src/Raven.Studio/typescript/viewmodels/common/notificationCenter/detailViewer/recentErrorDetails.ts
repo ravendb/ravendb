@@ -3,6 +3,7 @@ import abstractNotification = require("common/notifications/models/abstractNotif
 import notificationCenter = require("common/notifications/notificationCenter");
 import recentError = require("common/notifications/models/recentError");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import copyToClipboard from "common/copyToClipboard";
 
 class recentErrorDetails extends dialogViewModelBase {
 
@@ -13,7 +14,7 @@ class recentErrorDetails extends dialogViewModelBase {
 
     constructor(recentError: recentError, notificationCenter: notificationCenter) {
         super();
-        this.bindToCurrentInstance("close", "dismiss");
+        this.bindToCurrentInstance("close", "dismiss", "copyErrorDetails");
 
         this.recentError = recentError;
         this.dismissFunction = () => notificationCenter.dismiss(recentError);
@@ -22,6 +23,11 @@ class recentErrorDetails extends dialogViewModelBase {
     dismiss() {
         this.dismissFunction();
         this.close();
+    }
+
+    copyErrorDetails(): void {
+        const errorDetails = this.recentError.details();
+        copyToClipboard.copy(errorDetails, "Error has been copied to clipboard");
     }
 
     static supportsDetailsFor(notification: abstractNotification) {
