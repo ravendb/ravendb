@@ -9,7 +9,7 @@ import database from "models/resources/database";
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
 class commandBase {
 
-    static ravenClientVersion = '5.4.0.0';
+    static ravenClientVersion = '6.1.0.0';
 
     static ravenStudioVersionHeader = 'Raven-Studio-Version';
 
