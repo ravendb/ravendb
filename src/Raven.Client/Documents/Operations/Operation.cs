@@ -347,7 +347,7 @@ namespace Raven.Client.Documents.Operations
             {
                 var result = await InitializeResult().ConfigureAwait(false);
 
-                var initTask = Task.Factory.StartNew(Initialize);
+                var initTask = Task.Run(Initialize);
 
                 try
                 {
