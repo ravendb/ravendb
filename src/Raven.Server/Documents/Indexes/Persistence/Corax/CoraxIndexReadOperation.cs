@@ -1273,6 +1273,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             long[] ids = QueryPool.Rent(pageSize);
             var read = 0;
             long returnedDocs = 0;
+            long skippedDocs = 0;
             Page page = default;
             while ((read = mltQuery.Fill(ids.AsSpan())) != 0)
             {
@@ -1286,6 +1287,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                     if (hit == baseDocId)
                         continue;
+                    
+                    if (skippedDocs < query.Start)
+                    {
+                        skippedDocs++;
+                        continue;
+                    }
 
                     var termsReader = IndexSearcher.GetEntryTermsReader(hit, ref page);
                     var id = _documentIdReader.GetTermFor(hit);

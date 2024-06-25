@@ -15,7 +15,7 @@ public class RavenDB_22467 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void TestIfTakeClauseLimitsNumberOfReturnedDocuments(Options options)
     {
@@ -58,7 +58,7 @@ public class RavenDB_22467 : RavenTestBase
         }
     }
     
-    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void TestIfTakeClauseLimitsNumberOfReturnedDocumentsWithMultipleCoraxFills(Options options)
     {
@@ -118,6 +118,67 @@ public class RavenDB_22467 : RavenTestBase
                     .ToList();
                 
                 Assert.Equal(5999, moreUsers.Count);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TestSkipClause(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                for (var i = 0; i < 6000; i++)
+                {
+                    session.Store(new User(){ Id = $"user/{i + 1}", Name = "CoolName", Note = "SomeNote" });
+                }
+                
+                session.SaveChanges();
+
+                var index = new UserMoreLikeThisIndex();
+                
+                index.Execute(store);
+                
+                Indexes.WaitForIndexing(store);
+                
+                var moreUsers = session.Query<User, UserMoreLikeThisIndex>()
+                    .MoreLikeThis(builder => builder
+                        .UsingDocument(x => x.Id == "user/1")
+                        .WithOptions(new MoreLikeThisOptions
+                        {
+                            Fields = new[] { "Name", "Note" },
+                        }))
+                    .Skip(1000)
+                    .ToList();
+
+                Assert.Equal(4999, moreUsers.Count);
+                
+                moreUsers = session.Query<User, UserMoreLikeThisIndex>()
+                    .MoreLikeThis(builder => builder
+                        .UsingDocument(x => x.Id == "user/1")
+                        .WithOptions(new MoreLikeThisOptions
+                        {
+                            Fields = new[] { "Name", "Note" },
+                        }))
+                    .Skip(1000)
+                    .Take(50)
+                    .ToList();
+                
+                Assert.Equal(Enumerable.Range(1002, 50).Select(x => $"user/{x}"), moreUsers.Select(x => x.Id));
+                
+                moreUsers = session.Query<User, UserMoreLikeThisIndex>()
+                    .MoreLikeThis(builder => builder
+                        .UsingDocument(x => x.Id == "user/1")
+                        .WithOptions(new MoreLikeThisOptions
+                        {
+                            Fields = new[] { "Name", "Note" },
+                        }))
+                    .Skip(99999)
+                    .ToList();
+                
+                Assert.Equal(0, moreUsers.Count);
             }
         }
     }
