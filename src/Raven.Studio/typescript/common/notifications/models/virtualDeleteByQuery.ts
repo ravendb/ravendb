@@ -1,14 +1,12 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
-import virtualNotification = require("common/notifications/models/virtualNotification");
 import database = require("models/resources/database");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import moment = require("moment");
+import groupedVirtualNotification from "common/notifications/models/groupedVirtualNotification";
 
-class virtualDeleteByQuery extends virtualNotification {
+class virtualDeleteByQuery extends groupedVirtualNotification<queryBasedVirtualBulkOperationItem> {
     
     static readonly Id = "virtual$$deleteByQuery";
-    
-    operations = ko.observableArray<queryBasedVirtualBulkOperationItem>([]);
     
     constructor(db: database) {
         super(db, {

@@ -3,12 +3,11 @@ import virtualNotification = require("common/notifications/models/virtualNotific
 import database = require("models/resources/database");
 import moment = require("moment");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
+import groupedVirtualNotification from "common/notifications/models/groupedVirtualNotification";
 
-class virtualUpdateByQuery extends virtualNotification {
+class virtualUpdateByQuery extends groupedVirtualNotification<queryBasedVirtualBulkOperationItem> {
 
     static readonly Id = "virtual$$updateByQuery";
-
-    operations = ko.observableArray<queryBasedVirtualBulkOperationItem>([]);
 
     constructor(db: database) {
         super(db, {

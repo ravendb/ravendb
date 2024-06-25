@@ -1,15 +1,13 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
-import virtualNotification = require("common/notifications/models/virtualNotification");
 import database = require("models/resources/database");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import moment = require("moment");
+import groupedVirtualNotification from "common/notifications/models/groupedVirtualNotification";
 
-class virtualBulkInsert extends virtualNotification {
+class virtualBulkInsert extends groupedVirtualNotification<virtualBulkOperationItem> {
     
     static readonly Id = "virtual$$bulkInsert";
 
-    operations = ko.observableArray<virtualBulkOperationItem>([]);
-    
     constructor(db: database) {
         super(db, {
             Id: virtualBulkInsert.Id,
