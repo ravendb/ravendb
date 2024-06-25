@@ -793,8 +793,9 @@ function getSortedRegularIndexes(
 ): IndexSharedInfo[] {
     switch (sortBy) {
         case "name":
-        case "createdTimestamp":
             return _.orderBy(indexes, [sortBy], [sortDirection]);
+        case "createdTimestamp":
+            return _.orderBy(indexes, (index) => IndexUtils.getEarliestCreatedTimestamp(index), [sortDirection]);
         case "lastIndexingTime":
         case "lastQueryingTime":
             return _.orderBy(
