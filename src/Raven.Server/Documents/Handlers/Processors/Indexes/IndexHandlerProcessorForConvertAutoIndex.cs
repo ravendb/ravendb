@@ -31,14 +31,19 @@ internal class IndexHandlerProcessorForConvertAutoIndex<TRequestHandler, TOperat
 
     private string GetName() => RequestHandler.GetStringQueryString("name", required: true);
 
-    private ConvertType GetConvertType()
+    private ConversionOutputType GetConvertType()
     {
-        var typeAsString = RequestHandler.GetStringQueryString("type", required: true);
+        var typeAsString = RequestHandler.GetStringQueryString("outputType", required: true);
 
-        if (Enum.TryParse(typeAsString, ignoreCase: true, out ConvertType convertType) == false)
-            throw new InvalidOperationException($"Could not parse '{typeAsString}' to any known conversion type.");
+        if (Enum.TryParse(typeAsString, ignoreCase: true, out ConversionOutputType convertType) == false)
+            throw new InvalidOperationException($"Could not parse '{typeAsString}' to any known conversion output type.");
 
         return convertType;
+    }
+
+    private bool HasDownload()
+    {
+        return RequestHandler.GetBoolValueQueryString("download", required: false) ?? false;
     }
 
     public override async ValueTask ExecuteAsync()
@@ -55,19 +60,21 @@ internal class IndexHandlerProcessorForConvertAutoIndex<TRequestHandler, TOperat
 
             switch (type)
             {
-                case ConvertType.Csharp:
+                case ConversionOutputType.CsharpClass:
                     var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex, out var csharpClassName);
 
-                    csharpClassName = $"{csharpClassName}.cs";
-
-                    HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = $"attachment; filename=\"{csharpClassName}\"; filename*=UTF-8''{csharpClassName}";
+                    if (HasDownload())
+                    {
+                        csharpClassName = $"{csharpClassName}.cs";
+                        HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = $"attachment; filename=\"{csharpClassName}\"; filename*=UTF-8''{csharpClassName}";
+                    }
 
                     await using (var writer = new StreamWriter(RequestHandler.ResponseBodyStream()))
                     {
                         await writer.WriteLineAsync(result);
                     }
                     break;
-                case ConvertType.Export:
+                case ConversionOutputType.Json:
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                     {
                         var definition = AutoToStaticIndexConverter.Instance.ConvertToIndexDefinition(autoIndex);
@@ -91,10 +98,10 @@ internal class IndexHandlerProcessorForConvertAutoIndex<TRequestHandler, TOperat
         }
     }
 
-    private enum ConvertType
+    private enum ConversionOutputType
     {
-        Csharp,
-        Export
+        CsharpClass,
+        Json
     }
 }
 
@@ -651,7 +658,7 @@ public class AutoToStaticIndexConverter
                 else
                 {
                     if (seenConst)
-                        throw new InvalidOperationException("Cannot generate complex group by because const was encountered.");
+                        throw new InvalidOperationException("Cannot generate complex group by because a constant field was encountered.");
 
                     sb
                         .Append("result.")
