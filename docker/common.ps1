@@ -71,7 +71,7 @@ function GetWindowsImageTags($repo, $version, $WinVer) {
             return @(
                 "$($repo):$($version)-windows-1809",
                 "$($repo):windows-1809-latest",
-                "$($repo):6.0-windows-1809-latest"
+                "$($repo):6.1-windows-1809-latest"
             )
             break;
         }
@@ -79,7 +79,7 @@ function GetWindowsImageTags($repo, $version, $WinVer) {
              return @(
                 "$($repo):$($version)-windows-ltsc2022",
                 "$($repo):windows-ltsc2022-latest",
-                "$($repo):6.0-windows-ltsc2022-latest"
+                "$($repo):6.1-windows-ltsc2022-latest"
             )
             break;
         }
