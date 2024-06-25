@@ -28,7 +28,7 @@ namespace Voron.Impl.Scratch
     /// This class relies on external synchronization and is not meant to be used in multiple
     /// threads at the same time
     /// </summary>
-    public sealed unsafe class ScratchBufferPool : ILowMemoryHandler, IDisposable
+    public sealed class ScratchBufferPool : ILowMemoryHandler, IDisposable
     {
         private readonly StorageEnvironment _env;
         // Immutable state. 
@@ -161,7 +161,7 @@ namespace Voron.Impl.Scratch
             return item;
         }
 
-        public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, long pageNumber)
+        public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, long pageNumber, Page previousVersion)
         {
             if (tx == null)
                 throw new ArgumentNullException(nameof(tx));
@@ -169,18 +169,18 @@ namespace Voron.Impl.Scratch
 
             var current = _current;
 
-            if (current.File.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, pageNumber, out PageFromScratchBuffer result))
+            if (current.File.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, pageNumber, previousVersion, out PageFromScratchBuffer result))
                 return result;
 
             // we can allocate from the end of the file directly
             if (current.File.LastUsedPage + size <= current.File.NumberOfAllocatedPages)
-                return current.File.Allocate(tx, numberOfPages, size, pageNumber);
+                return current.File.Allocate(tx, numberOfPages, size, pageNumber, previousVersion);
 
             if (current.File.Size < _options.MaxScratchBufferSize)
             {
                 var numberOfPagesBeforeAllocate = current.File.NumberOfAllocatedPages;
 
-                var page = current.File.Allocate(tx, numberOfPages, size, pageNumber);
+                var page = current.File.Allocate(tx, numberOfPages, size, pageNumber, previousVersion);
 
                 if (current.File.NumberOfAllocatedPages > numberOfPagesBeforeAllocate)
                     _scratchSpaceMonitor.Increase((current.File.NumberOfAllocatedPages - numberOfPagesBeforeAllocate) * Constants.Storage.PageSize);
@@ -195,7 +195,7 @@ namespace Voron.Impl.Scratch
 
             try
             {
-                return current.File.Allocate(tx, numberOfPages, size, pageNumber);
+                return current.File.Allocate(tx, numberOfPages, size, pageNumber, previousVersion);
             }
             finally
             {
@@ -298,26 +298,7 @@ namespace Voron.Impl.Scratch
             public DateTime RecycledAt;
         }
 
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PageFromScratchBuffer ShrinkOverflowPage(PageFromScratchBuffer value, int newNumberOfPages)
-        {
-            var item = GetScratchBufferFile(value.ScratchFileNumber);
-
-            return item.File.ShrinkOverflowPage(value, newNumberOfPages);
-        }
         
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal ScratchBufferItem GetScratchBufferFile(int scratchNumber)
-        {
-            var currentScratchFile = _current;
-            if (scratchNumber == currentScratchFile.Number)
-                return currentScratchFile;
-            // if we can avoid the dictionary lookup for the common case of 
-            // looking at the latest scratch, that is great
-            return _scratchBuffers[scratchNumber];
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddScratchBufferFile(ScratchBufferItem scratch)
         {
@@ -591,8 +572,7 @@ namespace Voron.Impl.Scratch
                     {
                         NumberOfPages = allocatedPage.NumberOfPages,
                         PositionInScratchBuffer = allocatedPage.PositionInScratchBuffer,
-                        ScratchFileNumber = allocatedPage.ScratchFileNumber,
-                        Size = allocatedPage.Size
+                        ScratchFileNumber = allocatedPage.File.Number,
                     });
                 }
 
@@ -620,6 +600,11 @@ namespace Voron.Impl.Scratch
         public void LowMemoryOver()
         {
             _lowMemoryFlag.Lower();
+        }
+
+        public ScratchBufferFile GetScratchBufferFile(int number)
+        {
+            return _scratchBuffers.TryGetValue(number, out var item) ? item.File : null;
         }
     }
 }
