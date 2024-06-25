@@ -46,7 +46,12 @@
                                     <span class="help-block" data-bind="validationMessage: databaseType"></span>
                                     <div class="has-warning" data-bind="visible: databaseType() === 'MySQL_MySql_Data'">
                                         <div class="help-block">
-                                            <i class="icon-warning"></i> <span> This connector is deprecated</span>
+                                            <i class="icon-warning"></i> 
+                                            <span>
+                                                This connector is deprecated. 
+                                                MySqlConnector will be used instead. 
+                                                Please update Factory to: MySqlConnector.MySqlConnectorFactory.
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
