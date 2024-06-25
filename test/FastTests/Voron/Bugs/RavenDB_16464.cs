@@ -68,12 +68,13 @@ namespace FastTests.Voron.Bugs
         }
 
         [Fact]
-        public void MustNotFreePagesAndRemoveJournalsIfThereIsTransactionThatMightReadFromIt()
+        public unsafe void CanKeepReadScratchPagesWhenFlushingWhenThereIsTransactionThatMightReadFromIt()
         {
             RequireFileBasedPager();
 
             var r = new Random(3);
 
+            byte[] bytes = [];
             for (int j = 0; j < 2; j++)
             {
                 using (var tx = Env.WriteTransaction())
@@ -84,7 +85,7 @@ namespace FastTests.Voron.Bugs
                     {
                         var overflowSize = r.Next(5, 10);
 
-                        var bytes = new byte[overflowSize * 8192];
+                        bytes = new byte[overflowSize * 8192];
 
                         r.NextBytes(bytes);
 
@@ -98,6 +99,13 @@ namespace FastTests.Voron.Bugs
             Assert.Equal(3, Env.Journal.Files.Count);
             Assert.Equal(0, Env.Journal.CurrentFile.Available4Kbs);
 
+            byte* basePtr;
+            using (var rtx = Env.ReadTransaction())
+            {
+                basePtr = rtx.ReadTree("tree").Read("items/7").Reader.Base;
+                Assert.Equal(3, rtx.LowLevelTransaction.Id);
+            }
+            
             Transaction readTx = null;
 
             Env.Journal.Applicator.ForTestingPurposesOnly().OnUpdateJournalStateUnderWriteTransactionLock += () =>
@@ -105,17 +113,26 @@ namespace FastTests.Voron.Bugs
                 readTx = Env.ReadTransaction();
             };
 
-            Env.FlushLogToDataFile(); 
+            Env.FlushLogToDataFile();
 
-            readTx.Dispose();
+            {
+                using var _ = readTx;
+                Assert.Equal(0, Env.Journal.GetSnapshots().Count);
+                Assert.Equal(0, Env.Journal.Files.Count);
 
-            Env.Journal.Applicator.ForTestingPurposesOnly().OnUpdateJournalStateUnderWriteTransactionLock = null;
+                ValueReader reader = readTx.ReadTree("tree").Read("items/7").Reader;
+                Assert.Equal(bytes, reader.AsSpan());
+                Assert.Equal((nint)basePtr, (nint)reader.Base);
+                Assert.Equal(3, readTx.LowLevelTransaction.Id);
+            }
 
-            Assert.Equal(1, Env.Journal.GetSnapshots().Count);
-
-            Assert.Equal(1, Env.Journal.Files.Count);
-
-            Assert.Equal(3, Env.Journal.Files[0].LastTransactionId);
+            
+            using (var wtx = Env.ReadTransaction())
+            {
+                var reader = wtx.ReadTree("tree").Read("items/7").Reader;
+                Assert.Equal(bytes, reader.AsSpan());
+                Assert.NotEqual((nint)basePtr, (nint)reader.Base);
+            }
         }
     }
 }

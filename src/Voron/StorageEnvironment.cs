@@ -150,7 +150,6 @@ namespace Voron
                 _currentStateRecordRecord = new EnvironmentStateRecord(
                     dataPagerState,
                     0,
-                    FrozenSet<Pager2.State>.Empty,
                     FrozenDictionary<long, PageFromScratchBuffer>.Empty,
                     0);
                 
@@ -1724,9 +1723,28 @@ namespace Voron
             }
         }
 
+        public void UpdateScratchTable(LowLevelTransaction tx)
+        {
+            Debug.Assert(tx.FlushedToJournal <0 && 
+                         tx.Committed && 
+                         tx.Flags == TransactionFlags.ReadWrite,
+                "Attempt to directly update the scratch table when not in a commited write transaction that skipped writing to the disk");
+            
+            var pagesInScratch = tx.GetPagesInScratch();
+            while (true)
+            {
+                var currentState = _currentStateRecordRecord!;
+                Debug.Assert(currentState.TransactionId == tx.Id- 1);
+                var updatedState = currentState with { ScratchPagesTable = pagesInScratch };
+                if (Interlocked.CompareExchange(ref _currentStateRecordRecord, updatedState, currentState) == currentState)
+                {
+                    break;
+                }
+            }
+        }
+        
         private void UpdateStateOnCommit(LowLevelTransaction tx)
         {
-            var pagerStates = tx.GetReferencedPagerStates();
             var pagesInScratch = tx.GetPagesInScratch();
             // ensure that we have disjointed sets and not a case of both free & used at once
             long transactionId = tx.Id;
@@ -1737,7 +1755,6 @@ namespace Voron
                 var updatedState = currentState with
                 {
                     TransactionId = transactionId,
-                    StatesStrongRefs = pagerStates,
                     ScratchPagesTable = pagesInScratch,
                     FlushedToJournal = tx.FlushedToJournal
                 };
@@ -1751,6 +1768,9 @@ namespace Voron
 
         public bool GetLatestTransactionToFlush(long uptoTxId, out EnvironmentStateRecord record)
         {
+            if (uptoTxId == 0)
+                uptoTxId = long.MaxValue;
+            
             record = default;
             bool found = false;
             while (true)

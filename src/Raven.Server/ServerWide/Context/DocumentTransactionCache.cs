@@ -22,6 +22,6 @@ namespace Raven.Server.ServerWide.Context
             public string LastChangeVector;
         }
 
-        public readonly Dictionary<string, CollectionCache> LastEtagsByCollection = new Dictionary<string, CollectionCache>(StringComparer.OrdinalIgnoreCase);
+        public readonly Dictionary<string, CollectionCache> LastEtagsByCollection = new(StringComparer.OrdinalIgnoreCase);
     }
 }
