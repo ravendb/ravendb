@@ -46,6 +46,27 @@ public class RavenDB_22498 : RavenTestBase
             var autoIndex = record.AutoIndexes.Values.First();
 
             var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex, out _);
+
+            RavenTestHelper.AssertEqualRespectingNewLines("""
+                                                          public class Index_Orders_ByEmployeeAndSearch_Company_AndShipTo_City : Raven.Client.Documents.Indexes.AbstractIndexCreationTask<Order>
+                                                          {
+                                                              public Index_Orders_ByEmployeeAndSearch_Company_AndShipTo_City()
+                                                              {
+                                                                  Map = items => from item in items
+                                                                                 select new
+                                                                                 {
+                                                                                     Company = item.Company,
+                                                                                     Company_Search = item.Company,
+                                                                                     Employee = item.Employee,
+                                                                                     ShipTo_City = item.ShipTo.City,
+                                                                                 };
+                                                          
+                                                                  Index("Company_Search", Raven.Client.Documents.Indexes.FieldIndexing.Search);
+                                                              }
+                                                          }
+                                                          
+                                                          """, result);
+
             var def = AutoToStaticIndexConverter.Instance.ConvertToIndexDefinition(autoIndex);
 
             await store.Maintenance.SendAsync(new PutIndexesOperation(def));
@@ -79,6 +100,23 @@ public class RavenDB_22498 : RavenTestBase
             var autoIndex = record.AutoIndexes.Values.First();
 
             var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex, out _);
+
+            RavenTestHelper.AssertEqualRespectingNewLines("""
+                                                          public class Index_Orders_By_metadata_Is_Nice : Raven.Client.Documents.Indexes.AbstractIndexCreationTask<Order>
+                                                          {
+                                                              public Index_Orders_By_metadata_Is_Nice()
+                                                              {
+                                                                  Map = items => from item in items
+                                                                                 select new
+                                                                                 {
+                                                                                     metadata_Is_Nice = MetadataFor(item)["Is-Nice"],
+                                                                                 };
+                                                          
+                                                              }
+                                                          }
+
+                                                          """, result);
+
             var def = AutoToStaticIndexConverter.Instance.ConvertToIndexDefinition(autoIndex);
 
             await store.Maintenance.SendAsync(new PutIndexesOperation(def));
@@ -111,6 +149,23 @@ public class RavenDB_22498 : RavenTestBase
             var autoIndex = record.AutoIndexes.Values.First();
 
             var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex, out _);
+
+            RavenTestHelper.AssertEqualRespectingNewLines("""
+                                                          public class Index__empty_ByColl : Raven.Client.Documents.Indexes.AbstractIndexCreationTask<object>
+                                                          {
+                                                              public Index__empty_ByColl()
+                                                              {
+                                                                  Map = items => from item in items
+                                                                                 select new
+                                                                                 {
+                                                                                     Coll = item.Coll,
+                                                                                 };
+                                                          
+                                                              }
+                                                          }
+
+                                                          """, result);
+
             var def = AutoToStaticIndexConverter.Instance.ConvertToIndexDefinition(autoIndex);
 
             await store.Maintenance.SendAsync(new PutIndexesOperation(def));
@@ -148,6 +203,38 @@ public class RavenDB_22498 : RavenTestBase
             var autoIndex = record.AutoIndexes.Values.First();
 
             var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex, out _);
+
+            RavenTestHelper.AssertEqualRespectingNewLines("""
+                                                          public class Index_Orders_ByCountReducedByCompany : Raven.Client.Documents.Indexes.AbstractIndexCreationTask<Order, Index_Orders_ByCountReducedByCompany.Result>
+                                                          {
+                                                              public Index_Orders_ByCountReducedByCompany()
+                                                              {
+                                                                  Map = items => from item in items
+                                                                                 select new
+                                                                                 {
+                                                                                     Count = 1,
+                                                                                     Company = item.Company,
+                                                                                 };
+                                                          
+                                                                  Reduce = results => from result in results
+                                                                                      group result by new { result.Company } into g
+                                                                                      select new
+                                                                                      {
+                                                                                          Count = g.Sum(x => x.Count),
+                                                                                          Company = g.Key.Company,
+                                                                                      };
+                                                          
+                                                              }
+                                                          
+                                                              public class Result
+                                                              {
+                                                                  public int Count { get; set; }
+                                                                  public object Company { get; set; }
+                                                              }
+                                                          }
+
+                                                          """, result);
+
             var def = AutoToStaticIndexConverter.Instance.ConvertToIndexDefinition(autoIndex);
 
             await store.Maintenance.SendAsync(new PutIndexesOperation(def));
@@ -250,7 +337,7 @@ public class RavenDB_22498 : RavenTestBase
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/indexes/auto/convert?name={Uri.EscapeDataString(_name)}&type=export";
+            url = $"{node.Url}/databases/{node.Database}/indexes/auto/convert?name={Uri.EscapeDataString(_name)}&outputType=json";
 
             var request = new HttpRequestMessage
             {
