@@ -1,6 +1,8 @@
+using System;
 using Sparrow;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Voron.Impl.Paging;
 
 namespace Voron.Impl.Scratch
 {
@@ -14,29 +16,40 @@ namespace Voron.Impl.Scratch
             if (x == y) return true;
             if (x == null || y == null) return false;            
 
-            return x.PositionInScratchBuffer == y.PositionInScratchBuffer && x.Size == y.Size && x.NumberOfPages == y.NumberOfPages && x.ScratchFileNumber == y.ScratchFileNumber;
+            return x.PositionInScratchBuffer == y.PositionInScratchBuffer && x.NumberOfPages == y.NumberOfPages && x.File == y.File;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(PageFromScratchBuffer obj)
         {
-            int v = Hashing.Combine(obj.NumberOfPages, obj.ScratchFileNumber);
-            int w = Hashing.Combine(obj.Size.GetHashCode(), obj.PositionInScratchBuffer.GetHashCode());
+            int v = Hashing.Combine(obj.NumberOfPages, obj.File.Number);
+            int w = Hashing.Combine(obj.PositionInScratchBuffer.GetHashCode(), obj.PageNumberInDataFile.GetHashCode());
             return Hashing.Combine(v, w);
         }
     }
 
 
     public sealed record PageFromScratchBuffer(
-        long AllocatedInTransactionId,
+        ScratchBufferFile File,
+        Pager2.State State,
+        long AllocatedInTransaction,
         long PositionInScratchBuffer,
         long PageNumberInDataFile,
-        Page Page,
+        Page PreviousVersion,
         int NumberOfPages,
-        int ScratchFileNumber,
-        int Size
+        bool IsDeleted = false
     )
     {
-        public Page PreviousVersion = new();
+        public unsafe Page ReadPage(LowLevelTransaction tx)
+        {
+            return new Page(Read(ref tx.PagerTransactionState));
+        }
+        
+        public unsafe byte* Read(ref Pager2.PagerTransactionState txState)
+        {
+            if (IsDeleted == false) 
+                return File.Pager.AcquirePagePointerWithOverflowHandling(State, ref txState, PositionInScratchBuffer);
+            throw new InvalidOperationException($"Attempt to read page {PageNumberInDataFile} that was deleted");
+        }
     }
 }

@@ -35,7 +35,6 @@ namespace Voron.Impl.Scratch
     {
         public int ScratchFileNumber { get; set; }
         public long PositionInScratchBuffer { get; set; }
-        public long Size { get; set; }
         public int NumberOfPages { get; set; }
     }
 

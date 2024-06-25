@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using FastTests.Voron.FixedSize;
 using Raven.Server.Documents;
 using Sparrow;
@@ -164,23 +165,54 @@ namespace FastTests.Voron.RawData
             Env.FlushLogToDataFile();
         }
 
+        [Fact]
+        public void CanReadAndWriteFromSection_AfterFlush_MixedFlushDuringTransaction()
+        {
+            Options.ManualFlushing = true;
+            long pageNumber;
+            long id;
+            Task t;
+            using (var tx = Env.WriteTransaction())
+            {
+                var section = ActiveRawDataSmallSection.Create(tx, "test", (byte)TableType.None);
+                pageNumber = section.PageNumber;
+
+                t = Task.Run(() => Env.FlushLogToDataFile());    
+                //var section = new RawDataSmallSection(tx, pageNumber);
+                Assert.True(section.TryAllocate(15, out id));
+                WriteValue(section, id, "Hello There");
+                tx.Commit();
+            }
+
+            t.Wait();
+            
+            Env.FlushLogToDataFile();
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var section = new ActiveRawDataSmallSection(tx, pageNumber);
+
+                AssertValueMatches(section, id, "Hello There");
+            }
+        }
 
         [Fact]
         public void CanReadAndWriteFromSection_AfterFlush()
         {
-            Env.Options.ManualFlushing = true;
+            Options.ManualFlushing = true;
             long pageNumber;
             long id;
             using (var tx = Env.WriteTransaction())
             {
                 var section = ActiveRawDataSmallSection.Create(tx, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
-          
+
                 //var section = new RawDataSmallSection(tx, pageNumber);
                 Assert.True(section.TryAllocate(15, out id));
                 WriteValue(section, id, "Hello There");
                 tx.Commit();
             }
+
             Env.FlushLogToDataFile();
 
             using (var tx = Env.ReadTransaction())

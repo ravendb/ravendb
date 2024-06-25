@@ -651,9 +651,8 @@ namespace Voron.Impl.Journal
 
                     // RavenDB-13302: we need to force a re-check this before we make decisions here
                     _waj._env.ActiveTransactions.ForceRecheckingOldestTransactionByFlusherThread();
-                    long oldestActiveTransaction = _waj._env.ActiveTransactions.OldestTransaction;
-                    
-                    if (_waj._env.GetLatestTransactionToFlush(uptoTxId: oldestActiveTransaction, out var record) == false || 
+
+                    if (_waj._env.GetLatestTransactionToFlush(uptoTxId: _waj._env.ActiveTransactions.OldestTransaction, out var record) == false || 
                         record.ScratchPagesTable.Count == 0)
                         return; // nothing to do
                     
@@ -730,7 +729,7 @@ namespace Voron.Impl.Journal
 
                         try
                         {
-                            UpdateJournalStateUnderWriteTransactionLock(txw,lastFlushed, flushedRecord, journalSnapshots);
+                            UpdateJournalStateUnderWriteTransactionLock(txw, lastFlushed, flushedRecord, journalSnapshots);
 
                             if (_waj._logger.IsInfoEnabled)
                                 _waj._logger.Info($"Updated journal state under write tx lock (txId: {txw.Id}) after waiting for {sp.Elapsed}");
@@ -822,6 +821,13 @@ namespace Voron.Impl.Journal
                         {
                             action(txw);
                             txw.Commit();
+                            if (txw.FlushedToJournal < 0)
+                            {
+                                // we successfully commited, but nothing was changed
+                                // we need to publish our changes to the scratch table so 
+                                // new (read) transactions will see that immediately
+                                _waj._env.UpdateScratchTable(txw);
+                            }
                         }
                         break;
                     }
@@ -834,7 +840,7 @@ namespace Voron.Impl.Journal
             }
 
             private void UpdateJournalStateUnderWriteTransactionLock(LowLevelTransaction txw, 
-                LastFlushState lastFlushed,
+                LastFlushState lastFlushState,
                 EnvironmentStateRecord flushedRecord,
                 List<JournalSnapshot> journalSnapshots)
             {
@@ -871,12 +877,11 @@ namespace Voron.Impl.Journal
                 var scratchBufferPool = _waj._env.ScratchBufferPool;
                 foreach (var (_, pageFromScratchBuffer) in flushedRecord.ScratchPagesTable)
                 {
-                    if(pageFromScratchBuffer.AllocatedInTransactionId <= lastFlushed.TransactionId)
-                        continue; // already freed in a previous flush, since it is 
-                    scratchBufferPool.Free(txw, pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
+                    if(pageFromScratchBuffer.AllocatedInTransaction <= lastFlushState.TransactionId)
+                        continue;
+                    
+                    scratchBufferPool.Free(txw, pageFromScratchBuffer.File.Number, pageFromScratchBuffer.PositionInScratchBuffer);
                 }
-
-                txw.DropPageStatesBefore(flushedRecord.TransactionId);
             }
 
             private List<JournalSnapshot> GetJournalSnapshots()
@@ -1262,7 +1267,13 @@ namespace Voron.Impl.Journal
                     Pager2.PagerTransactionState txState = default;
                     foreach (var (_, pageValue) in record.ScratchPagesTable)
                     {
-                        var pageHeader = (PageHeader*)pageValue.Page.Pointer;
+                        if (pageValue.IsDeleted)
+                        {
+                            //dataPager.ZeroPage() - hole punching
+                            continue;
+                        }
+                        
+                        var pageHeader = (PageHeader*)pageValue.Read(ref txState);
 
                         if (_waj._env.Options.Encryption.IsEnabled == false)
                         {
@@ -1271,7 +1282,7 @@ namespace Voron.Impl.Journal
                             {
                                 var checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageHeader->PageNumber, out var expectedChecksum);
                                 if (checksum != expectedChecksum)
-                                    ThrowInvalidChecksumOnPageFromScratch(pageValue.ScratchFileNumber, pageValue, pageHeader, checksum, expectedChecksum);
+                                    ThrowInvalidChecksumOnPageFromScratch(pageValue.File.Number, pageValue, pageHeader, checksum, expectedChecksum);
                             }
                             finally
                             {
@@ -1284,11 +1295,12 @@ namespace Voron.Impl.Journal
                         {
                             numberOfPages = Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize);
                         }
+                        
                         const int adjustPageSize = (Constants.Storage.PageSize) / (4 * Constants.Size.Kilobyte);
                         dataPager.DirectWrite(ref dataPagerState, ref txState, record.TransactionId,
                             pageHeader->PageNumber * adjustPageSize, 
                             numberOfPages * adjustPageSize, 
-                            pageValue.Page.Pointer);
+                            pageValue.Read(ref txState));
 
                         written += numberOfPages * Constants.Storage.PageSize;
                     }
@@ -1313,7 +1325,7 @@ namespace Voron.Impl.Journal
             [DoesNotReturn]
             private static void ThrowInvalidChecksumOnPageFromScratch(int scratchNumber, PageFromScratchBuffer pagePosition, PageHeader* page, ulong checksum, ulong expectedChecksum)
             {
-                var message = $"During apply logs to data, tried to copy {scratchNumber} / {pagePosition.ScratchFileNumber} ({page->PageNumber}) " +
+                var message = $"During apply logs to data, tried to copy {scratchNumber} / {pagePosition.File.Number} ({page->PageNumber}) " +
                               $"has checksum {checksum} but expected {expectedChecksum}";
 
                 message += $"Page flags: {page->Flags}. ";
@@ -1605,7 +1617,7 @@ namespace Voron.Impl.Journal
             var pagesEncountered = 0;
             foreach (var txPage in txPages)
             {
-                var scratchPage =txPage.Page.Pointer;
+                var scratchPage =txPage.Read(ref tx.PagerTransactionState);
                 var pageHeader = (PageHeader*)scratchPage;
 
                 // When encryption is off, we do validation by checksum

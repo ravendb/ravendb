@@ -15,6 +15,7 @@ using Voron.Global;
 using Voron.Impl.Paging;
 using Sparrow.Server.Utils;
 using System.Diagnostics.CodeAnalysis;
+using Sparrow.Binary;
 using Sparrow.Server.LowMemory;
 
 namespace Voron.Impl.Scratch
@@ -137,13 +138,11 @@ namespace Voron.Impl.Scratch
 
         public ScratchFileDebugInfo DebugInfo { get; }
 
-        public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, int sizeToAllocate, long pageNumber)
+        public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, int sizeToAllocate, long pageNumber, Page previousVersion)
         {
             _scratchPager.EnsureContinuous(ref _scratchPagerState, _lastUsedPage, sizeToAllocate, tx.Id);
-            tx.RegisterPagerState(_scratchPagerState);
             
-            var p = _scratchPager.AcquirePagePointer(_scratchPagerState, ref tx.PagerTransactionState, _lastUsedPage);
-            var result = new PageFromScratchBuffer(tx.Id, _lastUsedPage, pageNumber, new Page(p), numberOfPages, _scratchNumber, sizeToAllocate);
+            var result = new PageFromScratchBuffer(this,_scratchPagerState, tx.Id, _lastUsedPage, pageNumber, previousVersion, numberOfPages);
 
             _allocatedPagesCount += numberOfPages;
             _allocatedPages.Add(_lastUsedPage, result);
@@ -152,7 +151,7 @@ namespace Voron.Impl.Scratch
             return result;
         }
 
-        public bool TryGettingFromAllocatedBuffer(LowLevelTransaction tx, int numberOfPages, int size, long pageNumber, out PageFromScratchBuffer result)
+        public bool TryGettingFromAllocatedBuffer(LowLevelTransaction tx, int numberOfPages, int size, long pageNumber, Page previousVersion, out PageFromScratchBuffer result)
         {
             result = null;
 
@@ -161,7 +160,6 @@ namespace Voron.Impl.Scratch
                 var freeAndAvailablePageNumber = listOfAvailableImmediately.Last!.Value;
 
                 listOfAvailableImmediately.RemoveLast();
-                byte* freeAndAvailablePagePointer = _scratchPager.AcquirePagePointer(_scratchPagerState, ref tx.PagerTransactionState, freeAndAvailablePageNumber);
 
 #if VALIDATE
                 byte* freeAndAvailablePagePointer = _scratchPager.AcquirePagePointer(tx, freeAndAvailablePageNumber, PagerState);
@@ -172,8 +170,7 @@ namespace Voron.Impl.Scratch
 #endif
 
                 
-                result = new PageFromScratchBuffer(tx.Id, freeAndAvailablePageNumber, pageNumber, new Page(freeAndAvailablePagePointer),
-                    numberOfPages, _scratchNumber,  size);
+                result = new PageFromScratchBuffer(this,_scratchPagerState, tx.Id,freeAndAvailablePageNumber, pageNumber, previousVersion, numberOfPages);
 
                 _allocatedPagesCount += numberOfPages;
                 _allocatedPages.Add(freeAndAvailablePageNumber, result);
@@ -190,7 +187,6 @@ namespace Voron.Impl.Scratch
                 return false;
 
             list.RemoveLast();
-            byte* freePageBySizePointer = _scratchPager.AcquirePagePointer(_scratchPagerState, ref tx.PagerTransactionState, val.Page);
 
 #if VALIDATE
             byte* freePageBySizePointer = _scratchPager.AcquirePagePointer(tx, val.Page, PagerState);
@@ -200,8 +196,7 @@ namespace Voron.Impl.Scratch
             _scratchPager.UnprotectPageRange(freePageBySizePointer, freePageBySizeSize, true);
 #endif
 
-            result = new PageFromScratchBuffer(tx.Id, val.Page, pageNumber, new Page(freePageBySizePointer),
-                numberOfPages, _scratchNumber,  size);
+            result = new PageFromScratchBuffer(this, _scratchPagerState, tx.Id,val.Page, pageNumber, previousVersion, numberOfPages);
 
             _allocatedPagesCount += numberOfPages;
             _allocatedPages.Add(val.Page, result);
@@ -249,14 +244,15 @@ namespace Voron.Impl.Scratch
             _allocatedPagesCount -= value.NumberOfPages;
             _allocatedPages.Remove(page);
 
-            Debug.Assert(value.Size > 0);
+            Debug.Assert(value.NumberOfPages > 0);
 
         
             // We are freeing with the pages being 'visible' to any party (for ex. commits)
-            if (_freePagesBySize.TryGetValue(value.Size, out LinkedList<PendingPage> list) == false)
+            var size = Bits.PowerOf2(value.NumberOfPages);
+            if (_freePagesBySize.TryGetValue(size, out LinkedList<PendingPage> list) == false)
             {
                 list = new LinkedList<PendingPage>();
-                _freePagesBySize[value.Size] = list;
+                _freePagesBySize[size] = list;
             }
 
             list.AddFirst(new PendingPage

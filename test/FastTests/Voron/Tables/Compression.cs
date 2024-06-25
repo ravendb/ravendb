@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Text;
 using Sparrow.Binary;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
@@ -272,9 +273,23 @@ namespace FastTests.Voron.Tables
             return new string(Enumerable.Repeat(chars, length)
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public unsafe void Can_allocate_and_modify_page_same_tx()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                Page page = tx.LowLevelTransaction.AllocatePage(1);
+                tx.LowLevelTransaction.PageLocator.Renew();
+                Page page2 = tx.LowLevelTransaction.ModifyPage(page.PageNumber);
+                Assert.Equal((nint)page.Pointer, (nint)page2.Pointer);
+            }
+        }
+
         [Fact]
         public void Can_force_small_value_to_compress_to_large()
         {
+            Options.ManualFlushing = true;
             var random = new Random(222);
             using (var tx = Env.WriteTransaction())
             {

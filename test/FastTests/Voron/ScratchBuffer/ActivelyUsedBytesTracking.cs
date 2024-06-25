@@ -31,17 +31,17 @@ namespace FastTests.Voron.ScratchBuffer
                 {
                     Assert.False(file.HasActivelyUsedBytes(2));
                     
-                    file.Allocate(tx.LowLevelTransaction, 1, 1, 8);
-                    file.Allocate(tx.LowLevelTransaction, 1, 1, 9);
-                    file.Allocate(tx.LowLevelTransaction, 1, 1, 10);
-                    file.Allocate(tx.LowLevelTransaction, 1, 1, 11);
-                    file.Allocate(tx.LowLevelTransaction, 1, 1, 12);
+                    var p0 = file.Allocate(tx.LowLevelTransaction, 1, 1, 8, default);
+                    var p1 =file.Allocate(tx.LowLevelTransaction, 1, 1, 9, default);
+                    var p2 =file.Allocate(tx.LowLevelTransaction, 1, 1, 10, default);
+                    var p3 =file.Allocate(tx.LowLevelTransaction, 1, 1, 11, default);
+                    var p4 =file.Allocate(tx.LowLevelTransaction, 1, 1, 12, default);
 
-                    file.Free(tx.LowLevelTransaction, 0);
-                    file.Free(tx.LowLevelTransaction, 1);
-                    file.Free(tx.LowLevelTransaction, 2);
-                    file.Free(tx.LowLevelTransaction, 3);
-                    file.Free(tx.LowLevelTransaction, 4);
+                    file.Free(tx.LowLevelTransaction, p0.PositionInScratchBuffer);
+                    file.Free(tx.LowLevelTransaction, p1.PositionInScratchBuffer);
+                    file.Free(tx.LowLevelTransaction, p2.PositionInScratchBuffer);
+                    file.Free(tx.LowLevelTransaction, p3.PositionInScratchBuffer);
+                    file.Free(tx.LowLevelTransaction, p4.PositionInScratchBuffer);
 
                     for (int i = 0; i <= 9; i++)
                     {
