@@ -59,6 +59,12 @@ namespace Raven.Server.Web.System
         [RavenAction("/build/version/updates", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetVersionUpdatesInfo()
         {
+            if (Server.Configuration.Updates.BackgroundChecksDisabled)
+            {
+                NoContentStatus();
+                return;
+            }
+            
             var shouldRefresh = GetBoolValueQueryString("refresh", required: false) ?? false;
             if (shouldRefresh && IsLatestVersionCheckThrottled() == false)
             {

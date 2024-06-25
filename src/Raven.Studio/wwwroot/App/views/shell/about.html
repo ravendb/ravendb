@@ -53,15 +53,15 @@
                             </div>
                         </a>
                     </div>
-                    <div>
+                    <div data-bind="if: newVersionStatus() !== 'checksDisabled'">
                         <div class="flex-horizontal flex-stretch-items">
                             <button data-bind="click: openLatestVersionDownload" class="btn btn-primary big-button flex-grow">
                                 <i class="icon-server"></i>
                                 <div class="content">
                                     <small data-bind="html: newVersionAvailableHtml"></small>
-                                    <strong data-bind="visible: !isNewVersionAvailable(), text: currentServerVersion"></strong>
-                                    <small data-bind="visible: isNewVersionAvailable">Newer version exists</small>
-                                    <strong data-bind="visible: isNewVersionAvailable">Download Now</strong>
+                                    <strong data-bind="visible: newVersionStatus() === 'latest', text: currentServerVersion"></strong>
+                                    <small data-bind="visible: newVersionStatus() === 'available'">Newer version exists</small>
+                                    <strong data-bind="visible: newVersionStatus() === 'available'">Download Now</strong>
                                 </div>
                             </button>
                             <button data-bind="disable: spinners.latestVersionUpdates, click: refreshLatestVersionInfo, css: { 'btn-spinner': spinners.latestVersionUpdates }"
@@ -69,7 +69,7 @@
                                 <i class="icon-refresh"></i>
                             </button>
                         </div>
-                        <div class="text-center margin-top" data-bind="if: isNewVersionAvailable">
+                        <div class="text-center margin-top" data-bind="if: newVersionStatus() === 'available'">
                             <a href="#" data-bind="attr: { href: latestVersionWhatsNewUrl }" target="_blank">See What's New</a>
                         </div>
                     </div>
