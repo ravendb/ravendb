@@ -73,6 +73,12 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
             _definition.Priority = Priority;
             _definition.State = State;
             _definition.DeploymentMode = DeploymentMode;
+            _definition.CompoundFields = CompoundFieldsStrings;
+
+            if (SearchEngineType.HasValue)
+            {
+                _definition.Configuration[Constants.Configuration.Indexes.IndexingStaticSearchEngineType] = SearchEngineType.Value.ToString();
+            }
 
             var definition = new TimeSeriesIndexDefinition();
             _definition.CopyTo(definition);
