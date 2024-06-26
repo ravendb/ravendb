@@ -24,7 +24,10 @@ using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using Raven.Client.Documents.Changes;
@@ -424,20 +427,7 @@ namespace Raven.Server
                 throw;
             }
         }
-
-        private bool TryReadNodeTag(out string nodeTag)
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-                nodeTag = RachisConsensus.ReadNodeTag(context);
-
-            // First run: allow the server to exchange all necessary data through Rachis, and then start OpenTelemetry.
-            if (nodeTag == RachisConsensus.InitialTag)
-                return false;
-
-            return true;
-        }
-
+        
         private void StartOpenTelemetry()
         {
             if (_openTelemetryInitialized == false)
@@ -453,37 +443,70 @@ namespace Raven.Server
             if (openTelemetryConfiguration.Enabled == false)
                 return;
 
-            if (TryReadNodeTag(out var nodeTag) == false)
+            if (ClusterStateMachine.TryReadNodeTag(ServerStore, out var nodeTag) == false)
                 return;
             
             var openTelemetryBuilder = services.AddOpenTelemetry();
             
-
             openTelemetryBuilder.WithMetrics(ConfigureMetrics);
             void ConfigureMetrics(MeterProviderBuilder builder)
             {
                 builder.ConfigureResource(x => x.AddEnvironmentVariableDetector());
+                var configuration = Configuration.Monitoring.OpenTelemetry;
                 builder.SetResourceBuilder(
                     ResourceBuilder.CreateDefault()
                         .AddService("server", "ravendb", serviceInstanceId: nodeTag));
 
-                if (Configuration.Monitoring.OpenTelemetry.AspNetCoreInstrumentationMetricsEnabled)
+                if (configuration.AspNetCoreInstrumentationMetricsEnabled)
                     builder.AddAspNetCoreInstrumentation();
-                if (Configuration.Monitoring.OpenTelemetry.RuntimeInstrumentationMetricsEnabled)
+                if (configuration.RuntimeInstrumentationMetricsEnabled)
                     builder.AddRuntimeInstrumentation();
                 
-                builder.AddMeter(Constants.Meters.GeneralMeter);
-                builder.AddMeter(Constants.Meters.RequestsMeter);
-                builder.AddMeter(Constants.Meters.StorageMeter);
-                builder.AddMeter(Constants.Meters.GcMeter);
-                builder.AddMeter(Constants.Meters.TotalDatabasesMeter);
+                if (configuration.GeneralEnabled)
+                    builder.AddMeter(Constants.Meters.GeneralMeter);
+                
+                if (configuration.Requests)
+                    builder.AddMeter(Constants.Meters.RequestsMeter);
 
-
-                if (openTelemetryConfiguration.ConsoleExporter)
+                if (configuration.ServerStorage)
+                    builder.AddMeter(Constants.Meters.StorageMeter);
+                
+                if (configuration.GcEnabled)
+                    builder.AddMeter(Constants.Meters.GcMeter);
+                
+                if (configuration.TotalDatabases)
+                    builder.AddMeter(Constants.Meters.TotalDatabasesMeter);
+                
+                if (configuration.Resources)
+                    builder.AddMeter(Constants.Meters.Resources);
+                
+                if (configuration.CPUCredits)
+                    builder.AddMeter(Constants.Meters.CpuCreditsMeter);
+                
+                if (configuration.ConsoleExporter)
                     builder.AddConsoleExporter();
 
-                if (openTelemetryConfiguration.OpenTelemetryProtocolExporter)
-                    builder.AddOtlpExporter();
+                if (configuration.OpenTelemetryProtocolExporter)
+                {
+                    builder.AddOtlpExporter(x =>
+                    {
+                        if (configuration.OtlpEndpoint != null)
+                            x.Endpoint = new Uri(configuration.OtlpEndpoint);
+
+                        if (configuration.OtlpProtocol != null)
+                            x.Protocol = configuration.OtlpProtocol.Value;
+
+                        if (configuration.OtlpHeaders != null)
+                            x.Headers = configuration.OtlpHeaders;
+
+                        if (configuration.OtlpExportProcessorType != null)
+                            x.ExportProcessorType = configuration.OtlpExportProcessorType.Value;
+
+                        if (configuration.OtlpTimeout != null)
+                            x.TimeoutMilliseconds = configuration.OtlpTimeout.Value;
+                    });
+                }
+
                 
                 _openTelemetryInitialized = true;
             }

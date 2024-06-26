@@ -8,7 +8,7 @@ public static class Constants
         public const string RequestsMeter = "ravendb.serverwide.requests";
         public const string StorageMeter = "ravendb.serverwide.storage";
         public const string GcMeter = "ravendb.serverwide.gc";
-        public const string Hardware = "ravendb.serverwide.hardware";
+        public const string Resources = "ravendb.serverwide.resources";
         public const string TotalDatabasesMeter = "ravendb.serverwide.totaldatabases";
         public const string CpuCreditsMeter = "ravendb.serverwide.cpucredits";
  

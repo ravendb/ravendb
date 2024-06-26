@@ -4926,6 +4926,15 @@ namespace Raven.Server.ServerWide
             return false;
         }
 
+        public static bool TryReadNodeTag(ServerStore serverStore, out string nodeTag)
+        {
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+                nodeTag = RachisConsensus.ReadNodeTag(context);
+
+            return nodeTag != RachisConsensus.InitialTag;
+        }
+
         public ClusterStateMachine()
         {
             Subscriptions = new SubscriptionsClusterStorage(this);

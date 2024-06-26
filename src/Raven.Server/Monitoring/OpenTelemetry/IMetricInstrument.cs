@@ -2,9 +2,7 @@
 
 namespace Raven.Server.Monitoring.OpenTelemetry;
 
-public interface PlaceHolderReflection{}
-
-public interface IMetricInstrument<out TInstrumentValue>: PlaceHolderReflection
+public interface IMetricInstrument<out TInstrumentValue>
 {
     TInstrumentValue GetCurrentMeasurement();
 }
