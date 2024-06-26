@@ -817,6 +817,11 @@ namespace SlowTests.Authentication
                     ("GET", "/admin/debug/info-package"),               // heavy
                 };
 
+                var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
+                {
+                    ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
+                };
+
                 using (var httpClientHandler = new HttpClientHandler())
                 {
                     httpClientHandler.ClientCertificates.Add(userCert);
@@ -845,7 +850,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName1, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
                         if (route.EndpointType == EndpointType.Write)
@@ -863,7 +868,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName2, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
                     {
                         var canAccess = false;
 
@@ -936,6 +941,11 @@ namespace SlowTests.Authentication
                     ("GET", "/admin/debug/info-package"),               // heavy
                 };
 
+                var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
+                {
+                    ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
+                };
+
                 using (var httpClientHandler = new HttpClientHandler())
                 {
                     httpClientHandler.ClientCertificates.Add(userCert);
@@ -964,7 +974,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName1, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
                     {
                         var canAccess = route.AuthorizationStatus == AuthorizationStatus.ValidUser;
 
@@ -976,7 +986,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName2, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
                     {
                         var canAccess = false;
 
@@ -1049,6 +1059,11 @@ namespace SlowTests.Authentication
                     ("GET", "/admin/debug/info-package"),               // heavy
                 };
 
+                var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
+                {
+                    ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
+                };
+
                 using (var httpClientHandler = new HttpClientHandler())
                 {
                     httpClientHandler.ClientCertificates.Add(userCert);
@@ -1077,7 +1092,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName1, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 
@@ -1089,7 +1104,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName2, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
                     {
                         var canAccess = false;
 
@@ -1159,6 +1174,11 @@ namespace SlowTests.Authentication
                     ("GET", "/admin/debug/info-package"),               // heavy
                 };
 
+                var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
+                {
+                    ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
+                };
+
                 using (var httpClientHandler = new HttpClientHandler())
                 {
                     httpClientHandler.ClientCertificates.Add(userCert);
@@ -1182,7 +1202,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName1, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 
@@ -1194,7 +1214,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName2, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 
@@ -1250,7 +1270,7 @@ namespace SlowTests.Authentication
                     ("POST", "/setup/hosts"),                           // only available in setup mode
                     ("POST", "/setup/unsecured"),                       // only available in setup mode
                     ("POST", "/setup/unsecured/package"),               // only available in setup mode
-                    ("POST", "/setup/continue/unsecured"),               // only available in setup mode
+                    ("POST", "/setup/continue/unsecured"),              // only available in setup mode
                     ("POST", "/setup/secured"),                         // only available in setup mode
                     ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
                     ("POST", "/setup/letsencrypt"),                     // only available in setup mode
@@ -1262,6 +1282,11 @@ namespace SlowTests.Authentication
                     ("GET", "/admin/debug/cluster-info-package"),       // heavy
                     ("GET", "/admin/debug/remote-cluster-info-package"),// heavy
                     ("GET", "/admin/debug/info-package"),               // heavy
+                };
+
+                var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
+                {
+                    ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
                 };
 
                 using (var httpClientHandler = new HttpClientHandler())
@@ -1284,7 +1309,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName1, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 
@@ -1296,7 +1321,7 @@ namespace SlowTests.Authentication
                         }
                     });
 
-                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseName2, httpClient, (route, statusCode) =>
+                    await AssertDatabaseRoutesAsync(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 
@@ -1343,7 +1368,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        private static async Task AssertDatabaseRoutesAsync(IEnumerable<RouteInformation> routes, string databaseName, HttpClient httpClient, Action<RouteInformation, HttpStatusCode> assert)
+        private static async Task AssertDatabaseRoutesAsync(IEnumerable<RouteInformation> routes, HashSet<(string Method, string Path)> endpointsToIgnore, string databaseName, HttpClient httpClient, Action<RouteInformation, HttpStatusCode> assert)
         {
             foreach (var route in routes)
             {
@@ -1352,6 +1377,9 @@ namespace SlowTests.Authentication
 
                 if (route.Method == "OPTIONS")
                     continue; // artificially added routes for CORS
+
+                if (endpointsToIgnore.Contains((route.Method, route.Path)))
+                    continue;
 
                 var requestUri = new Uri(route.Path.Replace("/databases/*/", $"/databases/{databaseName}/", StringComparison.OrdinalIgnoreCase), UriKind.Relative);
                 HttpResponseMessage response;
