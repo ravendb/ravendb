@@ -508,6 +508,8 @@ namespace Raven.Server.Monitoring.Snmp
             AddGc(GCKind.Ephemeral);
             AddGc(GCKind.FullBlocking);
 
+            store.Add(new MonitorLockContentionCount());
+
             return store;
 
             void AddGc(GCKind gcKind)
