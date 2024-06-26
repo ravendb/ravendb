@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using Microsoft.Extensions.Configuration;
+using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Monitoring.Snmp;
@@ -48,7 +50,7 @@ namespace Raven.Server.Config.Categories
         public sealed class OpenTelemetryConfiguration : ConfigurationCategory
         {
             [Description("Indicates if OpenTelemetry is enabled or not. Default: false")]
-            [DefaultValue(false)]
+            [DefaultValue(true)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool Enabled { get; set; }
             
@@ -72,6 +74,31 @@ namespace Raven.Server.Config.Categories
             [ConfigurationEntry("Monitoring.OpenTelemetry.OpenTelemetryProtocol.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool OpenTelemetryProtocolExporter { get; set; }
             
+            [Description("Endpoint where OpenTelemetryProtocol should sends data. Default: null (internal OTLP default settings).")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.OpenTelemetryProtocol.Endpoint", ConfigurationEntryScope.ServerWideOnly)]
+            public string OtlpEndpoint { get; set; }
+            
+            [Description("Defines the protocol that OpenTelemetryProtocol should use to send data. Default: null (internal OTLP default settings).")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.OpenTelemetryProtocol.Protocol", ConfigurationEntryScope.ServerWideOnly)]
+            public OtlpExportProtocol? OtlpProtocol { get; set; }
+            
+            [Description("OpenTelemetryProtocol custom headers. Default: null.")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.OpenTelemetryProtocol.Headers", ConfigurationEntryScope.ServerWideOnly)]
+            public string OtlpHeaders { get; set; }           
+            
+            [Description("OpenTelemetryProtocol export processor type. Default: null.")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.OpenTelemetryProtocol.ExportProcessorType", ConfigurationEntryScope.ServerWideOnly)]
+            public ExportProcessorType? OtlpExportProcessorType { get; set; }
+            
+            [Description("OpenTelemetryProtocol timeout value. Default: null.")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.OpenTelemetryProtocol.Timeout", ConfigurationEntryScope.ServerWideOnly)]
+            public int? OtlpTimeout { get; set; }
+            
             [Description("Indicates if metrics should be exported to the console output.")]
             [DefaultValue(false)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.ConsoleExporter", ConfigurationEntryScope.ServerWideOnly)]
@@ -83,14 +110,14 @@ namespace Raven.Server.Config.Categories
             public bool ServerStorage { get; set; }
             
             [Description("Expose instruments related to CPU credits.")]
-            [DefaultValue(true)]
+            [DefaultValue(false)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.CPUCredits.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool CPUCredits { get; set; }
             
-            [Description("Expose instruments related to hardware usage.")]
+            [Description("Expose instruments related to resources usage.")]
             [DefaultValue(true)]
-            [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.Hardware.Enabled", ConfigurationEntryScope.ServerWideOnly)]
-            public bool Hardware { get; set; }
+            [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.Resources.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool Resources { get; set; }
 
             [Description("Expose instruments related to aggregated database statistics.")]
             [DefaultValue(true)]
@@ -103,9 +130,14 @@ namespace Raven.Server.Config.Categories
             public bool Requests { get; set; }
             
             [Description("Expose instruments related to GC.")]
-            [DefaultValue(true)]
+            [DefaultValue(false)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.GC.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool GcEnabled { get; set; }
+            
+            [Description("Expose instruments related to general.")]
+            [DefaultValue(true)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.ServerWide.General.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool GeneralEnabled { get; set; }
         }
 
         [ConfigurationCategory(ConfigurationCategoryType.Monitoring)]
