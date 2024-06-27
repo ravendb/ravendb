@@ -1,12 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
-using Raven.Client.Util;
-using Raven.Server.Config;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.OpenTelemetry;
 
@@ -15,6 +8,7 @@ public class MetricsManager
     private readonly RavenServer _server;
     private readonly SemaphoreSlim _locker = new(1, 1);
     private ServerMetrics _serverMetrics;
+    private bool _metricsActivated;
     
     public MetricsManager(RavenServer server)
     {
@@ -30,6 +24,9 @@ public class MetricsManager
         _locker.Wait();
         try
         {
+            if (_metricsActivated)
+                return;
+            
             var activate = _server.ServerStore.LicenseManager.CanUseOpenTelemetryMonitoring(withNotification: true, startUp: false);
             if (activate)
             {
@@ -56,11 +53,14 @@ public class MetricsManager
 
         try
         {
+            if (_metricsActivated)
+                return;
+            
             var activate = _server.ServerStore.LicenseManager.CanUseOpenTelemetryMonitoring(withNotification: true, startUp: true);
             if (activate)
             {
                 if (_serverMetrics != null)
-                    throw new InvalidOperationException("Cannot start SNMP Engine because it is already activated. Should not happen!");
+                    throw new InvalidOperationException("Cannot start OpenTelemetry because it is already activated. Should not happen!");
 
                 RegisterServerWideMeters();
             }
@@ -80,5 +80,6 @@ public class MetricsManager
             return;
 
         _serverMetrics = new(_server);
+        _metricsActivated = true;
     }
 }

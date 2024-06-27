@@ -4,13 +4,13 @@ public static class Constants
 {
     public static class Meters
     {
-        public const string GeneralMeter = "ravendb.serverwide.general";
-        public const string RequestsMeter = "ravendb.serverwide.requests";
-        public const string StorageMeter = "ravendb.serverwide.storage";
-        public const string GcMeter = "ravendb.serverwide.gc";
-        public const string Resources = "ravendb.serverwide.resources";
-        public const string TotalDatabasesMeter = "ravendb.serverwide.totaldatabases";
-        public const string CpuCreditsMeter = "ravendb.serverwide.cpucredits";
+        public const string GeneralMeter = "ravendb.server.general";
+        public const string RequestsMeter = "ravendb.server.requests";
+        public const string StorageMeter = "ravendb.server.storage";
+        public const string GcMeter = "ravendb.server.gc";
+        public const string Resources = "ravendb.server.resources";
+        public const string TotalDatabasesMeter = "ravendb.server.totaldatabases";
+        public const string CpuCreditsMeter = "ravendb.server.cpucredits";
  
     }
     

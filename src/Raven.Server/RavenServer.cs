@@ -457,9 +457,9 @@ namespace Raven.Server
                     ResourceBuilder.CreateDefault()
                         .AddService("server", "ravendb", serviceInstanceId: nodeTag));
 
-                if (configuration.AspNetCoreInstrumentationMetricsEnabled)
+                if (configuration.AspNetCoreInstrumentationMetersEnabled)
                     builder.AddAspNetCoreInstrumentation();
-                if (configuration.RuntimeInstrumentationMetricsEnabled)
+                if (configuration.RuntimeInstrumentationMetersEnabled)
                     builder.AddRuntimeInstrumentation();
                 
                 if (configuration.GeneralEnabled)
