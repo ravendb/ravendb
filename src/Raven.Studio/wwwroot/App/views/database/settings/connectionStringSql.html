@@ -32,6 +32,16 @@
                 </span>
             </div>
         </div>
+        <div class="has-warning" data-bind="visible: factoryName() === 'System.Data.SqlClient'">
+            <div class="help-block">
+                <i class="icon-warning"></i>
+                <span>
+                    This connector is deprecated. 
+                    Microsoft SqlClient will be used instead. 
+                    Please update Factory to: Microsoft.Data.SqlClient.
+                </span>
+            </div>
+        </div>
     </div>
 </div>
 <div class="form-group" data-bind="validationElement: connectionString">
