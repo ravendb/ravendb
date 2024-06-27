@@ -125,7 +125,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Lambda2Js.Signed" Version="3.1.4" />
-    <PackageReference Include="Microsoft.AspNetCore.JsonPatch" Version="6.0.12" />
+    <PackageReference Include="Microsoft.AspNetCore.JsonPatch" Version="6.0.31" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="6.0.0" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
