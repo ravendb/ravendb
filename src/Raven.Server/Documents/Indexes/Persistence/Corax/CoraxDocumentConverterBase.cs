@@ -413,33 +413,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     {
         if (IgnoreComplexObjectsDuringIndex)
             return;
-
-        if (_index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.CoraxComplexFieldsNotSupported)
-        {
-            ComplexObjectLegacyHandling();
-            return;
-        }
         
         if (KnownFieldsForWriter.TryGetByFieldName(field.Name, out var binding) && binding.FieldIndexingMode != FieldIndexingMode.No)
             ThrowIndexingComplexObjectNotSupported(field, _index.Type);
-
-        // Backward compatibility for older indexes
-        // Previously, we silently changed the definition not to throw when encountering a complex field without any particular configuration.
-        // Let's persist this behavior for old indexes.
-        void ComplexObjectLegacyHandling()
-        {
-            if (_index.GetIndexDefinition().Fields.TryGetValue(field.Name, out var fieldFromDefinition) &&
-                fieldFromDefinition.Indexing != null && 
-                fieldFromDefinition.Indexing != FieldIndexing.No)
-            {
-                // We need to disable the complex object handling after we check and then throw. 
-                DisableIndexingForComplexObject(field);
-                ThrowIndexingComplexObjectNotSupported(field, _index.Type);
-            }
-
-            DisableIndexingForComplexObject(field);
-            return;
-        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
