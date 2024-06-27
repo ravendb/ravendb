@@ -33,7 +33,6 @@ public class CoraxCrud: StorageTest
             {
                 builder.Write(0, null, "users/1"u8);
                 builder.Write(1, null, "Oren Eini"u8);
-                builder.EndWriting();
             }
             indexWriter.Commit();
         }
@@ -62,7 +61,6 @@ public class CoraxCrud: StorageTest
                 builder.Write(Constants.IndexWriter.DynamicField, "Items","One");
                 builder.Write(Constants.IndexWriter.DynamicField, "Items","Two");
                 builder.DecrementList();
-                builder.EndWriting();
             }
             indexWriter.Commit();
         }
@@ -88,7 +86,6 @@ public class CoraxCrud: StorageTest
             {
                 builder.Write(0, null, "users/1"u8);
                 builder.Write(1, null, "Oren Oren Oren Rahien"u8);
-                builder.EndWriting();
             }
             indexWriter.Commit();
         }
@@ -99,13 +96,11 @@ public class CoraxCrud: StorageTest
             {
                 builder.Write(0, null, "users/1"u8);
                 builder.Write(1, null, "Oren Eini"u8);
-                builder.EndWriting();
             }
             using (var builder = indexWriter.Update("users/2"u8))
             {
                 builder.Write(0, null, "users/2"u8);
                 builder.Write(1, null, "Oren Oren"u8);
-                builder.EndWriting();
             }
             indexWriter.Commit();
         }
@@ -136,7 +131,6 @@ public class CoraxCrud: StorageTest
             {
                 builder.Write(0, null, "users/1"u8);
                 builder.Write(1, null, "Oren Eini"u8);
-                builder.EndWriting();
             }
             indexWriter.Commit();
         }
@@ -147,7 +141,6 @@ public class CoraxCrud: StorageTest
             {
                 builder.Write(0, null, "users/1"u8);
                 builder.Write(1, null, "Ayende Rahien"u8);
-                builder.EndWriting();
             }
             indexWriter.Commit();
         }

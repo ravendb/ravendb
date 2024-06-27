@@ -95,7 +95,6 @@ namespace FastTests.Corax
                     using var builder = indexWriter.Index(entry.Id);
                     builder.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
                     builder.Write(ContentId, Encoding.UTF8.GetBytes(entry.Content.ToString()), entry.Content, Convert.ToDouble(entry.Content));
-                    builder.EndWriting();
                 }
                 indexWriter.Commit();
             }

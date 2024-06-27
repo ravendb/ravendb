@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Indexes;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -35,7 +34,6 @@ namespace FastTests.Corax.Bugs
 
                 session.Store(new TestData()
                 {
-                    Complex = true,
                     Identifier = "hehe3",
                     Name = "a2",
                     Second = "b3"
@@ -44,26 +42,20 @@ namespace FastTests.Corax.Bugs
                 session.SaveChanges();
             }
 
-            var index = new ComplexIndex();
-            index.Execute(store);
-            Indexes.WaitForIndexing(store);
-            
-            var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] {index.IndexName}));
-            Assert.Equal(1, indexErrors.Length);
+            new ComplexIndex().Execute(store);
             WaitForUserToContinueTheTest(store);
-            Assert.Contains("field is a complex object. Indexing it as a text isn't supported and it's supposed to have", indexErrors[0].Errors[0].Error);
+            Indexes.WaitForIndexing(store);
+
             using (var session = store.OpenSession())
             {
                 var users = session
                     .Query<TestData, ComplexIndex>()
                     .Customize(x => x.WaitForNonStaleResults())
-                    .Where(x => x.Identifier.StartsWith("hehe"))
+                    .Where(x => x.Identifier == "hehe3")
                     .ToList();
 
-                Assert.Equal(2, users.Count);
+                Assert.Equal(1, users.Count);
             }
-
-            WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount, 2);
         }
 
         public class TestData
@@ -71,13 +63,12 @@ namespace FastTests.Corax.Bugs
             public string Name { get; set; }
             public string Second { get; set; }
             public string Identifier { get; set; }
-            public bool Complex { get; set; }
         }
         private class ComplexIndex : AbstractIndexCreationTask<TestData>
         {
             public ComplexIndex()
             {
-                Map = datas => datas.Select(i => new { Identifier = i.Identifier, Complex = i.Complex ? new { i.Name, i.Second } : null });
+                Map = datas => datas.Select(i => new { Identifier = i.Identifier, Complex = new { i.Name, i.Second } });
 
                 Index("Complex", FieldIndexing.Exact);
             }

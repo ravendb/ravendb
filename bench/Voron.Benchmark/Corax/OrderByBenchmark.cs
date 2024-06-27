@@ -129,7 +129,6 @@ namespace Voron.Benchmark.Corax
                     builder.Write(1, Encoding.UTF8.GetBytes("Eini"));
                     builder.Write(2, Encoding.UTF8.GetBytes(12L.ToString()), 12L, 12D);
                     builder.Write(3, Encoding.UTF8.GetBytes("Dog"));
-                    builder.EndWriting();
                 }
 
                 {
@@ -138,7 +137,6 @@ namespace Voron.Benchmark.Corax
                     builder.Write(1, Encoding.UTF8.GetBytes("Eini"));
                     builder.Write(2, Encoding.UTF8.GetBytes(7.ToString()), 7L, 7D);
                     builder.Write(3, Encoding.UTF8.GetBytes("Dog"));
-                    builder.EndWriting();
                 }
 
                 for (int i = 0; i < 100_000; i++)
@@ -149,7 +147,6 @@ namespace Voron.Benchmark.Corax
                     var age = i % 15;
                     builder.Write(2, Encoding.UTF8.GetBytes(age.ToString()), age, age);
                     builder.Write(3, Encoding.UTF8.GetBytes("Dog"));
-                    builder.EndWriting();
                 }
 
                 writer.Commit();

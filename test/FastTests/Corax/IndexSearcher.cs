@@ -48,7 +48,6 @@ namespace FastTests.Corax
                     builder.Write(ContentIndex, Encodings.Utf8.GetBytes(entry1.Content), dateTime.Ticks, dateTime.Ticks);
                     double doubleVal = dateTime.Ticks;
                     Assert.NotEqual(dateTime.Ticks, (long)doubleVal);
-                    builder.EndWriting();
                 }
 
                 indexWriter.Commit();
@@ -1996,7 +1995,6 @@ namespace FastTests.Corax
                 }
 
                 entry.IndexEntryId = builder.EntryId;
-                builder.EndWriting();
             }
             indexWriter.Commit();
             mapping.Dispose();
@@ -2011,7 +2009,7 @@ namespace FastTests.Corax
                 using var builder = indexWriter.Index(entry.Id);
                 builder.Write(IdIndex, PrepareString(entry.Id));
                 builder.Write(ContentIndex, PrepareString(entry.Content));
-                builder.EndWriting();
+
             }
 
             indexWriter.Commit();
@@ -2030,7 +2028,6 @@ namespace FastTests.Corax
                     using var entryWriter = indexWriter.Index(entry.Id);
                     entryWriter.Write(IdIndex, PrepareString(entry.Id));
                     entryWriter.Write(ContentIndex, PrepareString(entry.Content.ToString(CultureInfo.InvariantCulture)), Convert.ToInt64(entry.Content), entry.Content);
-                    entryWriter.EndWriting();
                 }
 
                 indexWriter.Commit();

@@ -191,7 +191,7 @@ namespace Corax.Indexing
 
             _indexedEntries.Add(keySlice); // Register entry by key.
             int index = InsertTermsPerEntry(entryId);
-            _builder.Init(entryId, index, keySlice);
+            _builder.Init(entryId, index);
             return _builder;
         }
 
@@ -215,7 +215,7 @@ namespace Corax.Indexing
             Slice.From(_transaction.Allocator, key, ByteStringType.Immutable, out var keySlice);
             _indexedEntries.Add(keySlice);  // Register entry by key. 
             int index = InsertTermsPerEntry(entryId);
-            _builder.Init(entryId, index, keySlice);
+            _builder.Init(entryId, index);
 
             return _builder;
         }

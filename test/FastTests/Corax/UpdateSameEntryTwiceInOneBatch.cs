@@ -38,7 +38,6 @@ namespace FastTests.Corax
                 {
                     builder.Write(0, "users/1"u8);
                     builder.Write(1, "dancing queen"u8);
-                    builder.EndWriting();
                 }
                 
                 writer.Commit();
@@ -50,7 +49,6 @@ namespace FastTests.Corax
                 {
                     builder.Write(0, "users/1"u8);
                     builder.Write(1, "fernando"u8);
-                    builder.EndWriting();
                 }
                 writer.Commit();
             }
@@ -62,7 +60,6 @@ namespace FastTests.Corax
                 {
                     builder.Write(0, "users/1"u8);
                     builder.Write(1, "eagles"u8);
-                    builder.EndWriting();
                 }
 
                 fieldNamesByRootPage = writer.GetIndexedFieldNamesByRootPage();
@@ -76,7 +73,6 @@ namespace FastTests.Corax
                 {
                     builder.Write(0, "users/1"u8);
                     builder.Write(1, "eagles"u8); // no change!
-                    builder.EndWriting();
                 }
                 writer.Commit();
             }
@@ -109,7 +105,6 @@ namespace FastTests.Corax
                 {
                     builder.Write(0, "users/1"u8);
                     builder.Write(1, "dancing queen"u8);
-                    builder.EndWriting();
                 }
                 
                 writer.Commit();
@@ -122,7 +117,6 @@ namespace FastTests.Corax
                     {
                         builder.Write(0, "users/1"u8);
                         builder.Write(1, "fernando"u8);
-                        builder.EndWriting();
                     }
                 }
 
@@ -131,7 +125,6 @@ namespace FastTests.Corax
                     {
                         builder.Write(0, "users/1"u8);
                         builder.Write(1, "eagles"u8);
-                        builder.EndWriting();
                     }
                 }
 
@@ -159,7 +152,6 @@ namespace FastTests.Corax
                 {
                     builder.Write(0, "users/1"u8);
                     builder.Write(1, "dancing queen"u8);
-                    builder.EndWriting();
                 }
                 
                 writer.Commit();
@@ -172,7 +164,6 @@ namespace FastTests.Corax
                     {
                         builder.Write(0, "users/1"u8);
                         builder.Write(1, "fernando"u8);
-                        builder.EndWriting();
                     }
                 }
 
@@ -210,7 +201,6 @@ namespace FastTests.Corax
                     builder.Write(0, "users/1"u8);
                     builder.Write(1, "dancing queen"u8);
                     builder.Write(2, "someKey"u8);
-                    builder.EndWriting();
                 }
                 
                 writer.Commit();
@@ -224,7 +214,6 @@ namespace FastTests.Corax
                         builder.Write(0, "users/1"u8);
                         builder.Write(1, "fernando"u8);
                         builder.Write(2, "someKey"u8);
-                        builder.EndWriting();
                     }
                 }
 
@@ -272,7 +261,7 @@ namespace FastTests.Corax
                     builder.Write(0, "users/1"u8);
                     builder.Write(1, "maciej"u8);
                     builder.Write(2, "1"u8);
-                    builder.EndWriting();
+
                 }
 
                 writer.Commit();
@@ -286,14 +275,12 @@ namespace FastTests.Corax
                     builder.Write(0, "users/1"u8);
                     builder.Write(1, "maciej"u8);
                     builder.Write(2, "2"u8);
-                    builder.EndWriting();
                 }
                 using (var builder = writer.Update("users/2"u8))
                 {
                     builder.Write(0, "users/2"u8);
                     builder.Write(1, "maciej"u8);
                     builder.Write(2, "0"u8);
-                    builder.EndWriting();
                 }
 
                 writer.Commit();

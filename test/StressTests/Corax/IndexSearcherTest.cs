@@ -62,7 +62,6 @@ public class IndexSearcherTest : StorageTest
         using var builder = indexWriter.Index(entry.Id);
         builder.Write(IdIndex, PrepareString(entry.Id));
         builder.Write(ContentIndex, PrepareString(entry.Content));
-        builder.EndWriting();
 
         Span<byte> PrepareString(string value)
         {

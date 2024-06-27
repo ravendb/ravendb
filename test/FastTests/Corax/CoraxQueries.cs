@@ -344,7 +344,6 @@ namespace FastTests.Corax
                 entryBuilder.Write(LongValueId, Encoding.UTF8.GetBytes(entry.LongValue.ToString()), entry.LongValue, entry.LongValue);
                 entryBuilder.Write(DoubleValueId, Encoding.UTF8.GetBytes(entry.DoubleValue.ToString()), (long)entry.DoubleValue, entry.DoubleValue);
                 entryBuilder.Write(TextualValueId, Encodings.Utf8.GetBytes(entry.TextualValue));
-                entryBuilder.EndWriting();
             }
 
             indexWriter.Commit();
