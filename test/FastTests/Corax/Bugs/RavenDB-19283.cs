@@ -54,7 +54,6 @@ public class RavenDB_19283 : StorageTest
                     }
                 }
                 writer.DecrementList();
-                writer.EndWriting();
             }
             indexWriter.Commit();
         }

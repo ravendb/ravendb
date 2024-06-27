@@ -188,7 +188,6 @@ public class RankingFunctionTests : StorageTest
             using var builder = indexWriter.Index(dto.Id.ToString());
             builder.Write(IdIndex, dto.IdAsSpan, dto.Id, dto.Id);
             builder.Write(ContentIndex, dto.ContentAsSpan);
-            builder.EndWriting();
         }
 
         indexWriter.Commit();

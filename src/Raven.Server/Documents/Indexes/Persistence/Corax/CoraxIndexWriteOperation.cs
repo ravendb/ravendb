@@ -88,22 +88,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);
-            using (var builder = _indexWriter.Update(key.AsSpan()))
+            using var builder = _indexWriter.Update(key.AsSpan());
+
+            using (Stats.AddStats.Start())
             {
-
-                using (Stats.AddStats.Start())
+                if (_converter.SetDocument(key, sourceDocumentId, document, indexContext, builder))
                 {
-                    if (_converter.SetDocument(key, sourceDocumentId, document, indexContext, builder))
-                    {
-                        stats.RecordIndexingOutput();
-                        builder.EndWriting();
-                        return;
-                    }
-
-                    Delete(key, stats);
+                    stats.RecordIndexingOutput();
+                    return;
                 }
-
-                builder.EndWriting();
+                Delete(key, stats);
             }
         }
 
@@ -111,18 +105,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);
-            using (var builder = _indexWriter.Index(key.AsSpan()))
+            using var builder = _indexWriter.Index(key.AsSpan());
+
+            using (Stats.AddStats.Start())
             {
-
-                using (Stats.AddStats.Start())
-                {
-                    if (_converter.SetDocument(key, sourceDocumentId, document, indexContext, builder))
-                        stats.RecordIndexingOutput();
-                    else
-                        _indexWriter.ReduceModificationCount();
-                }
-
-                builder.EndWriting();
+                if (_converter.SetDocument(key, sourceDocumentId, document, indexContext, builder))
+                    stats.RecordIndexingOutput();
+                else
+                    _indexWriter.ReduceModificationCount();
             }
         }
 
