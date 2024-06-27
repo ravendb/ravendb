@@ -1,5 +1,4 @@
 ﻿using Corax;
-using Corax.Querying;
 using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow.Server;
@@ -49,6 +48,7 @@ public class IndexEntryReaderBigDoc : StorageTest
                     }
                 }
                 writer.DecrementList();
+                writer.EndWriting();
             }
             indexWriter.Commit();
         }
