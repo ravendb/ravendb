@@ -18,6 +18,7 @@ using NCrontab.Advanced;
 using NCrontab.Advanced.Extensions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -35,7 +36,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
-using Raven.Client.ServerWide.Sharding;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
@@ -163,6 +163,8 @@ namespace Raven.Server.ServerWide
         {
             // we want our servers to be robust get early errors about such issues
             MemoryInformation.EnableEarlyOutOfMemoryChecks = true;
+
+            DefaultIdentityPartsSeparator = Constants.Identities.DefaultSeparator;
 
             QueryClauseCache = new MemoryCache(new MemoryCacheOptions
             {
@@ -855,7 +857,6 @@ namespace Raven.Server.ServerWide
 
             CheckSwapOrPageFileAndRaiseNotification();
 
-
             _sharding = new ShardingStore(this);
             _engine = new RachisConsensus<ClusterStateMachine>(this);
 
@@ -866,6 +867,8 @@ namespace Raven.Server.ServerWide
             using (context.OpenReadTransaction())
             {
                 PublishedServerUrls = PublishedServerUrls.Read(context);
+
+                LoadDefaultIdentityPartsSeparator(context);
             }
 
             _ = Task.Run(PublishServerUrlAsync).IgnoreUnobservedExceptions();
@@ -882,6 +885,25 @@ namespace Raven.Server.ServerWide
 
             Initialized = true;
             InitializationCompleted.Set();
+        }
+
+        public void LoadDefaultIdentityPartsSeparator(ClientConfiguration clientConfiguration)
+        {
+            var defaultIdentityPartsSeparator = Constants.Identities.DefaultSeparator;
+            if (clientConfiguration is { Disabled: false, IdentityPartsSeparator: not null })
+                defaultIdentityPartsSeparator = clientConfiguration.IdentityPartsSeparator.Value;
+
+            DefaultIdentityPartsSeparator = defaultIdentityPartsSeparator;
+        }
+
+        private void LoadDefaultIdentityPartsSeparator(ClusterOperationContext context)
+        {
+            ClientConfiguration clientConfiguration = null;
+            var serverClientConfigurationJson = Cluster.Read(context, Constants.Configuration.ClientId, out _);
+            if (serverClientConfigurationJson != null)
+                clientConfiguration = JsonDeserializationClient.ClientConfiguration(serverClientConfigurationJson);
+
+            LoadDefaultIdentityPartsSeparator(clientConfiguration);
         }
 
         private async Task PublishServerUrlAsync()
@@ -2570,6 +2592,8 @@ namespace Raven.Server.ServerWide
 
         public Guid ServerId => GetServerId();
 
+        public char DefaultIdentityPartsSeparator;
+
         public bool IsShutdownRequested()
         {
             return _shutdownNotification.IsCancellationRequested;
@@ -3218,7 +3242,7 @@ namespace Raven.Server.ServerWide
                 if (cmd.Timeout != null)
                 {
                     cts.CancelAfter(cmd.Timeout.Value);
-                } 
+                }
 
                 using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     return await SendToLeaderAsyncInternal(context, cmd, cts.Token);
@@ -3428,7 +3452,7 @@ namespace Raven.Server.ServerWide
         internal ClusterRequestExecutor CreateNewClusterRequestExecutor(string leaderUrl)
         {
             var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.Certificate.Certificate, Server.Conventions);
-            requestExecutor.DefaultTimeout = Engine.OperationTimeout;   
+            requestExecutor.DefaultTimeout = Engine.OperationTimeout;
 
             return requestExecutor;
         }
