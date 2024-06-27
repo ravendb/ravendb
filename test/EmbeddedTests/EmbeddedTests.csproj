@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <RuntimeFrameworkVersion>6.0.12</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>6.0.31</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>EmbeddedTests</AssemblyName>
     <PackageId>EmbeddedTests</PackageId>
