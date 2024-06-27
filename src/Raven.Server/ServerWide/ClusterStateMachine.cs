@@ -642,7 +642,7 @@ namespace Raven.Server.ServerWide
 
                     case nameof(PutClientConfigurationCommand):
                         AssertLicenseLimits(type, serverStore, databaseRecord: null, items: null, context);
-                        PutValue<ClientConfiguration>(context, type, cmd, index);
+                        PutClientConfiguration(context, type, cmd, index, serverStore);
                         break;
 
                     case nameof(PutServerWideStudioConfigurationCommand):
