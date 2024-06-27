@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.CompilerServices;
-using System.Text;
 using Sparrow;
 using Sparrow.Server;
 using Voron;
@@ -34,7 +33,6 @@ namespace Corax
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
-                
                 Slice.From(ctx, ProjectionNullValue, ByteStringType.Immutable, out ProjectionNullValueSlice);
                 Slice.From(ctx, NullValue, ByteStringType.Immutable, out NullValueSlice);
                 Slice.From(ctx, EmptyString, ByteStringType.Immutable, out EmptyStringSlice);

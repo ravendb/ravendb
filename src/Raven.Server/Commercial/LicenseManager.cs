@@ -1449,7 +1449,7 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.DelayedExternalReplication, message, addNotification: true);
         }
 
-        public void  AssertCanUseDocumentsCompression(DocumentsCompressionConfiguration documentsCompression)
+        public void AssertCanUseDocumentsCompression(DocumentsCompressionConfiguration documentsCompression)
         {
             var hasDocumentsCompression = HasDocumentsCompression(documentsCompression);
 
@@ -1616,7 +1616,7 @@ namespace Raven.Server.Commercial
                     return true;
                 else
                 {
-                    const string details = "Your license allows you to run OpenTelemetry meters but in order to run on meters you've to manually restart the RavenDB process.";
+                    const string details = "Your license allows you to run OpenTelemetry meters, but OpenTelemetry is initialized at process startup. To enable the OpenTelemetry feature, you must restart the process.";
                     throw GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: true);
                 }
             }

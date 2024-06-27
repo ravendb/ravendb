@@ -10,7 +10,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
     {
         private readonly MetricCacher _metricCacher;
         private readonly string _cacheKey;
-        protected KeyValuePair<string, object?> MeasurementTag;
+        protected KeyValuePair<string, object> MeasurementTag;
 
         protected ServerGcBase(MetricCacher metricCacher, GCKind gcKind, string dots)
             : base(dots, (int)gcKind)
