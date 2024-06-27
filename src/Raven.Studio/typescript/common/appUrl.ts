@@ -563,7 +563,7 @@ class appUrl {
         return "#databases/tasks/backups?" + databasePart;
     }
     
-    static forOngoingTasks(db: database | databaseInfo): string {
+    static forOngoingTasks(db: database | databaseInfo | string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/ongoingTasks?" + databasePart;
     }
