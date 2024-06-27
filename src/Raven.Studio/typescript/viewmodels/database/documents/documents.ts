@@ -53,7 +53,7 @@ class documents extends shardViewModelBase {
     dirtyCurrentCollection = ko.observable<boolean>(false);
 
     copyDisabledReason: KnockoutComputed<disabledReason>;
-    canExportAsCsv: KnockoutComputed<boolean>;
+    canExportToFile: KnockoutComputed<boolean>;
     
     $downloadForm: JQuery;
 
@@ -69,6 +69,11 @@ class documents extends shardViewModelBase {
         delete: ko.observable<boolean>(false),
         copy: ko.observable<boolean>(false)
     };
+
+    exportAsFileSettings = {
+        format: ko.observable<"json" | "csv">("csv"),
+        allColumns: ko.observable<boolean>(true)
+    }
 
     constructor(db: database) {
         super(db);
@@ -130,7 +135,7 @@ class documents extends shardViewModelBase {
             return resultDirty || collectionChanged;
         });
         
-        this.canExportAsCsv = ko.pureComputed(() => {
+        this.canExportToFile = ko.pureComputed(() => {
             return this.inSpecificCollection();
         });
     }
@@ -415,27 +420,18 @@ class documents extends shardViewModelBase {
         app.showBootstrapDialog(new showDataDialog("Document IDs", text, "javascript"));
     }
 
-    exportCsvVisibleColumns() {
-        const columns = this.columnsSelector.getSimpleColumnsFields();
-        this.exportCsvInternal(columns);
-    }
-    
-    exportCsvFull() {
-        this.exportCsvInternal();
-    }
-    
-    private exportCsvInternal(columns: string[] = undefined) {
-        eventsCollector.default.reportEvent("documents", "export-csv");
+    exportAsFile() {
+        eventsCollector.default.reportEvent("query", "export-csv");
 
         const args = {
-            format: "csv",
-            field: columns
-        };
-
+            format: this.exportAsFileSettings.format(),
+            field: this.exportAsFileSettings.allColumns() ? undefined : this.columnsSelector.getSimpleColumnsFields(),
+        }
+        
         const payload = {
             Query: "from '" + this.currentCollection().name + "'"
         };
-
+        
         $("input[name=ExportOptions]").val(JSON.stringify(payload));
 
         const url = appUrl.forDatabaseQuery(this.db) + endpoints.databases.streaming.streamsQueries + appUrl.urlEncodeArgs(args);
