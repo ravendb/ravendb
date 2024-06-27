@@ -48,6 +48,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 writer.Write(Constants.IndexWriter.DynamicField, fieldName, Encoding.UTF8.GetBytes(""));
                 writer.Write(0, "users/1"u8);
                 entryId = writer.EntryId;
+                writer.EndWriting();
             }
             indexWriter.Commit();
         }
@@ -99,6 +100,7 @@ public unsafe class DynamicFieldsTests : StorageTest
 
                 writer.Write(Constants.IndexWriter.DynamicField, "Age_0", Encoding.UTF8.GetBytes("30.31"), 30, 30.31);
                 writer.Write(Constants.IndexWriter.DynamicField,"Age_1", Encoding.UTF8.GetBytes("10"), 10, 10);
+                writer.EndWriting();
             }
 
             indexer.Commit();
@@ -160,6 +162,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entry.Write(0, "users/1"u8);
                 entry.Write(1, "Oren"u8);
                 entry.Write(Constants.IndexWriter.DynamicField,"Nick", "Ayende"u8);
+                entry.EndWriting();
             }
             writer.Commit();
         }
@@ -200,6 +203,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entry.Write(1, "Oren"u8);
                 entry.Write(Constants.IndexWriter.DynamicField,"Nick", "Ayende"u8);
                 entry.Write(Constants.IndexWriter.DynamicField,"Name", "Eini Oren"u8);
+                entry.EndWriting();
             }
             
             writer.Commit();
@@ -245,6 +249,8 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entry.Write(0, "users/1"u8);
                 entry.Write(1, "Oren"u8);
                 entry.Write(Constants.IndexWriter.DynamicField,"Name", "Oren"u8);
+                entry.EndWriting();
+                documentId = entry.EntryId;
             }
             writer.Commit();
         }
@@ -311,6 +317,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entry.Write(0, "users/1"u8);
                 entry.Write(1, "Oren"u8);
                 entry.Write(Constants.IndexWriter.DynamicField, "Rank", "U"u8);
+                entry.EndWriting();
             }
 
             writer.Commit();
@@ -324,6 +331,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entry.Write(0, "users/1"u8);
                 entry.Write(1, "Oren"u8);
                 entry.Write(Constants.IndexWriter.DynamicField,"Name", "Oren"u8);
+                entry.EndWriting();
             }
             writer.Commit();
         }
@@ -337,6 +345,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entry.Write(0, "users/1"u8);
                 entry.Write(1, "Eini"u8);
                 entry.Write(Constants.IndexWriter.DynamicField,"Name", "Eini"u8);
+                entry.EndWriting();
             }
            
             writer.Commit();
@@ -371,7 +380,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 builder.Write(0, Encodings.Utf8.GetBytes(IdString));
                 var spatialEntry = new CoraxSpatialPointEntry(latitude, longitude, geohash);
                 builder.WriteSpatial(Constants.IndexWriter.DynamicField,"Coordinates_Home", spatialEntry);
-
+                builder.EndWriting();
             }
             writer.Commit();
         }
@@ -443,6 +452,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 }
                 writer.DecrementList();
                 entryId = writer.EntryId;
+                writer.EndWriting();
             }
             indexWriter.Commit();
         }
@@ -489,6 +499,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entryBuilder.Write(0, "users/1"u8);
                 entryBuilder.Write(1, "Oren"u8);
                 entryBuilder.Write(Constants.IndexWriter.DynamicField,"Rank", "U"u8);
+                entryBuilder.EndWriting();
             }
             writer.Commit();
         }
@@ -500,6 +511,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entryBuilder.Write(0, "users/1"u8);
                 entryBuilder.Write(1, "Oren"u8);
                 entryBuilder.Write(Constants.IndexWriter.DynamicField,"Name", "Maciej"u8);
+                entryBuilder.EndWriting();
             }
           
             writer.Commit();
@@ -545,7 +557,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entryBuilder.Write(0, "users/1"u8);
                 entryBuilder.Write(1, "Oren"u8);
                 entryBuilder.Write(Constants.IndexWriter.DynamicField,"Rank", "U"u8);
-
+                entryBuilder.EndWriting();
             }
             writer.Commit();
         }
@@ -557,7 +569,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entryBuilder.Write(0, "users/1"u8);
                 entryBuilder.Write(1, "Oren"u8);
                 entryBuilder.Write(Constants.IndexWriter.DynamicField,"Name", "Maciej"u8);
-
+                entryBuilder.EndWriting();
             }
             writer.Commit();
         }
@@ -576,6 +588,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entry.Write(0, "users/1"u8);
                 entry.Write(1, "Eini"u8);
                 entry.Write(Constants.IndexWriter.DynamicField,"Name", "Eini"u8);
+                entry.EndWriting();
             }
             writer.Commit();
         }

@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using Corax;
 using Corax.Analyzers;
-using Corax.Querying;
 using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow.Server;
@@ -16,7 +15,6 @@ using Xunit;
 using Xunit.Abstractions;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
-using VoronConstants = Voron.Global.Constants;
 
 
 namespace StressTests.Corax;
@@ -62,7 +60,7 @@ public class IndexSearcherTest : StorageTest
         using var builder = indexWriter.Index(entry.Id);
         builder.Write(IdIndex, PrepareString(entry.Id));
         builder.Write(ContentIndex, PrepareString(entry.Content));
-
+        builder.EndWriting();
         Span<byte> PrepareString(string value)
         {
             if (value == null)

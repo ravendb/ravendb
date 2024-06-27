@@ -58,6 +58,7 @@ public class RawCoraxFlag : StorageTest
                 using var builder = writer.Index(Encodings.Utf8.GetBytes(id));
                 builder.Write(IndexId, null, Encodings.Utf8.GetBytes(id));
                 builder.Store(Constants.IndexWriter.DynamicField, "Dynamic", item);
+                builder.EndWriting();
             }
 
             writer.Commit();
@@ -113,11 +114,13 @@ public class RawCoraxFlag : StorageTest
             {
                 builder.Write(IndexId, null, "us/1"u8);
                 builder.Write(ContentId, null, "First second third fourth");
+                builder.EndWriting();
             }
             using (var builder = writer.Index("us/2"u8))
             {
                 builder.Write(IndexId, null, "us/2"u8);
                 builder.Write(ContentId, null, "First third fourth second");
+                builder.EndWriting();
             }
            
             writer.Commit();
@@ -149,6 +152,7 @@ public class RawCoraxFlag : StorageTest
             {
                 builder.Write(IndexId, null, "us/1"u8);
                 builder.Write(ContentId, null, sentence);
+                builder.EndWriting();
             }
             writer.Commit();
         }
@@ -202,6 +206,7 @@ public class RawCoraxFlag : StorageTest
                 using var builder = writer.Index(Encodings.Utf8.GetBytes(id));
                 builder.Write(IndexId, null, Encodings.Utf8.GetBytes(id));
                 builder.Store(item);
+                builder.EndWriting();
             }
 
             writer.Commit();
