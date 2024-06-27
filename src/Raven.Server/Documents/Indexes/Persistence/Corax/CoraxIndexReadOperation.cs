@@ -1288,18 +1288,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     if (hit == baseDocId)
                         continue;
                     
+                    var id = _documentIdReader.GetTermFor(hit);
+                    if (ravenIds.Add(id) == false)
+                        continue;
+
                     if (skippedDocs < query.Start)
                     {
                         skippedDocs++;
                         continue;
                     }
-
+                    
                     var termsReader = IndexSearcher.GetEntryTermsReader(hit, ref page);
-                    var id = _documentIdReader.GetTermFor(hit);
-
-                    if (ravenIds.Add(id) == false)
-                        continue;
-
                     var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, termsReader, id, _index.IndexFieldsPersistence.HasTimeValues);
                     var result = retriever.Get(ref retrieverInput, token);
                     
