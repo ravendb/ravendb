@@ -100,6 +100,13 @@ export default function SqlConnectionString({
                         MySqlConnector.MySqlConnectorFactory.
                     </Alert>
                 )}
+                {formValues.factoryName === "System.Data.SqlClient" && (
+                    <Alert color="warning mt-1">
+                        <Icon icon="warning" color="warning" />
+                        This connector is deprecated. Microsoft SqlClient will be used instead. Please update Factory
+                        to: Microsoft.Data.SqlClient.
+                    </Alert>
+                )}
             </div>
             <div className="mb-2">
                 <Label className="d-flex align-items-center gap-1">
@@ -146,15 +153,21 @@ export default function SqlConnectionString({
 }
 
 const sqlFactoryOptions: SelectOptionWithWarning<SqlConnectionStringFactoryName>[] = [
-    { value: "System.Data.SqlClient", label: "Microsoft SQL Server (System.Data.SqlClient)" },
+    { value: "Microsoft.Data.SqlClient", label: "Microsoft SQL Server (System.Data.Microsoft)" },
     { value: "MySqlConnector.MySqlConnectorFactory", label: "MySQL Server (MySqlConnector.MySqlConnectorFactory)" },
     { value: "Npgsql", label: "PostgreSQL (Npgsql)" },
     { value: "Oracle.ManagedDataAccess.Client", label: "Oracle Database (Oracle.ManagedDataAccess.Client)" },
     { value: "MySql.Data.MySqlClient", label: "DEPRECATED: MySQL Server (MySql.Data.MySqlClient)", isWarning: true },
+    {
+        value: "System.Data.SqlClient",
+        label: "DEPRECATED: Microsoft SQL Server (System.Data.SqlClient)",
+        isWarning: true,
+    },
 ];
 
 function getSyntaxHelp(factory: SqlConnectionStringFactoryName) {
     switch (factory) {
+        case "Microsoft.Data.SqlClient":
         case "System.Data.SqlClient":
             return (
                 <span>

@@ -1001,6 +1001,7 @@ type LicenseStatus = Omit<Raven.Server.Commercial.LicenseStatus, "Version"> & { 
 
 
 type SqlConnectionStringFactoryName =
+    | "Microsoft.Data.SqlClient"
     | "System.Data.SqlClient"
     | "MySql.Data.MySqlClient"
     | "MySqlConnector.MySqlConnectorFactory"
