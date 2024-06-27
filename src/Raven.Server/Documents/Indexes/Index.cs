@@ -3034,7 +3034,7 @@ namespace Raven.Server.Documents.Indexes
         {
             // multiple maps can reference the same collections, we wants to return distinct names only
             return GetReferencedCollections()?
-                .SelectMany(p =>  p.Value?.Select(z => z.Name))
+                .SelectMany(p => p.Value?.Select(z => z.Name))
                 .ToHashSet();
         }
 
@@ -4084,7 +4084,8 @@ namespace Raven.Server.Documents.Indexes
             var length = sizeof(long) * 4 * Collections.Count + // last document etag, last tombstone etag and last mapped etags per collection
                          sizeof(int) + // definition hash
                          1 + // isStale
-                         1; // index state
+                         1 + // index state
+                         sizeof(long); // created timestamp (binary)
 
             if (q == null)
                 return length;
@@ -4126,6 +4127,8 @@ namespace Raven.Server.Documents.Indexes
             *indexEtagBytes = isStale ? (byte)0 : (byte)1;
             indexEtagBytes += sizeof(byte);
             *indexEtagBytes = (byte)indexState;
+            indexEtagBytes += sizeof(byte);
+            *(long*)indexEtagBytes = _indexStorage.CreatedTimestampAsBinary;
         }
 
         public long GetIndexEtag(QueryOperationContext context, QueryMetadata q)
@@ -4179,7 +4182,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var dict = new Dictionary<TombstoneDeletionBlockageSource, HashSet<string>>();
 
-            if (Status is not (IndexRunningStatus.Disabled or IndexRunningStatus.Paused)) 
+            if (Status is not (IndexRunningStatus.Disabled or IndexRunningStatus.Paused))
                 return dict;
 
             var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.Index, Name);
