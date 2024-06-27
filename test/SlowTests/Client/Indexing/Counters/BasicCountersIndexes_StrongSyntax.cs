@@ -1383,7 +1383,7 @@ namespace SlowTests.Client.Indexing.Counters
                     into g
                     select new
                     {
-                        Value = g.Key.Value, 
+                        Value = g.Key, 
                         Count = g.Sum(r => r.Count)
                     };
             }
