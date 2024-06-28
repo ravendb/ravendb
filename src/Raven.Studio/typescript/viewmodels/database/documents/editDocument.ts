@@ -46,6 +46,7 @@ import moment = require("moment");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import shard from "models/resources/shard";
 import shardedDatabase from "models/resources/shardedDatabase";
+import assertUnreachable from "components/utils/assertUnreachable";
 import generalUtils = require("common/generalUtils");
 
 class editDocument extends shardViewModelBase {
@@ -1183,12 +1184,12 @@ class editDocument extends shardViewModelBase {
                         break;
                     }
                     default:
-                        generalUtils.assertUnreachable(direction);
+                        assertUnreachable(direction);
                 }
                 break;
             }
             default:
-                generalUtils.assertUnreachable(tab);
+                assertUnreachable(tab);
         }
         
     }
@@ -1207,12 +1208,12 @@ class editDocument extends shardViewModelBase {
                             return currentRevisionIndex < this.revisionsToCompare().length - 1;
                         }
                         default:
-                            return generalUtils.assertUnreachable(direction);
+                            assertUnreachable(direction);
                     }
                 }
 
                 default:
-                    generalUtils.assertUnreachable(tab);
+                    assertUnreachable(tab);
             }
         });
     }
