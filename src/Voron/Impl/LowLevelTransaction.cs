@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -71,7 +72,7 @@ namespace Voron.Impl
 
             // These two are not just about pooling memory, but about actually holding
             // on to the values _across_ transactions
-            public Dictionary<long, PageFromScratchBuffer> ScratchPagesInUse = new ();
+            public ImmutableDictionary<long, PageFromScratchBuffer>.Builder ScratchPagesInUse = ImmutableDictionary.CreateBuilder<long, PageFromScratchBuffer>(); 
 
             public void Reset()
             {
@@ -1100,7 +1101,7 @@ namespace Voron.Impl
             var rollbackPages = _env.WriteTransactionPool.ScratchPagesInUse;
             
             // we need to roll back all the changes we made here
-            _env.WriteTransactionPool.ScratchPagesInUse = new Dictionary<long, PageFromScratchBuffer>(_envRecord.ScratchPagesTable);
+            _env.WriteTransactionPool.ScratchPagesInUse = _envRecord.ScratchPagesTable.ToBuilder(); 
             foreach (var (k, maybeRollBack) in rollbackPages)
             {
                 if(_envRecord.ScratchPagesTable.TryGetValue(k, out var committed) &&
@@ -1395,9 +1396,9 @@ namespace Voron.Impl
             return _dirtyPages.Contains(p);
         }
 
-        public FrozenDictionary<long, PageFromScratchBuffer> GetPagesInScratch()
+        public ImmutableDictionary<long, PageFromScratchBuffer> GetPagesInScratch()
         {
-            return  _env.WriteTransactionPool.ScratchPagesInUse.ToFrozenDictionary();
+            return _env.WriteTransactionPool.ScratchPagesInUse.ToImmutable();
         }
 
         public void ForgetAboutScratchPage(PageFromScratchBuffer value)
