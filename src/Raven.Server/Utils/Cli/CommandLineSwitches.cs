@@ -15,6 +15,8 @@ namespace Raven.Server.Utils.Cli
 
         public static bool PrintVersionAndExit => ParseSwitchOption(_versionOption);
 
+        public static bool PrintInfoAndExit => ParseSwitchOption(_infoOption);
+
         public static bool NonInteractive => ParseSwitchOption(_nonInteractiveOption);
 
         public const string DefaultServiceName = "RavenDB";
@@ -38,6 +40,8 @@ namespace Raven.Server.Utils.Cli
         private static CommandOption _browserOption;
 
         private static CommandOption _versionOption;
+
+        private static CommandOption _infoOption;
 
         private static CommandOption _nonInteractiveOption;
 
@@ -76,6 +80,10 @@ namespace Raven.Server.Utils.Cli
             _versionOption = _app.Option(
                 "-v | --version",
                 "Displays version and exits",
+                CommandOptionType.NoValue);
+            _infoOption = _app.Option(
+                "-i | --info",
+                "Displays info and exits",
                 CommandOptionType.NoValue);
             _printIdOption = _app.Option(
                 "--print-id",
