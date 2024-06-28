@@ -1,8 +1,4 @@
-del test-timings.xml
+dotnet test --logger "trx;LogFileName=output.xml"
 
-dotnet xunit -xml test-timings.xml 
-
-[xml]$tests = Get-Content test-timings.xml
-$tests.assemblies.assembly.collection.test | 
-    sort @{e={$_.time -as [double]} } -descending | 
-    select time, name -first 25
+[xml]$tests = Get-Content .\TestResults\output.xml
+$tests.TestRun.Results.UnitTestResult | sort @{e={$_.duration} } -descending | select testName, duration -first 25

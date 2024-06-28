@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -148,7 +149,7 @@ namespace Voron
                 _currentStateRecordRecord = new EnvironmentStateRecord(
                     dataPagerState,
                     0,
-                    FrozenDictionary<long, PageFromScratchBuffer>.Empty,
+                    ImmutableDictionary<long, PageFromScratchBuffer>.Empty, 
                     0,
                     null, 
                     -1);
