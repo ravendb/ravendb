@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Org.BouncyCastle.OpenSsl;
@@ -39,7 +40,7 @@ public sealed class LetsEncryptCertificateUtil
 
     public static async Task WriteCertificateAsPemToZipArchiveAsync(string name, byte[] rawBytes, string exportPassword, ZipArchive archive)
     {
-        var a = new Pkcs12Store();
+        var a = new Pkcs12StoreBuilder().Build();
         a.Load(new MemoryStream(rawBytes), Array.Empty<char>());
 
         X509CertificateEntry entry = null;
