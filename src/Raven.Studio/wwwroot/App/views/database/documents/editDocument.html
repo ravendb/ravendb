@@ -113,7 +113,7 @@
                         <div class="btn-group">
                             <button class="btn btn-sm btn-default" title="Previous revision" 
                                     data-bind="click: _.partial(revisionNavigate, 'backward', 'right'), enable: canNavigateObservable('backward', 'right')">
-                                <i class="icon-arrow-filled-left"></i>
+                                <i class="icon-corax-backward"></i>
                             </button>
                             <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" title="Choose revision">
                                 <span data-bind="text: $root.comparingWith().__metadata.lastModified()"></span> <span class="caret margin-left margin-left-sm"></span>
@@ -125,7 +125,7 @@
                             </ul>
                             <button class="btn btn-sm btn-default" title="Next revision" 
                                     data-bind="click: _.partial(revisionNavigate, 'forward', 'right'), enable: canNavigateObservable('forward', 'right')">
-                                <i class="icon-arrow-filled-right"></i>
+                                <i class="icon-corax-forward"></i>
                             </button>
                         </div>
                        
