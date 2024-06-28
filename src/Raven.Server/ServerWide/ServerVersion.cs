@@ -11,6 +11,7 @@ namespace Raven.Server.ServerWide
         private static string _version;
         private static string _fullVersion;
         private static string _assemblyVersion;
+        private static string _releaseDate;
 
         public static string Version => 
             _version ?? (_version = RavenVersionAttribute.Instance.Version);
@@ -24,6 +25,8 @@ namespace Raven.Server.ServerWide
             _fullVersion ?? (_fullVersion = RavenVersionAttribute.Instance.FullVersion);
         public static string AssemblyVersion =>
             _assemblyVersion ?? (_assemblyVersion = RavenVersionAttribute.Instance.AssemblyVersion);
+        public static string ReleaseDate =>
+            _releaseDate ?? (_releaseDate = RavenVersionAttribute.Instance.ReleaseDateString);
 
         public const int DevBuildNumber = 61;
 
