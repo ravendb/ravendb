@@ -62,7 +62,7 @@ public class MetricsManager
                 if (_serverMetrics != null)
                     throw new InvalidOperationException("Cannot start OpenTelemetry because it is already activated. Should not happen!");
 
-                RegisterServerWideMeters();
+                RegisterServerMeters();
             }
         }
         finally
@@ -71,12 +71,12 @@ public class MetricsManager
         }
     }
 
-    private void RegisterServerWideMeters()
+    private void RegisterServerMeters()
     {
         if (_serverMetrics != null)
             throw new InvalidOperationException("Server-wide metrics are already initialized.");
 
-        if (_server.Configuration.Monitoring.OpenTelemetry.ServerWideEnabled == false)
+        if (_server.Configuration.Monitoring.OpenTelemetry.ServerMetersEnabled == false)
             return;
 
         _serverMetrics = new(_server);
