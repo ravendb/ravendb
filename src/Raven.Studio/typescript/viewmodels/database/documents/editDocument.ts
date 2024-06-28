@@ -44,6 +44,7 @@ import studioSettings = require("common/settings/studioSettings");
 import globalSettings = require("common/settings/globalSettings");
 import fileDownloader = require("common/fileDownloader");
 import moment = require("moment");
+import generalUtils = require("common/generalUtils");
 
 class editDocument extends viewModelBase {
 
@@ -181,7 +182,8 @@ class editDocument extends viewModelBase {
         this.initValidation();
         
         this.bindToCurrentInstance("compareRevisions", "forceCreateRevision", "copyChangeVectorToClipboard", 
-                                   "togglePropertiesPanel", "activateTimeSeriesTab", "activateAttachmentsTab");
+                                   "togglePropertiesPanel", "activateTimeSeriesTab", "activateAttachmentsTab", 
+                                   "revisionNavigate");
     }
 
     canActivate(args: any) {
@@ -1107,6 +1109,58 @@ class editDocument extends viewModelBase {
                     return this.compareRevisions(itemToCompare);
                 }
             });
+    }
+    
+    revisionNavigate(direction: "backward" | "forward", tab: "right") {
+        if (!this.canNavigateObservable(direction, tab)) {
+            return;
+        }
+        switch (tab) {
+            case "right": {
+                const currentRevision = this.comparingWith();
+                const currentRevisionIndex = this.revisionsToCompare().findIndex(x => x === currentRevision);
+                switch (direction) {
+                    case "backward": {
+                        this.compareRevisions(this.revisionsToCompare()[currentRevisionIndex - 1]);
+                        break;
+                    }
+                    case "forward": {
+                        this.compareRevisions(this.revisionsToCompare()[currentRevisionIndex + 1]);
+                        break;
+                    }
+                    default:
+                        generalUtils.assertUnreachable(direction);
+                }
+                break;
+            }
+            default:
+                generalUtils.assertUnreachable(tab);
+        }
+        
+    }
+    
+    canNavigateObservable(direction: "backward" | "forward", tab: "right") {
+        return ko.pureComputed(() => {
+            switch (tab) {
+                case "right": {
+                    const currentRevision = this.comparingWith();
+                    const currentRevisionIndex = this.revisionsToCompare().findIndex(x => x === currentRevision);
+                    switch (direction) {
+                        case "backward": {
+                            return currentRevisionIndex > 0;
+                        }
+                        case "forward": {
+                            return currentRevisionIndex < this.revisionsToCompare().length - 1;
+                        }
+                        default:
+                            generalUtils.assertUnreachable(direction);
+                    }
+                }
+
+                default:
+                    generalUtils.assertUnreachable(tab);
+            }
+        });
     }
     
     compareRevisions(item: document) {
