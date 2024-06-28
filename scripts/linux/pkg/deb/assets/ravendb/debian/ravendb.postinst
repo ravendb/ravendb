@@ -52,9 +52,8 @@ if command -v setcap &> /dev/null; then
     setcap CAP_NET_BIND_SERVICE=+eip /usr/lib/ravendb/server/Raven.Server
 fi
 
-CREATEDUMP_PATH="/usr/lib/ravendb/server/createdump"
 RAVEN_DEBUG_PATH="/usr/lib/ravendb/server/Raven.Debug"
-debugBinList=("$CREATEDUMP_PATH" "$RAVEN_DEBUG_PATH")
+debugBinList=("$RAVEN_DEBUG_PATH")
 for binFilePath in "${debugBinList[@]}"
 do
     binFilename="$(basename $binFilePath)"
