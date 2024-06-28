@@ -18,7 +18,7 @@ public class RequiresMsSqlRetryFactAttribute : RetryFactAttribute
         if (RavenTestHelper.IsRunningOnCI)
             return;
 
-        if (MySqlConnectionString.Instance.CanConnect == false)
-            Skip = "Test requires MySQL database";
+        if (MsSqlConnectionString.Instance.CanConnect == false)
+            Skip = "Test requires MsSQL database";
     }
 }

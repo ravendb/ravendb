@@ -3,7 +3,6 @@ import websocketBasedWidget = require("viewmodels/resources/widgets/websocketBas
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import iconsPlusTextColumn = require("widgets/virtualGrid/columns/iconsPlusTextColumn");
-import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import genUtils = require("common/generalUtils");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 import multiNodeTagsColumn = require("widgets/virtualGrid/columns/multiNodeTagsColumn");
@@ -196,14 +195,24 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
     private getTaskCountClass(item: taskItem): string {
         if (!item.isTitleItem()) {
             return ""
-    }
+        }
         
         if (item.taskCount()) {
             return "text-bold";
-    }
+        }
 
         return "text-muted small";
+    }
+
+    private getOngoingTasksUrlForNode(databaseName: string, nodeTag: string): string {
+        const node = clusterTopologyManager.default.getClusterNodeByTag(nodeTag);
+
+        if (!node) {
+            return "#"
         }
+
+        return node.serverUrl() + "/studio/index.html" + appUrl.forOngoingTasks(databaseName);
+    }
 
     private prepareColumns(): virtualColumn[] {
         const grid = this.gridController();
@@ -224,7 +233,7 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 headerTitle: "Nodes running the tasks"
             })
         ];
-        }
+    }
 
     reducePerDatabase(itemsArray: rawTaskItem[]): taskItem[] {
         const output: taskItem[] = [];
