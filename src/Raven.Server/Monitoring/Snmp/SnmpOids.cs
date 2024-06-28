@@ -373,6 +373,10 @@ namespace Raven.Server.Monitoring.Snmp
 
             public const string ServerLimitsPrefix = "1.17.{0}";
 
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("Monitor lock contention count")]
+            public const string MonitorLockContentionCount = "1.18.1";
+
             public static DynamicJsonArray ToJson()
             {
                 var array = new DynamicJsonArray();

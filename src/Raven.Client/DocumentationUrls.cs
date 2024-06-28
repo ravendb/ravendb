@@ -15,6 +15,18 @@ internal static class DocumentationUrls
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.1/csharp/client-api/session/querying/text-search/highlight-query-results"/></remarks>
             public const string HighlightQueryResults = nameof(HighlightQueryResults);
 
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.1/Csharp/client-api/session/querying/debugging/query-timings"/></remarks>
+            public const string QueryTimings = nameof(QueryTimings);
+
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.1/csharp/client-api/session/querying/how-to-query#session.advanced.rawquery"/></remarks>
+            public const string RawDocumentQuery = nameof(RawDocumentQuery);
+
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.1/csharp/indexes/querying/projections#projection-behavior-with-a-static-index"/></remarks>
+            public const string ProjectionBehavior = nameof(ProjectionBehavior);
+
+            /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.1/csharp/indexes/querying/faceted-search"/></remarks>
+            public const string FacetedSearch = nameof(FacetedSearch);
+
             internal static class HowToCustomizeQuery
             {
                 /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.1/csharp/client-api/session/querying/how-to-customize-query#beforequeryexecuted"/></remarks>

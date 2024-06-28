@@ -104,7 +104,7 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                         </LocationSpecificDetailsItem>
                     ) : (
                         <LocationSpecificDetailsItem className="status">
-                            <Icon icon="check" margin="m-0" /> Up to date
+                            <Icon icon="check" margin="me-sm-1" /> Up to date
                         </LocationSpecificDetailsItem>
                     )}
                 </LocationSpecificDetailsItemsContainer>

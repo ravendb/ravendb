@@ -89,6 +89,11 @@ namespace Raven.Client.Documents.Indexes.Counters
                     builder.AddMap(_map.Counter, _map.Map);
             }
 
+            if (SearchEngineType.HasValue)
+            {
+                builder.Configuration[Constants.Configuration.Indexes.IndexingStaticSearchEngineType] = SearchEngineType.Value.ToString();
+            }
+
             var indexDefinition = builder.ToIndexDefinition(Conventions);
             return indexDefinition;
         }

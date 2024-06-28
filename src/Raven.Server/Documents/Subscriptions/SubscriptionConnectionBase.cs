@@ -1109,6 +1109,11 @@ namespace Raven.Server.Documents.Subscriptions
                         // but we must wait for it before we release _copiedBuffer
                         _lastReplyFromClientTask.Wait();
                     }
+                    else if (_lastReplyFromClientTask.IsFaulted)
+                    {
+                        // need to catch the exception here to prevent UnobservedTaskException 
+                        _lastReplyFromClientTask.Wait();
+                    }
                 }
                 catch
                 {

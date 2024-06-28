@@ -179,10 +179,14 @@ export default function ClientDatabaseConfiguration() {
                                             <div className="p-4">
                                                 <div className="md-label">
                                                     Identity parts separator{" "}
-                                                    <Icon id="SetIdentityPartsSeparator" icon="info" color="info" />
+                                                    <Icon
+                                                        id="SetIdentityPartsSeparator-server"
+                                                        icon="info"
+                                                        color="info"
+                                                    />
                                                 </div>
                                                 <UncontrolledPopover
-                                                    target="SetIdentityPartsSeparator"
+                                                    target="SetIdentityPartsSeparator-server"
                                                     trigger="hover"
                                                     container="PopoverContainer"
                                                     placement="right"
@@ -203,10 +207,14 @@ export default function ClientDatabaseConfiguration() {
                                                 />
                                                 <div className="md-label mt-4">
                                                     Maximum number of requests per session{" "}
-                                                    <Icon id="SetMaximumRequestsPerSession" icon="info" color="info" />
+                                                    <Icon
+                                                        id="SetMaximumRequestsPerSession-server"
+                                                        icon="info"
+                                                        color="info"
+                                                    />
                                                 </div>
                                                 <UncontrolledPopover
-                                                    target="SetMaximumRequestsPerSession"
+                                                    target="SetMaximumRequestsPerSession-server"
                                                     trigger="hover"
                                                     container="PopoverContainer"
                                                     placement="right"
@@ -239,10 +247,14 @@ export default function ClientDatabaseConfiguration() {
                                         <div className="p-4">
                                             <div className="md-label">
                                                 Identity parts separator{" "}
-                                                <Icon id="SetIdentityPartsSeparator" icon="info" color="info" />
+                                                <Icon
+                                                    id="SetIdentityPartsSeparator-database"
+                                                    icon="info"
+                                                    color="info"
+                                                />
                                             </div>
                                             <UncontrolledPopover
-                                                target="SetIdentityPartsSeparator"
+                                                target="SetIdentityPartsSeparator-database"
                                                 trigger="hover"
                                                 container="PopoverContainer"
                                                 placement="right"
@@ -277,10 +289,14 @@ export default function ClientDatabaseConfiguration() {
                                             </InputGroup>
                                             <div className="md-label mt-4">
                                                 Maximum number of requests per session{" "}
-                                                <Icon id="SetMaximumRequestsPerSession" icon="info" color="info" />
+                                                <Icon
+                                                    id="SetMaximumRequestsPerSession-database"
+                                                    icon="info"
+                                                    color="info"
+                                                />
                                             </div>
                                             <UncontrolledPopover
-                                                target="SetMaximumRequestsPerSession"
+                                                target="SetMaximumRequestsPerSession-database"
                                                 trigger="hover"
                                                 container="PopoverContainer"
                                                 placement="right"
@@ -337,10 +353,10 @@ export default function ClientDatabaseConfiguration() {
                                         <Card className={classNames("p-4", { "item-disabled": canEditDatabaseConfig })}>
                                             <div className="md-label">
                                                 Load Balance Behavior{" "}
-                                                <Icon id="SetSessionContext" icon="info" color="info" />
+                                                <Icon id="SetSessionContext-server" icon="info" color="info" />
                                             </div>
                                             <UncontrolledPopover
-                                                target="SetSessionContext"
+                                                target="SetSessionContext-server"
                                                 trigger="hover"
                                                 container="PopoverContainer"
                                                 placement="right"
@@ -385,12 +401,12 @@ export default function ClientDatabaseConfiguration() {
                                                         {" "}
                                                         Seed
                                                         <Icon
-                                                            id="SetLoadBalanceSeedBehavior"
+                                                            id="SetLoadBalanceSeedBehavior-server"
                                                             icon="info"
                                                             color="info"
                                                         />
                                                         <UncontrolledPopover
-                                                            target="SetLoadBalanceSeedBehavior"
+                                                            target="SetLoadBalanceSeedBehavior-server"
                                                             trigger="hover"
                                                             container="PopoverContainer"
                                                             placement="right"
@@ -411,9 +427,9 @@ export default function ClientDatabaseConfiguration() {
                                             )}
                                             <div className="md-label mt-4">
                                                 Read Balance Behavior{" "}
-                                                <Icon id="SetReadBalanceBehavior" icon="info" color="info" />
+                                                <Icon id="SetReadBalanceBehavior-server" icon="info" color="info" />
                                                 <UncontrolledPopover
-                                                    target="SetReadBalanceBehavior"
+                                                    target="SetReadBalanceBehavior-server"
                                                     trigger="hover"
                                                     container="PopoverContainer"
                                                     placement="right"
@@ -440,10 +456,10 @@ export default function ClientDatabaseConfiguration() {
                                     <Card className={classNames("p-4", { "item-disabled": !canEditDatabaseConfig })}>
                                         <div className="md-label">
                                             Load Balance Behavior{" "}
-                                            <Icon id="SetSessionContext" icon="info" color="info" />
+                                            <Icon id="SetSessionContext-database" icon="info" color="info" />
                                         </div>
                                         <UncontrolledPopover
-                                            target="SetSessionContext"
+                                            target="SetSessionContext-database"
                                             trigger="hover"
                                             container="PopoverContainer"
                                             placement="right"
@@ -498,9 +514,13 @@ export default function ClientDatabaseConfiguration() {
                                                 <div className="md-label mt-4">
                                                     {" "}
                                                     Seed
-                                                    <Icon id="SetLoadBalanceSeedBehavior" icon="info" color="info" />
+                                                    <Icon
+                                                        id="SetLoadBalanceSeedBehavior-database"
+                                                        icon="info"
+                                                        color="info"
+                                                    />
                                                     <UncontrolledPopover
-                                                        target="SetLoadBalanceSeedBehavior"
+                                                        target="SetLoadBalanceSeedBehavior-database"
                                                         trigger="hover"
                                                         container="PopoverContainer"
                                                         placement="right"
@@ -542,9 +562,9 @@ export default function ClientDatabaseConfiguration() {
                                         )}
                                         <div className="md-label mt-4">
                                             Read Balance Behavior{" "}
-                                            <Icon id="SetReadBalanceBehavior" icon="info" color="info" />
+                                            <Icon id="SetReadBalanceBehavior-database" icon="info" color="info" />
                                             <UncontrolledPopover
-                                                target="SetReadBalanceBehavior"
+                                                target="SetReadBalanceBehavior-database"
                                                 trigger="hover"
                                                 container="PopoverContainer"
                                                 placement="right"

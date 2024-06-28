@@ -108,8 +108,9 @@ export function IndexDistribution(props: IndexDistributionProps) {
 
     const sharded = IndexUtils.isSharded(index);
 
-    const formattedCreatedTimestamp = index.createdTimestamp
-        ? genUtils.formatDurationByDate(moment(index.createdTimestamp)) + " ago"
+    const earliestCreatedTimestamp = IndexUtils.getEarliestCreatedTimestamp(index);
+    const formattedEarliestCreatedTimestamp = earliestCreatedTimestamp
+        ? genUtils.formatDurationByDate(moment(earliestCreatedTimestamp)) + " ago"
         : null;
 
     const items = (
@@ -168,9 +169,9 @@ export function IndexDistribution(props: IndexDistributionProps) {
                 </DistributionSummary>
                 {items}
             </LocationDistribution>
-            {formattedCreatedTimestamp && (
+            {formattedEarliestCreatedTimestamp && (
                 <div className="small">
-                    <span className="text-muted">Created:</span> <strong>{formattedCreatedTimestamp}</strong>
+                    <span className="text-muted">Created:</span> <strong>{formattedEarliestCreatedTimestamp}</strong>
                 </div>
             )}
         </div>

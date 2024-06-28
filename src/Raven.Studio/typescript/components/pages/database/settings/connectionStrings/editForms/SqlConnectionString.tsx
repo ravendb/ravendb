@@ -96,7 +96,8 @@ export default function SqlConnectionString({
                 {formValues.factoryName === "MySql.Data.MySqlClient" && (
                     <Alert color="warning mt-1">
                         <Icon icon="warning" color="warning" />
-                        This connector is deprecated
+                        This connector is deprecated. MySqlConnector will be used instead. Please update Factory to:
+                        MySqlConnector.MySqlConnectorFactory.
                     </Alert>
                 )}
             </div>

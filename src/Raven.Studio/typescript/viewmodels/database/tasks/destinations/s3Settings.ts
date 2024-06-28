@@ -14,6 +14,7 @@ class s3Settings extends amazonSettings {
     forcePathStyle = ko.observable<boolean>();
     accessKeyPropertyName: KnockoutComputed<string>;
     secretKeyPropertyName: KnockoutComputed<string>;
+    isSecretHidden = ko.observable<boolean>(true);
 
     targetOperation: string;
 
@@ -167,6 +168,10 @@ class s3Settings extends amazonSettings {
             ForcePathStyle: false,
             CustomServerUrl: null,
         }, allowedRegions, targetOperation);
+    }
+    
+    toggleIsSecretHidden() {
+        this.isSecretHidden(!this.isSecretHidden());
     }
 }
 
