@@ -13,5 +13,6 @@ public record EnvironmentStateRecord(
     ImmutableDictionary<long, PageFromScratchBuffer> ScratchPagesTable,
     long FlushedToJournal,
     TreeMutableState Root,
-    long NextPageNumber
+    long NextPageNumber,
+    object ClientState
     );
