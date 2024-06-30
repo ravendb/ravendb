@@ -314,17 +314,22 @@ public partial class RavenTestBase
             }
         }
 
+        public Task<WaitHandle[]> WaitForBackupToComplete(IDocumentStore store, RavenServer server)
+        {
+            return WaitForBackupsToComplete(new[] { store }, [server]);
+        }
+
         public Task<WaitHandle[]> WaitForBackupToComplete(IDocumentStore store)
         {
             return WaitForBackupsToComplete(new[] { store });
         }
 
-        public async Task<WaitHandle[]> WaitForBackupsToComplete(IEnumerable<IDocumentStore> stores)
+        public async Task<WaitHandle[]> WaitForBackupsToComplete(IEnumerable<IDocumentStore> stores, List<RavenServer> servers = null)
         {
             var waitHandles = new List<WaitHandle>();
             foreach (var store in stores)
             {
-                await foreach (var db in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(store))
+                await foreach (var db in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(store, servers))
                 {
                     BackupTestBase.FillBackupCompletionHandles(waitHandles, db);
                 }

@@ -15,6 +15,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -40,6 +41,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly ServerStore _serverStore;
         private readonly CancellationTokenSource _cancellationToken;
         private readonly PathSetting _tempBackupPath;
+        private readonly string _originalDatabaseName;
 
         private readonly ConcurrentDictionary<long, PeriodicBackup> _periodicBackups
             = new ConcurrentDictionary<long, PeriodicBackup>();
@@ -62,6 +64,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _logger = LoggingSource.Instance.GetLogger<PeriodicBackupRunner>(_database.Name);
             _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
             _tempBackupPath = BackupUtils.GetBackupTempPath(_database.Configuration, "PeriodicBackupTemp", out _);
+            _originalDatabaseName = database is ShardedDocumentDatabase sdd ? sdd.ShardedDatabaseName : database.Name;
 
             // we pass wakeup-1 to ensure the backup will run right after DB woke up on wakeup time, and not on the next occurrence.
             // relevant only if it's the first backup after waking up
@@ -329,7 +332,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
 
                 BackupUtils.CheckServerHealthBeforeBackup(_serverStore, periodicBackup.Configuration.Name);
-                _serverStore.ConcurrentBackupsCounter.StartBackup(periodicBackup.Configuration.Name, _logger);
+                _serverStore.ConcurrentBackupsCounter.StartBackup(_originalDatabaseName, periodicBackup.Configuration.Name, _logger);
 
                 var tcs = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -498,7 +501,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             try
             {
-                _serverStore.ConcurrentBackupsCounter.FinishBackup(periodicBackup.Configuration.Name, periodicBackup.RunningBackupStatus, elapsed, _logger);
+                _serverStore.ConcurrentBackupsCounter.FinishBackup(_originalDatabaseName, periodicBackup.Configuration.Name, periodicBackup.RunningBackupStatus, elapsed, _logger);
 
                 periodicBackup.RunningTask = null;
                 periodicBackup.CancelToken = null;
