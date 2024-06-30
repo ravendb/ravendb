@@ -15,6 +15,7 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Platform;
 using Sparrow.Utils;
+using Voron.Global;
 using Voron.Platform.Win32;
 
 namespace Voron.Impl.Paging;
@@ -147,11 +148,6 @@ public unsafe partial class Pager2
         public event TxStateDelegate OnDispose;
         public event TxStateDelegate OnBeforeCommitFinalization;
         
-        /// <summary>
-        /// This is an action because in sync, we have a *single* pager invovled
-        /// </summary>
-        public TxStateDelegate Sync;
-
         public delegate void TxStateDelegate(Pager2 pager, State state, ref PagerTransactionState txState);
 
         public void InvokeBeforeCommitFinalization(Pager2 pager, State state, ref PagerTransactionState txState) => OnBeforeCommitFinalization?.Invoke(pager, state, ref txState);
@@ -183,7 +179,6 @@ public unsafe partial class Pager2
         /// This is cleared upon committing the transaction state to the global state  
         /// </summary>
         private State? _previous;
-        private bool _fileOwnershipMoved;
 
         public void BeforePublishing()
         {
@@ -191,39 +186,27 @@ public unsafe partial class Pager2
         }
 
         public readonly WeakReference<State> WeakSelf;
-        public State(Pager2 pager, State? previous)
-        {
-            Pager = pager;
-            _previous = previous;
-            WeakSelf = new WeakReference<State>(this);
-        }
 
-        public State Clone()
+        public State(Pager2 pager, byte* baseAddress, long totalAllocatedSize, void* handle)
         {
-            State clone = new State(Pager, this)
-            {
-                FileAccess = FileAccess,
-                FileStream = FileStream,
-                Handle = Handle,
-                MemAccess = MemAccess,
-                FileAttributes = FileAttributes,
-            };
-            return clone;
+            BaseAddress = baseAddress;
+            TotalAllocatedSize = totalAllocatedSize;
+            NumberOfAllocatedPages = totalAllocatedSize / Constants.Storage.PageSize;
+            Handle = handle;
+       
+            Pager = pager;
+            _previous = null;
+            WeakSelf = new WeakReference<State>(this);
         }
 
 
         public byte* BaseAddress;
         public long NumberOfAllocatedPages;
         public long TotalAllocatedSize;
-        public MemoryMappedFile? MemoryMappedFile;
 
         public bool Disposed;
 
-        public Win32NativeFileAccess FileAccess;
-        public Win32NativeFileAttributes FileAttributes;
-        public Win32MemoryMapNativeMethods.NativeFileMapAccessType MemAccess;
-        public SafeFileHandle Handle;
-        public FileStream FileStream;
+        public void* Handle;
 
         public void Dispose()
         {
@@ -240,22 +223,13 @@ public unsafe partial class Pager2
                 
                 Pager._states.TryRemove(WeakSelf);
 
-                if (_fileOwnershipMoved == false)
-                {
-                    Handle.Dispose();
-                    FileStream.Dispose();
-                }
-
-                MemoryMappedFile?.Dispose();
-                if (PlatformDetails.RunningOnWindows)
-                {
-                    Win32MemoryMapNativeMethods.UnmapViewOfFile(BaseAddress);
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
+                var rc = Pal.rvn_close_pager(Handle, BaseAddress, out var errorCode);
                 NativeMemory.UnregisterFileMapping(Pager.FileName, (nint)BaseAddress, TotalAllocatedSize);
+                
+                if (rc != PalFlags.FailCodes.Success)
+                {
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to close data pager for: {Pager.FileName}");
+                }
             }
             
             GC.SuppressFinalize(this);
@@ -295,12 +269,5 @@ public unsafe partial class Pager2
                 }
             }
         }
-
-        public void MoveFileOwnership()
-        {
-            _fileOwnershipMoved = true;
-        }
-
     }
-
 }

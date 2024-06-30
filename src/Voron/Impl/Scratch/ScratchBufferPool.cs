@@ -135,8 +135,8 @@ namespace Voron.Impl.Scratch
                 try
                 {
                     (scratchPager, scratchPagerState) =
-                        _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber),
-                            requestedSize.Value);
+                        _options.CreateTemporaryBufferPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber),
+                            requestedSize.Value, encrypted: _options.Encryption.IsEnabled);
                 }
                 catch (Exception)
                 {
@@ -147,8 +147,9 @@ namespace Voron.Impl.Scratch
             }
             else
             {
-                (scratchPager, scratchPagerState) = _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber),
-                    Math.Max(_options.InitialLogFileSize, minSize));
+                (scratchPager, scratchPagerState) = _options.CreateTemporaryBufferPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber),
+                    Math.Max(_options.InitialLogFileSize, minSize),
+                    encrypted: _options.Encryption.IsEnabled);
             }
 
             var scratchFile = new ScratchBufferFile(scratchPager, scratchPagerState, _currentScratchNumber);
@@ -207,10 +208,14 @@ namespace Voron.Impl.Scratch
         public void Free(LowLevelTransaction tx, int scratchNumber, long page)
         {
             var scratch = _scratchBuffers[scratchNumber];
-            scratch.File.Free(tx, page);
-            if (scratch.File.AllocatedPagesCount != 0)
-                return;
+            if (scratch.File.Free(tx, page))
+            {
+                MaybeRecycleFile(tx, scratch);
+            }
+        }
 
+        private void MaybeRecycleFile(LowLevelTransaction tx, ScratchBufferItem scratch)
+        {
             List<ScratchBufferFile> recycledScratchesToDispose = null;
 
             while (_recycleArea.First != null)

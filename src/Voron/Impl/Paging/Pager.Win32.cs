@@ -8,6 +8,7 @@ using System.Threading;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Platform;
+using Sparrow.Server.Platform;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Platform.Win32;
@@ -21,50 +22,15 @@ public unsafe partial class Pager2
     {
         public static Functions CreateFunctions() => new()
         {
-            Init = &Win32.Init,
             AcquirePagePointer = &Win32.AcquirePagePointer,
             AcquireRawPagePointer = &Win32.AcquirePagePointer,
             AcquirePagePointerForNewPage = &Win32.AcquirePagePointerForNewPage,
-            AllocateMorePages = &Win32.AllocateMorePages,
-            Sync = &Win32.Sync,
             ProtectPageRange = ProtectPages ? &Win64.ProtectPageRange : &Win64.ProtectPageNoop,
             UnprotectPageRange = ProtectPages ? &Win64.UnprotectPageRange : &Win64.ProtectPageNoop,
             EnsureMapped = &Win32.EnsureMapped,
-            RecoverFromMemoryLockFailure = &Win64.RecoverFromMemoryLockFailure,
-            DirectWrite = &Win32.DirectWrite
         };
         
         private const int NumberOfPagesInAllocationGranularity = Win64.AllocationGranularity / Constants.Storage.PageSize;
-
-
-        private static void DirectWrite(Pager2 pager, ref State state, ref PagerTransactionState txState, long posBy4Kbs, int numberOf4Kbs, byte* source)
-        {
-            Debug.Assert(txState.Sync == null || txState.Sync == SyncAfterDirectWrite);
-            
-            txState.Sync = SyncAfterDirectWrite;
-            const int pageSizeTo4KbRatio = (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte));
-            var pageNumber = posBy4Kbs / pageSizeTo4KbRatio;
-            var offsetBy4Kb = posBy4Kbs % pageSizeTo4KbRatio;
-            var numberOfPages = numberOf4Kbs / pageSizeTo4KbRatio;
-            if (posBy4Kbs % pageSizeTo4KbRatio != 0 ||
-                numberOf4Kbs % pageSizeTo4KbRatio != 0)
-                numberOfPages++;
-
-            pager.EnsureContinuous(ref state, pageNumber, numberOfPages);
-
-            EnsureMapped(pager, state, ref txState, pageNumber, numberOfPages);
-            var page = AcquirePagePointer(pager, state, ref txState, pageNumber);
-
-            var toWrite = numberOf4Kbs * 4 * Constants.Size.Kilobyte;
-            byte* destination = page + offsetBy4Kb * (4 * Constants.Size.Kilobyte);
-
-            
-            pager._functions.UnprotectPageRange(destination, (ulong)toWrite);
-
-            Memory.Copy(destination, source, toWrite);
-
-            pager._functions.ProtectPageRange(destination, (ulong)toWrite);
-        }
 
         private static void SyncAfterDirectWrite(Pager2 pager, State state, ref PagerTransactionState txState)
         {
@@ -151,126 +117,22 @@ public unsafe partial class Pager2
 
                     if (!set.TryRemove(addr))
                         continue;
-
-                    if (pager._lockMemory && addr.Size > 0)
-                    {
-                        try
-                        {
-                            Sodium.Unlock((byte*)addr.Address, (UIntPtr)addr.Size);
-                        }
-                        catch (Exception e)
-                        {
-                            throw new InvalidOperationException("Failed to unlock memory in 32-bit mode", e);
-                        }            
-                    }
-
-                    Win32MemoryMapNativeMethods.UnmapViewOfFile((byte*)addr.Address);
-                    NativeMemory.UnregisterFileMapping(addr.File, addr.Address, addr.Size);
-
                     if (set.IsEmpty)
                     {
                         pager32BitsState.MemoryMapping.TryRemove(addr.StartPage, out set);
+                    }
+                    
+                    NativeMemory.UnregisterFileMapping(addr.File, addr.Address, addr.Size);
+                    var rc = Pal.rvn_unmap_memory((void*)addr.Address, out var errorCode);
+                    if (rc != PalFlags.FailCodes.Success)
+                    {
+                        PalHelper.ThrowLastError(rc, errorCode, $"Failed to unmap memory in 32 bits mode for {pager.FileName}");
                     }
                 }
             }
             finally
             {
                 pager32BitsState.AllocationLock.ExitWriteLock();
-            }
-        }
-
-
-        public static State Init(Pager2 pager, OpenFileOptions openFileOptions)
-        {
-            var copyOnWriteMode = pager.Options.CopyOnWriteMode && openFileOptions.File.EndsWith(Constants.DatabaseFilename);
-            if (copyOnWriteMode)
-                ThrowNotSupportedOption(pager.FileName);
-
-            var state = new State(pager, null)
-            {
-                FileAccess = openFileOptions.ReadOnly 
-                        ? Win32NativeFileAccess.GenericRead
-                        : Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite,
-                FileAttributes = (openFileOptions.Temporary
-                                     ? Win32NativeFileAttributes.Temporary | Win32NativeFileAttributes.DeleteOnClose
-                                     : Win32NativeFileAttributes.Normal) |
-                                 (openFileOptions.SequentialScan ? Win32NativeFileAttributes.SequentialScan : Win32NativeFileAttributes.RandomAccess),
-                MemAccess =openFileOptions.ReadOnly ? 
-                    Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read : 
-                    Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read | Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write
-            };
-
-            try
-            {
-                Win64.OpenFile(pager, openFileOptions, state);
-                Win64.MapFile(state);
-                pager.InstallState(state);
-            }
-            catch
-            {
-                try
-                {
-                    state.Dispose();
-                }
-                catch
-                {
-                    // ignored
-                }
-
-                throw;
-            }
-
-            return state;
-        }
-
-        private static void AllocateMorePages(Pager2 pager, long newLength, ref State state)
-        {
-            var newLengthAfterAdjustment = Win64.NearestSizeToAllocationGranularity(newLength);
-
-            if (newLengthAfterAdjustment <= state.TotalAllocatedSize)
-                return;
-
-            var allocationSize = newLengthAfterAdjustment - state.TotalAllocatedSize;
- 
-            Win32NativeFileMethods.SetFileLength(state.Handle, state.TotalAllocatedSize + allocationSize, pager.FileName);
-
-            var newState = state.Clone();
-            
-            try
-            {
-                newState.TotalAllocatedSize = state.TotalAllocatedSize + allocationSize;
-                newState.NumberOfAllocatedPages = newState.TotalAllocatedSize / Constants.Storage.PageSize;
-
-                Win64.MapFile(newState);
-            }
-            catch
-            {
-                newState.Dispose();
-                throw;
-            }
-            
-            pager.InstallState(newState);
-            
-            state.MoveFileOwnership();
-            
-            state = newState;
-        }
-        
-        [DoesNotReturn]
-        private static void ThrowNotSupportedOption(string file)
-        {
-            throw new NotSupportedException(
-                "CopyOnWriteMode is currently not supported for 32 bits, error on " +
-                file);
-        }
-        public static void Sync(Pager2 pager, State state)
-        {
-            if (pager._temporaryOrDeleteOnClose)
-                return;
-            
-            if (Win32MemoryMapNativeMethods.FlushFileBuffers(state.Handle) == false)
-            {
-                throw new Win32Exception(Marshal.GetLastWin32Error());
             }
         }
 
@@ -340,12 +202,9 @@ public unsafe partial class Pager2
                 }
 
 
-                var offset = new SplitValue
-                {
-                    Value = (ulong)startPage * Constants.Storage.PageSize
-                };
-
-                if ((long)offset.Value + size > state.TotalAllocatedSize)
+                long offset = startPage * Constants.Storage.PageSize;
+                
+                if (offset + size > state.TotalAllocatedSize)
                 {
                     // this can happen when the file size is not a natural multiple of the allocation granularity
                     // frex: granularity of 64KB, and the file size is 80KB. In this case, a request to map the last
@@ -353,32 +212,16 @@ public unsafe partial class Pager2
                     // actually there in the file, and if the code will attempt to access beyond the end of file, we'll get
                     // an access denied error, but this is already handled in higher level of the code, since we aren't just
                     // handing out access to the full range we are mapping immediately.
-                    if ((long)offset.Value < state.TotalAllocatedSize)
-                        size = state.TotalAllocatedSize - (long) offset.Value;
+                    if (offset < state.TotalAllocatedSize)
+                        size = state.TotalAllocatedSize - offset;
                     else
                         ThrowInvalidMappingRequested(startPage, size, state.TotalAllocatedSize);
                 }
 
-                IntPtr hFileMappingObject = state.MemoryMappedFile!.SafeMemoryMappedFileHandle.DangerousGetHandle();
-                var result = Win32MemoryMapNativeMethods.MapViewOfFileEx(hFileMappingObject, state.MemAccess, offset.High,
-                    offset.Low,
-                    (UIntPtr)size, null);
-
-                if (result == null)
+                var rc = Pal.rvn_map_memory(state.Handle, offset, size, out var result, out int errorCode);
+                if (rc != PalFlags.FailCodes.Success)
                 {
-                    ThrowOnInvalidMapping(pager, state, startPage, size);
-                }
-
-                if (pager._lockMemory && size > 0)
-                {
-                    try
-                    {
-                        pager.Lock(result, size);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException("Failed to lock memory in 32-bit mode", e);
-                    }
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to map in 32 bits mode from {pager.FileName}");
                 }
 
                 NativeMemory.RegisterFileMapping(pager.FileName, new IntPtr(result), size, null);
@@ -399,25 +242,6 @@ public unsafe partial class Pager2
             }
         }
 
-        private static void ThrowOnInvalidMapping(Pager2 pager, State state, long startPage, long size)
-        {
-            var lastWin32Error = Marshal.GetLastWin32Error();
-
-            const int ERROR_NOT_ENOUGH_MEMORY = 8;
-            if (lastWin32Error == ERROR_NOT_ENOUGH_MEMORY)
-            {
-                throw new OutOfMemoryException($"Unable to map {size / Constants.Size.Kilobyte:#,#0} kb starting at {startPage} on {pager.FileName}", new Win32Exception(lastWin32Error));
-            }
-
-            const int INVALID_HANDLE = 6;
-
-            if (lastWin32Error == INVALID_HANDLE && state.Disposed)
-                throw new ObjectDisposedException("Pager " + pager.FileName + " was already disposed");
-
-            throw new Win32Exception(
-                $"Unable to map {size / Constants.Size.Kilobyte:#,#0} kb starting at {startPage} on {pager.FileName} (lastWin32Error={lastWin32Error})",
-                new Win32Exception(lastWin32Error));
-        }
 
         private static LoadedPage AddMappingToTransaction(TxStateFor32Bits state, long startPage, long size, MappedAddresses mappedAddresses)
         {

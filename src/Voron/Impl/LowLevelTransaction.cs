@@ -57,7 +57,7 @@ namespace Voron.Impl
 
         public Pager2.PagerTransactionState PagerTransactionState;
         private readonly WriteAheadJournal _journal;
-
+        public ImmutableDictionary<long, PageFromScratchBuffer> ModifiedPagesInTransaction;
         internal sealed class WriteTransactionPool
         {
 #if DEBUG
@@ -147,7 +147,6 @@ namespace Voron.Impl
         private const int RevertedScratchPageMarker = -0xDEAD;
 
         private CommitStats _requestedCommitStats;
-        private JournalFile.UpdatePageTranslationTableAndUnusedPagesAction? _updatePageTranslationTableAndUnusedPages;
 
         public TransactionPersistentContext PersistentContext { get; }
         public TransactionFlags Flags { get; }
@@ -606,7 +605,7 @@ namespace Voron.Impl
 
                 TrackDirtyPage(pageNumber);
 
-                var page = pageFromScratchBuffer.ReadPage(this);
+                var page = pageFromScratchBuffer.ReadRawPage(this);
                 if (zeroPage)
                     Memory.Set(page.Pointer, 0, Constants.Storage.PageSize * numberOfPages);
                 var newPage = page with
@@ -985,7 +984,6 @@ namespace Voron.Impl
             try
             {
                 var numberOfWrittenPages = _journal.WriteToJournal(this);
-                _updatePageTranslationTableAndUnusedPages = numberOfWrittenPages.UpdatePageTranslationTableAndUnusedPages;
 
                 if (_forTestingPurposes?.SimulateThrowingOnCommitStage2 == true)
                     _forTestingPurposes.ThrowSimulateErrorOnCommitStage2();
@@ -1030,6 +1028,8 @@ namespace Voron.Impl
             _txHeader.TxMarker |= TransactionMarker.Commit;
 
             LastChanceToReadFromWriteTransactionBeforeCommit?.Invoke(this);
+
+            ModifiedPagesInTransaction = _env.WriteTransactionPool.ScratchPagesInUse.ToImmutable();
         }
 
         [DoesNotReturn]
@@ -1048,8 +1048,6 @@ namespace Voron.Impl
                 ValidateAllPages();
 
                 Committed = true;
-
-                _updatePageTranslationTableAndUnusedPages?.ExecuteAfterCommit(this);
 
                 _env.TransactionAfterCommit(this);
             }
@@ -1395,11 +1393,6 @@ namespace Voron.Impl
         public bool IsDirty(long p)
         {
             return _dirtyPages.Contains(p);
-        }
-
-        public ImmutableDictionary<long, PageFromScratchBuffer> GetPagesInScratch()
-        {
-            return _env.WriteTransactionPool.ScratchPagesInUse.ToImmutable();
         }
 
         public void ForgetAboutScratchPage(PageFromScratchBuffer value)

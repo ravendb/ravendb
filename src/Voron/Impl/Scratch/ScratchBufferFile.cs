@@ -208,12 +208,12 @@ namespace Voron.Impl.Scratch
             return _allocatedPagesCount > 0 || oldestActiveTransaction <= _txIdAfterWhichLatestFreePagesBecomeAvailable;
         }
 
-        public void Free(LowLevelTransaction tx, long page)
+        public bool Free(LowLevelTransaction tx, long page)
         {
-            Free(tx, tx.Id, page);
+            return Free(tx, tx.Id, page);
         }
         
-        public void Free(LowLevelTransaction tx, long asOfTxId, long page)
+        public bool Free(LowLevelTransaction tx, long asOfTxId, long page)
         {
 #if VALIDATE
             // If we have encryption enabled, then VALIDATE calls are handled by the EncryptionBufferPool
@@ -236,7 +236,7 @@ namespace Voron.Impl.Scratch
             if (_allocatedPages.TryGetValue(page, out PageFromScratchBuffer value) == false)
             {
                 ThrowInvalidFreeOfUnusedPage(page);
-                return; // never called
+                return default; // never called
             }
 
             tx.ForgetAboutScratchPage(value);
@@ -267,6 +267,8 @@ namespace Voron.Impl.Scratch
             });
 
             _txIdAfterWhichLatestFreePagesBecomeAvailable = asOfTxId;
+
+            return NumberOfAllocations == 0; 
         }
 
         [DoesNotReturn]

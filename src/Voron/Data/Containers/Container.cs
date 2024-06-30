@@ -271,7 +271,7 @@ namespace Voron.Data.Containers
 
         private readonly Page _page;
 
-        public ref ContainerPageHeader Header => ref MemoryMarshal.AsRef<ContainerPageHeader>(_page.AsSpan());
+        public ref ContainerPageHeader Header => ref _page.GetRef<ContainerPageHeader>();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ref ItemMetadata MetadataFor(int pos)
@@ -378,7 +378,7 @@ namespace Voron.Data.Containers
         {
             var page = llt.AllocatePage(1);
 
-            ref var header = ref MemoryMarshal.AsRef<ContainerPageHeader>(page.AsSpan());
+            ref var header = ref page.GetRef<ContainerPageHeader>();
             header.Flags = PageFlags.Single | PageFlags.Other;
             header.ContainerFlags = ExtendedPageType.Container;
             header.FloorOfData = Constants.Storage.PageSize;
@@ -1119,7 +1119,7 @@ namespace Voron.Data.Containers
             if (_page.Flags != (PageFlags.Single | PageFlags.Other))
                 throw new InvalidDataException("Page " + _page.PageNumber + " is not a container page");
             
-            ref var header = ref MemoryMarshal.AsRef<ContainerPageHeader>(_page.AsSpan());
+            ref var header =  ref _page.GetRef<ContainerPageHeader>();
 
             if (header.ContainerFlags != ExtendedPageType.Container && header.ContainerFlags != ExtendedPageType.ContainerOverflow)
                 throw new InvalidDataException("Page " + _page.PageNumber + " is not a container page");

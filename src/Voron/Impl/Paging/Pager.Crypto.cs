@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Sparrow;
 using Sparrow.Platform;
+using Sparrow.Server.Platform;
 using Voron.Global;
 
 namespace Voron.Impl.Paging;
@@ -229,7 +230,8 @@ public unsafe partial class Pager2
                 pager.EnsureMapped(state, ref txState, buffer.Key, numPages);
 
                 var pagePointer = pager.AcquireRawPagePointer(state, ref txState, buffer.Key);
-
+                Debug.Assert(pager._flags.HasFlag( Pal.OpenFileFlags.WritableMap),
+                    "pager._flags.HasFlag( Pal.OpenFileFlags.WritableMap) - expected a scratch file pager, not a data pager!");
                 Memory.Copy(pagePointer, buffer.Value.Pointer, dataSize);
             }
         }

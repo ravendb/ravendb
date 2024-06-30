@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using FastTests.Utils;
 using FastTests.Voron;
+using Sparrow.Server.Platform;
 using Voron;
 using Xunit;
 using Voron.Impl.Paging;
@@ -66,7 +67,7 @@ namespace SlowTests.Voron
             // Lets corrupt something
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
             {
-                var (pager,state) = Pager2.Create(options, new Pager2.OpenFileOptions { File = Path.Combine(DataDir, "Raven.Voron") });
+                var (pager, state) = Pager2.Create(options,  Path.Combine(DataDir, "Raven.Voron"),0, Pal.OpenFileFlags.None);
                 using var _ = pager;
                 Pager2.PagerTransactionState txState = default;
                 var writePtr = pager.AcquirePagePointer(state, ref txState, 2) + PageHeader.SizeOf + 43; // just some random place on page #2
