@@ -76,36 +76,31 @@ public class RachisLogIndexNotifications : AbstractRaftIndexNotifications<Recent
         if (task.IsCanceled)
             ThrowCanceledException(index, LastModifiedIndex);
 
-        if (result == task)
-            return true;
-
-        return false;
+        return result == task;
     }
 
     private void SetTaskCompleted(long index, Exception e)
     {
-        if (_tasksDictionary.TryGetValue(index, out var tcs))
+        if (_tasksDictionary.TryRemove(index, out var tcs) == false) 
+            return;
+        
+        // set the task as finished
+        if (e == null)
         {
-            // set the task as finished
-            if (e == null)
-            {
-                if (tcs.TrySetResult(null) == false)
-                    LogFailureToSetTaskResult();
-            }
-            else
-            {
-                if (tcs.TrySetException(e) == false)
-                    LogFailureToSetTaskResult();
-            }
-
-            void LogFailureToSetTaskResult()
-            {
-                if (Log.IsInfoEnabled)
-                    Log.Info($"Failed to set result of task with index {index}");
-            }
+            if (tcs.TrySetResult(null) == false)
+                LogFailureToSetTaskResult();
+        }
+        else
+        {
+            if (tcs.TrySetException(e) == false)
+                LogFailureToSetTaskResult();
         }
 
-        _tasksDictionary.TryRemove(index, out _);
+        void LogFailureToSetTaskResult()
+        {
+            if (Log.IsInfoEnabled)
+                Log.Info($"Failed to set result of task with index {index}");
+        }
     }
 
     public override void NotifyListenersAbout(long index, Exception e)

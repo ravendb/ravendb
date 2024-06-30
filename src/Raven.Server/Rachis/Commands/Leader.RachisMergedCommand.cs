@@ -141,7 +141,11 @@ namespace Raven.Server.Rachis
                         TaskCompletionSource = tcs,
                     };
                     _leader._entries[index] = state;
-                    context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += AfterCommit;
+                    context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+                    {
+                        if (tx.Committed)
+                            AfterCommit();
+                    };
                 }
 
                 _tcs.TrySetResult(state.TaskCompletionSource.Task);
@@ -155,7 +159,7 @@ namespace Raven.Server.Rachis
 
             }
 
-            private void AfterCommit(LowLevelTransaction tx)
+            private void AfterCommit()
             {
                 try
                 {
