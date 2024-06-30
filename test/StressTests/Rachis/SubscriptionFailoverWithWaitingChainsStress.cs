@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using RachisTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
@@ -267,11 +268,11 @@ namespace StressTests.Rachis
         {
             var node = cluster.Nodes[index];
 
-            node = await ToggleServer(node, shouldTrapRevivedNodesIntoCandidate);
+            node = await SubscriptionsFailover.ToggleServer(node, shouldTrapRevivedNodesIntoCandidate, base.GetNewServer);
             cluster.Nodes[index] = node;
 
             await Task.Delay(5000, token);
-            node = await ToggleServer(node, shouldTrapRevivedNodesIntoCandidate);
+            node = await SubscriptionsFailover.ToggleServer(node, shouldTrapRevivedNodesIntoCandidate, base.GetNewServer);
             cluster.Nodes[index] = node;
 
             await WaitForRehab(databaseName, index, cluster);
@@ -527,43 +528,6 @@ namespace StressTests.Rachis
             }
 
             return null;
-        }
-
-        private async Task<RavenServer> ToggleServer(Raven.Server.RavenServer node, bool shouldTrapRevivedNodesIntoCandidate)
-        {
-            if (node.Disposed)
-            {
-                var settings = new Dictionary<string, string>
-                {
-                    [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
-                    [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
-                    [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
-                    [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = node.WebUrl
-                };
-
-                var dataDirectory = node.Configuration.Core.DataDirectory.FullPath;
-
-                // if we want to make sure that the revived node will be trapped in candidate node, we should make sure that the election timeout value is different from the
-                // rest of the node (note that this is a configuration value, therefore we need to define it in "settings" and nowhere else)
-                if (shouldTrapRevivedNodesIntoCandidate == false)
-                    settings[RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = node.Configuration.Cluster.ElectionTimeout.AsTimeSpan.TotalMilliseconds.ToString();
-
-                node = base.GetNewServer(new ServerCreationOptions()
-                {
-                    DeletePrevious = false,
-                    RunInMemory = false,
-                    CustomSettings = settings,
-                    DataDirectory = dataDirectory
-                }, caller: $"{node.DebugTag}-{nameof(ToggleServer)}");
-
-                Assert.True(node.ServerStore.Engine.CurrentState != RachisState.Passive, "node.ServerStore.Engine.CurrentState != RachisState.Passive");
-            }
-            else
-            {
-                var result = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
-            }
-
-            return node;
         }
     }
 }
