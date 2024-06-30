@@ -108,7 +108,7 @@ namespace Raven.Server
 
             configuration.Initialize();
 
-            GlobalFlushingBehavior.NumberOfConcurrentSyncsPerPhysicalDrive = configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
+            GlobalFlushingBehavior.NumberOfConcurrentSyncs = configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
 
             EncryptionBuffersPool.Instance.Disabled = configuration.Storage.DisableEncryptionBuffersPooling;
 
