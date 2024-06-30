@@ -31,8 +31,6 @@ namespace Raven.Server.Documents.Indexes.Persistence
         
         public abstract void OnBeforeExecuteIndexing(IndexingStatsAggregator indexingStatsAggregator, CancellationToken token);
 
-        public abstract void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache);
-
         internal abstract IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx);
 
         public abstract IndexWriteOperationBase OpenIndexWriter(Transaction writeTransaction, JsonOperationContext indexContext);

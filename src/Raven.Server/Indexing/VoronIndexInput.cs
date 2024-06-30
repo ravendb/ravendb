@@ -40,7 +40,7 @@ namespace Raven.Server.Indexing
         {
             if (transaction.IsWriteTransaction == false)
             {
-                if (transaction.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
+                if (transaction.LowLevelTransaction.CurrentStateRecord.ClientState is IndexTransactionCache cache)
                 {
                     if (cache.DirectoriesByName.TryGetValue(directory.Name, out var files))
                     {
