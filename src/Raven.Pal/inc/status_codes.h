@@ -4,44 +4,52 @@
 #ifndef CIFS_MAGIC_NUMBER
 #define CIFS_MAGIC_NUMBER               0xff534d42 /* TODO: Check if this is correct through out all plats */
 #endif
-
-#define SUCCESS                          0
-#define FAIL                            -1
-#define FAIL_OPEN_FILE                   1
-#define FAIL_SEEK_FILE                   2
-#define FAIL_WRITE_FILE                  3
-#define FAIL_SYNC_FILE                   4
-#define FAIL_NOMEM                       5
-#define FAIL_STAT_FILE                   6
-#define FAIL_RACE_RETRIES                7
-#define FAIL_PATH_RECURSION              8
-#define FAIL_FLUSH_FILE                  9
-#define FAIL_SYSCONF                    10
-#define FAIL_PWRITE                     11
-#define FAIL_PWRITE_WITH_RETRIES        12
-#define FAIL_MMAP64                     13
-#define FAIL_UNLINK                     14
-#define FAIL_CLOSE                      15
-#define FAIL_ALLOCATION_NO_RESIZE       16
-#define FAIL_FREE                       17
-#define FAIL_INVALID_HANDLE             18
-#define FAIL_TRUNCATE_FILE              19
-#define FAIL_GET_FILE_SIZE              20
-#define FAIL_ALLOC_FILE                 21
-#define FAIL_READ_FILE                  22
-#define FAIL_SET_FILE_POINTER           23
-#define FAIL_SET_EOF                    24
-#define FAIL_EOF                        25
-#define FAIL_PREFETCH                   26
-#define FAIL_CALLOC                     27
-#define FAIL_TEST_DURABILITY            28
-#define FAIL_CREATE_DIRECTORY           29
-#define FAIL_NOT_DIRECTORY              30
-#define FAIL_BROKEN_LINK                31
-#define FAIL_GET_REAL_PATH              32
-#define FAIL_GET_MODULE_HANDLE          33
-#define FAIL_DISCARD_VIRTUAL_MEMORY     34
-
+enum
+{
+    SUCCESS                     =       0,
+    FAIL                        =      -1,
+    FAIL_OPEN_FILE              =       1,
+    FAIL_SEEK_FILE              =       2,
+    FAIL_WRITE_FILE             =       3,
+    FAIL_SYNC_FILE              =       4,
+    FAIL_NOMEM                  =       5,
+    FAIL_STAT_FILE              =       6,
+    FAIL_RACE_RETRIES           =       7,
+    FAIL_PATH_RECURSION         =       8,
+    FAIL_FLUSH_FILE             =       9,
+    FAIL_SYSCONF                =      10,
+    FAIL_PWRITE                 =      11,
+    FAIL_PWRITE_WITH_RETRIES    =      12,
+    FAIL_MMAP64                 =      13,
+    FAIL_UNLINK                 =      14,
+    FAIL_CLOSE                  =      15,
+    FAIL_ALLOCATION_NO_RESIZE   =      16,
+    FAIL_FREE                   =      17,
+    FAIL_INVALID_HANDLE         =      18,
+    FAIL_TRUNCATE_FILE          =      19,
+    FAIL_GET_FILE_SIZE          =      20,
+    FAIL_ALLOC_FILE             =      21,
+    FAIL_READ_FILE              =      22,
+    FAIL_SET_FILE_POINTER       =      23,
+    FAIL_SET_EOF                =      24,
+    FAIL_EOF                    =      25,
+    FAIL_PREFETCH               =      26,
+    FAIL_CALLOC                 =      27,
+    FAIL_TEST_DURABILITY        =      28,
+    FAIL_CREATE_DIRECTORY       =      29,
+    FAIL_NOT_DIRECTORY          =      30,
+    FAIL_BROKEN_LINK            =      31,
+    FAIL_GET_REAL_PATH          =      32,
+    FAIL_GET_MODULE_HANDLE      =      33,
+    FAIL_DISCARD_VIRTUAL_MEMORY =      34,
+    FAIL_LOCK_MEMORY            =      35,
+    FAIL_MAP_VIEW_OF_FILE       =      36,
+    FAIL_UNMAP_VIEW_OF_FILE     =      37,
+    FAIL_DUPLICATE_HANDLE       =      38,
+    FAIL_SIZE_INVALID_32_BITS   =      39,
+    FAIL_SIZE_NEGATIVE_OR_ZERO  =      40
+    
+};
 #define ERRNO_SPECIAL_CODES_NONE        0
 #define ERRNO_SPECIAL_CODES_ENOMEM      (1 << 0)
 #define ERRNO_SPECIAL_CODES_ENOENT      (1 << 1)

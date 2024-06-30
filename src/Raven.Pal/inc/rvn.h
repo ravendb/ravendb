@@ -21,6 +21,20 @@ typedef int32_t bool;
 #define rvn_max(x, y) ((x) >= (y)) ? (x) : (y)
 #define rvn_min(x, y) ((x) <= (y)) ? (x) : (y)
 
+enum
+{
+    OPEN_FILE_NONE = 0,
+    OPEN_FILE_TEMPORARY = (1 << 1),
+    OPEN_FILE_READ_ONLY = (1 << 2),
+    OPEN_FILE_SEQUENTIAL_SCAN = (1 << 3),
+    OPEN_FILE_WRITABLE_MAP = (1 << 4),
+    OPEN_FILE_ENCRYPTED = (1 << 5),
+    OPEN_FILE_LOCK_MEMORY = (1 << 6),
+    OPEN_FILE_DO_NOT_CONSIDER_MEMORY_LOCK_FAILURE_AS_CATASTROPHIC_ERROR = (1 << 7),
+    OPEN_FILE_COPY_ON_WRITE = (1 << 8),
+    OPEN_FILE_DO_NOT_MAP = (1<<9)
+};
+
 #define ALLOCATION_GRANULARITY (64*1024)
 
 EXPORT struct SYSTEM_INFORMATION
@@ -36,6 +50,52 @@ EXPORT struct RVN_RANGE_LIST
     void *virtual_address;
     size_t number_of_bytes;
 } RVN_RANGE_LIST;
+
+EXPORT
+int32_t rvn_pager_get_file_handle(
+    void *handle,
+    void** file_handle,
+    int32_t* detailed_error_code);
+
+EXPORT
+int32_t rvn_unmap_memory(
+    void* mem,
+    int32_t *detailed_error_code);
+
+EXPORT
+int32_t rvn_map_memory(void* handle,
+    int64_t offset,
+    int64_t size,
+    void** mem,
+    int32_t *detailed_error_code);
+
+EXPORT int32_t
+rvn_init_pager(const char* filename,
+    int64_t initial_file_size,
+    int32_t open_flags,
+    void** handle,
+    void** memory,
+    int64_t *memory_size,
+    int32_t* detailed_error_code);
+
+EXPORT int32_t
+rvn_increase_pager_size(void* handle,
+    int64_t new_length,
+    void** new_handle,
+    void** memory,
+    int64_t* memory_size,
+    int32_t* detailed_error_code);
+
+EXPORT int32_t
+rvn_close_pager(
+    void *handle,
+    const void* memory,
+    int32_t* detailed_error_code);
+
+
+EXPORT int32_t
+rvn_sync_pager(void* handle,
+    int32_t* detailed_error_code);
 
 EXPORT uint64_t
 rvn_get_current_thread_id(void);

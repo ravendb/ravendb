@@ -1701,7 +1701,6 @@ namespace Voron
         
         private void UpdateStateOnCommit(LowLevelTransaction tx)
         {
-            var pagesInScratch = tx.GetPagesInScratch();
             // ensure that we have disjointed sets and not a case of both free & used at once
             var (txId, txFlushedToJournal) = tx.FlushedToJournal switch
             {
@@ -1710,10 +1709,13 @@ namespace Voron
                 -1 => (tx.CurrentStateRecord.TransactionId - 1, tx.CurrentStateRecord.FlushedToJournal),
                 _ => (tx.Id, tx.FlushedToJournal)
             };
+            var pagesInScratch = tx.ModifiedPagesInTransaction;
+            Debug.Assert(pagesInScratch != null, "pagesInScratch != null");
+            Debug.Assert(pagesInScratch != null);
             long nextPageNumber = tx.GetNextPageNumber();
             var rootObjectsState = tx.RootObjects.State;
             var clientState = tx.CurrentStateRecord.ClientState;
-            Debug.Assert(ReferenceEquals(rootObjectsState, tx.CurrentStateRecord.Root));
+            Debug.Assert(ReferenceEquals(rootObjectsState, tx.CurrentStateRecord.Root), "ReferenceEquals(rootObjectsState, tx.CurrentStateRecord.Root)");
             while (true)
             {
                 var currentState = _currentStateRecordRecord!;

@@ -13,7 +13,7 @@ namespace Voron
     {
         private const string FlushingThreadName = "Voron Flushing Thread";
 
-        public static int NumberOfConcurrentSyncsPerPhysicalDrive = 3;
+        public static int NumberOfConcurrentSyncs = 3;
 
         internal static readonly Lazy<GlobalFlushingBehavior> GlobalFlusher = new Lazy<GlobalFlushingBehavior>(() =>
         {
@@ -43,14 +43,9 @@ namespace Voron
 
         private readonly ConcurrentDictionary<StorageEnvironment.IndirectReference, EnvSyncReq> _envsToSync = new ConcurrentDictionary<StorageEnvironment.IndirectReference, EnvSyncReq>();
 
-        private readonly ConcurrentDictionary<uint, MountPointInfo> _mountPoints = new ConcurrentDictionary<uint, MountPointInfo>();
+        private readonly ConcurrentQueue<EnvSyncReq> _storageEnvironments = new ConcurrentQueue<EnvSyncReq>();
 
         private readonly Logger _log = LoggingSource.Instance.GetLogger<GlobalFlushingBehavior>("Global Flusher");
-
-        private sealed class MountPointInfo
-        {
-            public readonly ConcurrentQueue<EnvSyncReq> StorageEnvironments = new ConcurrentQueue<EnvSyncReq>();
-        }
 
         public bool HasLowNumberOfFlushingResources => _concurrentFlushesAvailable.CurrentCount <= _lowNumberOfFlushingResources;
 
@@ -122,34 +117,28 @@ namespace Voron
                     continue;
 
                 if (force == false && envSyncReq.Value.IsRequired == false &&
-                   env.Journal.Files.Count + env.Journal.Applicator.JournalsToDeleteCount <= env.Options.SyncJournalsCountThreshold)
+                    env.Journal.Files.Count + env.Journal.Applicator.JournalsToDeleteCount <= env.Options.SyncJournalsCountThreshold)
                     continue;
 
                 var isSyncRun = Interlocked.CompareExchange(ref envSyncReq.Value.IsSyncRun, 1, 0);
                 if (isSyncRun != 0)
                     continue;
 
-                var mpi = _mountPoints.GetOrAdd(env.DataPager.UniquePhysicalDriveId,
-                    _ => new MountPointInfo());
 
-                mpi.StorageEnvironments.Enqueue(envSyncReq.Value);
+                _storageEnvironments.Enqueue(envSyncReq.Value);
             }
 
-            foreach (var mountPoint in _mountPoints)
-            {
-                int parallelSyncsPerIo = Math.Min(NumberOfConcurrentSyncsPerPhysicalDrive, mountPoint.Value.StorageEnvironments.Count);
+            int parallelSyncsPerIo = Math.Min(NumberOfConcurrentSyncs, _storageEnvironments.Count);
 
-                for (int i = 0; i < parallelSyncsPerIo; i++)
-                {
-                    ThreadPool.QueueUserWorkItem(SyncAllEnvironmentsInMountPoint, mountPoint.Value);
-                }
+            for (int i = 0; i < parallelSyncsPerIo; i++)
+            {
+                ThreadPool.QueueUserWorkItem(SyncAllEnvironmentsInMountPoint);
             }
         }
 
         private void SyncAllEnvironmentsInMountPoint(object mt)
         {
-            var mountPointInfo = (MountPointInfo)mt;
-            while (mountPointInfo.StorageEnvironments.TryDequeue(out var req))
+            while (_storageEnvironments.TryDequeue(out var req))
             {
                 SyncEnvironment(req);
                 _envsToSync.TryRemove(req.Reference, out _);

@@ -7,6 +7,7 @@
 using Sparrow;
 using Sparrow.Binary;
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Generic;
@@ -34,8 +35,12 @@ using Voron.Util;
 using Constants = Voron.Global.Constants;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Eventing.Reader;
+using System.Windows.Markup;
+using Microsoft.Win32.SafeHandles;
 using System.Runtime.CompilerServices;
 using Sparrow.Server.LowMemory;
+using Sparrow.Server.Platform;
 
 namespace Voron.Impl.Journal
 {
@@ -1206,50 +1211,36 @@ namespace Voron.Impl.Journal
                 var dataPagerState = currentStateRecord.DataPagerState;
                 using (var meter = options.IoMetrics.MeterIoRate(dataPager.FileName, IoMetrics.MeterType.DataFlush, 0))
                 {
+                    var pagesBuffer = ArrayPool<Page>.Shared.Rent(record.ScratchPagesTable.Count);
                     Pager2.PagerTransactionState txState = default;
-                    foreach (var (_, pageValue) in record.ScratchPagesTable)
+                    try
                     {
-                        if (pageValue.IsDeleted)
-                        {
-                            //dataPager.ZeroPage() - hole punching
-                            continue;
-                        }
-                        
-                        var pageHeader = (PageHeader*)pageValue.Read(ref txState);
+                        Span<Page> pages = GetSortedPages(ref txState, record, pagesBuffer);
 
-                        if (_waj._env.Options.Encryption.IsEnabled == false)
+                        Page lastPage = pages[^1];
+                        dataPager.EnsureContinuous(ref dataPagerState, lastPage.PageNumber, lastPage.GetNumberOfPages());
+                        var rc = Pal.rvn_pager_get_file_handle(dataPagerState.Handle, out var fileHandle, out var errorCode);
+                        if (rc != PalFlags.FailCodes.Success)
                         {
-                            Pager2.PagerTransactionState tempTxState = default;
-                            try
+                            PalHelper.ThrowLastError(rc, errorCode, $"Failed to get file handle for {dataPager.FileName}");
+                        }
+                        using (fileHandle)
+                        {
+                            for (int i = 0; i < pages.Length; i++)
                             {
-                                var checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageHeader->PageNumber, out var expectedChecksum);
-                                if (checksum != expectedChecksum)
-                                    ThrowInvalidChecksumOnPageFromScratch(pageValue.File.Number, pageValue, pageHeader, checksum, expectedChecksum);
-                            }
-                            finally
-                            {
-                                tempTxState.InvokeDispose(dataPager, dataPagerState, ref tempTxState);
+                                Debug.Assert(pages[i].PageNumber + pages[i].GetNumberOfPages() <= dataPagerState.NumberOfAllocatedPages,
+                                    "pages[i].PageNumber + pages[i].GetNumberOfPagesUpdateStateOnCommit() <= dataPagerState.NumberOfAllocatedPages");
+                                
+                                var span = new Span<byte>(pages[i].Pointer, pages[i].GetNumberOfPages() * Constants.Storage.PageSize);
+                                RandomAccess.Write(fileHandle, span, pages[i].PageNumber * Constants.Storage.PageSize);
                             }
                         }
-
-                        int numberOfPages = 1;
-                        if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
-                        {
-                            numberOfPages = Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize);
-                        }
-                        
-                        const int adjustPageSize = (Constants.Storage.PageSize) / (4 * Constants.Size.Kilobyte);
-                        dataPager.DirectWrite(ref dataPagerState, ref txState,
-                            pageHeader->PageNumber * adjustPageSize, 
-                            numberOfPages * adjustPageSize, 
-                            pageValue.Read(ref txState));
-
-                        written += numberOfPages * Constants.Storage.PageSize;
                     }
-
-                    txState.Sync?.Invoke(dataPager, dataPagerState, ref txState);
-                        
-                    txState.InvokeDispose(dataPager, dataPagerState, ref txState);
+                    finally
+                    {
+                        ArrayPool<Page>.Shared.Return(pagesBuffer);
+                        txState.InvokeDispose(dataPager, dataPagerState, ref txState);
+                    }
                         
                     _waj._env.UpdateDataPagerState(dataPagerState);
                     meter.SetFileSize(dataPagerState.TotalAllocatedSize);
@@ -1262,6 +1253,47 @@ namespace Voron.Impl.Journal
                     _waj._logger.Operations($"Very long data flushing. It took {sp.Elapsed} to flush {record.ScratchPagesTable.Count:#,#} pages to { dataPager.FileName} with {new Size(written, SizeUnit.Bytes)}.");
 
                 Interlocked.Add(ref _totalWrittenButUnsyncedBytes, written);
+            }
+
+            private Span<Page> GetSortedPages(ref Pager2.PagerTransactionState txState, EnvironmentStateRecord record, Page[] pagesBuffer)
+            {
+                int index = 0;
+                var pageNumsBuffer = ArrayPool<long>.Shared.Rent(record.ScratchPagesTable.Count);
+                foreach (var (pageNum, pageValue) in record.ScratchPagesTable)
+                {
+                    Debug.Assert(pageValue.AllocatedInTransaction <= record.TransactionId, "pageValue.AllocatedInTransaction <= record.TransactionId");
+                    if (pageValue.IsDeleted)
+                    {
+                        //dataPager.ZeroPage() - hole punching
+                        continue;
+                    }
+                    pageNumsBuffer[index] = pageNum;
+                    var page = PreparePage(ref txState, pageValue);
+                    pagesBuffer[index] = page;
+                    Debug.Assert(pageNum == page.PageNumber, "pageNum == page.PageNumber");
+                    index++;
+
+                }
+                var pagesNums = new Span<long>(pageNumsBuffer, 0, index);
+                var pages = new Span<Page>(pagesBuffer, 0, index);
+                pagesNums.Sort(pages);
+                ArrayPool<long>.Shared.Return(pageNumsBuffer);
+                return pages;
+            }
+
+            private Page PreparePage(ref Pager2.PagerTransactionState txState, PageFromScratchBuffer pageValue)
+            {
+                byte* page = pageValue.Read(ref txState);
+
+                if (_waj._env.Options.Encryption.IsEnabled == false)
+                {
+                    PageHeader* pageHeader = ((PageHeader*)page);
+                    var checksum = StorageEnvironment.CalculatePageChecksum(page, pageHeader->PageNumber, out var expectedChecksum);
+                    if (checksum != expectedChecksum)
+                        ThrowInvalidChecksumOnPageFromScratch(pageValue.File.Number, pageValue, pageHeader, checksum, expectedChecksum);
+                }
+
+                return new Page(page);
             }
 
             [DoesNotReturn]
@@ -1455,7 +1487,7 @@ namespace Voron.Impl.Journal
                     tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
 
                     sp.Restart();
-                    journalEntry.UpdatePageTranslationTableAndUnusedPages = CurrentFile.Write(tx, journalEntry);
+                    CurrentFile.Write(tx, journalEntry);
                     sp.Stop();
                     tx.FlushedToJournal = CurrentFile.Number;
                     _lastCompressionAccelerationInfo.WriteDuration = sp.Elapsed;
@@ -1512,6 +1544,7 @@ namespace Voron.Impl.Journal
             try
             {
                 _compressionPager.EnsureContinuous(ref _compressionPagerState, 0, pagesRequired);
+                Debug.Assert(_compressionPagerState.TotalAllocatedSize >= pagesRequired* Constants.Storage.PageSize, "_compressionPagerState.TotalAllocatedSize >= pagesRequired* Constants.Storage.PageSize");
             }
             catch (InsufficientMemoryException)
             {
@@ -1609,6 +1642,8 @@ namespace Voron.Impl.Journal
                 try
                 {
                     _compressionPager.EnsureContinuous(ref _compressionPagerState, pagesWritten, outputBufferInPages);
+                    Debug.Assert(_compressionPagerState.TotalAllocatedSize >= (pagesWritten+outputBufferInPages)* Constants.Storage.PageSize,
+                        "_compressionPagerState.TotalAllocatedSize >= (pagesWritten+outputBufferInPages)* Constants.Storage.PageSize");
                 }
                 catch (InsufficientMemoryException)
                 {
@@ -1952,7 +1987,6 @@ namespace Voron.Impl.Journal
         public byte* Base;
         public int NumberOf4Kbs;
         public int NumberOfUncompressedPages;
-        public JournalFile.UpdatePageTranslationTableAndUnusedPagesAction? UpdatePageTranslationTableAndUnusedPages;
     }
 
 }

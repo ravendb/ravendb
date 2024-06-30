@@ -129,7 +129,7 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// write transaction's raw page data into journal
         /// </summary>
-        public UpdatePageTranslationTableAndUnusedPagesAction Write(LowLevelTransaction tx, CompressedPagesResult pages)
+        public void Write(LowLevelTransaction tx, CompressedPagesResult pages)
         {
             var cur4KbPos = _writePosIn4Kb;
 
@@ -138,6 +138,7 @@ namespace Voron.Impl.Journal
             try
             {
                 Write(cur4KbPos, pages.Base, pages.NumberOf4Kbs);
+                Interlocked.Add(ref _writePosIn4Kb, pages.NumberOf4Kbs);
                 LastTransactionId = tx.Id;
             }
             catch (Exception e)
@@ -145,8 +146,6 @@ namespace Voron.Impl.Journal
                 env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
                 throw;
             }
-
-            return new UpdatePageTranslationTableAndUnusedPagesAction(this, pages.NumberOf4Kbs);
         }
 
         public void InitFrom(JournalReader journalReader, List<TransactionHeader> transactionHeaders)
@@ -163,24 +162,6 @@ namespace Voron.Impl.Journal
 
                 if (writer != null)
                     writer.DeleteOnClose = value;
-            }
-        }
-
-        public readonly struct UpdatePageTranslationTableAndUnusedPagesAction(
-            JournalFile parent,
-            int numberOfWritten4Kbs)
-        {
-            public void ExecuteAfterCommit(LowLevelTransaction tx)
-            {
-                Debug.Assert(tx.Committed);
-
-                // it is important that the last write position will be set
-                // _after_ the PTT update, because a flush that is concurrent 
-                // with the write will first get the WritePosIn4KB and then 
-                // do the flush based on the PTT. Worst case, we'll flush 
-                // more then we need, but won't get into a position where we
-                // think we flushed, and then realize that we didn't.
-                Interlocked.Add(ref parent._writePosIn4Kb, numberOfWritten4Kbs);
             }
         }
     }

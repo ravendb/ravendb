@@ -5,8 +5,10 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
@@ -14,8 +16,10 @@ using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Server.Exceptions;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
+using Sparrow.Server.Utils;
 using Voron.Exceptions;
 using Voron.Global;
 
@@ -23,14 +27,9 @@ namespace Voron.Impl.Paging;
 
 public unsafe partial class Pager2 : IDisposable
 {
-    private static readonly object WorkingSetIncreaseLocker = new object();
-
-
     public readonly string FileName;
-    public uint UniquePhysicalDriveId;
     public readonly StorageEnvironmentOptions Options;
-
-    private readonly bool _canPrefetch, _temporaryOrDeleteOnClose, _usePageProtection;
+    private readonly Pal.OpenFileFlags _flags;
 
     private readonly StateFor32Bits? _32BitsState;
 
@@ -44,17 +43,10 @@ public unsafe partial class Pager2 : IDisposable
     private readonly ConcurrentSet<WeakReference<State>> _states = [];
     private readonly EncryptionBuffersPool _encryptionBuffersPool;
     private readonly byte[] _masterKey;
-    private readonly PrefetchTableHint _prefetchState;
+    private PrefetchTableHint _prefetchState;
     private readonly Logger _logger;
     private DateTime _lastIncrease;
     private long _increaseSize;
-
-    /// <summary>
-    /// Control whatever we should treat memory lock errors as catastrophic errors
-    /// or not. By default, we consider them catastrophic and fail immediately to
-    /// avoid leaking any data. 
-    /// </summary>
-    private readonly bool _doNotConsiderMemoryLockFailureAsCatastrophicError;
 
     /// <summary>
     /// This determines whatever we'll attempt to lock the memory,
@@ -65,22 +57,20 @@ public unsafe partial class Pager2 : IDisposable
     private const int MinIncreaseSize = 16 * Constants.Size.Kilobyte;
     private const int MaxIncreaseSize = Constants.Size.Gigabyte;
 
-    public struct OpenFileOptions
+    public static (Pager2 Pager, State State) Create(StorageEnvironmentOptions options, string filename, long initialFileSize, Pal.OpenFileFlags flags)
     {
-        public string File;
-        public long? InitializeFileSize;
-        public bool Temporary;
-        public bool DeleteOnClose;
-        public bool ReadOnly;
-        public bool SequentialScan;
-        public bool UsePageProtection;
-        public bool Encrypted;
-        public bool LockMemory;
-        public bool DoNotConsiderMemoryLockFailureAsCatastrophicError;
+        var pager = new Pager2(options, filename, flags, GetFunctions(options, flags));
+        var result = Pal.rvn_init_pager(filename, initialFileSize, flags, 
+            out var handle, out var memory, out var memorySize, out var error);
+        if (result != PalFlags.FailCodes.Success)
+            RaiseError(filename, error, result, initialFileSize);
+        var state = new State(pager, memory, memorySize, handle);
+        pager.InstallState(state);
+        pager.Initialize(memorySize);
+        return (pager, state);
     }
 
-
-    public static (Pager2 Pager, State State) Create(StorageEnvironmentOptions options, OpenFileOptions openFileOptions)
+    private static Functions GetFunctions(StorageEnvironmentOptions options, Pal.OpenFileFlags flags)
     {
         var funcs = options.RunningOn32Bits switch
         {
@@ -89,43 +79,58 @@ public unsafe partial class Pager2 : IDisposable
             _ => throw new NotSupportedException("Running " + RuntimeInformation.OSDescription)
         };
 
-        if (openFileOptions.Encrypted)
+        if (flags.HasFlag(Pal.OpenFileFlags.Encrypted))
         {
             funcs.AcquirePagePointer = &Crypto.AcquirePagePointer;
             funcs.AcquirePagePointerForNewPage = &Crypto.AcquirePagePointerForNewPage;
         }
 
-        var pager = new Pager2(options, openFileOptions, funcs, canPrefetchAhead: true, usePageProtection: openFileOptions.UsePageProtection,
-            out State state);
+        return funcs;
+    }
 
-        return (pager, state);
+    private static void RaiseError(string filename, int errorCode, PalFlags.FailCodes rc, long initialFileSize, [CallerMemberName] string? caller = null)
+    {
+        if (rc == PalFlags.FailCodes.FailLockMemory)
+            throw new InsufficientMemoryException(
+                $"Failed to increase the min working set size so we can lock memory for {filename}. With encrypted " +
+                "databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error " +
+                "and aborting the current operation.");
+
+        try
+        {
+            PalHelper.ThrowLastError(rc, errorCode, $"{caller} failed on {rc} for '{filename}'");
+        }
+        catch (DiskFullException dfEx)
+        {
+            var diskSpaceResult = DiskUtils.GetDiskSpaceInfo(filename);
+            throw new DiskFullException(filename, initialFileSize, diskSpaceResult?.TotalFreeSpace.GetValue(SizeUnit.Bytes), dfEx.Message);
+        }
     }
 
     private Pager2(StorageEnvironmentOptions options,
-        OpenFileOptions openFileOptions,
-        Functions functions,
-        bool canPrefetchAhead,
-        bool usePageProtection,
-        out State state)
+        string filename,
+        Pal.OpenFileFlags flags,
+        Functions functions)
     {
         Options = options;
-        FileName = openFileOptions.File;
-        _lockMemory = openFileOptions.LockMemory;
-        _doNotConsiderMemoryLockFailureAsCatastrophicError = openFileOptions.DoNotConsiderMemoryLockFailureAsCatastrophicError;
-        _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{openFileOptions}");
-        _canPrefetch = PlatformDetails.CanPrefetch && canPrefetchAhead && options.EnablePrefetching;
-        _temporaryOrDeleteOnClose = openFileOptions.Temporary || openFileOptions.DeleteOnClose;
-        _usePageProtection = usePageProtection;
+        _flags = flags;
+        FileName = filename;
+        _canPrefetch = PlatformDetails.CanPrefetch == false || options.EnablePrefetching == false;
+        _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{filename}");
         _encryptionBuffersPool = options.Encryption.EncryptionBuffersPool;
         _masterKey = options.Encryption.MasterKey;
         _functions = functions;
         _increaseSize = MinIncreaseSize;
-        state = functions.Init(this, openFileOptions);
-        _prefetchState = new PrefetchTableHint(options.PrefetchSegmentSize, options.PrefetchResetThreshold, state.TotalAllocatedSize);
+        _prefetchState = PrefetchTableHint.Empty;
         if (options.RunningOn32Bits)
         {
             _32BitsState = new StateFor32Bits();
         }
+    }
+
+    private void Initialize(long initialSize)
+    {
+        _prefetchState = new PrefetchTableHint(Options.PrefetchSegmentSize, Options.PrefetchResetThreshold, initialSize);
     }
 
     public void DiscardWholeFile(State state)
@@ -222,12 +227,16 @@ public unsafe partial class Pager2 : IDisposable
 
     public void Sync(State state, long totalUnsynced)
     {
-        if (state.Disposed || _temporaryOrDeleteOnClose)
+        if (state.Disposed || _flags.HasFlag(Pal.OpenFileFlags.Temporary))
             return; // nothing to do here
 
         using var metric = Options.IoMetrics.MeterIoRate(FileName, IoMetrics.MeterType.DataSync, 0);
         metric.IncrementFileSize(state.TotalAllocatedSize);
-        _functions.Sync(this, state);
+        var rc = Pal.rvn_sync_pager(state.Handle, out var errorCode);
+        if (rc != PalFlags.FailCodes.Success)
+        {
+            PalHelper.ThrowLastError(rc, errorCode, $"Failed to sync file: {FileName}");
+        }
         metric.IncrementSize(totalUnsynced);
     }
 
@@ -290,22 +299,6 @@ public unsafe partial class Pager2 : IDisposable
         return _functions.AcquirePagePointerForNewPage(this, pageNumber, numberOfPages, state, ref txState);
     }
 
-    public void ProtectPageRange(byte* start, ulong size)
-    {
-        if (_usePageProtection == false || size == 0)
-            return;
-
-        _functions.ProtectPageRange(start, size);
-    }
-
-    public void UnprotectPageRange(byte* start, ulong size)
-    {
-        if (_usePageProtection == false || size == 0)
-            return;
-
-        _functions.UnprotectPageRange(start, size);
-    }
-
     public void EnsureContinuous(ref State state, long requestedPageNumber, int numberOfPages)
     {
         if (state.Disposed)
@@ -322,11 +315,21 @@ public unsafe partial class Pager2 : IDisposable
         {
             allocationSize = GetNewLength(allocationSize, minRequested);
         }
-
+        Debug.Assert(allocationSize > state.TotalAllocatedSize, "allocationSize > state.TotalAllocatedSize");
+        
         if (Options.CopyOnWriteMode && state.Pager.FileName.EndsWith(Constants.DatabaseFilename))
             throw new IncreasingDataFileInCopyOnWriteModeException(state.Pager.FileName, allocationSize);
 
-        _functions.AllocateMorePages(this, allocationSize, ref state);
+        var rc = Pal.rvn_increase_pager_size(state.Handle, 
+            allocationSize, out var handle, out var baseAddress, 
+            out var totalAllocatedSize, out var errorCode);
+        if (rc != PalFlags.FailCodes.Success)
+        {
+            PalHelper.ThrowLastError(rc, errorCode, $"Failed to increase file '{state.Pager.FileName}' to {new Size(allocationSize, SizeUnit.Bytes)}");
+        }
+        Debug.Assert(totalAllocatedSize >= state.TotalAllocatedSize, "totalAllocatedSize >= state.TotalAllocatedSize");
+        state = new State(this, baseAddress, totalAllocatedSize, handle);
+        InstallState(state);
     }
 
 
@@ -373,6 +376,7 @@ public unsafe partial class Pager2 : IDisposable
     }
 
     private static readonly long IncreaseByPowerOf2Threshold = new Size(512, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+    private readonly bool _canPrefetch;
 
     private static long GetNearestFileSize(long neededSize)
     {
@@ -395,6 +399,8 @@ public unsafe partial class Pager2 : IDisposable
 
     private class PrefetchTableHint
     {
+        public static PrefetchTableHint Empty = new(1024, 1024, 0);
+        
         private const byte EvenPrefetchCountMask = 0x70;
         private const byte EvenPrefetchMaskShift = 4;
         private const byte OddPrefetchCountMask = 0x07;
@@ -535,57 +541,6 @@ public unsafe partial class Pager2 : IDisposable
         }
     }
 
-    private void Lock(byte* address, long sizeToLock)
-    {
-        var lockTaken = false;
-        try
-        {
-            if (Sodium.Lock(address, (UIntPtr)sizeToLock) == 0)
-                return;
-
-            if (_doNotConsiderMemoryLockFailureAsCatastrophicError)
-                return;
-
-            if (PlatformDetails.RunningOnPosix == false)
-                // when running on linux we can't do anything from within the process, so let's avoid the locking entirely
-                Monitor.Enter(WorkingSetIncreaseLocker, ref lockTaken);
-
-            TryHandleFailureToLockMemory(address, sizeToLock);
-        }
-        finally
-        {
-            if (lockTaken)
-                Monitor.Exit(WorkingSetIncreaseLocker);
-        }
-    }
-
-    private void TryHandleFailureToLockMemory(byte* addressToLock, long sizeToLock)
-    {
-
-        if (_functions.RecoverFromMemoryLockFailure(this, addressToLock, sizeToLock))
-            return;
-
-        using var currentProcess = Process.GetCurrentProcess();
-
-        var msg =
-            $"Unable to lock memory for {FileName} with size {new Size(sizeToLock, SizeUnit.Bytes)}), with encrypted databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error and aborting the current operation.{Environment.NewLine}";
-        if (PlatformDetails.RunningOnPosix)
-        {
-            msg +=
-                $"The admin may configure higher limits using: 'sudo prlimit --pid {currentProcess.Id} --memlock={sizeToLock}' to increase the limit. (It's recommended to do that as part of the startup script){Environment.NewLine}";
-        }
-        else
-        {
-            msg +=
-                $"Already tried to raise the the process min working set to {new Size(currentProcess.MinWorkingSet.ToInt64(), SizeUnit.Bytes)} but still got a failure.{Environment.NewLine}";
-        }
-
-        msg +=
-            "This behavior is controlled by the 'Security.DoNotConsiderMemoryLockFailureAsCatastrophicError' setting (expert only, modifications of this setting is not recommended).";
-
-        throw new InsufficientMemoryException(msg);
-    }
-
     public void TryReleasePage(ref PagerTransactionState txState, long pageNumber)
     {
         if (txState.ForCrypto?.TryGetValue(this, out var cyprtoState) is not true)
@@ -603,10 +558,5 @@ public unsafe partial class Pager2 : IDisposable
         
         cyprtoState.RemoveBuffer(pageNumber);
         _encryptionBuffersPool.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread, buffer.Generation);
-    }
-
-    public void DirectWrite(ref State state, ref PagerTransactionState txState,  long posBy4Kbs, int numberOf4Kbs, byte* source)
-    {
-        _functions.DirectWrite(this,ref state, ref txState, posBy4Kbs, numberOf4Kbs, source);
     }
 }

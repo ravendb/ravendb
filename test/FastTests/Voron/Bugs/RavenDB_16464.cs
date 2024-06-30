@@ -53,7 +53,7 @@ namespace FastTests.Voron.Bugs
             }
 
             Assert.Equal(3, Env.Journal.Files.Count); 
-            Assert.Equal(0, Env.Journal.CurrentFile.Available4Kbs); // this is very important condition to run into the issue - see details in RavenDB-16464
+            Assert.Null(Env.Journal.CurrentFile); // this is very important condition to run into the issue - see details in RavenDB-16464
 
             Env.FlushLogToDataFile(); // this will flush all journals, the issue was that it also marked all of them as unused so they were removed from _files list, but didn't free the allocations in scratch buffers to ensure we don't free pages that can be still read
             var old = Env.Journal.Files;
@@ -104,7 +104,7 @@ namespace FastTests.Voron.Bugs
             }
 
             Assert.Equal(3, Env.Journal.Files.Count);
-            Assert.Equal(0, Env.Journal.CurrentFile.Available4Kbs);
+            Assert.Null(Env.Journal.CurrentFile);
 
             byte* basePtr;
             using (var rtx = Env.ReadTransaction())

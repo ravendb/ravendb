@@ -235,7 +235,7 @@ namespace StressTests.Voron
             int bufferSizeInPages = checked((int)(bufferSize / Constants.Storage.PageSize));
 
             Console.WriteLine($"CreateScratchPager. Size: {bufferSize}. Pages: {bufferSizeInPages}. Name: {scratchName}");
-            var (pager, state) = env.Options.CreateScratchPager(filename, (long)bufferSizeInPages * Constants.Storage.PageSize);
+            var (pager, state) = env.Options.CreateTemporaryBufferPager(filename, (long)bufferSizeInPages * Constants.Storage.PageSize, encrypted: false);
 
             Console.WriteLine($"EnsureContinuous. Pages: {bufferSizeInPages}. Name: {scratchName}");
             pager.EnsureContinuous(ref state, 0, bufferSizeInPages);

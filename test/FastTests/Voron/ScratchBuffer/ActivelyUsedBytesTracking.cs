@@ -24,7 +24,7 @@ namespace FastTests.Voron.ScratchBuffer
             using (var options = StorageEnvironmentOptions.CreateMemoryOnly())
             using(var env = new StorageEnvironment(options))
             {
-                var (pager, state) = options.CreateScratchPager("temp", 65*1024);
+                var (pager, state) = options.CreateTemporaryBufferPager("temp", 65*1024, encrypted:false);
                 using var _ = pager;
                 using (var file = new ScratchBufferFile(pager, state, 0))
                 using(var tx = env.WriteTransaction())

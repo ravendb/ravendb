@@ -65,6 +65,12 @@
     <ClCompile Include="src\win\writefileheader.c">
       <Filter>Source Files\Win</Filter>
     </ClCompile>
+    <ClCompile Include="src\win\pager.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="src\posix\fileutils.c">
       <Filter>Source Files\Posix</Filter>
     </ClCompile>

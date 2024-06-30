@@ -8,6 +8,7 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Platform;
+using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Tests.Infrastructure;
 using Voron;
@@ -31,7 +32,8 @@ namespace FastTests.Sparrow
             {
                 options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
 
-                var (pager, state) = Pager2.Create(options, new Pager2.OpenFileOptions { File = Path.Combine(DataDir, "Raven.Voron"), Encrypted = true });
+                var (pager, state) = Pager2.Create(options,  Path.Combine(DataDir, "Raven.Voron"),0, 
+                    Pal.OpenFileFlags.Encrypted | Pal.OpenFileFlags.WritableMap);
                 using var _ = pager;
                 Pager2.PagerTransactionState txState = new(){IsWriteTransaction = true};
                 try
@@ -205,7 +207,7 @@ namespace FastTests.Sparrow
                 options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
 
 
-                var (pager, state) = Pager2.Create(options, new Pager2.OpenFileOptions { File = Path.Combine(DataDir, "Raven.Voron"), Encrypted = true });
+                var (pager, state) = Pager2.Create(options,  Path.Combine(DataDir, "Raven.Voron"),0, Pal.OpenFileFlags.Encrypted | Pal.OpenFileFlags.WritableMap);
                 using var _ = pager;
 
                 Pager2.PagerTransactionState txState = new(){IsWriteTransaction = true};
@@ -253,7 +255,7 @@ namespace FastTests.Sparrow
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
             {
                 options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
-                var (pager, state) = Pager2.Create(options, new Pager2.OpenFileOptions { File = Path.Combine(DataDir, "Raven.Voron"), Encrypted = true });
+                var (pager, state) = Pager2.Create(options,  Path.Combine(DataDir, "Raven.Voron"),0, Pal.OpenFileFlags.Encrypted| Pal.OpenFileFlags.WritableMap);
                 using var _ = pager;
                 Pager2.PagerTransactionState txState = new(){IsWriteTransaction = true};
                 try
