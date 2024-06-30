@@ -178,11 +178,6 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
     public override void Initialize(StorageEnvironment environment)
     {
     }
-    
-    public override void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
-    {
-        //lucene method
-    }
 
     internal override IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx)
     {

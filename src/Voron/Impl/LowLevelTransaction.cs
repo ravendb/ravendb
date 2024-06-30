@@ -46,8 +46,6 @@ namespace Voron.Impl
         internal TestingStuff _forTestingPurposes;
         public Pager2.State DataPagerState;
 
-        public object ImmutableExternalState;
-
         private Tree _root;
         public Tree RootObjects => _root;
 
@@ -195,7 +193,6 @@ namespace Voron.Impl
             _disposeAllocator = allocator == null;
 
             Flags = TransactionFlags.Read;
-            ImmutableExternalState = previous.ImmutableExternalState;
 
             _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
 
@@ -308,6 +305,13 @@ namespace Voron.Impl
             _envRecord = _envRecord with { Root = root.State };
 
             _root = root;
+        }
+
+        internal void UpdateClientState(object state)
+        {
+            Debug.Assert(_envRecord.ClientState == null || state == null || _envRecord.ClientState.GetType() == state.GetType(),
+                "Cannot *change* the type of the client state, must always be a single type!");
+            _envRecord = _envRecord with { ClientState = state };
         }
 
         private void InitializeRoots()
@@ -739,8 +743,6 @@ namespace Voron.Impl
                 }
 
                 OnDispose?.Invoke(this);
-
-                ImmutableExternalState = null;
             }
         }
 
@@ -888,7 +890,6 @@ namespace Voron.Impl
                 _env.ActiveTransactions.Add(nextTx);
                 _env.WriteTransactionStarted();
 
-                nextTx.AfterCommitWhenNewTransactionsPrevented += _env.InvokeAfterCommitWhenNewTransactionsPrevented;
                 _env.InvokeNewTransactionCreated(nextTx);
 
                 return nextTx;

@@ -550,7 +550,7 @@ namespace Raven.Server.Documents.Indexes
 
             public long ReadLastProcessedReferenceEtag(Transaction tx, string collection, CollectionName referencedCollection)
             {
-                if (tx.IsWriteTransaction == false && tx.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
+                if (tx.IsWriteTransaction == false && tx.LowLevelTransaction.CurrentStateRecord.ClientState is IndexTransactionCache cache)
                 {
                     switch (_type)
                     {
@@ -594,7 +594,7 @@ namespace Raven.Server.Documents.Indexes
 
             public long ReadLastProcessedReferenceTombstoneEtag(Transaction tx, string collection, CollectionName referencedCollection)
             {
-                if (tx.IsWriteTransaction == false && tx.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
+                if (tx.IsWriteTransaction == false && tx.LowLevelTransaction.CurrentStateRecord.ClientState is IndexTransactionCache cache)
                 {
                     switch (_type)
                     {
@@ -778,7 +778,7 @@ namespace Raven.Server.Documents.Indexes
             var txi = tx.InnerTransaction;
             if (txi.IsWriteTransaction == false)
             {
-                if (txi.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
+                if (txi.LowLevelTransaction.CurrentStateRecord.ClientState is IndexTransactionCache cache)
                 {
                     if (cache.Collections.TryGetValue(collection, out var val))
                         return val.LastProcessedTombstoneEtag;
@@ -796,7 +796,7 @@ namespace Raven.Server.Documents.Indexes
             var txi = tx.InnerTransaction;
             if (txi.IsWriteTransaction == false)
             {
-                if (txi.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
+                if (txi.LowLevelTransaction.CurrentStateRecord.ClientState is IndexTransactionCache cache)
                 {
                     if (cache.Collections.TryGetValue(collection, out var val))
                         return val.LastIndexedEtag;

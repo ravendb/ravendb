@@ -38,7 +38,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly Analyzer _dummyAnalyzer = new SimpleAnalyzer();
         internal IndexReader _lastReader;
         private readonly LuceneDocumentConverterBase _converter;
-        private IndexTransactionCache _streamsCache = new IndexTransactionCache();
         private static readonly StopAnalyzer StopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 
         private LuceneIndexWriter _indexWriter;
@@ -240,8 +239,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             TempFileCache = new TempFileCache(environment.Options);
 
-            environment.NewTransactionCreated += SetStreamCacheInTx;
-
             using (var tx = environment.WriteTransaction())
             {
                 InitializeMainIndexStorage(tx, environment);
@@ -266,12 +263,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
         }
 
-
-        public override void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
-        {
-            _streamsCache = transactionCache;
-        }
-
         internal override IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx)
         {
             var newCache = new IndexTransactionCache();
@@ -290,11 +281,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             return newCache;
-        }
-
-        private void SetStreamCacheInTx(LowLevelTransaction tx)
-        {
-            tx.ImmutableExternalState = _streamsCache;
         }
         
         private void FillCollectionEtags(Transaction tx,
