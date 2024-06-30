@@ -158,9 +158,6 @@ public abstract class AbstractExecutor : IDisposable
             int shardNumber = shards.Span[position];
 
             var cmd = operation.CreateCommandForShard(shardNumber);
-            if (cmd == null)
-                continue;
-
             cmd.ModifyRequest = operation.ModifyHeaders;
             cmd.ModifyUrl = operation.ModifyUrl;
             

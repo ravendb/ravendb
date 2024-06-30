@@ -8,9 +8,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 {
     public readonly struct ShardedRevertDocumentsToRevisionsOperation : IShardedOperation
     {
-        private readonly Dictionary<long, Dictionary<string, string>> _shardsToDocs;
+        private readonly Dictionary<int, Dictionary<string, string>> _shardsToDocs;
 
-        public ShardedRevertDocumentsToRevisionsOperation(Dictionary<long, Dictionary<string, string>> shardsToDocs)
+        public ShardedRevertDocumentsToRevisionsOperation(Dictionary<int, Dictionary<string, string>> shardsToDocs)
         {
             _shardsToDocs = shardsToDocs;
         }
@@ -19,9 +19,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 
         public RavenCommand<object> CreateCommandForShard(int shardNumber)
         {
-            if (_shardsToDocs.Keys.Contains(shardNumber) == false)
-                return null;
-
             return new RevertDocumentsToRevisionsCommand(_shardsToDocs[shardNumber]);
         }
     }

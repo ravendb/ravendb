@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.ServerWide;
@@ -14,7 +15,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
 
         protected override Task RevertDocuments(Dictionary<string, string> idToChangeVector, OperationCancelToken token)
         {
-            return RequestHandler.Database.DocumentsStorage.RevisionsStorage.RevertDocumentsToRevisions(idToChangeVector, token);
+            var revisionsStorage = RequestHandler.Database.DocumentsStorage.RevisionsStorage;
+
+            revisionsStorage.VerifyRevisionsIdsAndChangeVectors(idToChangeVector);
+
+            return revisionsStorage.RevertDocumentsToRevisions(changeVectors: idToChangeVector.Values.ToList(), token);
         }
     }
 }
