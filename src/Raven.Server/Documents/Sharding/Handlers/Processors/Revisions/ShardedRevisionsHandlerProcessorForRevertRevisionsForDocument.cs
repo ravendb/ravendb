@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors.Revisions;
@@ -17,7 +18,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 
         protected override async Task RevertDocuments(Dictionary<string, string> idToChangeVector, OperationCancelToken token)
         {
-            var shardsToDocs = new Dictionary<long, Dictionary<string, string>>();
+            var shardsToDocs = new Dictionary<int, Dictionary<string, string>>();
             using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 foreach (var (id, cv) in idToChangeVector)
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
             }
 
             var op = new ShardedRevertDocumentsToRevisionsOperation(shardsToDocs);
-            await RequestHandler.ShardExecutor.ExecuteParallelForAllThrowAggregatedFailure(op, token.Token);
+            await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToDocs.Keys.ToArray(), op, token.Token);
         }
     }
 }

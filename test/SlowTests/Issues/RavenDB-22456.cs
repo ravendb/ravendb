@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide;
 using Tests.Infrastructure;
 using Xunit;
@@ -71,8 +73,9 @@ namespace SlowTests.Issues
             var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             using (var token = new OperationCancelToken(database.Configuration.Databases.OperationTimeout.AsTimeSpan, database.DatabaseShutdown, CancellationToken.None))
             {
-                await database.DocumentsStorage.RevisionsStorage.RevertDocumentsToRevisions(new Dictionary<string, string>() { { user1.Id, user1revertCv } },
-                    token: token);
+                var idToChangeVector = new Dictionary<string, string>() { { user1.Id, user1revertCv } };
+                database.DocumentsStorage.RevisionsStorage.VerifyRevisionsIdsAndChangeVectors(idToChangeVector);
+                await database.DocumentsStorage.RevisionsStorage.RevertDocumentsToRevisions(idToChangeVector.Values.ToList(), token);
             }
 
             using (var session = store.OpenAsyncSession())
