@@ -797,6 +797,12 @@ namespace Raven.Server.Documents.Subscriptions
                 }
             }
 
+            if (_subscriptionStorage.ShouldWaitForClusterStabilization())
+            {
+                // in case of unstable cluster, we will try to heartbeat the client for 30 seconds and then send actual no-op command
+                return;
+            }
+
             var (etag, _) = await _documentsStorage.DocumentDatabase.ServerStore.SendToLeaderAsync(command);
             await _documentsStorage.DocumentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _documentsStorage.DocumentDatabase.ServerStore.Engine.OperationTimeout);
         }

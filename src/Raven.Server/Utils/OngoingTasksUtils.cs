@@ -16,10 +16,16 @@ internal static class OngoingTasksUtils
         IDatabaseTaskStatus taskStatus,
         NotificationCenter.NotificationCenter notificationCenter)
     {
+        return WhoseTaskIsIt(serverStore, databaseTopology, serverStore.Engine.CurrentState, configuration, taskStatus, notificationCenter);
+    }
+
+    internal static string WhoseTaskIsIt(ServerStore serverStore, DatabaseTopology databaseTopology, RachisState currentState, IDatabaseTask configuration, IDatabaseTaskStatus taskStatus,
+        NotificationCenter.NotificationCenter notificationCenter)
+    {
         Debug.Assert(taskStatus is not PeriodicBackupStatus);
 
         var whoseTaskIsIt = databaseTopology.WhoseTaskIsIt(
-            serverStore.Engine.CurrentState, configuration,
+            currentState, configuration,
             getLastResponsibleNode:
             () =>
             {

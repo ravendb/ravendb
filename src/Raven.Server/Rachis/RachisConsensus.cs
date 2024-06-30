@@ -896,7 +896,12 @@ namespace Raven.Server.Rachis
             PrevStates.LimitedSizeEnqueue(transition, 5);
 
             context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented +=
-                _ => CurrentState = rachisState; //  we need this to happened while we still under the write lock
+                _ =>
+                {
+                    CurrentState = rachisState;
+                    LastState = transition;
+
+                }; //  we need this to happened while we still under the write lock
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
@@ -981,6 +986,7 @@ namespace Raven.Server.Rachis
             });
         }
 
+        public StateTransition LastState;
         public ConcurrentQueue<StateTransition> PrevStates { get; set; } = new ConcurrentQueue<StateTransition>();
 
         public bool TakeOffice()
