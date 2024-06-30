@@ -19,6 +19,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.NotificationCenter;
@@ -455,6 +456,8 @@ namespace SlowTests.Server.Documents.Revisions
 
                 await EnsureReplicatingAsync(store1, store2);
                 await EnsureReplicatingAsync(store2, store1);
+
+                Assert.True(await WaitForChangeVectorInClusterForModeAsync(new List<RavenServer>{ cluster.Nodes[0], cluster.Nodes[1] }, database, mode: options.DatabaseMode, timeout: 30_000));
 
                 using (var session1 = store1.OpenAsyncSession())
                 using (var session2 = store2.OpenAsyncSession())
