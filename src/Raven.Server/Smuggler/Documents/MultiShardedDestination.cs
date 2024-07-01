@@ -154,6 +154,9 @@ namespace Raven.Server.Smuggler.Documents
             protected readonly Dictionary<int, T> _actions;
             protected readonly T _last;
 
+            private BlittableJsonDocumentBuilder _builder;
+            private BlittableMetadataModifier _metadataModifier;
+
             protected ShardedActions(ShardedDatabaseContext databaseContext, Dictionary<int, T> actions, DatabaseSmugglerOptionsServerSide options)
             {
                 DatabaseContext = databaseContext;
@@ -176,6 +179,21 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 return _context;
+            }
+
+            public BlittableJsonDocumentBuilder GetBuilderForNewDocument(UnmanagedJsonParser parser, JsonParserState state, BlittableMetadataModifier modifier = null)
+            {
+                return _builder ??= new BlittableJsonDocumentBuilder(_context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "stream/object", parser, state, modifier: modifier);
+            }
+
+            public BlittableMetadataModifier GetMetadataModifierForNewDocument(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false,
+                bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+            {
+                _metadataModifier ??= new BlittableMetadataModifier(_context, legacyImport, readLegacyEtag, operateOnTypes);
+                _metadataModifier.FirstEtagOfLegacyRevision = firstEtagOfLegacyRevision;
+                _metadataModifier.LegacyRevisionsCount = legacyRevisionsCount;
+
+                return _metadataModifier;
             }
 
             public virtual async ValueTask DisposeAsync()

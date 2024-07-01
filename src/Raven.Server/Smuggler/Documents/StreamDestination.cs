@@ -1140,7 +1140,7 @@ namespace Raven.Server.Smuggler.Documents
 
             }
 
-            public StreamCounterActions(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, StreamDestination destination, string propertyName) : base(writer, propertyName)
+            public StreamCounterActions(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, StreamDestination destination, string propertyName) : base(context, writer, propertyName)
             {
                 _context = context;
                 _destination = destination;

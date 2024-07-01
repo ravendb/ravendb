@@ -17,6 +17,8 @@ namespace Raven.Server.Documents
 {
     public sealed class BlittableMetadataModifier : IDisposable, IBlittableDocumentModifier
     {
+        private bool _disposed;
+
         private bool _readingMetadataObject;
         private int _depth;
         private State _state = State.None;
