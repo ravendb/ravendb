@@ -106,13 +106,11 @@ public unsafe partial struct SortingMultiMatch<TInner>
             where TComparer2 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
             where TComparer3 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
         {
-            
             if (match._orderMetadata[0].Ascending)
                 indexes.Sort(new IndirectComparer<TComparer1, TComparer2, TComparer3>(ref match, batchTerms, comparer1,
-                comparer2, comparer3, false));
+                comparer2, comparer3));
             else
-                indexes.Sort(new IndirectComparer<Descending<TComparer1>, TComparer2, TComparer3>(ref match, batchTerms, new(comparer1), comparer2, comparer3, true));
-
+                indexes.Sort(new IndirectComparer<Descending<TComparer1>, TComparer2, TComparer3>(ref match, batchTerms, new(comparer1), comparer2, comparer3));
             
             // Support for including scores in the projection in case the score comparer is not first. 
             // We only have one chance to copy in the right order before pagination happens
