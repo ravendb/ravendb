@@ -1075,7 +1075,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private sealed class StreamCounterActions : StreamActionsBase, ICounterActions
+        private sealed class StreamCounterActions : StreamActionsBaseWithBuilder, ICounterActions
         {
             private readonly JsonOperationContext _context;
             private readonly StreamDestination _destination;
@@ -1152,17 +1152,28 @@ namespace Raven.Server.Smuggler.Documents
                 return _context;
             }
 
+            public BlittableJsonDocumentBuilder GetBuilderForNewDocument(UnmanagedJsonParser parser, JsonParserState state, BlittableMetadataModifier modifier = null)
+            {
+                return GetOrCreateBuilder(parser, state, "stream/object", modifier);
+            }
+
+            public BlittableMetadataModifier GetMetadataModifierForNewDocument(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false,
+                bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+            {
+                return GetOrCreateMetadataModifier(firstEtagOfLegacyRevision, legacyRevisionsCount, legacyImport, readLegacyEtag, operateOnTypes);
+            }
+
             public Task<Stream> GetTempStreamAsync()
             {
                 throw new NotSupportedException("GetTempStream is never used in StreamCounterActions. Shouldn't happen");
             }
         }
 
-        private sealed class StreamTimeSeriesActions : StreamActionsBase, ITimeSeriesActions
+        private sealed class StreamTimeSeriesActions : StreamActionsBaseWithBuilder, ITimeSeriesActions
         {
             private readonly JsonOperationContext _context;
 
-            public StreamTimeSeriesActions(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, string propertyName) : base(writer, propertyName)
+            public StreamTimeSeriesActions(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, string propertyName) : base(context, writer, propertyName)
             {
                 _context = context;
             }
@@ -1232,6 +1243,17 @@ namespace Raven.Server.Smuggler.Documents
                 _context.CachedProperties.NewDocument();
                 return _context;
             }
+
+            public BlittableJsonDocumentBuilder GetBuilderForNewDocument(UnmanagedJsonParser parser, JsonParserState state, BlittableMetadataModifier modifier = null)
+            {
+                return GetOrCreateBuilder(parser, state, "stream/object", modifier);
+            }
+
+            public BlittableMetadataModifier GetMetadataModifierForNewDocument(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false,
+                bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+            {
+                return GetOrCreateMetadataModifier(firstEtagOfLegacyRevision, legacyRevisionsCount, legacyImport, readLegacyEtag, operateOnTypes);
+            }
         }
 
         private sealed class StreamSubscriptionActions : StreamActionsBase, ISubscriptionActions
@@ -1282,7 +1304,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private sealed class StreamDocumentActions : StreamActionsBase, IDocumentActions
+        private sealed class StreamDocumentActions : StreamActionsBaseWithBuilder, IDocumentActions
         {
             private readonly JsonOperationContext _context;
             private readonly ISmugglerSource _source;
@@ -1292,7 +1314,7 @@ namespace Raven.Server.Smuggler.Documents
             private Stream _attachmentStreamsTempFile;
 
             public StreamDocumentActions(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, ISmugglerSource source, DatabaseSmugglerOptionsServerSide options, Func<LazyStringValue, bool> filterMetadataProperty, string propertyName)
-                : base(writer, propertyName)
+                : base(context, writer, propertyName)
             {
                 _context = context;
                 _source = source;
@@ -1441,6 +1463,17 @@ namespace Raven.Server.Smuggler.Documents
                 return _context;
             }
 
+            public BlittableJsonDocumentBuilder GetBuilderForNewDocument(UnmanagedJsonParser parser, JsonParserState state, BlittableMetadataModifier modifier = null)
+            {
+                return GetOrCreateBuilder(parser, state, "stream/object", modifier);
+            }
+
+            public BlittableMetadataModifier GetMetadataModifierForNewDocument(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false,
+                bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+            {
+                return GetOrCreateMetadataModifier(firstEtagOfLegacyRevision, legacyRevisionsCount, legacyImport, readLegacyEtag, operateOnTypes);
+            }
+
             private async ValueTask WriteAttachmentStreamAsync(string hash, Stream stream, string tag)
             {
                 if (_attachmentStreamsAlreadyExported == null)
@@ -1561,6 +1594,43 @@ namespace Raven.Server.Smuggler.Documents
             public ValueTask FlushAsync()
             {
                 return ValueTask.CompletedTask;
+            }
+        }
+
+        private abstract class StreamActionsBaseWithBuilder : StreamActionsBase
+        {
+            protected readonly JsonOperationContext Context;
+
+            private BlittableJsonDocumentBuilder _builder;
+            private BlittableMetadataModifier _metadataModifier;
+
+            protected StreamActionsBaseWithBuilder(JsonOperationContext context, AsyncBlittableJsonTextWriter writer, string propertyName)
+                : base(writer, propertyName)
+            {
+                Context = context;
+            }
+
+            protected BlittableJsonDocumentBuilder GetOrCreateBuilder(UnmanagedJsonParser parser, JsonParserState state, string debugTag, BlittableMetadataModifier modifier = null)
+            {
+                return _builder ??= new BlittableJsonDocumentBuilder(Context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag, parser, state, modifier: modifier);
+            }
+
+            protected BlittableMetadataModifier GetOrCreateMetadataModifier(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false,
+                bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+            {
+                _metadataModifier ??= new BlittableMetadataModifier(Context, legacyImport, readLegacyEtag, operateOnTypes);
+                _metadataModifier.FirstEtagOfLegacyRevision = firstEtagOfLegacyRevision;
+                _metadataModifier.LegacyRevisionsCount = legacyRevisionsCount;
+
+                return _metadataModifier;
+            }
+
+            public override ValueTask DisposeAsync()
+            {
+                _builder?.Dispose();
+                _metadataModifier?.Dispose();
+
+                return base.DisposeAsync();
             }
         }
 

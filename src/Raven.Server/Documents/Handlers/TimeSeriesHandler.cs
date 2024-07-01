@@ -13,6 +13,8 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Sparrow.Json;
 using System.Diagnostics.CodeAnalysis;
+using Raven.Client.Documents.Smuggler;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -26,7 +28,7 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
             }
         }
-        
+
         [RavenAction("/databases/*/timeseries/ranges", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task ReadRanges()
         {
@@ -289,6 +291,9 @@ namespace Raven.Server.Documents.Handlers
 
             public string LastChangeVector;
 
+            private BlittableJsonDocumentBuilder _builder;
+            private BlittableMetadataModifier _metadataModifier;
+
             public SmugglerTimeSeriesBatchCommand(DocumentDatabase database)
             {
                 _database = database;
@@ -356,6 +361,21 @@ namespace Raven.Server.Documents.Handlers
                 _toReturn.Add(allocatedMemoryData);
             }
 
+            public BlittableJsonDocumentBuilder GetOrCreateBuilder(UnmanagedJsonParser parser, JsonParserState state, string debugTag, BlittableMetadataModifier modifier = null)
+            {
+                return _builder ??= new BlittableJsonDocumentBuilder(_context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag, parser, state, modifier: modifier);
+            }
+
+            public BlittableMetadataModifier GetOrCreateMetadataModifier(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false,
+                bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+            {
+                _metadataModifier ??= new BlittableMetadataModifier(_context, legacyImport, readLegacyEtag, operateOnTypes);
+                _metadataModifier.FirstEtagOfLegacyRevision = firstEtagOfLegacyRevision;
+                _metadataModifier.LegacyRevisionsCount = legacyRevisionsCount;
+
+                return _metadataModifier;
+            }
+
             public void Dispose()
             {
                 if (_isDisposed)
@@ -372,6 +392,9 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var returnable in _toReturn)
                     _context.ReturnMemory(returnable);
                 _toReturn.Clear();
+
+                _builder?.Dispose();
+                _metadataModifier?.Dispose();
 
                 _releaseContext?.Dispose();
                 _releaseContext = null;
