@@ -319,6 +319,17 @@ namespace Raven.Server.Smuggler.Documents
                 return _command.Context;
             }
 
+            public BlittableJsonDocumentBuilder GetBuilderForNewDocument(UnmanagedJsonParser parser, JsonParserState state, BlittableMetadataModifier modifier = null)
+            {
+                return _command.GetOrCreateBuilder(parser, state, "import/object", modifier);
+            }
+
+            public BlittableMetadataModifier GetMetadataModifierForNewDocument(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false,
+                bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+            {
+                return _command.GetOrCreateMetadataModifier(firstEtagOfLegacyRevision, legacyRevisionsCount, legacyImport, readLegacyEtag, operateOnTypes);
+            }
+
             public async ValueTask DisposeAsync()
             {
                 await FinishBatchOfDocumentsAsync();
@@ -656,7 +667,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (IsRevision)
                     {
                         PutAttachments(context, document, isRevision: true, out _);
-                       
+
                         if ((document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler)) &&
                             (_missingDocumentsForRevisions != null))
                         {
@@ -1014,7 +1025,7 @@ namespace Raven.Server.Smuggler.Documents
 
                         foreach (var toRemove in attachmentsToRemoveNames)
                         {
-                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove,  null, collectionName: out _, updateDocument: false, extractCollectionName: false);
+                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove, null, collectionName: out _, updateDocument: false, extractCollectionName: false);
                         }
 
                         metadata.Modifications = new DynamicJsonValue(metadata);
@@ -1286,6 +1297,16 @@ namespace Raven.Server.Smuggler.Documents
                 return _cmd.Context;
             }
 
+            public BlittableJsonDocumentBuilder GetBuilderForNewDocument(UnmanagedJsonParser parser, JsonParserState state, BlittableMetadataModifier modifier = null)
+            {
+                return _cmd.GetOrCreateBuilder(parser, state, "counters/object", modifier);
+            }
+
+            public BlittableMetadataModifier GetMetadataModifierForNewDocument(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false, bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+            {
+                return _cmd.GetOrCreateMetadataModifier(firstEtagOfLegacyRevision, legacyRevisionsCount, legacyImport, readLegacyEtag, operateOnTypes);
+            }
+
             public Task<Stream> GetTempStreamAsync()
             {
                 throw new NotSupportedException("GetTempStream is never used in CounterActions. Shouldn't happen");
@@ -1400,6 +1421,17 @@ namespace Raven.Server.Smuggler.Documents
             {
                 _cmd.Context.CachedProperties.NewDocument();
                 return _cmd.Context;
+            }
+
+            public BlittableJsonDocumentBuilder GetBuilderForNewDocument(UnmanagedJsonParser parser, JsonParserState state, BlittableMetadataModifier modifier = null)
+            {
+                return _cmd.GetOrCreateBuilder(parser, state, "timeseries/object", modifier);
+            }
+
+            public BlittableMetadataModifier GetMetadataModifierForNewDocument(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false,
+                bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+            {
+                return _cmd.GetOrCreateMetadataModifier(firstEtagOfLegacyRevision, legacyRevisionsCount, legacyImport, readLegacyEtag, operateOnTypes);
             }
         }
     }
