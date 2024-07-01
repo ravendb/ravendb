@@ -888,6 +888,13 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
                 Documents.Clear();
+
+                _metadataModifier?.Dispose();
+                _metadataModifier = null;
+
+                _builder?.Dispose();
+                _builder = null;
+
                 _resetContext?.Dispose();
                 _resetContext = null;
 
