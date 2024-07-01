@@ -203,6 +203,9 @@ namespace Raven.Server.Smuggler.Documents
                     await action.DisposeAsync();
                 }
 
+                _metadataModifier?.Dispose();
+                _builder?.Dispose();
+
                 _rtnCtx.Dispose();
                 _prevRtnCtx?.Dispose();
             }
