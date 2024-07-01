@@ -703,6 +703,11 @@ interface hypertextColumnOpts<T> extends textColumnOpts<T> {
     openInNewTab?: (item: T) => boolean;
 }
 
+interface multiNodeTagsColumnOpts<T> extends textColumnOpts<T> {
+    nodeHrefAccessor?: (item: T, nodeTag: string) => string;
+    nodeLinkTitleAccessor?: (item: T, nodeTag: string) => string;
+}
+
 type timeSeriesColumnEventType = "plot" | "preview";
 
 interface timeSeriesColumnOpts<T> extends textColumnOpts<T> {

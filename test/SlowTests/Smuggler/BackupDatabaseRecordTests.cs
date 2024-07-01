@@ -142,7 +142,7 @@ namespace SlowTests.Smuggler
                     {
                         Name = "connection",
                         ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store1.Database};",
-                        FactoryName = "System.Data.SqlClient"
+                        FactoryName = "Microsoft.Data.SqlClient"
                     };
 
                     var result2 = store1.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
@@ -345,7 +345,7 @@ namespace SlowTests.Smuggler
                     {
                         Name = "connection",
                         ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store1.Database};",
-                        FactoryName = "System.Data.SqlClient"
+                        FactoryName = "Microsoft.Data.SqlClient"
                     };
 
                     var result2 = store1.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
@@ -802,25 +802,25 @@ namespace SlowTests.Smuggler
                     {
                         Name = "scon1",
                         ConnectionString = "http://127.0.0.1:8081",
-                        FactoryName = "System.Data.SqlClient"
+                        FactoryName = "Microsoft.Data.SqlClient"
                     };
                     var scon2 = new SqlConnectionString()
                     {
                         Name = "scon2",
                         ConnectionString = "http://127.0.0.1:8082",
-                        FactoryName = "System.Data.SqlClient"
+                        FactoryName = "Microsoft.Data.SqlClient"
                     };
                     var scon3 = new SqlConnectionString()
                     {
                         Name = "scon3",
                         ConnectionString = "http://127.0.0.1:8083",
-                        FactoryName = "System.Data.SqlClient"
+                        FactoryName = "Microsoft.Data.SqlClient"
                     };
                     var scon4 = new SqlConnectionString()
                     {
                         Name = "scon4",
                         ConnectionString = "http://127.0.0.1:8084",
-                        FactoryName = "System.Data.SqlClient"
+                        FactoryName = "Microsoft.Data.SqlClient"
                     };
                     var putResult1 = await store1.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon1));
                     var putResult2 = await store1.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon2));
@@ -1100,7 +1100,7 @@ namespace SlowTests.Smuggler
                 {
                     Name = "connection",
                     ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store.Database};",
-                    FactoryName = "System.Data.SqlClient"
+                    FactoryName = "Microsoft.Data.SqlClient"
                 };
 
                 var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
@@ -1315,7 +1315,7 @@ namespace SlowTests.Smuggler
                 {
                     Name = "sql-cs",
                     ConnectionString = "http://127.0.0.1:8081",
-                    FactoryName = "System.Data.SqlClient"
+                    FactoryName = "Microsoft.Data.SqlClient"
                 }));
 
                 await store.Maintenance.SendAsync(new PutConnectionStringOperation<OlapConnectionString>(new OlapConnectionString
