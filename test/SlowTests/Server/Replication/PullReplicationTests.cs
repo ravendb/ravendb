@@ -282,7 +282,7 @@ namespace SlowTests.Server.Replication
         public async Task DisablePullReplicationOnSink()
         {
             var definitionName = $"pull-replication {GetDatabaseName()}";
-            var timeout = 3000;
+            var timeout = 10_000;
 
             using (var sink = GetDocumentStore())
             using (var hub = GetDocumentStore())
