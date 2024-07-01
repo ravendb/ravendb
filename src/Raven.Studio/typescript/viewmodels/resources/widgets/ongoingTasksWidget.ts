@@ -7,7 +7,9 @@ import genUtils = require("common/generalUtils");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 import multiNodeTagsColumn = require("widgets/virtualGrid/columns/multiNodeTagsColumn");
 import taskItem = require("models/resources/widgets/taskItem");
-import DatabaseUtils from "components/utils/DatabaseUtils";
+import appUrl = require("common/appUrl");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 
 class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.Notifications.OngoingTasksPayload> {
 
@@ -217,21 +219,42 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
     private prepareColumns(): virtualColumn[] {
         const grid = this.gridController();
         return [
-            new iconsPlusTextColumn<taskItem>(grid, x => x.isTitleItem() ? this.getTaskTypeHtml(x) : "", "Task", "30%", {
-                headerTitle: "Tasks type"
-            }),
-
-            new iconsPlusTextColumn<taskItem>(grid, x => this.getTaskCountHtml(x), "Count", "15%", {
-                headerTitle: "Tasks count"
-            }),
-
-            new textColumn<taskItem>(grid, x => x.isTitleItem() ? "" : DatabaseUtils.formatName(x.databaseName()), "Database", "30%", {
-                title: x => x.databaseName()
-            }),
-
-            new multiNodeTagsColumn(grid, taskItem.createNodeTagsProvider(), "20%", {
-                headerTitle: "Nodes running the tasks"
-            })
+            new iconsPlusTextColumn<taskItem>(
+                grid, x => x.isTitleItem() ? this.getTaskTypeHtml(x) : "",
+                "Task",
+                "30%",
+                {
+                    headerTitle: "Tasks type"
+                }
+            ),
+            new iconsPlusTextColumn<taskItem>(
+                grid,
+                x => this.getTaskCountHtml(x),
+                "Count",
+                "15%",
+                {
+                    headerTitle: "Tasks count"
+                }
+            ),
+            new hyperlinkColumn<taskItem>(
+                grid, x => x.isTitleItem() ? "" : x.databaseName(),
+                x => appUrl.forOngoingTasks(x.databaseName()),
+                "Database",
+                "30%",
+                {
+                    title: x => `Ongoing tasks for database ${x.databaseName()}`
+                }
+            ),
+            new multiNodeTagsColumn<taskItem>(
+                grid,
+                taskItem.createNodeTagsProvider(),
+                "20%",
+                {
+                    headerTitle: "Nodes running the tasks",
+                    nodeHrefAccessor: (item, nodeTag) => this.getOngoingTasksUrlForNode(item.databaseName(), nodeTag),
+                    nodeLinkTitleAccessor: (item, nodeTag) => `Ongoing tasks for database ${item.databaseName()} on node ${nodeTag}`
+                }
+            )
         ];
     }
 
