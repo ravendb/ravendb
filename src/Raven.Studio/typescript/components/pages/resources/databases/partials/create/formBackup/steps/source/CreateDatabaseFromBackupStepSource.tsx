@@ -1,7 +1,7 @@
 import { FormSelect, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { OptionWithIcon, SingleValueWithIcon, SelectOptionWithIcon } from "components/common/select/Select";
-import React from "react";
+import React, { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Collapse, Row, Col, Label } from "reactstrap";
 import { CreateDatabaseFromBackupFormData as FormData, RestoreSource } from "../../createDatabaseFromBackupValidation";
@@ -21,12 +21,30 @@ import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 const backupSourceImg = require("Content/img/createDatabase/backup-source.svg");
 
 export default function CreateDatabaseFromBackupStepSource() {
-    const { control } = useFormContext<FormData>();
+    const { control, setValue } = useFormContext<FormData>();
     const {
-        sourceStep: { sourceType },
+        sourceStep: { sourceData, sourceType },
     } = useWatch({
         control,
     });
+
+    const firstRestorePoint = sourceData[sourceType]?.pointsWithTags?.[0]?.restorePoint;
+    const isFirstRestorePointEncrypted = firstRestorePoint?.isEncrypted ?? false;
+    const isFirstRestorePointSnapshot = firstRestorePoint?.isSnapshotRestore ?? false;
+
+    const encryptionKeyFromSourceStep = sourceData[sourceType]?.encryptionKey ?? "";
+
+    // Toggle encryption step based on the first restore point encryption
+    useEffect(() => {
+        setValue(`sourceStep.isEncrypted`, isFirstRestorePointEncrypted);
+    }, [isFirstRestorePointEncrypted, setValue]);
+
+    // Set encryption key in encryption step if the first restore point is encrypted snapshot
+    useEffect(() => {
+        if (isFirstRestorePointSnapshot && isFirstRestorePointEncrypted) {
+            setValue(`encryptionStep.key`, encryptionKeyFromSourceStep);
+        }
+    }, [isFirstRestorePointSnapshot, isFirstRestorePointEncrypted, encryptionKeyFromSourceStep, setValue]);
 
     return (
         <>
@@ -72,7 +90,7 @@ export default function CreateDatabaseFromBackupStepSource() {
                 <FormSwitch control={control} name="sourceStep.isSkipIndexes" color="primary">
                     <Icon icon="index" /> Skip indexes
                 </FormSwitch>
-                <IsEncryptedField />
+                <IsEncryptedField isFirstRestorePointSnapshot={isFirstRestorePointSnapshot} />
             </Collapse>
         </>
     );
@@ -106,22 +124,18 @@ const sourceOptions: SelectOptionWithIcon<RestoreSource>[] = [
     },
 ];
 
-function IsEncryptedField() {
+interface IsEncryptedFieldProps {
+    isFirstRestorePointSnapshot: boolean;
+}
+
+function IsEncryptedField({ isFirstRestorePointSnapshot }: IsEncryptedFieldProps) {
     const { control, formState } = useFormContext<FormData>();
-    const {
-        sourceStep: { sourceType, sourceData },
-    } = useWatch({
-        control,
-    });
 
     const hasEncryption = useAppSelector(licenseSelectors.statusValue("HasEncryption"));
     const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
 
-    const isRestorePointEncrypted = sourceType
-        ? sourceData[sourceType].pointsWithTags[0].restorePoint?.isEncrypted
-        : false;
-
-    const isEncryptionDisabled = !hasEncryption || !isSecureServer || isRestorePointEncrypted || formState.isSubmitting;
+    const isEncryptionDisabled =
+        !hasEncryption || !isSecureServer || isFirstRestorePointSnapshot || formState.isSubmitting;
 
     return (
         <ConditionalPopover
@@ -133,10 +147,6 @@ function IsEncryptedField() {
                 {
                     isActive: !isSecureServer,
                     message: <AuthenticationOffMessage />,
-                },
-                {
-                    isActive: isRestorePointEncrypted,
-                    message: "Fill Backup Encryption Key above",
                 },
             ]}
             popoverPlacement="left"
