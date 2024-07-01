@@ -34,7 +34,7 @@ public static class CertificateGenerator
         int yearsValid, AsymmetricCipherKeyPair clientKeyPair)
     {
         var keyUsage = new KeyUsage(KeyUsage.DigitalSignature | KeyUsage.KeyEncipherment);
-        var extendedKeyUsage = new ExtendedKeyUsage(new[] { KeyPurposeID.IdKPServerAuth, KeyPurposeID.IdKPClientAuth });
+        var extendedKeyUsage = new ExtendedKeyUsage(new[] { KeyPurposeID.id_kp_serverAuth, KeyPurposeID.id_kp_clientAuth });
         var subjectAlternativeName = new GeneralNames(new GeneralName(GeneralName.DnsName, "localhost"));
 
         return GenerateCertificate(subjectName, yearsValid, clientKeyPair, keyUsage, extendedKeyUsage, subjectAlternativeName, signerCertificate, signerKeyPair);
@@ -43,7 +43,7 @@ public static class CertificateGenerator
     public static X509Certificate2 GenerateSelfSignedClientCertificate(string subjectName, int yearsValid, AsymmetricCipherKeyPair keyPair)
     {
         var keyUsage = new KeyUsage(KeyUsage.DigitalSignature | KeyUsage.KeyEncipherment);
-        var extendedKeyUsage = new ExtendedKeyUsage(KeyPurposeID.IdKPServerAuth, KeyPurposeID.IdKPClientAuth);
+        var extendedKeyUsage = new ExtendedKeyUsage(KeyPurposeID.id_kp_serverAuth, KeyPurposeID.id_kp_clientAuth);
         var subjectAlternativeName = new GeneralNames(new GeneralName(GeneralName.DnsName, "localhost"));
 
         return GenerateCertificate(subjectName, yearsValid, keyPair, keyUsage, extendedKeyUsage, subjectAlternativeName, isCa: true);
