@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             foreach (var (fieldName, fieldIndexing) in _indexingScope.DynamicFields)
             {
                 using var _ = Slice.From(_allocator, fieldName, out var slice);
-                _dynamicFieldsBuilder.AddDynamicBinding(slice, FieldIndexingIntoFieldIndexingMode(fieldIndexing.Indexing), fieldIndexing.Storage == FieldStorage.Yes);
+                _dynamicFieldsBuilder.AddDynamicBinding(slice, FieldIndexingIntoFieldIndexingMode(fieldIndexing.Indexing), fieldIndexing.Storage== FieldStorage.Yes);
             }
 
             _dynamicFields = _dynamicFieldsBuilder.Build();

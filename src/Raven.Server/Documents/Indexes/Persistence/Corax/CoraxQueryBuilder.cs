@@ -530,7 +530,10 @@ public static class CoraxQueryBuilder
                 return ToCoraxQuery(builderParameters, newExpr, ref builderParameters.StreamingDisabled, exact);
             }
 
-            return ToCoraxQuery(builderParameters, ne.Expression, ref builderParameters.StreamingDisabled, exact);
+            //e.g. or (not exists(Field))
+            var inner = ToCoraxQuery(builderParameters, ne.Expression, ref builderParameters.StreamingDisabled, exact);
+            inner = MaterializeWhenNeeded(builderParameters, inner, ref builderParameters.StreamingDisabled);
+            return builderParameters.IndexSearcher.AndNot(builderParameters.IndexSearcher.AllEntries(), inner);
         }
 
         if (expression is BetweenExpression be)

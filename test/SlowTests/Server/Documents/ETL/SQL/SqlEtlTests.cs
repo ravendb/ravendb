@@ -6,7 +6,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
@@ -303,7 +303,7 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
                     {
                         Name = connectionStringName,
                         ConnectionString = connectionString,
-                        FactoryName = "System.Data.SqlClient"
+                        FactoryName = "Microsoft.Data.SqlClient"
                     });
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
@@ -718,7 +718,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     {
                         Name = "simulate",
                         ConnectionString = connectionString,
-                        FactoryName = "System.Data.SqlClient",
+                        FactoryName = "Microsoft.Data.SqlClient",
                     }));
                     Assert.NotNull(result1.RaftCommandIndex);
 
@@ -802,7 +802,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     {
                         Name = "simulate",
                         ConnectionString = connectionString,
-                        FactoryName = "System.Data.SqlClient",
+                        FactoryName = "Microsoft.Data.SqlClient",
                     }));
                     Assert.NotNull(result1.RaftCommandIndex);
 
@@ -1056,7 +1056,7 @@ for (var i = 0; i < attachments.length; i++)
 "
                             }
                         }
-                    }, new SqlConnectionString { Name = "test", FactoryName = "System.Data.SqlClient", ConnectionString = connectionString });
+                    }, new SqlConnectionString { Name = "test", FactoryName = "Microsoft.Data.SqlClient", ConnectionString = connectionString });
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
 
@@ -1236,7 +1236,7 @@ loadToUsers(
 "
                                 }
                             }
-                    }, new SqlConnectionString { Name = "test", FactoryName = "System.Data.SqlClient", ConnectionString = connectionString });
+                    }, new SqlConnectionString { Name = "test", FactoryName = "Microsoft.Data.SqlClient", ConnectionString = connectionString });
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
 
@@ -1385,7 +1385,7 @@ loadToOrders(orderData);
             {
                 Name = connectionStringName,
                 ConnectionString = connectionString,
-                FactoryName = "System.Data.SqlClient"
+                FactoryName = "Microsoft.Data.SqlClient"
             });
         }
 

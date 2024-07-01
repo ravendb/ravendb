@@ -413,33 +413,20 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     {
         if (IgnoreComplexObjectsDuringIndex)
             return;
-
-        if (_index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.CoraxComplexFieldsNotSupported)
-        {
-            ComplexObjectLegacyHandling();
-            return;
-        }
         
-        if (KnownFieldsForWriter.TryGetByFieldName(field.Name, out var binding) && binding.FieldIndexingMode != FieldIndexingMode.No)
-            ThrowIndexingComplexObjectNotSupported(field, _index.Type);
+        Debug.Assert(field.Indexing != FieldIndexing.No, "field.Indexing != FieldIndexing.No");
 
-        // Backward compatibility for older indexes
-        // Previously, we silently changed the definition not to throw when encountering a complex field without any particular configuration.
-        // Let's persist this behavior for old indexes.
-        void ComplexObjectLegacyHandling()
+        if (_index.GetIndexDefinition().Fields.TryGetValue(field.Name, out var fieldFromDefinition) &&
+            fieldFromDefinition.Indexing != null && 
+            fieldFromDefinition.Indexing != FieldIndexing.No)
         {
-            if (_index.GetIndexDefinition().Fields.TryGetValue(field.Name, out var fieldFromDefinition) &&
-                fieldFromDefinition.Indexing != null && 
-                fieldFromDefinition.Indexing != FieldIndexing.No)
-            {
-                // We need to disable the complex object handling after we check and then throw. 
-                DisableIndexingForComplexObject(field);
-                ThrowIndexingComplexObjectNotSupported(field, _index.Type);
-            }
-
+            // We need to disable the complex object handling after we check and then throw. 
             DisableIndexingForComplexObject(field);
-            return;
+            ThrowIndexingComplexObjectNotSupported(field, _index.Type);
         }
+
+        DisableIndexingForComplexObject(field);
+
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -480,6 +467,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
     private void DisableIndexingForComplexObject(IndexField field)
     {
+        field.Indexing = FieldIndexing.No;
         _complexFields ??= new();
         _complexFields.Add(field);
         
@@ -501,12 +489,12 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             exceptionMessage =
                 $"The value of '{fieldName}' field is a complex object. Indexing it as a text isn't supported and it's supposed to have \\\"Indexing\\\" option set to \\\"No\\\". " +
                 $"Note that you can still store it and use it in projections.{Environment.NewLine}" +
-                "If you need to use it for searching purposes, you have to call ToString() on the field value in the index definition. Read more at: https://ravendb.net/l/OB9XW4/6.1/Csharp";
+                "If you need to use it for searching purposes, you have to call ToString() on the field value in the index definition.";
         }
         else
         {
             exceptionMessage =
-                $"The value of '{fieldName}' field is a complex object. Indexing it as a text isn't supported. You should consider querying on individual fields of that object. Read more at: https://ravendb.net/l/OB9XW4/6.1/Csharp";
+                $"The value of '{fieldName}' field is a complex object. Indexing it as a text isn't supported. You should consider querying on individual fields of that object.";
         }
         throw new NotSupportedInCoraxException(exceptionMessage);
     }

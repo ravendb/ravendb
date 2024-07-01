@@ -116,14 +116,14 @@ namespace Voron.Benchmark.Corax
 
             using (var writer = new IndexWriter(env, fields, SupportedFeatures.All))
             {
-                { 
+                {
                     using var builder = writer.Index("Arava");
-                    builder.Write(0, "Arava"u8);
-                    builder.Write(1, "Eini"u8);
-                    builder.Write(2, Encoding.UTF8.GetBytes(12L.ToString()), 12L, 12D);
-                    builder.Write(3, "Dog"u8);
-                    builder.EndWriting();
-
+                    
+                   builder.Write(0, "Arava"u8);
+                   builder.Write(1, "Eini"u8);
+                   builder.Write(2, Encoding.UTF8.GetBytes(12L.ToString()), 12L, 12D);
+                   builder.Write(3, "Dog"u8);
+                   builder.EndWriting();
                 }
 
                 {

@@ -1,5 +1,4 @@
 ﻿using Corax;
-using Corax.Querying;
 using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow.Server;
@@ -11,7 +10,7 @@ using IndexWriter = Corax.Indexing.IndexWriter;
 
 namespace FastTests.Corax.Bugs;
 
-public unsafe class OptimizedUpdatesOnIndexes : StorageTest
+public class OptimizedUpdatesOnIndexes : StorageTest
 {
     public OptimizedUpdatesOnIndexes(ITestOutputHelper output) : base(output)
     {

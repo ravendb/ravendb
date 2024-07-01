@@ -87,6 +87,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var it = mapResults.GetEnumerator();
             bool shouldRollbackCurrentScope = true;
+            
             try
             {
                 if (it.MoveNext() == false)

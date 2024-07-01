@@ -2,7 +2,6 @@
 using System.Linq;
 using FastTests;
 using Orders;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Sparrow.Extensions;
 using Tests.Infrastructure;
@@ -41,9 +40,10 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                new TimeSeries_Index(options.SearchEngineMode is RavenSearchEngineMode.Corax).Execute(store);
+                new TimeSeries_Index().Execute(store);
 
                 Indexes.WaitForIndexing(store);
+
                 using (var session = store.OpenSession())
                 {
                     var results = session
@@ -68,11 +68,6 @@ namespace SlowTests.Issues
         {
             public TimeSeries_Index()
             {
-                //query
-            }
-            
-            public TimeSeries_Index(bool skipIndexingComplexField)
-            {
                 AddMap("Ticks", segments =>
                     from segment in segments
                     let hours = segment.Entries.GroupBy(x => x.Timestamp.Date)
@@ -80,12 +75,6 @@ namespace SlowTests.Issues
                     {
                         Hours = hours
                     });
-
-                if (skipIndexingComplexField)
-                {
-                    Index("Hours", FieldIndexing.No);
-                    Store("Hours", FieldStorage.Yes);
-                }
             }
         }
     }

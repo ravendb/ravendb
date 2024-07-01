@@ -132,7 +132,6 @@ namespace Voron.Benchmark.Corax
                     entryWriter.Write(2, Encoding.UTF8.GetBytes(7.ToString()), 7L, 7D);
                     entryWriter.Write(3, "Dog"u8);
                     entryWriter.EndWriting();
-                  
                 }
 
                 for (int i = 0; i < 10_000; i++)
