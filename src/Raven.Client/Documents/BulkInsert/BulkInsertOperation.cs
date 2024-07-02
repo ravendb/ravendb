@@ -309,7 +309,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task SendHeartBeatAsync()
         {
-            if (DateTime.UtcNow.Ticks - _lastWriteToStream.Ticks < _heartbeatCheckInterval.Ticks)
+            if (IsHeartbeatIntervalExceeded() == false)
                 return;
 
             if (_streamLock.Wait(0) == false)
@@ -333,7 +333,6 @@ namespace Raven.Client.Documents.BulkInsert
                 _currentWriter.Write("{\"Type\":\"HeartBeat\"}");
 
                 await FlushIfNeeded().ConfigureAwait(false);
-                await _requestBodyStream.FlushAsync(_token).ConfigureAwait(false);
             }
             catch (Exception)
             {
@@ -557,25 +556,25 @@ namespace Raven.Client.Documents.BulkInsert
                 _backgroundWriter = tmp;
                 _currentWriter.BaseStream.SetLength(0);
                 ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
-                _asyncWrite = WriteToRequestBodyStreamAsync(buffer);
 
-                if (DateTime.UtcNow.Ticks - _lastWriteToStream.Ticks < _heartbeatCheckInterval.Ticks)
-                {
-                    await _asyncWrite.ConfigureAwait(false);
-                    await _requestBodyStream.FlushAsync(_token).ConfigureAwait(false);
-                    _lastWriteToStream = DateTime.UtcNow;
-                }
+                _asyncWrite = WriteToRequestBodyStreamAsync(buffer, IsHeartbeatIntervalExceeded());
             }
         }
 
-        private async Task WriteToRequestBodyStreamAsync(ArraySegment<byte> buffer)
+        private bool IsHeartbeatIntervalExceeded()
+        {
+            return DateTime.UtcNow.Ticks - _lastWriteToStream.Ticks >= _heartbeatCheckInterval.Ticks;
+        }
+
+        private async Task WriteToRequestBodyStreamAsync(ArraySegment<byte> buffer, bool force = false)
         {
             await _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token).ConfigureAwait(false);
 
-            if (_isInitialWrite)
+            if (_isInitialWrite || force)
             {
                 _isInitialWrite = false;
                 await _requestBodyStream.FlushAsync(_token).ConfigureAwait(false);
+                _lastWriteToStream = DateTime.UtcNow;
             }
         }
 
