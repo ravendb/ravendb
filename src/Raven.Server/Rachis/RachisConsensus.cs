@@ -2005,7 +2005,7 @@ namespace Raven.Server.Rachis
         {
             if (term != CurrentTerm)
             {
-                throw new RachisConcurrencyException($"The term was changed from {term:#,#;;0} to {CurrentTerm:#,#;;0}");
+                throw new TermValidationException($"The term was changed from {term:#,#;;0} to {CurrentTerm:#,#;;0}");
             }
         }
 
