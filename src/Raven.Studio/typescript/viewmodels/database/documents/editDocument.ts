@@ -1155,6 +1155,7 @@ class editDocument extends viewModelBase {
                         default:
                             generalUtils.assertUnreachable(direction);
                     }
+                    break;
                 }
 
                 default:
