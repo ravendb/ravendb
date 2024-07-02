@@ -176,7 +176,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             RestoreSettings restoreSettings = null;
 
             var fullBackupPath = RestoreSource.GetBackupPath(backupPath);
-            _zipArchive = await RestoreSource.GetZipArchiveForSnapshot(fullBackupPath);
+            _zipArchive = await RestoreSource.GetZipArchiveForSnapshot(fullBackupPath, onProgress: message =>
+            {
+                restoreResult.AddInfo(message);
+                onProgress.Invoke(restoreResult.Progress);
+            });
 
             var restorePath = new VoronPathSetting(RestoreConfiguration.DataDirectory);
             if (Directory.Exists(restorePath.FullPath) == false)

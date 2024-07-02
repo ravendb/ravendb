@@ -18,6 +18,8 @@ using Sparrow.Server.Exceptions;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
+using System.Diagnostics;
+using Voron.Impl.Backup;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -93,7 +95,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return new RestoreBackupTask(serverStore, configuration, restoreSource, filesToRestore, token);
         }
 
-        public static async Task<Stream> CopyRemoteStreamLocallyAsync(Stream stream, Size size, RavenConfiguration configuration, CancellationToken cancellationToken)
+        public static async Task<Stream> CopyRemoteStreamLocallyAsync(Stream stream, Size size, RavenConfiguration configuration, Action<string> onProgress, CancellationToken cancellationToken)
         {
             if (stream.CanSeek)
                 return stream;
@@ -111,7 +113,24 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 AssertFreeSpace(size, basePath.FullPath);
 
-                await stream.CopyToAsync(file, cancellationToken);
+                var sw = Stopwatch.StartNew();
+                var swForProgress = Stopwatch.StartNew();
+                long totalRead = 0;
+
+                onProgress?.Invoke($"Copying ZipArchive locally, size: {size}");
+
+                stream.CopyTo(file, readCount =>
+                {
+                    totalRead += readCount;
+                    if (swForProgress.ElapsedMilliseconds > 5000)
+                    {
+                        swForProgress.Restart();
+                        onProgress?.Invoke($"Copied: {new Size(totalRead, SizeUnit.Bytes)}/{size}");
+                    }
+                }, cancellationToken);
+
+                onProgress?.Invoke($"Copied ZipArchive locally, took: {sw.ElapsedMilliseconds:#,#;;0}ms");
+
                 file.Seek(0, SeekOrigin.Begin);
 
                 return file;
@@ -133,7 +152,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                 throw;
             }
-
         }
 
         private static async Task<List<string>> GetOrderedFilesToRestoreAsync(IRestoreSource restoreSource, RestoreBackupConfigurationBase configuration)

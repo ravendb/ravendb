@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.ServerWide;
@@ -34,10 +35,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return blob.Data;
         }
 
-        public async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
+        public async Task<ZipArchive> GetZipArchiveForSnapshot(string path, Action<string> onProgress)
         {
             var blob = await _client.GetObjectAsync(path);
-            var file = await RestoreUtils.CopyRemoteStreamLocallyAsync(blob.Data, blob.Size, _serverStore.Configuration, _cancellationToken);
+            var file = await RestoreUtils.CopyRemoteStreamLocallyAsync(blob.Data, blob.Size, _serverStore.Configuration, onProgress, _cancellationToken);
             return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 
