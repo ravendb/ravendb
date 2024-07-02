@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.ServerWide;
@@ -32,11 +33,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return Task.FromResult(_client.DownloadObject(path));
         }
 
-        public async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
+        public async Task<ZipArchive> GetZipArchiveForSnapshot(string path, Action<string> onProgress)
         {
             Stream stream = _client.DownloadObject(path);
             var size = await _client.GetObjectSizeAsync(path);
-            var file = await RestoreUtils.CopyRemoteStreamLocallyAsync(stream, size, _serverStore.Configuration, _cancellationToken);
+            var file = await RestoreUtils.CopyRemoteStreamLocallyAsync(stream, size, _serverStore.Configuration, onProgress, _cancellationToken);
             return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 
