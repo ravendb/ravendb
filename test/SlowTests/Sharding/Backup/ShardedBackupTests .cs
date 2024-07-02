@@ -15,6 +15,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
@@ -44,7 +45,17 @@ namespace SlowTests.Sharding.Backup
         {
             var backupPath = NewDataPath(suffix: $"{options.DatabaseMode}_BackupFolder");
 
-            using (var store1 = Sharding.GetDocumentStore())
+            using var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Backup.MaxNumberOfConcurrentBackups)] = 1.ToString()
+                }
+            });
+            using (var store1 = Sharding.GetDocumentStore(new Options
+            {
+                Server = server
+            }))
             using (var store2 = GetDocumentStore(options))
             {
                 await Sharding.Backup.InsertData(store1);
@@ -55,10 +66,10 @@ namespace SlowTests.Sharding.Backup
                     Assert.Equal(1, shard.IndexStore.Count);
                 }
 
-                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store1);
+                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store1, server);
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store1, config);
+                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(server, store1, config);
 
                 Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
