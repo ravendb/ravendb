@@ -142,8 +142,6 @@ namespace Raven.Server.Utils
 
         public static int GetShardNumberFor(ShardingConfiguration configuration, int bucket) => FindBucketShard(configuration.BucketRanges, bucket);
 
-        public static int GetShardNumberFor(RawShardingConfiguration configuration, int bucket) => FindBucketShard(configuration.BucketRanges, bucket);
-
         public static int GetShardNumberFor(ShardingConfiguration configuration, ByteStringContext allocator, string id) => GetShardNumberAndBucketFor(configuration, allocator, id).ShardNumber;
 
         public static int GetShardNumberFor(ShardingConfiguration configuration, ByteStringContext allocator, LazyStringValue id) => GetShardNumberAndBucketFor(configuration, allocator, id).ShardNumber;

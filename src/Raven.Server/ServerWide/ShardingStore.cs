@@ -8,7 +8,6 @@ using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -16,18 +15,13 @@ using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Sharding;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
 using Sparrow.Server.Collections;
-using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide
 {
     public sealed class ShardingStore
     {
-        public bool BlockPrefixedSharding = true;
-
         private readonly ServerStore _serverStore;
         public bool ManualMigration = false;
 
@@ -36,9 +30,12 @@ namespace Raven.Server.ServerWide
             _serverStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
         }
 
-        public Task<(long Index, object Result)> StartBucketMigration(string database, int bucket, int toShard, string raftId = null)
+        public Task<(long Index, object Result)> StartBucketMigration(string database, int bucket, int toShard, string raftId = null) =>
+            StartBucketMigration(database, bucket, toShard, prefix: null, raftId);
+
+        public Task<(long Index, object Result)> StartBucketMigration(string database, int bucket, int toShard, string prefix, string raftId)
         {
-            var cmd = new StartBucketMigrationCommand(bucket, toShard, database, raftId ?? RaftIdGenerator.NewId());
+            var cmd = new StartBucketMigrationCommand(bucket, toShard, database, prefix, raftId ?? RaftIdGenerator.NewId());
             return _serverStore.SendToLeaderAsync(cmd);
         }
 
@@ -156,7 +153,7 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        public void FillShardingConfiguration(DatabaseRecord record, ClusterTopology clusterTopology, long? index)
+        public void FillShardingConfiguration(DatabaseRecord record, ClusterTopology clusterTopology, long? index, bool isRestore)
         {
             var shardingConfiguration = record.Sharding;
             if (shardingConfiguration.BucketRanges == null ||
@@ -176,7 +173,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            if (index is null or 0)
+            if (isRestore == false && index is null or 0)
             {
                 FillPrefixedSharding(shardingConfiguration);
             }
@@ -212,29 +209,16 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task UpdatePrefixedShardingIfNeeded(ClusterOperationContext context, DatabaseRecord databaseRecord)
-        {
-            if (_serverStore.Cluster.DatabaseExists(context, databaseRecord.DatabaseName) == false)
-                return;
-
-            var clusterTopology = _serverStore.GetClusterTopology(context);
-            var existingConfiguration = _serverStore.Cluster.ReadShardingConfiguration(context, databaseRecord.DatabaseName);
-            if (databaseRecord.Sharding.Prefixed.SequenceEqual(existingConfiguration.Prefixed))
-                return;
-
-            var urls = databaseRecord.Sharding.Orchestrator.Topology.Members.Select(clusterTopology.GetUrlFromTag).ToArray();
-            using (var requestExecutor = RequestExecutor.CreateForServer(urls, databaseRecord.DatabaseName, _serverStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
-            {
-                await HandlePrefixSettingsUpdate(context, databaseRecord, existingConfiguration.Prefixed, requestExecutor);
-            }
-        }
-
         private static void FillPrefixedSharding(ShardingConfiguration shardingConfiguration)
         {
             if (shardingConfiguration.Prefixed is not { Count: > 0 })
                 return;
 
-            var start = ShardHelper.NumberOfBuckets;
+            shardingConfiguration.Prefixed = shardingConfiguration.Prefixed
+                .OrderByDescending(x => x.Prefix)
+                .ToList();
+
+           var start = ShardHelper.NumberOfBuckets;
             foreach (var setting in shardingConfiguration.Prefixed)
             {
                 AddPrefixedBucketRange(setting, start, shardingConfiguration);
@@ -244,24 +228,15 @@ namespace Raven.Server.ServerWide
 
         private static void AddPrefixedBucketRange(PrefixedShardingSetting setting, int rangeStart, ShardingConfiguration shardingConfiguration)
         {
-            if (setting.Prefix.EndsWith('/') == false && setting.Prefix.EndsWith('-') == false)
-                throw new InvalidOperationException(
-                    $"Cannot add prefix '{setting.Prefix}' to {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
-                    "In order to define sharding by prefix, the prefix string must end with '/' or '-' characters.");
+            AssertValidPrefix(setting, shardingConfiguration);
 
             setting.BucketRangeStart = rangeStart;
 
             var shards = setting.Shards;
             var step = ShardHelper.NumberOfBuckets / shards.Count;
 
-            foreach (var shardNumber in shards)
+            foreach (var shardNumber in shards.OrderBy(x => x))
             {
-                if (shardingConfiguration.Shards.ContainsKey(shardNumber) == false)
-                {
-                    throw new InvalidDataException($"Cannot assign shard number {shardNumber} to prefix {setting.Prefix}, " +
-                                                   $"there's no shard '{shardNumber}' in sharding topology!");
-                }
-
                 shardingConfiguration.BucketRanges.Add(new ShardBucketRange
                 {
                     ShardNumber = shardNumber,
@@ -271,96 +246,26 @@ namespace Raven.Server.ServerWide
             }
         }
 
-
-
-        private static async Task HandlePrefixSettingsUpdate(JsonOperationContext context, DatabaseRecord databaseRecord, List<PrefixedShardingSetting> existingSettings, RequestExecutor requestExecutor)
+        internal static void AssertValidPrefix(PrefixedShardingSetting setting, ShardingConfiguration shardingConfiguration)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Minor,
-                "optimize this and reuse deleted bucket ranges");
+            if (setting.Prefix.EndsWith('/') == false && setting.Prefix.EndsWith('-') == false)
+                throw new InvalidOperationException(
+                    $"Cannot add prefix '{setting.Prefix}' to {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
+                    "In order to define sharding by prefix, the prefix string must end with '/' or '-' characters.");
 
-            var shardingConfiguration = databaseRecord.Sharding;
-            var safeToRemove = new List<PrefixedShardingSetting>();
-            var maxBucketRangeStart = 0;
+            if (setting.Shards.Count == 0)
+                throw new InvalidOperationException(
+                    $"Cannot add prefix '{setting.Prefix}' to {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
+                    $"{nameof(PrefixedShardingSetting)}.{nameof(PrefixedShardingSetting.Shards)} cannot be empty.");
 
-            foreach (var existingSetting in existingSettings)
+            foreach (var shardNumber in setting.Shards)
             {
-                bool found = false;
-                foreach (var setting in shardingConfiguration.Prefixed)
+                if (shardingConfiguration.Shards.ContainsKey(shardNumber) == false)
                 {
-                    if (setting.Prefix != existingSetting.Prefix)
-                        continue;
-
-                    found = true;
-
-                    if (setting.Shards.SequenceEqual(existingSetting.Shards) == false)
-                    {
-                        // todo
-
-                        // assigned shards were changed for this prefix settings
-                        // check if we can change it in Sharding.BucketRanges (no existing docs)
-                    }
-
-                    setting.BucketRangeStart = existingSetting.BucketRangeStart;
-                    if (maxBucketRangeStart < setting.BucketRangeStart)
-                        maxBucketRangeStart = setting.BucketRangeStart;
-
-                    break;
-                }
-
-                if (found)
-                    continue;
-
-                // existingSetting.Prefix was removed
-                if (await AssertNoDocsStartingWith(existingSetting.Prefix, context, requestExecutor) == false)
-                    throw new InvalidOperationException(
-                        $"Cannot remove prefix '{existingSetting.Prefix}' from {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
-                        $"There are existing documents in database '{databaseRecord.DatabaseName}' that start with '{existingSetting.Prefix}'. " +
-                        "In order to remove a sharding by prefix setting, you cannot have any documents in the database that starts with this prefix.");
-
-                safeToRemove.Add(existingSetting);
-            }
-
-            // remove deleted prefixes from Sharding.BucketRanges
-            foreach (var setting in safeToRemove)
-            {
-                for (int index = 0; index < shardingConfiguration.BucketRanges.Count; index++)
-                {
-                    var range = shardingConfiguration.BucketRanges[index];
-                    if (range.BucketRangeStart != setting.BucketRangeStart)
-                        continue;
-
-                    shardingConfiguration.BucketRanges.RemoveRange(index, setting.Shards.Count);
-                    break;
+                    throw new InvalidDataException($"Cannot assign shard number {shardNumber} to prefix {setting.Prefix}, " +
+                                                   $"there's no shard '{shardNumber}' in sharding topology!");
                 }
             }
-
-            var start = maxBucketRangeStart + ShardHelper.NumberOfBuckets;
-
-            // add new prefixed settings to Sharding.BucketRanges
-            foreach (var setting in shardingConfiguration.Prefixed)
-            {
-                if (setting.BucketRangeStart != 0)
-                    continue; // already added to BucketRanges
-
-                if (await AssertNoDocsStartingWith(setting.Prefix, context, requestExecutor) == false)
-                    throw new InvalidOperationException(
-                        $"Cannot add prefix '{setting.Prefix}' to {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
-                        $"There are existing documents in database '{databaseRecord.DatabaseName}' that start with '{setting.Prefix}'. " +
-                        "In order to define sharding by prefix, you cannot have any documents in the database that starts with this prefix.");
-
-                AddPrefixedBucketRange(setting, start, shardingConfiguration);
-                start += ShardHelper.NumberOfBuckets;
-            }
-
-        }
-
-        private static async Task<bool> AssertNoDocsStartingWith(string prefix, JsonOperationContext context, RequestExecutor requestExecutor)
-        {
-            var command = new GetDocumentsCommand(requestExecutor.Conventions, startWith: prefix,
-                startAfter: null, matches: null, exclude: null, start: 0, pageSize: int.MaxValue, metadataOnly: false);
-
-            await requestExecutor.ExecuteAsync(command, context, sessionInfo: null);
-            return command.Result.Results.Length == 0;
         }
 
         private static Dictionary<string, int> GetNodesDistribution(ClusterTopology clusterTopology, Dictionary<int, DatabaseTopology> shards)

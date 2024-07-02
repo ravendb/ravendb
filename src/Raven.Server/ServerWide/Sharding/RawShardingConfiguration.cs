@@ -230,4 +230,6 @@ public sealed class RawShardingConfiguration
     }
 
     public bool DoesShardHaveBuckets(int shardNumber) => ShardingConfiguration.DoesShardHaveBuckets(BucketRanges, shardNumber);
+
+    public bool DoesShardHavePrefixes(int shardNumber) => ShardingConfiguration.DoesShardHavePrefixes(Prefixed, shardNumber);
 }

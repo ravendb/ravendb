@@ -3010,12 +3010,7 @@ namespace Raven.Server.ServerWide
                         throw new ConcurrencyException($"Database '{databaseName}' already exists!");
                 }
 
-                DatabaseHelper.FillDatabaseTopology(this, context, databaseName, record, replicationFactor, index);
-
-                if (record.IsSharded)
-                {
-                    await Sharding.UpdatePrefixedShardingIfNeeded(context, record);
-                }
+                DatabaseHelper.FillDatabaseTopology(this, context, databaseName, record, replicationFactor, index, isRestore);
             }
 
             var addDatabaseCommand = new AddDatabaseCommand(raftRequestId)
