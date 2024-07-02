@@ -161,28 +161,27 @@
                             <i class="icon-csv-export"></i><span>Export to file</span>
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu exportselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
+                        <ul class="dropdown-menu padding padding-sm slidein-style" role="menu" data-bind="dropdownPanel: true">
                             <div class="flex-form padding padding-sm">
-                                <div class="form-group">
-                                    <label class="control-label">Format</label>
-                                    <div class="btn-group">
-                                        <button type="button" class="btn btn-default" 
+                                <div class="form-group flex-horizontal gap-3">
+                                    <label class="mb-0 align-self-center" style="width: 60px;">Format</label>
+                                    <div class="btn-group flex-horizontal">
+                                        <button type="button" class="btn btn-dark"
                                                 data-bind="click: _.partial(exportAsFileSettings.format, 'csv'), css: { active: exportAsFileSettings.format() === 'csv' }">CSV</button>
-                                        <button type="button" class="btn btn-default" 
+                                        <button type="button" class="btn btn-dark"
                                                 data-bind="click: _.partial(exportAsFileSettings.format, 'json'), css: { active: exportAsFileSettings.format() === 'json' }">JSON</button>
                                     </div>
                                 </div>
-                                <div class="form-group">
-                                    <label class="control-label">Columns</label>
-                                    <div class="btn-group">
-                                        <button type="button" class="btn btn-default" 
+                                <div class="form-group flex-horizontal gap-3">
+                                    <label class="mb-0 align-self-center" style="width: 60px;">Columns</label>
+                                    <div class="btn-group flex-horizontal">
+                                        <button type="button" class="btn btn-dark"
                                                 data-bind="click: _.partial(exportAsFileSettings.allColumns, true), css: { active: exportAsFileSettings.allColumns() }">All</button>
-                                        <button type="button" class="btn btn-default" 
+                                        <button type="button" class="btn btn-dark"
                                                 data-bind="click: _.partial(exportAsFileSettings.allColumns, false), css: { active: !exportAsFileSettings.allColumns() }">Visible</button>
                                     </div>
                                 </div>
-                                <div class="form-group">
-                                    <label class="control-label">&nbsp;</label>
+                                <div class="form-group margin-top-sm mb-0">
                                     <div class="btn-group">
                                         <button type="button" class="btn btn-primary close-panel" data-bind="click: exportAsFile">
                                             <i class="icon-download"></i>
