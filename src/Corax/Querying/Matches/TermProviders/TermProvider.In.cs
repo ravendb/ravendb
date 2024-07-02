@@ -45,9 +45,14 @@ namespace Corax.Querying.Matches.TermProviders
                 return false;
             }
 
-
             if (typeof(TTermsType) == typeof((string Term, bool Exact)) && (object)_terms[_termIndex] is (string stringTerm, bool isExact))
                 term = _searcher.TermQuery(isExact ? _exactField : _field, stringTerm);
+            else if (typeof(TTermsType) == typeof((string Term, bool Exact)) && (object)_terms[_termIndex] is (null, _))
+            {
+                term = _searcher.TryGetPostingListForNull(_field, out var postingListId) 
+                    ? _searcher.TermQuery(_field, postingListId, 1D) 
+                    : TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
+            }
             else if (typeof(TTermsType) == typeof(string))
                 term = _searcher.TermQuery(_field, (string)(object)_terms[_termIndex]);
             else if (typeof(TTermsType) == typeof(Slice))
