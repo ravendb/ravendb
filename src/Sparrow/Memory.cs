@@ -38,8 +38,10 @@ namespace Sparrow
         };
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static int CompareAvx2(void* p1, void* p2, int size)
+        internal static int CompareAvx256(void* p1, void* p2, int size)
         {
+            Debug.Assert(AdvInstructionSet.X86.IsSupportedAvx256);
+            
             // PERF: Given all the preparation that must happen before even accessing the pointers, even if we increase
             // the size of the method by 10+ bytes, by the time we access the data it is already there in L1 cache.
             Sse.Prefetch0(p1);
@@ -178,8 +180,10 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static int CompareAvx2(ref byte p1, ref byte p2, int size)
+        internal static int CompareAvx256(ref byte p1, ref byte p2, int size)
         {
+            Debug.Assert(AdvInstructionSet.X86.IsSupportedAvx256);
+            
             ref byte bpx = ref p1;
             ref byte bpy = ref p2;
             ref byte bpxEnd = ref Unsafe.AddByteOffset(ref p1, size);
@@ -313,8 +317,10 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static bool IsEqualConstantAvx2(ref byte constantRef, byte* ptr, int size)
+        internal static bool IsEqualConstantAvx256(ref byte constantRef, byte* ptr, int size)
         {
+            Debug.Assert(AdvInstructionSet.X86.IsSupportedAvx256);
+
             if (size >= Vector256<byte>.Count)
             {
                 Vector256<byte> result = Vector256.Equals(
@@ -733,9 +739,9 @@ namespace Sparrow
                 return 0;
 
 #if NET7_0_OR_GREATER
-            if (Avx2.IsSupported)
+            if (AdvInstructionSet.X86.IsSupportedAvx256)
             {
-                return CompareAvx2(p1, p2, size);
+                return CompareAvx256(p1, p2, size);
             }
 
             return new ReadOnlySpan<byte>(p1, size).SequenceCompareTo(new ReadOnlySpan<byte>(p2, size));
@@ -752,9 +758,9 @@ namespace Sparrow
                 return 0;
 
 #if NET7_0_OR_GREATER
-            if (Avx2.IsSupported)
+            if (AdvInstructionSet.X86.IsSupportedAvx256)
             {
-                return CompareAvx2(p1, p2, size);
+                return CompareAvx256(p1, p2, size);
             }
 
             return new ReadOnlySpan<byte>(p1, size).SequenceCompareTo(new ReadOnlySpan<byte>(p2, size));
@@ -767,9 +773,9 @@ namespace Sparrow
         public static int CompareInline(ref byte p1, ref byte p2, int size)
         {
 #if NET7_0_OR_GREATER
-            if (Avx2.IsSupported)
+            if (AdvInstructionSet.X86.IsSupportedAvx256)
             {
-                return CompareAvx2(ref p1, ref p2, size);
+                return CompareAvx256(ref p1, ref p2, size);
             }
 
             return MemoryMarshal.CreateReadOnlySpan(ref p1, size)
@@ -785,9 +791,9 @@ namespace Sparrow
 #if NET7_0_OR_GREATER
             ref byte p1Start = ref MemoryMarshal.GetReference(p1);
             ref byte p2Start = ref MemoryMarshal.GetReference(p2);
-            if (Avx2.IsSupported)
+            if (AdvInstructionSet.X86.IsSupportedAvx256)
             {
-                return CompareAvx2(ref p1Start, ref p2Start, size);
+                return CompareAvx256(ref p1Start, ref p2Start, size);
             }
 #endif
             return p1.SequenceCompareTo(p2);
@@ -906,8 +912,8 @@ namespace Sparrow
 
             ref var constantRef = ref MemoryMarshal.GetReference(constant);
 
-            if (Avx2.IsSupported)
-                return IsEqualConstantAvx2(ref constantRef, ptr, constant.Length);
+            if (AdvInstructionSet.X86.IsSupportedAvx256)
+                return IsEqualConstantAvx256(ref constantRef, ptr, constant.Length);
 
             return IsEqualConstantVector128(ref constantRef, ptr, constant.Length);
 #endif
@@ -930,8 +936,8 @@ namespace Sparrow
 
             ref var constantRef = ref *constant;
 
-            if (Avx2.IsSupported)
-                return IsEqualConstantAvx2(ref constantRef, ptr, size);
+            if (AdvInstructionSet.X86.IsSupportedAvx256)
+                return IsEqualConstantAvx256(ref constantRef, ptr, size);
 
             return IsEqualConstantVector128(ref constantRef, ptr, size);
 #else
@@ -958,8 +964,8 @@ namespace Sparrow
 
             ref var constantRef = ref MemoryMarshal.GetReference(constant);
 
-            if (Avx2.IsSupported)
-                return IsEqualConstantAvx2(ref constantRef, ptr, constant.Length);
+            if (AdvInstructionSet.X86.IsSupportedAvx256)
+                return IsEqualConstantAvx256(ref constantRef, ptr, constant.Length);
 
             return IsEqualConstantVector128(ref constantRef, ptr, constant.Length);
 #else

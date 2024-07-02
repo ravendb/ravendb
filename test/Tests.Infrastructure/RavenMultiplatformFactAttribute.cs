@@ -1,8 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
+using Sparrow;
 
 namespace Tests.Infrastructure;
 
@@ -32,14 +34,15 @@ public enum RavenArchitecture
 public enum RavenIntrinsics
 {
     None = 0,
-    AdvSimd = 1 << 1,
-    Avx = 1 << 2,
-    Avx2 = 1 << 3,
-    Sse = 1 << 4,
-    Sse2 = 1 << 5,
-    Sse3 = 1 << 6,
-    Sse41 = 1 << 7,
-    Sse42 = 1 << 8,
+    ArmBase = 1 << 1,
+    Arm64 = 1 << 2,
+    Sse = 1 << 3,
+    Avx256 = 1 << 4,
+    Avx512 = 1 << 5,
+
+    Vector128 = 1 << 7,
+    Vector256 = 1 << 8,
+    Vector512 = 1 << 9
 }
 
 public class RavenMultiplatformFactAttribute : RavenFactAttribute
@@ -156,28 +159,28 @@ public class RavenMultiplatformFactAttribute : RavenFactAttribute
         if (intrinsics is RavenIntrinsics.None)
             return true;
 
-        if (intrinsics.HasFlag(RavenIntrinsics.Avx) && Avx.IsSupported == false)
+        if (intrinsics.HasFlag(RavenIntrinsics.Vector128) && AdvInstructionSet.IsAcceleratedVector128 == false)
             return false;
 
-        if (intrinsics.HasFlag(RavenIntrinsics.Avx2) && Avx2.IsSupported == false)
+        if (intrinsics.HasFlag(RavenIntrinsics.Vector256) && AdvInstructionSet.IsAcceleratedVector256 == false)
             return false;
 
-        if (intrinsics.HasFlag(RavenIntrinsics.AdvSimd) && AdvSimd.IsSupported == false)
+        if (intrinsics.HasFlag(RavenIntrinsics.Vector512) && AdvInstructionSet.IsAcceleratedVector512 == false)
             return false;
 
-        if (intrinsics.HasFlag(RavenIntrinsics.Sse) && Sse.IsSupported == false)
+        if (intrinsics.HasFlag(RavenIntrinsics.ArmBase) && AdvInstructionSet.Arm.IsSupported == false)
             return false;
 
-        if (intrinsics.HasFlag(RavenIntrinsics.Sse2) && Sse2.IsSupported == false)
+        if (intrinsics.HasFlag(RavenIntrinsics.Arm64) && AdvInstructionSet.Arm.IsSupportedArm64 == false)
             return false;
 
-        if (intrinsics.HasFlag(RavenIntrinsics.Sse3) && Sse3.IsSupported == false)
+        if (intrinsics.HasFlag(RavenIntrinsics.Sse) && AdvInstructionSet.X86.IsSupportedSse == false)
             return false;
 
-        if (intrinsics.HasFlag(RavenIntrinsics.Sse41) && Sse41.IsSupported == false)
+        if (intrinsics.HasFlag(RavenIntrinsics.Avx256) && AdvInstructionSet.X86.IsSupportedAvx256 == false)
             return false;
 
-        if (intrinsics.HasFlag(RavenIntrinsics.Sse42) && Sse42.IsSupported == false)
+        if (intrinsics.HasFlag(RavenIntrinsics.Avx512) && AdvInstructionSet.X86.IsSupportedAvx512 == false)
             return false;
 
         return true;

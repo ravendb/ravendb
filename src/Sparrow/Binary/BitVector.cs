@@ -171,9 +171,9 @@ namespace Sparrow.Binary
         {
             ref var storage = ref MemoryMarshal.GetReference(_storage);
 #if NET7_0_OR_GREATER
-            if (Avx2.IsSupported)
+            if (AdvInstructionSet.X86.IsSupportedAvx256)
                 return IndexOfFirstSetBitAvx2(ref storage, _storage.Length);
-            if (Sse2.IsSupported)
+            if (AdvInstructionSet.X86.IsSupportedSse)
                 return IndexOfFirstSetBitSse2(ref storage, _storage.Length);
 #endif
             return IndexOfFirstSetBitScalar(ref storage, _storage.Length);

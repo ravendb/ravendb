@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.Intrinsics.X86;
 using Corax.Querying.Matches.Meta;
+using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -15,7 +16,7 @@ namespace FastTests.Corax
         }
 
 
-        [RavenMultiplatformFact(RavenTestCategory.Corax, RavenIntrinsics.Avx2)]
+        [RavenMultiplatformFact(RavenTestCategory.Corax, RavenIntrinsics.Vector256)]
         public void SmallForVectorized()
         {
             long* aS = stackalloc long[256];
@@ -95,7 +96,7 @@ namespace FastTests.Corax
             Assert.Equal(10, dV[0]);
         }
 
-        [RavenMultiplatformTheory(RavenTestCategory.Corax, RavenIntrinsics.Avx2)]
+        [RavenMultiplatformTheory(RavenTestCategory.Corax, RavenIntrinsics.Vector256)]
         [InlineData(125, 89, 90, 22)]
         [InlineData(125, 1, 24, 1)]
         [InlineData(125, 24, 1, 1)]
@@ -155,14 +156,10 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenMultiplatformTheory(RavenTestCategory.Corax, RavenIntrinsics.Avx2, Skip="Only used to find runs that could be problematic.")]
+        [RavenMultiplatformTheory(RavenTestCategory.Corax, RavenIntrinsics.Vector256, Skip="Only used to find runs that could be problematic.")]
         [InlineData(1337)]
         public void OutputCompatibilityForVectorizedExhaustive(int seed)
         {
-            // This method can only be run on platforms where the AVX2 instruction set is supported.
-            if (!Avx2.IsSupported)
-                return;
-
             Span<long> aS = stackalloc long[256];
             Span<long> bS = stackalloc long[256];
             Span<long> dS = stackalloc long[256];
