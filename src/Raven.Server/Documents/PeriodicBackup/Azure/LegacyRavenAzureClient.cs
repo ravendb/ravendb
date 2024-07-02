@@ -439,7 +439,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             var data = await response.Content.ReadAsStreamAsync();
             var headers = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
 
-            return new Blob(data, headers);
+            if (response.Content.Headers.TryGetValues("Content-Length", out var values) == false)
+                throw new InvalidOperationException("Content-Length header is not present");
+
+            var contentLength = values.FirstOrDefault();
+            if (long.TryParse(contentLength, out var size) == false)
+                throw new InvalidOperationException($"Content-Length header is present but could not be parsed, got: {contentLength}");
+
+            return new Blob(data, headers, size);
         }
 
         public void DeleteContainer()

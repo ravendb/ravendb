@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return new RestoreBackupTask(serverStore, configuration, restoreSource, filesToRestore, token);
         }
 
-        public static async Task<Stream> CopyRemoteStreamLocallyAsync(Stream stream, RavenConfiguration configuration, CancellationToken cancellationToken)
+        public static async Task<Stream> CopyRemoteStreamLocallyAsync(Stream stream, Size size, RavenConfiguration configuration, CancellationToken cancellationToken)
         {
             if (stream.CanSeek)
                 return stream;
@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             try
             {
-                AssertFreeSpace(stream, basePath.FullPath);
+                AssertFreeSpace(size, basePath.FullPath);
 
                 await stream.CopyToAsync(file, cancellationToken);
                 file.Seek(0, SeekOrigin.Begin);
@@ -163,27 +163,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return filesToRestore;
         }
 
-        private static void AssertFreeSpace(Stream stream, string basePath)
+        private static void AssertFreeSpace(Size size, string basePath)
         {
-            long streamLength;
-
-            try
-            {
-                streamLength = stream.Length;
-            }
-            catch (NotSupportedException)
-            {
-                // nothing we can do
-                return;
-            }
-
             var spaceInfo = DiskUtils.GetDiskSpaceInfo(basePath);
             if (spaceInfo == null)
                 return;
 
             // + we need to download the snapshot
             // + leave 1GB of free space
-            var freeSpaceNeeded = new Size(streamLength, SizeUnit.Bytes) + new Size(1, SizeUnit.Gigabytes);
+            var freeSpaceNeeded = size + new Size(1, SizeUnit.Gigabytes);
 
             if (freeSpaceNeeded > spaceInfo.TotalFreeSpace)
                 throw new DiskFullException($"There is not enough space on '{basePath}', we need at least {freeSpaceNeeded} in order to successfully copy the snapshot backup file locally. Currently available space is {spaceInfo.TotalFreeSpace}.");
