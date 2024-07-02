@@ -726,7 +726,7 @@ namespace Raven.Server.Documents.Subscriptions
         private long _lastNoopAckTicks;
         private Task _lastNoopAckTask = Task.CompletedTask;
 
-        public Task SendNoopAck()
+        public Task SendNoopAck(bool force = false)
         {
             if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 53_000)
             {
@@ -743,14 +743,14 @@ namespace Raven.Server.Documents.Subscriptions
                     if (currentLastNoopAckTicks != localLastNoopAckTicks)
                         return _lastNoopAckTask;
 
-                    var ackTask = SendNoopAckAsync(SubscriptionId, SubscriptionName);
+                    var ackTask = SendNoopAckAsync(SubscriptionId, SubscriptionName, force);
 
                     Interlocked.Exchange(ref _lastNoopAckTask, ackTask);
 
                     return ackTask;
                 }
 
-                return SendNoopAckAsync(SubscriptionId, SubscriptionName);
+                return SendNoopAckAsync(SubscriptionId, SubscriptionName, force);
             }
 
             return DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
@@ -760,7 +760,7 @@ namespace Raven.Server.Documents.Subscriptions
                 nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange));
         }
 
-        private async Task SendNoopAckAsync(long subscriptionId, string name)
+        private async Task SendNoopAckAsync(long subscriptionId, string name, bool force)
         {
             var command = new AcknowledgeSubscriptionBatchCommand(_documentsStorage.DocumentDatabase.Name, RaftIdGenerator.NewId())
             {
@@ -797,7 +797,7 @@ namespace Raven.Server.Documents.Subscriptions
                 }
             }
 
-            if (_subscriptionStorage.ShouldWaitForClusterStabilization())
+            if (force == false && _subscriptionStorage.ShouldWaitForClusterStabilization())
             {
                 // in case of unstable cluster, we will try to heartbeat the client for 30 seconds and then send actual no-op command
                 return;
