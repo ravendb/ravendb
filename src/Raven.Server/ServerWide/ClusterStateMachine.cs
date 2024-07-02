@@ -71,6 +71,7 @@ using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
+using ShardingConfiguration = Raven.Client.ServerWide.Sharding.ShardingConfiguration;
 
 namespace Raven.Server.ServerWide
 {
@@ -486,6 +487,9 @@ namespace Raven.Server.ServerWide
                     case nameof(SourceMigrationSendCompletedCommand):
                     case nameof(DestinationMigrationConfirmCommand):
                     case nameof(SourceMigrationCleanupCommand):
+                    case nameof(AddPrefixedShardingSettingCommand):
+                    case nameof(DeletePrefixedShardingSettingCommand):
+                    case nameof(UpdatePrefixedShardingSettingCommand):
                         UpdateDatabase(context, type, cmd, index, serverStore);
                         break;
 
@@ -1795,12 +1799,12 @@ namespace Raven.Server.ServerWide
                     using (var oldDatabaseRecord = ReadRawDatabaseRecord(context, addDatabaseCommand.Name))
                     {
                         VerifyUnchangedTasks(oldDatabaseRecord?.Raw);
+                        VerifyUnchangedPrefixedSetting(oldDatabaseRecord?.Raw);
                         shouldSetClientConfigEtag = ShouldSetClientConfigEtag(newDatabaseRecord, oldDatabaseRecord?.Raw);
                     }
 
                     VerifyIndexNames(newDatabaseRecord);
                     VerifyCustomSorters();
-
                     using (var databaseRecordAsJson = UpdateDatabaseRecordIfNeeded(databaseExists, shouldSetClientConfigEtag, index, addDatabaseCommand, newDatabaseRecord, context))
                     {
                         UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
@@ -1896,6 +1900,25 @@ namespace Raven.Server.ServerWide
                             return;
 
                         throw new RachisInvalidOperationException("Custom sorting is not supported in sharding as of yet");
+                    }
+
+                    void VerifyUnchangedPrefixedSetting(BlittableJsonReaderObject dbDoc)
+                    {
+                        if (dbDoc == null || addDatabaseCommand.Record.IsSharded == false || addDatabaseCommand.IsRestore)
+                            return;
+
+                        BlittableJsonReaderArray prefixedSetting = null, newPrefixedSetting = null;
+
+                        if (dbDoc.TryGet(nameof(DatabaseRecord.Sharding), out BlittableJsonReaderObject shardingConfig))
+                            shardingConfig.TryGet(nameof(ShardingConfiguration.Prefixed), out prefixedSetting);
+
+                        if (newDatabaseRecord.TryGet(nameof(DatabaseRecord.Sharding), out BlittableJsonReaderObject newConfig))
+                            newConfig.TryGet(nameof(DatabaseRecord.Sharding.Prefixed), out newPrefixedSetting);
+
+                        if (newPrefixedSetting?.Length != prefixedSetting?.Length ||
+                            newPrefixedSetting?.Equals(prefixedSetting) == false)
+                            throw new RachisInvalidOperationException($"Cannot update {nameof(ShardingConfiguration.Prefixed)} configuration with DatabaseRecord. " +
+                                                                      $"Please use a dedicated operation to update the {nameof(ShardingConfiguration.Prefixed)} configuration.");
                     }
                 }
             }

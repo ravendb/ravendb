@@ -17,11 +17,20 @@ const getDefaultValues = (allNodeTags: string[]): FormData => {
             shardsCount: 1,
             isDynamicDistribution: false,
             isManualReplication: false,
+            isPrefixesForShards: false,
         },
         manualNodeSelectionStep: {
             // if there is only one node, it should be selected by default
             nodes: allNodeTags.length === 1 ? allNodeTags : [],
             shards: [],
+        },
+        shardingPrefixesStep: {
+            prefixesForShards: [
+                {
+                    prefix: "",
+                    shardNumbers: [],
+                },
+            ],
         },
         dataDirectoryStep: {
             isDefault: true,
@@ -71,6 +80,12 @@ function mapToDto(formValues: FormData, allNodeTags: string[]): CreateDatabaseDt
                       Members: selectedOrchestrators,
                   },
               },
+              Prefixed: formValues.replicationAndShardingStep.isPrefixesForShards
+                  ? formValues.shardingPrefixesStep.prefixesForShards.map((x) => ({
+                        Prefix: x.prefix,
+                        Shards: x.shardNumbers,
+                    }))
+                  : null,
           }
         : null;
 

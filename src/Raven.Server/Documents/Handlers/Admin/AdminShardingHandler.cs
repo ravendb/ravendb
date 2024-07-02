@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
@@ -20,6 +21,24 @@ namespace Raven.Server.Documents.Handlers.Admin
             await database.DocumentsMigrator.ExecuteMoveDocumentsAsync();
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+        }
+
+        [RavenAction("/databases/*/admin/sharding/prefixed", "PUT", AuthorizationStatus.DatabaseAdmin)]
+        public Task AddPrefixedShardingSetting()
+        {
+            throw new NotSupportedInShardingException("This operation is not available from a specific shard");
+        }
+
+        [RavenAction("/databases/*/admin/sharding/prefixed", "DELETE", AuthorizationStatus.DatabaseAdmin)]
+        public Task DeletePrefixedShardingSetting()
+        {
+            throw new NotSupportedInShardingException("This operation is not available from a specific shard");
+        }
+
+        [RavenAction("/databases/*/admin/sharding/prefixed", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public Task UpdatePrefixedShardingSetting()
+        {
+            throw new NotSupportedInShardingException("This operation is not available from a specific shard");
         }
 
         private void ValidateShardDatabaseName()

@@ -10,7 +10,8 @@ export type CreateDatabaseDto = Pick<
         Shards: Record<number, { Members?: string[] }>;
         Orchestrator: {
             Topology: Pick<Raven.Client.ServerWide.DatabaseTopology, "Members">
-        }
+        },
+        Prefixed?: Raven.Client.ServerWide.Sharding.ShardingConfiguration["Prefixed"]
     };
 };
 

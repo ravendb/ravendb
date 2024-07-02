@@ -11,6 +11,7 @@ import StepBasicInfo from "./steps/CreateDatabaseRegularStepBasicInfo";
 import StepEncryption from "../../../../../../common/FormEncryption";
 import StepReplicationAndSharding from "./steps/CreateDatabaseRegularStepReplicationAndSharding";
 import StepNodeSelection from "./steps/CreateDatabaseRegularStepNodeSelection";
+import StepShardingPrefixes from "components/pages/resources/databases/partials/create/regular/steps/StepShardingPrefixes";
 import StepPath from "../shared/CreateDatabaseStepDataDirectory";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
@@ -59,6 +60,8 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
                     isSharded: data.replicationAndShardingStep.isSharded,
                     isManualReplication: data.replicationAndShardingStep.isManualReplication,
                     isEncrypted: data.basicInfoStep.isEncrypted,
+                    isPrefixesForShards: data.replicationAndShardingStep.isPrefixesForShards,
+                    usedPrefixes: data.shardingPrefixesStep.prefixesForShards.map((x) => x.prefix),
                 },
                 options
             ),
@@ -232,6 +235,12 @@ function getActiveStepsList(
             isInvalid: !!errors.manualNodeSelectionStep,
         },
         {
+            id: "shardingPrefixesStep",
+            label: "Sharding Prefixes",
+            active: formValues.replicationAndShardingStep.isPrefixesForShards,
+            isInvalid: !!errors.shardingPrefixesStep,
+        },
+        {
             id: "dataDirectoryStep",
             label: "Data Directory",
             active: true,
@@ -269,6 +278,7 @@ function getStepViews(
         ),
         replicationAndShardingStep: <StepReplicationAndSharding />,
         manualNodeSelectionStep: <StepNodeSelection />,
+        shardingPrefixesStep: <StepShardingPrefixes />,
         dataDirectoryStep: (
             <StepPath
                 isBackupFolder={false}

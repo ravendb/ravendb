@@ -101,7 +101,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
             </Row>
 
             <Row>
-                <Col lg={{ offset: 2, size: 8 }}>
+                <Col lg={{ offset: 1, size: 10 }}>
                     <Row className="pt-2">
                         <Col sm="6" className="d-flex gap-1 align-items-center">
                             <Icon id="ReplicationInfo" icon="info" color="info" margin="m-0" /> Available nodes:{" "}
@@ -181,7 +181,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                 />
                             </Collapse>
                         </Col>
-                        <Col sm="auto">
+                        <Col sm="6">
                             <Collapse isOpen={isSharded}>
                                 <InputGroup>
                                     <InputGroupText>Number of shards</InputGroupText>
@@ -194,6 +194,19 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                         max="100"
                                     />
                                 </InputGroup>
+                                <FormSwitch
+                                    control={control}
+                                    name="replicationAndShardingStep.isPrefixesForShards"
+                                    color="primary"
+                                    className="mt-3"
+                                >
+                                    Add <strong>prefixes</strong> for shards
+                                    <br />
+                                    <small className="text-muted">
+                                        Manage document distribution by defining
+                                        <br />a prefix for document names
+                                    </small>
+                                </FormSwitch>
                             </Collapse>
                         </Col>
                     </Row>
@@ -224,7 +237,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
             </Row>
 
             <Row className="mt-4">
-                <Col>
+                <Col lg={{ offset: 1, size: 5 }}>
                     <ConditionalPopover
                         conditions={{
                             isActive: !hasDynamicNodesDistribution,
@@ -249,7 +262,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                         </FormSwitch>
                     </ConditionalPopover>
                 </Col>
-                <Col>
+                <Col lg={{ size: 5 }}>
                     <ConditionalPopover
                         conditions={[
                             {

@@ -626,10 +626,15 @@ namespace Raven.Server.Web.System
                                         throw new InvalidOperationException($"Database '{databaseName}' doesn't reside on node '{node}' so it can't be deleted from it");
                                     }
 
-                                    if (isShard && topology.ReplicationFactor == 1 && rawRecord.Sharding.DoesShardHaveBuckets(shardNumber))
+                                    if (isShard && topology.ReplicationFactor == 1)
                                     {
-                                        throw new InvalidOperationException(
-                                            $"Database {databaseName} cannot be deleted because it is the last copy of shard {shardNumber} and it contains data that has not been migrated.");
+                                        if (rawRecord.Sharding.DoesShardHaveBuckets(shardNumber))
+                                            throw new InvalidOperationException(
+                                                $"Database {databaseName} cannot be deleted because it is the last copy of shard {shardNumber} and it contains data that has not been migrated.");
+                                        if (rawRecord.Sharding.DoesShardHavePrefixes(shardNumber))
+                                            throw new InvalidOperationException(
+                                                $"Database {databaseName} cannot be deleted because it is the last copy of shard {shardNumber} and there are prefixes settings for this shard. " +
+                                                $"In order to delete shard {shardNumber} from database {databaseName} you need to remove shard {shardNumber} from all prefixes settings in DatabaseRecord.Sharding.Prefixed.");
                                     }
 
                                     pendingDeletes.Add(node);

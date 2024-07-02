@@ -821,9 +821,7 @@ namespace SlowTests.Sharding.Subscriptions
         [InlineData(false)]
         public async Task CanUseSubscriptionWithDocumentIncludes(bool diff)
         {
-            DoNotReuseServer();
-            Server.ServerStore.Sharding.BlockPrefixedSharding = false;
-
+            
             var ops = diff
                 ? new Options
                 {
@@ -1141,9 +1139,6 @@ namespace SlowTests.Sharding.Subscriptions
         [InlineData(false)]
         public void SubscriptionWithIncludeAllCountersOfDocumentAndOfRelatedDocument(bool diff)
         {
-            DoNotReuseServer();
-            Server.ServerStore.Sharding.BlockPrefixedSharding = false;
-
             var ops = diff
                 ? new Options
                 {
