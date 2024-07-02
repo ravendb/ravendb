@@ -34,6 +34,8 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
     public Counts CompareExchangeTombstones { get; set; }
 
+    public CountsWithSkippedCountAndLastEtag TimeSeriesDeletedRanges { get; set; }
+
     public virtual DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue(GetType())
@@ -51,6 +53,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
             [nameof(CompareExchangeTombstones)] = CompareExchangeTombstones.ToJson(),
             [nameof(TimeSeries)] = TimeSeries.ToJson(),
             [nameof(ReplicationHubCertificates)] = ReplicationHubCertificates.ToJson(),
+            [nameof(TimeSeriesDeletedRanges)] = TimeSeriesDeletedRanges.ToJson()
         };
     }
 

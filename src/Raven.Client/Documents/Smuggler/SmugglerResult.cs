@@ -43,6 +43,7 @@ namespace Raven.Client.Documents.Smuggler
             Subscriptions = new Counts();
             ReplicationHubCertificates = new Counts();
             TimeSeries = new CountsWithSkippedCountAndLastEtag();
+            TimeSeriesDeletedRanges = new CountsWithSkippedCountAndLastEtag();
             _progress = new SmugglerProgress(this);
         }
 
@@ -85,6 +86,11 @@ namespace Raven.Client.Documents.Smuggler
             smugglerResult.TimeSeries.SizeInBytes += TimeSeries.SizeInBytes;
 
             smugglerResult.TimeSeries.LastEtag = Math.Max(smugglerResult.TimeSeries.LastEtag, TimeSeries.LastEtag);
+
+            smugglerResult.TimeSeriesDeletedRanges.ReadCount += TimeSeriesDeletedRanges.ReadCount;
+            smugglerResult.TimeSeriesDeletedRanges.ErroredCount += TimeSeriesDeletedRanges.ErroredCount;
+            smugglerResult.TimeSeriesDeletedRanges.SizeInBytes += TimeSeriesDeletedRanges.SizeInBytes;
+            smugglerResult.TimeSeriesDeletedRanges.LastEtag = Math.Max(smugglerResult.TimeSeriesDeletedRanges.LastEtag, TimeSeriesDeletedRanges.LastEtag);
 
             smugglerResult.Identities.ReadCount += Identities.ReadCount;
             smugglerResult.Identities.ErroredCount += Identities.ErroredCount;
@@ -230,6 +236,7 @@ namespace Raven.Client.Documents.Smuggler
                 Subscriptions = _result?.Subscriptions;
                 TimeSeries = _result?.TimeSeries;
                 ReplicationHubCertificates = _result?.ReplicationHubCertificates;
+                TimeSeriesDeletedRanges = _result?.TimeSeriesDeletedRanges;
             }
 
             internal string Message { get; set; }
@@ -260,6 +267,9 @@ namespace Raven.Client.Documents.Smuggler
 
             if (TimeSeries.LastEtag > lastEtag)
                 lastEtag = TimeSeries.LastEtag;
+
+            if (TimeSeriesDeletedRanges.LastEtag > lastEtag)
+                lastEtag = TimeSeriesDeletedRanges.LastEtag;
 
             return lastEtag;
         }

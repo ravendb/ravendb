@@ -84,6 +84,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             Counters = rp.Counters;
             TimeSeries = rp.TimeSeries;
             CompareExchangeTombstones = rp.CompareExchangeTombstones;
+            TimeSeriesDeletedRanges = rp.TimeSeriesDeletedRanges;
         }
 
         public override DynamicJsonValue ToJson()

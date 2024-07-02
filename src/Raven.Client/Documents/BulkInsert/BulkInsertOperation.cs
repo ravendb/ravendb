@@ -281,8 +281,12 @@ namespace Raven.Client.Documents.BulkInsert
             if (serverVersion != null && Version.TryParse(serverVersion, out var ver))
             {
                 // Version 6 only from 6.0.2
-                if (ver.Major == 6 && ver.Build < 2)
+                if (ver.Major == 6 && ver.Minor > 0)
+                    return true;
+
+                if (ver.Major == 6 && ver.Minor == 0 && ver.Build < 2)
                     return false;
+
                 // 5.4.108 or higher
                 if (ver.Major > 5 || (ver.Major == 5 && ver.Minor >= 4 && ver.Build >= 110))
                     return true;

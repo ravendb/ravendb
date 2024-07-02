@@ -443,6 +443,11 @@ namespace Raven.Server.Smuggler.Documents
             throw new NotSupportedException();
         }
 
+        public IAsyncEnumerable<TimeSeriesDeletedRangeItemForSmuggler> GetTimeSeriesDeletedRangesAsync(ITimeSeriesActions action, List<string> collectionsToExport)
+        {
+            return AsyncEnumerable.Empty<TimeSeriesDeletedRangeItemForSmuggler>();
+        }
+
         public void Dispose()
         {
         }
