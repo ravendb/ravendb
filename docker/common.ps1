@@ -35,7 +35,6 @@ function GetUbuntuImageTags($repo, $version, $arch) {
     switch ($arch) {
         "x64" { 
             return @(
-                "$($repo):latest-lts",
                 "$($repo):ubuntu-latest-lts",
                 "$($repo):5.4-ubuntu-latest",
                 "$($repo):$($version)-ubuntu.22.04-x64"
@@ -88,4 +87,29 @@ function GetWindowsImageTags($repo, $version, $WinVer) {
         }        
     }
 
+}
+
+function GetManifestTags {
+    param (
+        $repo
+    )
+
+    return @(
+        "${repo}:latest-lts",
+        "${repo}:5.4-latest"
+    )
+}
+
+function GetImageTagsForManifest {
+    param (
+        [string]$repo
+    )
+
+    return @(
+        "${repo}:5.4-ubuntu-latest",
+        "${repo}:5.4-ubuntu-arm32v7-latest",
+        "${repo}:5.4-ubuntu-arm64v8-latest",
+        "${repo}:5.4-windows-1809-latest",
+        "${repo}:5.4-windows-ltsc2022-latest"
+    )
 }
