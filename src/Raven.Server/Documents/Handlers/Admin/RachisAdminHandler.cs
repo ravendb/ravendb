@@ -60,14 +60,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var isClusterAdmin = IsClusterAdmin();
                     command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
 
-                    long etag;
-                    object result;
-                    using (var rachisMergedCmd = await ServerStore.Engine.PutAndGetRachisMergedCommandAsync(command))
-                    {
-                        await rachisMergedCmd.WaitForInsertToLeaderLog();
-                        (etag, result) = await rachisMergedCmd.WaitForCommit();
-                    }
-
+                    var (etag, result) = await ServerStore.Engine.PutAsync(command);
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                     var ms = context.CheckoutMemoryStream();
                     try

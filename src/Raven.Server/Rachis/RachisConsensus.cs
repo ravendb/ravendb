@@ -1104,16 +1104,6 @@ namespace Raven.Server.Rachis
             return leader.PutAsync(cmd, cmd.Timeout ?? OperationTimeout);
         }
 
-        public Task<Leader.RachisMergedCommand> PutAndGetRachisMergedCommandAsync(CommandBase cmd)
-        {
-            var leader = _currentLeader;
-            if (leader == null)
-                throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
-
-            Validator.AssertPutCommandToLeader(cmd);
-            return leader.PutAndGetRachisMergedCommandAsync(cmd, cmd.Timeout ?? OperationTimeout);
-        }
-
         public void SwitchToCandidateStateOnTimeout()
         {
             SwitchToCandidateState("Election timeout");
