@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Azure;
@@ -28,10 +28,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return blob.Data;
         }
 
-        protected override async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
+        protected override async Task<ZipArchive> GetZipArchiveForSnapshot(string path, Action<string> onProgress)
         {
             var blob = await _client.GetBlobAsync(path);
-            var file = await CopyRemoteStreamLocally(blob.Data);
+            var file = await CopyRemoteStreamLocallyAsync(blob.Data, blob.Size, onProgress);
             return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 

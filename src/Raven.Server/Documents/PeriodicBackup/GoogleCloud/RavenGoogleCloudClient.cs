@@ -150,6 +150,15 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
             );
         }
 
+        public async Task<Size> GetObjectSizeAsync(string fileName)
+        {
+            var obj = await GetObjectAsync(fileName);
+            if (obj.Size == null)
+                throw new InvalidOperationException("Size isn't available");
+
+            return new Size((long)obj.Size.Value, SizeUnit.Bytes);
+        }
+
         public Task DeleteObjectAsync(string fileName)
         {
             return _client.DeleteObjectAsync(

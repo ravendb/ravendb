@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected override async Task<ZipArchive> GetZipArchive(string filePath)
         {
             var blob = await _client.GetBlobAsync(filePath);
-            var file = await RestoreBackupTaskBase.CopyRemoteStreamLocally(blob.Data, _configuration, _cancellationToken);
+            var file = await RestoreBackupTaskBase.CopyRemoteStreamLocallyAsync(blob.Data, blob.Size, _configuration, onProgress: null, _cancellationToken);
             return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 
