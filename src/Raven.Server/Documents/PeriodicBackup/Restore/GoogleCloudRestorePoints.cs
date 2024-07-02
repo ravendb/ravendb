@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Config;
@@ -15,12 +16,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
     public sealed class GoogleCloudRestorePoints : RestorePointsBase
     {
         private readonly RavenConfiguration _configuration;
+        private readonly CancellationToken _cancellationToken;
         private readonly RavenGoogleCloudClient _client;
 
-        public GoogleCloudRestorePoints(RavenConfiguration configuration, TransactionOperationContext context, GoogleCloudSettings client) : base(context)
+        public GoogleCloudRestorePoints(RavenConfiguration configuration, TransactionOperationContext context, GoogleCloudSettings client, CancellationToken cancellationToken) : base(context)
         {
             _configuration = configuration;
-            _client = new RavenGoogleCloudClient(client, configuration.Backup);
+            _cancellationToken = cancellationToken;
+            _client = new RavenGoogleCloudClient(client, configuration.Backup, cancellationToken: cancellationToken);
         }
 
         public override Task<RestorePoints> FetchRestorePoints(string path, int? shardNumber = null)
@@ -58,7 +61,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected override async Task<ZipArchive> GetZipArchive(string filePath)
         {
             Stream downloadObject = _client.DownloadObject(filePath);
-            var file = await RestoreUtils.CopyRemoteStreamLocallyAsync(downloadObject, _configuration);
+            var file = await RestoreUtils.CopyRemoteStreamLocallyAsync(downloadObject, _configuration, _cancellationToken);
             return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 
