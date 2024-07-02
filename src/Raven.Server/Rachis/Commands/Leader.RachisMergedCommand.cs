@@ -89,7 +89,6 @@ namespace Raven.Server.Rachis
                     _leader._errorOccurred.TrySetException(e);
 
                     _tcs.TrySetException(e);
-                    // _tcs.TrySetResult(Task.FromException<(long, object)>(e));
                 }
 
                 return 1;

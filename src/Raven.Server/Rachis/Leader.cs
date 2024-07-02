@@ -674,16 +674,6 @@ namespace Raven.Server.Rachis
             return await rachisMergedCommand.Result();
         }
 
-        public async Task<RachisMergedCommand> PutAndGetRachisMergedCommandAsync(CommandBase command, TimeSpan timeout)
-        {
-            var rachisMergedCommand = new RachisMergedCommand(leader: this, command, timeout);
-
-            rachisMergedCommand.Initialize();
-
-            await _engine.TxMerger.Enqueue(rachisMergedCommand);
-            return rachisMergedCommand;
-        }
-
         public ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new ConcurrentQueue<(string, AlertRaised)>();
 
         public void NotifyAboutException(string node, string title, string message, Exception e)
