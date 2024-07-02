@@ -26,7 +26,7 @@ type trafficChangeType =
 
 
 class showTimingsFeature implements columnPreviewFeature {
-    install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => Raven.Client.Documents.Changes.TrafficWatchHttpChange, containerSelector: string) {
+    install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => Raven.Client.Documents.Changes.TrafficWatchHttpChange) {
         $tooltip.on("click", ".show-timings", () => {
             const item = elementProvider();
             
