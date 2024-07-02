@@ -22,8 +22,8 @@ namespace SlowTests.Issues
         {
         }
 
-        private readonly int _readTimeout = 500;
-        private readonly TimeSpan _delay = TimeSpan.FromSeconds(1);
+        private readonly int _readTimeout = 5000;
+        private readonly TimeSpan _delay = TimeSpan.FromSeconds(10);
 
         [RavenTheory(RavenTestCategory.BulkInsert)]
         [InlineData(null)]
