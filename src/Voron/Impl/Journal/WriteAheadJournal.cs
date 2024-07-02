@@ -796,13 +796,6 @@ namespace Voron.Impl.Journal
                         {
                             action(txw);
                             txw.Commit();
-                            if (txw.FlushedToJournal < 0)
-                            {
-                                // we successfully commited, but nothing was changed
-                                // we need to publish our changes to the scratch table so 
-                                // new (read) transactions will see that immediately
-                                _waj._env.UpdateScratchTable(txw);
-                            }
                         }
                         break;
                     }

@@ -341,7 +341,7 @@ namespace Voron.Data.BTrees
 
             var childTreeHeader = (TreeRootHeader*)((byte*)item + item->KeySize + Constants.Tree.NodeHeaderSize);
 
-            Debug.Assert(childTreeHeader->RootPageNumber < _llt.State.NextPageNumber);
+            Debug.Assert(childTreeHeader->RootPageNumber < _llt.GetNextPageNumber());
             Debug.Assert(childTreeHeader->Flags == TreeFlags.MultiValue);
 
             tree = Open(_llt, _tx, key, *childTreeHeader);

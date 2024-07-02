@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using Raven.Client.Documents.Changes;
 using Voron;
 using Voron.Impl;
 using Xunit;
@@ -54,14 +56,20 @@ namespace FastTests.Voron.Bugs
             Assert.Equal(0, Env.Journal.CurrentFile.Available4Kbs); // this is very important condition to run into the issue - see details in RavenDB-16464
 
             Env.FlushLogToDataFile(); // this will flush all journals, the issue was that it also marked all of them as unused so they were removed from _files list, but didn't free the allocations in scratch buffers to ensure we don't free pages that can be still read
-
-            Assert.Equal(0, Env.Journal.Files.Count);
+            var old = Env.Journal.Files;
+            using (var wtx = Env.WriteTransaction())
+            {
+                wtx.LowLevelTransaction.ModifyPage(0);
+                wtx.Commit();
+            }
 
             Env.FlushLogToDataFile();
+            Assert.Equal(1, Env.Journal.Files.Count);
 
             Env.Cleanup(tryCleanupRecycledJournals: true);
 
             var scratchBufferPoolInfo = Env.ScratchBufferPool.InfoForDebug(Env.PossibleOldestReadTransaction(null));
+            Assert.False(old.Any(j => Env.Journal.Files.Contains(j)));
 
             Assert.Equal(1, scratchBufferPoolInfo.ScratchFilesUsage.Count);
         }
@@ -111,17 +119,23 @@ namespace FastTests.Voron.Bugs
             {
                 readTx = Env.ReadTransaction();
             };
-
+            var old = Env.Journal.Files;
+            using (var wtx = Env.WriteTransaction())
+            {
+                wtx.LowLevelTransaction.ModifyPage(0);
+                wtx.Commit();
+            }
             Env.FlushLogToDataFile();
 
             {
                 using var _ = readTx;
-                Assert.Equal(0, Env.Journal.Files.Count);
+                Assert.False(old.Any(j => Env.Journal.Files.Contains(j)));
+                Assert.Equal(1, Env.Journal.Files.Count);
 
                 ValueReader reader = readTx.ReadTree("tree").Read("items/7").Reader;
                 Assert.Equal(bytes, reader.AsSpan());
                 Assert.Equal((nint)basePtr, (nint)reader.Base);
-                Assert.Equal(3, readTx.LowLevelTransaction.Id);
+                Assert.Equal(4, readTx.LowLevelTransaction.Id);
             }
 
             
