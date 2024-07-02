@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public static class RestoreUtils
     {
-        public static RestoreBackupConfigurationBase GetRestoreConfigurationAndSource(ServerStore serverStore, BlittableJsonReaderObject restoreConfiguration, out IRestoreSource restoreSource)
+        public static RestoreBackupConfigurationBase GetRestoreConfigurationAndSource(ServerStore serverStore, BlittableJsonReaderObject restoreConfiguration, out IRestoreSource restoreSource, OperationCancelToken token)
         {
             RestoreBackupConfigurationBase configuration;
             RestoreType restoreType = default;
@@ -43,19 +44,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 case RestoreType.S3:
                     var s3Configuration = JsonDeserializationCluster.RestoreS3BackupConfiguration(restoreConfiguration);
                     configuration = s3Configuration;
-                    restoreSource = new RestoreFromS3(serverStore, s3Configuration);
+                    restoreSource = new RestoreFromS3(serverStore, s3Configuration, token.Token);
                     break;
 
                 case RestoreType.Azure:
                     var azureConfiguration = JsonDeserializationCluster.RestoreAzureBackupConfiguration(restoreConfiguration);
                     configuration = azureConfiguration;
-                    restoreSource = new RestoreFromAzure(serverStore, azureConfiguration);
+                    restoreSource = new RestoreFromAzure(serverStore, azureConfiguration, token.Token);
                     break;
 
                 case RestoreType.GoogleCloud:
                     var googleCloudConfiguration = JsonDeserializationCluster.RestoreGoogleCloudBackupConfiguration(restoreConfiguration);
                     configuration = googleCloudConfiguration;
-                    restoreSource = new RestoreFromGoogleCloud(serverStore, googleCloudConfiguration);
+                    restoreSource = new RestoreFromGoogleCloud(serverStore, googleCloudConfiguration, token.Token);
                     break;
 
                 default:
@@ -92,7 +93,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return new RestoreBackupTask(serverStore, configuration, restoreSource, filesToRestore, token);
         }
 
-        public static async Task<Stream> CopyRemoteStreamLocallyAsync(Stream stream, RavenConfiguration configuration)
+        public static async Task<Stream> CopyRemoteStreamLocallyAsync(Stream stream, RavenConfiguration configuration, CancellationToken cancellationToken)
         {
             if (stream.CanSeek)
                 return stream;
@@ -110,7 +111,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 AssertFreeSpace(stream, basePath.FullPath);
 
-                await stream.CopyToAsync(file);
+                await stream.CopyToAsync(file, cancellationToken);
                 file.Seek(0, SeekOrigin.Begin);
 
                 return file;
