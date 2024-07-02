@@ -30,9 +30,9 @@ namespace FastTests.Sparrow
                         Assert.False(Memory.IsEqualConstant(s2Span, s1Ptr, size));
                         Assert.False(Memory.IsEqualConstantVector128(ref s2Span[0], s1Ptr, size));
 
-                        if (Avx2.IsSupported)
+                        if (AdvInstructionSet.X86.IsSupportedAvx256)
                         {
-                            Assert.False(Memory.IsEqualConstantAvx2(ref s2Span[0], s1Ptr, size));
+                            Assert.False(Memory.IsEqualConstantAvx256(ref s2Span[0], s1Ptr, size));
                         }
 
                         // We reset the state to zero
@@ -43,9 +43,9 @@ namespace FastTests.Sparrow
                         Assert.True(Memory.IsEqualConstant(s2Span, s1Ptr, size));
                         Assert.True(Memory.IsEqualConstantVector128(ref s2Span[0], s1Ptr, size));
 
-                        if (Avx2.IsSupported)
+                        if (AdvInstructionSet.X86.IsSupportedAvx256)
                         {
-                            Assert.True(Memory.IsEqualConstantAvx2(ref s2Span[0], s1Ptr, size));
+                            Assert.True(Memory.IsEqualConstantAvx256(ref s2Span[0], s1Ptr, size));
                         }
                     };
                 }
