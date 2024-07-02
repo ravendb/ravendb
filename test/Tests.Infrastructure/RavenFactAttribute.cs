@@ -15,8 +15,8 @@ public class RavenFactAttribute : RetryFactAttribute, ITraitAttribute
         _category = category;
     }
 
-    public RavenFactAttribute(RavenTestCategory category, bool retryable, int maxRetries = 3, int delayBetweenRetriesMs = 1000, params Type[] skipOnExceptions)
-        : base(retryable ? maxRetries : 1, delayBetweenRetriesMs, skipOnExceptions)
+    public RavenFactAttribute(RavenTestCategory category, bool retry, int maxRetries = 3, int delayBetweenRetriesMs = 1000, params Type[] skipOnExceptions)
+        : base(retry ? maxRetries : 1, delayBetweenRetriesMs, skipOnExceptions)
     {
         _category = category;
     }
@@ -33,15 +33,15 @@ public class RavenFactAttribute : RetryFactAttribute, ITraitAttribute
     {
         get
         {
-            return RavenFactSkip(_skip,  _category,  licenseRequired: LicenseRequired,  nightlyBuildRequired: NightlyBuildRequired,  msSqlRequired: MsSqlRequired,  elasticSearchRequired: ElasticSearchRequired);
+            return ShouldSkip(_skip,  _category,  licenseRequired: LicenseRequired,  nightlyBuildRequired: NightlyBuildRequired,  msSqlRequired: MsSqlRequired,  elasticSearchRequired: ElasticSearchRequired);
         }
 
         set => _skip = value;
     }
 
-    internal static string RavenFactSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool msSqlRequired, bool elasticSearchRequired)
+    private static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool msSqlRequired, bool elasticSearchRequired)
     {
-        var s = RavenAttributeSkip(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
+        var s = ShouldSkipRavenAttribute(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
         if (s != null)
             return s;
 
@@ -54,7 +54,7 @@ public class RavenFactAttribute : RetryFactAttribute, ITraitAttribute
         return null;
     }
 
-    internal static string RavenAttributeSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired)
+    internal static string ShouldSkipRavenAttribute(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired)
     {
         if (skip != null)
             return skip;

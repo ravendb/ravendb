@@ -15,8 +15,8 @@ public class RavenTheoryAttribute : RetryTheoryAttribute, ITraitAttribute
         _category = category;
     }
 
-    public RavenTheoryAttribute(RavenTestCategory category, bool retryable, int maxRetries = 3, int delayBetweenRetriesMs = 1000, params Type[] skipOnExceptions)
-        : base(retryable ? maxRetries : 1, delayBetweenRetriesMs, skipOnExceptions)
+    public RavenTheoryAttribute(RavenTestCategory category, bool retry, int maxRetries = 3, int delayBetweenRetriesMs = 1000, params Type[] skipOnExceptions)
+        : base(retry ? maxRetries : 1, delayBetweenRetriesMs, skipOnExceptions)
     {
         _category = category;
     }
@@ -33,15 +33,15 @@ public class RavenTheoryAttribute : RetryTheoryAttribute, ITraitAttribute
     {
         get
         {
-            return RavenTheorySkip(_skip, _category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, s3Required: S3Required, azureRequired: AzureRequired);
+            return ShouldSkip(_skip, _category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, s3Required: S3Required, azureRequired: AzureRequired);
         }
 
         set => _skip = value;
     }
 
-    internal static string RavenTheorySkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool s3Required, bool azureRequired)
+    private static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool s3Required, bool azureRequired)
     {
-        var s = RavenFactAttribute.RavenAttributeSkip(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
+        var s = RavenFactAttribute.ShouldSkipRavenAttribute(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
         if (s != null)
             return s;
 
