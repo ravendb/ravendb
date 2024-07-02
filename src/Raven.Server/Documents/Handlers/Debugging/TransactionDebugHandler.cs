@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(TxInfoResult.ThreadName)] = lowLevelTransaction.CurrentTransactionHolder?.Name,
                 [nameof(TxInfoResult.StartTime)] = lowLevelTransaction.TxStartTime.GetDefaultRavenFormat(isUtc: true),
                 [nameof(TxInfoResult.TotalTime)] = $"{(DateTime.UtcNow - lowLevelTransaction.TxStartTime).TotalMilliseconds} mSecs",
-                [nameof(TxInfoResult.FlushInProgressLockTaken)] = lowLevelTransaction.FlushInProgressLockTaken,
+                [nameof(TxInfoResult.FlushInProgressLockTaken)] = lowLevelTransaction._flushInProgressLockTaken,
                 [nameof(TxInfoResult.Flags)] = lowLevelTransaction.Flags,
                 [nameof(TxInfoResult.IsCloned)] = lowLevelTransaction.IsCloned,
                 [nameof(TxInfoResult.NumberOfModifiedPages)] = lowLevelTransaction.NumberOfModifiedPages,
