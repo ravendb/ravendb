@@ -1424,7 +1424,9 @@ namespace Raven.Server.Smuggler.Documents
                         builder = CreateBuilder(context, modifier);
                     }
 
-                    _context.CachedProperties.NewDocument();
+                    builder.Renew("import/object", Mode);
+
+                    context.CachedProperties.NewDocument();
 
                     await ReadObjectAsync(builder);
 
