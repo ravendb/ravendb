@@ -125,8 +125,6 @@ namespace Voron
 
         public Guid DbId { get; set; }
 
-        public StorageEnvironmentState State { get; private set; }
-
         public event Action OnLogsApplied;
 
         internal readonly long[] _validPagesAfterLoad;
@@ -151,7 +149,9 @@ namespace Voron
                     dataPagerState,
                     0,
                     FrozenDictionary<long, PageFromScratchBuffer>.Empty,
-                    0);
+                    0,
+                    null, 
+                    -1);
                 
                 _lastValidPageAfterLoad = dataPagerState.NumberOfAllocatedPages;
                 Debug.Assert(_lastValidPageAfterLoad != 0);
@@ -313,11 +313,11 @@ namespace Voron
 
             var entry = _headerAccessor.CopyHeader();
             var nextPageNumber = (header->TransactionId == 0 ? entry.LastPageNumber : header->LastPageNumber) + 1;
-            State = new StorageEnvironmentState(nextPageNumber);
-
+            
             _currentStateRecordRecord = _currentStateRecordRecord with
             {
-                TransactionId = header->TransactionId == 0 ? entry.TransactionId : header->TransactionId
+                TransactionId = header->TransactionId == 0 ? entry.TransactionId : header->TransactionId,
+                NextPageNumber = nextPageNumber
             };
             var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
@@ -453,8 +453,7 @@ namespace Voron
 
         private void CreateNewDatabase()
         {
-            const int initialNextPageNumber = 0;
-            State = new StorageEnvironmentState(initialNextPageNumber);
+            _currentStateRecordRecord = _currentStateRecordRecord with { NextPageNumber = 0 };
 
             if (Options.SimulateFailureOnDbCreation)
                 ThrowSimulateFailureOnDbCreation();
@@ -486,7 +485,7 @@ namespace Voron
 
         public HeaderAccessor HeaderAccessor => _headerAccessor;
 
-        public long NextPageNumber => State.NextPageNumber;
+        public long NextPageNumber => _currentStateRecordRecord.NextPageNumber;
 
         public StorageEnvironmentOptions Options => _options;
 
@@ -728,7 +727,7 @@ namespace Voron
                     tx = new LowLevelTransaction(this, transactionPersistentContext, flags, _freeSpaceHandling,
                         context)
                     {
-                        FlushInProgressLockTaken = flushInProgressReadLockTaken,
+                        _flushInProgressLockTaken = flushInProgressReadLockTaken,
                     };
 
                     if (flags == TransactionFlags.ReadWrite)
@@ -896,20 +895,6 @@ namespace Voron
             return new ExitWriteLock(_txCreation);
         }
 
-        internal bool IsInPreventNewTransactionsMode => _txCreation.IsWriteLockHeld;
-
-        internal bool TryPreventNewTransactions(TimeSpan timeout, out IDisposable exitWriteLock)
-        {
-            if (_txCreation.TryEnterWriteLock(timeout))
-            {
-                exitWriteLock = new ExitWriteLock(_txCreation);
-                return true;
-            }
-
-            exitWriteLock = null;
-            return false;
-        }
-
         public struct ExitWriteLock : IDisposable
         {
             private readonly ReaderWriterLockSlim _rwls;
@@ -942,12 +927,10 @@ namespace Voron
 
             using (PreventNewTransactions())
             {
-                if (tx.Committed && tx.FlushedToJournal >= 0)
+                if (tx.Committed)
                 {
                     UpdateStateOnCommit(tx);
                 }
-
-                State = tx.State;
 
                 Journal.Applicator.OnTransactionCommitted(tx);
 
@@ -986,7 +969,7 @@ namespace Voron
 
                 Journal.Applicator.OnTransactionCompleted();
 
-                if (tx.FlushInProgressLockTaken)
+                if (tx._flushInProgressLockTaken)
                     FlushInProgressLock.ExitReadLock();
             }
             finally
@@ -1471,14 +1454,14 @@ namespace Voron
             var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read))
             {
-                var numberOfAllocatedPages = Math.Max(tx.DataPagerState.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
+                var numberOfAllocatedPages = Math.Max(tx.DataPagerState.NumberOfAllocatedPages, _currentStateRecordRecord.NextPageNumber - 1); // async apply to data file task
 
                 return new EnvironmentStats
                 {
                     FreePagesOverhead = FreeSpaceHandling.GetFreePagesOverhead(tx),
                     RootPages = tx.RootObjects.State.Header.PageCount,
                     UnallocatedPagesAtEndOfFile = tx.DataPagerState.NumberOfAllocatedPages - NextPageNumber,
-                    UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * Constants.Storage.PageSize,
+                    UsedDataFileSizeInBytes = (_currentStateRecordRecord.NextPageNumber - 1) * Constants.Storage.PageSize,
                     AllocatedDataFileSizeInBytes = numberOfAllocatedPages * Constants.Storage.PageSize,
                     CommittedTransactionId = CurrentReadTransactionId,
                 };
@@ -1721,45 +1704,40 @@ namespace Voron
                     break;
             }
         }
-
-        public void UpdateScratchTable(LowLevelTransaction tx)
-        {
-            Debug.Assert(tx.FlushedToJournal <0 && 
-                         tx.Committed && 
-                         tx.Flags == TransactionFlags.ReadWrite,
-                "Attempt to directly update the scratch table when not in a commited write transaction that skipped writing to the disk");
-            
-            var pagesInScratch = tx.GetPagesInScratch();
-            while (true)
-            {
-                var currentState = _currentStateRecordRecord!;
-                Debug.Assert(currentState.TransactionId == tx.Id- 1);
-                var updatedState = currentState with { ScratchPagesTable = pagesInScratch };
-                if (Interlocked.CompareExchange(ref _currentStateRecordRecord, updatedState, currentState) == currentState)
-                {
-                    break;
-                }
-            }
-        }
         
         private void UpdateStateOnCommit(LowLevelTransaction tx)
         {
             var pagesInScratch = tx.GetPagesInScratch();
             // ensure that we have disjointed sets and not a case of both free & used at once
-            long transactionId = tx.Id;
+            var (txId, txFlushedToJournal) = tx.FlushedToJournal switch
+            {
+                // we may want to update the state of the transaction (scratch table, data pager state, etc)
+                // without incrementing the transaction id, since we didn't commit a transaction to the journal
+                -1 => (tx.CurrentStateRecord.TransactionId - 1, tx.CurrentStateRecord.FlushedToJournal),
+                _ => (tx.Id, tx.FlushedToJournal)
+            };
+            long nextPageNumber = tx.GetNextPageNumber();
+            var rootObjectsState = tx.RootObjects.State;
+            Debug.Assert(ReferenceEquals(rootObjectsState, tx.CurrentStateRecord.Root));
             while (true)
             {
                 var currentState = _currentStateRecordRecord!;
-                Debug.Assert(currentState.TransactionId == transactionId - 1);
                 var updatedState = currentState with
                 {
-                    TransactionId = transactionId,
+                    TransactionId = txId,
                     ScratchPagesTable = pagesInScratch,
-                    FlushedToJournal = tx.FlushedToJournal
+                    FlushedToJournal = txFlushedToJournal,
+                    NextPageNumber = nextPageNumber,
+                    Root = rootObjectsState
                 };
                 if (Interlocked.CompareExchange(ref _currentStateRecordRecord, updatedState, currentState) == currentState)
                 {
-                    _transactionsToFlush.Enqueue(updatedState);
+                    // We only want to flush to data pager transactions that have been flushed to the journal.
+                    // Transactions that _haven't_ been flushed are mostly book-keeping (updating scratch table, etc)
+                    if (tx.FlushedToJournal >= 0)  
+                    {
+                        _transactionsToFlush.Enqueue(updatedState);
+                    }
                     break;
                 }
             }
