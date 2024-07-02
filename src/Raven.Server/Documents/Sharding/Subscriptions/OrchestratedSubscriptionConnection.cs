@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             }
         }
 
-        public override Task SendNoopAckAsync() => Task.CompletedTask;
+        public override Task SendNoopAckAsync(bool force = false) => Task.CompletedTask;
 
         protected override bool FoundAboutMoreDocs()
         {

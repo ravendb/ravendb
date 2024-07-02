@@ -373,7 +373,7 @@ namespace Raven.Server.Documents.TcpHandlers
             await SendConfirmAsync(TcpConnection.DocumentDatabase.Time.GetUtcNow());
         }
 
-        public override Task SendNoopAckAsync() => State.SendNoopAck();
+        public override Task SendNoopAckAsync(bool force = false) => State.SendNoopAck(force);
 
         protected override bool FoundAboutMoreDocs()
         {
