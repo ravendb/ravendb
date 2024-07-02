@@ -45,6 +45,7 @@ using Sparrow;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Utils;
 using System.Threading;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -129,12 +130,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             _restoringToDefaultDataDirectory = IsDefaultDataDirectory(RestoreFromConfiguration.DataDirectory, RestoreFromConfiguration.DatabaseName);
         }
 
-        protected async Task<Stream> CopyRemoteStreamLocally(Stream stream)
+        protected async Task<Stream> CopyRemoteStreamLocallyAsync(Stream stream, Size size, Action<string> onProgress)
         {
-            return await CopyRemoteStreamLocally(stream, _serverStore.Configuration, _operationCancelToken.Token);
+            return await CopyRemoteStreamLocallyAsync(stream, size, _serverStore.Configuration, onProgress, _operationCancelToken.Token);
         }
 
-        public static async Task<Stream> CopyRemoteStreamLocally(Stream stream, RavenConfiguration configuration, CancellationToken cancellationToken)
+        public static async Task<Stream> CopyRemoteStreamLocallyAsync(Stream stream, Size size, RavenConfiguration configuration, Action<string> onProgress, CancellationToken cancellationToken)
         {
             if (stream.CanSeek)
                 return stream;
@@ -148,11 +149,28 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var file = SafeFileStream.Create(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read,
                 32 * 1024, FileOptions.DeleteOnClose);
 
-            AssertFreeSpace(stream, basePath.FullPath);
+            AssertFreeSpace(size, basePath.FullPath);
 
             try
             {
-                await stream.CopyToAsync(file, cancellationToken);
+                var sw = Stopwatch.StartNew();
+                var swForProgress = Stopwatch.StartNew();
+                long totalRead = 0;
+
+                onProgress?.Invoke($"Copying ZipArchive locally, size: {size}");
+
+                stream.CopyTo(file, readCount =>
+                {
+                    totalRead += readCount;
+                    if (swForProgress.ElapsedMilliseconds > 5000)
+                    {
+                        swForProgress.Restart();
+                        onProgress?.Invoke($"Copied: {new Size(totalRead, SizeUnit.Bytes)}/{size}");
+                    }
+                }, cancellationToken);
+
+                onProgress?.Invoke($"Copied ZipArchive locally, took: {sw.ElapsedMilliseconds:#,#;;0}ms");
+
                 file.Seek(0, SeekOrigin.Begin);
 
                 return file;
@@ -176,20 +194,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private static void AssertFreeSpace(Stream stream, string basePath)
+        private static void AssertFreeSpace(Size size, string basePath)
         {
-            long streamLength;
-
-            try
-            {
-                streamLength = stream.Length;
-            }
-            catch (NotSupportedException)
-            {
-                // nothing we can do
-                return;
-            }
-
             var spaceInfo = DiskUtils.GetDiskSpaceInfo(basePath);
             if (spaceInfo == null)
             {
@@ -201,7 +207,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             // + we need to download the snapshot
             // + leave 1GB of free space
-            var freeSpaceNeeded = new Sparrow.Size(streamLength, SizeUnit.Bytes) + new Sparrow.Size(1, SizeUnit.Gigabytes);
+            var freeSpaceNeeded = size + new Size(1, SizeUnit.Gigabytes);
 
             if (freeSpaceNeeded > spaceInfo.TotalFreeSpace)
                 throw new DiskFullException($"There is not enough space on '{basePath}', we need at least {freeSpaceNeeded} in order to successfully copy the snapshot backup file locally. " +
@@ -210,7 +216,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected abstract Task<Stream> GetStream(string path);
 
-        protected abstract Task<ZipArchive> GetZipArchiveForSnapshot(string path);
+        protected abstract Task<ZipArchive> GetZipArchiveForSnapshot(string path, Action<string> onProgress);
 
         protected abstract Task<List<string>> GetFilesForRestore();
 
@@ -601,7 +607,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             RestoreSettings restoreSettings = null;
 
             var fullBackupPath = GetBackupPath(backupPath);
-            _zipArchiveForSnapshot = await GetZipArchiveForSnapshot(fullBackupPath);
+            _zipArchiveForSnapshot = await GetZipArchiveForSnapshot(fullBackupPath, onProgress: message =>
+            {
+                restoreResult.AddInfo(message);
+                onProgress.Invoke(restoreResult.Progress);
+            });
 
             var restorePath = new VoronPathSetting(RestoreFromConfiguration.DataDirectory);
             if (Directory.Exists(restorePath.FullPath) == false)
