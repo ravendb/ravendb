@@ -1,12 +1,14 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
 using Corax.Indexing;
+using Sparrow;
 
 namespace Corax.Utils;
 
@@ -94,6 +96,8 @@ public static class EntryIdEncodings
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public static void DecodeAndDiscardFrequencyNeon(Span<long> entries, int read)
     {
+        Debug.Assert(AdvInstructionSet.Arm.IsSupported);
+
         int idX = read - (read % Vector128<long>.Count);
         if (read < Vector128<long>.Count)
             goto Classic;
@@ -128,9 +132,9 @@ public static class EntryIdEncodings
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static void DecodeAndDiscardFrequency(Span<long> entries, int read)
     {
-        if (Vector256.IsHardwareAccelerated)
+        if (AdvInstructionSet.IsAcceleratedVector256)
             DecodeAndDiscardFrequencyVector256(entries, read);
-        else if (AdvSimd.IsSupported)
+        else if (AdvInstructionSet.Arm.IsSupported)
             DecodeAndDiscardFrequencyNeon(entries, read);
         else
             DecodeAndDiscardFrequencyClassic(entries, read);
@@ -164,43 +168,20 @@ public static class EntryIdEncodings
         return FrequencyReconstructionFromQuantization(FrequencyQuantization(frequency));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     internal static long FrequencyQuantization(short frequency)
     {
-        if (Lzcnt.IsSupported)
-            return LzcntFrequencyQuantization(frequency);
-        if (ArmBase.Arm64.IsSupported)
-            return ArmLzcntFrequencyQuantization(frequency);
-        
-        return FrequencyQuantizationWithoutAcceleration(frequency);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static long ArmLzcntFrequencyQuantization(short frequency)
-    {
         if (frequency < 16)
             return frequency;
 
-        var leadingZeros = ArmBase.Arm64.LeadingZeroCount(frequency);
-        var level = (60 - leadingZeros + (leadingZeros & 0b1)) >> 1;
-        var mod = (frequency - Step[level - 1]) / LevelSizeInStep[level];
-        Debug.Assert((long)mod < 16);
-        return ((long)(level << 4)) | (long)mod;
-    }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static long LzcntFrequencyQuantization(short frequency)
-    {
-        if (frequency < 16)
-            return frequency;
-
-        var leadingZeros = Lzcnt.LeadingZeroCount((uint)frequency);
+        var leadingZeros = BitOperations.LeadingZeroCount((uint)frequency);
         var level = (28 - leadingZeros + (leadingZeros & 0b1)) >> 1;
         var mod = (frequency - Step[level - 1]) / LevelSizeInStep[level];
         Debug.Assert((long)mod < 16);
         return ((long)(level << 4)) | (long)mod;
     }
 
-    public static long FrequencyQuantizationWithoutAcceleration(short frequency)
+    internal static long FrequencyQuantizationReference(short frequency)
     {
         if (frequency < 16) //shortcut
             return frequency;

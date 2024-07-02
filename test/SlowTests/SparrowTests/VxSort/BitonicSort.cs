@@ -80,7 +80,7 @@ namespace SlowTests.SparrowTests.VxSort
                 () => GenerateData(size, seed))
             select new object[] { generator.Labeled($"{size:000}/R{i}") };
 
-        [RavenMultiplatformTheory(RavenTestCategory.Intrinsics, RavenIntrinsics.Sse42)]
+        [RavenMultiplatformTheory(RavenTestCategory.Intrinsics, RavenIntrinsics.Avx256)]
         [MemberData(nameof(PreSorted))]
         [MemberData(nameof(HalfMinValue))]
         [MemberData(nameof(HalfMaxValue))]
@@ -103,7 +103,7 @@ namespace SlowTests.SparrowTests.VxSort
             Assert.Equal(randomData, sortedData);
         }
 
-        [RavenMultiplatformTheory(RavenTestCategory.Intrinsics, RavenIntrinsics.Sse42)]
+        [RavenMultiplatformTheory(RavenTestCategory.Intrinsics, RavenIntrinsics.Avx256)]
         [MemberData(nameof(PreSorted))]
         [MemberData(nameof(HalfMinValue))]
         [MemberData(nameof(HalfMaxValue))]
@@ -133,7 +133,7 @@ namespace SlowTests.SparrowTests.VxSort
             Assert.Equal(randomData, sortedData);
         }
 
-        [RavenMultiplatformTheory(RavenTestCategory.Intrinsics, RavenIntrinsics.Sse42)]
+        [RavenMultiplatformTheory(RavenTestCategory.Intrinsics, RavenIntrinsics.Avx256)]
         [MemberData(nameof(PreSorted))]
         [MemberData(nameof(HalfMinValue))]
         [MemberData(nameof(HalfMaxValue))]
@@ -163,7 +163,7 @@ namespace SlowTests.SparrowTests.VxSort
             Assert.Equal(randomData, sortedData);
         }
 
-        [RavenMultiplatformTheory(RavenTestCategory.Intrinsics, RavenIntrinsics.Sse42)]
+        [RavenMultiplatformTheory(RavenTestCategory.Intrinsics, RavenIntrinsics.Avx256)]
         [MemberData(nameof(PreSorted))]
         [MemberData(nameof(HalfMinValue))]
         [MemberData(nameof(HalfMaxValue))]
@@ -193,7 +193,7 @@ namespace SlowTests.SparrowTests.VxSort
             Assert.Equal(randomData, sortedData);
         }
 
-        [RavenMultiplatformTheory(RavenTestCategory.Intrinsics, RavenIntrinsics.Sse42)]
+        [RavenMultiplatformTheory(RavenTestCategory.Intrinsics, RavenIntrinsics.Avx256)]
         [MemberData(nameof(PreSorted))]
         [MemberData(nameof(HalfMinValue))]
         [MemberData(nameof(HalfMaxValue))]
@@ -223,7 +223,7 @@ namespace SlowTests.SparrowTests.VxSort
             Assert.Equal(randomData, sortedData);
         }
 
-        [RavenMultiplatformTheory(RavenTestCategory.Intrinsics, RavenIntrinsics.Sse42)]
+        [RavenMultiplatformTheory(RavenTestCategory.Intrinsics, RavenIntrinsics.Avx256)]
         [MemberData(nameof(PreSorted))]
         [MemberData(nameof(HalfMinValue))]
         [MemberData(nameof(HalfMaxValue))]

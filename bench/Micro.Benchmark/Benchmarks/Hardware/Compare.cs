@@ -159,13 +159,13 @@ namespace Micro.Benchmark.Benchmarks.Hardware
         [Benchmark]
         public int Avx2Ref()
         {
-            return Memory.CompareAvx2(ref Unsafe.AsRef<byte>(source.Ptr), ref Unsafe.AsRef<byte>(destination.Ptr), Length);
+            return Memory.CompareAvx256(ref Unsafe.AsRef<byte>(source.Ptr), ref Unsafe.AsRef<byte>(destination.Ptr), Length);
         }
 
         [Benchmark]
         public int Avx2()
         {
-            return Memory.CompareAvx2(source.Ptr, destination.Ptr, Length);
+            return Memory.CompareAvx256(source.Ptr, destination.Ptr, Length);
         }
 
         [Benchmark]
@@ -197,7 +197,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
         public int Avx2_WithCacheMisses()
         {
             int index = randomLocation[(_randomIdx++) % Operations];
-            return Memory.CompareAvx2(source.Ptr + index, destination.Ptr + index, Length);
+            return Memory.CompareAvx256(source.Ptr + index, destination.Ptr + index, Length);
         }
 
         [Benchmark]

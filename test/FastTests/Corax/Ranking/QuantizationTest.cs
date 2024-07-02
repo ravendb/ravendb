@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
@@ -24,7 +25,7 @@ public class QuantizationTest : RavenTestBase
         for (short value = 1; value < short.MaxValue; ++value)
         {
             var quantized = EntryIdEncodings.FrequencyQuantization(value);
-            var quantizedByClassic = EntryIdEncodings.FrequencyQuantizationWithoutAcceleration(value);
+            var quantizedByClassic = EntryIdEncodings.FrequencyQuantizationReference(value);
             Assert.Equal(quantizedByClassic, quantized);
             Assert.True(quantized <= byte.MaxValue); //In range
 
@@ -56,7 +57,7 @@ public class QuantizationTest : RavenTestBase
         Assert.Equal(idsWithShifted, idsWithShiftedCopy);
     }
 
-    [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Intrinsics, RavenIntrinsics.AdvSimd)]
+    [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Intrinsics, RavenIntrinsics.ArmBase)]
     [InlineData(7)]
     [InlineData(8)]
     [InlineData(16)]
@@ -107,7 +108,7 @@ public class QuantizationTest : RavenTestBase
         }
     }
     
-    [RavenMultiplatformFact(RavenTestCategory.Corax | RavenTestCategory.Intrinsics, RavenIntrinsics.Avx2)]
+    [RavenMultiplatformFact(RavenTestCategory.Corax | RavenTestCategory.Intrinsics, RavenIntrinsics.Avx256)]
     public unsafe void CanSafelyReadVectorFromManagedMemory()
     {
         var toDelete = new List<int[]>();
