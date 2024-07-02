@@ -340,17 +340,19 @@ $table-bg-scale: 30% !default;
     @return mix(color.scale(color.scale($color, $lightness: -40%), $saturation: 30%), $panel-bg-1, $weight);
 }
 
-$color-support-free: $color-4;
-$color-support-professional: $color-4-2;
-$color-support-production: $color-5;
+$community: $color-4;
+$professional: $color-4-2;
+$enterprise: $color-5;
+
+$color-support-free: $community;
+$color-support-professional: $professional;
+$color-support-production: $enterprise;
 
 $node-color: $color-3-1;
 $shard-color: $color-4-1;
 $orchestrator-color: $color-2-1;
 $progress-color: $color-2-3;
 
-$professional: $color-4-2;
-$enterprise: $color-5;
 $developer: #c7ff6b;
 
 // Color system
@@ -418,6 +420,7 @@ $theme-colors: (
     "shard": $shard-color,
     "orchestrator": $orchestrator-color,
     "progress": $progress-color,
+    "community": $community,
     "professional": $professional,
     "enterprise": $enterprise,
     "developer": $developer,

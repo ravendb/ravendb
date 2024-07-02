@@ -1,0 +1,158 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+@use "Content/scss/variables";
+
+$btn-default-dimension: 36px;
+
+@keyframes rotate {
+    to {
+        --angle: 360deg;
+    }
+}
+
+@property --angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+}
+
+.bottom-right-tools-container {
+    position: fixed;
+    right: sizes.$gutter-sm;
+    bottom: sizes.$gutter-sm;
+
+    .btn-help-widget,
+    .btn-hide-widget {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: colors.$primary-var;
+        border: 1px solid colors.$link-color;
+        border-radius: $btn-default-dimension;
+        transition: bs5variables.$transition-base;
+
+        &:hover {
+            filter: colors.$hover-filter-var;
+        }
+    }
+
+    .btn-help-widget {
+        width: $btn-default-dimension;
+        height: $btn-default-dimension;
+
+        i {
+            line-height: $btn-default-dimension;
+        }
+    }
+
+    .btn-hide-widget {
+        position: absolute;
+        top: -#{sizes.$gutter};
+        right: 0;
+        height: 18px;
+        width: 18px;
+        font-size: sizes.$font-size-xs;
+    }
+
+    .action-menu {
+        position: relative;
+        width: 320px;
+        background-color: colors.$panel-bg-1-var;
+        border: 1px solid colors.$border-color-light-var;
+        border-radius: sizes.$border-radius-md;
+        z-index: variables.$zindex-help-widget;
+
+        &__list {
+            display: flex;
+            flex-direction: column;
+            gap: sizes.$gutter-xs;
+            padding: sizes.$gutter-sm;
+            list-style-type: none;
+            margin: 0;
+        }
+
+        &__header {
+            background-color: colors.$panel-header-bg-var;
+            padding: sizes.$gutter-sm;
+            border-bottom: 1px solid colors.$border-color-light-var;
+            border-top-left-radius: sizes.$border-radius-md;
+            border-top-right-radius: sizes.$border-radius-md;
+            position: relative;
+            display: flex;
+            flex-direction: row;
+            align-items: baseline;
+
+            &::before {
+                content: "";
+                background-image: url("../../../../wwwroot/Content/img/rook/with-coffee.svg");
+                position: absolute;
+                right: sizes.$gutter-md;
+                bottom: 0;
+                height: 90px;
+                width: 60px;
+                background-repeat: no-repeat;
+            }
+
+            h4 {
+                margin: 0;
+            }
+        }
+
+        &__back {
+            transition: bs5variables.$transition-base;
+
+            &:hover {
+                filter: colors.$hover-filter-var;
+                transform: translateX(-4px);
+            }
+        }
+
+        &__list-item {
+            position: relative;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: sizes.$gutter-xs;
+            background-color: colors.$panel-header-bg-var;
+            padding: sizes.$gutter-xs;
+            border: 1px solid colors.$border-color-light-var;
+            border-radius: sizes.$border-radius;
+            transition: bs5variables.$transition-base;
+            color: colors.$text-emphasis-var;
+
+            &--highlight {
+                border: 1px solid transparent;
+                animation: 6s rotate linear infinite;
+                background: linear-gradient(colors.$panel-header-bg-var, colors.$panel-header-bg-var) padding-box, linear-gradient(
+                        var(--angle),
+                        colors.$color-5-1,
+                        colors.$color-1-2,
+                        colors.$color-2-1
+                ) border-box;
+            }
+
+            &--primary {
+                border: 1px solid colors.$link-color;
+                background-color: colors.$primary-var;
+            }
+
+            &--cloud {
+                border: 1px solid lighten(colors.$brand-cloud, 15%);
+                background-color: colors.$brand-cloud;
+                color: colors.$black;
+            }
+
+            &:hover {
+                filter: colors.$hover-filter-var;
+            }
+        }
+
+        &__footer {
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid colors.$border-color-light-var;
+            padding: sizes.$gutter-sm;
+        }
+    }
+}
