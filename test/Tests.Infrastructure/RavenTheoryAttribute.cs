@@ -1,5 +1,5 @@
-﻿using xRetry;
-using Xunit;
+﻿using System;
+using xRetry;
 using Xunit.Sdk;
 
 namespace Tests.Infrastructure;
@@ -10,7 +10,13 @@ public class RavenTheoryAttribute : RetryTheoryAttribute, ITraitAttribute
     private string _skip;
     private readonly RavenTestCategory _category;
 
-    public RavenTheoryAttribute(RavenTestCategory category)
+    public RavenTheoryAttribute(RavenTestCategory category) : base(maxRetries: 1)
+    {
+        _category = category;
+    }
+
+    public RavenTheoryAttribute(RavenTestCategory category, bool retryable, int maxRetries = 3, int delayBetweenRetriesMs = 1000, params Type[] skipOnExceptions)
+        : base(retryable ? maxRetries : 1, delayBetweenRetriesMs, skipOnExceptions)
     {
         _category = category;
     }

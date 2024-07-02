@@ -57,7 +57,7 @@ namespace SlowTests.Authentication
             Server.Dispose();
         }
 
-        [RavenFact(RavenTestCategory.Certificates, delayBetweenRetriesMs: 1000)]
+        [RavenFact(RavenTestCategory.Certificates, retryable: true)]
         public async Task CanGetLetsEncryptCertificateAndRenewIt()
         {
             var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
@@ -234,7 +234,7 @@ namespace SlowTests.Authentication
             return setupInfo;
         }
 
-        [RavenFact(RavenTestCategory.Certificates | RavenTestCategory.Sharding, delayBetweenRetriesMs: 1000)]
+        [RavenFact(RavenTestCategory.Certificates | RavenTestCategory.Sharding, retryable: true)]
         public async Task CertificateReplaceSharded()
         {
             var acmeStagingUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";

@@ -1,6 +1,5 @@
 ﻿using System;
 using xRetry;
-using Xunit;
 using Xunit.Sdk;
 
 namespace Tests.Infrastructure;
@@ -16,8 +15,8 @@ public class RavenFactAttribute : RetryFactAttribute, ITraitAttribute
         _category = category;
     }
 
-    public RavenFactAttribute(RavenTestCategory category, int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
-    : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
+    public RavenFactAttribute(RavenTestCategory category, bool retryable, int maxRetries = 3, int delayBetweenRetriesMs = 1000, params Type[] skipOnExceptions)
+        : base(retryable ? maxRetries : 1, delayBetweenRetriesMs, skipOnExceptions)
     {
         _category = category;
     }
