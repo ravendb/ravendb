@@ -1,14 +1,23 @@
-﻿using Xunit;
+﻿using System;
+using xRetry;
+using Xunit;
 using Xunit.Sdk;
 
 namespace Tests.Infrastructure;
 
 [TraitDiscoverer("Tests.Infrastructure.XunitExtensions.RavenTraitDiscoverer", "Tests.Infrastructure")]
-public class RavenFactAttribute : FactAttribute, ITraitAttribute
+public class RavenFactAttribute : RetryFactAttribute, ITraitAttribute
 {
     private string _skip;
     private readonly RavenTestCategory _category;
-    public RavenFactAttribute(RavenTestCategory category)
+
+    public RavenFactAttribute(RavenTestCategory category) : base(maxRetries: 1)
+    {
+        _category = category;
+    }
+
+    public RavenFactAttribute(RavenTestCategory category, int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
+    : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
     {
         _category = category;
     }
