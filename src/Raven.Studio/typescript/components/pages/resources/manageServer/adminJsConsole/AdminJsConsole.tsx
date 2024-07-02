@@ -128,7 +128,7 @@ export default function AdminJSConsole() {
                                             <RunScriptButton
                                                 type="submit"
                                                 isSpinning={asyncRunAdminJsScript.status === "loading"}
-                                                disabled={!formState.isDirty || !isScriptValid}
+                                                disabled={!isScriptValid}
                                             />
                                             <div>
                                                 <h3>Script result</h3>
