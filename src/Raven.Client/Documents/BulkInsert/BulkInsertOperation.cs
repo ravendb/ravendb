@@ -332,7 +332,7 @@ namespace Raven.Client.Documents.BulkInsert
                 _inProgressCommand = CommandType.None;
                 _currentWriter.Write("{\"Type\":\"HeartBeat\"}");
 
-                await FlushIfNeeded().ConfigureAwait(false);
+                await FlushIfNeeded(force: true).ConfigureAwait(false);
             }
             catch (Exception)
             {
@@ -542,7 +542,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
 
-        private async Task FlushIfNeeded()
+        private async Task FlushIfNeeded(bool force = false)
         {
             await _currentWriter.FlushAsync().ConfigureAwait(false);
 
@@ -556,8 +556,8 @@ namespace Raven.Client.Documents.BulkInsert
                 _backgroundWriter = tmp;
                 _currentWriter.BaseStream.SetLength(0);
                 ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
-
-                _asyncWrite = WriteToRequestBodyStreamAsync(buffer, IsHeartbeatIntervalExceeded());
+                force = force || IsHeartbeatIntervalExceeded();
+                _asyncWrite = WriteToRequestBodyStreamAsync(buffer, force: force);
             }
         }
 
