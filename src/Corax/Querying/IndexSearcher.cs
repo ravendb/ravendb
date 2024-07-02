@@ -518,10 +518,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return exists;
     }
 
-    internal bool TryGetPostingListForNull(in FieldMetadata field, out long postingListId)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool TryGetPostingListForNull(in FieldMetadata field, out long postingListId) => TryGetPostingListForNull(field.FieldName, out postingListId);
+    
+    private bool TryGetPostingListForNull(Slice name, out long postingListId)
     {
         InitNullPostingList();
-        var result = _nullPostingList?.ReadStructure<(long PostingListId,long TermContainerId)>(field.FieldName);
+        var result = _nullPostingList?.ReadStructure<(long PostingListId,long TermContainerId)>(name);
         if (result == null)
         {
             postingListId = -1;

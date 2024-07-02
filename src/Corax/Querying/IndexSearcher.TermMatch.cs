@@ -160,7 +160,7 @@ public partial class IndexSearcher
         return termRatioToWholeCollection;
     }
 
-    internal TermMatch TermQuery(in FieldMetadata field, long containerId, double termRatioToWholeCollection)
+    public TermMatch TermQuery(in FieldMetadata field, long containerId, double termRatioToWholeCollection)
     {
         TermMatch matches;
         if ((containerId & (long)TermIdMask.PostingList) != 0)
@@ -234,16 +234,19 @@ public partial class IndexSearcher
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal long NumberOfDocumentsUnderSpecificTerm(CompactTree tree, Slice term)
     {
-        return NumberOfDocumentsUnderSpecificTerm(tree, term.AsReadOnlySpan());
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private long NumberOfDocumentsUnderSpecificTerm(CompactTree tree, ReadOnlySpan<byte> term)
-    {
-        if (tree.TryGetValue(term, out var value) == false)
+        var termAsSpan = term.AsReadOnlySpan();
+        if (tree.TryGetValue(termAsSpan, out long containerId) == false)
+        {
+            if (termAsSpan is [0])
+            {
+                if (TryGetPostingListForNull(tree.Name, out containerId))
+                    return NumberOfDocumentsUnderSpecificTerm(containerId);
+            }
+            
             return 0;
-
-        return NumberOfDocumentsUnderSpecificTerm(value);
+        }
+        
+        return NumberOfDocumentsUnderSpecificTerm(containerId);
     }
     
     private long NumberOfDocumentsUnderSpecificTerm(long containerId)
