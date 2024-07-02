@@ -262,7 +262,7 @@ namespace Raven.Server.Documents.Subscriptions
             };
         }
 
-        private async Task NoopAcknowledgeSubscription()
+        private async Task NoopAcknowledgeSubscriptionAsync(bool force)
         {
             var command = GetAcknowledgeSubscriptionBatchCommand(nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                 ISubscriptionConnection.NonExistentBatch, docsToResend: null);
@@ -285,6 +285,12 @@ namespace Raven.Server.Documents.Subscriptions
                     command.AssertSubscriptionState(rawDatabaseRecord, subscriptionTask, command.SubscriptionName);
                     return;
                 }
+            }
+
+            if (force == false && _subscriptionStorage.ShouldWaitForClusterStabilization())
+            {
+                // in case of unstable cluster, we will try to heartbeat the client for 30 seconds and then send actual no-op command
+                return;
             }
 
             var (etag, _) = await _server.SendToLeaderAsync(command);
@@ -355,7 +361,7 @@ namespace Raven.Server.Documents.Subscriptions
         private long _lastNoopAckTicks;
         private Task _lastNoopAckTask = Task.CompletedTask;
 
-        public Task SendNoopAck()
+        public Task SendNoopAck(bool force = false)
         {
             if (IsConcurrent)
             {
@@ -370,14 +376,14 @@ namespace Raven.Server.Documents.Subscriptions
                 if (currentLastNoopAckTicks != localLastNoopAckTicks)
                     return _lastNoopAckTask;
 
-                var ackTask = NoopAcknowledgeSubscription();
+                var ackTask = NoopAcknowledgeSubscriptionAsync(force);
 
                 Interlocked.Exchange(ref _lastNoopAckTask, ackTask);
 
                 return ackTask;
             }
 
-            return NoopAcknowledgeSubscription();
+            return NoopAcknowledgeSubscriptionAsync(force);
         }
     }
 }
