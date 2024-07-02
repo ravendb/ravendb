@@ -25,8 +25,8 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore(options))
             {
                 new MapReduceWithOutputToCollection().Execute(store);
-                new JavaIndex(options.SearchEngineMode is RavenSearchEngineMode.Corax).Execute(store);
-                new JavaWithAdditionalSourcesIndex(options.SearchEngineMode is RavenSearchEngineMode.Corax).Execute(store);
+                new JavaIndex().Execute(store);
+                new JavaWithAdditionalSourcesIndex().Execute(store);
                 string entityId;
                 using (var session = store.OpenSession())
                 {
@@ -175,7 +175,7 @@ namespace SlowTests.Issues
         private class JavaIndex : AbstractJavaScriptIndexCreationTask
         {
             public override string IndexName => "JavaIndex";
-            public JavaIndex(bool skipIndexingComplexFields)
+            public JavaIndex()
             {
                 Maps = new HashSet<string>
                 {
@@ -206,18 +206,15 @@ namespace SlowTests.Issues
                 {
                     {
                         Constants.Documents.Indexing.Fields.AllFields, new IndexFieldOptions { Storage = FieldStorage.Yes }
-                    },
+                    }
                 };
-                
-                if (skipIndexingComplexFields)
-                    Fields.Add("Communication", new IndexFieldOptions(){Storage = FieldStorage.Yes, Indexing = FieldIndexing.No});
             }
         }
 
         private class JavaWithAdditionalSourcesIndex : AbstractJavaScriptIndexCreationTask
         {
             public override string IndexName => "JavaWithAdditionalSourcesIndex";
-            public JavaWithAdditionalSourcesIndex(bool skipIndexingComplexFields)
+            public JavaWithAdditionalSourcesIndex()
             {
                 Maps = new HashSet<string>
                 {
@@ -239,12 +236,6 @@ namespace SlowTests.Issues
                 })";
 
                 OutputReduceToCollection = @"ThirdOutput";
-
-                if (skipIndexingComplexFields)
-                {
-                    Fields ??= new();
-                    Fields.Add("Communications", new IndexFieldOptions(){Storage = FieldStorage.Yes, Indexing = FieldIndexing.No});
-                }
 
                 AdditionalSources = new Dictionary<string, string>
                 {

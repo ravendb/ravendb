@@ -24,7 +24,22 @@
         <span class="help-block" data-bind="validationMessage: factoryName"></span>
         <div class="has-warning" data-bind="visible: factoryName() === 'MySql.Data.MySqlClient'">
             <div class="help-block">
-                <i class="icon-warning"></i> <span> This connector is deprecated</span>
+                <i class="icon-warning"></i>
+                <span>
+                    This connector is deprecated. 
+                    MySqlConnector will be used instead. 
+                    Please update Factory to: MySqlConnector.MySqlConnectorFactory.
+                </span>
+            </div>
+        </div>
+        <div class="has-warning" data-bind="visible: factoryName() === 'System.Data.SqlClient'">
+            <div class="help-block">
+                <i class="icon-warning"></i>
+                <span>
+                    This connector is deprecated. 
+                    Microsoft SqlClient will be used instead. 
+                    Please update Factory to: Microsoft.Data.SqlClient.
+                </span>
             </div>
         </div>
     </div>

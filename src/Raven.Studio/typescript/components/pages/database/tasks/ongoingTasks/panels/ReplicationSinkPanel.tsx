@@ -38,12 +38,12 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
         <RichPanelDetails>
             <RichPanelDetailItem label="Hub Name">{data.shared.hubName}</RichPanelDetailItem>
             <ConnectionStringItem
-                connectionStringDefined={!!data.shared.destinationDatabase}
+                connectionStringDefined={connectionStringDefined}
                 canEdit={canEdit}
                 connectionStringName={data.shared.connectionStringName}
                 connectionStringsUrl={connectionStringsUrl}
             />
-            {connectionStringDefined && (
+            {data.shared.destinationDatabase && (
                 <RichPanelDetailItem label="Hub Database">{data.shared.destinationDatabase}</RichPanelDetailItem>
             )}
             <RichPanelDetailItem label="Actual Hub URL">{data.shared.destinationUrl ?? "N/A"}</RichPanelDetailItem>

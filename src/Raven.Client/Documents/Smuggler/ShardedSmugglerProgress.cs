@@ -31,6 +31,7 @@ public sealed class ShardedSmugglerProgress : SmugglerResult.SmugglerProgress, I
         Counters = sp.Counters;
         TimeSeries = sp.TimeSeries;
         CompareExchangeTombstones = sp.CompareExchangeTombstones;
+        TimeSeriesDeletedRanges = sp.TimeSeriesDeletedRanges;
     }
 
     public override DynamicJsonValue ToJson()

@@ -64,9 +64,7 @@ type PointsWithTags = yup.InferType<ReturnType<typeof getPointsWithTagsSchema>>;
 function getEncryptionKeySchema(sourceType: RestoreSource) {
     return yup.string().when(["$sourceType", "pointsWithTags"], {
         is: (currentSourceType: RestoreSource, pointsWithTags: PointsWithTags) =>
-            currentSourceType === sourceType &&
-            pointsWithTags[0]?.restorePoint?.isEncrypted &&
-            !pointsWithTags[0]?.restorePoint?.isSnapshotRestore,
+            currentSourceType === sourceType && pointsWithTags[0]?.restorePoint?.isEncrypted,
         then: (schema) => schema.base64().required(),
     });
 }

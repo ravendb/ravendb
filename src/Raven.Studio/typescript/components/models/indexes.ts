@@ -22,7 +22,6 @@ export interface IndexSharedInfo {
     patternForReferencesToReduceOutputCollection: string;
     collectionNameForReferenceDocuments: string;
     nodesInfo: IndexNodeInfo[];
-    createdTimestamp: Date;
     referencedCollections: string[];
 }
 
@@ -32,6 +31,7 @@ export interface IndexNodeInfo {
     details: IndexNodeInfoDetails;
     loadError?: any;
     progress: IndexProgressInfo;
+    createdTimestamp: Date;
 }
 
 export interface IndexProgressInfo {
@@ -62,7 +62,8 @@ export interface IndexNodeInfoDetails {
 
 export type IndexGroupBy = "Collection" | "None";
 export type IndexSortBy =
-    | Extract<keyof IndexSharedInfo, "name" | "createdTimestamp">
+    | Extract<keyof IndexSharedInfo, "name">
+    | Extract<keyof IndexNodeInfo, "createdTimestamp">
     | Extract<keyof IndexNodeInfoDetails, "lastIndexingTime" | "lastQueryingTime">;
 
 export interface IndexFilterCriteria {

@@ -9,6 +9,7 @@ class glacierSettings extends amazonSettings {
     view = require("views/database/tasks/destinations/glacierSettings.html");
     
     vaultName = ko.observable<string>();
+    isSecretHidden = ko.observable<boolean>(true);
 
     targetOperation: string;
     
@@ -86,6 +87,10 @@ class glacierSettings extends amazonSettings {
             VaultName: null,
             GetBackupConfigurationScript: null
         }, allowedRegions, targetOperation);
+    }
+    
+    toggleIsSecretHidden() {
+        this.isSecretHidden(!this.isSecretHidden());
     }
 }
 

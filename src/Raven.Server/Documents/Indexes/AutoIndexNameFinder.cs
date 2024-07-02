@@ -12,6 +12,8 @@ namespace Raven.Server.Documents.Indexes
 {
     public sealed class AutoIndexNameFinder
     {
+        public const string AutoIndexPrefix = "Auto/";
+
         public static string FindMapIndexName(string collection, IReadOnlyCollection<AutoIndexField> fields)
         {
             return FindName(collection, fields, isMapReduce: false);
@@ -42,7 +44,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (fields.Count == 0)
             {
-                var collectionOnly = $"Auto/{collection}";
+                var collectionOnly = $"{AutoIndexPrefix}{collection}";
 
                 if (isMapReduce == false)
                     return $"{collectionOnly}/By{Constants.Documents.Indexing.Fields.DocumentIdFieldName.ToUpperFirstLetter()}";
@@ -52,7 +54,7 @@ namespace Raven.Server.Documents.Indexes
             
             var combinedFields = string.Join("And", fields.Select(GetName).OrderBy(x => x, StringComparer.Ordinal));
 
-            string formattableString = $"Auto/{collection}/By{combinedFields}";
+            string formattableString = $"{AutoIndexPrefix}{collection}/By{combinedFields}";
             if (formattableString.Length > 256)
             {
                 var shorterString = formattableString.Substring(0, 256) + "..." +

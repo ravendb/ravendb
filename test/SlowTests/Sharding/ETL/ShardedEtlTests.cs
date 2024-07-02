@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -12,6 +11,7 @@ using Elastic.Clients.Elasticsearch.IndexManagement;
 using Elastic.Transport.Products.Elasticsearch;
 using FastTests;
 using FastTests.Client;
+using Microsoft.Data.SqlClient;
 using Parquet;
 using Raven.Client;
 using Raven.Client.Documents;

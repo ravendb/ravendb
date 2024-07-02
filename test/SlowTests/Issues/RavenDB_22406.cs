@@ -15,7 +15,7 @@ public class RavenDB_22406 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
     public void CanIndexProperlyWithOneInvalidDocument(Options options)
     {
         using var store = GetDocumentStore(options);

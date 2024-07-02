@@ -21,6 +21,7 @@ export interface FormEncryptionProps<TFieldValues extends FieldValues, TName ext
     fileName: string;
     setEncryptionKey: (value: string) => void;
     triggerEncryptionKey: () => Promise<boolean>;
+    isReadOnly?: boolean;
 }
 
 export default function FormEncryption<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>({
@@ -32,6 +33,7 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
     fileName,
     setEncryptionKey,
     triggerEncryptionKey,
+    isReadOnly,
 }: FormEncryptionProps<TFieldValues, TName>) {
     const { databasesService } = useServices();
 
@@ -99,14 +101,21 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                     <div className="small-label mb-1">Key (Base64 Encoding)</div>
                     <div className="d-flex">
                         <InputGroup>
-                            <FormInput type="text" control={control} name={encryptionKeyFieldName} />
-                            <Button
-                                type="button"
-                                title="Regenerate key"
-                                onClick={() => asyncGenerateSecret.execute(true)}
-                            >
-                                <Icon icon="reset" margin="m-0" />
-                            </Button>
+                            <FormInput
+                                type="text"
+                                control={control}
+                                name={encryptionKeyFieldName}
+                                readOnly={isReadOnly}
+                            />
+                            {!isReadOnly && (
+                                <Button
+                                    type="button"
+                                    title="Regenerate key"
+                                    onClick={() => asyncGenerateSecret.execute(true)}
+                                >
+                                    <Icon icon="reset" margin="m-0" />
+                                </Button>
+                            )}
                         </InputGroup>
                         <ActionButton isEncryptionKeyValid={isEncryptionKeyValid}>
                             <Button

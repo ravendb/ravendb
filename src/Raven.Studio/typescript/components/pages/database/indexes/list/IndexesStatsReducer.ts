@@ -111,7 +111,6 @@ function mapToIndexSharedInfo(stats: IndexStats): IndexSharedInfo {
         patternForReferencesToReduceOutputCollection: stats.ReduceOutputReferencePattern,
         collectionNameForReferenceDocuments: stats.PatternReferencesCollectionName,
         searchEngine: stats.SearchEngineType,
-        createdTimestamp: genUtils.isServerMinDate(stats.CreatedTimestamp) ? null : new Date(stats.CreatedTimestamp),
         referencedCollections: stats.ReferencedCollections,
     };
 }
@@ -131,6 +130,7 @@ function mapToIndexNodeInfo(stats: IndexStats, location: databaseLocationSpecifi
             lastQueryingTime: stats.LastQueryingTime ? new Date(stats.LastQueryingTime) : null,
         },
         progress: null,
+        createdTimestamp: genUtils.isServerMinDate(stats.CreatedTimestamp) ? null : new Date(stats.CreatedTimestamp),
     };
 }
 
@@ -140,6 +140,7 @@ function initNodesInfo(locations: databaseLocationSpecifier[]): IndexNodeInfo[] 
         status: "idle",
         details: null,
         progress: null,
+        createdTimestamp: null,
     }));
 }
 

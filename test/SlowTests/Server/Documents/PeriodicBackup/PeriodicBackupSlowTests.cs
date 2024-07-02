@@ -3975,6 +3975,346 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task can_backup_and_restore_with_deleted_timeseries_ranges(Options options)
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            const string id = "users/1";
+
+            using (var store = GetDocumentStore(options))
+            {
+                var baseline = DateTime.UtcNow;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "fitzchak" }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "heartrate");
+                    for (int i = 0; i < 10; i++)
+                    {
+                        tsf.Append(baseline.AddHours(i), i);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "aviv" }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Null(ts);
+                }
+
+                await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode, isFullBackup: false, backupTaskId);
+            }
+
+            using (var store = GetDocumentStore(options))
+            {
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    // import from each shard backup dir
+                    var dirs = Directory.GetDirectories(backupPath);
+                    Assert.Equal(3, dirs.Length);
+
+                    foreach (var dir in dirs)
+                    {
+                        await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                    }
+                }
+                else
+                {
+                    var dir = Directory.GetDirectories(backupPath).First();
+                    Assert.Equal(2, Directory.GetFiles(dir).Length);
+
+                    await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    Assert.Equal("aviv", user.Name);
+
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Null(ts); // fails, we get 10 entries
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task deleted_ranges_should_be_processed_before_timeseries(Options options)
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            const string id = "users/1";
+
+            using (var store = GetDocumentStore(options))
+            {
+                var baseline = DateTime.UtcNow;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "fitzchak" }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "heartrate");
+                    for (int i = 0; i < 10; i++)
+                    {
+                        tsf.Append(baseline.AddHours(i), i);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+
+                var backupTaskId = await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // delete the document to create a timeseries deleted range 
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // recreate the document and time series, and append a new entry to the series
+                    // importing the deleted range should not delete this new entry
+
+                    await session.StoreAsync(new User { Name = "aviv" }, id);
+                    session.TimeSeriesFor(id, "heartrate").Append(baseline.AddYears(1), 100);
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Equal(1, ts.Length);
+                }
+
+                await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode, isFullBackup: false, backupTaskId);
+            }
+
+            using (var store = GetDocumentStore(options))
+            {
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    // import from each shard backup dir
+                    var dirs = Directory.GetDirectories(backupPath);
+                    Assert.Equal(3, dirs.Length);
+
+                    foreach (var dir in dirs)
+                    {
+                        await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                    }
+                }
+                else
+                {
+                    var dir = Directory.GetDirectories(backupPath).First();
+                    Assert.Equal(2, Directory.GetFiles(dir).Length);
+
+                    await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    Assert.Equal("aviv", user.Name);
+
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Equal(1, ts.Length);
+                    Assert.Equal(100, ts[0].Value);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task deleted_ranges_should_be_processed_before_timeseries2(Options options)
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            const string id = "users/1";
+
+            using (var store = GetDocumentStore(options))
+            {
+                var baseline = DateTime.UtcNow;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "fitzchak" }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "heartrate");
+                    for (int i = 0; i < 10; i++)
+                    {
+                        tsf.Append(baseline.AddHours(i), i);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // delete the document to create a timeseries deleted range 
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // recreate the document and time series, and append a new entry to the series
+
+                    await session.StoreAsync(new User { Name = "aviv" }, id);
+                    session.TimeSeriesFor(id, "heartrate").Append(baseline.AddYears(1), 100);
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // delete the document once again to create another deleted range
+                    // after importing this deleted range we should end up without timeseries
+
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // recreate the document so that we won't have a tombstone to backup
+                    await session.StoreAsync(new User { Name = "egor" }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Null(ts);
+                }
+
+                await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode, isFullBackup: false, backupTaskId);
+            }
+
+            using (var store = GetDocumentStore(options))
+            {
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    // import from each shard backup dir
+                    var dirs = Directory.GetDirectories(backupPath);
+                    Assert.Equal(3, dirs.Length);
+
+                    foreach (var dir in dirs)
+                    {
+                        await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                    }
+                }
+                else
+                {
+                    var dir = Directory.GetDirectories(backupPath).First();
+                    Assert.Equal(2, Directory.GetFiles(dir).Length);
+
+                    await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    Assert.Equal("egor", user.Name);
+
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Null(ts);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task can_skip_deleted_timeseries_ranges_on_import(Options options)
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            const string id = "users/1";
+
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.UtcNow;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "fitzchak" }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "heartrate");
+                    for (int i = 0; i < 10; i++)
+                    {
+                        tsf.Append(baseline.AddHours(i), i);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "aviv" }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Null(ts);
+                }
+
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+
+                Assert.True(WaitForValue(() =>
+                {
+                    var dir = Directory.GetDirectories(backupPath).First();
+                    var files = Directory.GetFiles(dir);
+                    return files.Length == 2;
+                }, expectedVal: true));
+            }
+
+            using (var store = GetDocumentStore(options))
+            {
+                // skip deleted ranges on import
+                var importOptions = new DatabaseSmugglerImportOptions();
+                importOptions.OperateOnTypes &= ~DatabaseItemType.TimeSeriesDeletedRanges;
+
+                await store.Smuggler.ImportIncrementalAsync(importOptions,
+                    Directory.GetDirectories(backupPath).First());
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    Assert.Equal("aviv", user.Name);
+
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Equal(10, ts.Length);
+                }
+            }
+        }
+
         private static IDisposable ReadOnly(string path)
         {
             var files = Directory.GetFiles(path);

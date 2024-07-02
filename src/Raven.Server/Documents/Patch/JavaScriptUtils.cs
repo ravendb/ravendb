@@ -16,6 +16,7 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.TimeSeries;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -142,6 +143,9 @@ namespace Raven.Server.Documents.Patch
             !(args[0].AsObject() is BlittableObjectInstance boi)) 
                 throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
 
+            if (boi.Metadata != null)
+                return boi.Metadata;
+
             var modifiedMetadata = new DynamicJsonValue();
 
             // we need to set the metadata on the blittable itself, because we are might get the actual blittable here instead of Document
@@ -170,8 +174,9 @@ namespace Raven.Server.Documents.Patch
                     Context.ReadObject(modifiedMetadata, boi.DocumentId) : 
                     Context.ReadObject(metadata, boi.DocumentId);
                 
-                JsValue metadataJs = TranslateToJs(_scriptEngine, Context, metadata);
+                var metadataJs = (BlittableObjectInstance)TranslateToJs(_scriptEngine, Context, metadata);
                 boi.Set(Constants.Documents.Metadata.Key, metadataJs);
+                boi.Metadata = metadataJs;
 
                 return metadataJs;
             }
@@ -436,9 +441,10 @@ namespace Raven.Server.Documents.Patch
                 return jsArray;
             }
             // for admin
-            if (o is RavenServer || o is DocumentDatabase)
+            if (o is RavenServer || o is DocumentDatabase || o is DocumentsOperationContext || o is TransactionOperationContext || o is ClusterOperationContext)
             {
                 AssertAdminScriptInstance();
+
                 return JsValue.FromObject(engine, o);
             }
             if (o is ObjectInstance j)

@@ -113,9 +113,12 @@ export default function CreateDatabaseFromBackup({
             const resultDto = await databasesService.restoreDatabaseFromBackup(
                 createDatabaseFromBackupDataUtils.mapToDto(formValues)
             );
-            notificationCenter.instance.openDetailsForOperationById(null, resultDto.OperationId);
 
-            closeModal();
+            try {
+                notificationCenter.instance.openDetailsForOperationById(null, resultDto.OperationId);
+            } finally {
+                closeModal();
+            }
         });
     };
 
@@ -198,11 +201,8 @@ function getActiveStepsList(
     isValidatingDatabaseName: boolean
 ): Step[] {
     const {
-        sourceStep: { sourceType, sourceData, isEncrypted },
+        sourceStep: { isEncrypted },
     } = formValues;
-
-    const isEncryptionActive =
-        sourceType && isEncrypted && !sourceData[sourceType].pointsWithTags[0].restorePoint?.isEncrypted;
 
     const allSteps: Step[] = [
         {
@@ -216,7 +216,7 @@ function getActiveStepsList(
         {
             id: "encryptionStep",
             label: "Encryption",
-            active: isEncryptionActive,
+            active: isEncrypted,
             isInvalid: !!errors.encryptionStep,
         },
         {
@@ -241,6 +241,11 @@ function getStepViews(
         formValues.encryptionStep.key
     );
 
+    const sourceType = formValues.sourceStep.sourceType;
+    const firstRestorePoint = formValues.sourceStep.sourceData[sourceType]?.pointsWithTags?.[0]?.restorePoint;
+    const isEncryptionReadOnly =
+        firstRestorePoint && firstRestorePoint.isEncrypted && firstRestorePoint.isSnapshotRestore;
+
     return {
         basicInfoStep: <StepBasicInfo />,
         sourceStep: <StepSource />,
@@ -254,6 +259,7 @@ function getStepViews(
                 triggerEncryptionKey={() => trigger("encryptionStep.key")}
                 encryptionKeyFieldName="encryptionStep.key"
                 isSavedFieldName="encryptionStep.isKeySaved"
+                isReadOnly={isEncryptionReadOnly}
             />
         ),
         dataDirectoryStep: <StepPath isBackupFolder manualSelectedNodes={null} />,

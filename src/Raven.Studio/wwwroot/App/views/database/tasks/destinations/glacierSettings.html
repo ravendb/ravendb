@@ -39,6 +39,14 @@
 <div class="row margin-bottom" data-bind="validationElement: awsSecretKey">
     <label class="control-label col-xs-12 col-sm-6 col-lg-4">Secret key <i class="required"></i></label>
     <div class="col-xs-12 col-sm-6 col-lg-8">
-        <input data-bind="textInput: awsSecretKey" type="password" class="form-control" />
+        <div class="input-group flex-grow">
+            <input data-bind="textInput: awsSecretKey, attr: { type: isSecretHidden() ? 'password' : 'text' }" class="form-control" />
+            <button type="button" class="btn btn-default" data-bind="click: toggleIsSecretHidden, visible: isSecretHidden()" title="View hidden characters">
+                <i class="icon-preview"></i>
+            </button>
+            <button type="button" class="btn btn-info" data-bind="click: toggleIsSecretHidden, visible: !isSecretHidden()" title="Hide characters">
+                <i class="icon-preview-off"></i>
+            </button>
+        </div>
     </div>
 </div>

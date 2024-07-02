@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax.Analyzers;
-using Corax.Indexing;
 using Corax.Pipeline;
 using Corax.Utils;
 using Sparrow.Json;
@@ -29,7 +28,7 @@ public partial class IndexWriter
 
         public long EntryId => _entryId;
 
-        public IndexEntryBuilder(Indexing.IndexWriter parent)
+        public IndexEntryBuilder(IndexWriter parent)
         {
             _parent = parent;
         }

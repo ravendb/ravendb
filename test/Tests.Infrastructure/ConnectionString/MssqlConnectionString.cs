@@ -1,5 +1,6 @@
 using System;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
+using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 
 namespace Tests.Infrastructure.ConnectionString
 {
@@ -15,11 +16,14 @@ namespace Tests.Infrastructure.ConnectionString
 
         protected override string VerifiedConnectionStringFactory(string cs)
         {
-            const string localConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3";
+            const string localConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3;Encrypt=Optional";
             if (TryConnect(localConnectionString, out var errorMessage))
                 return localConnectionString;
 
             var remoteConnectionString = Environment.GetEnvironmentVariable(EnvironmentVariable);
+
+            remoteConnectionString = SqlConnectionStringUtil.GetConnectionStringWithOptionalEncrypt(remoteConnectionString);
+            
             if (TryConnect(remoteConnectionString, out errorMessage))
                 return remoteConnectionString;
 

@@ -12,6 +12,7 @@ class azureSettings extends backupSettings {
     remoteFolderName = ko.observable<string>();
     accountName = ko.observable<string>();
     accountKey = ko.observable<string>();
+    isKeyHidden = ko.observable<boolean>(true);
     sasToken = ko.observable<string>();
 
     targetOperation: string;
@@ -118,6 +119,10 @@ class azureSettings extends backupSettings {
             SasToken: null,
             GetBackupConfigurationScript: null
         }, targetOperation);
+    }
+
+    toggleIsKeyHidden() {
+        this.isKeyHidden(!this.isKeyHidden());
     }
 }
 

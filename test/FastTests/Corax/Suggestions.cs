@@ -183,6 +183,7 @@ namespace FastTests.Corax
                     return Span<byte>.Empty;
                 return Encoding.UTF8.GetBytes(value);
             }
+
         }
 
         private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexEntryValues> list, IndexFieldsMapping mapping)

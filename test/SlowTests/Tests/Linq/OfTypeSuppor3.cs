@@ -32,7 +32,7 @@ namespace SlowTests.Tests.Linq
                     session.SaveChanges();
                 }
 
-                store.ExecuteIndex(new Index(options.SearchEngineMode is RavenSearchEngineMode.Corax));
+                store.ExecuteIndex(new Index());
 
                 Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
@@ -57,23 +57,12 @@ namespace SlowTests.Tests.Linq
 
             public Index()
             {
-                //query
-            }
-
-            public Index(bool skipIndexingComplexField)
-            {
                 Map = docs => docs.Select(doc => new Result
                                                  {
                                                      Values = doc.Values,
                                                      Strings = doc.Values.OfType<Bar>().Select(x => x.Value).ToArray(),
                                                  });
 
-                if (skipIndexingComplexField)
-                {
-                    Store(x => x.Values, FieldStorage.Yes);
-                    Index(x => x.Values, FieldIndexing.No);
-                }
-                
                 Store(result => result.Strings, FieldStorage.Yes);
             }
 

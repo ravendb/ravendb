@@ -177,6 +177,7 @@ export default function useIndexCleanup() {
         await fetchIndexMergeSuggestions(resultMap);
     };
 
+    // Changing the database causes re-mount
     const asyncFetchStats = useAsync(fetchStats, []);
 
     const surpassingSelectionState = genUtils.getSelectionState(

@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
+using Raven.Server.Extensions;
 using Sparrow;
 using Sparrow.Collections;
 
@@ -31,9 +32,9 @@ namespace Raven.Server.Documents
 
         public ResourceCache()
         {
-            _readonlyCaseSensitive = _caseSensitive.ToFrozenDictionary();
-            _readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionary();
-            _readonlyResourceDetails = _resourceDetails.ToFrozenDictionary();
+            _readonlyCaseSensitive = _caseSensitive.ToFrozenDictionaryWithSameComparer();
+            _readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionaryWithSameComparer();
+            _readonlyResourceDetails = _resourceDetails.ToFrozenDictionaryWithSameComparer();
         }
 
         public sealed class ResourceDetails
@@ -53,13 +54,13 @@ namespace Raven.Server.Documents
         public void Clear()
         {
             _caseSensitive.Clear();
-            _readonlyCaseSensitive = _caseSensitive.ToFrozenDictionary();
+            _readonlyCaseSensitive = _caseSensitive.ToFrozenDictionaryWithSameComparer();
 
             _caseInsensitive.Clear();
-            _readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionary();
+            _readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionaryWithSameComparer();
 
             _resourceDetails.Clear();
-            _readonlyResourceDetails = _resourceDetails.ToFrozenDictionary();
+            _readonlyResourceDetails = _resourceDetails.ToFrozenDictionaryWithSameComparer();
         }
 
         public bool TryGetValue(StringSegment resourceName, out Task<TResource> resourceTask)
@@ -88,7 +89,7 @@ namespace Raven.Server.Documents
 
             lock (this)
             {
-                if (_caseInsensitive.TryGetValue(resourceName, out var resourceTaskUnderLock) == false)
+                if (_readonlyCaseInsensitive.TryGetValue(resourceName, out var resourceTaskUnderLock) == false)
                 {
                     // database was deleted
                     return false;
@@ -106,7 +107,7 @@ namespace Raven.Server.Documents
                 {
                     mappingsForResource.Add(resourceName);
                     _caseSensitive.TryAdd(resourceName, resourceTask);
-                    _readonlyCaseSensitive = _caseSensitive.ToFrozenDictionary();
+                    _readonlyCaseSensitive = _caseSensitive.ToFrozenDictionaryWithSameComparer();
                 }
             }
             return true;
@@ -128,9 +129,9 @@ namespace Raven.Server.Documents
                 // at the end of the execution in order to diminish the time that an unstable state can be observed.
                 // While this is not a big issue because the code already supports dealing with that, the smaller the
                 // time such inconsistencies can be observed, the better.
-                var readonlyCaseSensitive = _caseSensitive.ToFrozenDictionary();
-                var readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionary();
-                var readonlyResourceDetails = _resourceDetails.ToFrozenDictionary();
+                var readonlyCaseSensitive = _caseSensitive.ToFrozenDictionaryWithSameComparer();
+                var readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionaryWithSameComparer();
+                var readonlyResourceDetails = _resourceDetails.ToFrozenDictionaryWithSameComparer();
 
                 _readonlyCaseSensitive = readonlyCaseSensitive;
                 _readonlyCaseInsensitive = readonlyCaseInsensitive;
@@ -207,9 +208,9 @@ namespace Raven.Server.Documents
                 // at the end of the execution in order to diminish the time that an unstable state can be observed.
                 // While this is not a big issue because the code already supports dealing with that, the smaller the
                 // time such inconsistencies can be observed, the better.
-                var readonlyCaseSensitive = _caseSensitive.ToFrozenDictionary();
-                var readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionary();
-                var readonlyResourceDetails = _resourceDetails.ToFrozenDictionary();
+                var readonlyCaseSensitive = _caseSensitive.ToFrozenDictionaryWithSameComparer();
+                var readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionaryWithSameComparer();
+                var readonlyResourceDetails = _resourceDetails.ToFrozenDictionaryWithSameComparer();
 
                 _readonlyCaseSensitive = readonlyCaseSensitive;
                 _readonlyCaseInsensitive = readonlyCaseInsensitive;
@@ -261,7 +262,7 @@ namespace Raven.Server.Documents
                             continue;
 
                         // We need to refresh only the case-insensitive dictionary.
-                        _readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionary();
+                        _readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionaryWithSameComparer();
 
                         return new DisposableAction(() =>
                         {
@@ -298,9 +299,9 @@ namespace Raven.Server.Documents
                     // at the end of the execution in order to diminish the time that an unstable state can be observed.
                     // While this is not a big issue because the code already supports dealing with that, the smaller the
                     // time such inconsistencies can be observed, the better.
-                    var readonlyCaseSensitive = _caseSensitive.ToFrozenDictionary();
-                    var readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionary();
-                    var readonlyResourceDetails = _resourceDetails.ToFrozenDictionary();
+                    var readonlyCaseSensitive = _caseSensitive.ToFrozenDictionaryWithSameComparer();
+                    var readonlyCaseInsensitive = _caseInsensitive.ToFrozenDictionaryWithSameComparer();
+                    var readonlyResourceDetails = _resourceDetails.ToFrozenDictionaryWithSameComparer();
 
                     _readonlyCaseSensitive = readonlyCaseSensitive;
                     _readonlyCaseInsensitive = readonlyCaseInsensitive;
@@ -389,9 +390,9 @@ namespace Raven.Server.Documents
                     // at the end of the execution in order to diminish the time that an unstable state can be observed.
                     // While this is not a big issue because the code already supports dealing with that, the smaller the
                     // time such inconsistencies can be observed, the better.
-                    var readonlyCaseSensitive = _parent._caseSensitive.ToFrozenDictionary();
-                    var readonlyCaseInsensitive = _parent._caseInsensitive.ToFrozenDictionary();
-                    var readonlyResourceDetails = _parent._resourceDetails.ToFrozenDictionary();
+                    var readonlyCaseSensitive = _parent._caseSensitive.ToFrozenDictionaryWithSameComparer();
+                    var readonlyCaseInsensitive = _parent._caseInsensitive.ToFrozenDictionaryWithSameComparer();
+                    var readonlyResourceDetails = _parent._resourceDetails.ToFrozenDictionaryWithSameComparer();
 
                     _parent._readonlyCaseSensitive = readonlyCaseSensitive;
                     _parent._readonlyCaseInsensitive = readonlyCaseInsensitive;

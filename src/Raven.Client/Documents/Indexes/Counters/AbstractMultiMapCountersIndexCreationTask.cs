@@ -77,7 +77,7 @@ namespace Raven.Client.Documents.Indexes.Counters
             if (Conventions == null)
                 Conventions = new DocumentConventions();
 
-            var indexDefinition = new CountersIndexDefinitionBuilder<object, TReduceResult>(IndexName)
+            CountersIndexDefinitionBuilder<object, TReduceResult> builder = new(IndexName)
             {
                 Indexes = Indexes,
                 Analyzers = Analyzers,
@@ -99,8 +99,16 @@ namespace Raven.Client.Documents.Indexes.Counters
                 LockMode = LockMode,
                 Priority = Priority,
                 State = State,
-                DeploymentMode = DeploymentMode
-            }.ToIndexDefinition(Conventions, validateMap: false);
+                DeploymentMode = DeploymentMode,
+                CompoundFieldsStrings = CompoundFieldsStrings,
+            };
+
+            if (SearchEngineType.HasValue)
+            {
+                builder.Configuration[Constants.Configuration.Indexes.IndexingStaticSearchEngineType] = SearchEngineType.Value.ToString();
+            }
+
+            var indexDefinition = builder.ToIndexDefinition(Conventions, validateMap: false);
 
             foreach (var map in _maps.Select(generateMap => generateMap()))
             {

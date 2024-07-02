@@ -38,12 +38,12 @@ function Details(props: RavenEtlPanelProps & { canEdit: boolean }) {
     return (
         <RichPanelDetails>
             <ConnectionStringItem
-                connectionStringDefined={!!data.shared.destinationDatabase}
+                connectionStringDefined={connectionStringDefined}
                 canEdit={canEdit}
                 connectionStringName={data.shared.connectionStringName}
                 connectionStringsUrl={connectionStringsUrl}
             />
-            {connectionStringDefined && (
+            {data.shared.destinationDatabase && (
                 <RichPanelDetailItem label="Destination Database">
                     {data.shared.destinationDatabase}
                 </RichPanelDetailItem>
