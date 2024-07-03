@@ -208,9 +208,8 @@ loadToOrders(orderData, "routingKey", {  // load to the 'Orders' Exchange with o
     static readonly azureQueueStorageEtlSampleText =
         `${transformationScriptSyntax.queueEtlBaseSampleText}
 
-loadToOrders(orderData, {  // load to the 'Orders' Topic with optional params
+loadToOrders(orderData, {  // load to the 'Orders' Queue with optional params
     Id: id(this),
-    PartitionKey: id(this),
     Type: 'com.github.users',
     Source: '/registrations/direct-signup'
 });`;

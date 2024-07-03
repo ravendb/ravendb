@@ -60,7 +60,7 @@ namespace Raven.Server.Config.Categories
         public TimeSetting AzureQueueStorageTimeToLive{ get; set; }
         
         [Description("How long a message is hidden after being retrieved but not deleted")]
-        [DefaultValue(0)] // azure default
+        [DefaultValue(0)] // Azure default
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("ETL.Queue.AzureQueueStorage.VisibilityTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting AzureQueueStorageVisibilityTimeout{ get; set; }
