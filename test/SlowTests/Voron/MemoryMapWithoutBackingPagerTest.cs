@@ -43,7 +43,7 @@ namespace SlowTests.Voron
         {
             Options.ManualFlushing = true;
             var state = Env.CurrentStateRecord.DataPagerState;
-            Env.DataPager.EnsureContinuous(ref state, 0,growthMultiplier, 0x0ff);
+            Env.DataPager.EnsureContinuous(ref state, 0,growthMultiplier);
             var testData = GenerateTestData().ToList();
             CreatTestSchema();
             using (var tx = Env.WriteTransaction())
@@ -107,7 +107,7 @@ namespace SlowTests.Voron
             {
                 numberOfPages *= 2;
                 
-                Env.DataPager.EnsureContinuous(ref state, 0, (int)(numberOfPages), 0x0ff);
+                Env.DataPager.EnsureContinuous(ref state, 0, (int)(numberOfPages));
             }
         }
     }

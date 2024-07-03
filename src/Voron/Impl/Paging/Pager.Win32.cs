@@ -37,7 +37,7 @@ public unsafe partial class Pager2
         private const int NumberOfPagesInAllocationGranularity = Win64.AllocationGranularity / Constants.Storage.PageSize;
 
 
-        private static void DirectWrite(Pager2 pager, ref State state, ref PagerTransactionState txState, long transactionId, long posBy4Kbs, int numberOf4Kbs, byte* source)
+        private static void DirectWrite(Pager2 pager, ref State state, ref PagerTransactionState txState, long posBy4Kbs, int numberOf4Kbs, byte* source)
         {
             Debug.Assert(txState.Sync == null || txState.Sync == SyncAfterDirectWrite);
             
@@ -50,7 +50,7 @@ public unsafe partial class Pager2
                 numberOf4Kbs % pageSizeTo4KbRatio != 0)
                 numberOfPages++;
 
-            pager.EnsureContinuous(ref state, pageNumber, numberOfPages, transactionId);
+            pager.EnsureContinuous(ref state, pageNumber, numberOfPages);
 
             EnsureMapped(pager, state, ref txState, pageNumber, numberOfPages);
             var page = AcquirePagePointer(pager, state, ref txState, pageNumber);
@@ -66,7 +66,7 @@ public unsafe partial class Pager2
             pager._functions.ProtectPageRange(destination, (ulong)toWrite);
         }
 
-        private static void SyncAfterDirectWrite(Pager2 pager, State state, ref PagerTransactionState txState, long transactionId)
+        private static void SyncAfterDirectWrite(Pager2 pager, State state, ref PagerTransactionState txState)
         {
             var stateFor32Bits = GetTxState(pager, ref txState);
             foreach (var kvp in stateFor32Bits.LoadedPages)
@@ -118,7 +118,7 @@ public unsafe partial class Pager2
             return pagerTxState;
         }
 
-        private static void OnTxDispose(Pager2 pager, State state, ref PagerTransactionState txState, long transactionId)
+        private static void OnTxDispose(Pager2 pager, State state, ref PagerTransactionState txState)
         {
             if (txState.For32Bits?.Remove(pager, out var pagerTxState) != true)
                 return;
@@ -223,7 +223,7 @@ public unsafe partial class Pager2
             return state;
         }
 
-        private static void AllocateMorePages(Pager2 pager, long newLength, ref State state, long transactionId)
+        private static void AllocateMorePages(Pager2 pager, long newLength, ref State state)
         {
             var newLengthAfterAdjustment = Win64.NearestSizeToAllocationGranularity(newLength);
 
@@ -234,7 +234,7 @@ public unsafe partial class Pager2
  
             Win32NativeFileMethods.SetFileLength(state.Handle, state.TotalAllocatedSize + allocationSize, pager.FileName);
 
-            var newState = state.Clone(transactionId);
+            var newState = state.Clone();
             
             try
             {
