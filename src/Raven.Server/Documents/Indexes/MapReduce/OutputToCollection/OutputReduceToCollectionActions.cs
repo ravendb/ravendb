@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         internal static Slice ReduceOutputsIdsToPatternReferenceIdsTree;
 
-        private ConcurrentDictionary<string, string> _prefixesOfReduceOutputDocumentsToDelete;
+        private ImmutableDictionary<string, string>.Builder _prefixesOfReduceOutputDocumentsToDelete;
         private readonly string _collectionOfReduceOutputs;
         private readonly long? _reduceOutputVersion;
         private readonly OutputReferencesPattern _patternForOutputReduceToCollectionReferences;
@@ -74,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             if (tx.InnerTransaction.ReadTree(Legacy.LegacyReduceOutputsTreeName) != null)
                 Legacy.ConvertLegacyPrefixesToDeleteTree(tx);
 
-            _prefixesOfReduceOutputDocumentsToDelete = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            _prefixesOfReduceOutputDocumentsToDelete = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.OrdinalIgnoreCase);
 
             using (var it = tree.Iterate(false))
             {
@@ -128,9 +129,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         public void AddPrefixesOfDocumentsToDelete(Dictionary<string, string> prefixes)
         {
-            if (_prefixesOfReduceOutputDocumentsToDelete == null)
-                _prefixesOfReduceOutputDocumentsToDelete = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
             using (_index._contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
@@ -153,9 +151,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             }
         }
 
-        public ConcurrentDictionary<string, string> GetPrefixesOfDocumentsToDelete()
+        public ImmutableDictionary<string, string> GetPrefixesOfDocumentsToDelete()
         {
-            return _prefixesOfReduceOutputDocumentsToDelete;
+            using var _ = _index._contextPool.AllocateOperationContext(out TransactionOperationContext context);
+            context.OpenReadTransaction();
+            if (context.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState is ImmutableDictionary<string, string> dic)
+                return dic;
+            return ImmutableDictionary<string, string>.Empty;
         }
 
         public bool HasDocumentsToDelete(TransactionOperationContext indexContext)
@@ -240,11 +242,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             reduceOutputsTree.Delete(prefix);
 
-            indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += __ =>
-            {
-                // ensure that we delete it from in-memory state only after successful commit
-                _prefixesOfReduceOutputDocumentsToDelete.TryRemove(prefix, out _);
-            };
+            _prefixesOfReduceOutputDocumentsToDelete.Remove(prefix);
+
+            indexContext.UpdatePrefixesOfReduceOutputDocumentsToDelete(_prefixesOfReduceOutputDocumentsToDelete.ToImmutable());
         }
 
         private static (string Prefix, string OriginalPattern) GetPrefixToDeleteAndOriginalPatternFromCurrent(TreeIterator it)

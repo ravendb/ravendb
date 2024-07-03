@@ -67,8 +67,6 @@ namespace Raven.Server.Documents.Indexes.Workers
 
     public abstract partial class HandleReferencesBase : IIndexingWork
     {
-        private readonly ReferencesState _referencesState = new ReferencesState();
-
         private readonly Logger _logger;
 
         private readonly Index _index;
@@ -144,7 +142,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                 try
                 {
-                    var referenceState = _referencesState.For(actionType, collection);
+                    var referenceState = indexContext.GetReferenceStateFor(actionType, collection);
                     foreach (var referencedCollection in referencedCollections)
                     {
                         var inMemoryStats = _index.GetReferencesStats(referencedCollection.Name);
@@ -243,12 +241,12 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                 if (CanContinueReferenceBatch() == false)
                                                 {
                                                     // updating the last reference state in order to continue from the place we left off
-                                                    referenceState = new ReferencesState.ReferenceState(referencedItem.Key, referencedItem.Etag, current.LowerSourceDocumentId ?? current.Id, lastIndexedParentEtag);
+                                                    referenceState = new ReferenceState(referencedItem.Key, referencedItem.Etag, current.LowerSourceDocumentId ?? current.Id, lastIndexedParentEtag);
 
                                                     if (batchContinuationResult != Index.CanContinueBatchResult.RenewTransaction)
                                                     {
                                                         // we save where we last stopped in order to continue running in a NEW indexing batch
-                                                        _referencesState.Set(actionType, collection, referenceState, indexContext);
+                                                        indexContext.SetReferencesStateFor(actionType, collection, referenceState);
                                                     }
 
                                                     earlyExit = true;
@@ -355,7 +353,10 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     throw new NotSupportedException();
                             }
 
-                            _referencesState.Clear(earlyExit, actionType, collection, indexContext);
+                            if (earlyExit == false)
+                            {
+                                indexContext.ClearReferencesStateFor(actionType, collection);
+                            }
                         }
                     }
                 }
@@ -371,7 +372,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
 
             if (moreWorkFound == false)
-                _referencesState.Clear(actionType);
+                indexContext.ClearReferencesState(actionType);
 
             return (moreWorkFound, batchContinuationResult);
         }
@@ -420,7 +421,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         }
 
         private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(QueryOperationContext queryContext, TransactionOperationContext indexContext,
-            string collection, Reference referencedItem, long lastIndexedEtag, HashSet<Slice> indexed, ReferencesState.ReferenceState referenceState)
+            string collection, Reference referencedItem, long lastIndexedEtag, HashSet<Slice> indexed, ReferenceState referenceState)
         {
             var lastProcessedItemId = referenceState?.GetLastProcessedItemId(referencedItem);
             foreach (var key in _referencesStorage.GetItemKeysFromCollectionThatReference(collection, referencedItem.Key, indexContext.Transaction, lastProcessedItemId))
@@ -486,9 +487,15 @@ namespace Raven.Server.Documents.Indexes.Workers
                 });
         }
 
-        public InMemoryReferencesInfo GetReferencesInfo(string collection)
+        public InMemoryReferencesInfo GetReferencesInfo(TransactionOperationContext indexContext, string collection)
         {
-            return _referencesState.GetReferencesInfo(collection);
+            ReferenceState docs = indexContext.GetReferenceStateFor(ActionType.Document, collection);
+            ReferenceState tombstone = indexContext.GetReferenceStateFor(ActionType.Tombstone, collection);
+            return new InMemoryReferencesInfo
+            {
+                ParentItemEtag = docs?.GetLastIndexedParentEtag() ?? 0,
+                ParentTombstoneEtag = tombstone?.GetLastIndexedParentEtag() ?? 0
+            };
         }
 
         protected abstract IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key);

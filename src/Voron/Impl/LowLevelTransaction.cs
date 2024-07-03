@@ -310,7 +310,7 @@ namespace Voron.Impl
         internal void UpdateClientState(object state)
         {
             Debug.Assert(_envRecord.ClientState == null || state == null || _envRecord.ClientState.GetType() == state.GetType(),
-                "Cannot *change* the type of the client state, must always be a single type!");
+                $"Cannot *change* the type of the client state, must always be a single type! Was {_envRecord.ClientState?.GetType()} to {state?.GetType()}");
             _envRecord = _envRecord with { ClientState = state };
         }
 

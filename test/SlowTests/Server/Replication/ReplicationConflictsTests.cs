@@ -1121,9 +1121,16 @@ namespace SlowTests.Server.Replication
                 }
                 await SetupReplicationAsync(store2, store1);
                 var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "test");
-                var db1 = (await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName)).DocumentsStorage.ConflictsStorage;
+                var db1 = (await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName)).DocumentsStorage;
 
-                Assert.Equal(2, WaitForValue(() => db1.ConflictsCount, 2));
+                Assert.Equal(2, WaitForValue(() =>
+                {
+                    using (db1.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        context.OpenReadTransaction();
+                        return db1.ConflictsStorage.GetNumberOfConflicts(context);
+                    }
+                }, 2));
             }
         }
 
@@ -1167,8 +1174,15 @@ namespace SlowTests.Server.Replication
                 }
                 await SetupReplicationAsync(store2, store1);
                 var dbName = options.DatabaseMode == RavenDatabaseMode.Single ? store1.Database : await Sharding.GetShardDatabaseNameForDocAsync(store1, "foo/bar");
-                var db1 = (await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName)).DocumentsStorage.ConflictsStorage;
-                Assert.Equal(2, WaitForValue(() => db1.ConflictsCount, 2));
+                var db1 = (await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName)).DocumentsStorage;
+                Assert.Equal(2, WaitForValue(() =>
+                {
+                    using (db1.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        context.OpenReadTransaction();
+                        return db1.ConflictsStorage.GetNumberOfConflicts(context);
+                    }
+                }, 2));
 
                 using (var session = store1.OpenSession())
                 {

@@ -12,7 +12,7 @@ namespace Raven.Server.ServerWide.Context
         public long LastConflictEtag;
         public long LastRevisionsEtag;
         public long LastAttachmentsEtag;
-
+        public long ConflictsCount;
         public long LastEtag;
 
         public sealed class CollectionCache

@@ -36,8 +36,6 @@ namespace Raven.Server.Documents.Replication
             _log = log;
         }
 
-        public long ConflictsCount => _database.DocumentsStorage?.ConflictsStorage?.ConflictsCount ?? 0;
-
         private long _processedRaftIndex;
 
         private readonly SemaphoreSlim _runOnce = new SemaphoreSlim(1, 1);
@@ -76,10 +74,15 @@ namespace Raven.Server.Documents.Replication
 
                     UpdateScriptResolvers(solver);
 
-                    if (ConflictsCount > 0 && solver?.IsEmpty() == false)
+                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        await ResolveConflictsInBackground(solver);
+                        context.OpenReadTransaction();
+                        if (_database.DocumentsStorage.ConflictsStorage.HasNoConflicts(context) && solver?.IsEmpty() == false)
+                        {
+                            await ResolveConflictsInBackground(solver);
+                        }    
                     }
+                    
                 }
             }
             catch (OperationCanceledException)
@@ -368,7 +371,8 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            if (_database.DocumentsStorage.ConflictsStorage.ConflictsCount != 0) // we have conflicts and we will resolve them in the put method, rest of the function is when we resolve on the fly
+            // we have conflicts and we will resolve them in the put method, rest of the function is when we resolve on the fly
+            if (_database.DocumentsStorage.ConflictsStorage.HasNoConflicts(context) == false) 
                 return;
 
             SaveLocalAsRevision(context, id);

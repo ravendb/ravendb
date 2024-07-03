@@ -1,11 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using NuGet.DependencyResolver;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
+using Voron.Impl;
 
 namespace Raven.Server.ServerWide.Context
 {
@@ -36,6 +42,83 @@ namespace Raven.Server.ServerWide.Context
         {
             return new RavenTransaction(Environment.WriteTransaction(PersistentContext, Allocator, timeout));
         }
+
+        public void UpdatePrefixesOfReduceOutputDocumentsToDelete(ImmutableDictionary<string,string> prefixes)
+        {
+            var llt = Transaction.InnerTransaction.LowLevelTransaction;
+            llt.UpdateClientState(GetIndexStateFrom(llt) with {PrefixesOfReduceOutputDocumentsToDelete = prefixes});
+        }
+
+        private static IndexStateRecord GetIndexStateFrom(LowLevelTransaction llt)
+        {
+            var rec = llt.CurrentStateRecord.ClientState switch
+            {
+                IndexStateRecord r => r,
+                null => IndexStateRecord.Empty,
+                _ => throw new ArgumentOutOfRangeException("Expected IndexTransactionalStateRecord, got " + llt.CurrentStateRecord.ClientState.GetType())
+            };
+            return rec;
+        }
+
+        public HandleReferencesBase.ReferenceState GetReferenceStateFor(HandleReferencesBase.ActionType actionType, string collection)
+        {
+            var state = GetIndexStateFrom(Transaction.InnerTransaction.LowLevelTransaction);
+            var map = actionType switch
+            {
+                HandleReferencesBase.ActionType.Document => state.Documents,
+                HandleReferencesBase.ActionType.Tombstone => state.Tombstones,
+                _ => throw new ArgumentOutOfRangeException(actionType.ToString())
+            };
+            if (map.Map.TryGetValue(collection, out var result))
+                return result;
+            return null;
+        }
+
+        public void SetReferencesStateFor(HandleReferencesBase.ActionType actionType, string collection, HandleReferencesBase.ReferenceState referenceState)
+        {
+            ModifyReferencesState(actionType, collection, referenceState);
+        }
+        
+        public void ClearReferencesStateFor(HandleReferencesBase.ActionType actionType, string collection)
+        {
+            ModifyReferencesState(actionType, collection, null); // clear for that collection
+        }
+
+        public void ClearReferencesState(HandleReferencesBase.ActionType actionType)
+        {
+            ModifyReferencesState(actionType, null, null); // clear all collections
+        }
+        
+        private void ModifyReferencesState(HandleReferencesBase.ActionType actionType, string collection, HandleReferencesBase.ReferenceState referenceState)
+        { 
+            var state = GetIndexStateFrom(Transaction.InnerTransaction.LowLevelTransaction);
+            var owner = actionType switch
+            {
+                HandleReferencesBase.ActionType.Document => state.Documents.Owner,
+                HandleReferencesBase.ActionType.Tombstone => state.Tombstones.Owner,
+                _ => throw new ArgumentOutOfRangeException(actionType.ToString())
+            };
+
+            if (collection == null)
+            {
+                owner.Clear();
+            }
+            else if (referenceState == null)
+            {
+                owner.Remove(collection);
+            }
+            else
+            {
+                owner[collection] = referenceState;
+            }
+
+            Transaction.InnerTransaction.LowLevelTransaction.UpdateClientState( state with
+            {
+                Documents = state.Documents with { Map = state.Documents.Owner.ToImmutable() },
+                Tombstones = state.Tombstones with { Map = state.Tombstones.Owner.ToImmutable() },
+            });
+        }
+
     }
 
     public abstract class TransactionOperationContext<TTransaction> : JsonOperationContext, IChangeVectorOperationContext 
