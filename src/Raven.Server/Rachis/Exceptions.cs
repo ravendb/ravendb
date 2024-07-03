@@ -96,7 +96,7 @@ namespace Raven.Server.Rachis
         }
 
         [DoesNotReturn]
-        public static void Throw(string msg)
+        public new static void Throw(string msg)
         {
             throw new TermValidationException(msg);
         }

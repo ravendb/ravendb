@@ -3295,11 +3295,11 @@ namespace Raven.Server.ServerWide
                 }
                 catch (Exception ex)
                 {
-                    if (reachedLeader.Value)
-                        throw;
-
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Tried to send message to leader (reached: {reachedLeader.Value}), retrying", ex);
+
+                    if (reachedLeader.Value)
+                        throw;
 
                     requestException = ex;
                 }
