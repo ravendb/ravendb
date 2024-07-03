@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         {
         }
 
-        protected abstract Task RevertDocuments(Dictionary<string, string> idToChangeVector, OperationCancelToken token);
+        protected abstract Task RevertDocumentsAsync(Dictionary<string, string> idToChangeVector, OperationCancelToken token);
 
         public override async ValueTask ExecuteAsync()
         {
@@ -31,9 +31,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 request = JsonDeserializationServer.RevertDocumentToRevision(json);
             }
 
-            var token = RequestHandler.CreateHttpRequestBoundOperationToken();
-
-            await RevertDocuments(request.IdToChangeVector, token);
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
+            {
+                await RevertDocumentsAsync(request.IdToChangeVector, token);
+            }
         }
     }
 }

@@ -2020,7 +2020,7 @@ namespace Raven.Server.Documents.Revisions
 
 
 
-        public Task RevertDocumentsToRevisions(Dictionary<string, string> idToChangeVector, OperationCancelToken token)
+        public Task RevertDocumentsToRevisionsAsync(Dictionary<string, string> idToChangeVector, OperationCancelToken token)
         {
             if (idToChangeVector.Count == 0)
                 return Task.CompletedTask;
@@ -2283,23 +2283,17 @@ namespace Raven.Server.Documents.Revisions
 
             private Document VerifyAndGetRevision(DocumentsOperationContext context, string id, string cv)
             {
-                if (id == null)
-                    throw new ArgumentException("Document id is null");
+                if (string.IsNullOrEmpty(id))
+                    throw new ArgumentException($"Document id is null or empty");
 
-                if (id == string.Empty)
-                    throw new ArgumentException("Document id is an empty string");
-
-                if (cv == null)
-                    throw new ArgumentException("Change Vector is null");
-
-                if (id == string.Empty)
-                    throw new ArgumentException("Change Vector is an empty string");
+                if (string.IsNullOrEmpty(cv))
+                    throw new ArgumentException($"Change Vector is null or empty");
 
                 var table = new Table(context.DocumentDatabase.DocumentsStorage.RevisionsStorage.RevisionsSchema, context.Transaction.InnerTransaction);
                 using (Slice.From(context.Allocator, cv, out var cvSlice))
                 {
                     if (table.ReadByKey(cvSlice, out TableValueReader tvr) == false)
-                        throw new InvalidOperationException($"Revision with the cv \"{cv}\" doesn't belong to the doc \"{id}\"");
+                        throw new InvalidOperationException($"Revision with the cv \"{cv}\" doesn't exist (id: '{id}')");
 
                     var revision = TableValueToRevision(context, ref tvr, DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector | DocumentFields.Data);
 

@@ -13,9 +13,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         {
         }
 
-        protected override Task RevertDocuments(Dictionary<string, string> idToChangeVector, OperationCancelToken token)
+        protected override Task RevertDocumentsAsync(Dictionary<string, string> idToChangeVector, OperationCancelToken token)
         {
-            return RequestHandler.Database.DocumentsStorage.RevisionsStorage.RevertDocumentsToRevisions(idToChangeVector, token);
+            return RequestHandler.Database.DocumentsStorage.RevisionsStorage.RevertDocumentsToRevisionsAsync(idToChangeVector, token);
         }
     }
 }

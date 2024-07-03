@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Commands
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/revisions/revert/document";
+            url = $"{node.Url}/databases/{node.Database}/revisions/revert/docs";
 
             var request = new RevertDocumentsToRevisionsRequest{ IdToChangeVector = _idToChangeVector };
 
