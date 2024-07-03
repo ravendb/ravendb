@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Store;
 using Raven.Client.Extensions.Streams;
+using Raven.Server.Documents.Indexes;
 using Voron;
 using Voron.Data;
 using Voron.Impl;
@@ -40,11 +41,11 @@ namespace Raven.Server.Indexing
         {
             if (transaction.IsWriteTransaction == false)
             {
-                if (transaction.LowLevelTransaction.CurrentStateRecord.ClientState is IndexTransactionCache cache)
+                if (transaction.LowLevelTransaction.CurrentStateRecord.ClientState is IndexStateRecord cache)
                 {
                     if (cache.DirectoriesByName.TryGetValue(directory.Name, out var files))
                     {
-                        if (files.ChunksByName.TryGetValue(name, out var details))
+                        if (files.TryGetValue(name, out var details))
                         {
                             // we don't dispose here explicitly, the fileName needs to be
                             // alive as long as the transaction is

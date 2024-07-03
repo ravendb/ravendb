@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -10,6 +11,7 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -243,7 +245,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 InitializeMainIndexStorage(tx, environment);
                 InitializeSuggestionsIndexStorage(tx, environment);
-                BuildStreamCacheAfterTx(tx);
+                
+                tx.LowLevelTransaction.UpdateClientState(UpdateIndexCache(tx));
 
                 // force tx commit so it will bump tx counter and just created searcher holder will have valid tx id
                 tx.LowLevelTransaction.ModifyPage(0);
@@ -263,29 +266,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
         }
 
-        internal override IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx)
+        public override IndexStateRecord UpdateIndexCache(Transaction tx)
         {
-            var newCache = new IndexTransactionCache();
-
-            FillCollectionEtags(tx, newCache.Collections);
-
-            var directoryFiles = new IndexTransactionCache.DirectoryFiles();
-            newCache.DirectoriesByName[_directory.Name] = directoryFiles;
-            FillLuceneFilesChunks(tx, directoryFiles.ChunksByName, _directory.Name);
+            var dirs = ImmutableDictionary.CreateBuilder<string, ImmutableDictionary<string, Tree.ChunkDetails[]>>();
+            dirs[_directory.Name] = GetLuceneFilesChunks(tx, _directory.Name);
 
             foreach (var (name, _) in _suggestionsDirectories)
             {
-                directoryFiles = new IndexTransactionCache.DirectoryFiles();
-                newCache.DirectoriesByName[name] = directoryFiles;
-                FillLuceneFilesChunks(tx, directoryFiles.ChunksByName, name);
+                dirs[name] = GetLuceneFilesChunks(tx, name);
             }
 
-            return newCache;
+            var rec = (IndexStateRecord)tx.LowLevelTransaction.CurrentStateRecord.ClientState ?? IndexStateRecord.Empty;
+
+            return rec with { Collections = GetCollectionEtags(tx), DirectoriesByName = dirs.ToImmutable() };
         }
         
-        private void FillCollectionEtags(Transaction tx,
-            Dictionary<string, IndexTransactionCache.CollectionEtags> map)
+        private  ImmutableDictionary<string, IndexStateRecord.CollectionEtags> GetCollectionEtags(Transaction tx)
         {
+            var builder = ImmutableDictionary.CreateBuilder<string, IndexStateRecord.CollectionEtags>(); 
             AbstractStaticIndexBase compiled = null;
 
             if (_index.Type.IsStatic())
@@ -306,60 +304,61 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         break;
                 }
             }
+            var referencedCollections = _index.GetReferencedCollections();
 
             foreach (string collection in _index.Collections)
             {
                 using (Slice.From(tx.LowLevelTransaction.Allocator, collection, out Slice collectionSlice))
                 {
-                    var etags = new IndexTransactionCache.CollectionEtags
+                    var collectionEtags = compiled?.CollectionsWithCompareExchangeReferences.Contains(collection) == true
+                        ? new IndexStateRecord.ReferenceCollectionEtags
+                        {
+                            LastEtag = _index._indexStorage.ReferencesForCompareExchange
+                                .ReadLastProcessedReferenceEtag(tx, collection, IndexStorage.CompareExchangeReferences.CompareExchange),
+                            LastProcessedTombstoneEtag = _index._indexStorage.ReferencesForCompareExchange
+                                .ReadLastProcessedReferenceTombstoneEtag(tx, collection, IndexStorage.CompareExchangeReferences.CompareExchange)
+                        }
+                        : null;
+
+                    var lastReferenceEtags = ImmutableDictionary.CreateBuilder<string, IndexStateRecord.ReferenceCollectionEtags>();
+                    if (referencedCollections?.TryGetValue(collection, out var collectionNames) ==true && collectionNames.Count > 0)
                     {
-                        LastIndexedEtag = IndexStorage.ReadLastEtag(tx,
+                        foreach (var collectionName in collectionNames)
+                        {
+                            lastReferenceEtags[collectionName.Name] = new IndexStateRecord.ReferenceCollectionEtags
+                            {
+                                LastEtag = _index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(tx, collection, collectionName),
+                                LastProcessedTombstoneEtag = _index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(tx, collection, collectionName),
+                            };
+                        }
+                    }
+
+                    var etags = new IndexStateRecord.CollectionEtags(
+                        IndexStorage.ReadLastEtag(tx,
                             IndexStorage.IndexSchema.EtagsTree,
                             collectionSlice
                         ),
-                        LastProcessedTombstoneEtag = IndexStorage.ReadLastEtag(tx,
+                        IndexStorage.ReadLastEtag(tx,
                             IndexStorage.IndexSchema.EtagsTombstoneTree,
                             collectionSlice
-                        )
-                    };
+                        ),
+                        collectionEtags,
+                        lastReferenceEtags.ToImmutable());
 
-                    if (compiled?.CollectionsWithCompareExchangeReferences.Contains(collection) == true)
-                    {
-                        etags.LastReferencedEtagsForCompareExchange = new IndexTransactionCache.ReferenceCollectionEtags
-                        {
-                            LastEtag = _index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceEtag(tx, collection, IndexStorage.CompareExchangeReferences.CompareExchange),
-                            LastProcessedTombstoneEtag = _index._indexStorage.ReferencesForCompareExchange.ReadLastProcessedReferenceTombstoneEtag(tx, collection, IndexStorage.CompareExchangeReferences.CompareExchange)
-                        };
-                    }
 
-                    map[collection] = etags;
+                    builder[collection] = etags;
                 }
             }
 
-            var referencedCollections = _index.GetReferencedCollections();
-            if (referencedCollections == null || referencedCollections.Count == 0)
-                return;
-
-            foreach (var (src, collections) in referencedCollections)
-            {
-                var collectionEtags = map[src];
-                collectionEtags.LastReferencedEtags ??= new Dictionary<string, IndexTransactionCache.ReferenceCollectionEtags>(StringComparer.OrdinalIgnoreCase);
-                foreach (var collectionName in collections)
-                {
-                    collectionEtags.LastReferencedEtags[collectionName.Name] = new IndexTransactionCache.ReferenceCollectionEtags
-                    {
-                        LastEtag = _index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(tx, src, collectionName),
-                        LastProcessedTombstoneEtag = _index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(tx, src, collectionName),
-                    };
-                }
-            }
+            return builder.ToImmutable();
         }
 
-        private void FillLuceneFilesChunks(Transaction tx, Dictionary<string, Tree.ChunkDetails[]> cache, string name)
+        private ImmutableDictionary<string, Tree.ChunkDetails[]> GetLuceneFilesChunks(Transaction tx, string name)
         {
+            var builder = ImmutableDictionary.CreateBuilder<string, Tree.ChunkDetails[]>();
             var filesTree = tx.ReadTree(name);
             if (filesTree == null)
-                return;
+                return builder.ToImmutable();
             using (var it = filesTree.Iterate(false))
             {
                 if (it.Seek(Slices.BeforeAllKeys))
@@ -369,10 +368,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         var chunkDetails = filesTree.ReadTreeChunks(it.CurrentKey, out _);
                         if (chunkDetails == null)
                             continue;
-                        cache[it.CurrentKey.ToString()] = chunkDetails;
+                        builder[it.CurrentKey.ToString()] = chunkDetails;
                     } while (it.MoveNext());
                 }
             }
+
+            return builder.ToImmutable();
         }
         
         private void InitializeSuggestionsIndexStorage(Transaction tx, StorageEnvironment environment)

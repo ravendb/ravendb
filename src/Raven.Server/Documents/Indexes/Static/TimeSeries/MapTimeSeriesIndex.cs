@@ -105,10 +105,10 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return workers.ToArray();
         }
 
-        public override HandleReferencesBase.InMemoryReferencesInfo GetInMemoryReferencesState(string collection, bool isCompareExchange)
+        public override HandleReferencesBase.InMemoryReferencesInfo GetInMemoryReferencesState(TransactionOperationContext indexContext, string collection, bool isCompareExchange)
         {
             var references = isCompareExchange ? (HandleReferencesBase)_handleCompareExchangeReferences : _handleReferences;
-            return references == null ? HandleReferencesBase.InMemoryReferencesInfo.Default : references.GetReferencesInfo(collection);
+            return references == null ? HandleReferencesBase.InMemoryReferencesInfo.Default : references.GetReferencesInfo(indexContext, collection);
         }
 
         public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)

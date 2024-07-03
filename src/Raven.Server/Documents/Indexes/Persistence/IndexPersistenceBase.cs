@@ -31,8 +31,6 @@ namespace Raven.Server.Documents.Indexes.Persistence
         
         public abstract void OnBeforeExecuteIndexing(IndexingStatsAggregator indexingStatsAggregator, CancellationToken token);
 
-        internal abstract IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx);
-
         public abstract IndexWriteOperationBase OpenIndexWriter(Transaction writeTransaction, JsonOperationContext indexContext);
 
         public abstract IndexReadOperationBase OpenIndexReader(Transaction readTransaction, IndexQueryServerSide query = null);
@@ -46,5 +44,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
         internal abstract void RecreateSuggestionsSearchers(Transaction asOfTx);
         public abstract void DisposeWriters();
         public abstract void Dispose();
+
+        public virtual IndexStateRecord UpdateIndexCache(Transaction tx) => tx.LowLevelTransaction.CurrentStateRecord.ClientState as IndexStateRecord;
     }
 }

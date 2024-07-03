@@ -33,7 +33,7 @@ internal sealed class StatsHandlerProcessorForEssentialStats : AbstractStatsHand
         stats.CountOfRevisionDocuments = database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
         stats.CountOfDocumentsConflicts = database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context);
         stats.CountOfTombstones = database.DocumentsStorage.GetNumberOfTombstones(context);
-        stats.CountOfConflicts = database.DocumentsStorage.ConflictsStorage.ConflictsCount;
+        stats.CountOfConflicts = database.DocumentsStorage.ConflictsStorage.GetNumberOfConflicts(context);
 
         stats.CountOfCounterEntries = database.DocumentsStorage.CountersStorage.GetNumberOfCounterEntries(context);
 
