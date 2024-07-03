@@ -55,7 +55,6 @@ namespace FastTests.Voron.Bugs
 
             Env.FlushLogToDataFile(); // this will flush all journals, the issue was that it also marked all of them as unused so they were removed from _files list, but didn't free the allocations in scratch buffers to ensure we don't free pages that can be still read
 
-            Assert.Equal(0, Env.Journal.GetSnapshots().Count);
             Assert.Equal(0, Env.Journal.Files.Count);
 
             Env.FlushLogToDataFile();
@@ -117,7 +116,6 @@ namespace FastTests.Voron.Bugs
 
             {
                 using var _ = readTx;
-                Assert.Equal(0, Env.Journal.GetSnapshots().Count);
                 Assert.Equal(0, Env.Journal.Files.Count);
 
                 ValueReader reader = readTx.ReadTree("tree").Read("items/7").Reader;

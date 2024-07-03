@@ -950,7 +950,6 @@ namespace Voron
                 State = tx.State;
 
                 Journal.Applicator.OnTransactionCommitted(tx);
-                Journal.UpdateCacheForJournalSnapshots();
 
                 tx.OnAfterCommitWhenNewTransactionsPrevented();
             }
@@ -1766,7 +1765,7 @@ namespace Voron
             }
         }
 
-        public bool GetLatestTransactionToFlush(long uptoTxId, out EnvironmentStateRecord record)
+        public bool GetLatestTransactionToFlush(long uptoTxId, List<PageFromScratchBuffer> bufferOfPageFromScratchBuffersToFree, out EnvironmentStateRecord record)
         {
             if (uptoTxId == 0)
                 uptoTxId = long.MaxValue;
@@ -1780,6 +1779,14 @@ namespace Voron
                     return found;
                 if (_transactionsToFlush.TryDequeue(out record) == false)
                     throw new InvalidOperationException("Failed to get transaction to flush after already peeked successfully");
+
+                foreach (var (_, pageFromScratch) in record.ScratchPagesTable)
+                {
+                    if (pageFromScratch.AllocatedInTransaction != record.TransactionId)
+                        continue;
+                    bufferOfPageFromScratchBuffersToFree.Add(pageFromScratch);
+                }
+
                 // single thread is reading from this, so we can be sure that peek + take gets the same value
                 Debug.Assert(ReferenceEquals(record, maybe));
                 found = true;

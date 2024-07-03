@@ -140,7 +140,7 @@ namespace Voron.Impl.Scratch
 
         public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, int sizeToAllocate, long pageNumber, Page previousVersion)
         {
-            _scratchPager.EnsureContinuous(ref _scratchPagerState, _lastUsedPage, sizeToAllocate, tx.Id);
+            _scratchPager.EnsureContinuous(ref _scratchPagerState, _lastUsedPage, sizeToAllocate);
             
             var result = new PageFromScratchBuffer(this,_scratchPagerState, tx.Id, _lastUsedPage, pageNumber, previousVersion, numberOfPages);
 
@@ -207,8 +207,13 @@ namespace Voron.Impl.Scratch
         {
             return _allocatedPagesCount > 0 || oldestActiveTransaction <= _txIdAfterWhichLatestFreePagesBecomeAvailable;
         }
-        
+
         public void Free(LowLevelTransaction tx, long page)
+        {
+            Free(tx, tx.Id, page);
+        }
+        
+        public void Free(LowLevelTransaction tx, long asOfTxId, long page)
         {
 #if VALIDATE
             // If we have encryption enabled, then VALIDATE calls are handled by the EncryptionBufferPool
@@ -239,7 +244,7 @@ namespace Voron.Impl.Scratch
             // use current write tx id to prevent from overriding a scratch page by write tx 
             // while there might be old read tx looking at it, so we'll only allocate from it
             // _after_ all transactions are past the _current_ write transaction
-            DebugInfo.LastAsOfTxIdWhenFree = tx.Id;
+            DebugInfo.LastAsOfTxIdWhenFree = asOfTxId;
 
             _allocatedPagesCount -= value.NumberOfPages;
             _allocatedPages.Remove(page);
@@ -258,10 +263,10 @@ namespace Voron.Impl.Scratch
             list.AddFirst(new PendingPage
             {
                 Page = value.PositionInScratchBuffer,
-                ValidAfterTransactionId = tx.Id
+                ValidAfterTransactionId = asOfTxId
             });
 
-            _txIdAfterWhichLatestFreePagesBecomeAvailable = tx.Id;
+            _txIdAfterWhichLatestFreePagesBecomeAvailable = asOfTxId;
         }
 
         [DoesNotReturn]

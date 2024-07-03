@@ -1109,11 +1109,6 @@ namespace Voron.Impl
                 _env.ScratchBufferPool.Free(this, maybeRollBack.File.Number, maybeRollBack.PositionInScratchBuffer);
             }
 
-            using (_env.PreventNewTransactions())
-            {
-                _env.Journal.UpdateCacheForJournalSnapshots();
-            }
-
             RolledBack = true;
         }
 

@@ -32,20 +32,21 @@ namespace FastTests.Voron.ScratchBuffer
                     Assert.False(file.HasActivelyUsedBytes(2));
                     
                     var p0 = file.Allocate(tx.LowLevelTransaction, 1, 1, 8, default);
-                    var p1 =file.Allocate(tx.LowLevelTransaction, 1, 1, 9, default);
-                    var p2 =file.Allocate(tx.LowLevelTransaction, 1, 1, 10, default);
-                    var p3 =file.Allocate(tx.LowLevelTransaction, 1, 1, 11, default);
-                    var p4 =file.Allocate(tx.LowLevelTransaction, 1, 1, 12, default);
+                    var p1 = file.Allocate(tx.LowLevelTransaction, 1, 1, 9, default);
+                    var p2 = file.Allocate(tx.LowLevelTransaction, 1, 1, 10, default);
+                    var p3 = file.Allocate(tx.LowLevelTransaction, 1, 1, 11, default);
+                    var p4 = file.Allocate(tx.LowLevelTransaction, 1, 1, 12, default);
 
-                    file.Free(tx.LowLevelTransaction, p0.PositionInScratchBuffer);
-                    file.Free(tx.LowLevelTransaction, p1.PositionInScratchBuffer);
-                    file.Free(tx.LowLevelTransaction, p2.PositionInScratchBuffer);
-                    file.Free(tx.LowLevelTransaction, p3.PositionInScratchBuffer);
-                    file.Free(tx.LowLevelTransaction, p4.PositionInScratchBuffer);
+                    file.Free(tx.LowLevelTransaction, 1, p0.PositionInScratchBuffer);
+                    file.Free(tx.LowLevelTransaction, 3, p1.PositionInScratchBuffer);
+                    file.Free(tx.LowLevelTransaction, 4, p2.PositionInScratchBuffer);
+                    file.Free(tx.LowLevelTransaction, 7, p3.PositionInScratchBuffer);
+                    file.Free(tx.LowLevelTransaction, 9, p4.PositionInScratchBuffer);
 
                     for (int i = 0; i <= 9; i++)
                     {
-                        Assert.True(file.HasActivelyUsedBytes(i));
+                        bool hasActivelyUsedBytes = file.HasActivelyUsedBytes(i);
+                        Assert.True(hasActivelyUsedBytes, "hasActivelyUsedBytes on " + i);
                     }
 
                     Assert.False(file.HasActivelyUsedBytes(10));

@@ -89,7 +89,7 @@ namespace Voron.Impl.Journal
             if (performDecompression)
             {
                 var numberOfPages = GetNumberOfPagesFor(current->UncompressedSize);
-                _recoveryPager.EnsureContinuous(ref recoveryPagerState, 0, numberOfPages, current->TransactionId);
+                _recoveryPager.EnsureContinuous(ref recoveryPagerState, 0, numberOfPages);
                 _recoveryPager.EnsureMapped(recoveryPagerState, ref txState, 0, numberOfPages);
                 outputPage = _recoveryPager.AcquirePagePointer(recoveryPagerState, ref txState, 0);
                 Memory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
@@ -111,7 +111,7 @@ namespace Voron.Impl.Journal
             else
             {
                 var numberOfPages = GetNumberOfPagesFor(current->UncompressedSize);
-                _recoveryPager.EnsureContinuous(ref recoveryPagerState, 0, numberOfPages, current->TransactionId);
+                _recoveryPager.EnsureContinuous(ref recoveryPagerState, 0, numberOfPages);
                 _recoveryPager.EnsureMapped(recoveryPagerState, ref txState, 0, numberOfPages);
                 outputPage = _recoveryPager.AcquirePagePointer(recoveryPagerState, ref txState, 0);
                 Memory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
@@ -138,7 +138,7 @@ namespace Voron.Impl.Journal
                 Debug.Assert(performDecompression == false || recoveryPagerState.Disposed == false);
 
                 var numberOfPagesOnDestination = GetNumberOfPagesFor(pageInfoPtr[i].Size);
-                _dataPager.EnsureContinuous(ref dataPagerState,pageInfoPtr[i].PageNumber, numberOfPagesOnDestination, current->TransactionId);
+                _dataPager.EnsureContinuous(ref dataPagerState,pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
                 _dataPager.EnsureMapped(dataPagerState, ref txState, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
 
 
@@ -726,7 +726,7 @@ namespace Voron.Impl.Journal
         {
         }
 
-        public void Complete(ref Pager2.State state, ref Pager2.PagerTransactionState txState, long transactionId)
+        public void Complete(ref Pager2.State state, ref Pager2.PagerTransactionState txState)
         {
             if (_encryptionBuffers != null) // Encryption enabled
             {
@@ -765,8 +765,8 @@ namespace Voron.Impl.Journal
                 }
             }
             
-            txState.InvokeBeforeCommitFinalization(_dataPager, state, ref txState, transactionId);
-            txState.InvokeDispose(_dataPager, state, ref txState, transactionId);
+            txState.InvokeBeforeCommitFinalization(_dataPager, state, ref txState);
+            txState.InvokeDispose(_dataPager, state, ref txState);
         }
 
         private static int GetNumberOfPagesFor(long size)
