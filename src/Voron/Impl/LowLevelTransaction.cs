@@ -147,7 +147,6 @@ namespace Voron.Impl
         private const int RevertedScratchPageMarker = -0xDEAD;
 
         private CommitStats _requestedCommitStats;
-        private JournalFile.UpdatePageTranslationTableAndUnusedPagesAction? _updatePageTranslationTableAndUnusedPages;
 
         public TransactionPersistentContext PersistentContext { get; }
         public TransactionFlags Flags { get; }
@@ -985,7 +984,6 @@ namespace Voron.Impl
             try
             {
                 var numberOfWrittenPages = _journal.WriteToJournal(this);
-                _updatePageTranslationTableAndUnusedPages = numberOfWrittenPages.UpdatePageTranslationTableAndUnusedPages;
 
                 if (_forTestingPurposes?.SimulateThrowingOnCommitStage2 == true)
                     _forTestingPurposes.ThrowSimulateErrorOnCommitStage2();
@@ -1048,8 +1046,6 @@ namespace Voron.Impl
                 ValidateAllPages();
 
                 Committed = true;
-
-                _updatePageTranslationTableAndUnusedPages?.ExecuteAfterCommit(this);
 
                 _env.TransactionAfterCommit(this);
             }

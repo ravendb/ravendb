@@ -502,18 +502,14 @@ namespace Voron
 
             public override (Pager2 Pager, Pager2.State State) InitializeDataPager()
             {
-                var openFileOptions = new Pager2.OpenFileOptions
-                {
-                    File = FilePath.FullPath,
-                    Temporary = false,
-                    DeleteOnClose = false,
-                    UsePageProtection = true,
-                    ReadOnly = false,
-                    SequentialScan = false,
-                    InitializeFileSize = InitialFileSize,
-                    Encrypted = Encryption.IsEnabled
-                };
-                return Pager2.Create(this, openFileOptions);
+                var flags = Pal.OpenFileFlags.None;
+                if(Encryption.IsEnabled)
+                    flags |= Pal.OpenFileFlags.Encrypted;
+                if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
+                    flags |= Pal.OpenFileFlags.DoNotMap;
+                return Pager2.Create(this, FilePath.FullPath,
+                    InitialFileSize ?? 0,
+                    flags);
             }
 
             public override string ToString()
@@ -811,20 +807,23 @@ namespace Voron
                     }
                     try
                     {
-                        return Pager2.Create(this,
-                            new Pager2.OpenFileOptions
+                        var flags = Pal.OpenFileFlags.Temporary | Pal.OpenFileFlags.WritableMap;
+                        if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
+                            flags |= Pal.OpenFileFlags.DoNotMap;
+                        if (encrypted)
+                        {
+                            flags |= Pal.OpenFileFlags.Encrypted;
+                            if (Encryption.IsEnabled)
                             {
-                                File = tempFile.FullPath,
-                                Temporary = true,
-                                DeleteOnClose = true,
-                                UsePageProtection = false,
-                                Encrypted = encrypted,
-                                InitializeFileSize = initialSize,
                                 // if we don't need encryption here, but there is encryption, means that this is a temp buffer
                                 // and we still need to ensure that this isn't paged to disk
-                                LockMemory = encrypted == false && Encryption.IsEnabled,
-                                DoNotConsiderMemoryLockFailureAsCatastrophicError = DoNotConsiderMemoryLockFailureAsCatastrophicError,
-                            });
+                                flags|=Pal.OpenFileFlags.LockMemory;
+                            }
+                            if(DoNotConsiderMemoryLockFailureAsCatastrophicError)
+                                flags|=Pal.OpenFileFlags.DoNotConsiderMemoryLockFailureAsCatastrophicError;
+                        }
+
+                        return Pager2.Create(this, tempFile.FullPath, initialSize, flags);
                     }
                     catch (FileNotFoundException e)
                     {
@@ -837,11 +836,6 @@ namespace Voron
                 }
 
                 throw new InvalidOperationException("Unable to create temporary mapped file " + name + ", even after trying multiple times.", err);
-            }
-            
-            public override (Pager2 Pager, Pager2.State State) CreateScratchPager(string name, long initialSize)
-            {
-                return CreateTemporaryBufferPager(name, initialSize, encrypted: false);
             }
 
             public override long GetJournalFileSize(long journalNumber, JournalInfo journalInfo)
@@ -859,12 +853,7 @@ namespace Voron
                     EnsureMinimumSize(fileInfo);
                 }
 
-                return Pager2.Create(this, new Pager2.OpenFileOptions
-                {
-                    File = fileInfo.FullName,
-                    ReadOnly = true,
-                    Encrypted = false, // for Journals, we want to read the raw data
-                });
+                return Pager2.Create(this, fileInfo.FullName, 0, Pal.OpenFileFlags.ReadOnly);
             }
 
             private FileInfo GetJournalFileInfo(long journalNumber, JournalInfo journalInfo)
@@ -927,18 +916,12 @@ namespace Voron
 
             public override (Pager2 Pager, Pager2.State State) InitializeDataPager()
             {
-                var fileOptions = new Pager2.OpenFileOptions
-                {
-                    File = _filename,
-                    Temporary = true,
-                    DeleteOnClose = true,
-                    ReadOnly = false,
-                    SequentialScan = false,
-                    InitializeFileSize = InitialFileSize,
-                    UsePageProtection = false,
-                    Encrypted = Encryption.IsEnabled
-                };
-                return Pager2.Create(this, fileOptions);
+                var flags = Pal.OpenFileFlags.Temporary;
+                if(Encryption.IsEnabled)
+                    flags |= Pal.OpenFileFlags.Encrypted;
+                if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
+                    flags |= Pal.OpenFileFlags.DoNotMap;
+                return Pager2.Create(this, _filename, InitialFileSize ?? 0, flags);
             }
 
             public override string ToString()
@@ -1044,25 +1027,6 @@ namespace Voron
                 Memory.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
             }
 
-            public override (Pager2 Pager, Pager2.State State) CreateScratchPager(string name, long initialSize)
-            {
-                var guid = Guid.NewGuid();
-                using (var currentProcess = Process.GetCurrentProcess())
-                {
-                    var filename = $"ravendb-{currentProcess.Id}-{_instanceId}-{name}-{guid}";
-
-                    return Pager2.Create(this,
-                        new Pager2.OpenFileOptions
-                        {
-                            File = TempPath.Combine(filename).FullPath,
-                            DeleteOnClose = true,
-                            Temporary = true,
-                            SequentialScan = false,
-                            InitializeFileSize = initialSize
-                        });
-                }
-            }
-
             public override (Pager2 Pager, Pager2.State State) CreateTemporaryBufferPager(string name, long initialSize, bool encrypted)
             {
                 var guid = Guid.NewGuid();
@@ -1070,14 +1034,11 @@ namespace Voron
                 {
                     var filename = $"ravendb-{currentProcess.Id}-{_instanceId}-{name}-{guid}";
 
-                    return Pager2.Create(this, new Pager2.OpenFileOptions
-                    {
-                        File = TempPath.Combine(filename).FullPath,
-                        InitializeFileSize = initialSize,
-                        SequentialScan = false,
-                        DeleteOnClose = true,
-                        Temporary = true,
-                    });
+                    var flags = Pal.OpenFileFlags.Temporary | Pal.OpenFileFlags.WritableMap;
+                    if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
+                        flags |= Pal.OpenFileFlags.DoNotMap;
+                    return Pager2.Create(this, TempPath.Combine(filename).FullPath, initialSize,
+                        flags);
                 }
             }
 
@@ -1148,9 +1109,6 @@ namespace Voron
 
         public abstract unsafe void WriteHeader(string filename, FileHeader* header);
 
-        public abstract (Pager2 Pager, Pager2.State State) CreateScratchPager(string name, long initialSize);
-
-        // Used for special temporary pagers (compression, recovery, lazyTX...) which should not be wrapped by the crypto pager.
         public abstract (Pager2 Pager, Pager2.State State) CreateTemporaryBufferPager(string name, long initialSize, bool encrypted);
 
         public abstract (Pager2 Pager, Pager2.State State) OpenJournalPager(long journalNumber, JournalInfo journalInfo);

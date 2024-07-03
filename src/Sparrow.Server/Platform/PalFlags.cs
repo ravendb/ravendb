@@ -42,6 +42,12 @@ namespace Sparrow.Server.Platform
             FailGetRealPath = 32,
             FailGetModuleHandle = 33,
             FailDiscardVirtualMemory = 34,
+            FailLockMemory = 35,
+            FailMapViewOfFile = 36,
+            FailUnmapViewOfFile = 37,
+            FailDuplicateHandle = 38,
+            FailSizeInvalid32Bits = 39,
+            FailSizeNegativeOrZero = 40,
         };
 
         [Flags]

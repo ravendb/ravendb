@@ -135,8 +135,8 @@ namespace Voron.Impl.Scratch
                 try
                 {
                     (scratchPager, scratchPagerState) =
-                        _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber),
-                            requestedSize.Value);
+                        _options.CreateTemporaryBufferPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber),
+                            requestedSize.Value, encrypted: _options.Encryption.IsEnabled);
                 }
                 catch (Exception)
                 {
@@ -147,8 +147,9 @@ namespace Voron.Impl.Scratch
             }
             else
             {
-                (scratchPager, scratchPagerState) = _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber),
-                    Math.Max(_options.InitialLogFileSize, minSize));
+                (scratchPager, scratchPagerState) = _options.CreateTemporaryBufferPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber),
+                    Math.Max(_options.InitialLogFileSize, minSize),
+                    encrypted: _options.Encryption.IsEnabled);
             }
 
             var scratchFile = new ScratchBufferFile(scratchPager, scratchPagerState, _currentScratchNumber);

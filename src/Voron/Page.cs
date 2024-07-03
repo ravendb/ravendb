@@ -1,31 +1,28 @@
 ﻿using System;
+using System.Buffers;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Sparrow.Json;
 using Voron.Global;
+using Voron.Impl.Paging;
 
 namespace Voron
 {
-    public readonly unsafe struct Page
+    public readonly unsafe struct Page(byte* pointer)
     {
-        public readonly byte* Pointer;
+        public readonly byte* Pointer = pointer;
 
-        public readonly Span<byte> AsSpan() => new Span<byte>(Pointer, IsOverflow ? OverflowSize + PageHeader.SizeOf : Constants.Storage.PageSize);
-
-        public readonly Span<byte> AsSpan(int offset, int length)
+        public ref T GetRef<T>() where T : unmanaged
+        {
+            return ref Unsafe.AsRef<T>(Pointer);
+        }
+        public Span<byte> AsSpan(int offset, int length)
         {
             Debug.Assert(offset + length <= (IsOverflow ? OverflowSize + PageHeader.SizeOf : Constants.Storage.PageSize));
             return new Span<byte>(Pointer + offset, length);
-        }
-
-        public readonly Span<T> AsSpan<T>(int offset, int length) where T : struct
-        {
-            Debug.Assert(length < (IsOverflow ? OverflowSize + PageHeader.SizeOf : Constants.Storage.PageSize) - offset);
-            return new Span<T>(Pointer + offset, length);
-        }
-
-        public Page(byte* pointer)
-        {
-            Pointer = pointer;
         }
 
         public bool IsValid
@@ -73,5 +70,17 @@ namespace Voron
         {
             Unsafe.CopyBlock(dest.Pointer, Pointer, (uint)(IsOverflow ? OverflowSize : Constants.Storage.PageSize));
         }
+
+        public int GetNumberOfPages()
+        {
+            var pageHeader = (PageHeader*)Pointer;
+            int numberOfPages = 1;
+            if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
+            {
+                numberOfPages = Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+            }
+            return numberOfPages;
+        }
+
     }
 }

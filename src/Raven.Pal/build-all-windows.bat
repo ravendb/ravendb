@@ -5,7 +5,7 @@ if exist artifacts\librvnpal.x86.dll del artifacts\librvnpal.x86.dll
 
 
 set vcbin=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build
-set clbin=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.33.31629\bin\Hostx64
+set clbin=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.40.33807\bin\Hostx64
 
 cmd.exe /c ""%vcbin%\vcvars32.bat" & "%clbin%\x86\cl" -Felibrvnpal.x86.dll -I inc /O2 /analyze /sdl /LD src\*.c src\win\*.c /link"
 copy librvnpal.x86.dll artifacts\librvnpal.win.x86.dll

@@ -144,4 +144,5 @@ test/Tryouts/69M_reddit_accounts.csv*
 src/Sparrow.Server/Utils/VxSort/codegen/.idea/
 
 src/Sparrow.Server/Utils/VxSort/codegen/__pycache__/
+/src/Raven.Pal/x64/Debug
 /UpgradeLog.htm

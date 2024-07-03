@@ -6,8 +6,6 @@ namespace Voron.Impl.Paging
 {
     public static unsafe class Pager
     {        
-        public static ConcurrentDictionary<string, uint> PhysicalDrivePerMountCache = new();
-
         public const int PageMaxSpace = Constants.Storage.PageSize - Constants.Tree.PageHeaderSize;
         // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
         public const int MaxKeySize = 2038 - RequiredSpaceForNewNode;

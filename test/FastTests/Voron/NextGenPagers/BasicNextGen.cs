@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Voron;
 using Voron.Global;
 using Xunit;
@@ -11,6 +12,8 @@ public class BasicNextGen : StorageTest
     public BasicNextGen(ITestOutputHelper output) : base(output)
     {
     }
+
+    private unsafe static Span<byte> AsSpan(Page p) => new Span<byte>(p.Pointer, Constants.Storage.PageSize);
 
     [Fact]
     public unsafe void CanHandleUpdatesAndFlushing()
@@ -25,7 +28,7 @@ public class BasicNextGen : StorageTest
                 {
                     var page = tx.LowLevelTransaction.AllocatePage(1);
                     byte b = (byte)(i+j+2);
-                    page.AsSpan()[PageHeader.SizeOf..].Fill(b);
+                    AsSpan(page)[PageHeader.SizeOf..].Fill(b);
                     
                     pagesAndVals.Add((page.PageNumber,b));
                 }
@@ -56,11 +59,11 @@ public class BasicNextGen : StorageTest
         {
             var page = tx.LowLevelTransaction.AllocatePage(1);
             pageNum1 = page.PageNumber;
-            page.AsSpan()[PageHeader.SizeOf..].Fill(3);
+            AsSpan(page)[PageHeader.SizeOf..].Fill(3);
             
             page = tx.LowLevelTransaction.AllocatePage(1);
             pageNum2 = page.PageNumber;
-            page.AsSpan()[PageHeader.SizeOf..].Fill(5);
+            AsSpan(page)[PageHeader.SizeOf..].Fill(5);
 
             tx.Commit();
         }
@@ -71,12 +74,12 @@ public class BasicNextGen : StorageTest
         using (var tx = Env.WriteTransaction())
         {
             var page = tx.LowLevelTransaction.ModifyPage(pageNum1);
-            page.AsSpan()[PageHeader.SizeOf..].Fill(4);
+            AsSpan(page)[PageHeader.SizeOf..].Fill(4);
            // tx.LowLevelTransaction.ModifyPage(pageNum2);
             tx.LowLevelTransaction.FreePage(pageNum2);
             page = tx.LowLevelTransaction.AllocatePage(1);
             Assert.Equal(pageNum2, page.PageNumber);
-            page.AsSpan()[PageHeader.SizeOf..].Fill(7);
+            AsSpan(page)[PageHeader.SizeOf..].Fill(7);
             using (var rtx = Env.ReadTransaction())
             {
                 var readPage = rtx.LowLevelTransaction.GetPage(pageNum1);

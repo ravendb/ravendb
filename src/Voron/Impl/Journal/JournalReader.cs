@@ -1,5 +1,6 @@
 ﻿using Sparrow;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -13,6 +14,10 @@ using System.Linq;
 using Sparrow.Platform;
 using Voron.Impl.FileHeaders;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+using Microsoft.Win32.SafeHandles;
+using Sparrow.Json;
 
 namespace Voron.Impl.Journal
 {
@@ -59,7 +64,8 @@ namespace Voron.Impl.Journal
 
         public TransactionHeader* LastTransactionHeader { get; private set; }
 
-        private bool ReadOneTransactionToDataFile(ref Pager2.State dataPagerState, ref Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState, StorageEnvironmentOptions options)
+        private bool ReadOneTransactionToDataFile(ref Pager2.State dataPagerState, ref Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState,
+            SafeFileHandle fileHandle, StorageEnvironmentOptions options)
         {
             if (_readAt4Kb >= _journalPagerNumberOfAllocated4Kb)
                 return false;
@@ -129,97 +135,127 @@ namespace Voron.Impl.Journal
                     throw new InvalidDataException($"Transaction {current->TransactionId} contains reference to page {pageInfoPtr[i].PageNumber} which is after the last allocated page {current->LastPageNumber}");
             }
 
-            for (var i = 0; i < current->PageCount; i++)
+            long bufferSize = 0;
+            byte* currentBuffer = null;
+            try
             {
-                if (totalRead > current->UncompressedSize)
-                    throw new InvalidDataException($"Attempted to read position {totalRead} from transaction data while the transaction is size {current->UncompressedSize}");
-
-                Debug.Assert(_journalPagerState.Disposed == false);
-                Debug.Assert(performDecompression == false || recoveryPagerState.Disposed == false);
-
-                var numberOfPagesOnDestination = GetNumberOfPagesFor(pageInfoPtr[i].Size);
-                _dataPager.EnsureContinuous(ref dataPagerState,pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
-                _dataPager.EnsureMapped(dataPagerState, ref txState, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
-
-
-                // We are going to overwrite the page, so we don't care about its current content
-                var pagePtr = _dataPager.AcquirePagePointerForNewPage(dataPagerState, ref txState, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
-                _dataPager.MaybePrefetchMemory(dataPagerState, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
-                
-                var pageNumber = *(long*)(outputPage + totalRead);
-                if (pageInfoPtr[i].PageNumber != pageNumber)
-                    throw new InvalidDataException($"Expected a diff for page {pageInfoPtr[i].PageNumber} but got one for {pageNumber}");
-                totalRead += sizeof(long);
-
-                _modifiedPages.Add(pageNumber);
-
-                for (var j = 1; j < numberOfPagesOnDestination; j++)
+                for (var i = 0; i < current->PageCount; i++)
                 {
-                    _modifiedPages.Remove(pageNumber + j);
-                }
+                    if (totalRead > current->UncompressedSize)
+                        throw new InvalidDataException(
+                            $"Attempted to read position {totalRead} from transaction data while the transaction is size {current->UncompressedSize}");
 
-                _dataPager.UnprotectPageRange(pagePtr, (ulong)pageInfoPtr[i].Size);
- 
-                if (pageInfoPtr[i].DiffSize == 0)
-                {
-                    if (pageInfoPtr[i].Size == 0)
+                    Debug.Assert(_journalPagerState.Disposed == false);
+                    Debug.Assert(performDecompression == false || recoveryPagerState.Disposed == false);
+
+                    var numberOfPagesOnDestination = GetNumberOfPagesFor(pageInfoPtr[i].Size);
+                    _dataPager.EnsureContinuous(ref dataPagerState, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
+                    _dataPager.EnsureMapped(dataPagerState, ref txState, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
+
+                    var pageNumber = *(long*)(outputPage + totalRead);
+                    if (pageInfoPtr[i].PageNumber != pageNumber)
+                        throw new InvalidDataException($"Expected a diff for page {pageInfoPtr[i].PageNumber} but got one for {pageNumber}");
+                    totalRead += sizeof(long);
+
+                    _modifiedPages.Add(pageNumber);
+
+                    for (var j = 1; j < numberOfPagesOnDestination; j++)
                     {
-                        // diff contained no changes
-                        continue;
+                        _modifiedPages.Remove(pageNumber + j);
                     }
 
-                    var journalPagePtr = outputPage + totalRead;
-
-                    if (options.Encryption.IsEnabled == false)
+                    long pageSize = (long)numberOfPagesOnDestination * Constants.Storage.PageSize;
+                    if (pageSize > bufferSize)
                     {
-                        var pageHeader = (PageHeader*)journalPagePtr;
-
-                        var checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageNumber, out var expectedChecksum);
-                        if (checksum != expectedChecksum) 
-                            ThrowInvalidChecksumOnPageFromJournal(pageNumber, current, expectedChecksum, checksum, pageHeader);
+                        currentBuffer = (byte*)NativeMemory.Realloc(currentBuffer, (nuint)pageSize);
                     }
 
-                    Memory.Copy(pagePtr, journalPagePtr, pageInfoPtr[i].Size);
-                    totalRead += pageInfoPtr[i].Size;
-
-                    if (options.Encryption.IsEnabled)
+                    if (pageInfoPtr[i].DiffSize == 0)
                     {
-                        throw new NotImplementedException();
-                        // var pageHeader = (PageHeader*)pagePtr;
-                        //
-                        // if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
-                        // {
-                        //     // need to mark overlapped buffers as invalid for commit
-                        //
-                        //     var encryptionBuffers = ((IPagerLevelTransactionState)this).CryptoPagerTransactionState[_dataPager];
-                        //
-                        //     var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
-                        //
-                        //     for (var j = 1; j < numberOfPages; j++)
-                        //     {
-                        //         if (encryptionBuffers.TryGetValue(pageNumber + j, out var buffer))
-                        //         {
-                        //             buffer.SkipOnTxCommit = true;
-                        //         }
-                        //     }
-                        // }
-                    }
-                }
-                else
-                {
-                    _diffApplier.Destination = pagePtr;
-                    _diffApplier.Diff = outputPage + totalRead;
-                    _diffApplier.Size = pageInfoPtr[i].Size;
-                    _diffApplier.DiffSize = pageInfoPtr[i].DiffSize;
-                    _diffApplier.Apply(pageInfoPtr[i].IsNewDiff);
-                    totalRead += pageInfoPtr[i].DiffSize;
-                }
+                        if (pageInfoPtr[i].Size == 0)
+                        {
+                            // diff contained no changes
+                            continue;
+                        }
 
-                _dataPager.ProtectPageRange(pagePtr, (ulong)pageInfoPtr[i].Size);
+                        var journalPagePtr = outputPage + totalRead;
+
+                        if (options.Encryption.IsEnabled == false)
+                        {
+                            var pageHeader = (PageHeader*)journalPagePtr;
+
+                            var checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageNumber, out var expectedChecksum);
+                            if (checksum != expectedChecksum)
+                                ThrowInvalidChecksumOnPageFromJournal(pageNumber, current, expectedChecksum, checksum, pageHeader);
+                        }
+
+                        Memory.Copy(currentBuffer, journalPagePtr, pageInfoPtr[i].Size);
+
+                        totalRead += pageInfoPtr[i].Size;
+
+                        if (options.Encryption.IsEnabled)
+                        {
+                            var pageHeader = (PageHeader*)journalPagePtr;
+                            if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
+                            {
+                                // need to mark overlapped buffers as invalid for commit
+                                var encryptionBuffers = txState.ForCrypto![_dataPager];
+                                var numberOfPages = Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+                                for (var j = 1; j < numberOfPages; j++)
+                                {
+                                    if (encryptionBuffers.TryGetValue(pageNumber + j, out var buffer))
+                                    {
+                                        buffer.SkipOnTxCommit = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        ReadPageFromFile(fileHandle, currentBuffer, pageSize, pageNumber);
+                        _diffApplier.Destination = currentBuffer;
+                        _diffApplier.Diff = outputPage + totalRead;
+                        _diffApplier.Size = pageInfoPtr[i].Size;
+                        _diffApplier.DiffSize = pageInfoPtr[i].DiffSize;
+                        _diffApplier.Apply(pageInfoPtr[i].IsNewDiff);
+                        totalRead += pageInfoPtr[i].DiffSize;
+                    }
+
+                    WritePageToFile(fileHandle, currentBuffer, pageSize, pageNumber);
+                }
             }
+            finally
+            { 
+                NativeMemory.Free(currentBuffer);
+            }
+
             LastTransactionHeader = current;
             
             return true;
+        }
+
+        private static void WritePageToFile(SafeFileHandle fileHandle, byte* currentBuffer, long pageSize, long pageNumber)
+        {
+            while (pageSize > 0) // need to handle > 2gb writes
+            {
+                int sizeToWrite = (int)Math.Min(pageSize, int.MaxValue);
+                RandomAccess.Write(fileHandle, new Span<byte>(currentBuffer, sizeToWrite), pageNumber * Constants.Storage.PageSize);
+                pageSize -= sizeToWrite;
+                currentBuffer += sizeToWrite;
+            }
+        }
+
+        private static void ReadPageFromFile(SafeFileHandle fileHandle, byte* currentBuffer, long pageSize, long pageNumber)
+        {
+            while (pageSize > 0)
+            {
+                int size = (int)Math.Min(pageSize, int.MaxValue);
+                RandomAccess.Read(fileHandle, new Span<byte>(currentBuffer, size), pageNumber * Constants.Storage.PageSize);
+                pageSize -= size;
+                currentBuffer += size;
+            }
+            
         }
 
         private void SkipCurrentTransaction(TransactionHeader* current)
@@ -274,7 +310,11 @@ namespace Voron.Impl.Journal
         public List<TransactionHeader> RecoverAndValidate(ref Pager2.State dataPagerState, ref Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState, StorageEnvironmentOptions options)
         {
             var transactionHeaders = new List<TransactionHeader>();
-            while (ReadOneTransactionToDataFile(ref dataPagerState, ref recoveryPagerState, ref txState, options))
+            var rc = Pal.rvn_pager_get_file_handle(dataPagerState.Handle, out var fileHandle, out int errorCode);
+            if(rc != PalFlags.FailCodes.Success)
+                PalHelper.ThrowLastError(rc, errorCode, "Failed to get a file handle to " + _dataPager.FileName);
+            using var _ = fileHandle;
+            while (ReadOneTransactionToDataFile(ref dataPagerState, ref recoveryPagerState, ref txState, fileHandle, options))
             {
                 Debug.Assert(transactionHeaders.Count == 0 || LastTransactionHeader->TransactionId > transactionHeaders.Last().TransactionId);
 

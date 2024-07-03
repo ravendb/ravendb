@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Win32.SafeHandles;
 using Sparrow.Platform;
 using Sparrow.Utils;
 
@@ -10,7 +11,7 @@ namespace Sparrow.Server.Platform
     public static unsafe class Pal
     {
         public static PalDefinitions.SystemInformation SysInfo;
-        public const int PAL_VER = 52000; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 52001; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -54,19 +55,85 @@ namespace Sparrow.Server.Platform
 
         private const string LIBRVNPAL = "librvnpal";
 
+
+        [Flags]
+        public enum OpenFileFlags
+        {
+            None = 0,
+            Temporary = 1 << 1,
+            ReadOnly = 1 << 2,
+            SequentialScan = 1 << 3,
+            WritableMap = 1 << 4,
+            Encrypted = 1 << 5,
+            LockMemory = 1 << 6,
+            DoNotConsiderMemoryLockFailureAsCatastrophicError = 1 << 7,
+            CopyOnWrite = 1 << 8,
+            DoNotMap = 1 << 9,
+        }
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_unmap_memory(void* mem,
+            out Int32 errorCode);
+        
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_map_memory(void* handle,
+            Int64 offset,
+            Int64 size,
+            out void* mem,
+            out Int32 errorCode);
+            
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_close_pager(
+            void* handle, void* memory, out Int32 errorCode);
+        
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_sync_pager(
+            void* handle, out Int32 errorCode);
+
+        public static PalFlags.FailCodes rvn_init_pager(
+            string filename,
+            Int64 initialFileSize,
+            OpenFileFlags flags,
+            out void* handle,
+            out byte* baseAddress,
+            out Int64 memorySize,
+            out Int32 errorCode)
+        {
+            using var convert = new Converter(filename);
+            return rvn_init_pager(convert.Pointer, initialFileSize, flags,
+                out handle, out baseAddress, out memorySize, out errorCode);
+        }
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_increase_pager_size(
+            void* handle,
+            Int64 newFileSize,
+            out void* newHandle,
+            out byte* baseAddress,
+            out Int64 memorySize,
+            out Int32 errorCode);
+        
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_init_pager(
+            byte* filename,
+            Int64 initialFileSize,
+            OpenFileFlags flags,
+            out void* handle,
+            out byte* baseAddress,
+            out Int64 memorySize,
+            out Int32 errorCode);
+
         public static PalFlags.FailCodes rvn_write_header(
             string filename,
             void* header,
             Int32 size,
             out Int32 errorCode)
         {
-            using (var convert = new Converter(filename))
-            {
-                return rvn_write_header(convert.Pointer,
-                    header,
-                    size,
-                    out errorCode);
-            }
+            using var convert = new Converter(filename);
+            return rvn_write_header(convert.Pointer,
+                header,
+                size,
+                out errorCode);
         }
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
@@ -163,6 +230,13 @@ namespace Sparrow.Server.Platform
             out void* newAddress,
             out Int32 errorCode);
 
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_pager_get_file_handle(
+            void* handle,
+            out SafeFileHandle fileHandle,
+            out Int32 errorCode);
+        
         public static PalFlags.FailCodes rvn_open_journal_for_writes(
             string filename,
             PalFlags.JournalMode mode,
@@ -302,18 +376,17 @@ namespace Sparrow.Server.Platform
         {
             private byte[] _buffer;
             public byte* Pointer => (byte*)PinnedHandle.AddrOfPinnedObject();
-            private static readonly Encoding CurrentEncoding = PlatformDetails.RunningOnPosix ? Encoding.UTF8 : Encoding.Unicode;
             private GCHandle PinnedHandle;
 
             public Converter(string s)
             {
-                var size = CurrentEncoding.GetMaxByteCount(s.Length) + sizeof(char);
+                var size = Encoding.UTF8.GetMaxByteCount(s.Length) + sizeof(char);
                 _buffer = ArrayPool<byte>.Shared.Rent(size);
-                int length = CurrentEncoding.GetBytes(s, 0, s.Length, _buffer, 0);
+                int length = Encoding.UTF8.GetBytes(s, 0, s.Length, _buffer, 0);
                 if (length > size - sizeof(char))
                 {
                     throw new InvalidOperationException(
-                        $"Invalid length of GetBytes while converting string : '{s}' using '{CurrentEncoding.EncodingName}' Encoder. Got length of {length} bytes while max size for the string using this encoder is {CurrentEncoding.GetMaxByteCount(s.Length)}");
+                        $"Invalid length of GetBytes while converting string : '{s}' using '{Encoding.UTF8.EncodingName}' Encoder. Got length of {length} bytes while max size for the string using this encoder is {Encoding.UTF8.GetMaxByteCount(s.Length)}");
                 }
 
                 for (int i = length; i < length + sizeof(char); i++)
