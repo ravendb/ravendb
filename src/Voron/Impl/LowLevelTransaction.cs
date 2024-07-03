@@ -605,7 +605,7 @@ namespace Voron.Impl
 
                 TrackDirtyPage(pageNumber);
 
-                var page = pageFromScratchBuffer.ReadPage(this);
+                var page = pageFromScratchBuffer.ReadRawPage(this);
                 if (zeroPage)
                     Memory.Set(page.Pointer, 0, Constants.Storage.PageSize * numberOfPages);
                 var newPage = page with
