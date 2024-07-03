@@ -179,13 +179,6 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
     {
     }
 
-    internal override IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx)
-    {
-        //lucene method
-
-        return null;
-    }
-
     internal override void RecreateSearcher(Transaction asOfTx)
     {
         //lucene method

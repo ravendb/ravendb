@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.Indexes
                         writePos += sizeof(long);
                         *(long*)writePos = lastProcessedTombstoneEtag;
 
-                        var referencesInfo = index.GetInMemoryReferencesState(collection, isCompareExchange: false);
+                        var referencesInfo = index.GetInMemoryReferencesState(indexContext, collection, isCompareExchange: false);
                         writePos += sizeof(long);
                         *(long*)writePos = referencesInfo.ParentItemEtag;
                         writePos += sizeof(long);
@@ -243,7 +243,7 @@ namespace Raven.Server.Documents.Indexes
                     writePos += sizeof(long);
                     *(long*)writePos = lastProcessedTombstoneEtag;
 
-                    var referencesInfo = index.GetInMemoryReferencesState(collection, isCompareExchange: true);
+                    var referencesInfo = index.GetInMemoryReferencesState(indexContext, collection, isCompareExchange: true);
                     writePos += sizeof(long);
                     *(long*)writePos = referencesInfo.ParentItemEtag;
                     writePos += sizeof(long);

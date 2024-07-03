@@ -2404,7 +2404,7 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
-        public virtual HandleReferencesBase.InMemoryReferencesInfo GetInMemoryReferencesState(string collection, bool isCompareExchange)
+        public virtual HandleReferencesBase.InMemoryReferencesInfo GetInMemoryReferencesState(TransactionOperationContext indexContext, string collection, bool isCompareExchange)
         {
             return HandleReferencesBase.InMemoryReferencesInfo.Default;
         }
@@ -2491,7 +2491,7 @@ namespace Raven.Server.Documents.Indexes
 
                             tx.InnerTransaction.LowLevelTransaction.LastChanceToReadFromWriteTransactionBeforeCommit += llt =>
                             {
-                                llt.UpdateClientState(IndexPersistence.BuildStreamCacheAfterTx(llt.Transaction));
+                                llt.UpdateClientState(IndexPersistence.UpdateIndexCache(llt.Transaction));
                             };
 
                             tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += llt =>
