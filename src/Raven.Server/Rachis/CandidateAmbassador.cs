@@ -59,7 +59,7 @@ namespace Raven.Server.Rachis
         {
             return new NodeStatus
             {
-                Name = $"Candidate Ambassador for {_engine.Tag} > {_tag} in term {_engine.CurrentTerm}",
+                Name = $"Candidate Ambassador for {_engine.Tag} > {_tag} in term {_engine.CurrentCommittedState.Term}",
                 Connected = Status == AmbassadorStatus.Connected,
                 ErrorDetails = Status == AmbassadorStatus.Connected ? null : LastException?.ToString(),
                 LastReply = _connection?.Info?.LastReceived ?? DateTime.MinValue,
@@ -213,7 +213,7 @@ namespace Raven.Server.Rachis
                                     if (_engine.Log.IsInfoEnabled)
                                         _engine.Log.Info($"Candidate RequestVote trial vote req/res took {sp.ElapsedMilliseconds:#,#;;0} ms");
 
-                                    if (rvr.Term > _engine.CurrentTerm && rvr.VoteGranted == false)
+                                    if (rvr.Term > _engine.CurrentCommittedState.Term && rvr.VoteGranted == false)
                                     {
                                         var message =
                                             $"Candidate ambassador for {_tag}: found election term {rvr.Term:#,#;;0} that is higher than ours {currentElectionTerm:#,#;;0}";

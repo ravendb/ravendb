@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         {
             if (_databaseContext.ShardsTopology.TryGetValue(_shardNumber, out var topology))
             {
-                var node = topology.WhoseTaskIsIt(_databaseContext.ServerStore.Engine.CurrentState, _state.SubscriptionState, null);
+                var node = topology.WhoseTaskIsIt(_databaseContext.ServerStore.Engine.CurrentCommittedState.State, _state.SubscriptionState, null);
                 if (node == null || _shardRequestExecutor == null)
                     return;
 

@@ -267,8 +267,8 @@ namespace Raven.Server.Documents.Subscriptions
             var command = GetAcknowledgeSubscriptionBatchCommand(nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                 ISubscriptionConnection.NonExistentBatch, docsToResend: null);
 
-            var state = _server.Engine.CurrentState;
-            if (state == RachisState.Leader || state == RachisState.Follower)
+            var state = _server.Engine.CurrentCommittedState.State;
+            if (state is RachisState.Leader or RachisState.Follower)
             {
                 // there are no changes for this subscription but we still want to check if we are the node that is responsible for this task.
                 // we can do that locally if we have a functional cluster (in a leader or follower state).

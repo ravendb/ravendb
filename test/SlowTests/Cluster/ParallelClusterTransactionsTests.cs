@@ -163,14 +163,14 @@ namespace SlowTests.Cluster
                 await checkingTask;
                 await destablizeTask;
 
-                var maxTerm = cluster.Nodes.Select(x => x.ServerStore.Engine.CurrentTerm).Max();
+                var maxTerm = cluster.Nodes.Select(x => x.ServerStore.Engine.CurrentCommittedState.Term).Max();
                 long maxTermOld;
                 var attempts = 3 * numberOfNodes;
                 do
                 {
                     maxTermOld = maxTerm;
                     await Task.Delay(TimeSpan.FromSeconds(3) * numberOfNodes);
-                    maxTerm = cluster.Nodes.Select(x => x.ServerStore.Engine.CurrentTerm).Max();
+                    maxTerm = cluster.Nodes.Select(x => x.ServerStore.Engine.CurrentCommittedState.Term).Max();
 
                     attempts--; // cluster couldn't stabilize
                 } while (maxTerm != maxTermOld && attempts > 0);
@@ -178,7 +178,7 @@ namespace SlowTests.Cluster
                 var compareExchangeCount = new HashSet<long>();
                 var maxLog = 0L;
 
-                foreach (var n in cluster.Nodes.Where(x => x.ServerStore.Engine.CurrentTerm >= maxTerm))
+                foreach (var n in cluster.Nodes.Where(x => x.ServerStore.Engine.CurrentCommittedState.Term >= maxTerm))
                 {
                     using (n.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())

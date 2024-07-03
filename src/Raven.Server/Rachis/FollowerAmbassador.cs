@@ -165,7 +165,7 @@ namespace Raven.Server.Rachis
                 var needNewConnection = _connection == null;
                 while (_leader.Running && _running)
                 {
-                    _engine.ValidateTerm(_term);
+                    _engine.ValidateLatestTerm(_term);
                     _debugRecorder.Start();
                     try
                     {
@@ -256,7 +256,7 @@ namespace Raven.Server.Rachis
                         {
                             var myLastCommittedIndex = 0L;
                             entries.Clear();
-                            _engine.ValidateTerm(_term);
+                            _engine.ValidateLatestTerm(_term);
 
                             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                             {
@@ -480,7 +480,7 @@ namespace Raven.Server.Rachis
                         return false;
                     }
 
-                    _engine.ValidateTerm(_term);
+                    _engine.ValidateLatestTerm(_term);
                 }
             }
             catch

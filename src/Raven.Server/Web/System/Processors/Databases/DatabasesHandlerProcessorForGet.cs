@@ -125,7 +125,7 @@ internal sealed class DatabasesHandlerProcessorForGet : AbstractDatabasesHandler
 
             topology.PredefinedMentors.TryGetValue(promotable, out var mentorCandidate);
             var node = GetNode(databaseRecord.DatabaseName, clusterTopology, promotable, mentorCandidate, out var promotableTask);
-            var mentor = topology.WhoseTaskIsIt(serverStore.Engine.CurrentState, promotableTask, null);
+            var mentor = topology.WhoseTaskIsIt(serverStore.Engine.CurrentCommittedState.State, promotableTask, null);
             nodesTopology.Promotables.Add(GetNodeId(node, mentor));
             SetNodeStatus(topology, promotable, nodesTopology, statuses);
         }
@@ -136,7 +136,7 @@ internal sealed class DatabasesHandlerProcessorForGet : AbstractDatabasesHandler
                 continue;
 
             var node = GetNode(databaseRecord.DatabaseName, clusterTopology, rehab, null, out var promotableTask);
-            var mentor = topology.WhoseTaskIsIt(serverStore.Engine.CurrentState, promotableTask, null);
+            var mentor = topology.WhoseTaskIsIt(serverStore.Engine.CurrentCommittedState.State, promotableTask, null);
             nodesTopology.Rehabs.Add(GetNodeId(node, mentor));
             SetNodeStatus(topology, rehab, nodesTopology, statuses);
         }

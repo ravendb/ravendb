@@ -924,10 +924,9 @@ namespace Voron
             {
                 if (tx.Committed)
                 {
+                    Journal.Applicator.OnTransactionCommitted(tx);
                     UpdateStateOnCommit(tx);
                 }
-
-                Journal.Applicator.OnTransactionCommitted(tx);
 
                 tx.OnAfterCommitWhenNewTransactionsPrevented();
             }
@@ -1713,6 +1712,7 @@ namespace Voron
             };
             long nextPageNumber = tx.GetNextPageNumber();
             var rootObjectsState = tx.RootObjects.State;
+            var clientState = tx.CurrentStateRecord.ClientState;
             Debug.Assert(ReferenceEquals(rootObjectsState, tx.CurrentStateRecord.Root));
             while (true)
             {
@@ -1723,7 +1723,8 @@ namespace Voron
                     ScratchPagesTable = pagesInScratch,
                     FlushedToJournal = txFlushedToJournal,
                     NextPageNumber = nextPageNumber,
-                    Root = rootObjectsState
+                    Root = rootObjectsState,
+                    ClientState = clientState
                 };
                 if (Interlocked.CompareExchange(ref _currentStateRecordRecord, updatedState, currentState) == currentState)
                 {

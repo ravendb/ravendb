@@ -291,10 +291,25 @@ namespace Raven.Server.Rachis
 
         public readonly RachisDebug InMemoryDebug = new RachisDebug();
 
-        public RachisState CurrentState
+        public RachisState CurrentStateIn(ClusterOperationContext ctx)
         {
-            get => _currentState;
-            private set => _currentState = value;
+            if (ctx.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState is RachisStateRecord r)
+                return r.State;
+            return RachisState.Passive;
+        }
+        
+        public void UpdateStateIn(ClusterOperationContext ctx, RachisState state)
+        {
+            var cur = (RachisStateRecord)ctx.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState ??
+                      RachisStateRecord.Empty;
+            ctx.Transaction.InnerTransaction.LowLevelTransaction.UpdateClientState(cur with {State = state});
+        }
+        
+        public void UpdateTermIn(ClusterOperationContext ctx, long term)
+        {
+            var cur = (RachisStateRecord)ctx.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState ??
+                      RachisStateRecord.Empty;
+            ctx.Transaction.InnerTransaction.LowLevelTransaction.UpdateClientState(cur with {Term = term});
         }
 
         public string LastStateChangeReason
@@ -313,8 +328,6 @@ namespace Raven.Server.Rachis
 
         public event EventHandler<StateTransition> StateChanged;
 
-        public event EventHandler LeaderElected;
-
         public Action<ClusterOperationContext> SwitchToSingleLeaderAction;
 
         public Action<ClusterOperationContext, Leader.RachisMergedCommand> BeforeAppendToRaftLog;
@@ -331,7 +344,15 @@ namespace Raven.Server.Rachis
         private readonly ConcurrentQueue<Elector> _electors = new ConcurrentQueue<Elector>();
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
-        public long CurrentTerm { get; private set; }
+        public RachisStateRecord CurrentCommittedState => (_persistentState.CurrentStateRecord.ClientState as RachisStateRecord) ?? RachisStateRecord.Empty;
+
+        public long CurrentTermIn(ClusterOperationContext ctx)
+        {
+            if (ctx.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState is RachisStateRecord r)
+                return r.Term;
+            return -1;
+        }
+
         public string Tag => _tag;
         public string ClusterId => _clusterId;
         public string ClusterBase64Id => _clusterIdBase64Id;
@@ -468,7 +489,6 @@ namespace Raven.Server.Rachis
                     Log = LoggingSource.Instance.GetLogger<RachisConsensus>(_tag);
                     LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
 
-                    CurrentTerm = ReadTerm(context);
 
                     topology = GetTopology(context);
                     if (topology.AllNodes.Count == 1 && topology.Members.Count == 1)
@@ -487,26 +507,23 @@ namespace Raven.Server.Rachis
 
                     InitializeState(context, changes);
 
-                    LogHistory.Initialize(tx, configuration, Log);
+                    LogHistory.Initialize(tx, configuration, Log); 
+                    // if we don't have a topology id, then we are passive
+                    // an admin needs to let us know that it is fine, either
+                    // by explicit bootstrapping or by connecting us to a cluster
+                    var state = topology.TopologyId == null || topology.Contains(_tag) == false ? RachisState.Passive : RachisState.Follower;
+                    var currentTerm = ReadTerm(context);
 
+                    tx.InnerTransaction.LowLevelTransaction.UpdateClientState(new RachisStateRecord(state, currentTerm));
+                   
                     tx.Commit();
                 }
 
                 Timeout = new TimeoutEvent(0, "Consensus");
                 RandomizeTimeout();
 
-                // if we don't have a topology id, then we are passive
-                // an admin needs to let us know that it is fine, either
-                // by explicit bootstrapping or by connecting us to a cluster
-                if (topology.TopologyId == null ||
-                    topology.Contains(_tag) == false)
-                {
-                    CurrentState = RachisState.Passive;
-                    return;
-                }
-
-                CurrentState = RachisState.Follower;
-                Timeout.Start(SwitchToCandidateStateOnTimeout);
+                if (CurrentCommittedState.State != RachisState.Passive)
+                    Timeout.Start(SwitchToCandidateStateOnTimeout);
             }
             catch (Exception)
             {
@@ -557,7 +574,7 @@ namespace Raven.Server.Rachis
 
         internal void SwitchToSingleLeader(ClusterOperationContext context)
         {
-            var electionTerm = CurrentTerm + 1;
+            var electionTerm = CurrentTermIn(context) + 1;
             CastVoteInTerm(context, electionTerm, Tag, "Switching to single leader");
 
             if (Log.IsInfoEnabled)
@@ -571,11 +588,11 @@ namespace Raven.Server.Rachis
             Candidate = null;
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
-                if (tx is LowLevelTransaction llt && llt.Committed)
-                {
-                    CommandsVersionManager.SetClusterVersion(ClusterCommandsVersionManager.MyCommandsVersion);
-                    leader.Start();
-                }
+                if (tx.Committed == false) 
+                    return;
+                
+                CommandsVersionManager.SetClusterVersion(ClusterCommandsVersionManager.MyCommandsVersion);
+                leader.Start();
             };
         }
 
@@ -597,7 +614,7 @@ namespace Raven.Server.Rachis
                 // we setup the wait _before_ checking the state
                 var task = _stateChanged.Task.WithCancellation(token);
 
-                if (CurrentState == rachisState)
+                if (CurrentCommittedState.State == rachisState)
                     return true;
 
                 await task;
@@ -628,7 +645,7 @@ namespace Raven.Server.Rachis
                 // we setup the wait _before_ checking the state
                 var task = _stateChanged.Task.WithCancellation(cts);
 
-                if (CurrentState != rachisState)
+                if (CurrentCommittedState.State != rachisState)
                     return true;
 
                 await task;
@@ -860,7 +877,7 @@ namespace Raven.Server.Rachis
                     data[1] = lastTruncatedTerm;
                 }
 
-                node.CurrentTerm = lastTruncatedIndex;
+                node.UpdateTermIn(context, lastTruncatedTerm);
             }
         }
 
@@ -872,8 +889,11 @@ namespace Raven.Server.Rachis
             Action beforeStateChangedEvent = null,
             bool disposeAsync = true)
         {
-            if (expectedTerm != CurrentTerm && expectedTerm != -1)
-                RachisConcurrencyException.Throw($"Attempted to switch state to {rachisState} on expected term {expectedTerm:#,#;;0} but the real term is {CurrentTerm:#,#;;0}");
+            Debug.Assert(context.Transaction.InnerTransaction.IsWriteTransaction);
+            
+            long currentTerm = CurrentTermIn(context);
+            if (expectedTerm != currentTerm && expectedTerm != -1)
+                RachisConcurrencyException.Throw($"Attempted to switch state to {rachisState} on expected term {expectedTerm:#,#;;0} but the real term is {currentTerm:#,#;;0}");
 
             if (rachisState == RachisState.LeaderElect || rachisState == RachisState.Leader)
             {
@@ -922,70 +942,67 @@ namespace Raven.Server.Rachis
             var transition = new StateTransition
             {
                 CurrentTerm = expectedTerm,
-                From = CurrentState,
+                From = CurrentStateIn(context),
                 To = rachisState,
                 Reason = stateChangedReason,
                 When = DateTime.UtcNow
             };
 
             PrevStates.LimitedSizeEnqueue(transition, 5);
-
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented +=
-                _ => CurrentState = rachisState; //  we need this to happened while we still under the write lock
-
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+            UpdateStateIn(context, rachisState);
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += llt =>
             {
-                if (tx is LowLevelTransaction llt && llt.Committed)
+                if (!llt.Committed) 
+                    return;
+                
+                try
                 {
-                    try
+                    beforeStateChangedEvent?.Invoke();
+                }
+                catch (Exception e)
+                {
+                    if (Log.IsInfoEnabled)
                     {
-                        beforeStateChangedEvent?.Invoke();
+                        Log.Info("Before state change invocation function failed.", e);
                     }
-                    catch (Exception e)
+                }
+
+                try
+                {
+                    StateChanged?.Invoke(this, transition);
+                }
+                catch (Exception e)
+                {
+                    if (Log.IsInfoEnabled)
+                    {
+                        Log.Info("State change invocation function failed.", e);
+                    }
+                }
+
+                if (disposeAsync)
+                {
+                    TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
                     {
                         if (Log.IsInfoEnabled)
                         {
-                            Log.Info("Before state change invocation function failed.", e);
+                            Log.Info($"Initiate disposing the term _prior_ to {expectedTerm:#,#;;0} with {toDispose.Count} things to dispose.");
                         }
-                    }
 
-                    try
-                    {
-                        StateChanged?.Invoke(this, transition);
-                    }
-                    catch (Exception e)
-                    {
-                        if (Log.IsInfoEnabled)
-                        {
-                            Log.Info("State change invocation function failed.", e);
-                        }
-                    }
-
-                    if (disposeAsync)
-                    {
-                        TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
-                        {
-                            if (Log.IsInfoEnabled)
-                            {
-                                Log.Info($"Initiate disposing the term _prior_ to {expectedTerm:#,#;;0} with {toDispose.Count} things to dispose.");
-                            }
-
-                            ParallelDispose(toDispose);
-                        });
-                    }
-                    else
-                    {
                         ParallelDispose(toDispose);
-                        TaskExecutor.CompleteAndReplace(ref _stateChanged);
-                    }
+                    });
+                }
+                else
+                {
+                    ParallelDispose(toDispose);
+                    TaskExecutor.CompleteAndReplace(ref _stateChanged);
+                }
 
-                    var elapsed = sp.Elapsed;
-                    if (elapsed > ElectionTimeout / 2)
+                var elapsed = sp.Elapsed;
+                if (elapsed > ElectionTimeout / 2)
+                {
+                    if (Log.IsOperationsEnabled)
                     {
-                        if (Log.IsOperationsEnabled)
-                        {
-                            Log.Operations($"Took way too much time ({elapsed}) to change the state to {rachisState} in term {expectedTerm:#,#;;0}. (Election timeout:{ElectionTimeout})");
-                        }
+                        Log.Operations($"Took way too much time ({elapsed}) to change the state to {rachisState} in term {expectedTerm:#,#;;0}. (Election timeout:{ElectionTimeout})");
                     }
                 }
             };
@@ -1018,14 +1035,19 @@ namespace Raven.Server.Rachis
 
         public ConcurrentQueue<StateTransition> PrevStates { get; set; } = new ConcurrentQueue<StateTransition>();
 
-        public bool TakeOffice()
+        public void TakeOffice(ClusterOperationContext context)
         {
-            if (CurrentState != RachisState.LeaderElect)
-                return false;
+            Debug.Assert(context.Transaction.InnerTransaction.IsWriteTransaction);
+            
+            if (CurrentStateIn(context) != RachisState.LeaderElect)
+                return ;
 
-            CurrentState = RachisState.Leader;
-            TaskExecutor.CompleteAndReplace(ref _stateChanged);
-            return true;
+            UpdateStateIn(context, RachisState.Leader);
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+            {
+                if (tx.Committed)
+                    TaskExecutor.CompleteAndReplace(ref _stateChanged);
+            };
         }
 
         public void AppendElector(Elector elector)
@@ -1094,7 +1116,7 @@ namespace Raven.Server.Rachis
 
         public void SwitchToCandidateState(string reason, bool forced = false)
         {
-            var currentTerm = CurrentTerm;
+            var currentTerm = CurrentCommittedState.Term;
             try
             {
                 Timeout.DisableTimeout();
@@ -1458,7 +1480,7 @@ namespace Raven.Server.Rachis
 
             Debug.Assert(context.Transaction != null);
 
-            ValidateTerm(term);
+            ValidateTermIn(context, term);
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
 
@@ -1966,7 +1988,7 @@ namespace Raven.Server.Rachis
 
         public void FoundAboutHigherTerm(long term, string reason)
         {
-            if (term <= CurrentTerm)
+            if (term <= CurrentCommittedState.Term)
                 return;
 
             var command = new CastVoteInTermCommand(this, term, reason);
@@ -1974,19 +1996,29 @@ namespace Raven.Server.Rachis
             TxMerger.EnqueueSync(command);
         }
 
-        public void ValidateTerm(long term)
+        public void ValidateLatestTerm(long term)
         {
-            if (term != CurrentTerm)
+            long current = CurrentCommittedState.Term;
+            if (term != current)
             {
-                throw new RachisConcurrencyException($"The term was changed from {term:#,#;;0} to {CurrentTerm:#,#;;0}");
+                throw new RachisConcurrencyException($"The term was changed from {term:#,#;;0} to {current:#,#;;0}");
+            }
+        }
+        public void ValidateTermIn(ClusterOperationContext ctx,long term)
+        {
+            long current = CurrentTermIn(ctx);
+            if (term != current)
+            {
+                throw new RachisConcurrencyException($"The term was changed from {term:#,#;;0} to {current:#,#;;0}");
             }
         }
 
         public unsafe void CastVoteInTerm(ClusterOperationContext context, long term, string votedFor, string reason)
         {
             Debug.Assert(context.Transaction != null);
-            if (term <= CurrentTerm)
-                throw new ConcurrencyException($"The current term {CurrentTerm:#,#;;0} is larger or equal to {term:#,#;;0}, aborting change");
+            var currentTerm = CurrentTermIn(context);
+            if (term <= currentTerm)
+                throw new ConcurrencyException($"The current term {currentTerm:#,#;;0} is larger or equal to {term:#,#;;0}, aborting change");
 
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
             using (state.DirectAdd(CurrentTermSlice, sizeof(long), out byte* ptr))
@@ -2009,7 +2041,7 @@ namespace Raven.Server.Rachis
                 }
             }
 
-            CurrentTerm = term;
+            UpdateTermIn(context, term);
 
             // give the other side enough time to become the leader before challenging them
             Timeout.Defer(votedFor);
@@ -2081,7 +2113,7 @@ namespace Raven.Server.Rachis
             using (ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
-                if (CurrentState != RachisState.Passive)
+                if (CurrentStateIn(ctx) != RachisState.Passive)
                     return false;
 
                 var newTag = _tag;
@@ -2218,7 +2250,7 @@ namespace Raven.Server.Rachis
 
         public string GetLeaderTag(bool safe = false)
         {
-            switch (CurrentState)
+            switch (CurrentCommittedState.State)
             {
                 case RachisState.Passive:
                 case RachisState.Candidate:
@@ -2280,7 +2312,6 @@ namespace Raven.Server.Rachis
         private readonly string _clusterIdBase64Id = new string(' ', 22);
         public readonly ClusterCommandsVersionManager CommandsVersionManager;
         public readonly CipherSuitesPolicy CipherSuitesPolicy;
-        private volatile RachisState _currentState;
 
         private unsafe void SetClusterBase(string str)
         {
@@ -2375,10 +2406,6 @@ namespace Raven.Server.Rachis
             return Convert.ToBoolean(reader.Reader.ReadByte());
         }
 
-        public void LeaderElectToLeaderChanged()
-        {
-            LeaderElected?.Invoke(null, null);
-        }
 
         public unsafe void ClearAppendedEntriesAfter(ClusterOperationContext context, long index)
         {

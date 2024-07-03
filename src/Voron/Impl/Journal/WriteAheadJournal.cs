@@ -481,28 +481,12 @@ namespace Voron.Impl.Journal
             return _headerAccessor.Get(ptr => ptr->Journal);
         }
 
-        [Conditional("DEBUG")]
-        private static void ValidateNoDuplicateJournals(List<JournalSnapshot> items)
-        {
-            for (int i = 0; i < items.Count; i++)
-            {
-                for (int j = i + 1; j < items.Count; j++)
-                {
-                    if (items[i].Number == items[j].Number)
-                    {
-                        throw new InvalidOperationException("Cannot add a snapshot of log file with number " + items[i].Number +
-                                                            " to the transaction, because it already exists in a snapshot collection");
-                    }
-                }
-            }
-        }
-
         public sealed class JournalApplicator : IDisposable
         {
-            private readonly List<PageFromScratchBuffer> _bufferOfPageFromScratchBuffersToFree = new();
-            private readonly ConcurrentDictionary<long, JournalFile> _journalsToDelete = new ConcurrentDictionary<long, JournalFile>();
-            private readonly object _flushingLock = new object();
-            private readonly SemaphoreSlim _fsyncLock = new SemaphoreSlim(1);
+            private static readonly ObjectPool<List<PageFromScratchBuffer>, ListResetBehavior<PageFromScratchBuffer>> _scratchPagesListPool = new(() => []);
+            private readonly ConcurrentDictionary<long, JournalFile> _journalsToDelete = new();
+            private readonly object _flushingLock = new();
+            private readonly SemaphoreSlim _fsyncLock = new(1);
             private readonly WriteAheadJournal _waj;
             private readonly ManualResetEventSlim _waitForJournalStateUpdateUnderTx = new();
             private readonly ManualResetEventSlim _onWriteTransactionCompleted = new();
@@ -593,6 +577,7 @@ namespace Voron.Impl.Journal
                 if (Monitor.IsEntered(_flushingLock) && _ignoreLockAlreadyTaken == false)
                     throw new InvalidJournalFlushRequestException("Applying journals to the data file has been already requested on the same thread");
 
+                List<PageFromScratchBuffer> bufferOfPageFromScratchBuffersToFree = null;
                 ByteStringContext byteStringContext = null;
                 bool lockTaken = false;
                 try
@@ -620,17 +605,16 @@ namespace Voron.Impl.Journal
 
                     // RavenDB-13302: we need to force a re-check this before we make decisions here
                     _waj._env.ActiveTransactions.ForceRecheckingOldestTransactionByFlusherThread();
-
+                    bufferOfPageFromScratchBuffersToFree = _scratchPagesListPool.Allocate();
                     if (_waj._env.GetLatestTransactionToFlush(
                             uptoTxId: _waj._env.ActiveTransactions.OldestTransaction,
-                            _bufferOfPageFromScratchBuffersToFree,
+                            bufferOfPageFromScratchBuffersToFree,
                             out var record) == false)
                     {
-                        Debug.Assert(_bufferOfPageFromScratchBuffersToFree.Count == 0);
+                        Debug.Assert(bufferOfPageFromScratchBuffersToFree.Count == 0);
                         return; // nothing to do
                     }
 
-                    var jrnls = GetJournalSnapshots();
                     
                     var currentTotalCommittedSinceLastFlushPages = TotalCommittedSinceLastFlushPages;
 
@@ -661,13 +645,14 @@ namespace Voron.Impl.Journal
 
                     Interlocked.Add(ref TotalCommittedSinceLastFlushPages, -currentTotalCommittedSinceLastFlushPages);
 
-                    ApplyJournalStateAfterFlush(token, lastFlushed, record, jrnls, byteStringContext);
+                    ApplyJournalStateAfterFlush(token, bufferOfPageFromScratchBuffersToFree, record, byteStringContext);
 
                     _waj._env.SuggestSyncDataFile();
                 }
                 finally
                 {
-                    _bufferOfPageFromScratchBuffersToFree.Clear();
+                    if(bufferOfPageFromScratchBuffersToFree != null) 
+                        _scratchPagesListPool.Free(bufferOfPageFromScratchBuffersToFree);
                     byteStringContext?.Dispose();
                     if (lockTaken)
                         Monitor.Exit(_flushingLock);
@@ -677,9 +662,8 @@ namespace Voron.Impl.Journal
             }
 
             private void ApplyJournalStateAfterFlush(CancellationToken token,
-                LastFlushState lastFlushed,
+                List<PageFromScratchBuffer> bufferOfPageFromScratchBuffersToFree,
                 EnvironmentStateRecord record,
-                List<JournalSnapshot> journalSnapshots,
                 ByteStringContext byteStringContext)
             {
                 // the idea here is that even though we need to run the journal through its state update under the transaction lock
@@ -704,7 +688,7 @@ namespace Voron.Impl.Journal
 
                         try
                         {
-                            UpdateJournalStateUnderWriteTransactionLock(txw,lastFlushed, record, journalSnapshots);
+                            UpdateJournalStateUnderWriteTransactionLock(txw,bufferOfPageFromScratchBuffersToFree, record);
 
                             if (_waj._logger.IsInfoEnabled)
                                 _waj._logger.Info($"Updated journal state under write tx lock (txId: {txw.Id}) after waiting for {sp.Elapsed}");
@@ -808,57 +792,50 @@ namespace Voron.Impl.Journal
             }
 
             private void UpdateJournalStateUnderWriteTransactionLock(LowLevelTransaction txw, 
-                LastFlushState lastFlushState,
-                EnvironmentStateRecord flushedRecord,
-                List<JournalSnapshot> journalSnapshots)
+                List<PageFromScratchBuffer> bufferOfPageFromScratchBuffersToFree,
+                EnvironmentStateRecord flushedRecord)
             {
                 _forTestingPurposes?.OnUpdateJournalStateUnderWriteTransactionLock?.Invoke();
-                var unusedJournals = GetUnusedJournalFiles(journalSnapshots, flushedRecord);
+
+                JournalFile journalFile = _waj._files.First(x => x.Number == flushedRecord.FlushedToJournal);
+                SetLastFlushed(new LastFlushState(
+                    flushedRecord.TransactionId,
+                    flushedRecord.FlushedToJournal,
+                    journalFile,
+                    _journalsToDelete.Values.ToList()));
+                
+                var unusedJournals = new List<JournalFile>();
+                _waj._files = _waj._files.RemoveWhile(x => x.Number < flushedRecord.FlushedToJournal, unusedJournals);
+
 
                 if (_waj._logger.IsInfoEnabled)
                 {
                     _waj._logger.Info($"Detected {unusedJournals.Count} unused journals after flush ({nameof(flushedRecord.TransactionId)} - {flushedRecord.TransactionId}). " +
                                       $"Journals to delete: {string.Join(',' , unusedJournals.Select(x => x.Number.ToString()))}");
                 }
-
+                
                 foreach (var unused in unusedJournals)
                 {
                     AddJournalToDelete(unused);
-                }
-
-                SetLastFlushed(new LastFlushState(
-                    flushedRecord.TransactionId,
-                    flushedRecord.FlushedToJournal,
-                    _waj._files.First(x => x.Number == flushedRecord.FlushedToJournal),
-                    _journalsToDelete.Values.ToList()));
-
-                if (unusedJournals.Count > 0)
-                {
-                    var lastUnusedJournalNumber = unusedJournals[^1].Number;
-
-                    _waj._files = _waj._files.RemoveWhile(x => x.Number <= lastUnusedJournalNumber);
                 }
 
                 if (_waj._files.Count == 0)
                     _waj.CurrentFile = null;
 
                 var scratchBufferPool = _waj._env.ScratchBufferPool;
-                foreach (var pageFromScratchBuffer in _bufferOfPageFromScratchBuffersToFree)
+                if (scratchBufferPool == null)
+                    throw new ArgumentNullException(nameof(scratchBufferPool));
+                if (bufferOfPageFromScratchBuffersToFree == null)
+                    throw new ArgumentNullException(nameof(bufferOfPageFromScratchBuffersToFree));
+                foreach (var pageFromScratchBuffer in bufferOfPageFromScratchBuffersToFree)
                 {
+                    if (pageFromScratchBuffer == null)
+                        throw new ArgumentNullException(nameof(pageFromScratchBuffer));
+                    if (pageFromScratchBuffer.File == null) 
+                        throw new ArgumentNullException(nameof(pageFromScratchBuffer.File));
+                        
                     scratchBufferPool.Free(txw, pageFromScratchBuffer.File.Number, pageFromScratchBuffer.PositionInScratchBuffer);
                 }
-            }
-
-            private List<JournalSnapshot> GetJournalSnapshots()
-            {
-                var files = _waj._files;
-                var jrnls = new List<JournalSnapshot>(files.Count);
-                foreach (var file in files)
-                {
-                    jrnls.Add(file.GetSnapshot());
-                }
-                jrnls.Sort();
-                return jrnls;
             }
 
             public void WaitForSyncToCompleteOnDispose()
@@ -1299,32 +1276,6 @@ namespace Voron.Impl.Journal
                     message += $"Overflow size: {page->OverflowSize}. ";
 
                 throw new InvalidDataException(message);
-            }
-
-            private List<JournalFile> GetUnusedJournalFiles(List<JournalSnapshot> jrnls, EnvironmentStateRecord flushedRecord)
-            {
-                var unusedJournalFiles = new List<JournalFile>();
-                foreach (var j in jrnls)
-                {
-                    if (j.Number > flushedRecord.FlushedToJournal) // after the last log we synced, nothing to do here
-                        continue;
-                    if (j.Number == flushedRecord.FlushedToJournal) // we are in the last log we synced
-                    {
-                        if (j.Available4Kbs != 0 || //　if there are more pages to be used here or
-                                                    // we didn't synchronize whole journal
-                            j.LastTransaction != flushedRecord.TransactionId)
-                            continue; // do not mark it as unused
-
-
-                        // Since we got the snapshot, this journal file had writes, so we 
-                        // are going to skip it for this round
-                        if (j.WritePosIn4KbPosition != j.FileInstance.WritePosIn4KbPosition)
-                            continue;
-                    }
-
-                    unusedJournalFiles.Add(j.FileInstance);
-                }
-                return unusedJournalFiles;
             }
 
             private void UpdateFileHeaderAfterDataFileSync(

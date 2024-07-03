@@ -33,7 +33,7 @@ public sealed class FollowerApplyCommand : MergedTransactionCommand<ClusterOpera
 
     protected override long ExecuteCmd(ClusterOperationContext context)
     {
-        _engine.ValidateTerm(_term);
+        _engine.ValidateTermIn(context, _term);
         if (_engine.Log.IsInfoEnabled)
         {
             _engine.Log.Info($"{ToString()}: Tx running in {_sw.Elapsed}");

@@ -182,7 +182,7 @@ namespace Raven.Server.Rachis
                     throw new ObjectDisposedException($"{ToString()} is being disposed.");
                 }
 
-                _engine.ValidateTerm(Term);
+                _engine.ValidateLatestTerm(Term);
 
                 if (_engine.Log.IsInfoEnabled)
                 {
@@ -499,14 +499,13 @@ namespace Raven.Server.Rachis
                 maxIndexOnQuorum == 0)
                 return; // nothing to do here
 
-            bool changedFromLeaderElectToLeader;
             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
                 if (_engine.ForTestingPurposes?.LeaderLock != null)
                     tx.InnerTransaction.LowLevelTransaction.OnDispose += _ => _engine.ForTestingPurposes?.LeaderLock?.Complete();
 
-                _engine.ValidateTerm(Term);
+                _engine.ValidateTermIn(context, Term);
 
                 _lastCommit = _engine.GetLastCommitIndex(context);
 
@@ -515,8 +514,6 @@ namespace Raven.Server.Rachis
 
                 if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < Term)
                     return;// can't commit until at least one entry from our term has been published
-
-                changedFromLeaderElectToLeader = _engine.TakeOffice();
             }
 
             var command = new LeaderApplyCommand(this, _engine, _lastCommit, maxIndexOnQuorum);
@@ -534,7 +531,7 @@ namespace Raven.Server.Rachis
                     TaskExecutor.Execute(o =>
                     {
                         var tuple = (CommandState)o;
-                        if (tuple.OnNotify != null)
+                        if (tuple!.OnNotify != null)
                         {
                             tuple.OnNotify(tuple.TaskCompletionSource);
                             return;
@@ -547,9 +544,6 @@ namespace Raven.Server.Rachis
             // we have still items to process, run them in 1 node cluster
             // and speed up the followers ambassadors if they can
             _newEntry.Set();
-
-            if (changedFromLeaderElectToLeader)
-                _engine.LeaderElectToLeaderChanged();
         }
 
         private readonly List<(FollowerAmbassador voter, TimeSpan time)> _timeoutsForVoters = new List<(FollowerAmbassador, TimeSpan)>();

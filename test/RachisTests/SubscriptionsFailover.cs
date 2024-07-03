@@ -633,7 +633,7 @@ namespace RachisTests
                         var databaseRecord = someServer.ServerStore.Cluster.ReadDatabase(context, database);
                         var db = await someServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database).ConfigureAwait(false);
                         var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
-                        tag = databaseRecord.Topology.WhoseTaskIsIt(someServer.ServerStore.Engine.CurrentState, subscriptionState, null);
+                        tag = databaseRecord.Topology.WhoseTaskIsIt(someServer.ServerStore.Engine.CurrentCommittedState.State, subscriptionState, null);
                     }
 
                     if (tag == null || tag == responsibleNode)

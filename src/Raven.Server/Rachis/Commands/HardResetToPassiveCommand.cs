@@ -42,7 +42,7 @@ namespace Raven.Server.Rachis.Commands
 
             RachisConsensus.SetTopology(_engine, context, topology);
 
-            _engine.SetNewStateInTx(context, RachisState.Passive, null, _engine.CurrentTerm, "Hard reset to passive by admin");
+            _engine.SetNewStateInTx(context, RachisState.Passive, null, _engine.CurrentTermIn(context), "Hard reset to passive by admin");
 
             return 1;
         }

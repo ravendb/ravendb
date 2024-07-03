@@ -720,14 +720,14 @@ namespace RachisTests
                 var res = cluster.Nodes.First(x =>
                     x != cluster.Leader && x != first &&
                     x.ServerStore.LoadDatabaseTopology(db)
-                        .WhoseTaskIsIt(x.ServerStore.Engine.CurrentState, new PromotableTask(x.ServerStore.NodeTag, x.WebUrl, db, firstFollowerTag), null) == firstFollowerTag);
+                        .WhoseTaskIsIt(x.ServerStore.Engine.CurrentCommittedState.State, new PromotableTask(x.ServerStore.NodeTag, x.WebUrl, db, firstFollowerTag), null) == firstFollowerTag);
 
                 Assert.Fail($"removed node was selected :/ Leader: {cluster.Leader.ServerStore.NodeTag}, first: {firstFollowerTag}, second {res.ServerStore.NodeTag}");
             });
         }
 
         [Fact]
-        public async Task FailOnAddingNodeThatHasPortZero()
+        public async Task FailOnAddingNodeThatHasPortZero() 
         {
             var (_, leader) = await CreateRaftCluster(1);
             leader.ServerStore.Configuration.Core.ServerUrls = new[] { leader.WebUrl };

@@ -293,7 +293,6 @@ namespace Voron.Debugging
         {
             var journalReports = journals.Select(journal =>
             {
-                var snapshot = journal.GetSnapshot();
                 var journalWriter = journal.JournalWriter;
 
                 if (journalWriter == null)
@@ -304,13 +303,12 @@ namespace Voron.Debugging
                     Flushed = false,
                     Number = journal.Number,
                     AllocatedSpaceInBytes = (long)journalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte,
-                    Available4Kbs = snapshot.Available4Kbs,
-                    LastTransaction = snapshot.LastTransaction,
+                    Available4Kbs = journal.Available4Kbs,
+                    LastTransaction = journal.LastTransactionId,
                 };
             });
             var flushedJournalReports = flushedJournals.Select(journal =>
             {
-                var snapshot = journal.GetSnapshot();
                 var journalWriter = journal.JournalWriter;
 
                 if (journalWriter == null)
@@ -321,8 +319,8 @@ namespace Voron.Debugging
                     Flushed = true,
                     Number = journal.Number,
                     AllocatedSpaceInBytes = (long)journalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte,
-                    Available4Kbs = snapshot.Available4Kbs,
-                    LastTransaction = snapshot.LastTransaction,
+                    Available4Kbs = journal.Available4Kbs,
+                    LastTransaction = journal.LastTransactionId,
                 };
             });
             return journalReports.Concat(flushedJournalReports).Where(x => x != null).ToList();

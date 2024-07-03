@@ -376,7 +376,7 @@ namespace Tests.Infrastructure
             var servers2 = servers.Select(s =>
             {
                 var engine = s.ServerStore.Engine;
-                return $"{s.ServerStore.NodeTag} in {engine.CurrentState} at term {engine.CurrentTerm}";
+                return $"{s.ServerStore.NodeTag} in {engine.CurrentCommittedState.State} at term {engine.CurrentCommittedState.Term}";
             });
             return string.Join(Environment.NewLine, servers2);
         }

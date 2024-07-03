@@ -556,7 +556,7 @@ namespace StressTests.Rachis
                     DataDirectory = dataDirectory
                 }, caller: $"{node.DebugTag}-{nameof(ToggleServer)}");
 
-                Assert.True(node.ServerStore.Engine.CurrentState != RachisState.Passive, "node.ServerStore.Engine.CurrentState != RachisState.Passive");
+                Assert.True(node.ServerStore.Engine.CurrentCommittedState.State != RachisState.Passive, "node.ServerStore.Engine.CurrentState != RachisState.Passive");
             }
             else
             {

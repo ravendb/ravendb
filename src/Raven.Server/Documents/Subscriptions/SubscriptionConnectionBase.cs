@@ -519,8 +519,8 @@ namespace Raven.Server.Documents.Subscriptions
                     var databaseTopologyAvailabilityExplanation = new Dictionary<string, string>();
 
                     string generalState;
-                    RachisState currentState = ServerStore.Engine.CurrentState;
-                    if (currentState == RachisState.Candidate || currentState == RachisState.Passive)
+                    RachisState currentState = ServerStore.Engine.CurrentCommittedState.State;
+                    if (currentState is RachisState.Candidate or RachisState.Passive)
                     {
                         generalState =
                             $"Current node ({ServerStore.NodeTag}) is in {currentState.ToString()} state therefore, we can't answer who's task is it and returning null";

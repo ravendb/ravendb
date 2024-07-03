@@ -683,7 +683,7 @@ namespace Raven.Server.ServerWide
                         throw new UnknownClusterCommandException(massage);
                 }
 
-                _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, result, null);
+                _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTermIn(context), cmd, result, null);
 
                 DismissUnrecoverableNotification();
             }
@@ -698,7 +698,7 @@ namespace Raven.Server.ServerWide
                     _parent.Log.Info(error, e);
                 }
 
-                _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, null, e);
+                _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTermIn(context), cmd, null, e);
                 NotifyLeaderAboutError(index, leader, e);
             }
             catch (Exception e)
@@ -736,7 +736,7 @@ namespace Raven.Server.ServerWide
             {
                 try
                 {
-                    serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.UnrecoverableClusterError, $"{_parent.CurrentTerm}/{index}"), context.Transaction, sendNotificationEvenIfDoesntExist: false);
+                    serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.UnrecoverableClusterError, $"{_parent.CurrentCommittedState.Term}/{index}"), context.Transaction, sendNotificationEvenIfDoesntExist: false);
                 }
                 catch
                 {
@@ -757,7 +757,7 @@ namespace Raven.Server.ServerWide
                             error,
                             AlertType.UnrecoverableClusterError,
                             NotificationSeverity.Error,
-                            key: $"{_parent.CurrentTerm}/{index}",
+                            key: $"{_parent.CurrentCommittedState.Term}/{index}",
                             details: new ExceptionDetails(exception)));
                     }
                     catch
@@ -797,7 +797,7 @@ namespace Raven.Server.ServerWide
                     }
 
                     var id = updateCommand.FindFreeId(context, index);
-                    updateCommand.Execute(context, items, id, record: null, _parent.CurrentState, out _);
+                    updateCommand.Execute(context, items, id, record: null, _parent.CurrentStateIn(context), out _);
 
                     if (databases.Add(database))
                     {
@@ -1392,47 +1392,49 @@ namespace Raven.Server.ServerWide
 
         private void ExecuteManyOnDispose(ClusterOperationContext context, long index, string type, List<Func<Task>> tasks)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += _ =>
+            var removeValue = _rachisLogIndexNotifications.AddTask(index);
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 var count = tasks.Count;
-                _rachisLogIndexNotifications.AddTask(index);
-
-                if (count == 0)
+                if (tx.Committed)
                 {
-                    NotifyAndSetCompleted(index);
-                    return;
+                    if (count == 0)
+                    {
+                        NotifyAndSetCompleted(index);
+                        return;
+                    }
+                }
+                else
+                {
+                    removeValue.Remove();
                 }
 
+                var exceptionAggregator =
+                    new ExceptionAggregator(_parent.Log, $"the raft index {index} is committed, but an error occured during executing the {type} command.");
 
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+                foreach (var task in tasks)
                 {
-                    var exceptionAggregator =
-                        new ExceptionAggregator(_parent.Log, $"the raft index {index} is committed, but an error occured during executing the {type} command.");
-
-                    foreach (var task in tasks)
+                    Task.Run(async () =>
                     {
-                        Task.Run(async () =>
+                        await exceptionAggregator.ExecuteAsync(task());
+                        if (Interlocked.Decrement(ref count) == 0)
                         {
-                            await exceptionAggregator.ExecuteAsync(task());
-                            if (Interlocked.Decrement(ref count) == 0)
+                            Exception error = null;
+                            try
                             {
-                                Exception error = null;
-                                try
-                                {
-                                    exceptionAggregator.ThrowIfNeeded();
-                                }
-                                catch (Exception e)
-                                {
-                                    error = e;
-                                }
-                                finally
-                                {
-                                    _rachisLogIndexNotifications.NotifyListenersAbout(index, error);
-                                }
+                                exceptionAggregator.ThrowIfNeeded();
                             }
-                        });
-                    }
-                };
+                            catch (Exception e)
+                            {
+                                error = e;
+                            }
+                            finally
+                            {
+                                _rachisLogIndexNotifications.NotifyListenersAbout(index, error);
+                            }
+                        }
+                    });
+                }
             };
         }
 
@@ -1517,7 +1519,7 @@ namespace Raven.Server.ServerWide
                     if (databaseRecord == null)
                         throw new DatabaseDoesNotExistException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because it does not exist");
 
-                    updateCommand.Execute(context, items, index, databaseRecord, _parent.CurrentState, out result);
+                    updateCommand.Execute(context, items, index, databaseRecord, _parent.CurrentStateIn(context), out result);
                 }
             }
             catch (Exception e)
@@ -1947,7 +1949,7 @@ namespace Raven.Server.ServerWide
                 var remote = addDatabaseCommand.Record.Topologies.ToArray();
                 if (databaseExists == false)
                 {
-                    AddStampToAllRemotes(index, remote);
+                    AddStampToAllRemotes(context, index, remote);
                     return true;
                 }
 
@@ -1955,7 +1957,7 @@ namespace Raven.Server.ServerWide
 
                 if (remote.Length != local.Length)
                 {
-                    AddStampToAllRemotes(index, remote);
+                    AddStampToAllRemotes(context, index, remote);
                     return true;
                 }
 
@@ -1975,13 +1977,13 @@ namespace Raven.Server.ServerWide
                     if (nameFound == false)
                     {
                         Debug.Assert(false, $"Same number of topologies {remote.Length}, but can't find remote topology {remoteName} in local topologies");
-                        AddStampToAllRemotes(index, remote);
+                        AddStampToAllRemotes(context, index, remote);
                         return true;
                     }
 
                     if (topologyFound == false)
                     {
-                        AddStampToRemote(index, remoteTopology);
+                        AddStampToRemote(context, index, remoteTopology);
                         changed = true;
                     }
                 }
@@ -2084,21 +2086,21 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void AddStampToAllRemotes(long index, (string Name, DatabaseTopology Topology)[] remote)
+        private void AddStampToAllRemotes(ClusterOperationContext context, long index, (string Name, DatabaseTopology Topology)[] remote)
         {
             foreach (var (name, topology) in remote)
             {
-                AddStampToRemote(index, topology);
+                AddStampToRemote(context,index, topology);
             }
         }
 
-        private void AddStampToRemote(long index, DatabaseTopology topology)
+        private void AddStampToRemote(ClusterOperationContext context,long index, DatabaseTopology topology)
         {
             topology.Stamp = new LeaderStamp
             {
                 Index = index,
                 LeadersTicks = -2,
-                Term = _parent.CurrentTerm
+                Term = _parent.CurrentTermIn(context)
             };
         }
 
@@ -2993,7 +2995,7 @@ namespace Raven.Server.ServerWide
                 ["Type"] = "Switch to single leader"
             };
 
-            var index = _parent.InsertToLeaderLog(context, _parent.CurrentTerm, context.ReadObject(cmd, "single-leader"), RachisEntryFlags.Noop);
+            var index = _parent.InsertToLeaderLog(context, _parent.CurrentTermIn(context), context.ReadObject(cmd, "single-leader"), RachisEntryFlags.Noop);
 
             foreach (var record in toDelete)
             {
@@ -3016,7 +3018,7 @@ namespace Raven.Server.ServerWide
                 {
                     Index = index,
                     LeadersTicks = 0,
-                    Term = _parent.CurrentTerm
+                    Term = _parent.CurrentTermIn(context)
                 };
 
                 var dbKey = "db/" + record.DatabaseName;

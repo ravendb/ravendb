@@ -106,11 +106,7 @@ public partial class Leader
                 _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context, _leader.Term, _nodeTag);
             }
 
-            // after commit but still under the lock
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += (tx) =>
-            {
-                AfterCommit(index);
-            };
+            CompleteTopologyModificationAfterRachisCommit(index);
 
             return 1;
         }
@@ -131,7 +127,7 @@ public partial class Leader
             return clusterTopology.LastNodeId.Substring(0, clusterTopology.LastNodeId.Length - 1) + lastChar;
         }
 
-        private void AfterCommit(long index)
+        private void CompleteTopologyModificationAfterRachisCommit(long index)
         {
             var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
             _leader._entries[index] = new Leader.CommandState { TaskCompletionSource = tcs, CommandIndex = index };

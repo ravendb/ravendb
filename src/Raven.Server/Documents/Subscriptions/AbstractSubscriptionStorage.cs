@@ -43,7 +43,7 @@ public abstract class AbstractSubscriptionStorage
         var topology = GetTopology(context);
         var tag = GetNodeFromState(taskStatus);
         var lastFunc = UpdateValueForDatabaseCommand.GetLastResponsibleNode(_serverStore.LicenseManager.HasHighlyAvailableTasks(), topology, tag);
-        return topology.WhoseTaskIsIt(_serverStore.Engine.CurrentState, taskStatus, lastFunc);
+        return topology.WhoseTaskIsIt(_serverStore.Engine.CurrentStateIn(context), taskStatus, lastFunc);
     }
 
     public static string GetSubscriptionResponsibleNodeForProgress(RawDatabaseRecord record, string shardName, SubscriptionState taskStatus, bool hasHighlyAvailableTasks)

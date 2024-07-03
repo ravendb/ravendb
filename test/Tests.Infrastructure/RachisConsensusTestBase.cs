@@ -92,7 +92,7 @@ namespace Tests.Infrastructure
                 var done = await follower.WaitForTopology(watcherCluster ? Leader.TopologyModification.NonVoter : Leader.TopologyModification.Voter).WaitWithoutExceptionAsync(timeout);
                 Assert.True(done, "Waited for node to become a follower for too long");
             }
-            var currentState = RachisConsensuses[leaderIndex + initialCount].CurrentState;
+            var currentState = RachisConsensuses[leaderIndex + initialCount].CurrentCommittedState.State;
             Assert.True(currentState == RachisState.Leader ||
                         currentState == RachisState.LeaderElect,
                 "The leader has changed while waiting for cluster to become stable, it is now " + currentState + " Beacuse: " + leader.LastStateChangeReason);
@@ -132,8 +132,8 @@ namespace Tests.Infrastructure
         protected List<RachisConsensus<CountingStateMachine>> GetFollowers()
         {
             return RachisConsensuses.Where(
-                     x => x.CurrentState != RachisState.Leader &&
-                     x.CurrentState != RachisState.LeaderElect).ToList();
+                     x => x.CurrentCommittedState.State != RachisState.Leader &&
+                     x.CurrentCommittedState.State != RachisState.LeaderElect).ToList();
         }
 
         protected void DisconnectFromNode(RachisConsensus<CountingStateMachine> node)
@@ -180,7 +180,7 @@ namespace Tests.Infrastructure
             }
 
             RavenTestHelper.AssertTrue(Task.WhenAny(waitingTasks).Wait(3000 * nodes.Count()), () => GetCandidateStatus(nodes));
-            return nodes.FirstOrDefault(x => x.CurrentState == RachisState.Leader);
+            return nodes.FirstOrDefault(x => x.CurrentCommittedState.State == RachisState.Leader);
         }
 
         public static string GetCandidateStatus(IEnumerable<RachisConsensus<CountingStateMachine>> nodes)
@@ -190,13 +190,14 @@ namespace Tests.Infrastructure
             foreach (var node in nodes)
             {
                 var candidate = node.Candidate;
+                var currentCommittedState = node.CurrentCommittedState;
                 if (candidate == null)
                 {
-                    sb.AppendLine($"'{node.Tag}' is {node.CurrentState} at term {node.CurrentTerm}, current candidate is null {node.LastStateChangeReason}");
+                    sb.AppendLine($"'{node.Tag}' is {currentCommittedState.State} at term {currentCommittedState.Term}, current candidate is null {node.LastStateChangeReason}");
                     continue;
                 }
 
-                sb.AppendLine($"'{node.Tag}' is {node.CurrentState} at term {node.CurrentTerm} (running: {candidate.Running})");
+                sb.AppendLine($"'{node.Tag}' is {currentCommittedState.State} at term {currentCommittedState.Term} (running: {candidate.Running})");
                 sb.AppendJoin(Environment.NewLine, candidate.GetStatus().Values);
                 sb.AppendLine();
             }
@@ -308,7 +309,7 @@ namespace Tests.Infrastructure
                 try
                 {
                     var stream = tcpClient.GetStream();
-                    var remoteConnection = new RemoteConnection(rachis.Tag, rachis.CurrentTerm, stream,
+                    var remoteConnection = new RemoteConnection(rachis.Tag, rachis.CurrentCommittedState.Term, stream,
                         features: new TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures
                         {
                             MultiTree = true
@@ -428,7 +429,7 @@ namespace Tests.Infrastructure
                     {
                         var tasks = RachisConsensuses.Select(x => x.WaitForState(RachisState.Leader, cts.Token));
                         await Task.WhenAny(tasks);
-                        var leader = RachisConsensuses.Single(x => x.CurrentState == RachisState.Leader);
+                        var leader = RachisConsensuses.Single(x => x.CurrentCommittedState.State == RachisState.Leader);
                         await action(leader);
                         return;
                     }

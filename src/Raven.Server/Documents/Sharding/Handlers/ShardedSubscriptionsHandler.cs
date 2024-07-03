@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 foreach (var topology in DatabaseContext.ShardsTopology.Values)
                 {
-                    var node = topology.WhoseTaskIsIt(ServerStore.Engine.CurrentState, subscription, null);
+                    var node = topology.WhoseTaskIsIt(ServerStore.Engine.CurrentStateIn(context), subscription, null);
                     if (node == null || node == ServerStore.NodeTag)
                         continue;
 

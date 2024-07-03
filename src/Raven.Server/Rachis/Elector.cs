@@ -47,6 +47,7 @@ namespace Raven.Server.Rachis
                     while (_engine.IsDisposed == false)
                     {
 
+                        var current = _engine.CurrentCommittedState;
                         _engine.ForTestingPurposes?.LeaderLock?.HangThreadIfLocked();
 
                         using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -56,7 +57,7 @@ namespace Raven.Server.Rachis
                             if (_engine.Log.IsInfoEnabled)
                             {
                                 var election = rv.IsTrialElection ? "Trial" : "Real";
-                                _engine.Log.Info($"Received ({election}) 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                _engine.Log.Info($"Received ({election}) 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {current.Term}, " +
                                                  $"Forced election is {rv.IsForcedElection}. (Sent from:{rv.SendingThread})");
                             }
 
@@ -66,8 +67,8 @@ namespace Raven.Server.Rachis
                                 _engine.LeaderTag = null;
                                 //If we are followers we want to drop the connection with the leader right away.
                                 //We shouldn't be in any other state since if we are candidate our leaderTag should be null but its safer to verify.
-                                if (_engine.CurrentState == RachisState.Follower)
-                                    _engine.SetNewState(RachisState.Follower, null, _engine.CurrentTerm, $"We got a vote request from our leader {rv.Source} so we switch to leaderless state.");
+                                if (_engine.CurrentCommittedState.State == RachisState.Follower)
+                                    _engine.SetNewState(RachisState.Follower, null, current.Term, $"We got a vote request from our leader {rv.Source} so we switch to leaderless state.");
                             }
 
                             ClusterTopology clusterTopology;
@@ -103,18 +104,17 @@ namespace Raven.Server.Rachis
                             {
                                 _connection.Send(context, new RequestVoteResponse
                                 {
-                                    Term = _engine.CurrentTerm,
+                                    Term = current.Term,
                                     VoteGranted = false,
                                     // we only report to the node asking for our vote if we are the leader, this gives
                                     // the oust node a authoritative confirmation that they were removed from the cluster
-                                    NotInTopology = _engine.CurrentState == RachisState.Leader,
+                                    NotInTopology = current.State == RachisState.Leader,
                                     Message = $"Node {rv.Source} is not in my topology, cannot vote for it"
                                 });
                                 return;
                             }
 
-                            var currentTerm = _engine.CurrentTerm;
-                            if (rv.Term == currentTerm && rv.ElectionResult == ElectionResult.Won)
+                            if (rv.Term == current.Term && rv.ElectionResult == ElectionResult.Won)
                             {
                                 var r = Follower.CheckIfValidLeader(_engine, _connection);
                                 if (r.Success)
@@ -140,11 +140,11 @@ namespace Raven.Server.Rachis
                                 return;
                             }
 
-                            if (rv.Term <= _engine.CurrentTerm)
+                            if (rv.Term <= current.Term)
                             {
                                 _connection.Send(context, new RequestVoteResponse
                                 {
-                                    Term = _engine.CurrentTerm,
+                                    Term = current.Term,
                                     VoteGranted = false,
                                     Message = "My term is higher or equals to yours"
                                 });
@@ -155,7 +155,7 @@ namespace Raven.Server.Rachis
                             {
                                 _connection.Send(context, new RequestVoteResponse
                                 {
-                                    Term = _engine.CurrentTerm,
+                                    Term = current.Term,
                                     VoteGranted = false,
                                     Message = $"My last log term is {lastLogTerm} and higher than yours {rv.LastLogTerm}"
                                 });
@@ -165,8 +165,8 @@ namespace Raven.Server.Rachis
 
                             if (rv.IsForcedElection == false &&
                                 (
-                                    _engine.CurrentState == RachisState.Leader ||
-                                    _engine.CurrentState == RachisState.LeaderElect
+                                    current.State == RachisState.Leader ||
+                                    current.State == RachisState.LeaderElect
                                 )
                             )
                             {
@@ -183,7 +183,7 @@ namespace Raven.Server.Rachis
                             {
                                 _connection.Send(context, new RequestVoteResponse
                                 {
-                                    Term = _engine.CurrentTerm,
+                                    Term = current.Term,
                                     VoteGranted = false,
                                     Message = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}"
                                 });
@@ -194,14 +194,14 @@ namespace Raven.Server.Rachis
                             {
                                 _connection.Send(context, new RequestVoteResponse
                                 {
-                                    Term = _engine.CurrentTerm,
+                                    Term = current.Term,
                                     VoteGranted = false,
                                     Message = $"Already voted for another node in {lastVotedTerm}"
                                 });
                                 continue;
                             }
 
-                            if (rv.Term > _engine.CurrentTerm + 1)
+                            if (rv.Term > current.Term + 1)
                             {
                                 // trail election is often done on the current term + 1, but if there is any
                                 // election on a term that is greater than the current term plus one, we should
@@ -212,9 +212,9 @@ namespace Raven.Server.Rachis
 
                                 _connection.Send(context, new RequestVoteResponse
                                 {
-                                    Term = _engine.CurrentTerm,
+                                    Term = current.Term,
                                     VoteGranted = false,
-                                    Message = $"Increasing my term to {_engine.CurrentTerm}"
+                                    Message = $"Increasing my term to {current.Term}"
                                 });
                                 continue;
                             }
@@ -226,7 +226,7 @@ namespace Raven.Server.Rachis
                                 {
                                     _connection.Send(context, new RequestVoteResponse
                                     {
-                                        Term = _engine.CurrentTerm,
+                                        Term = current.Term,
                                         VoteGranted = false,
                                         Message = $"My leader {currentLeader} is keeping me up to date, so I don't want to vote for you"
                                     });
@@ -237,7 +237,7 @@ namespace Raven.Server.Rachis
                                 {
                                     _connection.Send(context, new RequestVoteResponse
                                     {
-                                        Term = _engine.CurrentTerm,
+                                        Term = current.Term,
                                         VoteGranted = false,
                                         Message = $"My log {lastLogIndex} is more up to date than yours {rv.LastLogIndex}"
                                     });
