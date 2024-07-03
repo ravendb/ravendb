@@ -41,7 +41,7 @@ public class RavenTheoryAttribute : RetryTheoryAttribute, ITraitAttribute
 
     private static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool s3Required, bool azureRequired)
     {
-        var s = RavenFactAttribute.ShouldSkipRavenAttribute(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
+        var s = RavenFactAttribute.ShouldSkip(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
         if (s != null)
             return s;
 

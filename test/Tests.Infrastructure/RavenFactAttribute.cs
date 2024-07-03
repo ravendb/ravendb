@@ -41,7 +41,7 @@ public class RavenFactAttribute : RetryFactAttribute, ITraitAttribute
 
     private static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool msSqlRequired, bool elasticSearchRequired)
     {
-        var s = ShouldSkipRavenAttribute(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
+        var s = ShouldSkip(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
         if (s != null)
             return s;
 
@@ -54,7 +54,7 @@ public class RavenFactAttribute : RetryFactAttribute, ITraitAttribute
         return null;
     }
 
-    internal static string ShouldSkipRavenAttribute(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired)
+    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired)
     {
         if (skip != null)
             return skip;
