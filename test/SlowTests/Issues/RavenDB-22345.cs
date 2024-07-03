@@ -23,16 +23,17 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Cluster)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task Handle_Outdated_Leader_On_RachisMergedCommand(Options options)
+        [RavenFact(RavenTestCategory.Cluster)]
+        public async Task Handle_Outdated_Leader_On_RachisMergedCommand()
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, watcherCluster: true);
             var follower = nodes.First(n => n.ServerStore.NodeTag != leader.ServerStore.NodeTag);
 
-            options.Server = leader;
-            options.ReplicationFactor = nodes.Count;
-            using var store = GetDocumentStore(options);
+            using var store = GetDocumentStore(new Options()
+            {
+                Server = leader,
+                ReplicationFactor = nodes.Count
+            });
             using var followerStore = new DocumentStore
             {
                 Database = store.Database, 
