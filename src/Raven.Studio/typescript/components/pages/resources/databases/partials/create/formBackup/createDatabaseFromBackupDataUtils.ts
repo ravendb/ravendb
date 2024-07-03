@@ -177,13 +177,17 @@ function getSourceDto(
     encryptionDataIsEncrypted: boolean,
     encryptionDataKey: string
 ): SelectedSourceDto & Pick<CreateDatabaseFromBackupDto, "BackupLocation" | "Settings"> {
+    const backupLocation = isSharded
+        ? null
+        : sourceStep.sourceData[sourceStep.sourceType].pointsWithTags[0].restorePoint.location;
+
     switch (sourceStep.sourceType) {
         case "local": {
             const data = sourceStep.sourceData.local;
 
             return {
                 ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),
-                BackupLocation: isSharded ? null : data.pointsWithTags[0].restorePoint.location,
+                BackupLocation: backupLocation,
             };
         }
         case "ravenCloud": {
@@ -197,7 +201,7 @@ function getSourceDto(
                     AwsRegionName: data.awsSettings.regionName,
                     BucketName: data.awsSettings.bucketName,
                     AwsSessionToken: data.awsSettings.sessionToken,
-                    RemoteFolderName: data.awsSettings.remoteFolderName,
+                    RemoteFolderName: backupLocation,
                     Disabled: false,
                     CustomServerUrl: null,
                     ForcePathStyle: false,
@@ -216,7 +220,7 @@ function getSourceDto(
                     AwsRegionName: data.awsRegion,
                     BucketName: data.bucketName,
                     AwsSessionToken: "",
-                    RemoteFolderName: data.remoteFolderName,
+                    RemoteFolderName: backupLocation,
                     Disabled: false,
                     GetBackupConfigurationScript: null,
                     CustomServerUrl: data.isUseCustomHost ? data.customHost : null,
@@ -234,7 +238,7 @@ function getSourceDto(
                     SasToken: "",
                     AccountName: data.accountName,
                     StorageContainer: data.container,
-                    RemoteFolderName: data.remoteFolderName,
+                    RemoteFolderName: backupLocation,
                     Disabled: false,
                     GetBackupConfigurationScript: null,
                 } satisfies AzureSettings,
@@ -249,7 +253,7 @@ function getSourceDto(
                 Settings: {
                     BucketName: data.bucketName,
                     GoogleCredentialsJson: data.credentialsJson,
-                    RemoteFolderName: data.remoteFolderName,
+                    RemoteFolderName: backupLocation,
                     Disabled: false,
                     GetBackupConfigurationScript: null,
                 } satisfies GoogleCloudSettings,
