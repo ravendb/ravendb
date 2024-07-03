@@ -20,7 +20,7 @@ internal static class OngoingTasksUtils
         Debug.Assert(taskStatus is not PeriodicBackupStatus);
 
         var whoseTaskIsIt = databaseTopology.WhoseTaskIsIt(
-            serverStore.Engine.CurrentState, configuration,
+            serverStore.Engine.CurrentCommittedState.State, configuration,
             getLastResponsibleNode:
             () =>
             {

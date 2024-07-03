@@ -16,13 +16,13 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Cluster
 
         protected override Integer32 GetData()
         {
-            var term = _store.Engine.CurrentTerm;
+            var term = _store.Engine.CurrentCommittedState.Term;
             return new Integer32((int)term);
         }
 
         public long GetCurrentMeasurement()
         {
-            return _store.Engine.CurrentTerm;
+            return _store.Engine.CurrentCommittedState.Term;
         }
     }
 }

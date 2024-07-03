@@ -142,7 +142,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.True(result);
 
                 await cluster.Leader.ServerStore.Engine.HardResetToNewClusterAsync(tag);
-                await AssertWaitForTrueAsync(() => Task.FromResult(node.ServerStore.Engine.CurrentState == RachisState.Passive));
+                await AssertWaitForTrueAsync(() => Task.FromResult(node.ServerStore.Engine.CurrentCommittedState.State == RachisState.Passive));
 
                 var outgoingConnections = await WaitForValueAsync(async () =>
                 {
@@ -326,11 +326,11 @@ namespace RachisTests.DatabaseCluster
                 var task = await Task.WhenAny(t1, t2);
                 if (task == t1)
                 {
-                    Assert.NotEqual(RachisState.Passive, cluster.Nodes[1].ServerStore.Engine.CurrentState);
+                    Assert.NotEqual(RachisState.Passive, cluster.Nodes[1].ServerStore.Engine.CurrentCommittedState.State);
                 }
                 else
                 {
-                    Assert.NotEqual(RachisState.Passive, cluster.Nodes[0].ServerStore.Engine.CurrentState);
+                    Assert.NotEqual(RachisState.Passive, cluster.Nodes[0].ServerStore.Engine.CurrentCommittedState.State);
                 }
             }
 
@@ -355,11 +355,11 @@ namespace RachisTests.DatabaseCluster
                 var task = await Task.WhenAny(t1, t2);
                 if (task == t1)
                 {
-                    Assert.Equal(RachisState.Follower, cluster.Nodes[1].ServerStore.Engine.CurrentState);
+                    Assert.Equal(RachisState.Follower, cluster.Nodes[1].ServerStore.Engine.CurrentCommittedState.State);
                 }
                 else
                 {
-                    Assert.Equal(RachisState.Follower, cluster.Nodes[0].ServerStore.Engine.CurrentState);
+                    Assert.Equal(RachisState.Follower, cluster.Nodes[0].ServerStore.Engine.CurrentCommittedState.State);
                 }
             }
         }
@@ -461,7 +461,7 @@ namespace RachisTests.DatabaseCluster
 
                 await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(removed.ServerStore.NodeTag));
                 Assert.True(await removed.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitWithoutExceptionAsync(TimeSpan.FromSeconds(30)),
-                    $"Removed node wasn't move to passive state ({removed.ServerStore.Engine.CurrentState})");
+                    $"Removed node wasn't move to passive state ({removed.ServerStore.Engine.CurrentCommittedState.State})");
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));
 

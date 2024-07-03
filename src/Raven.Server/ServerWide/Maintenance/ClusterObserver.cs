@@ -118,7 +118,7 @@ namespace Raven.Server.ServerWide.Maintenance
             if (token.WaitHandle.WaitOne(_supervisorSamplePeriod))
                 return;
 
-            while (_term == _engine.CurrentTerm && token.IsCancellationRequested == false)
+            while (_term == _engine.CurrentCommittedState.Term && token.IsCancellationRequested == false)
             {
                 try
                 {

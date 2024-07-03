@@ -51,7 +51,7 @@ namespace Raven.Server.Rachis
                 {
                     // Operation may fail, that's why we don't RaiseOrDie
                     _running.Raise();
-                    ElectionTerm = _engine.CurrentTerm;
+                    ElectionTerm = _engine.CurrentCommittedState.Term;
                     if (_engine.Log.IsInfoEnabled)
                     {
                         _engine.Log.Info($"Candidate {_engine.Tag}: Starting elections");
@@ -103,11 +103,11 @@ namespace Raven.Server.Rachis
                         _engine.AppendStateDisposable(this, candidateAmbassador); // concurrency exception here will dispose the current candidate and it ambassadors
                         candidateAmbassador.Start();
                     }
-                    while (_running && _engine.CurrentState == RachisState.Candidate)
+                    while (_running && _engine.CurrentCommittedState.State == RachisState.Candidate)
                     {
                         if (_peersWaiting.WaitOne(_engine.Timeout.TimeoutPeriod) == false)
                         {
-                            ElectionTerm = _engine.CurrentTerm + 1;
+                            ElectionTerm = _engine.CurrentCommittedState.Term + 1;
                             _engine.RandomizeTimeout(extend: true);
 
                             StateChange(); // will wake ambassadors and make them ping peers again
@@ -190,14 +190,14 @@ namespace Raven.Server.Rachis
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"Candidate {_engine.Tag}: Failure during candidacy run with current state of {_engine.CurrentState}", e);
+                        _engine.Log.Info($"Candidate {_engine.Tag}: Failure during candidacy run with current state of {_engine.CurrentCommittedState.State}", e);
                     }
-                    if (_engine.CurrentState == RachisState.Candidate)
+                    if (_engine.CurrentCommittedState.State == RachisState.Candidate)
                     {
                         // if we are still a candidate, start the candidacy again.
                         _engine.SwitchToCandidateState("An error occurred during the last candidacy: " + e);
                     }
-                    else if (_engine.CurrentState != RachisState.Passive)
+                    else if (_engine.CurrentCommittedState.State != RachisState.Passive)
                     {
                         _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
                     }
@@ -222,7 +222,7 @@ namespace Raven.Server.Rachis
             {
                 _engine.Log.Info($"{ToString()}: {message}");
             }
-            _engine.SetNewState(RachisState.Passive, this, _engine.CurrentTerm, message);
+            _engine.SetNewState(RachisState.Passive, this, _engine.CurrentCommittedState.Term, message);
         }
 
         private bool StillHavePeers(List<CandidateAmbassador> ambassadorsToRemove)
@@ -253,8 +253,9 @@ namespace Raven.Server.Rachis
 
         private void CastVoteForSelf(long electionTerm, string reason, bool setStateChange = true)
         {
-            var command = new CandidateCastVoteInTermCommand(this, _engine, electionTerm, reason);
+            var command = new CandidateCastVoteInTermCommand(_engine, electionTerm, reason);
             _engine.TxMerger.EnqueueSync(command);
+            RunRealElectionAtTerm = ElectionTerm = electionTerm;
 
             if (_engine.Log.IsInfoEnabled)
             {

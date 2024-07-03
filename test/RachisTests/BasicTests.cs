@@ -94,7 +94,7 @@ namespace RachisTests
             using (context.OpenWriteTransaction())
             {
                 mre.Wait();
-                leader.SetNewStateInTx(context, RachisState.Follower, null, leader.CurrentTerm, "deadlock");
+                leader.SetNewStateInTx(context, RachisState.Follower, null, leader.CurrentTermIn(context), "deadlock");
                 context.Transaction.Commit();
             }
 

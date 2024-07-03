@@ -529,5 +529,42 @@ namespace StressTests.Rachis
 
             return null;
         }
+        
+        private async Task<RavenServer> ToggleServer(Raven.Server.RavenServer node, bool shouldTrapRevivedNodesIntoCandidate)
+        {
+            if (node.Disposed)
+            {
+                var settings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
+                    [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
+                    [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
+                    [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = node.WebUrl
+                };
+
+                var dataDirectory = node.Configuration.Core.DataDirectory.FullPath;
+
+                // if we want to make sure that the revived node will be trapped in candidate node, we should make sure that the election timeout value is different from the
+                // rest of the node (note that this is a configuration value, therefore we need to define it in "settings" and nowhere else)
+                if (shouldTrapRevivedNodesIntoCandidate == false)
+                    settings[RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = node.Configuration.Cluster.ElectionTimeout.AsTimeSpan.TotalMilliseconds.ToString();
+
+                node = base.GetNewServer(new ServerCreationOptions()
+                {
+                    DeletePrevious = false,
+                    RunInMemory = false,
+                    CustomSettings = settings,
+                    DataDirectory = dataDirectory
+                }, caller: $"{node.DebugTag}-{nameof(ToggleServer)}");
+
+                Assert.True(node.ServerStore.Engine.CurrentCommittedState.State != RachisState.Passive, "node.ServerStore.Engine.CurrentState != RachisState.Passive");
+            }
+            else
+            {
+                var result = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
+            }
+
+            return node;
+        }
     }
 }

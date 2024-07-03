@@ -19,7 +19,7 @@ public sealed class ElectorCastVoteInTermCommand : MergedTransactionCommand<Clus
     protected override long ExecuteCmd(ClusterOperationContext context)
     {
         // double checking things under the transaction lock
-        if (_requestVote.Term > _engine.CurrentTerm + 1)
+        if (_requestVote.Term > _engine.CurrentTermIn(context) + 1)
         {
             _engine.CastVoteInTerm(context, _requestVote.Term - 1, null, "Noticed that the term in the cluster grew beyond what I was familiar with, increasing it");
         }

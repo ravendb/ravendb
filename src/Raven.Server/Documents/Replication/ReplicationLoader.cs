@@ -1199,7 +1199,7 @@ namespace Raven.Server.Documents.Replication
         private void HandleInternalReplication(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
         {
             var newInternalDestinations =
-                newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, newRecord.DeletionInProgress, _clusterTopology, _server.Engine.CurrentState);
+                newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, newRecord.DeletionInProgress, _clusterTopology, _server.Engine.CurrentCommittedState.State);
             var internalConnections = DatabaseTopology.FindChanges(_internalDestinations, newInternalDestinations);
 
             if (internalConnections.RemovedDestiantions.Count > 0)

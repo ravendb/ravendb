@@ -634,7 +634,7 @@ namespace RachisTests
                         var databaseRecord = someServer.ServerStore.Cluster.ReadDatabase(context, database);
                         var db = await someServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database).ConfigureAwait(false);
                         var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
-                        tag = databaseRecord.Topology.WhoseTaskIsIt(someServer.ServerStore.Engine.CurrentState, subscriptionState, null);
+                        tag = databaseRecord.Topology.WhoseTaskIsIt(someServer.ServerStore.Engine.CurrentCommittedState.State, subscriptionState, null);
                     }
 
                     if (tag == null || tag == responsibleNode)
@@ -819,7 +819,7 @@ namespace RachisTests
                     Assert.NotNull(processingNode);
 
                     // wait for the node to become candidate
-                    await WaitAndAssertForValueAsync(() => processingNode.ServerStore.Engine.CurrentState, RachisState.Candidate);
+                    await WaitAndAssertForValueAsync(() => processingNode.ServerStore.Engine.CurrentCommittedState.State, RachisState.Candidate);
                     if (options.DatabaseMode == RavenDatabaseMode.Sharded)
                     {
                         // set up action to halt the ack
@@ -865,9 +865,9 @@ namespace RachisTests
                     // wait for nodes to stabilize
                     await WaitAndAssertForValueAsync(() =>
                     {
-                        if (processingNode.ServerStore.Engine.CurrentState == RachisState.Candidate || resurrectedNode.ServerStore.Engine.CurrentState == RachisState.Candidate)
+                        if (processingNode.ServerStore.Engine.CurrentCommittedState.State == RachisState.Candidate || resurrectedNode.ServerStore.Engine.CurrentCommittedState.State == RachisState.Candidate)
                             return false;
-                        if (processingNode.ServerStore.Engine.CurrentState == RachisState.Passive || resurrectedNode.ServerStore.Engine.CurrentState == RachisState.Passive)
+                        if (processingNode.ServerStore.Engine.CurrentCommittedState.State == RachisState.Passive || resurrectedNode.ServerStore.Engine.CurrentCommittedState.State == RachisState.Passive)
                             return false;
                         return true;
                     }, true, timeout: 60_000, interval: 333);
@@ -959,7 +959,7 @@ namespace RachisTests
                     DataDirectory = dataDirectory
                 }, $"{node.DebugTag}-{nameof(ToggleServer)}");
 
-                Assert.True(node.ServerStore.Engine.CurrentState != RachisState.Passive, "node.ServerStore.Engine.CurrentState != RachisState.Passive");
+                Assert.True(node.ServerStore.Engine.CurrentCommittedState.State != RachisState.Passive, "node.ServerStore.Engine.CurrentState != RachisState.Passive");
             }
             else
             {

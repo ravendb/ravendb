@@ -93,14 +93,12 @@ public abstract partial class RachisConsensus
         }
     }
 
-    public readonly RachisDebug InMemoryDebug = new RachisDebug();
-
     public DateTime? LastCommitted;
     public DateTime? LastAppended;
 
     public RaftDebugView DebugView()
     {
-        switch (CurrentState)
+        switch (CurrentCommittedState.State)
         {
             case RachisState.Passive:
                 return new PassiveDebugView(this);
@@ -224,7 +222,7 @@ public abstract class RaftDebugView : IDynamicJsonValueConvertible
     protected RaftDebugView(RachisConsensus engine)
     {
         _engine = engine;
-        Term = engine.CurrentTerm;
+        Term = engine.CurrentCommittedState.Term;
         CommandsVersion = new RaftCommandsVersion
         {
             Local = ClusterCommandsVersionManager.MyCommandsVersion,

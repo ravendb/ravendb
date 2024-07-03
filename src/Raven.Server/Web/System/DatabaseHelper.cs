@@ -230,7 +230,7 @@ namespace Raven.Server.Web.System
             databaseTopology.ClusterTransactionIdBase64 ??= clusterTransactionId;
             databaseTopology.DatabaseTopologyIdBase64 ??= Guid.NewGuid().ToBase64Unpadded();
             databaseTopology.Stamp ??= new LeaderStamp();
-            databaseTopology.Stamp.Term = server.Engine.CurrentTerm;
+            databaseTopology.Stamp.Term = server.Engine.CurrentCommittedState.Term;
             databaseTopology.Stamp.LeadersTicks = server.Engine.CurrentLeader?.LeaderShipDuration ?? 0;
             databaseTopology.NodesModifiedAt = SystemTime.UtcNow;
         }

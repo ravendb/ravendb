@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -109,13 +110,28 @@ public class RachisLogIndexNotifications : AbstractRaftIndexNotifications<Recent
         base.NotifyListenersAbout(index, e);
     }
 
-    public void AddTask(long index)
+    public RemoveValue AddTask(long index)
     {
         Debug.Assert(_tasksDictionary.TryGetValue(index, out _) == false, $"{nameof(_tasksDictionary)} should not contain task with key {index}");
         if (_isDisposed.IsRaised())
             throw new ObjectDisposedException(nameof(RachisLogIndexNotifications));
 
-        _tasksDictionary.TryAdd(index, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
+        var value = _tasksDictionary.AddOrUpdate(index, Create,Update);
+
+        return new RemoveValue(this, index, value);
+        
+        
+        TaskCompletionSource<object> Create(long _) => new();
+        TaskCompletionSource<object> Update(long _, TaskCompletionSource<object> old) => new();
+    }
+
+    public class RemoveValue(RachisLogIndexNotifications Parent, long Index, TaskCompletionSource<object> Item)
+    {
+        public void Remove()
+        {
+            Item.TrySetCanceled();
+            Parent._tasksDictionary.TryRemove(new KeyValuePair<long, TaskCompletionSource<object>>(Index, Item));
+        }
     }
 }
 
