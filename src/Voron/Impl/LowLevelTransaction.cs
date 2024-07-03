@@ -57,7 +57,7 @@ namespace Voron.Impl
 
         public Pager2.PagerTransactionState PagerTransactionState;
         private readonly WriteAheadJournal _journal;
-
+        public ImmutableDictionary<long, PageFromScratchBuffer> ModifiedPagesInTransaction;
         internal sealed class WriteTransactionPool
         {
 #if DEBUG
@@ -1028,6 +1028,8 @@ namespace Voron.Impl
             _txHeader.TxMarker |= TransactionMarker.Commit;
 
             LastChanceToReadFromWriteTransactionBeforeCommit?.Invoke(this);
+
+            ModifiedPagesInTransaction = _env.WriteTransactionPool.ScratchPagesInUse.ToImmutable();
         }
 
         [DoesNotReturn]
@@ -1391,11 +1393,6 @@ namespace Voron.Impl
         public bool IsDirty(long p)
         {
             return _dirtyPages.Contains(p);
-        }
-
-        public ImmutableDictionary<long, PageFromScratchBuffer> GetPagesInScratch()
-        {
-            return _env.WriteTransactionPool.ScratchPagesInUse.ToImmutable();
         }
 
         public void ForgetAboutScratchPage(PageFromScratchBuffer value)

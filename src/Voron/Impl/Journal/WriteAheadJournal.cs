@@ -1258,6 +1258,7 @@ namespace Voron.Impl.Journal
                 var pageNumsBuffer = ArrayPool<long>.Shared.Rent(record.ScratchPagesTable.Count);
                 foreach (var (pageNum, pageValue) in record.ScratchPagesTable)
                 {
+                    Debug.Assert(pageValue.AllocatedInTransaction <= record.TransactionId, "pageValue.AllocatedInTransaction <= record.TransactionId");
                     if (pageValue.IsDeleted)
                     {
                         //dataPager.ZeroPage() - hole punching
