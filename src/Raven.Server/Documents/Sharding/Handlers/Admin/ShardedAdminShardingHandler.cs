@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
@@ -53,7 +52,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
                     urls = shardingConfiguration.Orchestrator.Topology.Members.Select(clusterTopology.GetUrlFromTag).ToArray();
                 }
 
-                if (await AssertNoDocumentsStartingWith(context, setting.Prefix, urls) == false)
+                if (await AssertNoDocumentsStartingWithAsync(context, setting.Prefix, urls) == false)
                     throw new InvalidOperationException(
                         $"Cannot add prefix '{setting.Prefix}' to {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
                         $"There are existing documents in database '{DatabaseName}' that start with '{setting.Prefix}'. " +
@@ -63,8 +62,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
                 var (raftIndex, _) = await ServerStore.SendToLeaderAsync(cmd);
 
                 await DatabaseContext.ServerStore.WaitForExecutionOnRelevantNodesAsync(context, shardingConfiguration.Orchestrator.Topology.Members, raftIndex);
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+                
+                NoContentStatus();
             }
         }
 
@@ -88,7 +87,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
                     urls = shardingConfiguration.Orchestrator.Topology.Members.Select(clusterTopology.GetUrlFromTag).ToArray();
                 }
 
-                if (await AssertNoDocumentsStartingWith(context, setting.Prefix, urls) == false)
+                if (await AssertNoDocumentsStartingWithAsync(context, setting.Prefix, urls) == false)
                     throw new InvalidOperationException(
                         $"Cannot remove prefix '{setting.Prefix}' from {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
                         $"There are existing documents in database '{DatabaseName}' that start with '{setting.Prefix}'. " +
@@ -99,7 +98,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
 
                 await DatabaseContext.ServerStore.WaitForExecutionOnRelevantNodesAsync(context, shardingConfiguration.Orchestrator.Topology.Members, raftIndex);
 
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+                NoContentStatus();
             }
         }
 
@@ -125,7 +124,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
 
                 await DatabaseContext.ServerStore.WaitForExecutionOnRelevantNodesAsync(context, shardingConfiguration.Orchestrator.Topology.Members, raftIndex);
 
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+                NoContentStatus();
             }
         }
 
@@ -195,7 +194,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
             }
         }
 
-        private async Task<bool> AssertNoDocumentsStartingWith(JsonOperationContext context, string prefix, string[] urls, string database = null)
+        private async Task<bool> AssertNoDocumentsStartingWithAsync(JsonOperationContext context, string prefix, string[] urls, string database = null)
         {
             using (var requestExecutor = RequestExecutor.CreateForServer(urls, database ?? DatabaseName, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
             {
