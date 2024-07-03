@@ -17,6 +17,7 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
     where T : class 
 {
     private readonly bool _isBlittable;
+    protected long _index;
 
     protected AbstractHandlerProcessorForUpdateDatabaseConfiguration([NotNull] TRequestHandler requestHandler)
         : base(requestHandler)
@@ -88,18 +89,18 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
         OnBeforeUpdateConfiguration(ref configuration, context);
 
         var raftRequestId = RequestHandler.GetRaftRequestIdFromQuery();
-        var (index, _) = await OnUpdateConfiguration(context, configuration, raftRequestId);
+        (_index, _) = await OnUpdateConfiguration(context, configuration, raftRequestId);
 
-        await RequestHandler.WaitForIndexNotificationAsync(index);
+        await RequestHandler.WaitForIndexNotificationAsync(_index);
 
         RequestHandler.HttpContext.Response.StatusCode = (int)GetResponseStatusCode();
 
         var json = new DynamicJsonValue
         {
-            ["RaftCommandIndex"] = index
+            ["RaftCommandIndex"] = _index
         };
 
-        OnBeforeResponseWrite(context, json, configuration, index);
+        OnBeforeResponseWrite(context, json, configuration, _index);
 
         context.Write(writer, json);
 
