@@ -73,7 +73,7 @@ namespace SlowTests.Issues
             var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             using (var token = new OperationCancelToken(database.Configuration.Databases.OperationTimeout.AsTimeSpan, database.DatabaseShutdown, CancellationToken.None))
             {
-                await database.DocumentsStorage.RevisionsStorage.RevertDocumentsToRevisions(new Dictionary<string, string>() { { user1.Id, user1revertCv } }, token);
+                await database.DocumentsStorage.RevisionsStorage.RevertDocumentsToRevisionsAsync(new Dictionary<string, string>() { { user1.Id, user1revertCv } }, token);
             }
 
             using (var session = store.OpenAsyncSession())
@@ -314,30 +314,37 @@ namespace SlowTests.Issues
             Exception e = await Assert.ThrowsAsync<RavenException>(() => store.Operations.SendAsync(
                 new RevertDocumentsToRevisionsOperation(user1.Id, "A:253-jyJQ+3eQ5kuHIGZ+aqSVow")));
 
-            if (options.DatabaseMode == RavenDatabaseMode.Single)
-            {
-                e = e.InnerException;
-            }
+            e = e.InnerException;
 
-            Assert.Contains(
-                "Revision with the cv \"A:253-jyJQ+3eQ5kuHIGZ+aqSVow\" doesn't belong to the doc \"Users/1-A\"",
-                e.Message);
+            Assert.Contains("Revision with the cv \"A:253-jyJQ+3eQ5kuHIGZ+aqSVow\" doesn't exist (id: 'Users/1-A')", e.Message);
 
             e = await Assert.ThrowsAsync<RavenException>(() => store.Operations.SendAsync(
                 new RevertDocumentsToRevisionsOperation(user1.Id, user2revertCv)));
 
+            e = e.InnerException;
+
             if (options.DatabaseMode == RavenDatabaseMode.Single)
             {
-                e = e.InnerException;
                 Assert.Contains(
                     $"Revision with the cv \"{user2revertCv}\" doesn't belong to the doc \"Users/1-A\" but to the doc \"Users/2-B\"",
                     e.Message);
             }
             else
             {
+                var u1shard = await Sharding.GetShardNumberForAsync(store, "Users/1-A");
+                var u2shard = await Sharding.GetShardNumberForAsync(store, "Users/2-B");
+                var expectedMsg = string.Empty;
+                if (u1shard == u2shard)
+                    expectedMsg = $"Revision with the cv \"{user2revertCv}\" doesn't belong to the doc \"Users/1-A\" but to the doc \"Users/2-B\"";
+                else
+                {
+                    // if users/1-A and Users/2-B are in a separate shards, the shard won't find the cv at all
+                    expectedMsg = $"Revision with the cv \"{user2revertCv}\" doesn't exist (id: 'Users/1-A')";
+                }
+
                 Assert.Contains(
-                    $"Revision with the cv \"{user2revertCv}\" doesn't belong to the doc \"Users/1-A\"",
-                    e.Message); // if users/1-A and Users/2-B are in a separate shards, the shard won't find the cv at all
+                    expectedMsg,
+                    e.Message); 
             }
 
             using (var session = store.OpenAsyncSession())

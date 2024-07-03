@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -18,6 +19,16 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </param>
         public RevertDocumentsToRevisionsOperation(Dictionary<string, string> idToChangeVector)
         {
+            if (idToChangeVector == null)
+            {
+                throw new ArgumentNullException(nameof(idToChangeVector), "idToChangeVector cannot be null.");
+            }
+
+            if (idToChangeVector.Count == 0)
+            {
+                throw new ArgumentException("idToChangeVector must contain at least one item.", nameof(idToChangeVector));
+            }
+
             _idToChangeVector = idToChangeVector;
         }
 
@@ -28,6 +39,16 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// <param name="cv">The change vector of the revision to which the document should be reverted.</param>
         public RevertDocumentsToRevisionsOperation(string id, string cv)
         {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentException("id cannot be null or empty.", nameof(id));
+            }
+
+            if (string.IsNullOrEmpty(cv))
+            {
+                throw new ArgumentException("cv cannot be null or empty.", nameof(cv));
+            }
+
             _idToChangeVector = new Dictionary<string, string>() { { id, cv } };
         }
 

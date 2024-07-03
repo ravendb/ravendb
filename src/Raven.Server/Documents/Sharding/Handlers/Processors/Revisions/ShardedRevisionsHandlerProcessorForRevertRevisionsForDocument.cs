@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
         {
         }
 
-        protected override async Task RevertDocuments(Dictionary<string, string> idToChangeVector, OperationCancelToken token)
+        protected override async Task RevertDocumentsAsync(Dictionary<string, string> idToChangeVector, OperationCancelToken token)
         {
             var shardsToDocs = new Dictionary<int, Dictionary<string, string>>();
             using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

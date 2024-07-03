@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        [RavenAction("/databases/*/revisions/revert/document", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        [RavenAction("/databases/*/revisions/revert/docs", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task RevertDocument()
         {
             using (var processor = new RevisionsHandlerProcessorForRevertRevisionsForDocument(this))
