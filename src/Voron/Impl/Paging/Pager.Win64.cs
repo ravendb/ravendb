@@ -96,7 +96,7 @@ public unsafe partial class Pager2
             }
         }
 
-        public static void AllocateMorePages(Pager2 pager, long newLength, ref State state, long transactionId)
+        public static void AllocateMorePages(Pager2 pager, long newLength, ref State state)
         {
             var newLengthAfterAdjustment = NearestSizeToAllocationGranularity(newLength);
 
@@ -107,7 +107,7 @@ public unsafe partial class Pager2
 
             Win32NativeFileMethods.SetFileLength(state.Handle, state.TotalAllocatedSize + allocationSize, pager.FileName);
 
-            var newState = state.Clone(transactionId);
+            var newState = state.Clone();
             try
             {
                 newState.TotalAllocatedSize = state.TotalAllocatedSize + allocationSize;
@@ -416,7 +416,7 @@ public unsafe partial class Pager2
         }
 
 
-        private static void DirectWrite(Pager2 pager,ref State state, ref PagerTransactionState txState, long transactionId, long posBy4Kbs, int numberOf4Kbs, byte* source)
+        private static void DirectWrite(Pager2 pager,ref State state, ref PagerTransactionState txState, long posBy4Kbs, int numberOf4Kbs, byte* source)
         {
             const int pageSizeTo4KbRatio = (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte));
             var pageNumber = posBy4Kbs / pageSizeTo4KbRatio;
@@ -425,7 +425,7 @@ public unsafe partial class Pager2
             if (numberOf4Kbs % pageSizeTo4KbRatio != 0)
                 numberOfPages++;
 
-            pager.EnsureContinuous(ref state, pageNumber, numberOfPages, transactionId);
+            pager.EnsureContinuous(ref state, pageNumber, numberOfPages);
 
             var toWrite = numberOf4Kbs * 4 * Constants.Size.Kilobyte;
             pager.EnsureMapped(state, ref txState, pageNumber, numberOfPages);

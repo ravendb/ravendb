@@ -154,7 +154,7 @@ namespace Voron.Data.Compression
                     {
                         var numberOfPagesBeforeAllocate = _compressionPager.PagerState.NumberOfAllocatedPages;
 
-                        _compressionPager.Pager.EnsureContinuous(ref _compressionPager.PagerState, _lastUsedPage, allocationInPages, tx.Id);
+                        _compressionPager.Pager.EnsureContinuous(ref _compressionPager.PagerState, _lastUsedPage, allocationInPages);
 
                         if (_compressionPager.PagerState.NumberOfAllocatedPages > numberOfPagesBeforeAllocate)
                             _scratchSpaceMonitor.Increase((_compressionPager.PagerState.NumberOfAllocatedPages - numberOfPagesBeforeAllocate) * Constants.Storage.PageSize);

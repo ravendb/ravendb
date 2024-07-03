@@ -80,7 +80,7 @@ namespace Voron.Util
             }
             finally
             {
-                txState.InvokeDispose(src, txr.DataPagerState, ref txState, txr.Id);
+                txState.InvokeDispose(src, txr.DataPagerState, ref txState);
             }
 
             var totalSecElapsed = Math.Max((double)totalSw.ElapsedMilliseconds / 1000, 0.0001);

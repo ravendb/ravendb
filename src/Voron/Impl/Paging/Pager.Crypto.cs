@@ -200,7 +200,7 @@ public unsafe partial class Pager2
             return cryptoState;
         }
 
-        private static void TxOnCommit(Pager2 pager, State state, ref PagerTransactionState txState, long transactionId)
+        private static void TxOnCommit(Pager2 pager, State state, ref PagerTransactionState txState)
         {
             if (txState.ForCrypto?.TryGetValue(pager, out var cryptoState) != true)
                 return;
@@ -225,7 +225,7 @@ public unsafe partial class Pager2
                 var dataSize = EncryptPage(pager, pageHeader);
                 var numPages = Pager.GetNumberOfOverflowPages(dataSize);
 
-                pager.EnsureContinuous(ref state, buffer.Key, numPages, transactionId);
+                pager.EnsureContinuous(ref state, buffer.Key, numPages);
                 pager.EnsureMapped(state, ref txState, buffer.Key, numPages);
 
                 var pagePointer = pager.AcquireRawPagePointer(state, ref txState, buffer.Key);
@@ -234,7 +234,7 @@ public unsafe partial class Pager2
             }
         }
 
-        private static void TxOnDispose(Pager2 pager, State state, ref PagerTransactionState txState, long transactionId)
+        private static void TxOnDispose(Pager2 pager, State state, ref PagerTransactionState txState)
         {
             if (txState.ForCrypto?.Remove(pager, out var cryptoState) != true)
                 return;

@@ -36,7 +36,7 @@ namespace FastTests.Sparrow
                 Pager2.PagerTransactionState txState = new(){IsWriteTransaction = true};
                 try
                 {
-                    pager.EnsureContinuous(ref state, 17, 1, 0x0ff); // We're gonna try to read and write to page 17
+                    pager.EnsureContinuous(ref state, 17, 1); // We're gonna try to read and write to page 17
                     var pagePointer = pager.AcquirePagePointerForNewPage(state, ref txState, 17, 1);
 
                     var header = (PageHeader*)pagePointer;
@@ -44,11 +44,11 @@ namespace FastTests.Sparrow
                     header->Flags = PageFlags.Single | PageFlags.FixedSizeTreePage;
 
                     Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', Constants.Storage.PageSize - PageHeader.SizeOf);
-                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState, 0x0ff);
+                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState);
                 }
                 finally
                 {
-                    txState.InvokeDispose(pager, state, ref txState, 0x0ff);
+                    txState.InvokeDispose(pager, state, ref txState);
                 }
 
                 txState = default;
@@ -60,11 +60,11 @@ namespace FastTests.Sparrow
                     Assert.True(pagePointer[PageHeader.SizeOf] == 'X');
                     Assert.True(pagePointer[666] == 'X');
                     Assert.True(pagePointer[1039] == 'X');
-                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState, 0x0ff);
+                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState);
                 }
                 finally
                 {
-                    txState.InvokeDispose(pager, state, ref txState, 0x0ff);
+                    txState.InvokeDispose(pager, state, ref txState);
                 }
             }
         }
@@ -213,7 +213,7 @@ namespace FastTests.Sparrow
                 {
                     var overflowSize = 4 * Constants.Storage.PageSize + 100;
 
-                    pager.EnsureContinuous(ref state, 26, 5, 0x0ff);
+                    pager.EnsureContinuous(ref state, 26, 5);
                     var pagePointer = pager.AcquirePagePointerForNewPage(state, ref txState, 26, 5);
 
                     var header = (PageHeader*)pagePointer;
@@ -222,11 +222,11 @@ namespace FastTests.Sparrow
                     header->OverflowSize = overflowSize;
 
                     Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', overflowSize);
-                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState, 0x0ff);
+                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState);
                 }
                 finally
                 {
-                    txState.InvokeDispose(pager, state, ref txState, 0x0ff);
+                    txState.InvokeDispose(pager, state, ref txState);
                 }
 
                 txState = default;
@@ -238,11 +238,11 @@ namespace FastTests.Sparrow
                     Assert.True(pagePointer[PageHeader.SizeOf] == 'X');
                     Assert.True(pagePointer[666] == 'X');
                     Assert.True(pagePointer[1039] == 'X');
-                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState, 0x0ff);
+                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState);
                 }
                 finally
                 {
-                    txState.InvokeDispose(pager, state, ref txState, 0x0ff);
+                    txState.InvokeDispose(pager, state, ref txState);
                 }
             }
         }
@@ -260,7 +260,7 @@ namespace FastTests.Sparrow
                 {
                     var overflowSize = 4 * Constants.Storage.PageSize + 100;
 
-                    pager.EnsureContinuous(ref state, 26, 5, 0x0ff);
+                    pager.EnsureContinuous(ref state, 26, 5);
                     var pagePointer = pager.AcquirePagePointerForNewPage(state, ref txState, 26, 5);
 
                     var header = (PageHeader*)pagePointer;
@@ -282,11 +282,11 @@ namespace FastTests.Sparrow
 
                     Assert.True(PageExistsInCache(txState, pager, 26, out usages));
                     Assert.Equal(2, usages);
-                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState, 0x0ff);
+                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState);
                 }
                 finally
                 {
-                    txState.InvokeDispose(pager, state, ref txState, 0x0ff);
+                    txState.InvokeDispose(pager, state, ref txState);
                 }
 
                 txState = default;
@@ -316,11 +316,11 @@ namespace FastTests.Sparrow
 
                     Assert.False(PageExistsInCache(txState, pager, 26, out usages));
                     Assert.Equal(0, usages);
-                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState, 0x0ff);
+                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState);
                 }
                 finally
                 {
-                    txState.InvokeDispose(pager, state, ref txState, 0x0ff);
+                    txState.InvokeDispose(pager, state, ref txState);
                 }
 
                 bool PageExistsInCache(Pager2.PagerTransactionState txState, Pager2 pager, long page, out int usages)
