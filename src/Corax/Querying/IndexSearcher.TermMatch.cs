@@ -237,7 +237,7 @@ public partial class IndexSearcher
         var termAsSpan = term.AsReadOnlySpan();
         if (tree.TryGetValue(termAsSpan, out long containerId) == false)
         {
-            if (termAsSpan is [0])
+            if (termAsSpan.SequenceEqual(Constants.NullValueSpan))
             {
                 if (TryGetPostingListForNull(tree.Name, out containerId))
                     return NumberOfDocumentsUnderSpecificTerm(containerId);
