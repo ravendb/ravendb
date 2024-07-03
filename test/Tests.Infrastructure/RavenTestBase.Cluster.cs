@@ -232,7 +232,7 @@ public partial class RavenTestBase
         {
             var servers = nodes ?? _parent.Servers;
             var notDisposed = servers.Count(s => s.ServerStore.Disposed == false);
-            var notPassive = servers.Count(s => s.ServerStore.Engine.CurrentState != RachisState.Passive);
+            var notPassive = servers.Count(s => s.ServerStore.Engine.CurrentCommittedState.State != RachisState.Passive);
 
             Assert.True(servers.Count == notDisposed, $"Unequal not disposed nodes {servers.Count} != {notDisposed}");
             Assert.True(servers.Count == notPassive, $"Unequal not passive nodes {servers.Count} != {notPassive}");
@@ -249,7 +249,7 @@ public partial class RavenTestBase
                 timeout = Debugger.IsAttached ? TimeSpan.FromSeconds(300) : TimeSpan.FromSeconds(60);
 
             var tasks = nodes.Where(s => s.ServerStore.Disposed == false &&
-                                          s.ServerStore.Engine.CurrentState != RachisState.Passive)
+                                          s.ServerStore.Engine.CurrentCommittedState.State != RachisState.Passive)
                 .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index))
                 .ToList();
 

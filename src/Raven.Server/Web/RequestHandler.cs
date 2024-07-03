@@ -755,7 +755,7 @@ namespace Raven.Server.Web
             if (ServerStore.LeaderTag == null)
                 throw new NoLeaderException();
 
-            if (ServerStore.Engine.CurrentState == RachisState.LeaderElect)
+            if (ServerStore.Engine.CurrentCommittedState.State == RachisState.LeaderElect)
                 throw new NoLeaderException("This node is elected to be the leader, but didn't took office yet.");
 
             ClusterTopology topology;

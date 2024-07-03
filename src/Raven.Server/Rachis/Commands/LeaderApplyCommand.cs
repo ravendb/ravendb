@@ -27,8 +27,9 @@ public sealed class LeaderApplyCommand : MergedTransactionCommand<ClusterOperati
     {
         var sw = Stopwatch.StartNew();
 
-        LastAppliedCommit = _engine.Apply(context, _maxIndexOnQuorum, _leader, sw);
+        _engine.TakeOffice(context);
 
+        LastAppliedCommit = _engine.Apply(context, _maxIndexOnQuorum, _leader, sw);
         var elapsed = sw.Elapsed;
         if (RachisStateMachine.EnableDebugLongCommit && elapsed > TimeSpan.FromSeconds(5))
             Console.WriteLine($"Commiting from {_lastCommit} to {LastAppliedCommit} took {elapsed}");

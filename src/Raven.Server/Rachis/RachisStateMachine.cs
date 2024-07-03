@@ -49,7 +49,7 @@ namespace Raven.Server.Rachis
 
                 if (flags != RachisEntryFlags.StateMachineCommand)
                 {
-                    _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, null, null);
+                    _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTermIn(context), cmd, null, null);
 
                     var currentIndex = index;
                     context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += t =>

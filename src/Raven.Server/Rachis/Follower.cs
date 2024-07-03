@@ -87,17 +87,18 @@ namespace Raven.Server.Rachis
                     var appendEntries = _connection.Read<AppendEntries>(context);
                     var sp = Stopwatch.StartNew();
 
-                    if (appendEntries.Term != _engine.CurrentTerm)
+                    long committedTerm = _engine.CurrentCommittedState.Term;
+                    if (appendEntries.Term != committedTerm)
                     {
                         _connection.Send(context, new AppendEntriesResponse
                         {
-                            CurrentTerm = _engine.CurrentTerm,
-                            Message = "The current term that I have " + _engine.CurrentTerm + " doesn't match " + appendEntries.Term,
+                            CurrentTerm = committedTerm,
+                            Message = $"The current term that I have {committedTerm} doesn't match {appendEntries.Term}",
                             Success = false
                         });
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Info($"{ToString()}: Got invalid term {appendEntries.Term} while the current term is {_engine.CurrentTerm}, aborting connection...");
+                            _engine.Log.Info($"{ToString()}: Got invalid term {appendEntries.Term} while the current term is {committedTerm}, aborting connection...");
                         }
 
                         return;
@@ -299,9 +300,10 @@ namespace Raven.Server.Rachis
             {
                 var logLength = connection.Read<LogLengthNegotiation>(context);
 
-                if (logLength.Term < engine.CurrentTerm)
+                long currentTerm = engine.CurrentCommittedState.Term;
+                if (logLength.Term < currentTerm)
                 {
-                    var msg = $"The incoming term {logLength.Term} is smaller than current term {engine.CurrentTerm} and is therefor rejected (From thread: {logLength.SendingThread})";
+                    var msg = $"The incoming term {logLength.Term} is smaller than current term {currentTerm} and is therefor rejected (From thread: {logLength.SendingThread})";
                     if (engine.Log.IsInfoEnabled)
                     {
                         engine.Log.Info(msg);
@@ -310,7 +312,7 @@ namespace Raven.Server.Rachis
                     {
                         Status = LogLengthNegotiationResponse.ResponseStatus.Rejected,
                         Message = msg,
-                        CurrentTerm = engine.CurrentTerm
+                        CurrentTerm = currentTerm
                     });
                     connection.Dispose();
                     return (false, null);
@@ -543,7 +545,7 @@ namespace Raven.Server.Rachis
             {
                 _engine.Timeout.Defer(_connection.Source);
 
-                _engine.ValidateTerm(_term);
+                _engine.ValidateLatestTerm(_term);
 
                 if (midpointIndex == negotiation.PrevLogIndex && midpointTerm != negotiation.PrevLogTerm)
                 {
@@ -756,7 +758,7 @@ namespace Raven.Server.Rachis
 
         public async Task AcceptConnectionAsync(LogLengthNegotiation negotiation)
         {
-            if (_engine.CurrentState != RachisState.Passive)
+            if (_engine.CurrentCommittedState.State != RachisState.Passive)
                 _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
 
             // if leader / candidate, this remove them from play and revert to follower mode

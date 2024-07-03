@@ -238,7 +238,7 @@ public sealed class MetricsProvider
             result.NodeState = _serverStore.CurrentRachisState;
         }
 
-        result.CurrentTerm = _serverStore.Engine.CurrentTerm;
+        result.CurrentTerm = _serverStore.Engine.CurrentCommittedState.Term;
         result.Index = _serverStore.LastRaftCommitIndex;
         result.Id = _serverStore.Engine.ClusterId;
 

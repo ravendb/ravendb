@@ -21,7 +21,7 @@ public sealed class CastVoteInTermCommand : MergedTransactionCommand<ClusterOper
     protected override long ExecuteCmd(ClusterOperationContext context)
     {
         // we check it here again because now we are under the tx lock, so we can't get into concurrency issues
-        if (_term <= _engine.CurrentTerm)
+        if (_term <= _engine.CurrentTermIn(context))
             return 1;
 
         _engine.CastVoteInTerm(context, _term, votedFor: null, reason: _reason);

@@ -25,13 +25,13 @@ namespace RachisTests
         public async Task Follower_as_a_single_node_becomes_leader_automatically()
         {
             var node = SetupServer(true);
-            var nodeCurrentState = node.CurrentState;
+            var nodeCurrentState = node.CurrentCommittedState.State;
             Assert.True(nodeCurrentState == RachisState.LeaderElect ||
                         nodeCurrentState == RachisState.Leader);
             var waitForState = node.WaitForState(RachisState.Leader, CancellationToken.None);
 
             var condition = await waitForState.WaitWithoutExceptionAsync(10 * node.ElectionTimeout);
-            Assert.True(condition, $"Node is in state {node.CurrentState} and didn't become leader although he is alone in his cluster.");
+            Assert.True(condition, $"Node is in state {node.CurrentCommittedState.State} and didn't become leader although he is alone in his cluster.");
         }
 
 
@@ -48,7 +48,7 @@ namespace RachisTests
             using (leader.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
-                leader.SetNewStateInTx(ctx, RachisState.LeaderElect, null, leader.CurrentTerm, "append an extra entry so only me can be leader");
+                leader.SetNewStateInTx(ctx, RachisState.LeaderElect, null, leader.CurrentTermIn(ctx), "append an extra entry so only me can be leader");
                 tx.Commit();
             }
             
@@ -106,7 +106,7 @@ namespace RachisTests
             DisconnectBiDirectionalFromNode(follower1);
 
             var lastIndex = -1L;
-            var leaderTerm = firstLeader.CurrentTerm;
+            var leaderTerm = firstLeader.CurrentCommittedState.Term;
             await IssueCommandsAndWaitForCommit(3, "foo", 123);
 
             DisconnectBiDirectionalFromNode(firstLeader);
@@ -186,7 +186,7 @@ namespace RachisTests
             var randFollower = followers.First();
             DisconnectBiDirectionalFromNode(randFollower);
 
-            var leaderTerm = firstLeader.CurrentTerm;
+            var leaderTerm = firstLeader.CurrentCommittedState.Term;
             await IssueCommandsAndWaitForCommit(10, "foo", 123);
 
             ReconnectBiDirectionalFromNode(randFollower);
@@ -300,7 +300,7 @@ namespace RachisTests
 
             var timeToWait = TimeSpan.FromMilliseconds(3000);
             await IssueCommandsAndWaitForCommit(3, "test", 1);
-            var currentTerm = firstLeader.CurrentTerm;
+            var currentTerm = firstLeader.CurrentCommittedState.Term;
             DisconnectBiDirectionalFromNode(firstLeader);
 
 
@@ -338,7 +338,7 @@ namespace RachisTests
                     {
                         break;
                     }
-                    var maxTerm = followers.Max(f => f.CurrentTerm);
+                    var maxTerm = followers.Max(f => f.CurrentCommittedState.Term);
                     Assert.True(currentTerm + 1 < maxTerm, $"Followers didn't become leaders although old leader can't communicate with the cluster in term {currentTerm} (max term: {maxTerm})");
                     Assert.True(maxTerm < 10, "Followers were unable to elect a leader.");
                     currentTerm = maxTerm;
@@ -364,7 +364,7 @@ namespace RachisTests
             } while (retries-- > 0);
 
             Assert.True(retries > 0,
-                $"Old leader is in {firstLeader.CurrentState} state and didn't rollback his log to the new leader log (last index: {GetLastCommittedIndex(firstLeader)}, expected: {newLeaderLastIndex})");
+                $"Old leader is in {firstLeader.CurrentCommittedState.State} state and didn't rollback his log to the new leader log (last index: {GetLastCommittedIndex(firstLeader)}, expected: {newLeaderLastIndex})");
             Assert.Equal(3, RachisConsensuses.Count);
         }
 
@@ -376,7 +376,7 @@ namespace RachisTests
         {
             var firstLeader = await CreateNetworkAndGetLeader(numberOfNodes);
             firstLeader.CurrentLeader.StepDown();
-            Assert.True(await firstLeader.WaitForState(RachisState.Follower, CancellationToken.None).WaitWithoutExceptionAsync(TimeSpan.FromSeconds(30)), $"Old leader hasn't stepped down, firstLeader.CurrentState={firstLeader.CurrentState}.");
+            Assert.True(await firstLeader.WaitForState(RachisState.Follower, CancellationToken.None).WaitWithoutExceptionAsync(TimeSpan.FromSeconds(30)), $"Old leader hasn't stepped down, firstLeader.CurrentState={firstLeader.CurrentCommittedState.State}.");
         }
 
         /// <summary>
@@ -396,7 +396,7 @@ namespace RachisTests
             var firstLeader = await CreateNetworkAndGetLeader(numberOfNodes);
             var timeToWait = TimeSpan.FromMilliseconds(1000 * numberOfNodes);
             await IssueCommandsAndWaitForCommit(3, "test", 1);
-            var currentTerm = firstLeader.CurrentTerm;
+            var currentTerm = firstLeader.CurrentCommittedState.Term;
             DisconnectFromNode(firstLeader);
             List<Task> invalidCommands = IssueCommandsWithoutWaitingForCommits(firstLeader, 3, "test", 1);
             var followers = GetFollowers();
@@ -419,10 +419,10 @@ namespace RachisTests
                         break;
                     }
 
-                    var maxTerm = followers.Max(f => f.CurrentTerm);
+                    var maxTerm = followers.Max(f => f.CurrentCommittedState.Term);
                     RavenTestHelper.AssertTrue(currentTerm + 1 <= maxTerm, () =>
                         $"Followers didn't become leaders although old leader can't communicate with the cluster in term {currentTerm} (max term: {maxTerm})" +
-                        $"{string.Join(',', followers.Select(f => $"{f.Tag}={f.CurrentState}:{f.CurrentTerm}"))}");
+                        $"{string.Join(',', followers.Select(f => $"{f.Tag}={f.CurrentCommittedState.State}:{f.CurrentCommittedState.Term}"))}");
 
                     Assert.True(maxTerm < 10, "Followers were unable to elect a leader.");
                     currentTerm = maxTerm;
@@ -450,7 +450,7 @@ namespace RachisTests
             } while (retries-- > 0);
 
             Assert.True(retries > 0,
-                $"Old leader is in {firstLeader.CurrentState} state and didn't rollback his log to the new leader log (last index: {GetLastCommittedIndex(firstLeader)}, expected: {newLeaderLastIndex})");
+                $"Old leader is in {firstLeader.CurrentCommittedState.State} state and didn't rollback his log to the new leader log (last index: {GetLastCommittedIndex(firstLeader)}, expected: {newLeaderLastIndex})");
             Assert.Equal(numberOfNodes, RachisConsensuses.Count);
 
             foreach (var invalidCommand in invalidCommands)
@@ -472,23 +472,23 @@ namespace RachisTests
 
             var timeToWait = TimeSpan.FromMilliseconds(5000 * numberOfNodes);
             await IssueCommandsAndWaitForCommit(10, "test", 1);
-            var currentTerm = firstLeader.CurrentTerm;
+            var currentTerm = firstLeader.CurrentCommittedState.Term;
 
             Disconnect(follower.Url, firstLeader.Url);
 
             // append to previous leader
             AppendToLog(firstLeader, new TestCommand { Name = "foo", Value = 123 }, currentTerm);
 
-            Assert.True(await firstLeader.WaitForState(RachisState.Candidate, CancellationToken.None).WaitWithoutExceptionAsync(timeToWait), $"{firstLeader.CurrentState}");
+            Assert.True(await firstLeader.WaitForState(RachisState.Candidate, CancellationToken.None).WaitWithoutExceptionAsync(timeToWait), $"{firstLeader.CurrentCommittedState.State}");
             follower.FoundAboutHigherTerm(currentTerm + 1, " why not, should work!");
             Reconnect(follower.Url, firstLeader.Url);
 
             RavenTestHelper.AssertTrue(await firstLeader.WaitForState(RachisState.Leader, CancellationToken.None).WaitWithoutExceptionAsync(timeToWait), () =>
-                $"leader: {firstLeader.CurrentState} in term {firstLeader.CurrentTerm} with last index {GetLastCommittedIndex(firstLeader)}{Environment.NewLine}, " +
-                $"follower: state {follower.CurrentState} in term {follower.CurrentTerm} with last index {GetLastCommittedIndex(follower)}{Environment.NewLine}" +
+                $"leader: {firstLeader.CurrentCommittedState.State} in term {firstLeader.CurrentCommittedState.Term} with last index {GetLastCommittedIndex(firstLeader)}{Environment.NewLine}, " +
+                $"follower: state {follower.CurrentCommittedState.State} in term {follower.CurrentCommittedState.Term} with last index {GetLastCommittedIndex(follower)}{Environment.NewLine}" +
                 $"{GetCandidateStatus(RachisConsensuses)}");
 
-            Assert.True(currentTerm + 2 <= firstLeader.CurrentTerm, $"{currentTerm} + 2 <= {firstLeader.CurrentTerm}");
+            Assert.True(currentTerm + 2 <= firstLeader.CurrentCommittedState.Term, $"{currentTerm} + 2 <= {firstLeader.CurrentCommittedState.Term}");
 
             var count = 100;
             while (true)

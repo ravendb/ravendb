@@ -292,7 +292,7 @@ namespace Raven.Server.ServerWide
 
         public ClusterStateMachine Cluster => _engine?.StateMachine;
         public string LeaderTag => _engine.LeaderTag;
-        public RachisState CurrentRachisState => _engine.CurrentState;
+        public RachisState CurrentRachisState => _engine.CurrentCommittedState.State;
         public string NodeTag => _engine.Tag;
 
         public bool Disposed => _disposed;
@@ -405,7 +405,7 @@ namespace Raven.Server.ServerWide
 
                                             delay = 500; // on successful read, reset the delay
                                             topologyNotification.NodeTag = _engine.Tag;
-                                            topologyNotification.CurrentState = _engine.CurrentState;
+                                            topologyNotification.CurrentState = _engine.CurrentCommittedState.State;
                                             NotificationCenter.Add(topologyNotification);
                                         }
                                     }
@@ -489,12 +489,12 @@ namespace Raven.Server.ServerWide
                         continue;
                     }
 
-                    var term = _engine.CurrentTerm;
+                    var term = _engine.CurrentCommittedState.Term;
                     using (ClusterMaintenanceSupervisor = new ClusterMaintenanceSupervisor(this, _engine.Tag, term))
                     using (Observer = new ClusterObserver(this, ClusterMaintenanceSupervisor, _engine, term, _engine.ContextPool, ServerShutdown))
                     {
                         var oldNodes = new Dictionary<string, string>();
-                        while (_engine.LeaderTag == NodeTag && term == _engine.CurrentTerm)
+                        while (_engine.LeaderTag == NodeTag && term == _engine.CurrentCommittedState.Term)
                         {
                             var topologyChangedTask = _engine.GetTopologyChanged();
                             ClusterTopology clusterTopology;
@@ -1198,7 +1198,7 @@ namespace Raven.Server.ServerWide
 
                         var clusterTopology = GetClusterTopology();
 
-                        if (_engine.CurrentState != RachisState.Follower)
+                        if (_engine.CurrentCommittedState.State != RachisState.Follower)
                         {
                             OnTopologyChangeInternal(clusterTopology, leaderClusterTopology: null, new ServerNode() { ClusterTag = NodeTag, Url = GetNodeHttpServerUrl() });
                             return;
@@ -1244,7 +1244,7 @@ namespace Raven.Server.ServerWide
 
             //ClusterTopologyChanged notification is used by studio to show the connectivity state of the node
             //so we want to always fire it, regardless of the topology etag
-            NotificationCenter.Add(ClusterTopologyChanged.Create(topology, LeaderTag, NodeTag, _engine.CurrentTerm, _engine.CurrentState,
+            NotificationCenter.Add(ClusterTopologyChanged.Create(topology, LeaderTag, NodeTag, _engine.CurrentCommittedState.Term, _engine.CurrentCommittedState.State,
                 status ?? GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
 
             if (ShouldUpdateTopology(topology.Etag, _lastClusterTopologyIndex, out _, localClusterTopology))
@@ -3054,7 +3054,7 @@ namespace Raven.Server.ServerWide
 
         public async Task EnsureNotPassiveAsync(string publicServerUrl = null, string nodeTag = "A", bool skipLicenseActivation = false)
         {
-            if (_engine.CurrentState != RachisState.Passive)
+            if (_engine.CurrentCommittedState.State != RachisState.Passive)
                 return;
 
             if (_engine.Bootstrap(publicServerUrl ?? _server.ServerStore.GetNodeHttpServerUrl(), nodeTag) == false)
@@ -3087,17 +3087,17 @@ namespace Raven.Server.ServerWide
                     await Cluster.WaitForIndexNotification(index.Value);
             }
 
-            Debug.Assert(_engine.CurrentState != RachisState.Passive, "_engine.CurrentState != RachisState.Passive");
+            Debug.Assert(_engine.CurrentCommittedState.State != RachisState.Passive, "_engine.CurrentState != RachisState.Passive");
         }
 
         public bool IsLeader()
         {
-            return _engine.CurrentState == RachisState.Leader;
+            return _engine.CurrentCommittedState.State == RachisState.Leader;
         }
 
         public bool IsPassive()
         {
-            return _engine.CurrentState == RachisState.Passive;
+            return _engine.CurrentCommittedState.State == RachisState.Passive;
         }
 
         public DynamicJsonArray GetClusterErrors()
@@ -3280,7 +3280,7 @@ namespace Raven.Server.ServerWide
             {
                 token.ThrowIfCancellationRequested();
 
-                if (_engine.CurrentState == RachisState.Leader && _engine.CurrentLeader?.Running == true)
+                if (_engine.CurrentCommittedState.State == RachisState.Leader && _engine.CurrentLeader?.Running == true)
                 {
                     try
                     {
@@ -3292,7 +3292,7 @@ namespace Raven.Server.ServerWide
                         continue;
                     }
                 }
-                if (_engine.CurrentState == RachisState.Passive)
+                if (_engine.CurrentCommittedState.State == RachisState.Passive)
                 {
                     ThrowInvalidEngineState(cmd);
                 }
@@ -3578,7 +3578,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 var features = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Cluster, tcp.ProtocolVersion);
-                var remoteConnection = new RemoteConnection(_engine.Tag, _engine.CurrentTerm, tcp.Stream, features, disconnect);
+                var remoteConnection = new RemoteConnection(_engine.Tag, _engine.CurrentCommittedState.Term, tcp.Stream, features, disconnect);
 
                 await _engine.AcceptNewConnectionAsync(remoteConnection, remoteEndpoint);
             }
@@ -3623,7 +3623,7 @@ namespace Raven.Server.ServerWide
 
         public string LastStateChangeReason()
         {
-            return $"{_engine.CurrentState}, {_engine.LastStateChangeReason} (at {_engine.LastStateChangeTime})";
+            return $"{_engine.CurrentCommittedState.State}, {_engine.LastStateChangeReason} (at {_engine.LastStateChangeTime})";
         }
 
         public string GetNodeHttpServerUrl(string clientRequestedNodeUrl = null)

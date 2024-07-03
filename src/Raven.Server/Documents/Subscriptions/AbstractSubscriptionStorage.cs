@@ -69,7 +69,7 @@ public abstract class AbstractSubscriptionStorage
 
     public string GetSubscriptionResponsibleNode(ClusterOperationContext context, SubscriptionState taskStatus)
     {
-        return GetSubscriptionResponsibleNode(context, _serverStore.Engine.CurrentState, taskStatus);
+        return GetSubscriptionResponsibleNode(context, _serverStore.Engine.CurrentStateIn(context), taskStatus);
     }
 
     internal string GetSubscriptionResponsibleNode(ClusterOperationContext context, RachisState currentState, SubscriptionState taskStatus)
@@ -318,7 +318,7 @@ public abstract class AbstractSubscriptionStorage<TState> : AbstractSubscription
                     continue;
                 }
 
-                if (_serverStore.Engine.CurrentState == RachisState.Passive)
+                if (_serverStore.Engine.CurrentStateIn(context) == RachisState.Passive)
                 {
                     DropSubscriptionConnections(id,
                         new SubscriptionDoesNotBelongToNodeException($"Subscription operation was stopped on '{_serverStore.NodeTag}', because current node state is '{RachisState.Passive}'."));

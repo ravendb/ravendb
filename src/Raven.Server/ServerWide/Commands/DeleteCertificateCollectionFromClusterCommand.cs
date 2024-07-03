@@ -32,9 +32,12 @@ namespace Raven.Server.ServerWide.Commands
 
         public override void AfterDelete(ServerStore store, ClusterOperationContext context)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += _ =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
-                store.Server.Statistics.RemoveLastAuthorizedCertificateRequestTime(Names);
+                if (tx.Committed)
+                {
+                    store.Server.Statistics.RemoveLastAuthorizedCertificateRequestTime(Names);
+                }
             };
         }
     }

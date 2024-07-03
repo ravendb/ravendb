@@ -61,18 +61,6 @@ namespace Voron.Impl.Journal
             journalWriter = null;
         }
 
-        public JournalSnapshot GetSnapshot()
-        {
-            return new JournalSnapshot
-            {
-                FileInstance = this,
-                Number = Number,
-                Available4Kbs = Available4Kbs,
-                WritePosIn4KbPosition = WritePosIn4KbPosition,
-                LastTransaction = LastTransactionId
-            };
-        }
-
         public void SetLastReadTxHeader(long maxTransactionId, ref TransactionHeader lastReadTxHeader)
         {
             int low = 0;

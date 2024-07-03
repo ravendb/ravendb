@@ -5,28 +5,14 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Rachis.Commands;
 
-public sealed class CandidateCastVoteInTermCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
+public sealed class CandidateCastVoteInTermCommand([NotNull] RachisConsensus engine, long electionTerm, string reason)
+    : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
 {
-    private readonly Candidate _candidate;
-    private readonly RachisConsensus _engine;
-    private readonly long _electionTerm;
-    private readonly string _reason;
-
-    public CandidateCastVoteInTermCommand([NotNull] Candidate candidate, [NotNull] RachisConsensus engine, long electionTerm, string reason)
-    {
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _electionTerm = electionTerm;
-        _reason = reason;
-        _candidate = candidate;
-    }
+    private readonly RachisConsensus _engine = engine ?? throw new ArgumentNullException(nameof(engine));
 
     protected override long ExecuteCmd(ClusterOperationContext context)
     {
-        _engine.CastVoteInTerm(context, _electionTerm, _engine.Tag, _reason);
-        context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += (tx) =>
-        {
-            _candidate.ElectionTerm = _candidate.RunRealElectionAtTerm = _electionTerm;
-        };
+        _engine.CastVoteInTerm(context, electionTerm, _engine.Tag, reason);
         return 1;
     }
 

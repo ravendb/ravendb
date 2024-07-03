@@ -89,7 +89,7 @@ namespace SlowTests.Issues
                     Assert.Equal(licenseStatus.MaxCores, metrics.License.MaxCores);
                     
                     Assert.Equal(Server.ServerStore.NodeTag, metrics.Cluster.NodeTag);
-                    Assert.True(Server.ServerStore.Engine.CurrentTerm >= metrics.Cluster.CurrentTerm);
+                    Assert.True(Server.ServerStore.Engine.CurrentCommittedState.Term >= metrics.Cluster.CurrentTerm);
                     Assert.True(metrics.Cluster.CurrentTerm > 0);
                     Assert.True(Server.ServerStore.LastRaftCommitIndex >= metrics.Cluster.Index);
                     Assert.True(metrics.Cluster.Index > 0);
