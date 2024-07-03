@@ -31,8 +31,8 @@ export function EditAzureQueueStorageEtlInfoHub() {
                 description="Get additional info on this feature"
             >
                 <p>
-                    A <strong>Azure Queue Storage ETL</strong> ongoing-task is an ETL (Extract, Transform & Load) process
-                    that transfers data from this RavenDB database to a Azure Queue Storage.
+                    An <strong>Azure Queue Storage ETL</strong> ongoing-task is an ETL (Extract, Transform & Load) process
+                    that transfers data from this RavenDB database to Azure Queue Storage.
                 </p>
                 <ul>
                     <li>
@@ -62,7 +62,7 @@ export function EditAzureQueueStorageEtlInfoHub() {
                     <ul>
                         <li>A connection string to the Azure Queue Storage server.</li>
                         <li>The transformation scripts definitions.</li>
-                        <li>Per queue, select whether processed documents will be deleted from your RavenDB database.
+                        <li>Per queue, select whether processed documents will be deleted from your source RavenDB database.
                         </li>
                         <li>A responsible node to handle this task can be set.</li>
                     </ul>
