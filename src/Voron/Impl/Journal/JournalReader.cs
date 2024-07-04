@@ -90,16 +90,15 @@ namespace Voron.Impl.Journal
 
             _readAt4Kb += transactionSizeIn4Kb;
             
+            var numberOfPages = GetNumberOfPagesFor(current->UncompressedSize);
+            _recoveryPager.EnsureContinuous(ref recoveryPagerState, 0, numberOfPages);
+            _recoveryPager.EnsureMapped(recoveryPagerState, ref txState, 0, numberOfPages);
+            var outputPage = _recoveryPager.AcquirePagePointer(recoveryPagerState, ref txState, 0);
+            Memory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
+
             TransactionHeaderPageInfo* pageInfoPtr;
-            byte* outputPage;
             if (performDecompression)
             {
-                var numberOfPages = GetNumberOfPagesFor(current->UncompressedSize);
-                _recoveryPager.EnsureContinuous(ref recoveryPagerState, 0, numberOfPages);
-                _recoveryPager.EnsureMapped(recoveryPagerState, ref txState, 0, numberOfPages);
-                outputPage = _recoveryPager.AcquirePagePointer(recoveryPagerState, ref txState, 0);
-                Memory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
-
                 try
                 {
                     LZ4.Decode64LongBuffers((byte*)current + sizeof(TransactionHeader), current->CompressedSize, outputPage,
@@ -116,11 +115,6 @@ namespace Voron.Impl.Journal
             }
             else
             {
-                var numberOfPages = GetNumberOfPagesFor(current->UncompressedSize);
-                _recoveryPager.EnsureContinuous(ref recoveryPagerState, 0, numberOfPages);
-                _recoveryPager.EnsureMapped(recoveryPagerState, ref txState, 0, numberOfPages);
-                outputPage = _recoveryPager.AcquirePagePointer(recoveryPagerState, ref txState, 0);
-                Memory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
                 Memory.Copy(outputPage, (byte*)current + sizeof(TransactionHeader), current->UncompressedSize);
                 pageInfoPtr = (TransactionHeaderPageInfo*)outputPage;
             }
@@ -200,8 +194,8 @@ namespace Voron.Impl.Journal
                             {
                                 // need to mark overlapped buffers as invalid for commit
                                 var encryptionBuffers = txState.ForCrypto![_dataPager];
-                                var numberOfPages = Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize);
-                                for (var j = 1; j < numberOfPages; j++)
+                                var numberOfOverflowPages = Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+                                for (var j = 1; j < numberOfOverflowPages; j++)
                                 {
                                     if (encryptionBuffers.TryGetValue(pageNumber + j, out var buffer))
                                     {

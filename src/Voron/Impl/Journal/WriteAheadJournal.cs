@@ -1557,6 +1557,7 @@ namespace Voron.Impl.Journal
             }
 
             _compressionPager.EnsureMapped(_compressionPagerState, ref txState, 0, pagesRequired);
+            var stateOfThePagerForPagesToBeCompressed = _compressionPagerState;
             var txHeaderPtr = _compressionPager.AcquirePagePointer(_compressionPagerState, ref txState, 0);
             var txPageInfoPtr = txHeaderPtr + sizeof(TransactionHeader);
             var pagesInfo = (TransactionHeaderPageInfo*)txPageInfoPtr;
@@ -1641,6 +1642,11 @@ namespace Voron.Impl.Journal
 
                 try
                 {
+                    // IMPORTANT: The memory we got in the previous call to AcquirePagePointer() is associated with the _compressionPagerState
+                    // which may *change* because we are extending the file. We need to *ensure* that we keep hold of that state until the
+                    // end of this method, to avoid releasing the buffer too early when the state's finalizer is running. This is why we
+                    // have the stateOfThePagerForPagesToBeCompressed held there
+                    Debug.Assert(stateOfThePagerForPagesToBeCompressed != null, "Read the comment above!");
                     _compressionPager.EnsureContinuous(ref _compressionPagerState, pagesWritten, outputBufferInPages);
                     Debug.Assert(_compressionPagerState.TotalAllocatedSize >= (pagesWritten+outputBufferInPages)* Constants.Storage.PageSize,
                         "_compressionPagerState.TotalAllocatedSize >= (pagesWritten+outputBufferInPages)* Constants.Storage.PageSize");
@@ -1729,6 +1735,7 @@ namespace Voron.Impl.Journal
             if (_env.Options.Encryption.IsEnabled)
                 EncryptTransaction(txHeaderPtr);
 
+            GC.KeepAlive(stateOfThePagerForPagesToBeCompressed);
             return prepareToWriteToJournal;
         }
 
