@@ -642,7 +642,7 @@ namespace Raven.Server.ServerWide
 
                     case nameof(PutClientConfigurationCommand):
                         AssertLicenseLimits(type, serverStore, databaseRecord: null, items: null, context);
-                        PutClientConfiguration(context, type, cmd, index, serverStore);
+                        PutClientConfiguration(context, type, cmd, index);
                         break;
 
                     case nameof(PutServerWideStudioConfigurationCommand):
@@ -1387,21 +1387,17 @@ namespace Raven.Server.ServerWide
 
         private void ExecuteManyOnDispose(ClusterOperationContext context, long index, string type, List<Func<Task>> tasks)
         {
-            var removeValue = _rachisLogIndexNotifications.AddTask(index);
+            _rachisLogIndexNotifications.AddTask(index);
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
+                if (tx.Committed == false)
+                    return;
+
                 var count = tasks.Count;
-                if (tx.Committed)
+                if (count == 0)
                 {
-                    if (count == 0)
-                    {
-                        NotifyAndSetCompleted(index);
-                        return;
-                    }
-                }
-                else
-                {
-                    removeValue.Remove();
+                    NotifyAndSetCompleted(index);
+                    return;
                 }
 
                 var exceptionAggregator =
@@ -2628,34 +2624,25 @@ namespace Raven.Server.ServerWide
 
         private void NotifyValueChanged(ClusterOperationContext context, string type, long index)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += _ =>
-            {
-                // we do this under the write tx lock before we update the last applied index
-                _rachisLogIndexNotifications.AddTask(index);
+            _rachisLogIndexNotifications.AddTask(index);
 
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
-                {
-                    ExecuteAsyncTask(index, () => Changes.OnValueChanges(index, type));
-                };
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+            {
+                if (tx.Committed == false)
+                    return;
+                ExecuteAsyncTask(index, () => Changes.OnValueChanges(index, type));
             };
         }
 
         private void NotifyDatabaseAboutChanged(ClusterOperationContext context, string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType change, object changeState)
         {
             Debug.Assert(changeState.ContainsBlittableObject() == false, "You cannot use a blittable in the command state, since this is handled outside of the transaction");
-
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += _ =>
+            _rachisLogIndexNotifications.AddTask(index);
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
-                // we do this under the write tx lock before we update the last applied index
-                _rachisLogIndexNotifications.AddTask(index);
-
-                var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
-                tx.OnDispose += _ =>
-                {
-                    if (tx.Committed == false)
-                        return;
-                    ExecuteAsyncTask(index, () => Changes.OnDatabaseChanges(databaseName, index, type, change, changeState));
-                };
+                if (tx.Committed == false)
+                    return;
+                ExecuteAsyncTask(index, () => Changes.OnDatabaseChanges(databaseName, index, type, change, changeState));
             };
         }
 
@@ -3217,10 +3204,13 @@ namespace Raven.Server.ServerWide
         }
 
         private void OnTransactionDispose(ClusterOperationContext context, long index)
-        {
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += _ =>
+        {                
+            _rachisLogIndexNotifications.AddTask(index);
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
-                _rachisLogIndexNotifications.AddTask(index);
+                if (tx.Committed == false)
+                    return;
+                
                 NotifyAndSetCompleted(index);
             };
         }
