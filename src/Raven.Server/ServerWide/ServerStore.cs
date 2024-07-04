@@ -164,8 +164,6 @@ namespace Raven.Server.ServerWide
             // we want our servers to be robust get early errors about such issues
             MemoryInformation.EnableEarlyOutOfMemoryChecks = true;
 
-            DefaultIdentityPartsSeparator = Constants.Identities.DefaultSeparator;
-
             QueryClauseCache = new MemoryCache(new MemoryCacheOptions
             {
                 SizeLimit = configuration.Indexing.QueryClauseCacheSize.GetValue(SizeUnit.Bytes),
@@ -864,11 +862,15 @@ namespace Raven.Server.ServerWide
             _engine.Initialize(_env, Configuration, clusterChanges, myUrl, Server.Time, out _lastClusterTopologyIndex, ServerShutdown);
 
             using (Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
+            using (var wtx = context.OpenWriteTransaction())
             {
                 PublishedServerUrls = PublishedServerUrls.Read(context);
-
-                LoadDefaultIdentityPartsSeparator(context);
+                var clusterState = (ClusterStateRecord)wtx.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState;
+                wtx.InnerTransaction.LowLevelTransaction.UpdateClientState(clusterState with
+                {
+                    DefaultIdentityPartsSeparator = LoadDefaultIdentityPartsSeparator(context)
+                });
+                wtx.Commit();
             }
 
             _ = Task.Run(PublishServerUrlAsync).IgnoreUnobservedExceptions();
@@ -887,23 +889,21 @@ namespace Raven.Server.ServerWide
             InitializationCompleted.Set();
         }
 
-        public void LoadDefaultIdentityPartsSeparator(ClientConfiguration clientConfiguration)
+        public static char LoadDefaultIdentityPartsSeparator(ClientConfiguration clientConfiguration)
         {
-            var defaultIdentityPartsSeparator = Constants.Identities.DefaultSeparator;
             if (clientConfiguration is { Disabled: false, IdentityPartsSeparator: not null })
-                defaultIdentityPartsSeparator = clientConfiguration.IdentityPartsSeparator.Value;
-
-            DefaultIdentityPartsSeparator = defaultIdentityPartsSeparator;
+                return clientConfiguration.IdentityPartsSeparator.Value;
+            return Constants.Identities.DefaultSeparator;
         }
 
-        private void LoadDefaultIdentityPartsSeparator(ClusterOperationContext context)
+        private char LoadDefaultIdentityPartsSeparator(ClusterOperationContext context)
         {
             ClientConfiguration clientConfiguration = null;
             var serverClientConfigurationJson = Cluster.Read(context, Constants.Configuration.ClientId, out _);
             if (serverClientConfigurationJson != null)
                 clientConfiguration = JsonDeserializationClient.ClientConfiguration(serverClientConfigurationJson);
 
-            LoadDefaultIdentityPartsSeparator(clientConfiguration);
+            return LoadDefaultIdentityPartsSeparator(clientConfiguration);
         }
 
         private async Task PublishServerUrlAsync()
@@ -2591,8 +2591,6 @@ namespace Raven.Server.ServerWide
         }
 
         public Guid ServerId => GetServerId();
-
-        public char DefaultIdentityPartsSeparator;
 
         public bool IsShutdownRequested()
         {

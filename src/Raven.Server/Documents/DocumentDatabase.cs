@@ -70,6 +70,7 @@ using Constants = Raven.Client.Constants;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
+using Raven.Server.Rachis;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 
@@ -334,7 +335,7 @@ namespace Raven.Server.Documents
 
         public char IdentityPartsSeparator
         {
-            get => _localIdentityPartsSeparator ?? _serverStore.DefaultIdentityPartsSeparator;
+            get => _localIdentityPartsSeparator ?? ((ClusterStateRecord)_serverStore._env.CurrentStateRecord.ClientState).DefaultIdentityPartsSeparator;
         }
 
         public ClientConfiguration ClientConfiguration { get; private set; }

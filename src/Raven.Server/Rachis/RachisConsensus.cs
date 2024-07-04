@@ -293,22 +293,22 @@ namespace Raven.Server.Rachis
 
         public RachisState CurrentStateIn(ClusterOperationContext ctx)
         {
-            if (ctx.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState is RachisStateRecord r)
+            if (ctx.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState is ClusterStateRecord r)
                 return r.State;
             return RachisState.Passive;
         }
         
         public void UpdateStateIn(ClusterOperationContext ctx, RachisState state)
         {
-            var cur = (RachisStateRecord)ctx.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState ??
-                      RachisStateRecord.Empty;
+            var cur = (ClusterStateRecord)ctx.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState ??
+                      ClusterStateRecord.Empty;
             ctx.Transaction.InnerTransaction.LowLevelTransaction.UpdateClientState(cur with {State = state});
         }
         
         public void UpdateTermIn(ClusterOperationContext ctx, long term)
         {
-            var cur = (RachisStateRecord)ctx.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState ??
-                      RachisStateRecord.Empty;
+            var cur = (ClusterStateRecord)ctx.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState ??
+                      ClusterStateRecord.Empty;
             ctx.Transaction.InnerTransaction.LowLevelTransaction.UpdateClientState(cur with {Term = term});
         }
 
@@ -344,11 +344,11 @@ namespace Raven.Server.Rachis
         private readonly ConcurrentQueue<Elector> _electors = new ConcurrentQueue<Elector>();
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
-        public RachisStateRecord CurrentCommittedState => (_persistentState.CurrentStateRecord.ClientState as RachisStateRecord) ?? RachisStateRecord.Empty;
+        public ClusterStateRecord CurrentCommittedState => (_persistentState.CurrentStateRecord.ClientState as ClusterStateRecord) ?? ClusterStateRecord.Empty;
 
         public long CurrentTermIn(ClusterOperationContext ctx)
         {
-            if (ctx.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState is RachisStateRecord r)
+            if (ctx.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState is ClusterStateRecord r)
                 return r.Term;
             return -1;
         }
@@ -514,7 +514,11 @@ namespace Raven.Server.Rachis
                     var state = topology.TopologyId == null || topology.Contains(_tag) == false ? RachisState.Passive : RachisState.Follower;
                     var currentTerm = ReadTerm(context);
 
-                    tx.InnerTransaction.LowLevelTransaction.UpdateClientState(new RachisStateRecord(state, currentTerm));
+                    tx.InnerTransaction.LowLevelTransaction.UpdateClientState(ClusterStateRecord.Empty with
+                    {
+                        State = state,
+                        Term = currentTerm
+                    });
                    
                     tx.Commit();
                 }
