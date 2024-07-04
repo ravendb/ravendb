@@ -9,7 +9,7 @@ namespace Raven.Server.ServerWide;
 
 public sealed partial class ClusterStateMachine
 {
-    private void PutClientConfiguration(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
+    private void PutClientConfiguration(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
     {
         Exception exception = null;
         PutClientConfigurationCommand command = null;
@@ -24,7 +24,11 @@ public sealed partial class ClusterStateMachine
             using (var rec = context.ReadObject(command.ValueToJson(), "inner-val"))
                 PutValueDirectly(context, command.Name, rec, index);
 
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += _ => _parent.ServerStore.LoadDefaultIdentityPartsSeparator(command.Value);
+            var stateRecord = (ClusterStateRecord)context.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState;
+            context.Transaction.InnerTransaction.LowLevelTransaction.UpdateClientState(stateRecord with
+            {
+                DefaultIdentityPartsSeparator = ServerStore.LoadDefaultIdentityPartsSeparator(command.Value)
+            });
         }
         catch (Exception e)
         {

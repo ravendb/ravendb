@@ -1,6 +1,7 @@
 ﻿using System;
 using FastTests.Voron;
 using Voron;
+using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,7 +27,7 @@ namespace SlowTests.Voron.Issues
             {
                 using (var tx = Env.WriteTransaction())
                 {
-                    tx.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += transaction => throw new InvalidOperationException(
+                    tx.LowLevelTransaction.ForTestingPurposesOnly().ActionToCallOnTransactionAfterCommit += () => throw new InvalidOperationException(
                         "Intentional error during CommitStage3_DisposeTransactionResources should mark the env in the catastrophic error state");
 
                     tx.Commit();
@@ -60,9 +61,10 @@ namespace SlowTests.Voron.Issues
             {
                 using (var tx = Env.WriteTransaction())
                 {
-                    tx.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += transaction =>
+                    var llt = tx.LowLevelTransaction;
+                    llt.ForTestingPurposesOnly().ActionToCallOnTransactionAfterCommit += () =>
                     {
-                        transaction.Commit();
+                        llt.Commit();
                     };
 
                     tx.Commit();
@@ -79,7 +81,7 @@ namespace SlowTests.Voron.Issues
             {
                 using (var tx = Env.WriteTransaction())
                 {
-                    tx.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += transaction =>
+                    tx.LowLevelTransaction.ForTestingPurposesOnly().ActionToCallOnTransactionAfterCommit += () =>
                     {
                         using (Env.WriteTransaction())
                         {
