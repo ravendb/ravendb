@@ -72,6 +72,14 @@
                         <i class="icon-latest"></i>
                         <span>See the current document</span>
                     </a>
+                    <button class="btn btn-default" title="Compare this version with previous one" data-bind="click: enterCompareModeAndCompareWithPrevious, visible: compareButtonVisible">
+                        <i class="icon-diff"></i>
+                        <span>Compare</span>
+                    </button>
+                    <button class="btn btn-default" data-bind="click: exitCompareMode, visible: inDiffMode()">
+                        <i class="icon-cancel"></i>
+                        <span>Exit</span>
+                    </button>
                 </div>
                 <div class="pull-right-sm" data-bind="visible: !isDeleteRevision()">
                     <div class="btn-group" data-bind="visible: !inDiffMode()">
@@ -90,42 +98,88 @@
                     </div>
                 </div>
                 <div class="pull-right-sm" data-bind="visible: inDiffMode()">
-                    <button class="btn btn-default" data-bind="click: exitCompareMode">
-                        <i class="icon-cancel"></i>
-                        <span>Exit revisions compare mode</span>
-                    </button>
+                    <div class="radio-toggle d-flex justify-content-center">
+                        <input type="radio" id="radio-toggle-left" name="CompressAllCollections" value="previous" data-bind="checked: diffMode">
+                        <label for="radio-toggle-left" title="Automatically change right version to match previous of left document">Previous commit</label>
+                        <input type="radio" id="radio-toggle-right" name="CompressAllCollections" value="manual" data-bind="checked: diffMode">
+                        <label for="radio-toggle-right" title="Manually choose 2 arbitrary revisions to compare">Manual</label>
+                        <div class="toggle-knob">
+                            <i class="icon-diff m-0"></i><i class="icon-documents m-0"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="row" data-bind="visible: inDiffMode()">
-                <div class="col-md-6 text-center">
+                <div class="col-md-6 text-center d-flex">
                     <span data-bind="visible: currentDiff() && !currentDiff().identicalContent()">
                         <span class="text-success" data-bind="visible: $root.leftRevisionIsNewer()">Newer revision:</span>
                         <span class="text-warning" data-bind="visible: !$root.leftRevisionIsNewer()">Older revision:</span>
                     </span>
-                    <span class="margin-left margin-left-sm" data-bind="text: document().__metadata.lastModified()"></span>
+                    <div class="flex-grow"></div>
+                    <div data-bind="if: comparingWith" class="margin-left margin-left-sm inline-block">
+                        <div class="btn-group">
+                            <div data-bind="visible: diffMode() !== 'manual'">
+                                <span data-bind="text: $root.comparingWith().__metadata.lastModified()"></span>
+                                <i title="Conflicted revision" data-bind="visible: $root.comparingWith().__metadata.hasFlag('Conflicted')" class="icon-conflicts"></i>
+                                <i title="Resolved revision" data-bind="visible: $root.comparingWith().__metadata.hasFlag('Resolved')" class="icon-tick"></i>
+                            </div>
+                            <button class="btn btn-sm btn-default" title="Newer revision"
+                                    data-bind="click: _.partial(revisionNavigate, 'newer', 'left'), enable: canNavigateObservable('newer', 'left'), visible: diffMode() === 'manual'">
+                                <i class="icon-arrow-up"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" title="Choose revision" data-bind="visible: diffMode() === 'manual'">
+                                <span data-bind="text: $root.comparingWith().__metadata.lastModified()"></span>
+                                <i title="Conflicted revision" data-bind="visible: $root.comparingWith().__metadata.hasFlag('Conflicted')" class="icon-conflicts"></i>
+                                <i title="Resolved revision" data-bind="visible: $root.comparingWith().__metadata.hasFlag('Resolved')" class="icon-tick"></i>
+                                <span class="caret margin-left margin-left-sm"></span>
+                            </button>
+                            <ul class="dropdown-menu" data-bind="foreach: revisionsToCompare">
+                                <li data-bind="css: { active: $data === $root.comparingWith() }">
+                                    <a href="#" data-bind="click: _.partial($root.changeLeftRevision, $data)">
+                                        <span data-bind="text: $data.__metadata.lastModified()"></span>
+                                        <i title="Conflicted revision" data-bind="visible: $data.__metadata.hasFlag('Conflicted')" class="icon-conflicts"></i>
+                                        <i title="Resolved revision" data-bind="visible: $data.__metadata.hasFlag('Resolved')" class="icon-tick"></i>
+                                    </a>
+                                </li>
+                            </ul>
+                            <button class="btn btn-sm btn-default" title="Older revision"
+                                    data-bind="click: _.partial(revisionNavigate, 'older', 'left'), enable: canNavigateObservable('older', 'left'), visible: diffMode() === 'manual'">
+                                <i class="icon-arrow-down"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-6 text-center">
+                <div class="col-md-6 text-center d-flex">
                     <span data-bind="visible: currentDiff() && !currentDiff().identicalContent()">
                         <span class="text-warning" data-bind="visible: $root.leftRevisionIsNewer()">Older revision:</span>
                         <span class="text-success" data-bind="visible: !$root.leftRevisionIsNewer()">Newer revision:</span>
                     </span>
-                    <div data-bind="if: comparingWith" class="margin-left margin-left-sm inline-block">
+                    <div class="flex-grow"></div>
+                    <div class="margin-left margin-left-sm inline-block">
                         <div class="btn-group">
-                            <button class="btn btn-sm btn-default" title="Previous revision" 
-                                    data-bind="click: _.partial(revisionNavigate, 'backward', 'right'), enable: canNavigateObservable('backward', 'right')">
-                                <i class="icon-corax-backward"></i>
+                            <button class="btn btn-sm btn-default" title="Newer revision"
+                                    data-bind="click: _.partial(revisionNavigate, 'newer', 'right'), enable: canNavigateObservable('newer', 'right')">
+                                <i class="icon-arrow-up"></i>
                             </button>
-                            <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" title="Choose revision">
-                                <span data-bind="text: $root.comparingWith().__metadata.lastModified()"></span> <span class="caret margin-left margin-left-sm"></span>
+                            <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" 
+                                    data-bind="attr: { 'title': diffMode() === 'manual' ? 'Choose revision' : 'Choose revision (Switch to manual mode to choose revision to compare with)' }">
+                                <span data-bind="text: document().__metadata.lastModified()"></span>
+                                <i title="Conflicted revision" data-bind="visible: document().__metadata.hasFlag('Conflicted')" class="icon-conflicts"></i>
+                                <i title="Resolved revision" data-bind="visible: document().__metadata.hasFlag('Resolved')" class="icon-tick"></i>
+                                <span class="caret margin-left margin-left-sm"></span>
                             </button>
                             <ul class="dropdown-menu" data-bind="foreach: revisionsToCompare">
-                                <li data-bind="css: { active: $data === $root.comparingWith() }">
-                                    <a href="#" data-bind="text: $data.__metadata.lastModified(), click: _.partial($root.compareRevisions, $data)"></a>
+                                <li data-bind="css: { active: $data.__metadata.changeVector() === $root.document().__metadata.changeVector() }, visible: $root.diffMode() === 'previous' ? $index() < $root.revisionsToCompare().length - 1 : true">
+                                    <a href="#" data-bind="click: _.partial($root.changeRightRevision, $data)">
+                                        <span data-bind="text: $data.__metadata.lastModified()"></span>
+                                        <i title="Conflicted revision" data-bind="visible: $data.__metadata.hasFlag('Conflicted')" class="icon-conflicts"></i>
+                                        <i title="Resolved revision" data-bind="visible: $data.__metadata.hasFlag('Resolved')" class="icon-tick"></i>
+                                    </a>
                                 </li>
                             </ul>
-                            <button class="btn btn-sm btn-default" title="Next revision" 
-                                    data-bind="click: _.partial(revisionNavigate, 'forward', 'right'), enable: canNavigateObservable('forward', 'right')">
-                                <i class="icon-corax-forward"></i>
+                            <button class="btn btn-sm btn-default" title="Older revision"
+                                    data-bind="click: _.partial(revisionNavigate, 'older', 'right'), enable: canNavigateObservable('older', 'right')">
+                                <i class="icon-arrow-down"></i>
                             </button>
                         </div>
                        
@@ -151,6 +205,11 @@
         </div>
         <div class="flex-window-scroll editors-container">
             <div class="left-editor">
+                <pre id="docEditorLeft" class="form-control absolute-fill"
+                     data-bind="aceEditor: { code: documentTextLeft, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() || inDiffMode() || isReadOnlyAccess() },
+                                disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
+            </div>
+            <div class="right-editor">
                 <pre id="docEditor" class="form-control absolute-fill"
                      data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() || inDiffMode() || isReadOnlyAccess() },
                                 disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision() && !showHugeDocumentWarning()"></pre>
@@ -171,7 +230,7 @@
                             <span data-bind="text: documentItemType"></span> size is <strong data-bind="text: computedDocumentSize"></strong>.<br /><br />
                             Having huge documents impacts indexing, querying and other database tasks.<br />
                             Your browser may not perform well if you open the <span data-bind="text: documentItemType"></span> in this view.
-            </div>
+                        </div>
                         <div class="padding text-left">
                             Select how to continue: <br />
                         </div>
@@ -195,11 +254,7 @@
                     </div>
                 </div>
             </div>
-            <div class="right-editor">
-                <pre id="docEditorRight" class="form-control absolute-fill"
-                     data-bind="aceEditor: { code: documentTextRight, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() || inDiffMode() || isReadOnlyAccess() },
-                                disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
-            </div>
+           
         </div>
         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: documentText">
             <div class="help-block" data-bind="validationMessage: documentText"></div>
