@@ -208,10 +208,14 @@ namespace Voron.Impl.Scratch
         public void Free(LowLevelTransaction tx, int scratchNumber, long page)
         {
             var scratch = _scratchBuffers[scratchNumber];
-            scratch.File.Free(tx, page);
-            if (scratch.File.AllocatedPagesCount != 0)
-                return;
+            if (scratch.File.Free(tx, page))
+            {
+                MaybeRecycleFile(tx, scratch);
+            }
+        }
 
+        private void MaybeRecycleFile(LowLevelTransaction tx, ScratchBufferItem scratch)
+        {
             List<ScratchBufferFile> recycledScratchesToDispose = null;
 
             while (_recycleArea.First != null)
