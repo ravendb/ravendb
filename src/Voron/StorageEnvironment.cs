@@ -1710,11 +1710,12 @@ namespace Voron
                 _ => (tx.Id, tx.FlushedToJournal)
             };
             var pagesInScratch = tx.ModifiedPagesInTransaction;
+            Debug.Assert(pagesInScratch != null, "pagesInScratch != null");
             Debug.Assert(pagesInScratch != null);
             long nextPageNumber = tx.GetNextPageNumber();
             var rootObjectsState = tx.RootObjects.State;
             var clientState = tx.CurrentStateRecord.ClientState;
-            Debug.Assert(ReferenceEquals(rootObjectsState, tx.CurrentStateRecord.Root));
+            Debug.Assert(ReferenceEquals(rootObjectsState, tx.CurrentStateRecord.Root), "ReferenceEquals(rootObjectsState, tx.CurrentStateRecord.Root)");
             while (true)
             {
                 var currentState = _currentStateRecordRecord!;

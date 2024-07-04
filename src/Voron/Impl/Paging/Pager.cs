@@ -299,16 +299,6 @@ public unsafe partial class Pager2 : IDisposable
         return _functions.AcquirePagePointerForNewPage(this, pageNumber, numberOfPages, state, ref txState);
     }
 
-    public void ProtectPageRange(byte* start, ulong size)
-    {
-        _functions.ProtectPageRange(start, size);
-    }
-
-    public void UnprotectPageRange(byte* start, ulong size)
-    {
-        _functions.UnprotectPageRange(start, size);
-    }
-
     public void EnsureContinuous(ref State state, long requestedPageNumber, int numberOfPages)
     {
         if (state.Disposed)
@@ -325,7 +315,8 @@ public unsafe partial class Pager2 : IDisposable
         {
             allocationSize = GetNewLength(allocationSize, minRequested);
         }
-
+        Debug.Assert(allocationSize > state.TotalAllocatedSize, "allocationSize > state.TotalAllocatedSize");
+        
         if (Options.CopyOnWriteMode && state.Pager.FileName.EndsWith(Constants.DatabaseFilename))
             throw new IncreasingDataFileInCopyOnWriteModeException(state.Pager.FileName, allocationSize);
 
@@ -336,7 +327,7 @@ public unsafe partial class Pager2 : IDisposable
         {
             PalHelper.ThrowLastError(rc, errorCode, $"Failed to increase file '{state.Pager.FileName}' to {new Size(allocationSize, SizeUnit.Bytes)}");
         }
-
+        Debug.Assert(totalAllocatedSize >= state.TotalAllocatedSize, "totalAllocatedSize >= state.TotalAllocatedSize");
         state = new State(this, baseAddress, totalAllocatedSize, handle);
         InstallState(state);
     }

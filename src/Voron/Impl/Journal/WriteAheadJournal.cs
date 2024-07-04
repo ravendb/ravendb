@@ -1228,6 +1228,9 @@ namespace Voron.Impl.Journal
                         {
                             for (int i = 0; i < pages.Length; i++)
                             {
+                                Debug.Assert(pages[i].PageNumber + pages[i].GetNumberOfPages() <= dataPagerState.NumberOfAllocatedPages,
+                                    "pages[i].PageNumber + pages[i].GetNumberOfPagesUpdateStateOnCommit() <= dataPagerState.NumberOfAllocatedPages");
+                                
                                 var span = new Span<byte>(pages[i].Pointer, pages[i].GetNumberOfPages() * Constants.Storage.PageSize);
                                 RandomAccess.Write(fileHandle, span, pages[i].PageNumber * Constants.Storage.PageSize);
                             }
@@ -1265,7 +1268,9 @@ namespace Voron.Impl.Journal
                         continue;
                     }
                     pageNumsBuffer[index] = pageNum;
-                    pagesBuffer[index] = PreparePage(ref txState, pageValue);
+                    var page = PreparePage(ref txState, pageValue);
+                    pagesBuffer[index] = page;
+                    Debug.Assert(pageNum == page.PageNumber, "pageNum == page.PageNumber");
                     index++;
 
                 }
@@ -1539,6 +1544,7 @@ namespace Voron.Impl.Journal
             try
             {
                 _compressionPager.EnsureContinuous(ref _compressionPagerState, 0, pagesRequired);
+                Debug.Assert(_compressionPagerState.TotalAllocatedSize >= pagesRequired* Constants.Storage.PageSize, "_compressionPagerState.TotalAllocatedSize >= pagesRequired* Constants.Storage.PageSize");
             }
             catch (InsufficientMemoryException)
             {
@@ -1636,6 +1642,8 @@ namespace Voron.Impl.Journal
                 try
                 {
                     _compressionPager.EnsureContinuous(ref _compressionPagerState, pagesWritten, outputBufferInPages);
+                    Debug.Assert(_compressionPagerState.TotalAllocatedSize >= (pagesWritten+outputBufferInPages)* Constants.Storage.PageSize,
+                        "_compressionPagerState.TotalAllocatedSize >= (pagesWritten+outputBufferInPages)* Constants.Storage.PageSize");
                 }
                 catch (InsufficientMemoryException)
                 {
