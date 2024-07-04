@@ -41,7 +41,7 @@ class connectedDocuments {
     static currentTab = ko.observable<connectedDocsTabs>("attachments"); 
 
     loadDocumentAction: (docId: string) => void;
-    compareWithRevisionAction: (revisionChangeVector: string) => JQueryPromise<document>;
+    loadRevisionAction: (changeVector: string) => void;
     document: KnockoutObservable<document>;
     db: database;
     
@@ -89,7 +89,7 @@ class connectedDocuments {
     constructor(document: KnockoutObservable<document>,
         db: database,
         loadDocument: (docId: string) => void,
-        compareWithRevision: (revisionChangeVector: string) => JQueryPromise<document>,
+        loadRevision: (changeVector: string) => void,
         isCreatingNewDocument: KnockoutObservable<boolean>,
         crudActionsProvider: () => editDocumentCrudActions,
         inReadOnlyMode: KnockoutObservable<boolean>,
@@ -105,7 +105,7 @@ class connectedDocuments {
         this.isClone = isClone;
         this.document.subscribe((doc) => this.onDocumentLoaded(doc));
         this.loadDocumentAction = loadDocument;
-        this.compareWithRevisionAction = compareWithRevision;
+        this.loadRevisionAction = loadRevision;
         this.uploader = new editDocumentUploader(document, db, () => this.afterUpload());
         this.crudActionsProvider = crudActionsProvider;
 
@@ -137,21 +137,20 @@ class connectedDocuments {
             new hyperlinkColumn<connectedDocumentItem>(this.gridController() as virtualGridController<any>, x => x.id, x => x.href, "", "100%")
         ];
 
-        const revisionColumn = new hyperlinkColumn<connectedRevisionDocumentItem>(this.gridController() as virtualGridController<any>, x => x.id, x => x.href, "", "75%",
+        const revisionColumn = new hyperlinkColumn<connectedRevisionDocumentItem>(this.gridController() as virtualGridController<any>, x => x.id, x => x.href, "Revision", "75%",
             {
                 extraClass: item => item.deletedRevision ? "typed-revision deleted-revision" :
                     (item.conflictRevision ? "typed-revision conflict-revision" :
-                    item.resolvedRevision ? "typed-revision resolved-revision" : "")
+                    item.resolvedRevision ? "typed-revision resolved-revision" : ""),
+                handler: (item, event) => {
+                    if (!event.ctrlKey) {
+                        this.loadRevisionAction(item.revisionChangeVector);
+                        event.preventDefault();
+                    }
+                }
             });
-        const revisionCompareColumn = new actionColumn<connectedRevisionDocumentItem>(this.gridController() as virtualGridController<any>, (x, idx, e) => this.compareRevision(x, idx, e), "Diff", () => `<i title="Compare document with this revision" class="icon-diff"></i>`, "25%",
-            {
-                extraClass: doc => doc.deletedRevision ? 'deleted-revision-compare' : '',
-                title: () => "Compare current document with this revision"
-            }); 
         
-        const isDeleteRevision = this.document().__metadata.hasFlag("DeleteRevision");
-        
-        this.revisionsColumns = isDeleteRevision ? [revisionColumn] : [revisionColumn, revisionCompareColumn];
+        this.revisionsColumns = [revisionColumn];
         
         this.attachmentsColumns = [
             new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.downloadAttachment(x), "Name", x => x.name, "160px",
@@ -257,7 +256,10 @@ class connectedDocuments {
                 const timeSeriesItem = (item as timeSeriesItem);
                 
                 if (column instanceof textColumn) {
-                    if (column.header === "Timeseries date range") {
+                    if (column.header === "Revision") {
+                        const value = column.getCellValue(item);
+                        onValue(moment.utc(value), value);
+                    } else if (column.header === "Timeseries date range") {
                         onValue(timeSeriesItem.startDate + " - " + timeSeriesItem.endDate);
                     } else if (column.header === "Timeseries items count") {
                         onValue(timeSeriesItem.numberOfEntries.toLocaleString());
@@ -386,14 +388,6 @@ class connectedDocuments {
         }).promise();
     }
 
-    private compareRevision(revision: connectedRevisionDocumentItem, idx: number, event: JQueryEventObject) {
-        const $target = $(event.target);
-        $target.addClass("btn-spinner");
-        
-        this.compareWithRevisionAction(revision.revisionChangeVector)
-            .always(() => $target.removeClass("btn-spinner"));
-    }
-    
     private downloadAttachment(file: attachmentItem) {
         const args = {
             id: file.documentId,

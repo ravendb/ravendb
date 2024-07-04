@@ -47,7 +47,6 @@ import shardViewModelBase from "viewmodels/shardViewModelBase";
 import shard from "models/resources/shard";
 import shardedDatabase from "models/resources/shardedDatabase";
 import assertUnreachable from "components/utils/assertUnreachable";
-import generalUtils = require("common/generalUtils");
 
 class editDocument extends shardViewModelBase {
 
@@ -56,15 +55,17 @@ class editDocument extends shardViewModelBase {
     static editDocSelector = ".edit-document";
     static documentNameSelector = "#documentName";
     static docEditorSelector = "#docEditor";
-    static docEditorSelectorRight = "#docEditorRight";
+    static docEditorSelectorLeft = "#docEditorLeft";
     static readonly hugeSizeFormatted = document.hugeSizeFormatted;
 
     inReadOnlyMode = ko.observable<boolean>(false);
     inDiffMode = ko.observable<boolean>(false);
     currentDiff = ko.observable<aceDiff>();
+    diffMode = ko.observable<"previous" | "manual">("previous");
     revisionsToCompare = ko.observableArray<document>([]);
     comparingWith = ko.observable<document>();
     leftRevisionIsNewer: KnockoutComputed<boolean>;
+    compareButtonVisible: KnockoutComputed<boolean>;
     
     revisionChangeVector = ko.observable<string>();
     
@@ -72,11 +73,8 @@ class editDocument extends shardViewModelBase {
     documentItemType: KnockoutComputed<string>;
     
     documentText = ko.observable("");
-    documentTextOrg = ko.observable("");
-    documentTextRight = ko.observable("");
-    
-    documentTextStash = ko.observable<string>("");
-    stashedDocumentIsDirty = ko.observable<boolean>(false);
+    documentTextOrg = ko.observable(""); // stash for huge document
+    documentTextLeft = ko.observable("");
     
     metadata: KnockoutComputed<documentMetadata>;
     
@@ -121,12 +119,12 @@ class editDocument extends shardViewModelBase {
     documentArchivalEnabled: KnockoutComputed<boolean>;
 
     private docEditor: AceAjax.Editor;
-    private docEditorRight: AceAjax.Editor;
+    private docEditorLeft: AceAjax.Editor;
     entityName = ko.observable<string>("");
 
     $documentName: JQuery;
     $docEditor: JQuery;
-    $docEditorRight: JQuery;
+    $docEditorLeft: JQuery;
 
     isConflictDocument = ko.observable<boolean>(false);
     isNewLineFriendlyMode = ko.observable<boolean>(false);
@@ -148,7 +146,7 @@ class editDocument extends shardViewModelBase {
     connectedDocuments = new connectedDocuments(this.document,
         this.db,
         (docId) => this.loadDocument(docId),
-        changeVector => this.enterCompareModeAndCompareByChangeVector(changeVector),
+        (changeVector) => this.loadRevisionWithDirtyCheck(changeVector),
         this.isCreatingNewDocument,
         this.crudActionsProvider,
         this.inReadOnlyMode,
@@ -189,10 +187,10 @@ class editDocument extends shardViewModelBase {
         aceEditorBindingHandler.install();
         this.initializeObservables();
         this.initValidation();
-        
-        this.bindToCurrentInstance("compareRevisions", "forceCreateRevision", "copyChangeVectorToClipboard", 
-                                   "togglePropertiesPanel", "activateTimeSeriesTab", "activateAttachmentsTab", 
-                                   "revisionNavigate");
+
+        this.bindToCurrentInstance("forceCreateRevision", "copyChangeVectorToClipboard",
+            "togglePropertiesPanel", "activateTimeSeriesTab", "activateAttachmentsTab",
+            "revisionNavigate", "changeLeftRevision", "changeRightRevision");
     }
 
     canActivate(args: any) {
@@ -207,16 +205,23 @@ class editDocument extends shardViewModelBase {
                 } else if (args && args.id) {
                     return this.activateById(args.id);
                 } else {
-                    return $.Deferred().resolve({ can: true });
+                    return $.Deferred().resolve({can: true});
                 }
             });
     }
 
-    activate(navigationArgs: { list: string, database: string, item: string, id: string, new: string, index: string, revision: number }) {
+    activate(navigationArgs: {
+        list: string,
+        database: string,
+        item: string,
+        id: string,
+        new: string,
+        index: string,
+        revision: number
+    }) {
         super.activate(navigationArgs);
         this.updateHelpLink('M72H1R');
-
-        //TODO: raw url for revision
+        
         if (!navigationArgs || !navigationArgs.id) {
             return this.editNewDocument(navigationArgs ? navigationArgs.new : null);
         }
@@ -231,7 +236,7 @@ class editDocument extends shardViewModelBase {
 
         this.$documentName = $(editDocument.documentNameSelector);
         this.$docEditor = $(editDocument.docEditorSelector);
-        this.$docEditorRight = $(editDocument.docEditorSelectorRight);
+        this.$docEditorLeft = $(editDocument.docEditorSelectorLeft);
 
         this.isNewLineFriendlyMode.subscribe(val => {
             this.updateNewlineLayoutInDocument(val);
@@ -242,7 +247,7 @@ class editDocument extends shardViewModelBase {
         super.compositionComplete();
         
         this.docEditor = aceEditorBindingHandler.getEditorBySelection(this.$docEditor);
-        this.docEditorRight = aceEditorBindingHandler.getEditorBySelection(this.$docEditorRight);
+        this.docEditorLeft = aceEditorBindingHandler.getEditorBySelection(this.$docEditorLeft);
 
         // preload json newline friendly mode to avoid issues with document save
         (ace as any).config.loadModule("ace/mode/raven_document_newline_friendly");
@@ -255,7 +260,7 @@ class editDocument extends shardViewModelBase {
                     this.collapseDocsWhenOpening(true);
                     this.forceFold = true;
                 }
-        });
+            });
 
         if (this.docEditor) {
             this.docEditor.getSession().on("changeAnnotation", () => {
@@ -299,7 +304,7 @@ class editDocument extends shardViewModelBase {
 
     private activateByRevision(id: string, revisionChangeVector: string) {
         const canActivateResult = $.Deferred<canActivateResultDto>();
-        this.loadRevision(revisionChangeVector)
+        this.loadRevision(revisionChangeVector, id)
             .done(() => {
                 canActivateResult.resolve({ can: true });
             })
@@ -352,7 +357,6 @@ class editDocument extends shardViewModelBase {
     }
 
     private initializeObservables(): void {
-        
         this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.userSpecifiedId], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.cloneEnabled = ko.pureComputed(() => {
@@ -376,11 +380,7 @@ class editDocument extends shardViewModelBase {
             const isDirty = this.dirtyFlag().isDirty();
             const changeVector = this.metadata().changeVector();
 
-            if (isSaving || (!isDirty && changeVector)) {
-                return false;
-            }
-
-            return true;
+            return !(isSaving || (!isDirty && changeVector));
         });
 
         this.rawJsonUrl = ko.pureComputed(() => {
@@ -430,20 +430,30 @@ class editDocument extends shardViewModelBase {
                 return false;
             }
         });
-        
+
         this.leftRevisionIsNewer = ko.pureComputed(() => {
-           const leftDoc = this.document();
-           const rightDoc = this.comparingWith();
-           
-           if (leftDoc && rightDoc) {
-               const leftMoment = moment(leftDoc.__metadata.lastModified());
-               const rightMoment = moment(rightDoc.__metadata.lastModified());
-               
-               return leftMoment.isAfter(rightMoment);
-           }
-           
-           return false;
+            const rightDoc = this.document();
+            const leftDoc = this.comparingWith();
+
+            if (leftDoc && rightDoc) {
+                const leftMoment = moment(leftDoc.__metadata.lastModified());
+                const rightMoment = moment(rightDoc.__metadata.lastModified());
+
+                return leftMoment.isAfter(rightMoment);
+            }
+
+            return false;
         });
+        
+        this.compareButtonVisible = ko.pureComputed(() => {
+            const diffMode = this.inDiffMode();
+            const isClone = this.isClone();
+            const creatingNewDocument = this.isCreatingNewDocument();
+            const deleteRevision = this.isDeleteRevision();
+            const hasRevisions = this.document()?.__metadata.hasFlag("HasRevisions");
+            
+            return !diffMode && !isClone && !creatingNewDocument && !deleteRevision && hasRevisions;
+        })
 
         this.isDeleteRevision = ko.pureComputed(() => {
             const doc = this.document();
@@ -527,11 +537,13 @@ class editDocument extends shardViewModelBase {
                     this.hugeTextSize(textSizeInByes);
                 } else {
                     this.documentTextOrg(null);
-                this.documentText(docText);
+                    this.documentText(docText);
                     this.hugeTextSize(0);
-            }
+                }
             }
         });
+        
+        this.diffMode.subscribe(mode => this.onDiffModeChanged(mode));
 
         this.metadata = ko.pureComputed<documentMetadata>(() => this.document() ? this.document().__metadata : null);
         
@@ -659,23 +671,32 @@ class editDocument extends shardViewModelBase {
             return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument();
         });
         
-        this.canViewRelated = ko.pureComputed(() => {
-            return !this.isDeleteRevision() && (this.isClone() || !this.isCreatingNewDocument());
-        });
+        this.canViewRelated = ko.pureComputed(() => !this.isDeleteRevision() && (this.isClone() || !this.isCreatingNewDocument()));
 
-        this.canViewCSharpClass = ko.pureComputed(() => {
-            return !this.isCreatingNewDocument() && !this.inReadOnlyMode();
-        });
+        this.canViewCSharpClass = ko.pureComputed(() => !this.isCreatingNewDocument() && !this.inReadOnlyMode());
         
         this.showHugeDocumentWarning = ko.pureComputed(() => {
             if (this.isBusy()) {
                 return this.isHugeDocument();
             } else {
                 return this.isHugeDocument() && !this.ignoreHugeDocument();
-    }
+            }
         });
     }
 
+    async onDiffModeChanged(newMode: "previous" | "manual") {
+        if (newMode === "previous") {
+            // if user chooses previous we can't choose the oldest revision
+            const currentRevision = this.document();
+            if (this.revisionsToCompare().at(-1).__metadata.changeVector() === currentRevision.__metadata.changeVector()) {
+                await this.changeRightRevision(this.revisionsToCompare().at(-2));
+                return;
+            }
+            
+            await this.changeRightRevision(this.document());
+        }
+    }
+    
     enableCustomNameProvider() {
         this.provideCustomNameForNewDocument(true);
         this.userIdHasFocus(true);
@@ -690,7 +711,7 @@ class editDocument extends shardViewModelBase {
             return;
         }
         
-        if (change.Type === 'Delete') {
+        if (change.Type === "Delete") {
             if (this.editedDocId() === change.Id) {
                 this.displayDocumentDeleted(true);
             }
@@ -720,8 +741,8 @@ class editDocument extends shardViewModelBase {
         this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteDocument(), editDocument.editDocSelector);
         this.createKeyboardShortcut("ctrl+s", () => this.saveDocument(), editDocument.editDocSelector); 
-        // Q. Why do we have to setup ALT+S, when we could just use HTML's accesskey attribute?
-        // A. Because the accesskey attribute causes the save button to take focus, thus stealing the focus from the user's editing spot in the doc editor, disrupting his workflow.
+        // Q. Why do we have to set up ALT+S, when we could just use HTML's access key attribute?
+        // A. Because the access key attribute causes the save button to take focus, thus stealing the focus from the user's editing spot in the doc editor, disrupting his workflow.
     }
 
     private focusOnEditor() {
@@ -771,7 +792,7 @@ class editDocument extends shardViewModelBase {
         this.ignoreHugeDocument(true);
         
         if (this.inReadOnlyMode()) {
-            this.loadRevision(this.revisionChangeVector());
+            this.loadRevision(this.revisionChangeVector(), this.editedDocId());
         } else {
             this.loadDocument(this.document().getId());
         }
@@ -875,19 +896,19 @@ class editDocument extends shardViewModelBase {
             this.normalActionProvider.fetchCounters("") :
             $.when<pagedResult<counterItem>>({ items: [], totalResultCount: 0 } as pagedResult<counterItem>);
         
-        const fetchTimeseriesTask = this.normalActionProvider.fetchTimeSeries("");
+        const fetchTimeSeriesTask = this.normalActionProvider.fetchTimeSeries("");
 
-        $.when<any>(fetchCountersTask, fetchTimeseriesTask)
+        $.when<any>(fetchCountersTask, fetchTimeSeriesTask)
             .done((counters: pagedResult<counterItem>, timeSeries: pagedResult<timeSeriesItem>) => {
                 this.createCloneInternal(attachments, timeSeries.items, counters.items, keepChanges);
             })
     }
     
-    private createCloneInternal(attachments: attachmentItem[], timeseries: timeSeriesItem[], counters: counterItem[], keepChanges = false) {
+    private createCloneInternal(attachments: attachmentItem[], timeSeries: timeSeriesItem[], counters: counterItem[], keepChanges = false) {
         // Show current document as a clone document...
         router.navigate(window.location.hash + "&isClone=true", { trigger: false, replace: false });
         
-        this.crudActionsProvider(new clonedDocumentCrudActions(this, this.db, attachments, timeseries, counters, () => this.connectedDocuments.reload()));
+        this.crudActionsProvider(new clonedDocumentCrudActions(this, this.db, attachments, timeSeries, counters, () => this.connectedDocuments.reload()));
 
         this.isCreatingNewDocument(true);
         this.isClone(true);
@@ -951,7 +972,7 @@ class editDocument extends shardViewModelBase {
             const viewModel = new editorWarningsConfirm("Document",
                 [{ source: "Document", warnings: documentWarnings }],
                 (warning) => {
-                    // please note go to line is not zero based so we add 1
+                    // please note go to line is not zero based, so we add 1
                     this.docEditor.gotoLine(warning.row + 1, warning.column, true);
                     this.docEditor.focus();
             });
@@ -990,7 +1011,7 @@ class editDocument extends shardViewModelBase {
         const meta = updatedDto['@metadata'];
 
         // Fix up the metadata: if we're a new doc, attach the expected reserved properties like @id and @collection.
-        // AFAICT, Raven requires these reserved meta properties in order for the doc to be seen as a member of a collection.
+        // Raven requires these reserved meta properties in order for the doc to be seen as a member of a collection.
         if (this.isCreatingNewDocument()) {
             this.attachReservedMetaProperties(documentId, meta);
         } else {
@@ -1034,7 +1055,6 @@ class editDocument extends shardViewModelBase {
     }
     
     private onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) {
-        
         if (forceRevisionCreation && !saveResult.Results[0].RevisionCreated) {
             // No new revision was created since the server detected that a revision with latest document content already exists... so do nothing.
             this.isSaving(false);
@@ -1056,8 +1076,8 @@ class editDocument extends shardViewModelBase {
                     continue;
                 if (prop === "@collection" && savedDocumentDto["@collection"] === "@empty")
                     continue;
-                if (prop === "RevisionCreated") 
-                   continue;
+                if (prop === "RevisionCreated")
+                    continue;
                 metadata[prop] = (savedDocumentDto as any)[prop];
             }
         }
@@ -1084,7 +1104,7 @@ class editDocument extends shardViewModelBase {
 
         this.updateUrl(savedDocumentDto["@id"]);
 
-        this.dirtyFlag().reset(); //Resync Changes
+        this.dirtyFlag().reset(); //Resynchronize Changes
 
         this.isCreatingNewDocument(false);
         this.collectionForNewDocument(null);
@@ -1143,44 +1163,71 @@ class editDocument extends shardViewModelBase {
                     }
                 } else {
                     this.dirtyFlag().reset();
-                    messagePublisher.reportError("Could not load document: " + id, xhr.responseText, xhr.statusText);  
+                    messagePublisher.reportError("Could not load document: " + id, xhr.responseText, xhr.statusText);
                     loadTask.reject();
                 }
             })
-            .always(()=> this.isBusy(false));
+            .always(() => this.isBusy(false));
 
         return loadTask;
     }
 
-    private enterCompareModeAndCompareByChangeVector(revisionChangeVector: string): JQueryPromise<document> {
-        return new getDocumentRevisionsCommand(this.document().getId(), this.db, 0, 1024, true)
-            .execute()
-            .then(revisions => {
-                const itemToCompare = revisions.items.find(x => x.__metadata.changeVector() === revisionChangeVector);
-                
-                this.revisionsToCompare(revisions.items.filter(x => !x.__metadata.hasFlag("DeleteRevision")));
-                
-                if (itemToCompare) {
-                    return this.compareRevisions(itemToCompare);
-                }
-            });
+    async enterCompareModeAndCompareWithPrevious(): Promise<void> {
+        const changeVector = this.document().__metadata.changeVector();
+        const revisions = await new getDocumentRevisionsCommand(this.document().getId(), this.db, 0, 1024, true)
+            .execute();
+
+        const itemToCompare = revisions.items.find(x => x.__metadata.changeVector() === changeVector);
+        
+        this.revisionsToCompare(revisions.items.filter(x => !x.__metadata.hasFlag("DeleteRevision")));
+
+        this.diffMode("previous");
+        
+        if (itemToCompare) {
+            const isLastItem = this.revisionsToCompare().at(-1).__metadata.changeVector() === itemToCompare.__metadata.changeVector();
+            if (isLastItem) {
+                this.confirmationMessage("Nothing to compare", "This is the oldest revision. Please choose another revision.", {
+                    buttons: ["Ok"]
+                });
+            } else {
+                return this.changeRightRevision(itemToCompare);
+            }
+            
+        }
     }
     
-    revisionNavigate(direction: "backward" | "forward", tab: "right") {
+    async revisionNavigate(direction: "older" | "newer", tab: "right" | "left"): Promise<void> {
         if (!this.canNavigateObservable(direction, tab)) {
             return;
         }
         switch (tab) {
             case "right": {
+                const currentRevision = this.document();
+                const currentRevisionIndex = this.revisionsToCompare().findIndex(x => x.__metadata.changeVector() === currentRevision.__metadata.changeVector());
+                switch (direction) {
+                    case "newer": {
+                        await this.changeRightRevision(this.revisionsToCompare()[currentRevisionIndex - 1]);
+                        break;
+                    }
+                    case "older": {
+                        await this.changeRightRevision(this.revisionsToCompare()[currentRevisionIndex + 1]);
+                        break;
+                    }
+                    default:
+                        assertUnreachable(direction);
+                }
+                break;
+            }
+            case "left": {
                 const currentRevision = this.comparingWith();
                 const currentRevisionIndex = this.revisionsToCompare().findIndex(x => x === currentRevision);
                 switch (direction) {
-                    case "backward": {
-                        this.compareRevisions(this.revisionsToCompare()[currentRevisionIndex - 1]);
+                    case "newer": {
+                        await this.changeLeftRevision(this.revisionsToCompare()[currentRevisionIndex - 1]);
                         break;
                     }
-                    case "forward": {
-                        this.compareRevisions(this.revisionsToCompare()[currentRevisionIndex + 1]);
+                    case "older": {
+                        await this.changeLeftRevision(this.revisionsToCompare()[currentRevisionIndex + 1]);
                         break;
                     }
                     default:
@@ -1194,58 +1241,85 @@ class editDocument extends shardViewModelBase {
         
     }
     
-    canNavigateObservable(direction: "backward" | "forward", tab: "right") {
+    canNavigateObservable(direction: "older" | "newer", tab: "right" | "left") {
         return ko.pureComputed(() => {
             switch (tab) {
                 case "right": {
-                    const currentRevision = this.comparingWith();
-                    const currentRevisionIndex = this.revisionsToCompare().findIndex(x => x === currentRevision);
+                    const currentRevision = this.document();
+                    const currentRevisionIndex = this.revisionsToCompare().findIndex(x => x.__metadata.changeVector() === currentRevision.__metadata.changeVector());
                     switch (direction) {
-                        case "backward": {
+                        case "newer": {
                             return currentRevisionIndex > 0;
                         }
-                        case "forward": {
+                        case "older": {
+                            if (this.diffMode() === "previous") {
+                                // in case of previous mode we can't choose the oldest item, as we won't be able to compare with older than the oldest
+                                return currentRevisionIndex < this.revisionsToCompare().length - 2;
+                            }
+                            
                             return currentRevisionIndex < this.revisionsToCompare().length - 1;
                         }
                         default:
-                            assertUnreachable(direction);
+                            return assertUnreachable(direction);
+                    }
+                }
+                case "left": {
+                    if (this.diffMode() === "previous") {
+                        // block navigation in manual mode
+                        return false;
+                    }
+                    const currentRevision = this.comparingWith();
+                    const currentRevisionIndex = this.revisionsToCompare().findIndex(x => x === currentRevision);
+                    switch (direction) {
+                        case "newer": {
+                            return currentRevisionIndex > 0;
+                        }
+                        case "older":
+                            return currentRevisionIndex < this.revisionsToCompare().length - 1;
+                        default:
+                            return assertUnreachable(direction);
                     }
                 }
 
                 default:
-                    assertUnreachable(tab);
+                    return assertUnreachable(tab);
             }
         });
     }
     
-    compareRevisions(item: document) {
+    async changeRightRevision(item: document): Promise<void> {
+        const changeVector = item.__metadata.changeVector();
+        const allRevisions = this.revisionsToCompare();
+
+        await this.loadRevision(changeVector, this.editedDocId());
+        
+        const rightDoc = this.document();
+        const rightDocDto = rightDoc.toDiffDto();
+        this.documentText(genUtils.stringify(rightDocDto));
+        this.dirtyFlag().reset();
+        
+        if (this.diffMode() === "previous") {
+            const currentIndex = allRevisions.findIndex(x => x.__metadata.changeVector() === changeVector);
+            if (currentIndex < this.revisionsToCompare().length - 1) {
+                await this.changeLeftRevision(this.revisionsToCompare()[currentIndex + 1]);
+            }
+        } else {
+            this.renderDifferences();
+        }
+    }
+    
+    async changeLeftRevision(item: document): Promise<void> {
         this.comparingWith(item);
         
-        const revisionChangeVector = item.__metadata.changeVector();
-        return new getDocumentAtRevisionCommand(revisionChangeVector, this.db)
-            .execute()
-            .done((rightDoc: document) => {
-                const wasDirty = this.dirtyFlag().isDirty();
-                
-                this.documentTextStash(this.documentText() || this.documentTextOrg());
-                
-                const leftDoc = this.document();
-                const leftDocDto = leftDoc.toDiffDto();
-                this.documentText(genUtils.stringify(leftDocDto));
-                
-                if (rightDoc) {
-                    const rightDocDto = rightDoc.toDiffDto();
-                    this.documentTextRight(genUtils.stringify(rightDocDto));
-                }
-                
-                if (!wasDirty) {
-                    this.dirtyFlag().reset();
-                }
-                
-                this.stashedDocumentIsDirty(wasDirty);
+        const leftDoc = await new getDocumentAtRevisionCommand(item.__metadata.changeVector(), this.db)
+            .execute();
 
-                this.renderDifferences();
-            });
+        if (leftDoc) {
+            const leftDocDto = leftDoc.toDiffDto();
+            this.documentTextLeft(genUtils.stringify(leftDocDto));
+        }
+
+        this.renderDifferences();
     }
     
     private getDocumentPhysicalSize(id: string): JQueryPromise<Raven.Client.Documents.Commands.DocumentSizeDetails> {
@@ -1279,8 +1353,22 @@ class editDocument extends shardViewModelBase {
             });
     }
 
-    private loadRevision(changeVector: string) : JQueryPromise<document> {
+    private loadRevisionWithDirtyCheck(changeVector: string) {
+        if (!this.inDiffMode() && this.dirtyFlag().isDirty() && !this.inReadOnlyMode()) {
+            this.discardStayResult().then(result => {
+                if (result.can) {
+                    this.loadRevision(changeVector, this.editedDocId());
+                }
+            });
+        } else {
+            this.loadRevision(changeVector, this.editedDocId());
+        }
+    }
+    
+    private loadRevision(changeVector: string, documentId: string) : JQueryPromise<document> {
         this.isBusy(true);
+        
+        router.navigate(appUrl.forViewDocumentAtRevision(documentId, changeVector, this.db), false);
 
         return new getDocumentAtRevisionCommand(changeVector, this.db)
             .execute()
@@ -1373,7 +1461,7 @@ class editDocument extends shardViewModelBase {
             this.connectedDocuments.activateRevisions(true);
         } else if (!this.canViewAttachments() || !this.canViewCounters()) {
             this.connectedDocuments.activateRecent();
-        } else if (this.inReadOnlyMode()) { // revision mostly..
+        } else if (this.inReadOnlyMode()) { // revision mostly...
             this.connectedDocuments.activateRevisions(false);
         } else {
             this.connectedDocuments.activateAttachments();
@@ -1392,20 +1480,14 @@ class editDocument extends shardViewModelBase {
     private renderDifferences() {
         if (!this.inDiffMode()) {
             this.inDiffMode(true);
-            this.currentDiff(new aceDiff(this.docEditor, this.docEditorRight, this.leftRevisionIsNewer()));
+            this.currentDiff(new aceDiff(this.docEditorLeft, this.docEditor, this.leftRevisionIsNewer()));
         } else {
             this.currentDiff().refresh(this.leftRevisionIsNewer());
         }
     }
 
     exitCompareMode() {
-        this.documentText(this.documentTextStash());
-        this.documentTextStash("");
-        if (!this.stashedDocumentIsDirty()) {
-            this.dirtyFlag().reset();
-        }
-        
-        this.documentTextRight("");
+        this.documentTextLeft("");
         this.revisionsToCompare([]);
         this.comparingWith(null);
         
@@ -1513,12 +1595,12 @@ class normalCrudActions implements editDocumentCrudActions {
             return doc.__metadata.counters().length;
         });
     }
-    
+
     setCounter(counter: counterItem) {
-        const saveAction = (newCounter: boolean, counterName: string, newValue: number, 
-            db: database, onCounterNameError: (error: string) => void): JQueryPromise<CountersDetail> => {
+        const saveAction = (newCounter: boolean, counterName: string, newValue: number,
+                            db: database, onCounterNameError: (error: string) => void): JQueryPromise<CountersDetail> => {
             const documentId = this.document().getId();
-            
+
             const saveTask = () => {
                 const previousValue = counter ? counter.totalCounterValue : 0;
                 const counterDeltaValue = newValue - previousValue;
@@ -1862,15 +1944,15 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
     }
     
     fetchTimeSeries(nameFilter: string): JQueryPromise<pagedResult<timeSeriesItem>> {
-        let timeseries: timeSeriesItem[] = this.timeSeries();
+        let timeSeries: timeSeriesItem[] = this.timeSeries();
 
         if (nameFilter) {
-            timeseries = timeseries.filter(ts => ts.name.toLocaleLowerCase().includes(nameFilter));
+            timeSeries = timeSeries.filter(ts => ts.name.toLocaleLowerCase().includes(nameFilter));
         }
 
         return $.Deferred<pagedResult<timeSeriesItem>>().resolve({
-            items: timeseries,
-            totalResultCount: timeseries.length
+            items: timeSeries,
+            totalResultCount: timeSeries.length
         });
     }
 
@@ -1880,13 +1962,13 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
     
     saveRelatedItems(targetDocumentId: string): JQueryPromise<void> {
         const hasAttachments = this.attachmentsCount() > 0;
-        const hasTimeseries = this.timeSeriesCount() > 0;
+        const hasTimeSeries = this.timeSeriesCount() > 0;
         const hasCounters = this.countersCount() > 0;
         
-        if (hasAttachments || hasTimeseries || hasCounters) {
+        if (hasAttachments || hasTimeSeries || hasCounters) {
             
             const attachmentNames = this.attachments().map(x => x.name);
-            const timeseries = this.timeSeries().map(x => x.name);
+            const timeSeries = this.timeSeries().map(x => x.name);
             
             const counters: Array<{ name: string, value: number }> = this.counters().map(x => {
                 return {
@@ -1896,7 +1978,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
             });
             
             return new cloneRelatedItemsCommand(this.sourceDocumentId, this.fromRevision, this.changeVector,
-                targetDocumentId, this.db, attachmentNames, timeseries, counters)
+                targetDocumentId, this.db, attachmentNames, timeSeries, counters)
                 .execute();
         } else {
             // no need for extra call
