@@ -62,7 +62,8 @@ internal sealed class DatabasesHandlerProcessorForGetRestorePoints : AbstractSer
             var connectionType = GetPeriodicBackupConnectionType();
             var settings = await GetSettingsAsync(context);
 
-            using var source = GetRestorePointsSource(context, connectionType, settings, out string path, RequestHandler.AbortRequestToken);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(RequestHandler.Server.ServerStore.ServerShutdown, RequestHandler.AbortRequestToken);
+            using var source = GetRestorePointsSource(context, connectionType, settings, out string path, cts.Token);
 
             var shardNumber = JsonDeserializationServer.LocalSettings(settings).ShardNumber;
             var restorePoints = await source.FetchRestorePoints(path, shardNumber);
