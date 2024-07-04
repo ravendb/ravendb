@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                 onProgress?.Invoke($"Copying ZipArchive locally, size: {size}");
 
-                stream.CopyTo(file, readCount =>
+                await stream.CopyToAsync(file, readCount =>
                 {
                     totalRead += readCount;
                     if (swForProgress.ElapsedMilliseconds > 5000)
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     }
                 }, cancellationToken);
 
-                onProgress?.Invoke($"Copied ZipArchive locally, took: {sw.ElapsedMilliseconds:#,#;;0}ms");
+                onProgress?.Invoke($"Copied ZipArchive locally, took: {sw.Elapsed}");
 
                 file.Seek(0, SeekOrigin.Begin);
 
