@@ -6,9 +6,9 @@ using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
-using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
@@ -216,6 +216,26 @@ namespace Raven.Server.ServerWide
                 }
 
                 return _isSharded.Value;
+            }
+        }
+
+        private List<string> _supportedFeatures;
+
+        public IReadOnlyList<string> SupportedFeatures
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.SupportedFeatures ?? new List<string>();
+
+                if (_supportedFeatures == null && _record.TryGet(nameof(DatabaseRecord.SupportedFeatures), out BlittableJsonReaderArray supportedFeatures) && supportedFeatures != null)
+                {
+                    _supportedFeatures = new List<string>();
+                    foreach (LazyStringValue supportedFeature in supportedFeatures)
+                        _supportedFeatures.Add(supportedFeature);
+                }
+
+                return _supportedFeatures;
             }
         }
 
