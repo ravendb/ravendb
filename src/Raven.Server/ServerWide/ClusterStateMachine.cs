@@ -3190,7 +3190,7 @@ namespace Raven.Server.ServerWide
         private void OnTransactionDispose(ClusterOperationContext context, long index)
         {                
             _rachisLogIndexNotifications.AddTask(index);
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += tx =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 if (tx.Committed == false)
                     return;
