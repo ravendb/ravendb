@@ -192,7 +192,7 @@ namespace Voron.Impl
 
             Flags = TransactionFlags.Read;
 
-            _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
+            _pageLocator = transactionPersistentContext.AllocatePageLocator();
 
             InitializeRoots();
         }
@@ -252,7 +252,7 @@ namespace Voron.Impl
             _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
             _pagesToFreeOnCommit = new Stack<long>();
 
-            _pageLocator = PersistentContext.AllocatePageLocator(this);
+            _pageLocator = PersistentContext.AllocatePageLocator();
             InitializeRoots();
             InitTransactionHeader();
         }
@@ -286,7 +286,7 @@ namespace Voron.Impl
             PersistentContext = transactionPersistentContext;
             Flags = flags;
 
-            _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
+            _pageLocator = transactionPersistentContext.AllocatePageLocator();
 
             if (flags != TransactionFlags.ReadWrite)
             {

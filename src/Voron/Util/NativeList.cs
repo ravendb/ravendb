@@ -16,10 +16,10 @@ namespace Voron.Util;
 /// ContextBoundNativeList of T is the high level primitive that should be used for most uses and purposes. For example, there are cases where the
 /// NativeList has to contain other native lists, therefore, the requirement of NativeList of T to be completely unmanaged is important for those uses.
 /// </summary>
-public unsafe struct NativeList<T>
-    where T: unmanaged
+public unsafe struct NativeList<T>()
+    where T : unmanaged
 {
-    private ByteString _storage;
+    private ByteString _storage = default;
 
     public T* RawItems => Capacity > 0 ? (T*)_storage.Ptr : null;
 
@@ -29,11 +29,6 @@ public unsafe struct NativeList<T>
     public readonly Span<T> ToSpan() => Count == 0 ? Span<T>.Empty : new Span<T>(_storage.Ptr, Count);
     
     public bool IsValid => RawItems != null;
-
-    public NativeList()
-    {
-        _storage = default;
-    }
 
     public ref T this[int index]
     {
