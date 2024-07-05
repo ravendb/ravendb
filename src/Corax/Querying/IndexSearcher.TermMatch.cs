@@ -160,7 +160,7 @@ public partial class IndexSearcher
         return termRatioToWholeCollection;
     }
 
-    public TermMatch TermQuery(in FieldMetadata field, long containerId, double termRatioToWholeCollection)
+    internal TermMatch TermQuery(in FieldMetadata field, long containerId, double termRatioToWholeCollection)
     {
         TermMatch matches;
         if ((containerId & (long)TermIdMask.PostingList) != 0)
