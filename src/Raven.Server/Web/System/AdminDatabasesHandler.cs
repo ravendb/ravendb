@@ -913,6 +913,8 @@ namespace Raven.Server.Web.System
                     {
                         console.Log.Operations($"The certificate that was used to initiate the operation: {clientCert ?? "None"}");
                     }
+                    if (LoggingSource.AuditLog.IsInfoEnabled)
+                        LogAuditFor("Server", "Execute", $"AdminJSConsole Script: \"{adminJsScript.Script}\"");
 
                     result = console.ApplyScript(adminJsScript);
                 }
@@ -930,6 +932,9 @@ namespace Raven.Server.Web.System
                     {
                         console.Log.Operations($"The certificate that was used to initiate the operation: {clientCert ?? "None"}");
                     }
+                    if (LoggingSource.AuditLog.IsInfoEnabled)
+                        LogAuditFor("Database", "Execute", $"AdminJSConsole Script: \"{adminJsScript.Script}\"");
+
                     result = console.ApplyScript(adminJsScript);
                 }
                 else

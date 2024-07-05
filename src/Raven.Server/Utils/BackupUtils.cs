@@ -259,7 +259,8 @@ internal static class BackupUtils
         Debug.Assert(parameters.Configuration.TaskId != 0);
 
         var isFullBackup = IsFullBackup(parameters.BackupStatus, parameters.Configuration, nextFullBackup, nextIncrementalBackup, parameters.ResponsibleNodeTag);
-        var nextBackupTimeUtc = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup, parameters.BackupStatus.DelayUntil);
+        var nextBackupTimeLocal = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup, parameters.BackupStatus.DelayUntil);
+        var nextBackupTimeUtc = nextBackupTimeLocal.ToUniversalTime();
         var timeSpan = nextBackupTimeUtc - nowUtc;
 
         TimeSpan nextBackupTimeSpan;
@@ -302,7 +303,7 @@ internal static class BackupUtils
         try
         {
             var backupParser = CrontabSchedule.Parse(parameters.BackupFrequency);
-            return backupParser.GetNextOccurrence(parameters.LastBackupUtc);
+            return backupParser.GetNextOccurrence(parameters.LastBackupUtc.ToLocalTime());
         }
         catch (Exception e)
         {
@@ -317,7 +318,7 @@ internal static class BackupUtils
         }
     }
 
-    private static DateTime GetNextBackupDateTime(DateTime? nextFullBackup, DateTime? nextIncrementalBackup, DateTime? delayUntil)
+    public static DateTime GetNextBackupDateTime(DateTime? nextFullBackup, DateTime? nextIncrementalBackup, DateTime? delayUntil)
     {
         Debug.Assert(nextFullBackup != null || nextIncrementalBackup != null);
         DateTime? nextBackup;
@@ -329,8 +330,8 @@ internal static class BackupUtils
         else
             nextBackup = nextFullBackup <= nextIncrementalBackup ? nextFullBackup.Value : nextIncrementalBackup.Value;
 
-        return delayUntil.HasValue && delayUntil.Value > nextBackup.Value
-            ? delayUntil.Value : nextBackup.Value;
+        return delayUntil.HasValue && delayUntil.Value.ToLocalTime() > nextBackup.Value
+            ? delayUntil.Value.ToLocalTime() : nextBackup.Value;
     }
 
     private static bool IsFullBackup(PeriodicBackupStatus backupStatus,
