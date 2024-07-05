@@ -1,5 +1,5 @@
 import React from "react";
-import { Meta, ComponentStory } from "@storybook/react";
+import { Meta, StoryFn } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import StudioDatabaseConfiguration from "./StudioDatabaseConfiguration";
 import { mockStore } from "test/mocks/store/MockStore";
@@ -15,7 +15,7 @@ function commonInit() {
     databases.withActiveDatabase_NonSharded_SingleNode();
 }
 
-export const StudioConfiguration: ComponentStory<typeof StudioDatabaseConfiguration> = () => {
+export const StudioConfiguration: StoryFn<typeof StudioDatabaseConfiguration> = () => {
     commonInit();
 
     const { license } = mockStore;
@@ -24,7 +24,7 @@ export const StudioConfiguration: ComponentStory<typeof StudioDatabaseConfigurat
     return <StudioDatabaseConfiguration />;
 };
 
-export const LicenseRestricted: ComponentStory<typeof StudioDatabaseConfiguration> = () => {
+export const LicenseRestricted: StoryFn<typeof StudioDatabaseConfiguration> = () => {
     commonInit();
 
     const { license } = mockStore;

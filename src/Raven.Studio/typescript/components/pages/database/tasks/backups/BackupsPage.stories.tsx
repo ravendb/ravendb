@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Meta, ComponentStory } from "@storybook/react";
+import { Meta, StoryFn } from "@storybook/react";
 import { withBootstrap5, forceStoryRerender, withStorybookContexts } from "test/storybookTestUtils";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { mockServices } from "test/mocks/services/MockServices";
@@ -25,7 +25,7 @@ function commonInit() {
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 }
 
-export const EmptyView: ComponentStory<typeof BackupsPage> = () => {
+export const EmptyView: StoryFn<typeof BackupsPage> = () => {
     commonInit();
 
     const { tasksService } = mockServices;
@@ -44,7 +44,7 @@ export const EmptyView: ComponentStory<typeof BackupsPage> = () => {
     return <BackupsPage />;
 };
 
-export const FullView: ComponentStory<typeof BackupsPage> = () => {
+export const FullView: StoryFn<typeof BackupsPage> = () => {
     commonInit();
 
     const { tasksService } = mockServices;

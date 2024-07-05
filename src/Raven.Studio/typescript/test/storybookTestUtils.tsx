@@ -65,7 +65,7 @@ export const licenseArgType = {
         "Enterprise",
         "Developer",
     ] satisfies Raven.Server.Commercial.LicenseType[],
-};
+} as const;
 
 export const supportStatusArgType = {
     control: {
@@ -78,14 +78,14 @@ export const supportStatusArgType = {
         "ProfessionalSupport",
         "LicenseNotFound",
     ] satisfies Raven.Server.Commercial.Status[],
-};
+} as const;
 
 export const databaseAccessArgType = {
     control: {
         type: "select",
     },
     options: ["DatabaseAdmin", "DatabaseRead", "DatabaseReadWrite"] satisfies databaseAccessLevel[],
-};
+} as const;
 
 export const securityClearanceArgType = {
     control: {
@@ -98,4 +98,4 @@ export const securityClearanceArgType = {
         "ValidUser",
         "UnauthenticatedClients",
     ] satisfies Raven.Client.ServerWide.Operations.Certificates.SecurityClearance[],
-};
+} as const;
