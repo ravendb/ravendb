@@ -20,6 +20,7 @@ using System.Diagnostics.CodeAnalysis;
 using Sparrow.Json;
 
 using static Sparrow.DisposableExceptions;
+using static Sparrow.PortableExceptions;
 using static Voron.VoronExceptions;
 
 namespace Voron.Data.BTrees
@@ -81,7 +82,7 @@ namespace Voron.Data.BTrees
 
             if (newPageAllocator != null)
             {
-                Debug.Assert(isIndexTree, "If newPageAllocator is set, we must be in a isIndexTree = true");
+                ThrowIfNullOnDebug(isIndexTree, "If newPageAllocator is set, we must be in a isIndexTree = true");
                 SetNewPageAllocator(newPageAllocator);
             }
 
@@ -120,9 +121,9 @@ namespace Voron.Data.BTrees
 
         public bool HasNewPageAllocator { get; private set; }
 
-        public static Tree GetRoot(LowLevelTransaction llt, Slice name, TreeMutableState parentState)
+        public static Tree GetRoot(LowLevelTransaction llt, TreeMutableState parentState)
         {
-            return new Tree(llt, name, parentState);
+            return new Tree(llt, Constants.RootTreeNameSlice, parentState);
         }
         
         public static Tree Open(LowLevelTransaction llt, Transaction tx, Slice name, in TreeRootHeader header, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
@@ -138,10 +139,9 @@ namespace Voron.Data.BTrees
         public static Tree Create(LowLevelTransaction llt, Transaction tx, Slice name, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree,
             bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
-            if (type != RootObjectType.VariableSizeTree && type != RootObjectType.Table)
-                ThrowInvalidTreeCreateType();
-
-            VoronExceptions.ThrowIfReadOnly(llt);
+            ThrowIfReadOnly(llt);
+            ThrowIf<ArgumentException>(type != RootObjectType.VariableSizeTree && type != RootObjectType.Table,
+                $"Only valid types are {nameof(RootObjectType.VariableSizeTree)} or {nameof(RootObjectType.Table)}.");
 
             var newPage = newPageAllocator?.AllocateSinglePage(0) ?? llt.AllocatePage(1);
 
@@ -160,12 +160,6 @@ namespace Voron.Data.BTrees
 
             tree.RecordNewPage(newRootPage, 1);
             return tree;
-        }
-
-        [DoesNotReturn]
-        private static void ThrowInvalidTreeCreateType()
-        {
-            throw new ArgumentException($"Only valid types are {nameof(RootObjectType.VariableSizeTree)} or {nameof(RootObjectType.Table)}.");
         }
 
         private void RecordNewPage(TreePage p, int num)
@@ -293,7 +287,8 @@ namespace Voron.Data.BTrees
 
         public void Add(Slice key, Stream value)
         {
-            ValidateValueLength(value);
+            ThrowIfNull(value);
+            ThrowIf<ArgumentException>(value.Length > int.MaxValue, "Cannot add a value that is over 2GB in size");
 
             var length = (int)value.Length;
 
@@ -301,20 +296,6 @@ namespace Voron.Data.BTrees
             {
                 value.ReadExactly(new Span<byte>(ptr, length));
             }
-        }
-
-        private static void ValidateValueLength(Stream value)
-        {
-            ArgumentNullException.ThrowIfNull(value);
-
-            if (value.Length > int.MaxValue)
-                ThrowValueTooLarge();
-        }
-
-        [DoesNotReturn]
-        private static void ThrowValueTooLarge()
-        {
-            throw new ArgumentException("Cannot add a value that is over 2GB in size");
         }
 
         public void Add(Slice key, ReadOnlySpan<byte> value)
@@ -404,7 +385,9 @@ namespace Voron.Data.BTrees
             }
             
             nodeType &= ~TreeNodeFlags.NewOnly;
-            Debug.Assert(nodeType == TreeNodeFlags.Data || nodeType == TreeNodeFlags.MultiValuePageRef);
+            
+            ThrowIfOnDebug<InvalidOperationException>(nodeType != TreeNodeFlags.Data && nodeType != TreeNodeFlags.MultiValuePageRef,
+                $"Node should be either {nameof(TreeNodeFlags.Data)} or {nameof(TreeNodeFlags.MultiValuePageRef)}");
 
             var lastSearchPosition = page.LastSearchPosition; // searching for overflow pages might change this
             byte* overFlowPos = null;
@@ -492,7 +475,7 @@ namespace Voron.Data.BTrees
             private void ThrowScopeAlreadyOpen()
             {
                 var message = $"Write operation already requested on a tree name: {_parent}. " +
-                              $"{nameof(Tree.DirectAdd)} method cannot be called recursively while the scope is already opened.";
+                              $"{nameof(DirectAdd)} method cannot be called recursively while the scope is already opened.";
 
 
                 throw new InvalidOperationException(message);
