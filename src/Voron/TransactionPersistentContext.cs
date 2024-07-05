@@ -5,28 +5,16 @@ using Voron.Impl;
 
 namespace Voron
 {
-    public sealed class TransactionPersistentContext
+    public sealed class TransactionPersistentContext(bool longLivedTransactions = false)
     {
-        private bool _longLivedTransaction;
+        public bool LongLivedTransactions { get; set; } = longLivedTransactions;
+        
 
-        public bool LongLivedTransactions
-        {
-            get { return _longLivedTransaction; }
-            set
-            {
-                _longLivedTransaction = value;
-            }
-        }
-
-        private readonly Stack<PageLocator> _pageLocators = new Stack<PageLocator>();
-
-        public TransactionPersistentContext(bool longLivedTransactions = false)
-        {
-            LongLivedTransactions = longLivedTransactions;
-        }
+        private readonly Stack<PageLocator> _pageLocators = new();
+        
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PageLocator AllocatePageLocator(LowLevelTransaction tx)
+        public PageLocator AllocatePageLocator()
         {
             PageLocator locator;
             if (_pageLocators.Count != 0)

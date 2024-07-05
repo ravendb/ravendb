@@ -301,18 +301,6 @@ namespace Voron
             return new ValueReader(Content.Ptr, Size);
         }
 
-        public long ReadInt64()
-        {
-            Debug.Assert(Size == sizeof(long));
-            return *(long*)Content.Ptr;
-        }
-        
-        public double ReadDouble()
-        {
-            Debug.Assert(Size == sizeof(double));
-            return *(double*)Content.Ptr;
-        }
-
         public override int GetHashCode()
         {
             return this.Content.GetHashCode();
