@@ -31,7 +31,7 @@ public class RavenDB_22210 : RavenTestBase
             var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration(), explanationsList);
             Assert.True(result, string.Join('\n', explanationsList));
         }
-        catch (Exception e)
+        catch
         {
             //make sure CA certs are in store
             Assert.True(IsCACertificateInStore(certificates.ca), $"Certificate {certificates.ca.SubjectName} is not in store. {string.Join('\n', explanationsList)}");
@@ -60,7 +60,7 @@ public class RavenDB_22210 : RavenTestBase
             var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration(), explanationsList);
             Assert.True(result, string.Join('\n', explanationsList));
         }
-        catch (Exception e)
+        catch
         {
             //make sure CA certs are in store
             Assert.True(IsCACertificateInStore(certificates.ca), $"Certificate {certificates.ca.SubjectName} is not in store. {string.Join('\n', explanationsList)}");
@@ -97,7 +97,7 @@ public class RavenDB_22210 : RavenTestBase
             var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration(), explanationsList);
             Assert.False(result, string.Join('\n', explanationsList));
         }
-        catch (Exception e)
+        catch
         {
             //make sure CA certs are in store
             Assert.True(IsCACertificateInStore(certificates.ca), $"Certificate {certificates.ca.SubjectName} is not in store. {string.Join('\n', explanationsList)}");

@@ -3094,7 +3094,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.NotNull(taskBackupInfo);
                     Assert.NotNull(taskBackupInfo.OnGoingBackup);
 
-                    var expectedNextBackupDateTime = new DateTime(DateTime.UtcNow.Year + 1, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                    var expectedNextBackupDateTime = new DateTime(DateTime.Now.Year + 1, 1, 1, 0, 0, 0, DateTimeKind.Local).ToUniversalTime();
                     Assert.Equal(expectedNextBackupDateTime, taskBackupInfo.NextBackup.DateTime);
 
                     // Let's delay the backup task to next occurence + 1 hour
