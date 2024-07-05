@@ -1,4 +1,3 @@
-import MockInstance = jest.MockInstance;
 import { createValue } from "test/mocks/utils";
 
 export type ServiceMocks<T extends object> = {
@@ -24,7 +23,7 @@ export abstract class AutoMockService<T extends object> {
         return createValue(value, defaultValue);
     }
 
-    protected mockResolvedValue<T>(mock: MockInstance<T | Promise<T>, any>, value: MockedValue<T>, defaultValue: T) {
+    protected mockResolvedValue<T>(mock: any, value: MockedValue<T>, defaultValue: T) {
         const dto = this.createValue(value, defaultValue);
         mock.mockResolvedValue(dto);
         return dto;

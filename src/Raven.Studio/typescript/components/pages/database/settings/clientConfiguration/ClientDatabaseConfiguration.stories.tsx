@@ -1,5 +1,5 @@
 import React from "react";
-import { Meta, ComponentStory } from "@storybook/react";
+import { Meta, StoryFn } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import ClientDatabaseConfiguration from "./ClientDatabaseConfiguration";
 import { mockServices } from "test/mocks/services/MockServices";
@@ -21,7 +21,7 @@ function commonInit() {
     manageServerService.withGetDatabaseClientConfiguration();
 }
 
-export const WithGlobalConfiguration: ComponentStory<typeof ClientDatabaseConfiguration> = () => {
+export const WithGlobalConfiguration: StoryFn<typeof ClientDatabaseConfiguration> = () => {
     commonInit();
 
     const { manageServerService } = mockServices;
@@ -30,7 +30,7 @@ export const WithGlobalConfiguration: ComponentStory<typeof ClientDatabaseConfig
     return <ClientDatabaseConfiguration />;
 };
 
-export const WithoutGlobalConfiguration: ComponentStory<typeof ClientDatabaseConfiguration> = () => {
+export const WithoutGlobalConfiguration: StoryFn<typeof ClientDatabaseConfiguration> = () => {
     commonInit();
 
     const { manageServerService } = mockServices;
@@ -39,7 +39,7 @@ export const WithoutGlobalConfiguration: ComponentStory<typeof ClientDatabaseCon
     return <ClientDatabaseConfiguration />;
 };
 
-export const LicenseRestricted: ComponentStory<typeof ClientDatabaseConfiguration> = () => {
+export const LicenseRestricted: StoryFn<typeof ClientDatabaseConfiguration> = () => {
     commonInit();
 
     const { manageServerService } = mockServices;
