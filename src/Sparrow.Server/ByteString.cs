@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -501,7 +501,7 @@ namespace Sparrow.Server
 
     public interface IByteStringAllocator
     {
-        UnmanagedGlobalSegment Allocate(int size, Action allocationFailure);
+        UnmanagedGlobalSegment Allocate(int size);
         void Free(UnmanagedGlobalSegment memory);
     }
 
@@ -510,17 +510,9 @@ namespace Sparrow.Server
     /// </summary>
     public struct ByteStringDirectAllocator : IByteStringAllocator
     {
-        public UnmanagedGlobalSegment Allocate(int size, Action allocationFailure)
+        public UnmanagedGlobalSegment Allocate(int size)
         {
-            try
-            {
-                return new UnmanagedGlobalSegment(size);
-            }
-            catch
-            {
-                allocationFailure?.Invoke();
-                throw;
-            }
+            return new UnmanagedGlobalSegment(size);
         }
 
         public void Free(UnmanagedGlobalSegment memory)
@@ -568,7 +560,7 @@ namespace Sparrow.Server
         [ThreadStatic]
         private static int _minSize;
 
-        public UnmanagedGlobalSegment Allocate(int size, Action allocationFailure)
+        public UnmanagedGlobalSegment Allocate(int size)
         {
             if (_minSize < size)
                 _minSize = size;
@@ -601,16 +593,7 @@ namespace Sparrow.Server
                 segment.Dispose();
             }
 
-            // have to allocate it directly
-            try
-            {
-                return new UnmanagedGlobalSegment(size);
-            }
-            catch
-            {
-                allocationFailure?.Invoke();
-                throw;
-            }
+            return new UnmanagedGlobalSegment(size);
         }
 
         public unsafe void Free(UnmanagedGlobalSegment memory)
@@ -672,6 +655,12 @@ namespace Sparrow.Server
         }
     }
 
+    public interface INotifyAllocationFailure
+    {
+        void OnAllocationFailure<TAllocator>(ByteStringContext<TAllocator> context) 
+            where TAllocator : struct, IByteStringAllocator;
+    }
+    
     public unsafe class ByteStringContext<TAllocator> : IDisposable, IDisposableQueryable
         where TAllocator : struct, IByteStringAllocator
     {
@@ -681,7 +670,12 @@ namespace Sparrow.Server
 
         public static TAllocator Allocator;
 
-        public event Action AllocationFailed;
+        private INotifyAllocationFailure _allocationFailureListener;
+        
+        // PERF: The idea is that we will avoid as much as possible to allocate to deal with this as
+        // the most common case is the single listener. But when that happen, we will add the rest
+        // as events and allocate. 
+        private event Action AllocationFailedMultiListener;
 
         private sealed class SegmentInformation
         {
@@ -802,6 +796,9 @@ namespace Sparrow.Server
             Generation++;
 #endif
 
+            _allocationFailureListener = null;
+            AllocationFailedMultiListener = null;
+
             Array.Clear(_internalReusableStringPoolCount, 0, _internalReusableStringPoolCount.Length);
             foreach (var stack in _internalReusableStringPool)
             {
@@ -841,6 +838,8 @@ namespace Sparrow.Server
             _wholeSegments.Clear();
             _wholeSegments.Add(_internalCurrent);
             _wholeSegments.Add(_externalCurrent);
+
+            _allocationFailureListener = null;
         }
 
         internal int NumberOfReadyToUseMemorySegments => _internalReadyToUseMemorySegments?.Count ?? 0;
@@ -903,19 +902,16 @@ namespace Sparrow.Server
         private sealed class ByteStringMemoryManager<T>(ByteStringContext<TAllocator> context, ByteString str) : MemoryManager<T>
             where T : unmanaged
         {
-            private readonly ByteStringContext<TAllocator> _context = context;
-            private ByteString _str = str;
+            public override Memory<T> Memory => CreateMemory(str.Length);
 
-            public override Memory<T> Memory => CreateMemory(_str.Length);
-
-            public override Span<T> GetSpan() => new Span<T>(_str.Ptr, _str.Length);
+            public override Span<T> GetSpan() => new(str.Ptr, str.Length);
 
             public override MemoryHandle Pin(int elementIndex = 0)
             {
-                if (elementIndex < 0 || elementIndex >= _str.Length / sizeof(T))
+                if (elementIndex < 0 || elementIndex >= str.Length / sizeof(T))
                     throw new ArgumentOutOfRangeException(nameof(elementIndex));
 
-                return new MemoryHandle(_str._pointer + (elementIndex * sizeof(T)));
+                return new MemoryHandle(str._pointer + (elementIndex * sizeof(T)));
             }
 
             public override void Unpin()
@@ -924,7 +920,7 @@ namespace Sparrow.Server
 
             protected override void Dispose(bool disposing)
             {
-                _context.Release(ref _str);
+                context.Release(ref str);
             }
         }
 
@@ -1375,40 +1371,48 @@ namespace Sparrow.Server
 
         private SegmentInformation AllocateSegment(int size)
         {
-            var memorySegment = Allocator.Allocate(size, AllocationFailed);
-            if (memorySegment.Segment == null)
-                ThrowInvalidMemorySegmentOnAllocation();
+            try
+            {
+                var memorySegment = Allocator.Allocate(size);
+                if (memorySegment.Segment == null)
+                    ThrowInvalidMemorySegmentOnAllocation();
 
-            _totalAllocated += memorySegment.Size;
+                _totalAllocated += memorySegment.Size;
 
-            byte* start = memorySegment.Segment;
-            byte* end = start + memorySegment.Size;
+                byte* start = memorySegment.Segment;
+                byte* end = start + memorySegment.Size;
 
-            var segment = new SegmentInformation(memorySegment, start, end, true);
-            _wholeSegments.Add(segment);
+                var segment = new SegmentInformation(memorySegment, start, end, true);
+                _wholeSegments.Add(segment);
 
-            return segment;
+                return segment;
+            }
+            catch
+            {
+                _allocationFailureListener?.OnAllocationFailure(this);
+                throw;
+            }
         }
 
         [DoesNotReturn]
         private void ThrowInvalidMemorySegmentOnAllocation()
         {
-            AllocationFailed?.Invoke();
-            PortableExceptions.Throw<InvalidOperationException>("Allocate gave us a segment that was already disposed.");
+            _allocationFailureListener?.OnAllocationFailure(this);
+            Throw<InvalidOperationException>("Allocate gave us a segment that was already disposed.");
         }
 
         private void ThrowIfDisposed()
         {
             if (IsDisposed)
             {
-                AllocationFailed?.Invoke();
+                _allocationFailureListener?.OnAllocationFailure(this);
                 Throw(this, $"The {nameof(ByteStringContext)} has been disposed.");
             }
         }
 
         private void AllocateExternalSegment(int size)
         {
-            var memorySegment = Allocator.Allocate(size, AllocationFailed);
+            var memorySegment = Allocator.Allocate(size);
 
             _totalAllocated += memorySegment.Size;
 
@@ -1909,6 +1913,8 @@ namespace Sparrow.Server
 
                 _wholeSegments.Clear();
                 _internalReadyToUseMemorySegments.Clear();
+
+                AllocationFailedMultiListener = null;
             }
         }
 
@@ -1930,6 +1936,16 @@ namespace Sparrow.Server
             {
                 Allocator.Free(segment.Memory);
             }
+        }
+        
+        public void RegisterListener(INotifyAllocationFailure listener)
+        {
+            Debug.Assert(listener != null);
+
+            if (_allocationFailureListener is null)
+                _allocationFailureListener = listener;
+            else
+                AllocationFailedMultiListener += () => listener.OnAllocationFailure(this);
         }
     }
 

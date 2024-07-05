@@ -37,7 +37,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl
 {
-    public sealed unsafe class LowLevelTransaction : IDisposable, IDisposableQueryable
+    public sealed unsafe class LowLevelTransaction : IDisposable, IDisposableQueryable, INotifyAllocationFailure
     {
         public readonly Pager DataPager;
         private readonly StorageEnvironment _env;
@@ -182,7 +182,7 @@ namespace Voron.Impl
             _envRecord = previous._envRecord;
             _freeSpaceHandling = previous._freeSpaceHandling;
             _allocator = allocator ?? new ByteStringContext(SharedMultipleUseFlag.None);
-            _allocator.AllocationFailed += MarkTransactionAsFailed;
+            _allocator.RegisterListener(this);
             _disposeAllocator = allocator == null;
             _isValidationEnabled = _env.Options.Encryption.IsEnabled == false;
             _scratchPagesForReads = previous._scratchPagesForReads;
@@ -233,7 +233,7 @@ namespace Voron.Impl
 
             _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
             _disposeAllocator = true;
-            _allocator.AllocationFailed += MarkTransactionAsFailed;
+            _allocator.RegisterListener(this);
             _isValidationEnabled = _env.Options.Encryption.IsEnabled == false;
             _scratchPagesInUse = _env.WriteTransactionPool.ScratchPagesInUse;
             _getPageMethod = GetPageMethod.WriteScratchFirst;
@@ -272,7 +272,7 @@ namespace Voron.Impl
             _freeSpaceHandling = freeSpaceHandling;
 
             _allocator = context ?? new ByteStringContext(SharedMultipleUseFlag.None);
-            _allocator.AllocationFailed += MarkTransactionAsFailed;
+            _allocator.RegisterListener(this);
             _disposeAllocator = context == null;
 
             _isValidationEnabled = _env.Options.Encryption.IsEnabled == false;
@@ -776,8 +776,6 @@ namespace Voron.Impl
                 _env.TransactionCompleted(this);
 
                 _disposableScope.Dispose();
-
-                _allocator.AllocationFailed -= MarkTransactionAsFailed;
               
                 if (_disposeAllocator)
                 {
@@ -793,9 +791,14 @@ namespace Voron.Impl
             }
         }
 
-        public void MarkTransactionAsFailed()
+        internal void MarkTransactionAsFailed()
         {
             _txStatus |= TxStatus.Errored;
+        }
+
+        void INotifyAllocationFailure.OnAllocationFailure<TAllocator>(ByteStringContext<TAllocator> context)
+        {
+            MarkTransactionAsFailed();
         }
 
         internal void FreePageOnCommit(long pageNumber)
