@@ -88,10 +88,9 @@ namespace Voron.Data.BTrees
             llt.RegisterDisposable(new TreeDisposable(this));
         }
 
-        public Tree(LowLevelTransaction llt, Transaction tx, Slice name, TreeMutableState state)
+        private Tree(LowLevelTransaction llt, Slice name, TreeMutableState state)
         {
             _llt = llt;
-            _tx = tx;
             Name = name;
 
             _recentlyFoundPages = FoundPagesPool.Allocate();
@@ -118,6 +117,11 @@ namespace Voron.Data.BTrees
 
         public bool HasNewPageAllocator { get; private set; }
 
+        public static Tree GetRoot(LowLevelTransaction llt, Slice name, TreeMutableState parentState)
+        {
+            return new Tree(llt, name, parentState);
+        }
+        
         public static Tree Open(LowLevelTransaction llt, Transaction tx, Slice name, in TreeRootHeader header, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
             var tree = new Tree(llt, tx, header, name, isIndexTree, newPageAllocator);
@@ -168,7 +172,7 @@ namespace Voron.Data.BTrees
             throw new ArgumentException($"Only valid types are {nameof(RootObjectType.VariableSizeTree)} or {nameof(RootObjectType.Table)}.");
         }
 
-        internal void RecordNewPage(TreePage p, int num)
+        private void RecordNewPage(TreePage p, int num)
         {
             ref var header = ref State.Modify();
 
@@ -188,7 +192,7 @@ namespace Voron.Data.BTrees
             }
         }
 
-        internal void RecordFreedPage(TreePage p, int num)
+        private void RecordFreedPage(TreePage p, int num)
         {
             ref var header = ref State.Modify();
 
