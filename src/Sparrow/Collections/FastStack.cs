@@ -140,6 +140,16 @@ namespace Sparrow.Collections
             return ThrowForEmptyStack();
         }
 
+        // Returns the top object on the stack without removing it.  If the stack
+        // is empty, Peek throws an InvalidOperationException.        
+        public ref T TopByRef()
+        {
+            if (_size != 0)
+                return ref _array[_size - 1];
+
+            throw new InvalidOperationException("The stack is empty.");
+        }
+
         public bool TryPeek(out T result)
         {
             if (_size == 0)
@@ -170,16 +180,13 @@ namespace Sparrow.Collections
         public T Pop()
         {
             if (_size == 0)
-                goto Error;
+                throw new InvalidOperationException("The stack is empty.");
 
             _version++;
             T item = _array[--_size];
-            _array[_size] = default(T);
+            _array[_size] = default;
 
             return item;
-
-            Error:
-            return ThrowForEmptyStack();
         }
 
         public bool TryPop(out T result)
@@ -199,7 +206,7 @@ namespace Sparrow.Collections
 
         // Pushes an item to the top of the stack.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Push(T item)
+        public void Push(in T item)
         {
             if (_size == _array.Length)
                 goto Grow;
@@ -212,6 +219,28 @@ namespace Sparrow.Collections
             PushUnlikely(item);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref T PushByRef()
+        {
+            if (_size == _array.Length)
+                goto Grow;
+
+            ref var item = ref _array[_size++];
+            _version++;
+            return ref item;
+
+            Grow: return ref PushUnlikelyByRef();
+        }
+
+        private ref T PushUnlikelyByRef()
+        {
+            Array.Resize(ref _array, (_array.Length == 0) ? DefaultCapacity : 2 * _array.Length);
+            ref var item = ref _array[_size++];
+            _version++;
+            
+            return ref item;
+        }
+        
         private void PushUnlikely(T item)
         {
             Array.Resize(ref _array, (_array.Length == 0) ? DefaultCapacity : 2 * _array.Length);

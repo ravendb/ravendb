@@ -4,16 +4,9 @@ using Sparrow.Collections;
 
 namespace Sparrow.Utils
 {
-    internal sealed class TypeCache<T>
+    internal sealed class TypeCache<T>(int size)
     {
-        private readonly FastList<Tuple<Type, T>>[] _buckets;
-        private readonly int _size;
-
-        public TypeCache(int size)
-        {
-            _buckets = new FastList<Tuple<Type, T>>[size];
-            _size = size;
-        }
+        private readonly FastList<Tuple<Type, T>>[] _buckets = new FastList<Tuple<Type, T>>[size];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGet(Type type, out T result)
@@ -22,7 +15,7 @@ namespace Sparrow.Utils
 
             // We get the data and after that we always work from there to avoid
             // harmful race conditions.
-            var storage = _buckets[typeHash % _size];
+            var storage = _buckets[typeHash % size];
             if (storage == null)
                 goto NotFound;
 
@@ -63,7 +56,7 @@ namespace Sparrow.Utils
         public void Put(Type type, T value)
         {
             int typeHash = type.GetHashCode();
-            int bucket = typeHash % _size;
+            int bucket = typeHash % size;
 
             // The idea is that this TypeCache<T> is thread safe. It is better to lose some Put
             // that to allow side effects to happen. The tradeoff is having to recompute in case
