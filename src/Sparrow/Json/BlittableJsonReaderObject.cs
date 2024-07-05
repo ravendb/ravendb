@@ -10,6 +10,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
+using static Sparrow.DisposableExceptions;
+using static Sparrow.PortableExceptions;
 
 namespace Sparrow.Json
 {
@@ -40,7 +42,7 @@ namespace Sparrow.Json
             if (_mem == null)
                 return "Disposed";
 
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
 
             using (var memoryStream = new MemoryStream())
             {
@@ -53,7 +55,7 @@ namespace Sparrow.Json
 
         public ValueTask WriteJsonToAsync(Stream stream, CancellationToken token = default)
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
 
             return _context.WriteAsync(stream, this, token);
         }
@@ -73,8 +75,9 @@ namespace Sparrow.Json
         private BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context)
             : base(context)
         {
-            if (size == 0)
-                ThrowOnZeroSize(size);
+            //otherwise SetupPropertiesAccess will throw because of the memory garbage
+            //(or won't throw, but this is actually worse!)
+            ThrowIf<ArgumentException>(size == 0, $"{nameof(BlittableJsonReaderObject)} does not support objects with zero size");
 
             _isRoot = true;
             _mem = mem; // get beginning of memory pointer
@@ -119,14 +122,6 @@ namespace Sparrow.Json
             _currentPropertyIdSize = ProcessTokenPropertyFlags(currentType);
         }
 
-        private static void ThrowOnZeroSize(int size)
-        {
-            //otherwise SetupPropertiesAccess will throw because of the memory garbage
-            //(or won't throw, but this is actually worse!)
-            throw new ArgumentException("BlittableJsonReaderObject does not support objects with zero size",
-                nameof(size));
-        }
-
         public BlittableJsonReaderObject(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
             : base(parent._context)
         {
@@ -164,11 +159,6 @@ namespace Sparrow.Json
                 $"Property names offset flag should be either byte, short of int, instead of {token}");
         }
 
-        private static void ThrowObjectDisposed()
-        {
-            throw new ObjectDisposedException("blittable object has been disposed");
-        }
-
         public int Size => _size;
 
         public int Count => _propCount;
@@ -177,7 +167,7 @@ namespace Sparrow.Json
         {
             get
             {
-                AssertContextNotDisposed();
+                ThrowIfDisposedOnDebug(this);
 
                 if (_parent != null)
                     InvalidAttemptToCopyNestedObject();
@@ -190,7 +180,7 @@ namespace Sparrow.Json
         {
             get
             {
-                AssertContextNotDisposed();
+                ThrowIfDisposedOnDebug(this);
 
                 return Hashing.XXHash64.Calculate(_mem, (ulong)_size);
             }
@@ -200,7 +190,7 @@ namespace Sparrow.Json
 
         public string[] GetSortedPropertyNames()
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
 
             var propertyNames = new string[_propCount];
 
@@ -221,7 +211,7 @@ namespace Sparrow.Json
         /// <returns></returns>
         public string[] GetPropertyNames()
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
 
             var offsets = new int[_propCount];
             var propertyNames = new string[_propCount];
@@ -244,7 +234,7 @@ namespace Sparrow.Json
 
         private LazyStringValue GetPropertyName(int propertyId)
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
 
             var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId * _propNamesDataOffsetSize;
             var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
@@ -668,7 +658,7 @@ namespace Sparrow.Json
 
         public bool TryGetMember(StringSegment name, out object result)
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
 
             if (_mem == null)
                 goto ThrowDisposed;
@@ -698,7 +688,7 @@ namespace Sparrow.Json
             return true;
 
             ThrowDisposed:
-            ThrowObjectDisposed();
+            Throw(this, "blittable object has been disposed");
             result = null;
             return false;
         }
@@ -732,10 +722,8 @@ namespace Sparrow.Json
 
         public void GetPropertyByIndex(int index, ref PropertyDetails prop, bool addObjectToCache = false)
         {
-            AssertContextNotDisposed();
-
-            if (_mem == null)
-                ThrowObjectDisposed();
+            ThrowIfDisposedOnDebug(this);
+            ThrowIf<ObjectDisposedException>(_mem == null, "blittable object has been disposed");
 
             if (index < 0 || index >= _propCount)
                 ThrowOutOfRangeException(index);
@@ -775,7 +763,7 @@ namespace Sparrow.Json
 
         public int GetPropertyIndex(string name)
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
 
             var comparer = _context.GetLazyStringForFieldWithCaching(name);
             return GetPropertyIndex(comparer);
@@ -829,7 +817,7 @@ namespace Sparrow.Json
         /// </summary>
         /// <param name="propertyId">Position of the string in the property ids storage</param>
         /// <param name="comparer">Comparer of a specific string value</param>
-        /// <param name="ignoreCase">Indicates if the comparison should be case insensitive</param>
+        /// <param name="ignoreCase">Indicates if the comparison should be case-insensitive</param>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int ComparePropertyName(int propertyId, LazyStringValue comparer)
@@ -884,10 +872,8 @@ namespace Sparrow.Json
 
         public InsertionOrderProperties GetPropertiesByInsertionOrder()
         {
-            AssertContextNotDisposed();
-
-            if (_metadataPtr == null)
-                ThrowObjectDisposed();
+            ThrowIfDisposedOnDebug(this);
+            ThrowIf<ObjectDisposedException>(_metadataPtr == null, "blittable object has been disposed");
 
             var buffers = new InsertionOrderProperties(_context, _propCount);
             if (_propCount == 0)
@@ -909,7 +895,7 @@ namespace Sparrow.Json
 
         public ulong GetHashOfPropertyNames()
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
             var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
 
             ulong hash = (ulong)_propCount;
@@ -999,7 +985,7 @@ namespace Sparrow.Json
             if (_mem == null) //double dispose will do nothing
                 return;
 
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
 
             if (_allocatedMemory != null)
             {
@@ -1027,7 +1013,7 @@ namespace Sparrow.Json
 
         public void CopyTo(byte* ptr)
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
 
             if (_parent != null)
                 InvalidAttemptToCopyNestedObject();
@@ -1047,7 +1033,7 @@ namespace Sparrow.Json
 
         public BlittableJsonReaderObject Clone(JsonOperationContext context)
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
 
             if (_parent != null)
                 return context.ReadObject(this, "cloning nested obj");
@@ -1069,7 +1055,7 @@ namespace Sparrow.Json
             // we have to provide external context that will be used for that purpose during the read action
             // note that we don't copy the blittable data but still read from the original pointer
 
-            AssertContextNotDisposed(externalContext);
+            ThrowIfDisposedOnDebug(externalContext);
             
             return new BlittableJsonReaderObject(_mem, _size, externalContext)
             {
@@ -1079,7 +1065,7 @@ namespace Sparrow.Json
 
         public void BlittableValidation()
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
 
             var currentSize = Size - 1;
 
@@ -1124,7 +1110,7 @@ namespace Sparrow.Json
 
         private int PropertiesNamesValidation(int numberOfProps, int propsOffsetList, int propsNamesOffsetSize, int currentSize)
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
 
             var blittableSize = currentSize;
             var offsetCounter = 0;
@@ -1147,7 +1133,7 @@ namespace Sparrow.Json
 
         private int StringValidation(int stringOffset)
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
 
             int stringLength = ReadVariableSizeInt(stringOffset, out var lenOffset);
             if (stringLength < 0)
@@ -1191,7 +1177,7 @@ namespace Sparrow.Json
         private BlittableJsonToken TokenValidation(byte tokenStart, out int propOffsetSize,
             out int propIdSize)
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
 
             var token = (BlittableJsonToken)tokenStart;
             var tokenType = ProcessTokenTypeFlags(token);
@@ -1310,7 +1296,8 @@ namespace Sparrow.Json
         public void AddItemsToStream<T>(ManualBlittableJsonDocumentBuilder<T> writer)
             where T : struct, IUnmanagedWriteBuffer
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
+            
             using (var insertionOrder = GetPropertiesByInsertionOrder())
             {
                 var prop = new PropertyDetails();
@@ -1366,7 +1353,8 @@ namespace Sparrow.Json
 
         public override bool Equals(object obj)
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
+            
             if (ReferenceEquals(null, obj))
                 return false;
 
@@ -1381,7 +1369,8 @@ namespace Sparrow.Json
 
         public bool Equals(BlittableJsonReaderObject other, bool ignoreRavenProperties = false)
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
+            
             if (_propCount != other._propCount)
                 return false;
 
@@ -1428,7 +1417,8 @@ namespace Sparrow.Json
         [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
         public override int GetHashCode()
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
+            
             if (_hashCode == 0)
             {
                 ulong hash = GetHashOfPropertyNames();
@@ -1455,7 +1445,8 @@ namespace Sparrow.Json
             if (data == null)
                 return;
 
-            data.AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(data);
+
             data.NoCache = true;
 
             if (assertRemovals && data.Modifications?.Removals?.Count > 0 && data.Modifications.SourceIndex < data.Count)
@@ -1493,7 +1484,7 @@ namespace Sparrow.Json
 
         public bool Contains(LazyStringValue propertyName)
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
 
             var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
 
@@ -1508,6 +1499,6 @@ namespace Sparrow.Json
             return false;
         }
 
-        public ReadOnlySpan<byte> AsSpan() => new ReadOnlySpan<byte>(BasePointer, Size);
+        public ReadOnlySpan<byte> AsSpan() => new(BasePointer, Size);
     }
 }

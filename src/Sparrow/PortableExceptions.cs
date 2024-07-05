@@ -1,6 +1,11 @@
-﻿using System;
+using System;
+using System.Diagnostics;
+using System.IO;
+
+#if NET6_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+#endif
 
 namespace Sparrow
 {
@@ -25,6 +30,20 @@ namespace Sparrow
 #endif
             }
         }
+        
+        [Conditional("DEBUG")]
+        public static void ThrowIfNullOnDebug(
+#if NET6_0_OR_GREATER              
+            [NotNull]
+#endif
+            object argument,
+#if NET6_0_OR_GREATER        
+            [CallerArgumentExpression(nameof(argument))]
+#endif
+            string paramName = null)
+        {
+            ThrowIfNull(argument, paramName);
+        }
 
         public static void ThrowIfNotNull(
 #if NET6_0_OR_GREATER              
@@ -44,6 +63,20 @@ namespace Sparrow
                 Throw();
 #endif
             }
+        }
+
+        [Conditional("DEBUG")]
+        public static void ThrowIfNotNullOnDebug(
+#if NET6_0_OR_GREATER              
+            [NotNull]
+#endif
+            object argument,
+#if NET6_0_OR_GREATER        
+            [CallerArgumentExpression(nameof(argument))]
+#endif
+            string paramName = null)
+        {
+            ThrowIfNotNull(argument, paramName);
         }
 
         public static void ThrowIfNull<T>(
@@ -67,6 +100,20 @@ namespace Sparrow
             }
         }
 
+        [Conditional("DEBUG")]
+        public static void ThrowIfNullOnDebug<T>(
+#if NET6_0_OR_GREATER
+            [NotNull]
+#endif
+            object argument,
+#if NET6_0_OR_GREATER
+            [CallerArgumentExpression(nameof(argument))]
+#endif
+            string paramName = null) where T : Exception
+        {
+            ThrowIfNull<T>(argument, paramName);
+        }
+
         public static void ThrowIfNotNull<T>(
 #if NET6_0_OR_GREATER
             [NotNull]
@@ -86,6 +133,21 @@ namespace Sparrow
                 Throw<T>(message);
 #endif
             }
+        }
+
+        [Conditional("DEBUG")]
+        public static void ThrowIfNotNullOnDebug<T>(
+#if NET6_0_OR_GREATER
+            [NotNull]
+#endif
+            object argument,
+            string message = null,
+#if NET6_0_OR_GREATER
+            [CallerArgumentExpression(nameof(argument))]
+#endif
+            string paramName = null) where T : Exception
+        {
+            ThrowIfNotNull<T>(argument, message, paramName);
         }
 
         public static unsafe void ThrowIfNull<T>(
@@ -109,6 +171,21 @@ namespace Sparrow
             }
         }
 
+        [Conditional("DEBUG")]
+        public static unsafe void ThrowIfNullOnDebug<T>(
+#if NET6_0_OR_GREATER
+            [NotNull]
+#endif
+            void* argument,
+            string message = null,
+#if NET6_0_OR_GREATER
+            [CallerArgumentExpression(nameof(argument))]
+#endif
+            string paramName = null) where T : Exception
+        {
+            ThrowIfNull<T>(argument, message, paramName);
+        }
+
         public static unsafe void ThrowIfNotNull<T>(
 #if NET6_0_OR_GREATER
             [NotNull]
@@ -130,6 +207,21 @@ namespace Sparrow
             }
         }
 
+        [Conditional("DEBUG")]
+        public static unsafe void ThrowIfNotNullOnDebug<T>(
+#if NET6_0_OR_GREATER
+            [NotNull]
+#endif
+            void* argument,
+            string message = null,
+#if NET6_0_OR_GREATER
+            [CallerArgumentExpression(nameof(argument))]
+#endif
+            string paramName = null) where T : Exception
+        {
+            ThrowIfNotNull<T>(argument, message, paramName);
+        }
+
         public static void ThrowIf<T>(
             bool condition,
             string message = null,
@@ -148,6 +240,18 @@ namespace Sparrow
             }
         }
 
+        [Conditional("DEBUG")]
+        public static void ThrowIfOnDebug<T>(
+            bool condition,
+            string message = null,
+#if NET6_0_OR_GREATER
+            [CallerArgumentExpression(nameof(condition))]
+#endif
+            string paramName = null) where T : Exception
+        {
+            ThrowIf<T>(condition, message, paramName);
+        }
+
 #if NET6_0_OR_GREATER
         [DoesNotReturn]
 #endif
@@ -161,9 +265,21 @@ namespace Sparrow
                 throw new ArgumentOutOfRangeException(paramName, message);
             if (typeof(T) == typeof(InvalidOperationException))
                 throw new InvalidOperationException(message);
+            if (typeof(T) == typeof(ObjectDisposedException))
+                throw new ObjectDisposedException(message);
+            if (typeof(T) == typeof(EndOfStreamException))
+                throw new EndOfStreamException(message);
+            if (typeof(T) == typeof(InvalidDataException))
+                throw new InvalidDataException(message);
 
             // We will still throw but in a way that we can look
             throw new NotSupportedException($"Exception type '{typeof(T).Name}' is not supported by this {nameof(Throw)} statement.");
+        }
+
+        [Conditional("DEBUG")]
+        public static void ThrowOnDebug<T>(string paramName, string message)
+        {
+            Throw<T>(paramName, message);
         }
 
 #if NET6_0_OR_GREATER
@@ -179,9 +295,19 @@ namespace Sparrow
                 throw new ArgumentOutOfRangeException(null, message);
             if (typeof(T) == typeof(InvalidOperationException))
                 throw new InvalidOperationException(message);
+            if (typeof(T) == typeof(ObjectDisposedException))
+                throw new ObjectDisposedException(message);
+            if (typeof(T) == typeof(InvalidDataException))
+                throw new InvalidDataException(message);
 
             // We will still throw but in a way that we can look
             throw new NotSupportedException($"Exception type '{typeof(T).Name}' is not supported by this {nameof(Throw)} statement.");
+        }
+
+        [Conditional("DEBUG")]
+        public static void ThrowOnDebug<T>(string message)
+        {
+            Throw<T>(message);
         }
 
 

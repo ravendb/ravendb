@@ -2,7 +2,7 @@
 
 namespace Sparrow
 {
-    public interface IDisposableQueryable
+    internal interface IDisposableQueryable
     {
         bool IsDisposed { get; }
     }

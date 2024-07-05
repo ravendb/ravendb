@@ -19,9 +19,12 @@ using Constants = Voron.Global.Constants;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow.Json;
 
+using static Sparrow.DisposableExceptions;
+using static Voron.VoronExceptions;
+
 namespace Voron.Data.BTrees
 {
-    public unsafe partial class Tree
+    public unsafe partial class Tree 
     {
         private int _directAddUsage;
 
@@ -347,9 +350,8 @@ namespace Voron.Data.BTrees
 
         public DirectAddScope DirectAdd(Slice key, int len, TreeNodeFlags nodeType, out byte* ptr)
         {
-            AssertNotDisposed();
-
-            VoronExceptions.ThrowIfReadOnly(_llt);
+            ThrowIfDisposedOnDebug(_llt);
+            ThrowIfReadOnly(_llt);
 
             if (key.Size > Constants.Tree.MaxKeySize)
                 ThrowInvalidKeySize(key);
@@ -514,7 +516,7 @@ namespace Voron.Data.BTrees
 
         public TreePage ModifyPage(TreePage page)
         {
-            AssertNotDisposed();
+            ThrowIfDisposedOnDebug(_llt);
 
             if (page.Dirty)
                 return page;
@@ -528,7 +530,7 @@ namespace Voron.Data.BTrees
 
         public TreePage ModifyPage(long pageNumber)
         {
-            AssertNotDisposed();
+            ThrowIfDisposedOnDebug(_llt);
 
             var newPage = GetWriteableTreePage(pageNumber);
             newPage.Dirty = true;
@@ -1049,9 +1051,8 @@ namespace Voron.Data.BTrees
 
         public void Delete(Slice key)
         {
-            AssertNotDisposed();
-
-            VoronExceptions.ThrowIfReadOnly(_llt, "Cannot delete a value in a read only transaction");
+            ThrowIfDisposedOnDebug(_llt);
+            ThrowIfReadOnly(_llt, "Cannot delete a value in a read only transaction");
 
             var page = FindPageFor(key, node: out TreeNodeHeader* _, cursor: out var cursorConstructor, allowCompressed: true);
             if (page.IsCompressed)
@@ -1085,14 +1086,14 @@ namespace Voron.Data.BTrees
 
         public TreeIterator Iterate(bool prefetch)
         {
-            AssertNotDisposed();
+            ThrowIfDisposedOnDebug(_llt);
 
             return new TreeIterator(this, _llt, prefetch);
         }
 
         public ReadResult Read(Slice key)
         {
-            AssertNotDisposed();
+            ThrowIfDisposedOnDebug(_llt);
 
             var p = FindPageFor(key, out TreeNodeHeader* node);
 
@@ -1104,7 +1105,7 @@ namespace Voron.Data.BTrees
 
         public bool Exists(Slice key)
         {
-            AssertNotDisposed();
+            ThrowIfDisposedOnDebug(_llt);
 
             var p = FindPageFor(key, out _);
             return p.LastMatch == 0;
@@ -1112,7 +1113,7 @@ namespace Voron.Data.BTrees
 
         public int GetDataSize(Slice key)
         {
-            AssertNotDisposed();
+            ThrowIfDisposedOnDebug(_llt);
 
             var p = FindPageFor(key, out TreeNodeHeader* node);
 
@@ -1133,7 +1134,7 @@ namespace Voron.Data.BTrees
 
         public int GetDataSize(TreeNodeHeader* node)
         {
-            AssertNotDisposed();
+            ThrowIfDisposedOnDebug(_llt);
 
             if (node->Flags == (TreeNodeFlags.PageRef))
             {
@@ -1145,7 +1146,7 @@ namespace Voron.Data.BTrees
 
         public void RemoveEmptyDecompressedPage(DecompressedLeafPage emptyPage)
         {
-            AssertNotDisposed();
+            ThrowIfDisposedOnDebug(_llt);
 
             using (emptyPage.Original.GetNodeKey(_llt, 0, out var key))
             {
@@ -1167,7 +1168,7 @@ namespace Voron.Data.BTrees
 
         public long GetParentPageOf(TreePage page)
         {
-            AssertNotDisposed();
+            ThrowIfDisposedOnDebug(_llt);
 
             Debug.Assert(page.IsCompressed == false);
 
@@ -1242,7 +1243,7 @@ namespace Voron.Data.BTrees
 
         public List<long> AllPages()
         {
-            AssertNotDisposed();
+            ThrowIfDisposedOnDebug(_llt);
 
             var results = new List<long>();
             var stack = new Stack<TreePage>();
@@ -1332,13 +1333,6 @@ namespace Voron.Data.BTrees
             if (_prepareLocator == null) return;
             foreach (var ct in _prepareLocator.Values)
                 ct.PrepareForCommit();
-        }
-
-        [Conditional("DEBUG")]
-        internal void AssertNotDisposed()
-        {
-            if (_llt.IsDisposed)
-                throw new InvalidOperationException("Cannot call this operation on a disposed instance.");
         }
 
         private bool TryOverwriteOverflowPages(TreeNodeHeader* updatedNode, int len, out byte* pos)

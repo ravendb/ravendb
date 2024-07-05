@@ -1224,6 +1224,8 @@ namespace Voron.Data.Tables
 
         internal Tree GetTree(AbstractTreeIndexDef idx)
         {
+            DisposableExceptions.ThrowIfDisposedOnDebug(_tx);
+            
             Tree tree;
             if (idx.IsGlobal)
             {
@@ -1233,8 +1235,7 @@ namespace Voron.Data.Tables
             {
                 tree = GetTree(idx.Name, true);
             }
-                
-            tree?.AssertNotDisposed();
+
             return tree;
         }
 

@@ -8,12 +8,15 @@ using Sparrow.Binary;
 using Sparrow.Global;
 using Sparrow.Platform;
 using Sparrow.Threading;
+using Sparrow.Utils;
+
+using static Sparrow.DisposableExceptions;
+using static Sparrow.PortableExceptions;
 
 #if MEM_GUARD
 using Sparrow.Platform;
 #endif
 
-using Sparrow.Utils;
 
 namespace Sparrow.Json
 {
@@ -112,10 +115,12 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public AllocatedMemoryData Allocate(int size)
         {
-            DisposableException.ThrowIfDisposed(this);
+            ThrowIfDisposed(this);
 
-            PortableExceptions.ThrowIfNull<InvalidOperationException>(_ptrStart, "Attempt to allocate from reset arena without calling renew");
-
+            ThrowIfNull<InvalidOperationException>(_ptrStart, "Attempt to allocate from reset arena without calling renew");
+            ThrowIf<ArgumentOutOfRangeException>(size < 0, "Size cannot be negative");
+            ThrowIf<ArgumentOutOfRangeException>(size > MaxArenaSize, $"Requested size {size} while maximum size is {MaxArenaSize}");
+            
 #if MEM_GUARD
             return new AllocatedMemoryData
             {
@@ -123,10 +128,7 @@ namespace Sparrow.Json
                 SizeInBytes = size
             };
 #else
-
-            PortableExceptions.ThrowIf<ArgumentOutOfRangeException>(size < 0, "Size cannot be negative");
-            PortableExceptions.ThrowIf<ArgumentOutOfRangeException>(size > MaxArenaSize, $"Requested size {size} while maximum size is {MaxArenaSize}");
-
+            
             size = Bits.PowerOf2(Math.Max(sizeof(FreeSection), size));
 
             var index = Bits.MostSignificantBit(size) - 1;
@@ -155,12 +157,10 @@ namespace Sparrow.Json
 
         private void GrowArena(int requestedSize)
         {
-            if (requestedSize > MaxArenaSize)
-                throw new ArgumentOutOfRangeException(nameof(requestedSize), requestedSize,
-                    $"Requested arena resize to {requestedSize} while current size is {_allocated} and maximum size is {MaxArenaSize}");
-
+            ThrowIf<ArgumentOutOfRangeException>(requestedSize > MaxArenaSize, 
+                $"Requested arena resize to {requestedSize} while current size is {_allocated} and maximum size is {MaxArenaSize}");
+            
             long newSize = GetPreferredSize(requestedSize);
-
             if (newSize > MaxArenaSize)
                 newSize = MaxArenaSize;
 
@@ -448,13 +448,13 @@ namespace Sparrow.Json
         {
             get
             {
-                DisposableException.ThrowIfDisposed(this);
+                ThrowIfDisposed(this);
                 return _address;
             }
 
             private set
             {
-                DisposableException.ThrowIfDisposed(this);
+                ThrowIfDisposed(this);
                 _address = value;
             }
         }
