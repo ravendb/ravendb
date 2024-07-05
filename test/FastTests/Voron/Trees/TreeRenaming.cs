@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="TreeRenaming.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -63,7 +63,7 @@ namespace FastTests.Voron.Trees
 
                 var ae = Assert.Throws<ArgumentException>(() => tx.RenameTree("tree_1", "tree_2"));
 
-                Assert.Equal("Cannot rename a tree with the name of an existing tree: tree_2", ae.Message);
+                Assert.StartsWith("Cannot rename a tree with the name of an existing tree: tree_2", ae.Message);
             }
         }
 
@@ -74,7 +74,7 @@ namespace FastTests.Voron.Trees
             {
                 var ae = Assert.Throws<ArgumentException>(() => tx.RenameTree( "tree_1", "tree_2"));
 
-                Assert.Equal("Tree tree_1 does not exists", ae.Message);
+                Assert.StartsWith("Tree tree_1 does not exists", ae.Message);
             }
         }
 

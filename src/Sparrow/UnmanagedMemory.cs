@@ -3,13 +3,12 @@ using Sparrow.Json;
 
 namespace Sparrow
 {
-    public sealed unsafe class UnmanagedMemory
+    public sealed unsafe class UnmanagedMemory(byte* address, int size)
     {
         private Memory<byte>? _memory;
 
-        public readonly byte* Address;
-
-        public readonly int Size;
+        public readonly byte* Address = address;
+        public readonly int Size = size;
 
         public Memory<byte> Memory
         {
@@ -23,12 +22,6 @@ namespace Sparrow
 
                 return _memory.Value;
             }
-        }
-
-        public UnmanagedMemory(byte* address, int size)
-        {
-            Address = address;
-            Size = size;
         }
     }
 }
