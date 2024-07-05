@@ -299,15 +299,12 @@ namespace Sparrow.Server
         public void CopyTo(int from, byte[] dest, int offset, int count)
         {
             ThrowIfOnDebug<InvalidOperationException>(HasValue == false, $"{nameof(HasValue)} is false.");
-
-            if (from + count > _pointer->Length)
-                throw new ArgumentOutOfRangeException(nameof(from), "Cannot copy data after the end of the slice");
-            if (offset + count > dest.Length)
-                throw new ArgumentOutOfRangeException(nameof(from), "Cannot copy data after the end of the buffer");
-
             EnsureIsNotBadPointer();
+            
+            ThrowIf<ArgumentOutOfRangeException>(from + count > _pointer->Length, "Cannot copy data after the end of the slice");
+            ThrowIf<ArgumentOutOfRangeException>(offset + count > dest.Length, "Cannot copy data after the end of the buffer");
 
-            new Span<byte>(_pointer->Ptr + from, count)
+            new ReadOnlySpan<byte>(_pointer->Ptr + from, count)
                 .CopyTo(dest.AsSpan(offset, count));
         }
 
@@ -615,8 +612,7 @@ namespace Sparrow.Server
 
         public unsafe void Free(UnmanagedGlobalSegment memory)
         {
-            if (memory.Segment == null)
-                ThrowInvalidMemorySegment();
+            ThrowIfNull<InvalidOperationException>(memory.Segment, "Attempt to return a memory segment that has already been disposed");
 
             if (_minSize > memory.Size)
             {
@@ -638,12 +634,6 @@ namespace Sparrow.Server
             }
         }
 
-        [DoesNotReturn]
-        private static void ThrowInvalidMemorySegment()
-        {
-            throw new InvalidOperationException("Attempt to return a memory segment that has already been disposed");
-        }
-
         public static void CleanForCurrentThread()
         {
             if (SegmentsPool.IsValueCreated == false)
@@ -660,7 +650,8 @@ namespace Sparrow.Server
         }
     }
 
-    public sealed class ByteStringContext : ByteStringContext<ByteStringMemoryCache>
+    public sealed class ByteStringContext(SharedMultipleUseFlag lowMemoryFlag, int allocationBlockSize = ByteStringContext.DefaultAllocationBlockSizeInBytes)
+        : ByteStringContext<ByteStringMemoryCache>(lowMemoryFlag, allocationBlockSize)
     {
         internal static readonly int ExternalAlignedSize;
 
@@ -676,9 +667,6 @@ namespace Sparrow.Server
 
             Debug.Assert((PlatformDetails.Is32Bits ? 24 : 32) == ExternalAlignedSize, "(PlatformDetails.Is32Bits ? 24 : 32) == ExternalAlignedSize");
         }
-
-        public ByteStringContext(SharedMultipleUseFlag lowMemoryFlag, int allocationBlockSize = DefaultAllocationBlockSizeInBytes) : base(lowMemoryFlag, allocationBlockSize)
-        { }
     }
 
     public unsafe class ByteStringContext<TAllocator> : IDisposable, IDisposableQueryable
@@ -909,15 +897,11 @@ namespace Sparrow.Server
             return r;
         }
 
-        private sealed class ByteStringMemoryManager<T> : MemoryManager<T> where T : unmanaged
+        private sealed class ByteStringMemoryManager<T>(ByteStringContext<TAllocator> context, ByteString str) : MemoryManager<T>
+            where T : unmanaged
         {
-            private readonly ByteStringContext<TAllocator> _context;
-            private ByteString _str;
-            public ByteStringMemoryManager(ByteStringContext<TAllocator> context, ByteString str)
-            {
-                _context = context;
-                _str = str;
-            }
+            private readonly ByteStringContext<TAllocator> _context = context;
+            private ByteString _str = str;
 
             public override Memory<T> Memory => CreateMemory(_str.Length);
 
