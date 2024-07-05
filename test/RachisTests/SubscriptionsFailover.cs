@@ -15,9 +15,11 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
+using Raven.Server.Config;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -27,7 +29,6 @@ using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Sdk;
 
 namespace RachisTests
 {
@@ -735,7 +736,162 @@ namespace RachisTests
             }
         }
 
-        private async Task WaitForResponsibleNode(DocumentStore store, string forNode, string subscriptionName, bool toBecomeNull = false)
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SubscriptionWorkerShouldStayOnCandidateNodes(Options options)
+        {
+            var cluster = await CreateRaftCluster(numberOfNodes: 2, watcherCluster: false, shouldRunInMemory: false);
+            options.ReplicationFactor = 2;
+            options.Server = cluster.Leader;
+            options.DeleteDatabaseOnDispose = false;
+            options.RunInMemory = false;
+            using (var store = GetDocumentStore(options))
+            {
+                Servers.ForEach(x => x.ForTestingPurposesOnly().GatherVerboseDatabaseDisposeInformation = true);
+
+                var mre = new AsyncManualResetEvent();
+                using (var subscriptionManager = new DocumentSubscriptions(store))
+                {
+                    var name = await subscriptionManager.CreateAsync(new SubscriptionCreationOptions<User>());
+
+                    var subs = await store.Subscriptions.GetSubscriptionStateAsync(name);
+                    Assert.NotNull(subs);
+                    await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(subs.SubscriptionId, cluster.Nodes);
+                    string tag = null;
+                    string leadertag = null;
+                    await ActionWithLeader(async l =>
+                    {
+                        leadertag = l.ServerStore.NodeTag;
+                        tag = await WaitForResponsibleNode(store, l.ServerStore.NodeTag, name, toBecomeNull: false);
+                    });
+                    Assert.NotNull(tag);
+
+                    var redirects = new Dictionary<string, string>();
+                    var processedIds = new HashSet<string>();
+                    var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(name)
+                    {
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16),
+                        MaxErroneousPeriod = TimeSpan.FromMinutes(5)
+                    });
+
+                    subscription.OnEstablishedSubscriptionConnection += () =>
+                    {
+                        mre.Set();
+                    };
+                    subscription.AfterAcknowledgment += batch =>
+                    {
+                        foreach (var item in batch.Items.Select(x => x.Id))
+                        {
+                            processedIds.Add(item);
+                        }
+                        return Task.CompletedTask;
+                    };
+                    _ = subscription.Run(x => { });
+
+                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)), $"Could not connect subscription in time{Environment.NewLine}Redirects:{Environment.NewLine}{string.Join(Environment.NewLine, redirects.Select(x => $"Tag: {x.Key}, Exception: {x.Value}").ToList())}");
+
+                    subscription.OnSubscriptionConnectionRetry += ex =>
+                    {
+                        if (string.IsNullOrEmpty(subscription.CurrentNodeTag))
+                            return;
+                        redirects[subscription.CurrentNodeTag] = ex.ToString();
+                    };
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User
+                        {
+                            Name = "EGOR"
+                        }, "users/322");
+
+                        session.SaveChanges();
+                    }
+
+                    await WaitAndAssertForValueAsync(() => processedIds.Contains("users/322"), true);
+
+                    var sp = Stopwatch.StartNew();
+                    var toDispose = Servers.FirstOrDefault(x => x.ServerStore.NodeTag != tag);
+                    Assert.NotNull(toDispose);
+
+                    var (_, __, disposedTag) = await DisposeServerAndWaitForFinishOfDisposalAsync(toDispose);
+                    Assert.Equal(toDispose.ServerStore.NodeTag, disposedTag);
+                    var processingNode = Servers.FirstOrDefault(x => x.ServerStore.NodeTag == tag);
+                    Assert.NotNull(processingNode);
+
+                    // wait for the node to become candidate
+                    await WaitAndAssertForValueAsync(() => processingNode.ServerStore.Engine.CurrentState, RachisState.Candidate);
+                    if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                    {
+                        // set up action to halt the ack
+                        var shards = Sharding.GetShardsDocumentDatabaseInstancesFor(store);
+                        await foreach (var db in shards)
+                        {
+                            var testingStuff = db.ForTestingPurposesOnly();
+                            bool shouldWaitForClusterStabilization = false;
+                            var subscriptionInterrupt = new AsyncManualResetEvent();
+                            using (testingStuff.CallDuringWaitForChangedDocuments(() =>
+                                   {
+                                       shouldWaitForClusterStabilization = db.SubscriptionStorage.ShouldWaitForClusterStabilization();
+                                       subscriptionInterrupt.Set();
+                                   }))
+                            {
+                                await subscriptionInterrupt.WaitAsync(_reasonableWaitTime);
+                                // wait for the wait for cluster stabilization in subscription connection to happen
+                                Assert.True(shouldWaitForClusterStabilization, "shouldWaitForClusterStabilization");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        var db = await Databases.GetDocumentDatabaseInstanceFor(processingNode.ServerStore.NodeTag, store.Database);
+                        var testingStuff = db.ForTestingPurposesOnly();
+                        bool shouldWaitForClusterStabilization = false;
+                        var subscriptionInterrupt = new AsyncManualResetEvent();
+                        using (testingStuff.CallDuringWaitForChangedDocuments(() =>
+                               {
+                                   shouldWaitForClusterStabilization = db.SubscriptionStorage.ShouldWaitForClusterStabilization();
+                                   subscriptionInterrupt.Set();
+                               }))
+                        {
+                            await subscriptionInterrupt.WaitAsync(_reasonableWaitTime);
+                            // wait for the wait for cluster stabilization in subscription connection to happen
+                            Assert.True(shouldWaitForClusterStabilization, "shouldWaitForClusterStabilization");
+                        }
+
+                    }
+
+                    var resurrectedNode = await ToggleServer(toDispose, false, base.GetNewServer);
+
+                    // wait for nodes to stabilize
+                    await WaitAndAssertForValueAsync(() =>
+                    {
+                        if (processingNode.ServerStore.Engine.CurrentState == RachisState.Candidate || resurrectedNode.ServerStore.Engine.CurrentState == RachisState.Candidate)
+                            return false;
+                        if (processingNode.ServerStore.Engine.CurrentState == RachisState.Passive || resurrectedNode.ServerStore.Engine.CurrentState == RachisState.Passive)
+                            return false;
+                        return true;
+                    }, true, timeout: 60_000, interval: 333);
+                    string responsibleNodeAfterClusterStabilization = null;
+                    responsibleNodeAfterClusterStabilization = await WaitForResponsibleNode(store, processingNode.ServerStore.NodeTag, name, toBecomeNull: false);
+                    Assert.Equal(tag, responsibleNodeAfterClusterStabilization);
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User
+                        {
+                            Name = "EGR"
+                        }, "users/228");
+
+                        session.SaveChanges();
+                    }
+
+                    await WaitAndAssertForValueAsync(() => processedIds.Contains("users/228"), true);
+                    Assert.Empty(redirects);
+                }
+            }
+        }
+
+        private async Task<string> WaitForResponsibleNode(DocumentStore store, string forNode, string subscriptionName, bool toBecomeNull = false)
         {
             var sp = Stopwatch.StartNew();
             var op = new GetOngoingTaskInfoOperation(subscriptionName, OngoingTaskType.Subscription);
@@ -764,7 +920,7 @@ namespace RachisTests
                         }
                     }
 
-                    return;
+                    return tag;
                 }
             }
             finally
@@ -772,6 +928,45 @@ namespace RachisTests
                 sp.Stop();
                 Assert.True(sp.ElapsedMilliseconds < _reasonableWaitTime.TotalMilliseconds);
             }
+
+            return null;
+        }
+
+        internal static async Task<RavenServer> ToggleServer(Raven.Server.RavenServer node, bool shouldTrapRevivedNodesIntoCandidate, Func<ServerCreationOptions, string, RavenServer> getNewServerFunc)
+        {
+            if (node.Disposed)
+            {
+                var settings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
+                    [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
+                    [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
+                    [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = node.WebUrl
+                };
+
+                var dataDirectory = node.Configuration.Core.DataDirectory.FullPath;
+
+                // if we want to make sure that the revived node will be trapped in candidate node, we should make sure that the election timeout value is different from the
+                // rest of the node (note that this is a configuration value, therefore we need to define it in "settings" and nowhere else)
+                if (shouldTrapRevivedNodesIntoCandidate == false)
+                    settings[RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = node.Configuration.Cluster.ElectionTimeout.AsTimeSpan.TotalMilliseconds.ToString();
+
+                node = getNewServerFunc(new ServerCreationOptions()
+                {
+                    DeletePrevious = false,
+                    RunInMemory = false,
+                    CustomSettings = settings,
+                    DataDirectory = dataDirectory
+                }, $"{node.DebugTag}-{nameof(ToggleServer)}");
+
+                Assert.True(node.ServerStore.Engine.CurrentState != RachisState.Passive, "node.ServerStore.Engine.CurrentState != RachisState.Passive");
+            }
+            else
+            {
+                var result = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
+            }
+
+            return node;
         }
     }
 }

@@ -35,8 +35,7 @@ function GetUbuntuImageTags($repo, $version, $arch) {
     switch ($arch) {
         "x64" { 
             return @(
-                "$($repo):latest",
-                "$($repo):ubuntu-latest",
+#                "$($repo):ubuntu-latest",
                 "$($repo):6.1-ubuntu-latest",
                 "$($repo):$($version)-ubuntu.22.04-x64"
             )
@@ -44,7 +43,7 @@ function GetUbuntuImageTags($repo, $version, $arch) {
         }
         "arm32v7" {
             return @(
-                "$($repo):ubuntu-arm32v7-latest",
+#                "$($repo):ubuntu-arm32v7-latest",
                 "$($repo):6.1-ubuntu-arm32v7-latest",
                 "$($repo):$($version)-ubuntu.22.04-arm32v7"
             )
@@ -52,7 +51,7 @@ function GetUbuntuImageTags($repo, $version, $arch) {
         }
         "arm64v8" {
             return @(
-                "$($repo):ubuntu-arm64v8-latest",
+#                "$($repo):ubuntu-arm64v8-latest",
                 "$($repo):6.1-ubuntu-arm64v8-latest",
                 "$($repo):$($version)-ubuntu.22.04-arm64v8"
                 )
@@ -70,7 +69,7 @@ function GetWindowsImageTags($repo, $version, $WinVer) {
         "1809" {
             return @(
                 "$($repo):$($version)-windows-1809",
-                "$($repo):windows-1809-latest",
+#                "$($repo):windows-1809-latest",
                 "$($repo):6.1-windows-1809-latest"
             )
             break;
@@ -78,7 +77,7 @@ function GetWindowsImageTags($repo, $version, $WinVer) {
         "ltsc2022" {
              return @(
                 "$($repo):$($version)-windows-ltsc2022",
-                "$($repo):windows-ltsc2022-latest",
+#                "$($repo):windows-ltsc2022-latest",
                 "$($repo):6.1-windows-ltsc2022-latest"
             )
             break;
@@ -88,4 +87,29 @@ function GetWindowsImageTags($repo, $version, $WinVer) {
         }        
     }
 
+}
+
+function GetManifestTags {
+    param (
+        $repo
+    )
+
+    return @(
+#        "${repo}:latest",
+        "${repo}:6.1-latest"
+    )
+}
+
+function GetImageTagsForManifest {
+    param (
+        [string]$repo
+    )
+
+    return @(
+        "${repo}:6.1-ubuntu-latest",
+        "${repo}:6.1-ubuntu-arm32v7-latest",
+        "${repo}:6.1-ubuntu-arm64v8-latest",
+        "${repo}:6.1-windows-1809-latest",
+        "${repo}:6.1-windows-ltsc2022-latest"
+    )
 }

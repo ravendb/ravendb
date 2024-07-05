@@ -2,7 +2,6 @@ import AboutViewFloating, { AccordionItemWrapper } from "components/common/About
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import React from "react";
-import { useRavenLink } from "hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
@@ -17,10 +16,7 @@ export function EditAzureQueueStorageEtlInfoHub() {
             },
         ],
     });
-
-    //TODO: update docs link
-    const azureQueueStorageEtlDocsLink = useRavenLink({ hash: "TODO" }); 
-
+    
     return (
         <AboutViewFloating defaultOpen={hasQueueEtl ? null : "licensing"}>
             <AccordionItemWrapper

@@ -477,7 +477,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             await using (var gzipStream = await RavenServerBackupUtils.GetDecompressionStreamAsync(inputStream))
             using (var source = new StreamSource(gzipStream, context, database.Name, options))
             {
-                var smuggler = database.Smuggler.CreateForRestore(RestoreSettings.DatabaseRecord, source, destination, context, options, restoreResult, onProgress);
+                var smuggler = database.Smuggler.CreateForRestore(RestoreSettings.DatabaseRecord, source, destination, context, options, restoreResult, onProgress, OperationCancelToken.Token);
 
                 ConfigureSettingsForSmugglerRestore(database, smuggler, filePath, isLastFile);
 

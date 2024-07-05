@@ -192,16 +192,26 @@ public sealed class SubscriptionConnectionForShard : SubscriptionConnection
         do
         {
             CancellationTokenSource.Token.ThrowIfCancellationRequested();
-
+            var timeoutTask = TimeoutManager.WaitFor(ISubscriptionConnection.HeartbeatTimeout);
             var resultingTask = await Task
-                .WhenAny(migrationWaitTask, pendingReply, TimeoutManager.WaitFor(ISubscriptionConnection.HeartbeatTimeout)).ConfigureAwait(false);
+                .WhenAny(migrationWaitTask, pendingReply, timeoutTask).ConfigureAwait(false);
 
             if (CancellationTokenSource.IsCancellationRequested)
                 return false;
             if (resultingTask == pendingReply)
                 return false;
             if (migrationWaitTask == resultingTask)
-                return true;
+            {
+                if (_subscriptions.ShouldWaitForClusterStabilization())
+                {
+                    // we have unstable cluster
+                    await timeoutTask;
+                }
+                else
+                {
+                    return true;
+                }
+            }
 
             await SendHeartBeatAsync("Waiting for documents migration");
             await SendNoopAckAsync();

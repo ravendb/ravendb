@@ -239,7 +239,7 @@ class query extends shardViewModelBase {
 
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
     deleteDocumentDisableReason: KnockoutComputed<string>;
-    canExportCsv: KnockoutComputed<boolean>;
+    canExportToFile: KnockoutComputed<boolean>;
     
     isMapReduceIndex: KnockoutComputed<boolean>;
     isCollectionQuery: KnockoutComputed<boolean>;
@@ -298,6 +298,11 @@ class query extends shardViewModelBase {
         isLoadingSpatialResults: ko.observable<boolean>(false),
         isLoading: ko.observable<boolean>(false)
     };
+    
+    exportAsFileSettings = {
+        format: ko.observable<"json" | "csv">("csv"),
+        allColumns: ko.observable<boolean>(true)
+    }
 
     /*TODO
     isTestIndex = ko.observable<boolean>(false);
@@ -443,7 +448,7 @@ class query extends shardViewModelBase {
             return !mapReduce && !hasAnyItemSelected && queryResultsAreMatchingDocuments;
         });
         
-        this.canExportCsv = ko.pureComputed(() => {
+        this.canExportToFile = ko.pureComputed(() => {
             const hasNonEmptyResult = this.totalResultsForUi() > 0;
 
             if (!hasNonEmptyResult) {
@@ -620,7 +625,7 @@ class query extends shardViewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
-        this.$downloadForm = $("#exportCsvForm");
+        this.$downloadForm = $("#exportFileForm");
         
         this.setupDisableReasons();
 
@@ -1797,29 +1802,20 @@ class query extends shardViewModelBase {
             this.loadMoreSpatialResultsToMap();
         }
     }
-
-    exportCsvVisibleColumns(): void {
-        const columns = this.columnsSelector.getSimpleColumnsFields();
-        this.exportCsvInternal(columns);
-    }
-
-    exportCsvFull(): void {
-        this.exportCsvInternal();
-    }
-
-    private exportCsvInternal(columns?: string[]): void {
+    
+    exportAsFile() {
         eventsCollector.default.reportEvent("query", "export-csv");
 
         const args = {
-            format: "csv",
-            field: columns,
+            format: this.exportAsFileSettings.format(),
+            field: this.exportAsFileSettings.allColumns() ? undefined : this.columnsSelector.getSimpleColumnsFields(),
             debug: this.criteria().indexEntries() ? "entries" : undefined,
             includeLimit: this.criteria().ignoreIndexQueryLimit() ? "true" : undefined
         }
-        
+
         let payload: { Query: string, QueryParameters: string };
         const [queryParameters, rqlWithoutParameters] = queryCommand.extractQueryParameters(this.criteria().queryText());
-        
+
         if (this.criteria().showFields()) {
             payload = {
                 Query: queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(rqlWithoutParameters),
