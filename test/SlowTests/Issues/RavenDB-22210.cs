@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using FastTests;
 using Raven.Server.Config.Categories;
@@ -23,12 +24,23 @@ public class RavenDB_22210 : RavenTestBase
     {
         var certificates = GenerateAndRenewWithDifferentIntermediate();
         PopulateCaStore(certificates.ca, certificates.intermediate, certificates.intermediate2);
+        var explanationsList = new List<string>();
 
         try
         {
-            var explanationsList = new List<string>();
             var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration(), explanationsList);
             Assert.True(result, string.Join('\n', explanationsList));
+        }
+        catch
+        {
+            //make sure CA certs are in store
+            Assert.True(IsCACertificateInStore(certificates.ca), $"Certificate {certificates.ca.SubjectName} is not in store. {string.Join('\n', explanationsList)}");
+            Assert.True(IsCACertificateInStore(certificates.intermediate),
+                $"Certificate {certificates.intermediate.SubjectName} is not in store.  {string.Join('\n', explanationsList)}");
+            Assert.True(IsCACertificateInStore(certificates.intermediate2),
+                $"Certificate {certificates.intermediate2.SubjectName} is not in store.  {string.Join('\n', explanationsList)}");
+
+            throw;
         }
         finally
         {
@@ -41,12 +53,21 @@ public class RavenDB_22210 : RavenTestBase
     {
         var certificates = GenerateAndRenewWithTheSameIntermediate();
         PopulateCaStore(certificates.ca, certificates.intermediate);
+        var explanationsList = new List<string>();
 
         try
         {
-            var explanationsList = new List<string>();
             var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration(), explanationsList);
             Assert.True(result, string.Join('\n', explanationsList));
+        }
+        catch
+        {
+            //make sure CA certs are in store
+            Assert.True(IsCACertificateInStore(certificates.ca), $"Certificate {certificates.ca.SubjectName} is not in store. {string.Join('\n', explanationsList)}");
+            Assert.True(IsCACertificateInStore(certificates.intermediate),
+                $"Certificate {certificates.intermediate.SubjectName} is not in store. {string.Join('\n', explanationsList)}");
+
+            throw;
         }
         finally
         {
@@ -68,82 +89,100 @@ public class RavenDB_22210 : RavenTestBase
     public void RenewedWithDifferentChain_CannotAccess()
     {
         var certificates = GenerateAndRenewWithDifferentChain();
-        PopulateCaStore(certificates.ca, certificates.intermediate, certificates.intermediate2);
+        PopulateCaStore(certificates.ca, certificates.ca2, certificates.intermediate, certificates.intermediate2);
+        var explanationsList = new List<string>();
+
         try
         {
-            var explanationsList = new List<string>();
             var result = CertificateUtils.CertHasKnownIssuer(certificates.clientRenewed, certificates.client, new SecurityConfiguration(), explanationsList);
             Assert.False(result, string.Join('\n', explanationsList));
         }
+        catch
+        {
+            //make sure CA certs are in store
+            Assert.True(IsCACertificateInStore(certificates.ca), $"Certificate {certificates.ca.SubjectName} is not in store. {string.Join('\n', explanationsList)}");
+            Assert.True(IsCACertificateInStore(certificates.ca2), $"Certificate {certificates.ca2.SubjectName} is not in store. {string.Join('\n', explanationsList)}");
+            Assert.True(IsCACertificateInStore(certificates.intermediate),
+                $"Certificate {certificates.intermediate.SubjectName} is not in store. {string.Join('\n', explanationsList)}");
+            Assert.True(IsCACertificateInStore(certificates.intermediate2),
+                $"Certificate {certificates.intermediate2.SubjectName} is not in store. {string.Join('\n', explanationsList)}");
+
+            throw;
+        }
         finally
         {
-            CleanupCaStore(certificates.ca, certificates.intermediate, certificates.intermediate2);
+            CleanupCaStore(certificates.ca, certificates.ca2, certificates.intermediate, certificates.intermediate2);
         }
     }
 
     private static (X509Certificate2 ca, X509Certificate2 intermediate, X509Certificate2 intermediate2, X509Certificate2 client, X509Certificate2 clientRenewed)
         GenerateAndRenewWithDifferentIntermediate()
     {
+        var suffix = GenerateSuffix();
         var caKp = CertificateGenerator.GenerateRSAKeyPair();
-        var ca = CertificateGenerator.GenerateRootCACertificate(CaName, 5, caKp);
+        var ca = CertificateGenerator.GenerateRootCACertificate($"CaName-{suffix}", 5, caKp);
 
         var intermediateKp = CertificateGenerator.GenerateRSAKeyPair();
-        var intermediate = CertificateGenerator.GenerateIntermediateCACertificate(ca, caKp, IntermediateName, 2, intermediateKp);
+        var intermediate = CertificateGenerator.GenerateIntermediateCACertificate(ca, caKp, $"{IntermediateName}-{suffix}", 2, intermediateKp);
 
         var intermediate2Kp = CertificateGenerator.GenerateRSAKeyPair();
-        var intermediate2 = CertificateGenerator.GenerateIntermediateCACertificate(ca, caKp, $"{IntermediateName}-2", 2, intermediate2Kp);
+        var intermediate2 = CertificateGenerator.GenerateIntermediateCACertificate(ca, caKp, $"{IntermediateName}-{suffix}-2", 2, intermediate2Kp);
 
         var clientKp = CertificateGenerator.GenerateRSAKeyPair();
-        var client = CertificateGenerator.GenerateSignedClientCertificate(intermediate, intermediateKp, ClientName, 1, clientKp);
+        var client = CertificateGenerator.GenerateSignedClientCertificate(intermediate, intermediateKp, $"{ClientName}-{suffix}", 1, clientKp);
 
-        var client2 = CertificateGenerator.GenerateSignedClientCertificate(intermediate2, intermediate2Kp, ClientRenewedName, 1, clientKp);
+        var client2 = CertificateGenerator.GenerateSignedClientCertificate(intermediate2, intermediate2Kp, $"{ClientRenewedName}-{suffix}", 1, clientKp);
 
         return (ca, intermediate, intermediate2, client, client2);
     }
 
-    private static (X509Certificate2 ca, X509Certificate2 intermediate, X509Certificate2 intermediate2, X509Certificate2 client, X509Certificate2 clientRenewed)
+    private static (X509Certificate2 ca, X509Certificate2 ca2, X509Certificate2 intermediate, X509Certificate2 intermediate2, X509Certificate2 client, X509Certificate2
+        clientRenewed)
         GenerateAndRenewWithDifferentChain()
     {
+        var suffix = GenerateSuffix();
         var caKp = CertificateGenerator.GenerateRSAKeyPair();
-        var ca = CertificateGenerator.GenerateRootCACertificate(CaName, 5, caKp);
+        var ca = CertificateGenerator.GenerateRootCACertificate($"{CaName}-{suffix}", 5, caKp);
 
         var ca2Kp = CertificateGenerator.GenerateRSAKeyPair();
-        var ca2 = CertificateGenerator.GenerateRootCACertificate($"{CaName}-2", 5, caKp);
+        var ca2 = CertificateGenerator.GenerateRootCACertificate($"{CaName}-{suffix}-2", 5, ca2Kp);
 
         var intermediateKp = CertificateGenerator.GenerateRSAKeyPair();
-        var intermediate = CertificateGenerator.GenerateIntermediateCACertificate(ca, caKp, IntermediateName, 2, intermediateKp);
+        var intermediate = CertificateGenerator.GenerateIntermediateCACertificate(ca, caKp, $"{IntermediateName}-{suffix}", 2, intermediateKp);
 
         var intermediate2Kp = CertificateGenerator.GenerateRSAKeyPair();
-        var intermediate2 = CertificateGenerator.GenerateIntermediateCACertificate(ca2, ca2Kp, $"{IntermediateName}-2", 2, intermediate2Kp);
+        var intermediate2 = CertificateGenerator.GenerateIntermediateCACertificate(ca2, ca2Kp, $"{IntermediateName}-{suffix}-2", 2, intermediate2Kp);
 
         var clientKp = CertificateGenerator.GenerateRSAKeyPair();
-        var client = CertificateGenerator.GenerateSignedClientCertificate(intermediate, intermediateKp, ClientName, 1, clientKp);
+        var client = CertificateGenerator.GenerateSignedClientCertificate(intermediate, intermediateKp, $"{ClientName}-{suffix}", 1, clientKp);
 
-        var client2 = CertificateGenerator.GenerateSignedClientCertificate(intermediate2, intermediate2Kp, ClientRenewedName, 1, clientKp);
+        var client2 = CertificateGenerator.GenerateSignedClientCertificate(intermediate2, intermediate2Kp, $"{ClientRenewedName}-{suffix}", 1, clientKp);
 
-        return (ca, intermediate, intermediate2, client, client2);
+        return (ca, ca2, intermediate, intermediate2, client, client2);
     }
 
     private static (X509Certificate2 ca, X509Certificate2 intermediate, X509Certificate2 client, X509Certificate2 clientRenewed) GenerateAndRenewWithTheSameIntermediate()
     {
+        var suffix = GenerateSuffix();
         var caKp = CertificateGenerator.GenerateRSAKeyPair();
-        var ca = CertificateGenerator.GenerateRootCACertificate(CaName, 5, caKp);
+        var ca = CertificateGenerator.GenerateRootCACertificate($"{CaName}-{suffix}", 5, caKp);
 
         var intermediateKp = CertificateGenerator.GenerateRSAKeyPair();
-        var intermediate = CertificateGenerator.GenerateIntermediateCACertificate(ca, caKp, IntermediateName, 2, intermediateKp);
+        var intermediate = CertificateGenerator.GenerateIntermediateCACertificate(ca, caKp, $"{IntermediateName}-{suffix}", 2, intermediateKp);
 
         var clientKp = CertificateGenerator.GenerateRSAKeyPair();
-        var client = CertificateGenerator.GenerateSignedClientCertificate(intermediate, intermediateKp, ClientName, 1, clientKp);
-        var client2 = CertificateGenerator.GenerateSignedClientCertificate(intermediate, intermediateKp, ClientRenewedName, 1, clientKp);
+        var client = CertificateGenerator.GenerateSignedClientCertificate(intermediate, intermediateKp, $"{ClientName}-{suffix}", 1, clientKp);
+        var client2 = CertificateGenerator.GenerateSignedClientCertificate(intermediate, intermediateKp, $"{ClientRenewedName}-{suffix}", 1, clientKp);
 
         return (ca, intermediate, client, client2);
     }
 
     private static (X509Certificate2 client, X509Certificate2 clientRenewed) GenerateAndRenewSelfSigned()
     {
+        var suffix = GenerateSuffix();
         var clientKp = CertificateGenerator.GenerateRSAKeyPair();
-        var client = CertificateGenerator.GenerateSelfSignedClientCertificate(ClientName, 1, clientKp);
-        var client2 = CertificateGenerator.GenerateSelfSignedClientCertificate(ClientRenewedName, 1, clientKp);
+        var client = CertificateGenerator.GenerateSelfSignedClientCertificate($"{ClientName}-{suffix}", 1, clientKp);
+        var client2 = CertificateGenerator.GenerateSelfSignedClientCertificate($"{ClientRenewedName}-{suffix}", 1, clientKp);
 
         return (client, client2);
     }
@@ -165,7 +204,7 @@ public class RavenDB_22210 : RavenTestBase
                     store.Add(certificate);
                 }
 
-                Thread.Sleep(13);
+                Thread.Sleep(73);
 
                 retries++;
             }
@@ -193,6 +232,18 @@ public class RavenDB_22210 : RavenTestBase
             store.Open(OpenFlags.ReadWrite);
             store.RemoveRange(new X509Certificate2Collection(certificates));
         }
+    }
+
+    private static string GenerateSuffix()
+    {
+        var random = new Random();
+        var sb = new StringBuilder();
+        for (int i = 0; i < 8; i++)
+        {
+            sb.Append(random.Next(0, 10));
+        }
+
+        return sb.ToString();
     }
 
     private const string CaName = "raven-test-ca";

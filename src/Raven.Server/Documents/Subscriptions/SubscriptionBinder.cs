@@ -161,7 +161,7 @@ public sealed class SubscriptionBinder<TState, TConnection, TIncludeCommand> : I
 
         _connection.CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-        await _connection.SendNoopAckAsync();
+        await _connection.SendNoopAckAsync(force: true);
         await _connection.SendAcceptMessageAsync();
 
         await _subscriptionConnectionsState.UpdateClientConnectionTime();
