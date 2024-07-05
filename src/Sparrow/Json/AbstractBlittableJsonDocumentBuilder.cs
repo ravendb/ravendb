@@ -76,18 +76,26 @@ namespace Sparrow.Json
             public FastList<BlittableJsonToken> Types;
             public FastList<int> Positions;
             public long FirstWrite;
-            internal bool PartialRead;
+            internal readonly bool PartialRead;
 
             public BuildingState(ContinuationState state)
             {
                 State = state;
-                MaxPropertyId = 0;
-                CurrentProperty = null;
-                Properties = null;
-                Types = null;
-                Positions = null;
-                FirstWrite = 0;
-                PartialRead = false;
+            }
+            
+            public BuildingState(ContinuationState state, int maxPropertyId = 0,
+                CachedProperties.PropertyName currentProperty = null,
+                FastList<PropertyTag> properties = null, FastList<BlittableJsonToken> types = null, FastList<int> positions = null,
+                int firstWrite = 0, bool partialRead = false)
+            {
+                State = state;
+                MaxPropertyId = maxPropertyId;
+                CurrentProperty = currentProperty;
+                Properties = properties;
+                Types = types;
+                Positions = positions;
+                FirstWrite = firstWrite;
+                PartialRead = partialRead;
             }
         }
 
@@ -107,23 +115,15 @@ namespace Sparrow.Json
             CompleteArrayValue
         }
 
-        public struct PropertyTag
+        public readonly struct PropertyTag(byte type = 0, CachedProperties.PropertyName property = null, int position = 0)
         {
-            public int Position;
+            public readonly int Position = position;
+            public readonly CachedProperties.PropertyName Property = property;
+            public readonly byte Type = type;
 
             public override string ToString()
             {
                 return $"{nameof(Position)}: {Position}, {nameof(Property)}: {Property.Comparer} {Property.PropertyId}, {nameof(Type)}: {(BlittableJsonToken)Type}";
-            }
-
-            public CachedProperties.PropertyName Property;
-            public byte Type;
-
-            public PropertyTag(byte type, CachedProperties.PropertyName property, int position)
-            {
-                Type = type;
-                Property = property;
-                Position = position;
             }
         }
 

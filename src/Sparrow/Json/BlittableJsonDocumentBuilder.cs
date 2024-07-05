@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow.Exceptions;
@@ -46,7 +46,8 @@ namespace Sparrow.Json
             Renew(debugTag, mode);
         }
 
-        public BlittableJsonDocumentBuilder(JsonOperationContext context, JsonParserState state, UsageMode mode, string debugTag, IJsonParser reader, BlittableWriter<UnmanagedWriteBuffer> writer = null) : this(context, state, reader, writer)
+        public BlittableJsonDocumentBuilder(JsonOperationContext context, JsonParserState state, UsageMode mode, string debugTag, IJsonParser reader,
+            BlittableWriter<UnmanagedWriteBuffer> writer = null) : this(context, state, reader, writer)
         {
             Renew(debugTag, mode);
         }
@@ -64,6 +65,12 @@ namespace Sparrow.Json
 
             _writeToken = default;
             _writer.Reset();
+        }
+
+        public void Renew(string debugTag, UsageMode mode, IBlittableDocumentModifier modifier)
+        {
+            _modifier = modifier;
+            Renew(debugTag, mode);
         }
 
         public void Renew(string debugTag, UsageMode mode)
@@ -85,37 +92,31 @@ namespace Sparrow.Json
 
         public void ReadArrayDocument()
         {
-            AssertNotDisposed();
-
-            _continuationState.Push(new BuildingState(ContinuationState.ReadArrayDocument));
+            ref var item = ref _continuationState.PushByRef();
+            item = new BuildingState(ContinuationState.ReadArrayDocument);
         }
 
         public void ReadObjectDocument()
         {
-            AssertNotDisposed();
-
-            _continuationState.Push(new BuildingState(ContinuationState.ReadObjectDocument));
+            ref var item = ref _continuationState.PushByRef();
+            item = new BuildingState(ContinuationState.ReadObjectDocument);
         }
 
         public void ReadNestedObject()
         {
-            AssertNotDisposed();
-
-            _continuationState.Push(new BuildingState(ContinuationState.ReadObject));
+            ref var item = ref _continuationState.PushByRef();
+            item = new BuildingState(ContinuationState.ReadObject);
         }
 
         public void ReadProperty()
         {
-            AssertNotDisposed();
-
-            var state = new BuildingState(ContinuationState.ReadPropertyName)
+            ref var item = ref _continuationState.PushByRef();
+            item = new BuildingState(ContinuationState.ReadPropertyName, partialRead: true)
             {
                 State = ContinuationState.ReadPropertyName,
                 Properties = _propertiesCache.Allocate(),
                 FirstWrite = _writer.Position,
-                PartialRead = true
             };
-            _continuationState.Push(state);
         }
 
         public int SizeInBytes
@@ -140,11 +141,12 @@ namespace Sparrow.Json
             base.Dispose();
         }
 
-        private bool ReadInternal<TWriteStrategy>() where TWriteStrategy : IWriteStrategy
+        private bool ReadInternal<TWriteStrategy, TReader>(TReader reader) 
+            where TWriteStrategy : IWriteStrategy
+            where TReader : IJsonParser
         {
             var continuationState = _continuationState;
             var currentState = continuationState.Pop();
-            var reader = _reader;
             var state = _state;
             while (true)
             {
@@ -154,7 +156,7 @@ namespace Sparrow.Json
                         if (reader.Read() == false)
                         {
                             continuationState.Push(currentState);
-                            goto ReturnFalse;
+                            return false;
                         }
                         currentState.State = ContinuationState.ReadObject;
                         continue;
@@ -162,7 +164,7 @@ namespace Sparrow.Json
                         if (reader.Read() == false)
                         {
                             continuationState.Push(currentState);
-                            goto ReturnFalse;
+                            return false;
                         }
 
                         var fakeProperty = _context.CachedProperties.GetProperty(_fakeFieldName);
@@ -170,7 +172,7 @@ namespace Sparrow.Json
                         currentState.MaxPropertyId = fakeProperty.PropertyId;
                         currentState.FirstWrite = _writer.Position;
                         currentState.Properties = _propertiesCache.Allocate();
-                        currentState.Properties.Add(new PropertyTag { Property = fakeProperty });
+                        currentState.Properties.AddByRef(new PropertyTag( property: fakeProperty ));
                         currentState.State = ContinuationState.CompleteDocumentArray;
                         continuationState.Push(currentState);
                         currentState = new BuildingState(ContinuationState.ReadArray);
@@ -186,7 +188,7 @@ namespace Sparrow.Json
                         // Register property position, name id (PropertyId) and type (object type and metadata)
                         _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite, currentState.MaxPropertyId);
                         _propertiesCache.Return(ref currentState.Properties);
-                        goto ReturnTrue;
+                        return true;
 
                     case ContinuationState.ReadObject:
                         if (state.CurrentTokenType == JsonParserToken.StartObject)
@@ -197,7 +199,7 @@ namespace Sparrow.Json
                             continue;
                         }
 
-                        goto ErrorExpectedStartOfObject;
+                        throw new InvalidStartOfObjectException("Expected start of object, but got " + _state.CurrentTokenType + _reader.GenerateErrorState());
 
                     case ContinuationState.ReadArray:
                         if (state.CurrentTokenType == JsonParserToken.StartArray)
@@ -208,13 +210,13 @@ namespace Sparrow.Json
                             continue;
                         }
 
-                        goto ErrorExpectedStartOfArray;
+                        throw new InvalidStartOfObjectException("Expected start of array, but got " + _state.CurrentTokenType + _reader.GenerateErrorState());
 
                     case ContinuationState.ReadArrayValue:
                         if (reader.Read() == false)
                         {
                             continuationState.Push(currentState);
-                            goto ReturnFalse;
+                            return false;
                         }
 
                         if (state.CurrentTokenType == JsonParserToken.EndArray)
@@ -247,7 +249,7 @@ namespace Sparrow.Json
                         if (ReadMaybeModifiedPropertyName() == false)
                         {
                             continuationState.Push(currentState);
-                            goto ReturnFalse;
+                            return false;
                         }
 
                         if (state.CurrentTokenType == JsonParserToken.EndObject)
@@ -257,14 +259,14 @@ namespace Sparrow.Json
                             _propertiesCache.Return(ref currentState.Properties);
 
                             if (continuationState.Count == 0)
-                                goto ReturnTrue;
+                                return true;
 
                             currentState = continuationState.Pop();
                             continue;
                         }
 
                         if (state.CurrentTokenType != JsonParserToken.String)
-                            goto ErrorExpectedProperty;
+                            throw new InvalidDataException("Expected property, but got " + _state.CurrentTokenType + _reader.GenerateErrorState());
 
                         var property = CreateLazyStringValueFromParserState();
                         currentState.CurrentProperty = _context.CachedProperties.GetProperty(property);
@@ -275,7 +277,7 @@ namespace Sparrow.Json
                         if (reader.Read() == false)
                         {
                             continuationState.Push(currentState);
-                            goto ReturnFalse;
+                            return false;
                         }
                         currentState.State = ContinuationState.CompleteReadingPropertyValue;
                         continuationState.Push(currentState);
@@ -283,7 +285,7 @@ namespace Sparrow.Json
                         continue;
                     case ContinuationState.CompleteReadingPropertyValue:
                         // Register property position, name id (PropertyId) and type (object type and metadata)
-                        currentState.Properties.Add(new PropertyTag(
+                        currentState.Properties.AddByRef(new PropertyTag(
                             position: _writeToken.ValuePos,
                             type: (byte)_writeToken.WrittenToken,
                             property: currentState.CurrentProperty));
@@ -295,7 +297,7 @@ namespace Sparrow.Json
                                 _modifier?.EndObject();
                                 _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite, currentState.MaxPropertyId);
                                 _propertiesCache.Return(ref currentState.Properties);
-                                goto ReturnTrue;
+                                return true;
                             }
                         }
 
@@ -307,19 +309,6 @@ namespace Sparrow.Json
                         break;
                 }
             }
-
-        ReturnTrue:
-            return true;
-        ReturnFalse:
-            return false;
-
-        ErrorExpectedProperty:
-            ThrowExpectedProperty();
-        ErrorExpectedStartOfObject:
-            ThrowExpectedStartOfObject();
-        ErrorExpectedStartOfArray:
-            ThrowExpectedStartOfArray();
-            return false; // Will never execute.
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -330,14 +319,19 @@ namespace Sparrow.Json
             if (_continuationState.Count == 0)
                 return false; //nothing to do
 
-            if (_mode == UsageMode.None)
+            switch (_reader)
             {
-                return ReadInternal<WriteNone>();
-            }
+                case ObjectJsonParser ojp when _mode == UsageMode.None: return ReadInternal<WriteNone, ObjectJsonParser>(ojp);
+                case ObjectJsonParser ojp when _mode != UsageMode.None: return ReadInternal<WriteFull, ObjectJsonParser>(ojp);
 
-            return ReadInternal<WriteFull>();
+                case UnmanagedJsonParser ujp when _mode == UsageMode.None: return ReadInternal<WriteNone, UnmanagedJsonParser>(ujp);
+                case UnmanagedJsonParser ujp when _mode != UsageMode.None: return ReadInternal<WriteFull, UnmanagedJsonParser>(ujp);
+            }
+            
+            return _mode == UsageMode.None ? ReadInternal<WriteNone, IJsonParser>(_reader) : ReadInternal<WriteFull, IJsonParser>(_reader);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool ReadMaybeModifiedPropertyName()
         {
             if (_modifier != null)
@@ -345,21 +339,6 @@ namespace Sparrow.Json
                 return _modifier.AboutToReadPropertyName(_reader, _state);
             }
             return _reader.Read();
-        }
-
-        private void ThrowExpectedProperty()
-        {
-            throw new InvalidDataException("Expected property, but got " + _state.CurrentTokenType + _reader.GenerateErrorState());
-        }
-
-        private void ThrowExpectedStartOfArray()
-        {
-            throw new InvalidStartOfObjectException("Expected start of array, but got " + _state.CurrentTokenType + _reader.GenerateErrorState());
-        }
-
-        private void ThrowExpectedStartOfObject()
-        {
-            throw new InvalidStartOfObjectException("Expected start of object, but got " + _state.CurrentTokenType + _reader.GenerateErrorState());
         }
 
         private interface IWriteStrategy { }
@@ -412,11 +391,11 @@ namespace Sparrow.Json
             }
             else if (current != JsonParserToken.EndObject)
             {
-                ReadJsonValueUnlikely<TWriteStrategy>(current);
+                ReadJsonValueUnlikely(current);
             }
         }
 
-        private unsafe void ReadJsonValueUnlikely<TWriteStrategy>(JsonParserToken current) where TWriteStrategy : IWriteStrategy
+        private unsafe void ReadJsonValueUnlikely(JsonParserToken current) 
         {
             int start;
             switch (current)
@@ -448,12 +427,7 @@ namespace Sparrow.Json
                     return;
             }
 
-            ThrowExpectedValue(current);
-        }
-
-        private void ThrowExpectedValue(JsonParserToken token)
-        {
-            throw new InvalidDataException("Expected a value, but got " + token);
+            throw new InvalidDataException("Expected a value, but got " + current);
         }
 
         [Flags]
@@ -466,16 +440,10 @@ namespace Sparrow.Json
             ToDisk = ValidateDouble | CompressStrings
         }
 
-        public struct WriteToken
+        public readonly struct WriteToken(int valuePosition, BlittableJsonToken token)
         {
-            public int ValuePos;
-            public BlittableJsonToken WrittenToken;
-
-            public WriteToken(int position, BlittableJsonToken token)
-            {
-                ValuePos = position;
-                WrittenToken = token;
-            }
+            public readonly int ValuePos = valuePosition;
+            public readonly BlittableJsonToken WrittenToken = token;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

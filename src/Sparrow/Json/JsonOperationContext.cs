@@ -581,9 +581,8 @@ namespace Sparrow.Json
         {
             _jsonParserState.Reset();
             _objectJsonParser.Reset(builder);
-            _documentBuilder.Renew(documentId, mode);
+            _documentBuilder.Renew(documentId, mode, modifier);
             CachedProperties.NewDocument();
-            _documentBuilder._modifier = modifier;
             _documentBuilder.ReadObjectDocument();
             if (_documentBuilder.Read() == false)
                 throw new InvalidOperationException("Partial content in object json parser shouldn't happen");
