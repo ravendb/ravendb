@@ -19,6 +19,8 @@ using Constants = Voron.Global.Constants;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Voron.Impl.Paging;
+using static Sparrow.PortableExceptions;
+using static Voron.VoronExceptions;
 
 namespace Voron.Impl
 {
@@ -102,9 +104,8 @@ namespace Voron.Impl
             var header = (TreeRootHeader*)_lowLevelTransaction.RootObjects.DirectRead(treeName);
             if (header != null)
             {
-                if (header->RootObjectType != type)
-                    ThrowInvalidTreeType(treeName, type, header);
-
+                ThrowIf<InvalidOperationException>(header->RootObjectType != type, $"Tried to open {treeName} as a {type}, but it is actually a {header->RootObjectType}");
+                    
                 tree = Tree.Open(_lowLevelTransaction, this, treeName, *header, isIndexTree, newPageAllocator);
 
                 _trees.Add(treeName, tree);
@@ -114,13 +115,6 @@ namespace Voron.Impl
 
             _trees.Add(treeName, null);
             return null;
-        }
-
-        [DoesNotReturn]
-        private static void ThrowInvalidTreeType(Slice treeName, RootObjectType type, TreeRootHeader* header)
-        {
-            throw new InvalidOperationException($"Tried to open {treeName} as a {type}, but it is actually a " +
-                                                header->RootObjectType);
         }
 
         public void Commit()
@@ -135,7 +129,7 @@ namespace Voron.Impl
 
         public Transaction BeginAsyncCommitAndStartNewTransaction(TransactionPersistentContext persistentContext)
         {
-            VoronExceptions.ThrowIfReadOnly(_lowLevelTransaction, "Cannot call begin async commit on read tx");
+            ThrowIfReadOnly(_lowLevelTransaction, "Cannot call begin async commit on read tx");
 
             PrepareForCommit();
             
@@ -411,7 +405,7 @@ namespace Voron.Impl
 
         public void DeleteTree(Slice name)
         {
-            VoronExceptions.ThrowIfReadOnly(_lowLevelTransaction, "Cannot create a new newRootTree with a read only transaction");
+            ThrowIfReadOnly(_lowLevelTransaction, "Cannot create a new newRootTree with a read only transaction");
 
             Tree tree = ReadTree(name);
             if (tree == null)
@@ -463,17 +457,16 @@ namespace Voron.Impl
 
         public void RenameTree(Slice fromName, Slice toName)
         {
-            VoronExceptions.ThrowIfReadOnly(_lowLevelTransaction, "Cannot rename a new tree with a read only transaction");
+            ThrowIfReadOnly(_lowLevelTransaction, "Cannot rename a new tree with a read only transaction");
 
             if (SliceComparer.Equals(toName, Constants.RootTreeNameSlice))
-                throw new InvalidOperationException("Cannot create a tree with reserved name: " + toName);
+                Throw<InvalidOperationException>($"Cannot create a tree with reserved name: {toName}");
 
-            if (ReadTree(toName) != null)
-                throw new ArgumentException("Cannot rename a tree with the name of an existing tree: " + toName);
+            var existingTree = ReadTree(toName);
+            ThrowIfNotNull<ArgumentException>(existingTree,$"Cannot rename a tree with the name of an existing tree: {toName}");
 
             Tree fromTree = ReadTree(fromName);
-            if (fromTree == null)
-                throw new ArgumentException("Tree " + fromName + " does not exists");
+            ThrowIfNull<ArgumentException>(fromTree, $"Tree {fromName} does not exists");
 
             _lowLevelTransaction.RootObjects.Delete(fromName);
 
@@ -502,7 +495,7 @@ namespace Voron.Impl
             if (tree != null)
                 return tree;
 
-            VoronExceptions.ThrowIfReadOnly(_lowLevelTransaction, $"No such tree: '{name}' and cannot create trees in read transactions");
+            ThrowIfReadOnly(_lowLevelTransaction, $"No such tree: '{name}' and cannot create trees in read transactions");
 
             tree = Tree.Create(_lowLevelTransaction, this, name, flags, type, isIndexTree, newPageAllocator);
             ref var state = ref tree.State.Modify();

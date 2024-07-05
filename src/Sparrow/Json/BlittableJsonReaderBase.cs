@@ -236,7 +236,7 @@ namespace Sparrow.Json
         [Conditional("DEBUG")]
         protected void AssertContextNotDisposed()
         {
-            if (_context?.Disposed ?? false)
+            if (_context?.IsDisposed ?? false)
             {
                 throw new ObjectDisposedException("blittable's context has been disposed, blittable should not be used now in that case!");
             }
@@ -245,7 +245,7 @@ namespace Sparrow.Json
         [Conditional("DEBUG")]
         protected void AssertContextNotDisposed(JsonOperationContext context)
         {
-            if (context?.Disposed ?? false)
+            if (context?.IsDisposed ?? false)
             {
                 throw new ObjectDisposedException("blittable's context has been disposed, blittable should not be used now in that case!");
             }
