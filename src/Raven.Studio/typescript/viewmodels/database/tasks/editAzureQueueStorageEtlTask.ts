@@ -20,7 +20,6 @@ import documentMetadata = require("models/database/documents/documentMetadata");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import testQueueEtlCommand = require("commands/database/tasks/testQueueEtlCommand");
 import document = require("models/database/documents/document");
-import popoverUtils = require("common/popoverUtils");
 import { highlight, languages } from "prismjs";
 import licenseModel from "models/auth/licenseModel";
 import { EditAzureQueueStorageEtlInfoHub } from "viewmodels/database/tasks/EditAzureQueueStorageEtlInfoHub";

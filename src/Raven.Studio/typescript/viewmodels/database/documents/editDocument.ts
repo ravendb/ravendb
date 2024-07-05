@@ -1277,9 +1277,8 @@ class editDocument extends shardViewModelBase {
                         case "older":
                             return currentRevisionIndex < this.revisionsToCompare().length - 1;
                         default:
-                            generalUtils.assertUnreachable(direction);
+                            return assertUnreachable(direction);
                     }
-                    break;
                 }
 
                 default:
