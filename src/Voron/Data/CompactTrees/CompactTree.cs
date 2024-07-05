@@ -328,69 +328,60 @@ public sealed partial class CompactTree : IPrepareForCommit
 
     public static unsafe CompactTree InternalCreate(Tree parent, Slice name)
     {
-        Lookup<CompactKeyLookup> inner;
+        if (parent.TryRead(name, out _))
+            return new CompactTree(Lookup<CompactKeyLookup>.InternalCreate(parent, name));
+
         var llt = parent.Llt;
-        var existing = parent.Read(name);
-        if (existing == null)
+        if (llt.Flags != TransactionFlags.ReadWrite)
+            return null;
+
+        if ((parent.State.Header.Flags & TreeFlags.CompactTrees) != TreeFlags.CompactTrees)
         {
-            if (llt.Flags != TransactionFlags.ReadWrite)
-                return null;
+            // We will modify the parent tree state because there are Compact Trees in it.
+            ref var parentState = ref parent.State.Modify();
+            parentState.Flags |= TreeFlags.CompactTrees;
+        }
 
-            if ((parent.State.Header.Flags & TreeFlags.CompactTrees) != TreeFlags.CompactTrees)
+        long dictionaryId;
+
+        // This will be created a single time and stored in the root page.
+        using var scoped = Slice.From(llt.Allocator, PersistentDictionary.DictionaryKey, out var defaultKey);
+        var existingDictionary = llt.RootObjects.DirectRead(defaultKey);
+        if (existingDictionary == null)
+        {
+            dictionaryId = PersistentDictionary.CreateDefault(llt);
+
+            using var scope = llt.RootObjects.DirectAdd(defaultKey, sizeof(PersistentDictionaryRootHeader), out var ptr);
+            *(PersistentDictionaryRootHeader*)ptr = new PersistentDictionaryRootHeader()
             {
-                // We will modify the parent tree state because there are Compact Trees in it.
-                ref var parentState = ref parent.State.Modify();
-                parentState.Flags |= TreeFlags.CompactTrees;
-            }
-
-            long dictionaryId;
-
-            // This will be created a single time and stored in the root page.
-            using var scoped = Slice.From(llt.Allocator, PersistentDictionary.DictionaryKey, out var defaultKey);
-            var existingDictionary = llt.RootObjects.DirectRead(defaultKey);
-            if (existingDictionary == null)
-            {
-                dictionaryId = PersistentDictionary.CreateDefault(llt);
-
-                using var scope = llt.RootObjects.DirectAdd(defaultKey, sizeof(PersistentDictionaryRootHeader), out var ptr);
-                *(PersistentDictionaryRootHeader*)ptr = new PersistentDictionaryRootHeader()
-                {
-                    RootObjectType = RootObjectType.PersistentDictionary,
-                    PageNumber = dictionaryId
-                };
-            }
-            else
-            {
-                dictionaryId = ((PersistentDictionaryRootHeader*)existingDictionary)->PageNumber;
-            }
-
-            long containerId = Container.Create(llt);
-            inner = Lookup<CompactKeyLookup>.InternalCreate(parent, name, dictionaryId, containerId);
+                RootObjectType = RootObjectType.PersistentDictionary, PageNumber = dictionaryId
+            };
         }
         else
         {
-            inner = Lookup<CompactKeyLookup>.InternalCreate(parent, name);
+            dictionaryId = ((PersistentDictionaryRootHeader*)existingDictionary)->PageNumber;
         }
 
-        return new CompactTree(inner);
+        long containerId = Container.Create(llt);
+        return new CompactTree(
+            Lookup<CompactKeyLookup>.InternalCreate(parent, name, dictionaryId, containerId));
     }
 
     public static bool HasDictionary(LowLevelTransaction llt)
     {
         using var scoped = Slice.From(llt.Allocator, PersistentDictionary.DictionaryKey, out var dictionarySlice);
-        var existingDictionary = llt.RootObjects.Read(dictionarySlice);
-        return existingDictionary != null;
+
+        return llt.RootObjects.TryRead(dictionarySlice, out _);
     }
     
     public static unsafe long GetDictionaryId(LowLevelTransaction llt)
     {
         using var scoped = Slice.From(llt.Allocator, PersistentDictionary.DictionaryKey, out var dictionarySlice);
-        var read = llt.RootObjects.Read(dictionarySlice);
-        if (read != null)
-        {
-            return ((PersistentDictionaryRootHeader*)read.Reader.Base)->PageNumber;
-        }
-        return -1;
+
+        if (llt.RootObjects.TryRead(dictionarySlice, out var reader) == false)
+            return -1;
+
+        return ((PersistentDictionaryRootHeader*)reader.Base)->PageNumber;
     }
 
     public bool TryGetValue(string key, out long value)

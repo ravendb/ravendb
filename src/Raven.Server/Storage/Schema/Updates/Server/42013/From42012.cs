@@ -57,7 +57,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                                 {
                                     var key = it.CurrentKey;
                                     var keyAsString = key.ToString();   // old identity key
-                                    var value = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+                                    var value = it.CreateReaderForCurrent().Read<long>();
 
                                     var newKey = keyAsString.Substring(identityPrefix.ToString().Length);
 

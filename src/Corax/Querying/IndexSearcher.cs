@@ -389,11 +389,11 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public FieldIndexingMode GetFieldIndexingModeForDynamic(Slice name)
     {
         _persistedDynamicTreeAnalyzer ??= _transaction.ReadTree(Constants.IndexWriter.DynamicFieldsAnalyzersSlice);
-        var readResult = _persistedDynamicTreeAnalyzer?.Read(name);
-        if (readResult == null)
+
+        if (_persistedDynamicTreeAnalyzer.TryRead(name, out var reader) == false)
             return FieldIndexingMode.Normal;
 
-        var mode = (FieldIndexingMode)readResult.Reader.ReadByte();
+        var mode = (FieldIndexingMode)reader.Read<byte>();
         return mode;
     }
 
@@ -571,7 +571,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             {
                 do
                 {
-                    (_, long nullTermId) = it.CreateReaderForCurrent().ReadStructure<(long, long)>();
+                    (_, long nullTermId) = it.CreateReaderForCurrent().Read<(long, long)>();
                     nullTermsMarkers.Add(nullTermId);
                 } while (it.MoveNext());
             }
@@ -581,11 +581,11 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private long GetRootPageByFieldName(Slice fieldName)
     {
         var it = _fieldsTree.Iterate(false);
-        var result = _fieldsTree.Read(fieldName);
-        if (result is null)
+
+        if (_fieldsTree.TryRead(fieldName, out var reader) == false)
             return -1;
         
-        var state = (LookupState*)result.Reader.Base;
+        var state = (LookupState*)reader.Base;
         Debug.Assert(state->RootObjectType is RootObjectType.Lookup, "state->RootObjectType is RootObjectType.Lookup");
         return state->RootPage;
     }

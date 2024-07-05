@@ -346,7 +346,7 @@ namespace Voron
                 var buffer = new byte[16];
                 Debug.Assert(dbId != null);
                 // ReSharper disable once PossibleNullReferenceException
-                var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
+                var dbIdBytes = dbId.Reader.Read(buffer, 16);
                 if (dbIdBytes != 16)
                     VoronUnrecoverableErrorException.Raise(tx,
                         "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
@@ -385,7 +385,7 @@ namespace Voron
                     if (schemaVersion == null)
                         SchemaErrorException.Raise(this, "Could not find schema version in metadata tree, possible mismatch / corruption?");
 
-                    schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
+                    schemaVersionVal = schemaVersion.Reader.Read<int>();
                     Options.OnVersionReadingTransaction?.Invoke(readTx);
                 }
 
@@ -1033,7 +1033,7 @@ namespace Voron
                                     {
                                         do
                                         {
-                                            var rootObjectType = (RootObjectType)it.CreateReaderForCurrent().ReadByte();
+                                            var rootObjectType = (RootObjectType)it.CreateReaderForCurrent().Read<byte>();
                                             switch (rootObjectType)
                                             {
                                                 case RootObjectType.Lookup:
@@ -1099,7 +1099,7 @@ namespace Voron
                                 RegisterTableSection(tableTree, name, TableSchema.ActiveCandidateSectionSlice);
                                 RegisterTableSection(tableTree, name, TableSchema.InactiveSectionSlice);
                                 var readResult = tableTree.Read(TableSchema.ActiveSectionSlice);
-                                long pageNumber = readResult.Reader.ReadLittleEndianInt64();
+                                long pageNumber = readResult.Reader.Read<long>();
                                 var activeDataSmallSection = new ActiveRawDataSmallSection(tx, pageNumber);
                                 // off by one here because of the section header
                                 r.Add(activeDataSmallSection.PageNumber, name + "/" + TableSchema.ActiveSectionSlice + "/header");

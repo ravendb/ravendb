@@ -1507,7 +1507,7 @@ namespace Raven.Server.Documents.Revisions
         private static long CountOfRevisions(DocumentsOperationContext context, Slice prefix)
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
-            return numbers.Read(prefix)?.Reader.ReadLittleEndianInt64() ?? 0;
+            return numbers.Read(prefix)?.Reader.Read<long>() ?? 0;
         }
 
         public Document GetRevisionBefore(DocumentsOperationContext context, string id, DateTime max)

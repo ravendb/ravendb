@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var read = tree.Read(VersionSlice);
             if (read != null)
-                return read.Reader.ReadLittleEndianInt64();
+                return read.Reader.Read<long>();
 
             return isNew
                 ? BloomFilterVersion.CurrentVersion
@@ -132,13 +132,13 @@ namespace Raven.Server.Documents.Indexes
         {
             var read = tree.Read(mode == Mode.X64 ? Count64Slice : Count32Slice);
             if (read != null)
-                return read.Reader.ReadLittleEndianInt64();
+                return read.Reader.Read<long>();
 
             read = tree.Read(mode == Mode.X64 ? Count32Slice : Count64Slice);
             if (read != null)
             {
                 mode = mode == Mode.X64 ? Mode.X86 : Mode.X64;
-                return read.Reader.ReadLittleEndianInt64();
+                return read.Reader.Read<long>();
             }
 
             return 0;
@@ -383,7 +383,7 @@ namespace Raven.Server.Documents.Indexes
                 if (read == null)
                     return 0;
 
-                return read.Reader.ReadLittleEndianInt64();
+                return read.Reader.Read<long>();
             }
 
             internal bool Add(LazyStringValue key)

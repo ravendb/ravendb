@@ -1,12 +1,7 @@
 namespace Voron
 {
-    public class ReadResult
+    public class ReadResult(ValueReader reader)
     {
-        public ReadResult(ValueReader reader)
-        {
-            Reader = reader;
-        }
-         
-        public ValueReader Reader { get; private set; }
+        public ValueReader Reader { get; private set; } = reader;
     }
 }

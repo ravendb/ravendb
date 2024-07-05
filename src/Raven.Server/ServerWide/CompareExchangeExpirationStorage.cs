@@ -41,7 +41,7 @@ namespace Raven.Server.ServerWide
                 if (it.Seek(Slices.BeforeAllKeys) == false)
                     return false;
 
-                var entryTicks = it.CurrentKey.CreateReader().ReadBigEndianInt64();
+                var entryTicks = it.CurrentKey.CreateReader().ReadBigEndian<long>();
                 return entryTicks <= currentTicks;
             }
         }
@@ -56,7 +56,7 @@ namespace Raven.Server.ServerWide
 
                 do
                 {
-                    var entryTicks = it.CurrentKey.CreateReader().ReadBigEndianInt64();
+                    var entryTicks = it.CurrentKey.CreateReader().ReadBigEndian<long>();
                     if (entryTicks > currentTicks)
                         yield break;
 

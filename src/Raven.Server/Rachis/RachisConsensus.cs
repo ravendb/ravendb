@@ -422,7 +422,7 @@ namespace Raven.Server.Rachis
                 return 0L;
             }
 
-            return read.Reader.ReadLittleEndianInt64();
+            return read.Reader.Read<long>();
         }
 
         public string ReadNodeTag(ClusterOperationContext context)
@@ -1651,8 +1651,8 @@ namespace Raven.Server.Rachis
                 return;
             }
             var reader = read.Reader;
-            lastTruncatedIndex = reader.ReadLittleEndianInt64();
-            lastTruncatedTerm = reader.ReadLittleEndianInt64();
+            lastTruncatedIndex = reader.Read<long>();
+            lastTruncatedTerm = reader.Read<long>();
         }
 
         public unsafe BlittableJsonReaderObject GetEntry(ClusterOperationContext context, long index,
@@ -1686,7 +1686,7 @@ namespace Raven.Server.Rachis
             var read = state.Read(LastCommitSlice);
             if (read == null)
                 return 0;
-            return read.Reader.ReadLittleEndianInt64();
+            return read.Reader.Read<long>();
         }
 
         public void GetLastCommitIndex(ClusterOperationContext context, out long index, out long term)
@@ -1702,8 +1702,8 @@ namespace Raven.Server.Rachis
                 return;
             }
             var reader = read.Reader;
-            index = reader.ReadLittleEndianInt64();
-            term = reader.ReadLittleEndianInt64();
+            index = reader.Read<long>();
+            term = reader.Read<long>();
         }
 
         public void GetLastCommitIndex(out long index, out long term)
@@ -1726,13 +1726,13 @@ namespace Raven.Server.Rachis
             if (read != null)
             {
                 var reader = read.Reader;
-                var oldIndex = reader.ReadLittleEndianInt64();
+                var oldIndex = reader.Read<long>();
                 if (oldIndex > index)
                     throw new InvalidOperationException(
                         $"Cannot reduce the last commit index (is {oldIndex:#,#;;0} but was requested to reduce to {index:#,#;;0})");
                 if (oldIndex == index)
                 {
-                    var oldTerm = reader.ReadLittleEndianInt64();
+                    var oldTerm = reader.Read<long>();
                     if (oldTerm != term)
                         throw new InvalidOperationException(
                             $"Cannot change just the last commit index (at {oldIndex:#,#;;0} index, was {oldTerm:#,#;;0} but was requested to change it to {term:#,#;;0})");
@@ -1971,7 +1971,7 @@ namespace Raven.Server.Rachis
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
             var read = state.Read(CurrentTermSlice);
 
-            var votedTerm = read?.Reader.ReadLittleEndianInt64();
+            var votedTerm = read?.Reader.Read<long>();
 
             if (votedTerm != term && votedTerm.HasValue)
                 return (null, votedTerm.Value);
@@ -2297,7 +2297,7 @@ namespace Raven.Server.Rachis
             if (reader == null)
                 return false;
 
-            return Convert.ToBoolean(reader.Reader.ReadByte());
+            return Convert.ToBoolean(reader.Reader.Read<byte>());
         }
 
 

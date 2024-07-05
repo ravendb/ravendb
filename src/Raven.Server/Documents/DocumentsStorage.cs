@@ -576,10 +576,10 @@ namespace Raven.Server.Documents
             }
 
             var tree = tx.CreateTree(EtagsSlice);
-            var readResult = tree.Read(LastEtagSlice);
+
             long lastEtag = 0;
-            if (readResult != null)
-                lastEtag = readResult.Reader.ReadLittleEndianInt64();
+            if (tree.TryRead(LastEtagSlice, out var reader))
+                lastEtag = reader.Read<long>();
 
             var lastDocumentEtag = ReadLastDocumentEtag(tx);
             if (lastDocumentEtag > lastEtag)
@@ -627,7 +627,7 @@ namespace Raven.Server.Documents
                 return 0;
             }
 
-            return readResult.Reader.ReadLittleEndianInt64();
+            return readResult.Reader.Read<long>();
         }
 
         public void SetLastCompletedClusterTransactionIndex(DocumentsOperationContext context, long index)
@@ -2462,7 +2462,7 @@ namespace Raven.Server.Documents
                 do
                 {
                     var dbId = it.CurrentKey.ToString();
-                    yield return new KeyValuePair<string, long>(dbId, it.CreateReaderForCurrent().ReadLittleEndianInt64());
+                    yield return new KeyValuePair<string, long>(dbId, it.CreateReaderForCurrent().Read<long>());
                 }
                 while (it.MoveNext());
             }
@@ -2475,7 +2475,7 @@ namespace Raven.Server.Documents
             if (readResult == null)
                 return 0;
 
-            return readResult.Reader.ReadLittleEndianInt64();
+            return readResult.Reader.Read<long>();
         }
 
         public static void SetLastReplicatedEtagFrom(DocumentsOperationContext context, string dbId, long etag)

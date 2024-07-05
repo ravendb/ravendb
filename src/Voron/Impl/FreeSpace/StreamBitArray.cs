@@ -55,7 +55,7 @@ namespace Voron.Impl.FreeSpace
             if (!BitConverter.IsLittleEndian)
                 throw new NotSupportedException("Big endian conversion is not supported yet.");
 
-            SetCount = reader.ReadLittleEndianInt32();
+            SetCount = reader.Read<int>();
 
             unsafe
             {
