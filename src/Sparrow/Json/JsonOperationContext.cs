@@ -333,7 +333,7 @@ namespace Sparrow.Json
 
                     //_parent disposal sets _managedBuffers to null,
                     //throwing ObjectDisposedException() to make it more visible
-                    if (_parent.Disposed)
+                    if (_parent.IsDisposed)
                         ThrowParentWasDisposed();
 
                     if (_allocatedMemory != null)
@@ -409,7 +409,7 @@ namespace Sparrow.Json
         }
 
         private readonly DisposeOnce<SingleAttempt> _disposeOnceRunner;
-        public bool Disposed => _disposeOnceRunner.Disposed;
+        public bool IsDisposed => _disposeOnceRunner.Disposed;
 
         public override void Dispose()
         {
@@ -588,7 +588,7 @@ namespace Sparrow.Json
             string debugTag,
             CancellationToken token)
         {
-            if (Disposed)
+            if (IsDisposed)
                 ThrowObjectDisposed();
 
             _jsonParserState.Reset();
@@ -756,7 +756,7 @@ namespace Sparrow.Json
 
         private void EnsureNotDisposed()
         {
-            if (Disposed)
+            if (IsDisposed)
                 ThrowObjectDisposed();
         }
 
@@ -842,7 +842,7 @@ namespace Sparrow.Json
 
         protected internal virtual void Renew()
         {
-            if (Disposed)
+            if (IsDisposed)
                 ThrowObjectDisposed();
 
             if (_activeAllocatePathCaches == null)

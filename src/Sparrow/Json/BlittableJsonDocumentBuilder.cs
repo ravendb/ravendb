@@ -9,7 +9,7 @@ namespace Sparrow.Json
 {
     public sealed class BlittableJsonDocumentBuilder : AbstractBlittableJsonDocumentBuilder
     {
-        private static readonly StringSegment UnderscoreSegment = new StringSegment("_");
+        private static readonly StringSegment UnderscoreSegment = new("_");
 
         private readonly JsonOperationContext _context;
         private UsageMode _mode;
@@ -19,7 +19,7 @@ namespace Sparrow.Json
         private readonly JsonParserState _state;
         private LazyStringValue _fakeFieldName;
 
-        private readonly SingleUseFlag _disposed = new SingleUseFlag();
+        private readonly SingleUseFlag _disposed = new();
 
         private WriteToken _writeToken;
         private string _debugTag;
