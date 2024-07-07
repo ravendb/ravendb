@@ -40,7 +40,7 @@ namespace Sparrow.Utils
                 }
                 else
                 {
-                    suffix = Environment.Is64BitProcess ? ".arm.64.so" : ".arm.32.so";
+                    suffix = Environment.Is64BitProcess ? ".linux.arm.64.so" : ".linux.arm.32.so";
                 }
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))

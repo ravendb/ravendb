@@ -12,15 +12,7 @@ namespace Sparrow.Server.Platform
     {
         public const int PAL_VER = 62000; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
-        public static readonly PalDefinitions.SystemInformation SysInfo = GetSystemInfo();
-
-        private static PalDefinitions.SystemInformation GetSystemInfo()
-        {
-            var rc = rvn_get_system_information(out var info, out var errorCode);
-            if (rc != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(rc, errorCode, "Cannot get system information");
-            return info;
-        }
+        public static readonly PalDefinitions.SystemInformation SysInfo;
         
         static  Pal()
         {
