@@ -470,6 +470,7 @@ namespace Voron
                 }
             }
 
+            Options.AfterDatabaseCreation?.Invoke(this);
         }
 
         public IFreeSpaceHandling FreeSpaceHandling => _freeSpaceHandling;
