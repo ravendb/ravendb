@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Revisions;
-using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -48,7 +47,7 @@ internal abstract class AbstractRevisionsHandlerProcessorForPostRevisionsConfigu
 
     protected override ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
     {
-        RequestHandler.LogTaskToAudit(AdminRevisionsHandler.ReadRevisionsConfigTag, _index, configuration);
+        RequestHandler.LogTaskToAudit(RevisionsHandler.ReadRevisionsConfigTag, Index, configuration);
         return ValueTask.CompletedTask;
     }
 }
