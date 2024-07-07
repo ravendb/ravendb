@@ -138,6 +138,7 @@
     <ClInclude Include="inc\status_codes.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\posix\pager.c" />
     <ClCompile Include="test.c" />
     <ClCompile Include="src\fileutils_all.c" />
     <ClCompile Include="src\posix\fileutils.c">
