@@ -27,7 +27,7 @@ public class RavenRetryTheoryAttribute : RetryTheoryAttribute, ITraitAttribute
     {
         get
         {
-            return RavenTheoryAttribute.RavenTheorySkip(_skip, _category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, s3Required: S3Required, azureRequired: AzureRequired);
+            return RavenTheoryAttribute.ShouldSkip(_skip, _category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, s3Required: S3Required, azureRequired: AzureRequired);
         }
 
         set => _skip = value;

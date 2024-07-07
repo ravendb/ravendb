@@ -25,15 +25,15 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
     {
         get
         {
-            return RavenFactSkip(_skip,  _category,  licenseRequired: LicenseRequired,  nightlyBuildRequired: NightlyBuildRequired,  msSqlRequired: MsSqlRequired,  elasticSearchRequired: ElasticSearchRequired);
+            return ShouldSkip(_skip,  _category,  licenseRequired: LicenseRequired,  nightlyBuildRequired: NightlyBuildRequired,  msSqlRequired: MsSqlRequired,  elasticSearchRequired: ElasticSearchRequired);
         }
 
         set => _skip = value;
     }
 
-    internal static string RavenFactSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool msSqlRequired, bool elasticSearchRequired)
+    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool msSqlRequired, bool elasticSearchRequired)
     {
-        var s = RavenAttributeSkip(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
+        var s = ShouldSkip(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
         if (s != null)
             return s;
 
@@ -46,7 +46,7 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
         return null;
     }
 
-    internal static string RavenAttributeSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired)
+    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired)
     {
         if (skip != null)
             return skip;
