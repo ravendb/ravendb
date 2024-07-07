@@ -20,16 +20,12 @@ namespace Raven.Server.Documents.Handlers.Admin
                 await processor.ExecuteAsync();
         }
 
-        public const string ConflictedRevisionsConfigTag = "conflicted-revisions-config";
-
         [RavenAction("/databases/*/admin/revisions/conflicts/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ConfigConflictedRevisions()
         {
             using (var processor = new AdminRevisionsHandlerProcessorForPostRevisionsConflictsConfiguration(this))
                 await processor.ExecuteAsync();
         }
-
-        public const string ReadRevisionsConfigTag = "read-revisions-config";
 
         [RavenAction("/databases/*/admin/revisions/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task PostRevisionsConfiguration()
