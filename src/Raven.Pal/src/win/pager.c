@@ -5,6 +5,14 @@
 #include "status_codes.h"
 #include "internal_win.h"
 
+struct handle
+{
+    HANDLE file_handle;
+    HANDLE file_mapping_handle;
+    void* base_address;
+    uint64_t allocation_size;
+    int32_t open_flags;
+};
 
 BOOL CALLBACK InitializeCriticalSectionOnce(PINIT_ONCE initOnce,PVOID Parameter,PVOID *Context)
 {
@@ -33,20 +41,21 @@ uint64_t _GetNearestFileSize(uint64_t needed_size)
     return (needed_size + ONE_GB -1) & ~ONE_GB;
 }
 
-int32_t _RecoverFromMemoryLockFailure(void* mem, SIZE_T size)
+BOOL _RecoverFromMemoryLockFailure(void* mem, SIZE_T size)
 {
     static INIT_ONCE initOnce = INIT_ONCE_STATIC_INIT;
     static CRITICAL_SECTION working_set_increase_cs;
     InitOnceExecuteOnce(&initOnce, InitializeCriticalSectionOnce, &working_set_increase_cs, NULL);
     EnterCriticalSection(&working_set_increase_cs);
 
+    BOOL rc;
     SIZE_T min_working_set, max_working_set;
     if(!GetProcessWorkingSetSize(GetCurrentProcess(),
         &min_working_set,
         &max_working_set))
     {
-        LeaveCriticalSection(&working_set_increase_cs);
-        return 0;
+        rc = FALSE;
+        goto Exit;
     }
 
     // From: https://msdn.microsoft.com/en-us/library/windows/desktop/ms686234(v=vs.85).aspx
@@ -64,51 +73,50 @@ int32_t _RecoverFromMemoryLockFailure(void* mem, SIZE_T size)
     // Let's increase the max as well.
     max_working_set = rvn_max(max_working_set, next_working_set_size);
 
-    int32_t res = SetProcessWorkingSetSize(GetCurrentProcess(),
+    rc = SetProcessWorkingSetSize(GetCurrentProcess(),
         next_working_set_size,
         max_working_set);
     
+Exit:
     LeaveCriticalSection(&working_set_increase_cs);
-
-    return res;
+    return rc;
 }
-
-struct handle
-{
-    HANDLE file_handle;
-    HANDLE file_mapping_handle;
-    void* base_address;
-    uint64_t allocation_size;
-    int32_t open_flags;
-};
 
 int32_t rvn_lock_memory(int32_t open_flags, void* mem, int64_t size, int32_t *detailed_error_code)
 {
+    int32_t rc = SUCCESS;
     if(sizeof(SIZE_T) == 4)
     {
         if(size >= INT32_MAX) // we won't uspport large values on 32 bits
         {
-            *detailed_error_code = 0;
-            return FAIL_SIZE_INVALID_32_BITS;
+            rc = FAIL_SIZE_INVALID_32_BITS;
+            goto Exit;
         }
     }
     if(size <= 0)
     {
-        *detailed_error_code = 0;
-        return FAIL_SIZE_NEGATIVE_OR_ZERO;
+        rc = FAIL_SIZE_NEGATIVE_OR_ZERO;
+        goto Exit;
     }
     
     for (int i = 0; i < 10; ++i)
     {
         if(VirtualLock(mem, (SIZE_T)size) ||
             open_flags & OPEN_FILE_DO_NOT_CONSIDER_MEMORY_LOCK_FAILURE_AS_CATASTROPHIC_ERROR)
-            return 1;
-
-        *detailed_error_code = GetLastError();
-        if(_RecoverFromMemoryLockFailure(mem, size))
+        {
+            rc = SUCCESS;
             break;
+        }
+
+        if(!_RecoverFromMemoryLockFailure(mem, size))
+        {
+            rc = FAIL_LOCK_MEMORY;
+            break;
+        }
     }
-    return 0;
+Exit:
+    *detailed_error_code = GetLastError();
+    return rc;
 }
 
 EXPORT
@@ -116,6 +124,7 @@ int32_t rvn_unmap_memory(
     void* mem,
     int32_t *detailed_error_code)
 {
+    *detailed_error_code = 0;
     if(!UnmapViewOfFile(mem))
     {
         *detailed_error_code = GetLastError();
@@ -130,18 +139,19 @@ int32_t rvn_map_memory(void* handle,
     void** mem,
     int32_t *detailed_error_code)
 {
+    int32_t rc = SUCCESS;
     if(sizeof(void*) == 4)
     {
         if(size > INT32_MAX)
         {
-            *detailed_error_code = 0;
-            return FAIL_SIZE_INVALID_32_BITS;
+            rc = FAIL_SIZE_INVALID_32_BITS;
+            goto Exit;
         }
     }
     if(size <= 0)
     {
-        *detailed_error_code = 0;
-        return FAIL_SIZE_NEGATIVE_OR_ZERO;
+        rc = FAIL_SIZE_NEGATIVE_OR_ZERO;
+        goto Exit;
     }
     
     struct handle* handle_ptr = handle;
@@ -157,22 +167,25 @@ int32_t rvn_map_memory(void* handle,
 
     if(*mem == NULL)
     {
-        *detailed_error_code = GetLastError();
-        return FAIL_MAP_VIEW_OF_FILE;
+        rc = FAIL_MAP_VIEW_OF_FILE;
+        goto Exit;
     }
 
     if(handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
     {
-        int rc = rvn_lock_memory(handle_ptr->open_flags, *mem, size, detailed_error_code);
+        // intentionally returning the error code & rc from the lock_memory call
+        int mem_lock_rc = rvn_lock_memory(handle_ptr->open_flags, *mem, size, detailed_error_code);
         if(rc != SUCCESS)
         {
             UnmapViewOfFile(*mem);
             *mem = NULL;
-            return rc;
+            return mem_lock_rc;
         }
     }
-    
-    return SUCCESS;
+
+Exit:
+    *detailed_error_code = GetLastError();
+    return rc;
 }
 int32_t _open_pager_file(HANDLE h,
     int32_t open_flags,
@@ -182,12 +195,16 @@ int32_t _open_pager_file(HANDLE h,
     int64_t* memory_size,
     int32_t *detailed_error_code)
 {
+    int32_t rc = SUCCESS;
+    HANDLE m = INVALID_HANDLE_VALUE;
+    struct handle* handle_ptr = NULL;
+    void *mem = NULL;
+
     LARGE_INTEGER file_size;
     if(!GetFileSizeEx(h, &file_size) || file_size.QuadPart < 0)
     {
-        *detailed_error_code = GetLastError();
-        CloseHandle(h);
-        return FAIL_GET_FILE_SIZE;
+        rc = FAIL_GET_FILE_SIZE;
+        goto Error;
     }
     int64_t min_file_size = rvn_max(
         (req_file_size + ALLOCATION_GRANULARITY - 1) & ~(ALLOCATION_GRANULARITY - 1), 
@@ -197,36 +214,26 @@ int32_t _open_pager_file(HANDLE h,
     if(min_file_size  > file_size.QuadPart)
     {
         file_size.QuadPart = min_file_size;
-        int rc = _resize_file(h, min_file_size, detailed_error_code);
-        if(rc != SUCCESS)
-        {
-            CloseHandle(h);
-            return rc;
-        }
+        rc = _resize_file(h, min_file_size, detailed_error_code);
+        goto Error;
     }
 
     DWORD flProtect = (open_flags & OPEN_FILE_WRITABLE_MAP) ? PAGE_READWRITE : PAGE_READONLY;
-    HANDLE m = CreateFileMapping(h,
-      NULL,
-      flProtect,
-      0,
-      0,
-      NULL);
+    HANDLE m = CreateFileMapping(h,NULL, flProtect, 0, 0, NULL);
     
     if(m == NULL)
     {
-        *detailed_error_code = GetLastError();
-        CloseHandle(h);
-        return FAIL_MMAP64;
+        rc = FAIL_MMAP64;
+        goto Error;
     }
 
     if((open_flags & OPEN_FILE_DO_NOT_MAP))
     {
-        struct handle* handle_ptr = calloc(1, sizeof(struct handle));
+        handle_ptr = calloc(1, sizeof(struct handle));
         if(handle_ptr == NULL)
         {
-            CloseHandle(h);
-            return FAIL_NOMEM;
+            rc = FAIL_NOMEM;
+            goto Error;
         }
         handle_ptr->file_handle = h;
         handle_ptr->open_flags = open_flags;
@@ -240,34 +247,27 @@ int32_t _open_pager_file(HANDLE h,
         (FILE_MAP_READ | FILE_MAP_WRITE) :
         ((open_flags & OPEN_FILE_COPY_ON_WRITE) ? FILE_MAP_COPY : FILE_MAP_READ);
     
-    void* mem = MapViewOfFile(m,
-        dwDesiredAccess,
-        0,
-        0,
-        0);
+    void* mem = MapViewOfFile(m, dwDesiredAccess, 0, 0, 0);
     if(mem == NULL)
     {
-        *detailed_error_code = GetLastError();
-        CloseHandle(m);
-        CloseHandle(h);
-        return FAIL_MAP_VIEW_OF_FILE;
+        rc = FAIL_MAP_VIEW_OF_FILE;
+        goto Error;
     }
     CloseHandle(m);
+    m = INVALID_HANDLE_VALUE;
 
     if(open_flags & OPEN_FILE_LOCK_MEMORY && 
         !rvn_lock_memory(open_flags, mem, file_size.QuadPart, detailed_error_code))
     {
-        UnmapViewOfFile(mem);
-        CloseHandle(h);
-        return FAIL_LOCK_MEMORY;
+       rc = FAIL_LOCK_MEMORY;
+       goto Error;
     }
 
-    struct handle* handle_ptr = calloc(1, sizeof(struct handle));
+    handle_ptr = calloc(1, sizeof(struct handle));
     if(handle_ptr == NULL)
     {
-        UnmapViewOfFile(mem);
-        CloseHandle(h);
-        return FAIL_NOMEM;
+        rc = FAIL_NOMEM;
+        goto Error;
     }
 
     handle_ptr->file_handle = h;
@@ -279,6 +279,17 @@ int32_t _open_pager_file(HANDLE h,
     *memory = mem;
     *memory_size = file_size.QuadPart;
     return SUCCESS;
+
+Error:
+    *detailed_error_code = GetLastError();
+    if(mem != NULL)
+    {
+        UnmapViewOfFile(mem);
+    }
+    CloseHandle(m);
+    CloseHandle(h);
+    free(handle_ptr);
+    return rc;
 }
 
 EXPORT int32_t
@@ -300,14 +311,9 @@ rvn_init_pager(const char* filename,
     dwFlagsAndAttributes |= open_flags & OPEN_FILE_SEQUENTIAL_SCAN ? FILE_FLAG_SEQUENTIAL_SCAN : FILE_FLAG_RANDOM_ACCESS;
     dwFlagsAndAttributes |= open_flags & OPEN_FILE_READ_ONLY ? FILE_ATTRIBUTE_READONLY : 0;
     
-    HANDLE h = CreateFile(filename,
-        dwDesiredAccess,
+    HANDLE h = CreateFile(filename, dwDesiredAccess,
         FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
-        NULL,
-        OPEN_ALWAYS,
-        dwFlagsAndAttributes,
-        NULL
-        );
+        NULL, OPEN_ALWAYS, dwFlagsAndAttributes, NULL );
     if(h == INVALID_HANDLE_VALUE)
     {
         *detailed_error_code = GetLastError();
