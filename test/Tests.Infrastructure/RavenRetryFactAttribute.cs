@@ -27,7 +27,7 @@ public class RavenRetryFactAttribute : RetryFactAttribute, ITraitAttribute
     {
         get
         {
-            return RavenFactAttribute.RavenFactSkip(_skip, _category, licenseRequired: LicenseRequired, nightlyBuildRequired: MsSqlRequired, msSqlRequired: ElasticSearchRequired, elasticSearchRequired: NightlyBuildRequired);
+            return RavenFactAttribute.ShouldSkip(_skip, _category, licenseRequired: LicenseRequired, nightlyBuildRequired: MsSqlRequired, msSqlRequired: ElasticSearchRequired, elasticSearchRequired: NightlyBuildRequired);
         }
 
         set => _skip = value;
