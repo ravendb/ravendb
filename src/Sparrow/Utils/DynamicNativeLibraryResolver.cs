@@ -8,16 +8,13 @@ namespace Sparrow.Utils
 #if NETCOREAPP3_1_OR_GREATER
     internal static class DynamicNativeLibraryResolver
     {
-        private static Dictionary<string, Func<string, string>> _registered = new Dictionary<string, Func<string, string>>();
+        private static HashSet<string> _registered = new();
         private static readonly HashSet<Assembly> _registeredAssemblies = new HashSet<Assembly>();
-        public static void Register(Assembly asm, string lib, Func<string, string> mutator = null)
+        public static void Register(Assembly asm, string lib)
         {
             lock (typeof(DynamicNativeLibraryResolver))
             {
-                var copy = new Dictionary<string, Func<string, string>>(_registered)
-                {
-                    [lib] = mutator
-                };
+                var copy = new HashSet<string>(_registered) { lib };
                 _registered = copy;
                 if (_registeredAssemblies.Add(asm) == false)
                     return;
@@ -27,7 +24,7 @@ namespace Sparrow.Utils
 
         private static IntPtr Resolver(string libraryName, Assembly assembly, DllImportSearchPath? dllImportSearchPath)
         {
-            if (_registered.TryGetValue(libraryName, out var mutator) == false)
+            if (_registered.Contains(libraryName) == false)
                 return IntPtr.Zero;
 
             string suffix;
@@ -40,7 +37,7 @@ namespace Sparrow.Utils
                 }
                 else
                 {
-                    suffix = Environment.Is64BitProcess ? ".arm.64.so" : ".arm.32.so";
+                    suffix = Environment.Is64BitProcess ? ".linux.arm.64.so" : ".linux.arm.32.so";
                 }
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
@@ -65,8 +62,6 @@ namespace Sparrow.Utils
             }
 
             var name = libraryName + suffix;
-            if (mutator != null)
-                name = mutator(name);
             return NativeLibrary.Load(name, assembly, dllImportSearchPath);
         }
     }

@@ -11,6 +11,6 @@ void main() {
     void* mem;
     int64_t size;
     int32_t err;
-    int rc = rvn_init_pager("test.db", 0, OPEN_FILE_NONE, &handle, &mem, &size, &err);
+    int rc = rvn_init_pager("test.db", 0, OPEN_FILE_TEMPORARY | OPEN_FILE_ENCRYPTED | OPEN_FILE_WRITABLE_MAP | OPEN_FILE_LOCK_MEMORY, &handle, &mem, &size, &err);
     rvn_increase_pager_size(handle, 2147483648, &handle, &mem, &size, &err);
 }

@@ -16,9 +16,6 @@
     <Filter Include="Source Files\Win">
       <UniqueIdentifier>{fab785fd-5e3f-4e13-91e8-b755fc0b2ba2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Posix">
-      <UniqueIdentifier>{40f59f77-9ccc-42d7-95ad-415edbb1b6b3}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\internal_posix.h">
@@ -70,36 +67,6 @@
     </ClCompile>
     <ClCompile Include="test.c">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\posix\fileutils.c">
-      <Filter>Source Files\Posix</Filter>
-    </ClCompile>
-    <ClCompile Include="src\posix\geterrorstring.c">
-      <Filter>Source Files\Posix</Filter>
-    </ClCompile>
-    <ClCompile Include="src\posix\getsysteminformation.c">
-      <Filter>Source Files\Posix</Filter>
-    </ClCompile>
-    <ClCompile Include="src\posix\journal.c">
-      <Filter>Source Files\Posix</Filter>
-    </ClCompile>
-    <ClCompile Include="src\posix\linuxonly.c">
-      <Filter>Source Files\Posix</Filter>
-    </ClCompile>
-    <ClCompile Include="src\posix\maconly.c">
-      <Filter>Source Files\Posix</Filter>
-    </ClCompile>
-    <ClCompile Include="src\posix\mapping.c">
-      <Filter>Source Files\Posix</Filter>
-    </ClCompile>
-    <ClCompile Include="src\posix\sync.c">
-      <Filter>Source Files\Posix</Filter>
-    </ClCompile>
-    <ClCompile Include="src\posix\virtualmemory.c">
-      <Filter>Source Files\Posix</Filter>
-    </ClCompile>
-    <ClCompile Include="src\posix\writefileheader.c">
-      <Filter>Source Files\Posix</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

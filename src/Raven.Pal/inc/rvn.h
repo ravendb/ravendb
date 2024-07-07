@@ -1,15 +1,17 @@
 #ifndef RVN_H
 #define RVN_H
 
-#ifdef __APPLE__
+#if !defined(_MSC_VER) 
+
 #define EXPORT __attribute__((visibility("default")))
 #define PRIVATE __attribute__((visibility("hidden")))
-#elif _WIN32
-#define EXPORT _declspec(dllexport)
-#define PRIVATE
+
 #else
-#define EXPORT __attribute__((visibility("default")))
-#define PRIVATE __attribute__((visibility("hidden")))
+
+
+#define EXPORT __declspec(dllexport)
+#define PRIVATE 
+#define __builtin_clzl _tzcnt_u64
 #endif
 
 #include <stdint.h>
@@ -37,19 +39,19 @@ enum
 
 #define ALLOCATION_GRANULARITY (64*1024)
 
-EXPORT struct SYSTEM_INFORMATION
+struct SYSTEM_INFORMATION
 {
     int32_t page_size;
     int32_t prefetch_status;
 
     /* can_prefetch => prefetch_status == true */
-} SYSTEM_INFORMATION;
+};
 
-EXPORT struct RVN_RANGE_LIST
+struct RVN_RANGE_LIST
 {
     void *virtual_address;
     size_t number_of_bytes;
-} RVN_RANGE_LIST;
+};
 
 EXPORT
 int32_t rvn_pager_get_file_handle(
@@ -89,7 +91,6 @@ rvn_increase_pager_size(void* handle,
 EXPORT int32_t
 rvn_close_pager(
     void *handle,
-    const void* memory,
     int32_t* detailed_error_code);
 
 
@@ -107,31 +108,15 @@ EXPORT int32_t
 rvn_get_error_string(int32_t error, char *buf, int32_t buf_size, int32_t *special_errno_flags);
 
 EXPORT int32_t
-rvn_create_and_mmap64_file(const char *path, int64_t initial_file_size, int32_t flags, void **handle, void **base_addr, int64_t *actual_file_size, int32_t *detailed_error_code);
-
-EXPORT int32_t
-rvn_prefetch_virtual_memory(void *virtual_address, int64_t length, int32_t *detailed_error_code);
-
-EXPORT int32_t
 rvn_get_system_information(struct SYSTEM_INFORMATION *sys_info, int32_t *detailed_error_code);
-
-EXPORT int32_t
-rvn_memory_sync(void *address, int64_t size, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_mmap_dispose_handle(void *handle, int32_t *detailed_error_code);
 
-EXPORT int32_t
-rvn_unmap(int32_t flags, void *address, int64_t size, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_prefetch_ranges(struct RVN_RANGE_LIST *range_list, int32_t count, int32_t *detailed_error_code);
 
-EXPORT int32_t
-rvn_protect_range(void *start_address, int64_t size, int32_t protection, int32_t *detailed_error_code);
-
-EXPORT int32_t
-rvn_allocate_more_space(int64_t new_length_after_adjustment, void *handle, void **new_address, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int64_t initial_file_size, int32_t durability_support, void **handle, int64_t *actual_size, int32_t *detailed_error_code);

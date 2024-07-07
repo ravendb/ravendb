@@ -12,6 +12,7 @@ using FastTests.Sparrow;
 using FastTests.Voron.FixedSize;
 using FastTests.Client.Indexing;
 using FastTests;
+using Sparrow.Server.Platform;
 
 namespace Tryouts;
 
@@ -33,11 +34,11 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new JavaScriptIndexTests(testOutputHelper))
+                using (var test = new FixedSizeBugs(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
                     //test.CanRoundTripSmallContainer("GreaterThan42B");
-                    test.CanIndexMapWithFanout(options: RavenTestBase.Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+                    test.CanAddDuplicate();
                 }
             }
             catch (Exception e)

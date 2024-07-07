@@ -18,14 +18,6 @@
 #include "internal_posix.h"
 #include "status_codes.h"
 
-EXPORT int32_t
-rvn_memory_sync(void *address, int64_t size, int32_t *detailed_error_code)
-{
-    int32_t rc = msync(address, size, MS_SYNC);
-    if (rc != 0)
-        *detailed_error_code = errno;
-    return rc;
-}
 
 PRIVATE int32_t
 _sync_directory_for_internal(char *dir_path, int32_t *detailed_error_code)
