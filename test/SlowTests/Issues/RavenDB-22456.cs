@@ -73,9 +73,7 @@ namespace SlowTests.Issues
             var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             using (var token = new OperationCancelToken(database.Configuration.Databases.OperationTimeout.AsTimeSpan, database.DatabaseShutdown, CancellationToken.None))
             {
-                var idToChangeVector = new Dictionary<string, string>() { { user1.Id, user1revertCv } };
-                database.DocumentsStorage.RevisionsStorage.VerifyRevisionsIdsAndChangeVectors(idToChangeVector);
-                await database.DocumentsStorage.RevisionsStorage.RevertDocumentsToRevisions(idToChangeVector.Values.ToList(), token);
+                await database.DocumentsStorage.RevisionsStorage.RevertDocumentsToRevisions(new Dictionary<string, string>() { { user1.Id, user1revertCv } }, token);
             }
 
             using (var session = store.OpenAsyncSession())

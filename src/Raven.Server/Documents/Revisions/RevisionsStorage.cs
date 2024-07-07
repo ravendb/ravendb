@@ -2018,56 +2018,14 @@ namespace Raven.Server.Documents.Revisions
             return await RevertRevisions(before, window, onProgress, collections: null, token);
         }
 
-        public void VerifyRevisionsIdsAndChangeVectors(Dictionary<string, string> idToChangeVector)
+
+
+        public Task RevertDocumentsToRevisions(Dictionary<string, string> idToChangeVector, OperationCancelToken token)
         {
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                // Verify matching for all ids and cvs
-                foreach (var (id, cv) in idToChangeVector)
-                {
-                    VerifySingleRevisionIdAndChangeVector(context, id, cv);
-                }
-            }
-        }
-
-        private void VerifySingleRevisionIdAndChangeVector(DocumentsOperationContext context, string id, string cv)
-        {
-            if (id == null)
-                throw new ArgumentException("Document id is null");
-
-            if (id == string.Empty)
-                throw new ArgumentException("Document id is an empty string");
-
-            if (cv == null)
-                throw new ArgumentException("Change Vector is null");
-
-            if (id == string.Empty)
-                throw new ArgumentException("Change Vector is an empty string");
-
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
-            using (Slice.From(context.Allocator, cv, out var cvSlice))
-            {
-                if (table.ReadByKey(cvSlice, out TableValueReader tvr) == false)
-                {
-                    throw new InvalidOperationException($"Revision with the cv \"{cv}\" doesn't belong to the doc \"{id}\"");
-                }
-
-                var revision = TableValueToRevision(context, ref tvr, DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector);
-
-                if (revision.Id != id)
-                {
-                    throw new InvalidOperationException($"Revision with the cv \"{cv}\" doesn't belong to the doc \"{id}\" but to the doc \"{revision.Id}\"");
-                }
-            }
-        }
-
-        public Task RevertDocumentsToRevisions(List<string> changeVectors, OperationCancelToken token)
-        {
-            if (changeVectors.Count == 0)
+            if (idToChangeVector.Count == 0)
                 return Task.CompletedTask;
 
-            return _database.TxMerger.Enqueue(new RevertDocumentsCommand(changeVectors, token));
+            return _database.TxMerger.Enqueue(new RevertDocumentsCommand(idToChangeVector, token));
         }
 
         public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, HashSet<string> collections, OperationCancelToken token)
@@ -2269,7 +2227,7 @@ namespace Raven.Server.Documents.Revisions
         internal sealed class RevertDocumentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly List<Document> _list;
-            private readonly List<string> _cvs;
+            private readonly Dictionary<string, string> _idToChangeVector;
             private readonly CancellationToken _token;
 
             public RevertDocumentsCommand(List<Document> list, OperationCancelToken token)
@@ -2278,9 +2236,9 @@ namespace Raven.Server.Documents.Revisions
                 _token = token.Token;
             }
 
-            public RevertDocumentsCommand(List<string> cvs, OperationCancelToken token)
+            public RevertDocumentsCommand(Dictionary<string, string> idToChangeVector, OperationCancelToken token)
             {
-                _cvs = cvs;
+                _idToChangeVector = idToChangeVector;
                 _list = new List<Document>();
                 _token = token.Token;
             }
@@ -2289,23 +2247,13 @@ namespace Raven.Server.Documents.Revisions
             {
                 var documentsStorage = context.DocumentDatabase.DocumentsStorage;
 
-                if (_cvs != null)
+                if (_idToChangeVector != null)
                 {
-                    // add each revision to _list
-                    var table = new Table(documentsStorage.RevisionsStorage.RevisionsSchema, context.Transaction.InnerTransaction);
-
-                    foreach (var cv in _cvs)
+                    // Verify matching for all ids and cvs
+                    foreach (var (id, cv) in _idToChangeVector)
                     {
-                        using (Slice.From(context.Allocator, cv, out var cvSlice))
-                        {
-                            if (table.ReadByKey(cvSlice, out TableValueReader tvr) == false)
-                            {
-                                throw new InvalidOperationException($"Revision with the cv \"{cv}\" isn't exist\"");
-                            }
-
-                            var revision = TableValueToRevision(context, ref tvr, DocumentFields.Id | DocumentFields.LowerId | DocumentFields.Data);
-                            _list.Add(revision);
-                        }
+                        var revision = VerifyAndGetRevision(context, id, cv);
+                        _list.Add(revision);
                     }
                 }
 
@@ -2331,6 +2279,35 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 return _list.Count;
+            }
+
+            private Document VerifyAndGetRevision(DocumentsOperationContext context, string id, string cv)
+            {
+                if (id == null)
+                    throw new ArgumentException("Document id is null");
+
+                if (id == string.Empty)
+                    throw new ArgumentException("Document id is an empty string");
+
+                if (cv == null)
+                    throw new ArgumentException("Change Vector is null");
+
+                if (id == string.Empty)
+                    throw new ArgumentException("Change Vector is an empty string");
+
+                var table = new Table(context.DocumentDatabase.DocumentsStorage.RevisionsStorage.RevisionsSchema, context.Transaction.InnerTransaction);
+                using (Slice.From(context.Allocator, cv, out var cvSlice))
+                {
+                    if (table.ReadByKey(cvSlice, out TableValueReader tvr) == false)
+                        throw new InvalidOperationException($"Revision with the cv \"{cv}\" doesn't belong to the doc \"{id}\"");
+
+                    var revision = TableValueToRevision(context, ref tvr, DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector | DocumentFields.Data);
+
+                    if (revision.Id != id)
+                        throw new InvalidOperationException($"Revision with the cv \"{cv}\" doesn't belong to the doc \"{id}\" but to the doc \"{revision.Id}\"");
+
+                    return revision;
+                }
             }
 
             private static void InsertNewMetadataInfo(DocumentsOperationContext context, DocumentsStorage documentsStorage, Document document, CollectionName collectionName)
