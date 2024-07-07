@@ -1445,6 +1445,67 @@ namespace SlowTests.Cluster
             }
         }
 
+        
+    [RavenTheory(RavenTestCategory.ClusterTransactions)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task ModifyClusterWideDocumentInNotUpToDateNode(Options options)
+    {
+        var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 3, watcherCluster: true, leaderIndex: 0);
+        var database = GetDatabaseName();
+        
+        var o1 = options.Clone();
+        o1.ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology { Members = ["C", "B", "A"] };
+        o1.ModifyDatabaseName = _ => database;
+        o1.Server = leader;
+        o1.DeleteDatabaseOnDispose = false;
+
+        using (var store = GetDocumentStore(o1))
+        {
+            var watchers = nodes.Where(n => n != leader).Select(n => n.ServerStore.NodeTag).ToList();
+            leader.ServerStore.Engine.ForTestingPurposesOnly().NodeTagsToDisconnect = watchers;
+
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
+            using (var session = store.OpenAsyncSession(new SessionOptions
+                   {
+                       TransactionMode = TransactionMode.ClusterWide
+                   }))
+            {
+                await session.StoreAsync(new User(), "users/1", cts.Token);
+                try
+                {
+                    await session.SaveChangesAsync(cts.Token);
+                }
+                catch (TaskCanceledException)
+                {
+                    // can happen if we send the request to a watcher
+                }
+            }
+        }
+
+        var o2 = options.Clone();
+        o2.ModifyDatabaseName = _ => database;
+        o2.Server = nodes.First(n => n != leader);
+        o2.CreateDatabase = false;
+
+        using (var store = GetDocumentStore(o2))
+        {
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
+            using (var session = store.OpenAsyncSession())
+            {
+                var u = await session.LoadAsync<User>("users/1", cts.Token);
+                u.Age = 1;
+                try
+                {
+                    await Assert.ThrowsAsync<TaskCanceledException>(() => session.SaveChangesAsync(cts.Token));
+                }
+                finally
+                {
+                    leader.ServerStore.Engine.ForTestingPurposesOnly().NodeTagsToDisconnect = null;
+                }
+            }
+        }
+    }
+
         private class UserByName : AbstractIndexCreationTask<User>
         {
             public UserByName()

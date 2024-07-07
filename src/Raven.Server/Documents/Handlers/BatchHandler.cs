@@ -105,6 +105,9 @@ namespace Raven.Server.Documents.Handlers
                 if (waitForIndexesTimeout != null)
                     command.ModifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+                var index = command.GetMaxClusterTransactionIndex();
+                await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, token.Token);
+                
                 try
                 {
                     await Database.TxMerger.Enqueue(command);
@@ -867,6 +870,21 @@ namespace Raven.Server.Documents.Handlers
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
             public bool IsClusterTransaction;
+
+            public long GetMaxClusterTransactionIndex()
+            {
+                var index = 0L;
+                foreach (var command in ParsedCommands)
+                {
+                    if (command.OriginalChangeVector == null)
+                        continue;
+
+                    var clusterTxIndex = ChangeVectorUtils.GetEtagById(command.OriginalChangeVector, Database.ClusterTransactionId);
+                    index = Math.Max(index, clusterTxIndex);
+                }
+
+                return index;
+            }
 
             public MergedBatchCommand(DocumentDatabase database) : base(database)
             {
