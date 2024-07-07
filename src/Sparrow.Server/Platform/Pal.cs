@@ -10,17 +10,17 @@ namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
-        public static PalDefinitions.SystemInformation SysInfo;
-        public const int PAL_VER = 52001; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 62000; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
-        static Pal()
+        public static readonly PalDefinitions.SystemInformation SysInfo;
+        
+        static  Pal()
         {
             PalFlags.FailCodes rc;
             int errorCode;
             try
             {
-                var mutator = PlatformDetails.IsWindows8OrNewer == false ? (Func<string,string>)ToWin7DllName : default;
-                DynamicNativeLibraryResolver.Register(typeof(Pal).Assembly, LIBRVNPAL, mutator);
+                DynamicNativeLibraryResolver.Register(typeof(Pal).Assembly, LIBRVNPAL);
 
                 var palVer = rvn_get_pal_ver();
                 if (palVer != 0 && palVer != PAL_VER)
@@ -46,11 +46,6 @@ namespace Sparrow.Server.Platform
 
             if (rc != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(rc, errorCode, "Cannot get system information");
-
-            string ToWin7DllName(string name)
-            {
-                return name.Replace("win", "win7");
-            }
         }
 
         private const string LIBRVNPAL = "librvnpal";
@@ -84,7 +79,7 @@ namespace Sparrow.Server.Platform
             
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_close_pager(
-            void* handle, void* memory, out Int32 errorCode);
+            void* handle, out Int32 errorCode);
         
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_sync_pager(
@@ -150,86 +145,17 @@ namespace Sparrow.Server.Platform
             Int32 capacity,
             out Int32 specialErrnoCodes);
 
-        public static PalFlags.FailCodes rvn_create_and_mmap64_file(
-            string filename,
-            Int64 initialFileSize,
-            PalFlags.MmapOptions flags,
-            out SafeMmapHandle handle,
-            out void* baseAddress,
-            out Int64 actualFileSize,
-            out Int32 errorCode)
-        {
-            using (var convert = new Converter(filename))
-            {
-                return rvn_create_and_mmap64_file(convert.Pointer,
-                    initialFileSize,
-                    flags,
-                    out handle,
-                    out baseAddress,
-                    out actualFileSize,
-                    out errorCode);
-            }
-        }
-
-        [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_create_and_mmap64_file(
-            byte* filename,
-            Int64 initialFileSize,
-            PalFlags.MmapOptions flags,
-            out SafeMmapHandle handle,
-            out void* baseAddress,
-            out Int64 actualFileSize,
-            out Int32 errorCode);
-
-        [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_prefetch_virtual_memory(
-            void* virtualAddress,
-            Int64 length,
-            out Int32 errorCode);
-
         [DllImport(LIBRVNPAL, SetLastError = true)]
         private static extern PalFlags.FailCodes rvn_get_system_information(
             out PalDefinitions.SystemInformation systemInformation,
             out Int32 errorCode);
 
-        [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_memory_sync(
-            void* address,
-            Int64 size,
-            out Int32 errorCode);
-
-        [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_mmap_dispose_handle(
-            IntPtr handle,
-            out Int32 errorCode);
-
-        [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_unmap(
-            PalFlags.MmapOptions flags,
-            void* address,
-            Int64 size,
-            out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_prefetch_ranges(
             PalDefinitions.PrefetchRanges* list,
             Int32 count,
             out Int32 errorCode);
-
-        [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_protect_range(
-            void* start,
-            Int64 size,
-            PalFlags.ProtectRange protection,
-            out Int32 errorCode);
-
-        [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_allocate_more_space(
-            Int64 newLengthAfterAdjustment,
-            SafeMmapHandle handle,
-            out void* newAddress,
-            out Int32 errorCode);
-
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_pager_get_file_handle(
@@ -273,7 +199,6 @@ namespace Sparrow.Server.Platform
             IntPtr handle,
             out Int32 errorCode
         );
-
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_write_journal(
@@ -380,13 +305,14 @@ namespace Sparrow.Server.Platform
 
             public Converter(string s)
             {
-                var size = Encoding.UTF8.GetMaxByteCount(s.Length) + sizeof(char);
+                Encoding encoding = PlatformDetails.RunningOnWindows ? Encoding.Unicode : Encoding.UTF8;
+                var size = encoding.GetMaxByteCount(s.Length) + sizeof(char);
                 _buffer = ArrayPool<byte>.Shared.Rent(size);
-                int length = Encoding.UTF8.GetBytes(s, 0, s.Length, _buffer, 0);
+                int length = encoding.GetBytes(s, 0, s.Length, _buffer, 0);
                 if (length > size - sizeof(char))
                 {
                     throw new InvalidOperationException(
-                        $"Invalid length of GetBytes while converting string : '{s}' using '{Encoding.UTF8.EncodingName}' Encoder. Got length of {length} bytes while max size for the string using this encoder is {Encoding.UTF8.GetMaxByteCount(s.Length)}");
+                        $"Invalid length of GetBytes while converting string : '{s}' using '{encoding.EncodingName}' Encoder. Got length of {length} bytes while max size for the string using this encoder is {encoding.GetMaxByteCount(s.Length)}");
                 }
 
                 for (int i = length; i < length + sizeof(char); i++)

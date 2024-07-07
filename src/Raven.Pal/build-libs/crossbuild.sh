@@ -10,7 +10,7 @@ function log {
 function enable_cross_builds {
     log "Installing packages..."
     sudo apt-get update -qq >> "${LOG}" 2>&1
-    if ! sudo apt-get install -y crossbuild-essential-armhf crossbuild-essential-arm64 cmake clang libxml2-dev fuse libbz2-dev libfuse-dev libssl-dev fuse >> "${LOG}" 2>&1; then
+    if ! sudo apt-get install -y crossbuild-essential-armhf crossbuild-essential-arm64 cmake clang libxml2-dev fuse libbz2-dev zlib1g-dev libfuse-dev libssl-dev fuse >> "${LOG}" 2>&1; then
         echo "Failed. See ${LOG}";  
         exit 1;
     fi
@@ -43,7 +43,7 @@ function enable_cross_builds {
     OSXCROSS_SDKROOT="$(realpath "target/SDK/${MACOS_SDK_DIRNAME}")"
     export OSXCROSS_SDKROOT
     
-    tar xf  "$(realpath ../$MACOS_SDK_TAR_PATH)sudo" -C "$(realpath "target/SDK")"
+    tar xf  "$(realpath ../$MACOS_SDK_TAR_PATH)" -C "$(realpath "target/SDK")"
 
     log "Building mac compiler..."
     sed -i 's/read/echo/g' build.sh

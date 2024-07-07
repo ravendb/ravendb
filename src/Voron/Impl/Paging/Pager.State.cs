@@ -223,7 +223,7 @@ public unsafe partial class Pager2
                 
                 Pager._states.TryRemove(WeakSelf);
 
-                var rc = Pal.rvn_close_pager(Handle, BaseAddress, out var errorCode);
+                var rc = Pal.rvn_close_pager(Handle, out var errorCode);
                 NativeMemory.UnregisterFileMapping(Pager.FileName, (nint)BaseAddress, TotalAllocatedSize);
                 
                 if (rc != PalFlags.FailCodes.Success)
