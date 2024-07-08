@@ -29,8 +29,8 @@ uint64_t _GetNearestFileSize(uint64_t needed_size)
     }
     if (needed_size < POWER_OF_TWO_THRESHOLD)
     {
-        int32_t idx;
-        if (BitScanForward64(&idx, needed_size))
+        int32_t idx = __builtin_clzl(needed_size);
+        if (idx)
         {
             return (uint64_t)1 << (32 - idx);
         }

@@ -20,8 +20,7 @@ namespace Sparrow.Server.Platform
             int errorCode;
             try
             {
-                var mutator = PlatformDetails.IsWindows8OrNewer == false ? (Func<string,string>)ToWin7DllName : default;
-                DynamicNativeLibraryResolver.Register(typeof(Pal).Assembly, LIBRVNPAL, mutator);
+                DynamicNativeLibraryResolver.Register(typeof(Pal).Assembly, LIBRVNPAL);
 
                 var palVer = rvn_get_pal_ver();
                 if (palVer != 0 && palVer != PAL_VER)
@@ -47,11 +46,6 @@ namespace Sparrow.Server.Platform
 
             if (rc != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(rc, errorCode, "Cannot get system information");
-
-            string ToWin7DllName(string name)
-            {
-                return name.Replace("win", "win7");
-            }
         }
 
         private const string LIBRVNPAL = "librvnpal";

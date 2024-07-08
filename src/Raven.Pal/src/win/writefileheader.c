@@ -24,11 +24,12 @@ rvn_write_header (const char *path, void *header, int32_t size,
 		goto error_cleanup;
 	}
 
-    int32_t bytesWritten;
+	DWORD bytesWritten;
 	if ( !WriteFile(file, header, size, &bytesWritten, NULL) ){
 		rc = FAIL_WRITE_FILE;
 		goto error_cleanup;	
 	}
+
 
 	if ( !FlushFileBuffers(file) ){
 		rc = FAIL_SYNC_FILE;

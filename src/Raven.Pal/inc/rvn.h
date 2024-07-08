@@ -1,16 +1,8 @@
 #ifndef RVN_H
 #define RVN_H
 
-#ifdef __APPLE__
 #define EXPORT __attribute__((visibility("default")))
 #define PRIVATE __attribute__((visibility("hidden")))
-#elif _WIN32
-#define EXPORT _declspec(dllexport)
-#define PRIVATE
-#else
-#define EXPORT __attribute__((visibility("default")))
-#define PRIVATE __attribute__((visibility("hidden")))
-#endif
 
 #include <stdint.h>
 
@@ -37,19 +29,19 @@ enum
 
 #define ALLOCATION_GRANULARITY (64*1024)
 
-EXPORT struct SYSTEM_INFORMATION
+struct SYSTEM_INFORMATION
 {
     int32_t page_size;
     int32_t prefetch_status;
 
     /* can_prefetch => prefetch_status == true */
-} SYSTEM_INFORMATION;
+};
 
-EXPORT struct RVN_RANGE_LIST
+struct RVN_RANGE_LIST
 {
     void *virtual_address;
     size_t number_of_bytes;
-} RVN_RANGE_LIST;
+};
 
 EXPORT
 int32_t rvn_pager_get_file_handle(

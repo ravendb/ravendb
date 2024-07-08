@@ -101,7 +101,7 @@
     </None>
   </ItemGroup>
   <ItemGroup Condition="'$(Client_IncludeZstd)' == '' OR '$(Client_IncludeZstd)' == 'true'">
-    <None Include="..\..\libs\libzstd\libzstd.arm.64.so" Link="libzstd.arm.64.so">
+    <None Include="..\..\libs\libzstd\libzstd.linux.arm.64.so" Link="libzstd.linux.arm.64.so">
       <PackagePath>runtimes/linux-arm64/native/</PackagePath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <PackageCopyToOutput>true</PackageCopyToOutput>
@@ -109,7 +109,7 @@
     </None>
   </ItemGroup>
   <ItemGroup Condition="'$(Client_IncludeZstd)' == '' OR '$(Client_IncludeZstd)' == 'true'">
-    <None Include="..\..\libs\libzstd\libzstd.arm.32.so" Link="libzstd.arm.32.so">
+    <None Include="..\..\libs\libzstd\libzstd.linux.arm.32.so" Link="libzstd.linux.arm.32.so">
       <PackagePath>runtimes/linux-arm/native/</PackagePath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <PackageCopyToOutput>true</PackageCopyToOutput>
