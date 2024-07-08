@@ -218,7 +218,8 @@ int32_t _open_pager_file(HANDLE h,
     {
         file_size.QuadPart = min_file_size;
         rc = _resize_file(h, min_file_size, detailed_error_code);
-        goto Error;
+        if(rc != SUCCESS)
+            goto Error;
     }
 
     DWORD flProtect = (open_flags & OPEN_FILE_WRITABLE_MAP) ? PAGE_READWRITE : PAGE_READONLY;
@@ -253,7 +254,7 @@ int32_t _open_pager_file(HANDLE h,
     m = INVALID_HANDLE_VALUE;
 
     if (open_flags & OPEN_FILE_LOCK_MEMORY &&
-        !rvn_lock_memory(open_flags, mem, file_size.QuadPart, detailed_error_code))
+        rvn_lock_memory(open_flags, mem, file_size.QuadPart, detailed_error_code))
     {
         rc = FAIL_LOCK_MEMORY;
         goto Error;
@@ -342,9 +343,12 @@ rvn_increase_pager_size(void *handle,
 EXPORT int32_t
 rvn_close_pager(
     void *handle,
-    const void *memory,
     int32_t *detailed_error_code)
 {
+    if(handle == NULL)
+    {
+        return FAIL_INVALID_HANDLE;
+    }
     struct handle *handle_ptr = handle;
     *detailed_error_code = 0;
     int rc = SUCCESS;

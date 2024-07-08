@@ -1,8 +1,18 @@
 #ifndef RVN_H
 #define RVN_H
 
+#if !defined(_MSC_VER) 
+
 #define EXPORT __attribute__((visibility("default")))
 #define PRIVATE __attribute__((visibility("hidden")))
+
+#else
+
+
+#define EXPORT __declspec(dllexport)
+#define PRIVATE 
+#define __builtin_clzl _tzcnt_u64
+#endif
 
 #include <stdint.h>
 
@@ -81,7 +91,6 @@ rvn_increase_pager_size(void* handle,
 EXPORT int32_t
 rvn_close_pager(
     void *handle,
-    const void* memory,
     int32_t* detailed_error_code);
 
 

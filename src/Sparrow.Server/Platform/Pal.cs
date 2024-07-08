@@ -79,7 +79,7 @@ namespace Sparrow.Server.Platform
             
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_close_pager(
-            void* handle, void* memory, out Int32 errorCode);
+            void* handle, out Int32 errorCode);
         
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_sync_pager(

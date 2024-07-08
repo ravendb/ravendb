@@ -104,7 +104,6 @@ int32_t _open_pager_file(int fd,
 
     if ((open_flags & OPEN_FILE_DO_NOT_MAP))
     {
-
         handle_ptr->file_fd = fd;
         handle_ptr->open_flags = open_flags;
         *memory_size = st.st_size;
@@ -231,9 +230,12 @@ rvn_increase_pager_size(void *handle,
 EXPORT int32_t
 rvn_close_pager(
     void *handle,
-    const void *memory,
     int32_t *detailed_error_code)
 {
+    if(handle == NULL)
+    {
+        return FAIL_INVALID_HANDLE;
+    }
     struct handle *handle_ptr = handle;
     *detailed_error_code = 0;
     int rc = SUCCESS;
