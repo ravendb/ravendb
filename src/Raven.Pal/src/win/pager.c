@@ -301,7 +301,7 @@ rvn_init_pager(const char *filename,
     dwFlagsAndAttributes |= open_flags & OPEN_FILE_SEQUENTIAL_SCAN ? FILE_FLAG_SEQUENTIAL_SCAN : FILE_FLAG_RANDOM_ACCESS;
     dwFlagsAndAttributes |= open_flags & OPEN_FILE_READ_ONLY ? FILE_ATTRIBUTE_READONLY : 0;
 
-    HANDLE h = CreateFile(filename, dwDesiredAccess,
+    HANDLE h = CreateFileW((LPCWSTR)filename, dwDesiredAccess,
                           FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
                           NULL, OPEN_ALWAYS, dwFlagsAndAttributes, NULL);
     if (h == INVALID_HANDLE_VALUE)

@@ -10,7 +10,7 @@ rvn_write_header (const char *path, void *header, int32_t size,
 		  int32_t * detailed_error_code) 
 {
 	int32_t rc;
-	HANDLE file = CreateFile(path,
+	HANDLE file = CreateFileW((LPCWSTR)path,
 		GENERIC_WRITE | GENERIC_READ,
 		FILE_SHARE_READ,
 		NULL,

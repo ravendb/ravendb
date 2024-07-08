@@ -305,13 +305,14 @@ namespace Sparrow.Server.Platform
 
             public Converter(string s)
             {
-                var size = Encoding.UTF8.GetMaxByteCount(s.Length) + sizeof(char);
+                Encoding encoding = PlatformDetails.RunningOnWindows ? Encoding.Unicode : Encoding.UTF8;
+                var size = encoding.GetMaxByteCount(s.Length) + sizeof(char);
                 _buffer = ArrayPool<byte>.Shared.Rent(size);
-                int length = Encoding.UTF8.GetBytes(s, 0, s.Length, _buffer, 0);
+                int length = encoding.GetBytes(s, 0, s.Length, _buffer, 0);
                 if (length > size - sizeof(char))
                 {
                     throw new InvalidOperationException(
-                        $"Invalid length of GetBytes while converting string : '{s}' using '{Encoding.UTF8.EncodingName}' Encoder. Got length of {length} bytes while max size for the string using this encoder is {Encoding.UTF8.GetMaxByteCount(s.Length)}");
+                        $"Invalid length of GetBytes while converting string : '{s}' using '{encoding.EncodingName}' Encoder. Got length of {length} bytes while max size for the string using this encoder is {encoding.GetMaxByteCount(s.Length)}");
                 }
 
                 for (int i = length; i < length + sizeof(char); i++)
