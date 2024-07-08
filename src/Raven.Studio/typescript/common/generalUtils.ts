@@ -1,7 +1,7 @@
 ﻿/// <reference path="../../typings/tsd.d.ts" />
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import moment = require("moment");
-import { MouseEvent, SyntheticEvent } from "react";
+import { MouseEvent } from "react";
 
 type SelectionState = "AllSelected" | "SomeSelected" | "Empty";
 

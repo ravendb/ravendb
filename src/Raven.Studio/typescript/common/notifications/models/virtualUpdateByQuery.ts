@@ -1,5 +1,4 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
-import virtualNotification = require("common/notifications/models/virtualNotification");
 import database = require("models/resources/database");
 import moment = require("moment");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
