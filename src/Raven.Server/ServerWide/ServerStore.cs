@@ -936,6 +936,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
+
         public void TriggerDatabases()
         {
             _engine.StateMachine.Changes.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
@@ -954,7 +955,7 @@ namespace Raven.Server.ServerWide
                         {
                             try
                             {
-                                await DatabasesLandlord.ClusterOnDatabaseChanged(db, 0, "Init", DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
+                                await DatabasesLandlord.ClusterOnDatabaseChanged(db, 0, DatabasesLandlord.Init, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
                             }
                             catch (Exception e)
                             {
