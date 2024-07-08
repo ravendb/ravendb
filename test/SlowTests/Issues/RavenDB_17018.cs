@@ -206,7 +206,12 @@ namespace SlowTests.Issues
                 
                 string reason;
                 var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out reason);
-                Assert.True(outcome, reason);
+                if (outcome == false)
+                {
+                    // "Queue is empty" means that the UpdatePagingInternal already invoked by the Timer
+                    // Any other reason is Failure 
+                    Assert.Equal("Queue is empty", reason); 
+                }
 
                 using (database.NotificationCenter.GetStored(out var actions))
                 {
