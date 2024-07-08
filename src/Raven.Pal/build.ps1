@@ -52,7 +52,7 @@ echo "Building Linux x86"
 zig cc -Wall -O3  -shared  -fPIC -Iinc -target x86-linux-gnu -o artifacts/librvnpal.linux.x86.so $shared $posix_files "src/posix/linuxonly.c" 
 
 echo "Building Linux x64"
-zig cc -Wall -O3  -shared  -fPIC -Iinc -target x86-linux-gnu -o artifacts/librvnpal.linux.x64.so $shared $posix_files "src/posix/linuxonly.c" 
+zig cc -Wall -O3  -shared  -fPIC -Iinc -target x86_64-linux-gnu -o artifacts/librvnpal.linux.x64.so $shared $posix_files "src/posix/linuxonly.c" 
 
 echo "Building Linux ARM32 (Rasbperry Pi)"
 zig cc -Wall -O3  -shared  -fPIC -Iinc -target arm-linux-gnueabihf -o artifacts/librvnpal.linux.arm.32.so $shared $posix_files "src/posix/linuxonly.c" 
