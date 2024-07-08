@@ -92,11 +92,12 @@ namespace Raven.Server.Smuggler.Migration
                         smugglerResult.TimeSeries = new SmugglerProgressBase.CountsWithSkippedCountAndLastEtag();
                     }
 
-                    if ((_buildVersion >= 4000 && _buildVersion <= 54133) || (_buildVersion >= 6000 && _buildVersion <= 60035))
+                    if ((_buildVersion >= 4000 && _buildVersion <= 54133) || 
+                        (_buildVersion >= 6000 && _buildVersion <= 60035) ||
+                        (_buildVersion >= 40 && _buildVersion < 54))
                     {
                         // prevent NRE, time series deleted ranges were added in 5.4.201 and 6.0.105 
                         smugglerResult.TimeSeriesDeletedRanges = new SmugglerProgressBase.CountsWithSkippedCountAndLastEtag();
-
                     }
 
                     var importInfo = new ImportInfo
