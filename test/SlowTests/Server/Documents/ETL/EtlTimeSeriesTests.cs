@@ -194,7 +194,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var src = GetDocumentStore(_options);
+            using var src = GetDocumentStore(_options);
             using (var session = src.OpenAsyncSession())
             {
                 var entity = new User { Name = "Joe Doe" };
@@ -693,14 +693,14 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
 
             await AssertWaitForTrueAsync(async () =>
             {
-                var session = dest.OpenAsyncSession();
+                using var session = dest.OpenAsyncSession();
                 var user = await session.LoadAsync<User>(users[batchSize].Id);
                 return user.Name.EndsWith(changed);
             }, interval: _waitInterval);
 
             await AssertWaitForTrueAsync(async () =>
             {
-                var session = dest.OpenAsyncSession();
+                using var session = dest.OpenAsyncSession();
                 var ts = await session.TimeSeriesFor(users[0].Id, timeSeriesName).GetAsync(times[1], times[1]);
                 return ts.Length == 1;
             }, interval: _waitInterval);
