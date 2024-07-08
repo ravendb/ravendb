@@ -214,8 +214,7 @@ namespace Voron.Impl
             Debug.Assert((PlatformDetails.Is32Bits || env.Options.ForceUsing32BitsPager) == false,
                 $"Async commit isn't supported in 32bits environments. We don't carry 32 bits state from previous tx");
 
-            _flushInProgressLockTaken = previous._flushInProgressLockTaken;
-            CurrentTransactionHolder = previous.CurrentTransactionHolder;
+            CurrentTransactionIdHolder = previous.CurrentTransactionIdHolder;
             TxStartTime = DateTime.UtcNow;
             DataPager = previous.DataPager;
             DataPagerState = previous.DataPagerState;
@@ -694,7 +693,7 @@ namespace Voron.Impl
         
         public bool IsDisposed => _txStatus.HasFlag(TxStatus.Disposed);
 
-        public NativeMemory.ThreadStats CurrentTransactionHolder { get; set; }
+        public int CurrentTransactionIdHolder { get; set; }
         
         public PageLocator PageLocator => _pageLocator;
 
@@ -1074,10 +1073,11 @@ namespace Voron.Impl
         [Conditional("DEBUG")]
         private void EnsureDisposeOfWriteTxIsOnTheSameThreadThatCreatedIt()
         {
-            if (Flags == TransactionFlags.ReadWrite && NativeMemory.CurrentThreadStats != CurrentTransactionHolder)
+            var threadStats = NativeMemory.GetByThreadId(System.Environment.CurrentManagedThreadId);
+            if (Flags == TransactionFlags.ReadWrite && System.Environment.CurrentManagedThreadId != CurrentTransactionIdHolder)
             {
                 throw new InvalidOperationException($"Dispose of the write transaction must be called from the same thread that created it. " +
-                                                    $"Transaction {Id} (Flags: {Flags}) was created by {CurrentTransactionHolder.Name}, thread Id: {CurrentTransactionHolder.ManagedThreadId}. " +
+                                                    $"Transaction {Id} (Flags: {Flags}) was created by '{threadStats?.Name}', thread Id: {CurrentTransactionIdHolder}. " +
                                                     $"The dispose was called from {NativeMemory.CurrentThreadStats.Name}, thread Id: {NativeMemory.CurrentThreadStats.ManagedThreadId}. " +
                                                     $"Do you have any await call in the scope of the write transaction?");
             }
@@ -1123,7 +1123,6 @@ namespace Voron.Impl
             return _txStatus.ToString();
         }
 
-        internal bool _flushInProgressLockTaken;
         private EnvironmentStateRecord _envRecord;
         private long _localTxNextPageNumber;
         public DateTime TxStartTime;
