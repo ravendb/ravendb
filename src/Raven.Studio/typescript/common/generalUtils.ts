@@ -1,7 +1,7 @@
 ﻿/// <reference path="../../typings/tsd.d.ts" />
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import moment = require("moment");
-import { SyntheticEvent } from "react";
+import { MouseEvent, SyntheticEvent } from "react";
 
 type SelectionState = "AllSelected" | "SomeSelected" | "Empty";
 
@@ -609,11 +609,9 @@ class genUtils {
         return code;
     }
     
-    static canConsumeDelegatedEvent(event: JQueryEventObject | Event | SyntheticEvent) {
-        const rawEvent: Event | SyntheticEvent = ("originalEvent" in event) ? event.originalEvent : event;
-        
-        const target = rawEvent.target as HTMLElement;
-        const currentTarget = rawEvent.currentTarget as HTMLElement;
+    static canConsumeDelegatedEvent(event: MouseEvent<HTMLElement>) {
+        const target = event.target as HTMLElement;
+        const currentTarget = event.currentTarget as HTMLElement;
         
         let element = target;
         

@@ -127,7 +127,7 @@ class revisionsBin extends shardViewModelBase {
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
         this.columnPreview.install(".documents-grid", ".js-revisions-bin-tooltip", 
-            (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
+            (doc: document, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy: string) => void) => {
             if (column instanceof textColumn) {
                 
                 if (column.header === "Deletion date") {

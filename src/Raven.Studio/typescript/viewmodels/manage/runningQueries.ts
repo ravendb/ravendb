@@ -115,7 +115,7 @@ class runningQueries extends viewModelBase {
 
         this.columnPreview.install("virtual-grid", ".js-running-queries-tooltip",
             (item: ExecutingQueryInfoWithCache, column: textColumn<ExecutingQueryInfoWithCache>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
 
                 let value = column.getCellValue(item);
             

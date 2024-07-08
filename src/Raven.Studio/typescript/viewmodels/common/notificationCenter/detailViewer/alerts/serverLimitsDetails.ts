@@ -50,7 +50,7 @@ class serverLimitsDetails extends abstractAlertDetails {
         this.columnPreview.install(".serverLimitsDetails", ".js-server-limits-details-tooltip",
             (details: ServerLimitInfo,
              column: textColumn<ServerLimitInfo>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 const value = column.getCellValue(details);
                 if (value) {
                     onValue(genUtils.escapeHtml(value), value);

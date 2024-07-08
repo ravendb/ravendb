@@ -271,7 +271,7 @@ class documents extends shardViewModelBase {
         const fullDocumentsProvider = new documentPropertyProvider(this.db);
 
         this.columnPreview.install(".documents-grid", ".js-documents-preview", 
-            (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+            (doc: document, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
             if (column instanceof textColumn) {
                 if (this.currentCollection().isAllDocuments && column.header === "Last Modified") {
                     onValue(moment.utc(doc.__metadata.lastModified()), doc.__metadata.lastModified());
@@ -308,7 +308,7 @@ class documents extends shardViewModelBase {
         this.resetGrid(false);
     }
 
-    newDocument(docs: documents, $event: JQueryEventObject) {
+    newDocument(docs: documents, $event: JQuery.TriggeredEvent) {
         eventsCollector.default.reportEvent("document", "new");
         const url = appUrl.forNewDoc(this.db);
         if ($event.ctrlKey) {
@@ -318,7 +318,7 @@ class documents extends shardViewModelBase {
         }
     }
 
-    newDocumentInCollection(docs: documents, $event: JQueryEventObject) {
+    newDocumentInCollection(docs: documents, $event: JQuery.TriggeredEvent) {
         eventsCollector.default.reportEvent("document", "new-in-collection");
         const url = appUrl.forNewDoc(this.db, this.currentCollection().name);
         if ($event.ctrlKey) {

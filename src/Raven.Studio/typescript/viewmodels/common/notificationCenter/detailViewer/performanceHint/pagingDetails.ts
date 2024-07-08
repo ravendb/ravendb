@@ -71,7 +71,7 @@ class pagingDetails extends abstractPerformanceHintDetails {
         });
 
         this.columnPreview.install(".pagingDetails", ".js-paging-details-tooltip", 
-            (details: pagingDetailsItemDto, column: textColumn<pagingDetailsItemDto>, e: JQueryEventObject, 
+            (details: pagingDetailsItemDto, column: textColumn<pagingDetailsItemDto>, e: JQuery.TriggeredEvent, 
              onValue: (context: any, valueToCopy?: string) => void) => {
             const value = column.getCellValue(details);
             if (column.header === "Date") {

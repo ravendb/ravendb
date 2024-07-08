@@ -82,7 +82,7 @@ class enforceRevisionsConfigurationDetail extends abstractOperationDetails {
         this.columnPreview.install(".revisionsDetails", ".js-revisions-details-tooltip",
             (details: gridItem,
              column: textColumn<gridItem>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 const value = column.getCellValue(details);
                 if (value) {
                     onValue(generalUtils.escapeHtml(value));

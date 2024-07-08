@@ -725,7 +725,7 @@ class query extends shardViewModelBase {
             });
 
         this.columnPreview.install("virtual-grid", ".js-query-tooltip", 
-            (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
+            (doc: document, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy: string) => void) => {
             if (this.currentTab() === "explanations" && column.header === "Explanation") {
                 // we don't want to show inline preview for Explanation column, as value doesn't contain full message
                 // which might be misleading - use preview button to obtain entire explanation 

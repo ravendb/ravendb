@@ -250,7 +250,7 @@ class editTimeSeries extends viewModelBase {
 
         this.columnPreview.install("virtual-grid", ".js-time-series-tooltip",
             (item: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry, column: textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 const value = column.getCellValue && column.getCellValue(item);
                 if (column.header === "Edit") {
                     return null;

@@ -204,7 +204,7 @@ class indexErrors extends shardViewModelBase {
                 item.onDetailsLoaded(results);
                 item.filterAndShow(this.filterItems);
             })
-            .fail(result => item.onDetailsLoadError(result.responseJSON.Message));
+            .fail((result: JQueryXHR) => item.onDetailsLoadError(result.responseJSON.Message));
     }
 
     private mapItems(indexErrorsDto: Raven.Client.Documents.Indexes.IndexErrors[]): IndexErrorPerDocument[] {

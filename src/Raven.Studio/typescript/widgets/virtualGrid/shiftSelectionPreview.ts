@@ -9,7 +9,7 @@ class shiftSelectionHandler implements disposable {
 
     private readonly gridId: string;
     private readonly virtualRowsProvider: () => virtualRow[];
-    private readonly $gridElement: JQuery;
+    private readonly $gridElement: JQuery<HTMLElement>;
     private readonly canHighlight: (start: number, end: number) => boolean;
     private renderedHintFor: [number, number] = null;
     private moveHandler: disposable = null;
@@ -19,7 +19,7 @@ class shiftSelectionHandler implements disposable {
         this.virtualRowsProvider = rowsProvider;
         this.canHighlight = canHighlight;
 
-        this.$gridElement = $(document.querySelector("#" + this.gridId));
+        this.$gridElement = $(document.querySelector("#" + this.gridId)) as JQuery<HTMLElement>;
     }
 
     get selectionRange(): [number, number] {
@@ -29,7 +29,7 @@ class shiftSelectionHandler implements disposable {
     init() {
         const $document = $(document);
 
-        $document.on("keydown." + this.gridId, (e: JQueryEventObject) => {
+        $document.on("keydown." + this.gridId, (e: JQuery.TriggeredEvent) => {
             if (_.isNumber(this.shiftSelectStartIndexCandidate) && e.shiftKey) {
                 if (!this.moveHandler) {
                     this.moveHandler = this.createShiftSelectionHandler();
@@ -51,7 +51,7 @@ class shiftSelectionHandler implements disposable {
     }
 
     private createShiftSelectionHandler(): disposable {
-        this.$gridElement.on("mousemove.shift", (e: JQueryEventObject) => this.updateHints(e));
+        this.$gridElement.on("mousemove.shift", (e: JQuery.TriggeredEvent) => this.updateHints(e));
 
         return {
             dispose: () => {
@@ -61,7 +61,7 @@ class shiftSelectionHandler implements disposable {
         }
     }
 
-    private updateHints(e: JQueryEventObject) {
+    private updateHints(e: JQuery.TriggeredEvent) {
         if (!e.shiftKey && this.moveHandler) {
             this.moveHandler.dispose();
             this.moveHandler = null;
