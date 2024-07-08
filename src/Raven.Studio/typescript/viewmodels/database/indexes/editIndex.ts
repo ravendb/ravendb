@@ -492,7 +492,7 @@ class editIndex extends shardViewModelBase {
 
         const $body = $("body");
         
-        this.registerDisposableDelegateHandler($body, "click", ".js-change-to-corax", (event: JQueryEventObject) => {
+        this.registerDisposableDelegateHandler($body, "click", ".js-change-to-corax", (event: JQuery.TriggeredEvent) => {
             this.searchEngineConfiguration("Corax");
             messagePublisher.reportSuccess("Changed Index search engine to Corax");
             

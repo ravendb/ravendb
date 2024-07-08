@@ -256,7 +256,7 @@ class importDatabaseFromSql extends viewModelBase {
         
         this.initHints();
         
-        this.registerDisposableHandler($body, "click", (event: JQueryEventObject) => {
+        this.registerDisposableHandler($body, "click", (event: JQuery.TriggeredEvent) => {
             if ($(event.target).closest(".inline-edit").length === 0) {
                 // click outside edit area - close all of them
                 
@@ -608,7 +608,7 @@ class importDatabaseFromSql extends viewModelBase {
         });
 
         // handler for selecting table before linking
-        this.registerDisposableDelegateHandler($body, "click", ".popover-link-ref", (event: JQueryEventObject) => {
+        this.registerDisposableDelegateHandler($body, "click", ".popover-link-ref", (event: JQuery.TriggeredEvent) => {
             const $target = $(event.target);
             const refId = $target.attr('data-popover-ref-id');
 
@@ -693,7 +693,7 @@ class importDatabaseFromSql extends viewModelBase {
         });
         
         // handler for selecting table before linking
-        this.registerDisposableDelegateHandler($body, "click", ".popover-embed-ref", (event: JQueryEventObject) => {
+        this.registerDisposableDelegateHandler($body, "click", ".popover-embed-ref", (event: JQuery.TriggeredEvent) => {
             const $target = $(event.target);
             const refId = $target.attr('data-popover-ref-id');
 

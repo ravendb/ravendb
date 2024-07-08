@@ -65,7 +65,7 @@ class indexingDetails extends abstractPerformanceHintDetails {
         });
 
         this.columnPreview.install(".indexingDetails", ".js-indexing-details-tooltip",
-            (details: indexingDetailsItemDto, column: textColumn<indexingDetailsItemDto>, e: JQueryEventObject,
+            (details: indexingDetailsItemDto, column: textColumn<indexingDetailsItemDto>, e: JQuery.TriggeredEvent,
              onValue: (context: any, valueToCopy?: string) => void) => {
                 const value = column.getCellValue(details);
                 if (column.header === "Date") {

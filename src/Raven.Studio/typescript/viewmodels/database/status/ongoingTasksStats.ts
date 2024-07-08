@@ -600,7 +600,7 @@ class ongoingTasksStats extends shardViewModelBase {
         this.enableLiveView();
 
         const $body = $("body");
-        this.registerDisposableDelegateHandler($body, "click", ".js-task-details-btn", (event: JQueryEventObject) => {
+        this.registerDisposableDelegateHandler($body, "click", ".js-task-details-btn", (event: JQuery.TriggeredEvent) => {
             event.preventDefault();
             app.showBootstrapDialog(new showDataDialog("Error details", this.currentDetails, "plain"));
             

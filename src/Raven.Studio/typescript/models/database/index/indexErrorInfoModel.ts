@@ -144,7 +144,7 @@ class indexErrorInfoModel {
         const gridContainerSelector = "." + this.gridClass;
         
         this.columnPreview.install(gridContainerSelector, gridTooltipClass,
-            (indexError: IndexErrorPerDocument, column: textColumn<IndexErrorPerDocument>, e: JQueryEventObject,
+            (indexError: IndexErrorPerDocument, column: textColumn<IndexErrorPerDocument>, e: JQuery.TriggeredEvent,
              onValue: (context: any, valueToCopy?: string) => void) => {
             if (column.header === "Action" || column.header === "Show") {
                 // do nothing

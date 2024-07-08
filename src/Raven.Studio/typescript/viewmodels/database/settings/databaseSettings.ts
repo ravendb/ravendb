@@ -194,7 +194,7 @@ class databaseSettings extends shardViewModelBase {
         return false;
     }
 
-    private selectActionHandler(categoryToShow: categoryInfo, event: JQueryEventObject) {
+    private selectActionHandler(categoryToShow: categoryInfo, event: JQuery.TriggeredEvent) {
         event.preventDefault();
         this.setCategory(categoryToShow.name());
     }
@@ -330,7 +330,7 @@ class databaseSettings extends shardViewModelBase {
         this.columnPreview.install(".summary-list-container", ".js-summary-details-tooltip",
             (details: models.settingsEntry,
              column: textColumn<models.settingsEntry>,
-             e: JQueryEventObject,
+             e: JQuery.TriggeredEvent,
              onValue: (context: any, valueToCopy?: string) => void) => {
                 if (column.header !== "Origin") {
                     const value = column.getCellValue(details);

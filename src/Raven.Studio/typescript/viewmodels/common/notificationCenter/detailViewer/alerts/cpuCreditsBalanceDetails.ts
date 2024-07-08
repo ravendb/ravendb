@@ -42,7 +42,7 @@ class cpuCreditsBalanceDetails extends abstractAlertDetails {
         this.columnPreview.install(".cpuCreditsBalanceDetails", ".js-cpu-credits-balance-details-tooltip",
             (details: TableItem,
              column: textColumn<TableItem>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 const value = column.getCellValue(details);
                 if (value) {
                     onValue(genUtils.escapeHtml(value), value);

@@ -57,7 +57,7 @@ class virtualBulkInsertDetails extends dialogViewModelBase {
         this.columnPreview.install(".virtualBulkInsertDetails", ".js-virtual-bulk-insert-details-tooltip",
             (details: virtualBulkOperationItem,
              column: textColumn<virtualBulkOperationItem>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 if (!(column instanceof actionColumn)) {
                     if (column.header === "Date") {
                         onValue(moment.utc(details.date), details.date);

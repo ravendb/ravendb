@@ -632,7 +632,7 @@ class adminLogs extends viewModelBase {
         this.downloadLogsValidationGroup.errors.showAllMessages(false);
     }
 
-    onDownloadLogs(_: any, event: JQueryEventObject) {
+    onDownloadLogs(_: any, event: JQuery.TriggeredEvent) {
         if (!this.isValid(this.downloadLogsValidationGroup)) {
             event.stopImmediatePropagation();
             return;

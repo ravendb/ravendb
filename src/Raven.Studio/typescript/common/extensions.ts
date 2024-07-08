@@ -187,7 +187,7 @@ class extensions {
     private static interceptModalsInDropdownPanels(element: HTMLElement) {
         const $toggle = $(element).parent();
 
-        const onModalClicked = (e: JQueryEventObject) => {
+        const onModalClicked = (e: JQuery.TriggeredEvent) => {
             // both dropdown and modal are visible, don't hide dropdown when backdrop or modal clicked
             e.stopPropagation();
         }
@@ -543,7 +543,7 @@ class extensions {
 
         ko.bindingHandlers["durationPicker"] = {
             init: (element, valueAccessor: () => KnockoutObservable<number>, allBindings) => {
-                const $element = $(element);
+                const $element = $(element) as JQuery<HTMLElement>;
                 const bindings = allBindings();
 
                 const showDays = bindings.durationPickerOptions ? bindings.durationPickerOptions.showDays : false;

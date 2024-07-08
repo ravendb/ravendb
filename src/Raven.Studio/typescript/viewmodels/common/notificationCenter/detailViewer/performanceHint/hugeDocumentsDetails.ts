@@ -52,7 +52,7 @@ class hugeDocumentsDetails extends abstractPerformanceHintDetails {
         });
 
         this.columnPreview.install(".hugeDocumentsDetails", ".js-huge-documents-details-tooltip", 
-            (details: hugeDocumentsDetailsItemDto, column: textColumn<hugeDocumentsDetailsItemDto>, e: JQueryEventObject, 
+            (details: hugeDocumentsDetailsItemDto, column: textColumn<hugeDocumentsDetailsItemDto>, e: JQuery.TriggeredEvent, 
              onValue: (context: any, valueToCopy?: string) => void) => {
             const value = column.getCellValue(details);
             if (column.header === "Last access") {
