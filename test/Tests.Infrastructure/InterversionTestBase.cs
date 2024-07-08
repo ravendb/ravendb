@@ -45,7 +45,7 @@ namespace Tests.Infrastructure
         protected const string Server42Version = "4.2.124";
         protected const string Server52Version = "5.2.100";
         protected const string Server53Version = "5.3.100";
-        protected const string Server54Version = "5.4.109";
+        protected const string Server54Version = "5.4.201-nightly-20240706-0301";
 
         protected DocumentStore GetDocumentStore(
             string serverVersion,
