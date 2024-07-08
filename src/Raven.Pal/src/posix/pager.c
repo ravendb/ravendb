@@ -241,13 +241,13 @@ rvn_close_pager(
     int rc = SUCCESS;
     if (!(handle_ptr->open_flags & OPEN_FILE_DO_NOT_MAP))
     {
-        if (!munmap(handle_ptr->base_address, handle_ptr->allocation_size))
+        if (munmap(handle_ptr->base_address, handle_ptr->allocation_size))
         {
             *detailed_error_code = errno;
             rc = FAIL_MAP_VIEW_OF_FILE;
         }
     }
-    if (!close(handle_ptr->file_fd))
+    if (close(handle_ptr->file_fd))
     {
         if (*detailed_error_code == 0)
             *detailed_error_code = errno;
@@ -264,7 +264,7 @@ rvn_sync_pager(void *handle,
                int32_t *detailed_error_code)
 {
     struct handle *handle_ptr = handle;
-    if (!_flush_file(handle_ptr->file_fd))
+    if (_flush_file(handle_ptr->file_fd))
     {
         *detailed_error_code = errno;
         return FAIL_SYNC_FILE;

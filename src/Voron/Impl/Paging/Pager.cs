@@ -72,19 +72,12 @@ public unsafe partial class Pager2 : IDisposable
 
     private static Functions GetFunctions(StorageEnvironmentOptions options, Pal.OpenFileFlags flags)
     {
-        var funcs = options.RunningOn32Bits switch
-        {
-            false when PlatformDetails.RunningOnWindows => Win64.CreateFunctions(),
-            true when PlatformDetails.RunningOnWindows => Win32.CreateFunctions(),
-            _ => throw new NotSupportedException("Running " + RuntimeInformation.OSDescription)
-        };
-
+        var funcs = options.RunningOn32Bits ? Win32.CreateFunctions() : Win64.CreateFunctions();
         if (flags.HasFlag(Pal.OpenFileFlags.Encrypted))
         {
             funcs.AcquirePagePointer = &Crypto.AcquirePagePointer;
             funcs.AcquirePagePointerForNewPage = &Crypto.AcquirePagePointerForNewPage;
         }
-
         return funcs;
     }
 
