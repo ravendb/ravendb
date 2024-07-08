@@ -290,3 +290,59 @@ int32_t rvn_pager_get_file_handle(
     *file_handle = (void *)(intptr_t)new_fd;
     return SUCCESS;
 }
+
+
+EXPORT
+int32_t rvn_map_memory(void *handle,
+                       int64_t offset,
+                       int64_t size,
+                       void **mem,
+                       int32_t *detailed_error_code)
+{
+    int32_t rc = SUCCESS;
+    if (sizeof(void *) == 4)
+    {
+        if (size > INT32_MAX)
+        {
+            rc = FAIL_SIZE_INVALID_32_BITS;
+            goto Error;
+        }
+    }
+    if (size <= 0)
+    {
+        rc = FAIL_SIZE_NEGATIVE_OR_ZERO;
+        goto Error;
+    }
+
+    struct handle *handle_ptr = handle;
+    
+    int32_t mmap_flags = (handle_ptr->open_flags & OPEN_FILE_COPY_ON_WRITE) ? MAP_PRIVATE : MAP_SHARED;
+    int32_t prot = (handle_ptr->open_flags & OPEN_FILE_WRITABLE_MAP) ? PROT_READ | PROT_WRITE : PROT_READ;
+    *mem = rvn_mmap(NULL, size, prot, mmap_flags, handle_ptr->file_fd, offset);
+    if (*mem == NULL)
+    {
+        rc = FAIL_MAP_VIEW_OF_FILE;
+        goto Error;
+    }
+
+    if (handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
+    {
+        // intentionally returning the error code & rc from the lock_memory call
+        rc = rvn_lock_memory(handle_ptr->open_flags, *mem, size, detailed_error_code);
+        if (rc != SUCCESS)
+        {
+            goto Error;
+        }
+    }
+
+    return SUCCESS;
+
+Error:
+    *detailed_error_code = errno;
+    if(*mem)
+    {
+        munmap(*mem, size);
+        *mem = NULL;
+    }
+    return rc;
+}

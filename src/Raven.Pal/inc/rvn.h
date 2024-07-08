@@ -108,9 +108,6 @@ EXPORT int32_t
 rvn_get_error_string(int32_t error, char *buf, int32_t buf_size, int32_t *special_errno_flags);
 
 EXPORT int32_t
-rvn_create_and_mmap64_file(const char *path, int64_t initial_file_size, int32_t flags, void **handle, void **base_addr, int64_t *actual_file_size, int32_t *detailed_error_code);
-
-EXPORT int32_t
 rvn_get_system_information(struct SYSTEM_INFORMATION *sys_info, int32_t *detailed_error_code);
 
 EXPORT int32_t
