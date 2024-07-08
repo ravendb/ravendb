@@ -32,6 +32,7 @@ namespace Raven.Server.Documents
 {
     public class DatabasesLandlord : IDisposable
     {
+        public const string Init = "Init";
         public const string DoNotRemove = "DoNotRemove";
         private readonly AsyncReaderWriterLock _disposing = new AsyncReaderWriterLock();
 
@@ -683,7 +684,8 @@ namespace Raven.Server.Documents
 
         private async Task<DocumentDatabase> UnlikelyCreateDatabaseUnderContention(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, string caller = null)
         {
-            if (await _databaseSemaphore.WaitAsync(_concurrentDatabaseLoadTimeout) == false)
+            var timeToWait = caller == Init ? Timeout.InfiniteTimeSpan : _concurrentDatabaseLoadTimeout;
+            if (await _databaseSemaphore.WaitAsync(timeToWait) == false)
                 throw new DatabaseConcurrentLoadTimeoutException("Too many databases loading concurrently, timed out waiting for them to load.");
 
             return await CreateDatabaseUnderResourceSemaphore(databaseName, config, wakeup);
