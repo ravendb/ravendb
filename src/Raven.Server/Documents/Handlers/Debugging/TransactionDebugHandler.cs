@@ -8,6 +8,7 @@ using Raven.Server.Utils;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 using Voron;
 using Voron.Impl;
 
@@ -72,11 +73,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return new DynamicJsonValue
             {
                 [nameof(TxInfoResult.TransactionId)] = lowLevelTransaction.Id,
-                [nameof(TxInfoResult.ThreadId)] = lowLevelTransaction.CurrentTransactionHolder?.ManagedThreadId,
-                [nameof(TxInfoResult.ThreadName)] = lowLevelTransaction.CurrentTransactionHolder?.Name,
+                [nameof(TxInfoResult.ThreadId)] = lowLevelTransaction.CurrentTransactionIdHolder,
+                [nameof(TxInfoResult.ThreadName)] = NativeMemory.GetByThreadId(lowLevelTransaction.CurrentTransactionIdHolder)?.Name,
                 [nameof(TxInfoResult.StartTime)] = lowLevelTransaction.TxStartTime.GetDefaultRavenFormat(isUtc: true),
                 [nameof(TxInfoResult.TotalTime)] = $"{(DateTime.UtcNow - lowLevelTransaction.TxStartTime).TotalMilliseconds} mSecs",
-                [nameof(TxInfoResult.FlushInProgressLockTaken)] = lowLevelTransaction._flushInProgressLockTaken,
+                [nameof(TxInfoResult.FlushInProgressLockTaken)] = lowLevelTransaction.Environment.IsFlushInProgress,
                 [nameof(TxInfoResult.Flags)] = lowLevelTransaction.Flags,
                 [nameof(TxInfoResult.IsCloned)] = lowLevelTransaction.IsCloned,
                 [nameof(TxInfoResult.NumberOfModifiedPages)] = lowLevelTransaction.NumberOfModifiedPages,

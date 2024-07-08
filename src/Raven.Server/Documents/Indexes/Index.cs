@@ -4516,22 +4516,12 @@ namespace Raven.Server.Documents.Indexes
 
             _lastCheckedFlushLock = now;
 
-            var gotLock = _indexStorage.Environment().FlushInProgressLock.TryEnterReadLock(0);
-            try
-            {
-                if (gotLock == false)
-                {
-                    stats.RecordBatchCompletedReason(type, "Environment flush was waiting for us and global flusher was about to use all free flushing resources");
-                    return true;
-                }
-            }
-            finally
-            {
-                if (gotLock)
-                    _indexStorage.Environment().FlushInProgressLock.ExitReadLock();
-            }
+            if (_indexStorage.Environment().IsFlushInProgress is false) 
+                return false;
+            
+            stats.RecordBatchCompletedReason(type, "Environment flush was waiting for us and global flusher was about to use all free flushing resources");
+            return true;
 
-            return false;
         }
 
         public enum CanContinueBatchResult

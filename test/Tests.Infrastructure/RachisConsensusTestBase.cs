@@ -205,8 +205,6 @@ namespace Tests.Infrastructure
             return sb.ToString();
         }
 
-        protected bool EnableCaptureWriteTransactionStackTrace = false;
-
         protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0, int electionTimeout = 300, [CallerMemberName] string caller = null, bool shouldRunInMemory = true, string nodeTag = null)
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, port);
@@ -244,9 +242,7 @@ namespace Tests.Infrastructure
             }
 
             var serverStore = new RavenServer(configuration) { ThrowOnLicenseActivationFailure = true }.ServerStore;
-#if DEBUG
-            serverStore.EnableCaptureWriteTransactionStackTrace = EnableCaptureWriteTransactionStackTrace;
-#endif
+
             serverStore.Initialize();
             var rachis = new RachisConsensus<CountingStateMachine>(serverStore, seed);
             var storageEnvironment = new StorageEnvironment(server);

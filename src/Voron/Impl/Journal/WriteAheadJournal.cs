@@ -497,6 +497,8 @@ namespace Voron.Impl.Journal
             private readonly ManualResetEventSlim _onWriteTransactionCompleted = new();
             private readonly LockTaskResponsible _flushLockTaskResponsible;
 
+            public int FlushInProgress;
+
             public sealed class LastFlushState
             {
                 public readonly long TransactionId;
@@ -602,6 +604,8 @@ namespace Voron.Impl.Journal
                             $"Could not acquire the write lock in {timeToWait.TotalSeconds} seconds");
                     }
 
+                    Interlocked.Exchange(ref FlushInProgress, 1);
+                    
                     if (_waj._env.Disposed)
                         return;
 
@@ -656,6 +660,8 @@ namespace Voron.Impl.Journal
                 }
                 finally
                 {
+                    Interlocked.Exchange(ref FlushInProgress, 0);
+                    
                     if(bufferOfPageFromScratchBuffersToFree != null) 
                         _scratchPagesListPool.Free(bufferOfPageFromScratchBuffersToFree);
                     byteStringContext?.Dispose();
@@ -674,7 +680,6 @@ namespace Voron.Impl.Journal
                 // the idea here is that even though we need to run the journal through its state update under the transaction lock
                 // we don't actually have to do that in our own transaction, what we'll do is to setup things so if there is a running
                 // write transaction, we'll piggy back on its commit to complete our process, without interrupting its work
-                _waj._env.FlushInProgressLock.EnterWriteLock();
                 _waj.CurrentFlushingInProgressHolder = NativeMemory.CurrentThreadStats;
 
                 try
@@ -721,7 +726,6 @@ namespace Voron.Impl.Journal
                 finally
                 {
                     _waj.CurrentFlushingInProgressHolder = null;
-                    _waj._env.FlushInProgressLock.ExitWriteLock();
                 }
             }
 
@@ -1399,15 +1403,14 @@ namespace Voron.Impl.Journal
             [Conditional("DEBUG")]
             private void ThrowOnFlushLockEnterWhileWriteTransactionLockIsTaken()
             {
-                var currentWriteTransactionHolder = _waj._env._currentWriteTransactionHolder;
+                var currentWriteTransactionHolder = _waj._env._currentWriteTransactionIdHolder;
                 var currentTxLockCount = _waj._env._transactionWriter.CurrentCount;
 
-                if (currentWriteTransactionHolder != null &&
-                    currentWriteTransactionHolder == NativeMemory.CurrentThreadStats)
+                if (currentWriteTransactionHolder == System.Environment.CurrentManagedThreadId)
                 {
                     throw new InvalidOperationException("The flushing lock must be taken before acquiring the write transaction lock. " +
                                                         "This check is supposed to prevent potential deadlock and guarantee the same order of taking those two locks." +
-                                                        $"(Thread holding the write tx lock - Name: '{currentWriteTransactionHolder.Name}', Id: {currentWriteTransactionHolder.ManagedThreadId}. " +
+                                                        $"(Thread holding the write tx lock - Name: '{NativeMemory.GetByThreadId(currentWriteTransactionHolder)?.Name}', Id: {currentWriteTransactionHolder}. " +
                                                         $"Current thread - Id: {Thread.CurrentThread.ManagedThreadId}. " +
                                                         $"Current tx lock count: {currentTxLockCount})");
                 }

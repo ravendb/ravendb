@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.LowMemory;
@@ -17,6 +18,11 @@ namespace Sparrow.Utils
         internal static readonly LightWeightThreadLocal<ThreadStats> ThreadAllocations = new LightWeightThreadLocal<ThreadStats>(
             () => new ThreadStats());
 
+        public static ThreadStats GetByThreadId(int threadId)
+        {
+            return ThreadAllocations.Values.FirstOrDefault(x => x.ManagedThreadId == threadId);
+        } 
+        
         public static void NotifyCurrentThreadAboutToClose()
         {
             ThreadAllocations.Value = null;
