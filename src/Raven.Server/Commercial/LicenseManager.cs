@@ -436,6 +436,7 @@ namespace Raven.Server.Commercial
             }
 
             ThrowIfCannotActivateLicense(licenseStatus);
+            await UpdateLicenseForLetsEncryptAsync(license);
 
             try
             {
@@ -454,7 +455,42 @@ namespace Raven.Server.Commercial
                 throw new InvalidOperationException("Could not save license!", e);
             }
         }
-        
+
+        private async Task UpdateLicenseForLetsEncryptAsync(License newLicense)
+        {
+            if (_serverStore.Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
+                return;
+
+            var previousLicense = _serverStore.LoadLicense();
+            if (previousLicense == null)
+            {
+                // no license
+                return;
+            }
+
+            if (previousLicense.Id == newLicense.Id)
+            {
+                // same license id
+                return;
+            }
+
+            var updateInfo = new UpdateLicenseForLetsEncrypt
+            {
+                PreviousLicense = previousLicense,
+                NewLicense = newLicense
+            };
+
+            var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/update-lets-encrypt-license",
+                    new StringContent(JsonConvert.SerializeObject(updateInfo), Encoding.UTF8, "application/json"), _serverStore.ServerShutdown)
+                .ConfigureAwait(false);
+
+            if (response.IsSuccessStatusCode == false)
+            {
+                var responseString = await response.Content.ReadAsStringAsync(_serverStore.ServerShutdown).ConfigureAwait(false);
+                throw new InvalidOperationException($"Cannot activate license because we failed to update the license for Let's Encrypt {responseString}");
+            }
+        }
+
         private void ResetLicense(string error)
         {
             LicenseStatus = new LicenseStatus
@@ -472,7 +508,7 @@ namespace Raven.Server.Commercial
                 LicensedTo = licenseStatus.LicensedTo,
                 ErrorMessage = null,
                 Attributes = licenseStatus.Attributes,
-                FirstServerStartDate = LicenseStatus.FirstServerStartDate,
+                FirstServerStartDate = LicenseStatus.FirstServerStartDate
             };
         }
 
