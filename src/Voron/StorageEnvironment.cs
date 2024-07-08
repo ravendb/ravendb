@@ -98,9 +98,8 @@ namespace Voron
 
         private readonly WriteAheadJournal _journal;
         internal readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1, 1);
-        internal NativeMemory.ThreadStats _currentWriteTransactionHolder;
+        internal int _currentWriteTransactionIdHolder;
         private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
-        internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
         private readonly ReaderWriterLockSlim _txCreation = new ReaderWriterLockSlim();
         private readonly CountdownEvent _envDispose = new CountdownEvent(1);
 
@@ -671,7 +670,6 @@ namespace Voron
             _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
             bool txLockTaken = false;
-            bool flushInProgressReadLockTaken = false;
             try
             {
                 IncrementUsageOnNewTransaction();
@@ -679,16 +677,6 @@ namespace Voron
                 if (flags == TransactionFlags.ReadWrite)
                 {
                     var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
-
-                    if (FlushInProgressLock.IsWriteLockHeld == false)
-                    {
-                        flushInProgressReadLockTaken = FlushInProgressLock.TryEnterReadLock(wait);
-                        if (flushInProgressReadLockTaken == false)
-                        {
-                            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
-                            ThrowOnTimeoutWaitingForReadFlushingInProgressLock(wait);
-                        }
-                    }
 
                     ThrowOnWriteTransactionOpenedByTheSameThread();
 
@@ -702,7 +690,7 @@ namespace Voron
 
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                    _currentWriteTransactionHolder = NativeMemory.CurrentThreadStats;
+                    _currentWriteTransactionIdHolder = Environment.CurrentManagedThreadId;
                     WriteTransactionStarted();
 
                     if (_endOfDiskSpace != null)
@@ -727,19 +715,11 @@ namespace Voron
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
                     tx = new LowLevelTransaction(this, transactionPersistentContext, flags, _freeSpaceHandling,
-                        context)
-                    {
-                        _flushInProgressLockTaken = flushInProgressReadLockTaken,
-                    };
+                        context);
 
-                    if (flags == TransactionFlags.ReadWrite)
-                    {
-                        tx.CurrentTransactionHolder = _currentWriteTransactionHolder;
-                    }
-                    else
-                    {
-                        tx.CurrentTransactionHolder = NativeMemory.CurrentThreadStats;
-                    }
+                    tx.CurrentTransactionIdHolder = flags == TransactionFlags.ReadWrite ? 
+                        _currentWriteTransactionIdHolder : 
+                        Environment.CurrentManagedThreadId;
 
                     ActiveTransactions.Add(tx);
 
@@ -758,12 +738,8 @@ namespace Voron
                 {
                     if (txLockTaken)
                     {
-                        _currentWriteTransactionHolder = null;
+                        _currentWriteTransactionIdHolder = -1;
                         _transactionWriter.Release();
-                    }
-                    if (flushInProgressReadLockTaken)
-                    {
-                        FlushInProgressLock.ExitReadLock();
                     }
                 }
                 finally
@@ -779,27 +755,15 @@ namespace Voron
             NewTransactionCreated?.Invoke(tx);
         }
 
-#if DEBUG
-        public bool CaptureTransactionStackTrace;
-#endif
-
         [Conditional("DEBUG")]
         private void ThrowOnWriteTransactionOpenedByTheSameThread()
         {
-            var currentWriteTransactionHolder = _currentWriteTransactionHolder;
-            if (currentWriteTransactionHolder != null &&
-                currentWriteTransactionHolder == NativeMemory.CurrentThreadStats)
+            var currentWriteTransactionHolder = _currentWriteTransactionIdHolder;
+            if (currentWriteTransactionHolder == Environment.CurrentManagedThreadId)
             {
                 throw new InvalidOperationException($"A write transaction is already opened by thread name: " +
-                                                    $"{currentWriteTransactionHolder.Name}, Id: {currentWriteTransactionHolder.ManagedThreadId}{Environment.NewLine}" +
-                                                    $"{currentWriteTransactionHolder.CapturedStackTrace}");
+                                                    $"{Thread.CurrentThread.Name}, Id: {currentWriteTransactionHolder}{Environment.NewLine}");
             }
-#if DEBUG
-            if (currentWriteTransactionHolder != null && CaptureTransactionStackTrace)
-            {
-                currentWriteTransactionHolder.CapturedStackTrace = Environment.StackTrace;
-            }
-#endif
         }
 
         internal void IncrementUsageOnNewTransaction()
@@ -836,32 +800,16 @@ namespace Voron
             if (wait == TimeSpan.Zero)// avoid allocating any strings in common case of just trying
                 throw new TimeoutException("Tried and failed to get the tx lock with no timeout, someone else is holding the lock, will retry later...");
 
-            var copy = _currentWriteTransactionHolder;
-            if (copy == NativeMemory.CurrentThreadStats)
+            var copy = _currentWriteTransactionIdHolder;
+            if (copy == Environment.CurrentManagedThreadId)
             {
                 throw new InvalidOperationException("A write transaction is already opened by this thread");
             }
 
+            var threadStats = NativeMemory.GetByThreadId(copy);
 
             var message = $"Waited for {wait} for transaction write lock, but could not get it";
-            if (copy != null)
-                message += $", the tx is currently owned by thread {copy.ManagedThreadId} - {copy.Name}, OS thread id: {copy.UnmanagedThreadId}";
-
-            throw new TimeoutException(message);
-        }
-
-        [DoesNotReturn]
-        private void ThrowOnTimeoutWaitingForReadFlushingInProgressLock(TimeSpan wait)
-        {
-            var copy = Journal.CurrentFlushingInProgressHolder;
-            if (copy == NativeMemory.CurrentThreadStats)
-            {
-                throw new InvalidOperationException("Flushing is already being performed by this thread");
-            }
-
-            var message = $"Waited for {wait} for read access of the flushing in progress lock, but could not get it";
-            if (copy != null)
-                message += $", the flushing in progress lock is currently owned by thread {copy.ManagedThreadId} - {copy.Name}";
+            message += $", the tx is currently owned by thread {copy} - {threadStats?.Name}, OS thread id: {threadStats?.UnmanagedThreadId}";
 
             throw new TimeoutException(message);
         }
@@ -957,14 +905,11 @@ namespace Voron
                 if (tx.AsyncCommit != null)
                     return;
 
-                _currentWriteTransactionHolder = null;
+                _currentWriteTransactionIdHolder = -1;
                 _writeTransactionRunning.Reset();
                 _transactionWriter.Release();
 
                 Journal.Applicator.OnTransactionCompleted();
-
-                if (tx._flushInProgressLockTaken)
-                    FlushInProgressLock.ExitReadLock();
             }
             finally
             {
@@ -1670,6 +1615,7 @@ namespace Voron
 
         // We create a single thread-safe persistent dictionary locator with enough state to deal with almost any scenario.
         internal PersistentDictionaryLocator DictionaryLocator { get; } = new PersistentDictionaryLocator(1024);
+        public bool IsFlushInProgress => Journal.Applicator.FlushInProgress != 0;
 
         public PersistentDictionary CreateEncodingDictionary(Page dictionaryPage)
         {
