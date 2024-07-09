@@ -16,7 +16,8 @@ public record IndexStateRecord(
     HandleReferencesBase.State Tombstones,
     ImmutableDictionary<string, IndexStateRecord.CollectionEtags> Collections,
     ImmutableDictionary<string, ImmutableDictionary<string, Tree.ChunkDetails[]>> DirectoriesByName,
-    LuceneIndexState LuceneIndexState)
+    LuceneIndexState LuceneIndexState,
+    ImmutableDictionary<string, LuceneIndexState> LuceneSuggestionStates)
 {
 
     public static IndexStateRecord Empty = new IndexStateRecord(
@@ -25,7 +26,8 @@ public record IndexStateRecord(
         HandleReferencesBase.State.Empty,
         ImmutableDictionary<string, CollectionEtags>.Empty,
         ImmutableDictionary<string, ImmutableDictionary<string, Tree.ChunkDetails[]>>.Empty,
-        new LuceneIndexState());
+        new LuceneIndexState(),
+        ImmutableDictionary<string, LuceneIndexState>.Empty);
     
     public sealed class ReferenceCollectionEtags
     {

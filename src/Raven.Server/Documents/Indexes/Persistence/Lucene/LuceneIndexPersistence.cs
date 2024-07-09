@@ -56,7 +56,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public LuceneVoronDirectory LuceneDirectory { get { return _directory; } }
 
         private readonly Dictionary<string, LuceneVoronDirectory> _suggestionsDirectories;
-        private readonly Dictionary<string, LuceneIndexSearcherHolder> _suggestionsIndexSearcherHolders;
 
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
@@ -70,7 +69,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             _logger = LoggingSource.Instance.GetLogger<LuceneIndexPersistence>(index.DocumentDatabase.Name);
             _suggestionsDirectories = new Dictionary<string, LuceneVoronDirectory>();
-            _suggestionsIndexSearcherHolders = new Dictionary<string, LuceneIndexSearcherHolder>();
             _disposeOnce = new DisposeOnce<SingleAttempt>(() =>
             {
                 DisposeWriters();
@@ -137,15 +135,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             _fields = fields.ToDictionary(x => x.Name, x => x);
-
-            foreach (var field in _fields)
-            {
-                if (!field.Value.HasSuggestions)
-                    continue;
-
-                string fieldName = field.Key;
-                _suggestionsIndexSearcherHolders[fieldName] = new LuceneIndexSearcherHolder(state => new IndexSearcher(_suggestionsDirectories[fieldName], true, state), _index._indexStorage.DocumentDatabase);
-            }
         }
 
         [ThreadStatic]
@@ -384,6 +373,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         
         private void InitializeSuggestionsIndexStorage(Transaction tx, StorageEnvironment environment)
         {
+            var dic = ImmutableDictionary<string, LuceneIndexState>.Empty.ToBuilder();
             foreach (var field in _fields)
             {
                 if (!field.Value.HasSuggestions)
@@ -395,11 +385,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 using (directory.SetTransaction(tx, out IState state))
                 {
                     CreateIndexStructure(directory, state);
-                    var holder = _suggestionsIndexSearcherHolders[field.Key];
-                    holder.SetIndexSearcher(tx);
                 }
+                
+                var dir = _suggestionsDirectories[field.Key];
+                dic.Add(field.Key, CreateSuggestions(dir));
             }
         }
+
+        private static LuceneIndexState CreateSuggestions(Directory dir) => new(() => new IndexSearcher(dir, true, _currentIndexState));
 
         private void InitializeMainIndexStorage(Transaction tx, StorageEnvironment environment)
         {
@@ -463,10 +456,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (!_suggestionsDirectories.TryGetValue(field, out LuceneVoronDirectory directory))
                 throw new InvalidOperationException($"No suggestions index found for field '{field}'.");
 
-            if (!_suggestionsIndexSearcherHolders.TryGetValue(field, out LuceneIndexSearcherHolder holder))
-                throw new InvalidOperationException($"No suggestions index found for field '{field}'.");
-
-            return IndexReadOperationFactory.CreateLuceneSuggestionIndexReader(_index, directory, holder, readTransaction);
+            return IndexReadOperationFactory.CreateLuceneSuggestionIndexReader(_index, directory, readTransaction);
         }
 
         internal override void RecreateSearcher(Transaction asOfTx)
@@ -478,9 +468,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         internal override void RecreateSuggestionsSearchers(Transaction asOfTx)
         {
-            foreach (var suggestion in _suggestionsIndexSearcherHolders)
+            if (_suggestionsDirectories.Count == 0)
+                return;
+
+            var record = (IndexStateRecord)asOfTx.LowLevelTransaction.CurrentStateRecord.ClientState;
+            var builder = record.LuceneSuggestionStates.ToBuilder();
+            foreach (var suggestion in _suggestionsDirectories)
             {
-                suggestion.Value.SetIndexSearcher(asOfTx);
+                builder[suggestion.Key] = CreateSuggestions(suggestion.Value);
             }
         }
 

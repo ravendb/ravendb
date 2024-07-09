@@ -22,9 +22,9 @@ public sealed class DatabaseIndexReadOperationFactory : IIndexReadOperationFacto
         return new CoraxIndexReadOperation(index, logger, readTransaction, queryBuilderFactories, fieldsMapping, query);
     }
 
-    public LuceneSuggestionIndexReader CreateLuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder,
+    public LuceneSuggestionIndexReader CreateLuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory, 
         Transaction readTransaction)
     {
-        return new LuceneSuggestionIndexReader(index, directory, searcherHolder, readTransaction);
+        return new LuceneSuggestionIndexReader(index, directory, readTransaction);
     }
 }

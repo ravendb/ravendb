@@ -25,9 +25,9 @@ public sealed class ShardedIndexReadOperationFactory : IIndexReadOperationFactor
         return new ShardedCoraxIndexReadOperation(index, logger, readTransaction, queryBuilderFactories, fieldsMapping, query);
     }
 
-    public LuceneSuggestionIndexReader CreateLuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder,
+    public LuceneSuggestionIndexReader CreateLuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory, 
         Transaction readTransaction)
     {
-        return new ShardedLuceneSuggestionIndexReader(index, directory, searcherHolder, readTransaction);
+        return new ShardedLuceneSuggestionIndexReader(index, directory,  readTransaction);
     }
 }

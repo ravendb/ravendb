@@ -20,16 +20,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     public class LuceneSuggestionIndexReader : SuggestionIndexReaderBase
     {
         private readonly IndexSearcher _searcher;
-        private readonly IDisposable _releaseSearcher;
         private readonly IDisposable _releaseReadTransaction;
 
         private readonly IState _state;
 
-        public LuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder, Transaction readTransaction)
+        public LuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory, Transaction readTransaction)
             : base(index, LoggingSource.Instance.GetLogger<LuceneSuggestionIndexReader>(index._indexStorage.DocumentDatabase.Name))
         {
             _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
-            _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
+            _searcher = ((LuceneIndexPersistence)index.IndexPersistence).GetSearcher(readTransaction, _state);
         }
 
         public override SuggestionResult Suggestions(IndexQueryServerSide query, SuggestionField field, JsonOperationContext documentsContext, CancellationToken token)
@@ -308,7 +307,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public override void Dispose()
         {
-            _releaseSearcher?.Dispose();
             _releaseReadTransaction?.Dispose();
         }
     }
