@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -78,20 +79,22 @@ namespace Voron.Util
 
         internal List<LowLevelTransaction> AllTransactionsInstances => _activeTxs.ToList();
 
+        internal IEnumerable<LowLevelTransaction> Enumerate() => _activeTxs;
+
         public bool Contains(LowLevelTransaction tx)
         {
             return tx.ActiveTransactionNode.Value == tx;
         }
     }
 
-    public sealed class RacyConcurrentBag
+    public sealed class RacyConcurrentBag : IEnumerable<LowLevelTransaction>
     {
         public sealed class Node
         {
             public LowLevelTransaction Value;
         }
 
-        private Node[] _array = Array.Empty<Node>();
+        private Node[] _array = [];
 
         private int _inUse;
 
@@ -254,6 +257,24 @@ namespace Voron.Util
             if (val == long.MaxValue)
                 return 0;
             return val;
+        }
+
+        public IEnumerator<LowLevelTransaction> GetEnumerator()
+        {
+            var copy = _array;
+            for (int i = 0; i < copy.Length; i++)
+            {
+                var item = copy[i].Value;
+                if (item != null && item != InvalidLowLevelTransaction)
+                {
+                    yield return item;
+                }
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 }

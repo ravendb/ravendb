@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Threading;
+using Lucene.Net.Search;
+using Lucene.Net.Store;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Indexing;
 using Sparrow.Json;
@@ -46,5 +48,6 @@ namespace Raven.Server.Documents.Indexes.Persistence
         public abstract void Dispose();
 
         public virtual IndexStateRecord UpdateIndexCache(Transaction tx) => tx.LowLevelTransaction.CurrentStateRecord.ClientState as IndexStateRecord;
+        
     }
 }

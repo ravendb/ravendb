@@ -29,14 +29,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly IndexSearcher _searcher;
         private readonly IDisposable _releaseReadTransaction;
         private readonly LuceneRavenPerFieldAnalyzerWrapper _analyzer;
-        private readonly IDisposable _releaseSearcher;
 
         private readonly IState _state;
 
         public LuceneIndexFacetedReadOperation(Index index,
             IndexDefinitionBaseServerSide indexDefinition,
             LuceneVoronDirectory directory,
-            LuceneIndexSearcherHolder searcherHolder,
             QueryBuilderFactories queryBuilderFactories,
             Transaction readTransaction,
             DocumentDatabase documentDatabase)
@@ -52,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
-            _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
+            _searcher = ((LuceneIndexPersistence)_index.IndexPersistence).GetSearcher(readTransaction, _state);
         }
 
         public override List<FacetResult> FacetedQuery(FacetQuery facetQuery, QueryTimingsScope queryTimings, DocumentsOperationContext context, Func<string, SpatialField> getSpatialField, CancellationToken token)
@@ -385,7 +383,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public override void Dispose()
         {
-            _releaseSearcher?.Dispose();
             _releaseReadTransaction?.Dispose();
         }
 
