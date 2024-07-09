@@ -84,20 +84,23 @@ public unsafe partial class Pager2
             return pagerTxState;
         }
 
-        private static void OnTxDispose(Pager2 pager, State state, ref PagerTransactionState txState)
+        private static void OnTxDispose(StorageEnvironment env, ref State state, ref PagerTransactionState txState)
         {
-            if (txState.For32Bits?.Remove(pager, out var pagerTxState) != true)
+            if (txState.For32Bits is null)
                 return;
 
-            var canCleanup = false;
-            foreach (var addr in pagerTxState.AddressesToUnload)
+            foreach (var (pager, pagerTxState) in txState.For32Bits)
             {
-                canCleanup |= Interlocked.Decrement(ref addr.Usages) == 0;
-            }
+                var canCleanup = false;
+                foreach (var addr in pagerTxState.AddressesToUnload)
+                {
+                    canCleanup |= Interlocked.Decrement(ref addr.Usages) == 0;
+                }
 
-            if (canCleanup)
-            {
-                CleanupMemory(pager, pagerTxState);
+                if (canCleanup)
+                {
+                    CleanupMemory(pager, pagerTxState);
+                }
             }
         }
         

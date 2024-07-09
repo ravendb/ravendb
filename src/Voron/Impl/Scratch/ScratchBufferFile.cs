@@ -33,7 +33,6 @@ namespace Voron.Impl.Scratch
         private readonly int _scratchNumber;
 
         private readonly Dictionary<long, LinkedList<PendingPage>> _freePagesBySize = new();
-        private readonly Dictionary<int, LinkedList<long>> _freePagesBySizeAvailableImmediately = new();
         private readonly Dictionary<long, PageFromScratchBuffer> _allocatedPages = new();
         private readonly DisposeOnce<SingleAttempt> _disposeOnceRunner;
 
@@ -76,7 +75,6 @@ namespace Voron.Impl.Scratch
         private void ClearDictionaries()
         {
             _allocatedPages.Clear();
-            _freePagesBySizeAvailableImmediately.Clear();
             _freePagesBySize.Clear();
         }
 
@@ -154,29 +152,6 @@ namespace Voron.Impl.Scratch
         public bool TryGettingFromAllocatedBuffer(LowLevelTransaction tx, int numberOfPages, int size, long pageNumber, Page previousVersion, out PageFromScratchBuffer result)
         {
             result = null;
-
-            if (_freePagesBySizeAvailableImmediately.TryGetValue(size, out LinkedList<long> listOfAvailableImmediately) && listOfAvailableImmediately.Count > 0)
-            {
-                var freeAndAvailablePageNumber = listOfAvailableImmediately.Last!.Value;
-
-                listOfAvailableImmediately.RemoveLast();
-
-#if VALIDATE
-                byte* freeAndAvailablePagePointer = _scratchPager.AcquirePagePointer(tx, freeAndAvailablePageNumber, PagerState);
-                ulong freeAndAvailablePageSize = (ulong)size * Constants.Storage.PageSize;
-                // This has to be forced, as the list of available pages should be protected by default, but this
-                // is a policy we implement inside the ScratchBufferFile only.
-                _scratchPager.UnprotectPageRange(freeAndAvailablePagePointer, freeAndAvailablePageSize, true);
-#endif
-
-                
-                result = new PageFromScratchBuffer(this,_scratchPagerState, tx.Id,freeAndAvailablePageNumber, pageNumber, previousVersion, numberOfPages);
-
-                _allocatedPagesCount += numberOfPages;
-                _allocatedPages.Add(freeAndAvailablePageNumber, result);
-
-                return true;
-            }
 
             if (!_freePagesBySize.TryGetValue(size, out LinkedList<PendingPage> list) || list.Count <= 0)
                 return false;
@@ -270,6 +245,8 @@ namespace Voron.Impl.Scratch
 
             return NumberOfAllocations == 0; 
         }
+
+        public ref Pager2.State GetStateRef() => ref _scratchPagerState;
 
         [DoesNotReturn]
         private static void ThrowInvalidFreeOfUnusedPage(long page)

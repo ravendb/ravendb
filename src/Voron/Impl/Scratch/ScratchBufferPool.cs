@@ -41,6 +41,7 @@ namespace Voron.Impl.Scratch
         private int _currentScratchNumber = -1;
 
         private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers = new();
+        private readonly ConcurrentDictionary<Pager2, ScratchBufferItem> _scratchBuffersByPager = new();
 
         private readonly LinkedList<ScratchBufferItem> _recycleArea = new();
 
@@ -68,6 +69,7 @@ namespace Voron.Impl.Scratch
                 }
 
                 _scratchBuffers.Clear();
+                _scratchBuffersByPager.Clear();
 
                 while (_recycleArea.First != null)
                 {
@@ -237,7 +239,10 @@ namespace Voron.Impl.Scratch
                     continue;
                 }
 
-                _scratchBuffers.TryRemove(recycledScratch.Number, out var _);
+                if (_scratchBuffers.TryRemove(recycledScratch.Number, out var removedFile))
+                {
+                    _scratchBuffersByPager.TryRemove(removedFile.File.Pager, out _);
+                }
 
                 if (recycledScratchesToDispose == null)
                     recycledScratchesToDispose = new List<ScratchBufferFile>();
@@ -310,6 +315,7 @@ namespace Voron.Impl.Scratch
             RemoveInactiveScratches(scratch);
 
             _scratchBuffers.AddOrUpdate(scratch.Number, scratch, (_, __) => scratch);
+            _scratchBuffersByPager.AddOrUpdate(scratch.File.Pager, scratch, (_, __) => scratch);
         }
 
         private int RemoveInactiveScratches(ScratchBufferItem except)
@@ -325,9 +331,9 @@ namespace Voron.Impl.Scratch
                     scratchBufferItem == _current)
                     continue;
 
-                ScratchBufferItem _;
-                if (_scratchBuffers.TryRemove(scratchBufferItem.Number, out _) == false)
+                if (_scratchBuffers.TryRemove(scratchBufferItem.Number, out var removedFile) == false)
                     ThrowUnableToRemoveScratch(scratchBufferItem);
+                _scratchBuffersByPager.TryRemove(removedFile.File.Pager, out _);
 
                 if (_recycleArea.Contains(scratchBufferItem) == false)
                 {
@@ -517,7 +523,10 @@ namespace Voron.Impl.Scratch
                 var recycledScratch = scratchNode.Value;
                 if (recycledScratch.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction(null)) == false)
                 {
-                    _scratchBuffers.TryRemove(recycledScratch.Number, out _);
+                    if (_scratchBuffers.TryRemove(recycledScratch.Number, out var removedFile))
+                    {
+                        _scratchBuffersByPager.TryRemove(removedFile.File.Pager, out _);
+                    }
                     recycledScratch.File.Dispose();
                     _scratchSpaceMonitor.Decrease(recycledScratch.File.NumberOfAllocatedPages * Constants.Storage.PageSize);
 
@@ -610,6 +619,11 @@ namespace Voron.Impl.Scratch
         public ScratchBufferFile GetScratchBufferFile(int number)
         {
             return _scratchBuffers.TryGetValue(number, out var item) ? item.File : null;
+        }
+        
+        public ScratchBufferFile GetScratchBufferFile(Pager2 pager)
+        {
+            return _scratchBuffersByPager.TryGetValue(pager, out var item) ? item.File : null;
         }
     }
 }
