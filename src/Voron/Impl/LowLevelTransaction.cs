@@ -132,7 +132,6 @@ namespace Voron.Impl
         /// passed the transaction rollback
         /// </summary>
         public event Action<LowLevelTransaction> OnRollBack;
-        public event Action<LowLevelTransaction> AfterCommitWhenNewTransactionsPrevented;
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         internal FixedSizeTree _freeSpaceTree;
@@ -1130,14 +1129,6 @@ namespace Voron.Impl
         internal long? LocalPossibleOldestReadTransaction;
         internal RacyConcurrentBag.Node ActiveTransactionNode;
         public Transaction Transaction;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void OnAfterCommitWhenNewTransactionsPrevented()
-        {
-            // the event cannot be called outside this class while we need to call it in 
-            // StorageEnvironment.TransactionAfterCommit
-            AfterCommitWhenNewTransactionsPrevented?.Invoke(this);
-        }
 
 #if DEBUG
 
