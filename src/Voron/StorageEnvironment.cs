@@ -873,10 +873,10 @@ namespace Voron
                 if (tx.Committed)
                 {
                     Journal.Applicator.OnTransactionCommitted(tx);
+                    tx.OnAfterCommitWhenNewTransactionsPrevented();
                     UpdateStateOnCommit(tx);
                 }
 
-                tx.OnAfterCommitWhenNewTransactionsPrevented();
             }
         }
 
