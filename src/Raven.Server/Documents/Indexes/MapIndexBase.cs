@@ -119,7 +119,9 @@ namespace Raven.Server.Documents.Indexes
                 }
                 else
                 {
-                    writer.Value.Delete(indexItem.LowerId, stats);
+                    if (indexItem.KnownToBeNew == false)
+                        writer.Value.Delete(indexItem.LowerId, stats);
+
                     writer.Value.IndexDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, first, stats, indexContext);
                     var numberOfOutputs = 1; // the first
                     do
