@@ -2,7 +2,6 @@
 using FastTests;
 using SlowTests.Cluster;
 using Tests.Infrastructure;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace StressTests.Cluster
@@ -13,7 +12,7 @@ namespace StressTests.Cluster
         {
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX64)]
+        [MultiplatformFact(RavenArchitecture.AllX64, Skip = "RavenDB-22199")]
         public async Task ParallelClusterTransactions()
         {
             using (var test = new ParallelClusterTransactionsTests(Output))

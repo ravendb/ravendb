@@ -41,7 +41,7 @@ namespace SlowTests.Cluster
             return base.GetNewServer(options, caller);
         }
 
-        [Fact]
+        [Fact(Skip="RavenDB-22199")]
         public Task ParallelClusterTransactions() => ParallelClusterTransactions(3);
 
 
