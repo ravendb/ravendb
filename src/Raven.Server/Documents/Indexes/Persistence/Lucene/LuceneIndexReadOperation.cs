@@ -49,7 +49,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly bool _indexHasBoostedFields;
 
         private readonly LuceneRavenPerFieldAnalyzerWrapper _analyzer;
-        private readonly IDisposable _releaseSearcher;
         private readonly IDisposable _releaseReadTransaction;
         private readonly int _maxNumberOfOutputsPerDocument;
 
@@ -68,7 +67,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _luceneCleaner = new LuceneCleaner();
         }
 
-        public LuceneIndexReadOperation(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder, QueryBuilderFactories queryBuilderFactories, Transaction readTransaction, IndexQueryServerSide query)
+        public LuceneIndexReadOperation(Index index, LuceneVoronDirectory directory,  QueryBuilderFactories queryBuilderFactories, Transaction readTransaction, IndexQueryServerSide query)
             : base(index, LoggingSource.Instance.GetLogger<LuceneIndexReadOperation>(index._indexStorage.DocumentDatabase.Name), queryBuilderFactories, query)
         {
             try
@@ -84,7 +83,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexType = index.Type;
             _indexHasBoostedFields = index.HasBoostedFields;
             _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
-            _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
+            _searcher = ((LuceneIndexPersistence)_index.IndexPersistence).GetSearcher(readTransaction, _state);
             _readLock = _luceneCleaner.EnterRunningQueryReadLock();
         }
 
@@ -1003,7 +1002,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 base.Dispose();
                 _analyzer?.Dispose();
-                _releaseSearcher?.Dispose();
                 _releaseReadTransaction?.Dispose();
             }
         }

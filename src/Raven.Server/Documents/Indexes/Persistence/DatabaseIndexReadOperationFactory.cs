@@ -10,10 +10,10 @@ namespace Raven.Server.Documents.Indexes.Persistence;
 
 public sealed class DatabaseIndexReadOperationFactory : IIndexReadOperationFactory
 {
-    public LuceneIndexReadOperation CreateLuceneIndexReadOperation(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder,
+    public LuceneIndexReadOperation CreateLuceneIndexReadOperation(Index index, LuceneVoronDirectory directory, 
         QueryBuilderFactories queryBuilderFactories, Transaction readTransaction, IndexQueryServerSide query)
     {
-        return new LuceneIndexReadOperation(index, directory, searcherHolder, queryBuilderFactories, readTransaction, query);
+        return new LuceneIndexReadOperation(index, directory, queryBuilderFactories, readTransaction, query);
     }
 
     public CoraxIndexReadOperation CreateCoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
