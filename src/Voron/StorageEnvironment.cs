@@ -100,7 +100,6 @@ namespace Voron
         internal readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1, 1);
         internal int _currentWriteTransactionIdHolder;
         private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
-        private readonly ReaderWriterLockSlim _txCreation = new ReaderWriterLockSlim();
         private readonly CountdownEvent _envDispose = new CountdownEvent(1);
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
@@ -626,21 +625,11 @@ namespace Voron
             {
                 IncrementUsageOnNewTransaction();
 
-                LowLevelTransaction tx;
+                _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                _txCreation.EnterReadLock();
-                try
-                {
-                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                LowLevelTransaction tx = new(previous.LowLevelTransaction, transactionPersistentContext, context);
 
-                    tx = new LowLevelTransaction(previous.LowLevelTransaction, transactionPersistentContext, context);
-
-                    ActiveTransactions.Add(tx);
-                }
-                finally
-                {
-                    _txCreation.ExitReadLock();
-                }
+                ActiveTransactions.Add(tx);
 
                 return new Transaction(tx);
             }
@@ -709,26 +698,18 @@ namespace Voron
 
                 LowLevelTransaction tx;
 
-                _txCreation.EnterReadLock();
-                try
-                {
-                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                    tx = new LowLevelTransaction(this, transactionPersistentContext, flags, _freeSpaceHandling,
-                        context);
+                tx = new LowLevelTransaction(this, transactionPersistentContext, flags, _freeSpaceHandling,
+                    context);
 
-                    tx.CurrentTransactionIdHolder = flags == TransactionFlags.ReadWrite ? 
-                        _currentWriteTransactionIdHolder : 
-                        Environment.CurrentManagedThreadId;
+                tx.CurrentTransactionIdHolder = flags == TransactionFlags.ReadWrite ? 
+                    _currentWriteTransactionIdHolder : 
+                    Environment.CurrentManagedThreadId;
 
-                    ActiveTransactions.Add(tx);
+                ActiveTransactions.Add(tx);
 
-                    NewTransactionCreated?.Invoke(tx);
-                }
-                finally
-                {
-                    _txCreation.ExitReadLock();
-                }
+                NewTransactionCreated?.Invoke(tx);
 
                 return tx;
             }
@@ -830,30 +811,6 @@ namespace Voron
             return result;
         }
 
-        internal ExitWriteLock PreventNewTransactions()
-        {
-            if (_txCreation.IsWriteLockHeld)
-                return default;
-
-            _txCreation.EnterWriteLock();
-            return new ExitWriteLock(_txCreation);
-        }
-
-        public struct ExitWriteLock : IDisposable
-        {
-            private readonly ReaderWriterLockSlim _rwls;
-
-            public ExitWriteLock(ReaderWriterLockSlim rwls)
-            {
-                _rwls = rwls;
-            }
-
-            public void Dispose()
-            {
-                _rwls?.ExitWriteLock();
-            }
-        }
-
         public event Action<LowLevelTransaction> NewTransactionCreated;
 
         internal void TransactionAfterCommit(LowLevelTransaction tx)
@@ -868,16 +825,11 @@ namespace Voron
                 return;
             }
 
-            using (PreventNewTransactions())
-            {
-                if (tx.Committed)
-                {
-                    Journal.Applicator.OnTransactionCommitted(tx);
-                    tx.OnAfterCommitWhenNewTransactionsPrevented();
-                    UpdateStateOnCommit(tx);
-                }
-
-            }
+            if (!tx.Committed) 
+                return;
+            
+            Journal.Applicator.OnTransactionCommitted(tx);
+            UpdateStateOnCommit(tx);
         }
 
         internal void TransactionCompleted(LowLevelTransaction tx)
