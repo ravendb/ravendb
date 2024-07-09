@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -7,7 +8,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.Documents;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -51,7 +51,8 @@ namespace SlowTests.Issues
             Backup.WaitForResponsibleNodeUpdateInCluster(store, nodes, result.TaskId);
 
             // Turn Database offline in second server.
-            secondServer.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
+            var unloaded = secondServer.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
+            Assert.True(unloaded);
 
             // Backup run in first server
             await Backup.RunBackupAsync(firstServer, result.TaskId, store);
@@ -70,9 +71,10 @@ namespace SlowTests.Issues
                 if (secondInfo == null)
                     return false;
 
-                return firstInfo.LastBackup == secondInfo.LastBackup;
+                return (Math.Abs(firstInfo.IntervalUntilNextBackupInSec - secondInfo.IntervalUntilNextBackupInSec) <= 1) && 
+                       firstInfo.LastBackup == secondInfo.LastBackup;
             }, true, timeout: 60_000, interval: 1000);
-
+            
             Assert.Equal(firstInfo.BackupTaskType, secondInfo.BackupTaskType);
             Assert.Equal(firstInfo.IntervalUntilNextBackupInSec, secondInfo.IntervalUntilNextBackupInSec, tolerance: 1);
             Assert.Equal(firstInfo.Destinations?.Count, 1);
