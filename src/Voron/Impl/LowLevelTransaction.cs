@@ -540,6 +540,8 @@ namespace Voron.Impl
 
         public long GetNextPageNumber() => _envRecord.NextPageNumber + _localTxNextPageNumber;
 
+        public void SetNextPageNumber(long nextPageNumber) => _localTxNextPageNumber = nextPageNumber - _envRecord.NextPageNumber;
+
         internal void TestOnly_SetLocalTxNextPageNumber(long n)
         {
             _localTxNextPageNumber = n;

@@ -64,7 +64,7 @@ namespace Voron.Impl.Journal
 
         public TransactionHeader* LastTransactionHeader { get; private set; }
 
-        private bool ReadOneTransactionToDataFile(ref Pager2.State dataPagerState, ref Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState,
+        public bool ReadOneTransactionToDataFile(ref Pager2.State dataPagerState, ref Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState,
             SafeFileHandle fileHandle, StorageEnvironmentOptions options)
         {
             if (_readAt4Kb >= _journalPagerNumberOfAllocated4Kb)
@@ -320,7 +320,7 @@ namespace Voron.Impl.Journal
             return transactionHeaders;
         }
 
-        private void ZeroRecoveryBufferIfNeeded(Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState, StorageEnvironmentOptions options)
+        public void ZeroRecoveryBufferIfNeeded(Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState, StorageEnvironmentOptions options)
         {
             if (options.Encryption.IsEnabled == false)
                 return;

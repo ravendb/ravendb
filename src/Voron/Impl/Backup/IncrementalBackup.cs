@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron.Data.BTrees;
 using Voron.Exceptions;
@@ -354,6 +355,10 @@ namespace Voron.Impl.Backup
                 long lastTxId = env.HeaderAccessor.Get(x => x->TransactionId);
 
                 long journalNumber = -1;
+                var rc = Pal.rvn_pager_get_file_handle(txw.DataPagerState.Handle, out var fileHandle, out int errorCode);
+                if(rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, errorCode, "Failed to get a file handle to " + txw.DataPager.FileName);
+                using var _ = fileHandle;
                 foreach (var entry in entries)
                 {
                     switch (Path.GetExtension(entry.Name))
@@ -368,74 +373,73 @@ namespace Voron.Impl.Backup
                                 output.Position = output.Length;
                                 input.CopyTo(output);
                             }
-                            throw new NotImplementedException();
 
-                            // var pager = env.Options.OpenPager(jounalFileName);
-                            // toDispose.Add(pager);
-                            //
-                            // if (long.TryParse(Path.GetFileNameWithoutExtension(entry.Name), out journalNumber) == false)
-                            // {
-                            //     throw new InvalidOperationException("Cannot parse journal file number");
-                            // }
+                            var (journalPager, journalPagerState) = env.Options.OpenJournalPager(jounalFileName.FullPath);
+                            toDispose.Add(journalPager);
+                            toDispose.Add(journalPagerState);
 
-                            // var recoveryPager =
-                            //     env.Options.CreateTemporaryBufferPager(Path.Combine(tempDir.Combine(StorageEnvironmentOptions.JournalRecoveryName(journalNumber)).FullPath),
-                            //         env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);
-                            // toDispose.Add(recoveryPager);
+                            if (long.TryParse(Path.GetFileNameWithoutExtension(entry.Name), out journalNumber) == false)
+                            {
+                                throw new InvalidOperationException("Cannot parse journal file number");
+                            }
 
-                            // using (var reader = new JournalReader(pager, env.DataPager, recoveryPager, new HashSet<long>(), new JournalInfo
-                            //        {
-                            //            LastSyncedTransactionId = lastTxId
-                            //        }, new FileHeader { HeaderRevision = -1 }, lastTxHeader))
-                            // {
-                            //     throw new NotImplementedException();
-                            //     // while (reader.ReadOneTransactionToDataFile(env.Options))
-                            //     // {
-                            //     //     lastTxHeader = reader.LastTransactionHeader;
-                            //     // }
-                            //
-                            //     // reader.ZeroRecoveryBufferIfNeeded(reader, env.Options);
-                            //     // if (lastTxHeader != null)
-                            //     // {
-                            //     //     *lastTxHeaderStackLocation = *lastTxHeader;
-                            //     //     lastTxHeader = lastTxHeaderStackLocation;
-                            //     //     lastTxId = lastTxHeader->TransactionId;
-                            //     // }
-                            // }
+                            var (recoveryPager, recoverPagerState) =
+                                env.Options.CreateTemporaryBufferPager(
+                                    Path.Combine(tempDir.Combine(StorageEnvironmentOptions.JournalRecoveryName(journalNumber)).FullPath),
+                                    env.Options.InitialFileSize ?? env.Options.InitialLogFileSize,
+                                    env.Options.Encryption.IsEnabled);
+                            toDispose.Add(recoveryPager);
+                            toDispose.Add(recoverPagerState);
+                            
+                            using (var reader = new JournalReader(journalPager, journalPagerState, txw.DataPager, recoveryPager, new HashSet<long>(),
+                                       new JournalInfo { LastSyncedTransactionId = lastTxId }, new FileHeader { HeaderRevision = -1 }, lastTxHeader))
+                            {
+                                while (reader.ReadOneTransactionToDataFile(ref txw.DataPagerState, ref recoverPagerState, ref txw.PagerTransactionState,fileHandle, env.Options))
+                                {
+                                    lastTxHeader = reader.LastTransactionHeader;
+                                }
 
-                            //break;
+                                reader.ZeroRecoveryBufferIfNeeded(recoverPagerState, ref txw.PagerTransactionState, env.Options);
+                                if (lastTxHeader != null)
+                                {
+                                    *lastTxHeaderStackLocation = *lastTxHeader;
+                                    lastTxHeader = lastTxHeaderStackLocation;
+                                    lastTxId = lastTxHeader->TransactionId;
+                                }
+                            }
+
+                            break;
 
                         default:
                             throw new InvalidOperationException("Unknown file, cannot restore: " + entry);
                     }
                 }
 
-                // if (lastTxHeader == null)
-                //     return; // there was no valid transactions, nothing to do
-                //
-                // env.Options.DataPager.Sync(0);
-                //
-                //
-                // var root = Tree.Open(txw, null, Constants.RootTreeNameSlice, &lastTxHeader->Root);
-                //
-                // txw.UpdateRootsIfNeeded(root);
-                //
-                // txw.State.NextPageNumber = lastTxHeader->LastPageNumber + 1;
-                //
-                // txw.Commit();
-                //
-                // env.HeaderAccessor.Modify(header =>
-                // {
-                //     header->TransactionId = lastTxHeader->TransactionId;
-                //     header->LastPageNumber = lastTxHeader->LastPageNumber;
-                //     
-                //     header->Journal.LastSyncedTransactionId = lastTxHeader->TransactionId;
-                //
-                //     header->Root = lastTxHeader->Root;
-                //     
-                //     Sparrow.Memory.Set(header->Journal.Reserved, 0, JournalInfo.NumberOfReservedBytes);
-                //     header->Journal.Flags = JournalInfoFlags.None;
-                // });
+                if (lastTxHeader == null)
+                    return; // there was no valid transactions, nothing to do
+                
+                txw.DataPager.Sync(txw.DataPagerState, 0);
+                
+                var root = Tree.Open(txw, null, Constants.RootTreeNameSlice, lastTxHeader->Root);
+                
+                txw.UpdateRootsIfNeeded(root);
+
+                txw.SetNextPageNumber(lastTxHeader->LastPageNumber + 1);
+                
+                txw.Commit();
+                
+                env.HeaderAccessor.Modify(header =>
+                {
+                    header->TransactionId = lastTxHeader->TransactionId;
+                    header->LastPageNumber = lastTxHeader->LastPageNumber;
+                    
+                    header->Journal.LastSyncedTransactionId = lastTxHeader->TransactionId;
+                
+                    header->Root = lastTxHeader->Root;
+                    
+                    Sparrow.Memory.Set(header->Journal.Reserved, 0, JournalInfo.NumberOfReservedBytes);
+                    header->Journal.Flags = JournalInfoFlags.None;
+                });
             }
             finally
             {

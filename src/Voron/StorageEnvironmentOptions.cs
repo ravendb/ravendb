@@ -853,7 +853,13 @@ namespace Voron
                     EnsureMinimumSize(fileInfo);
                 }
 
-                return Pager2.Create(this, fileInfo.FullName, 0, Pal.OpenFileFlags.ReadOnly);
+                string filename = fileInfo.FullName;
+                return OpenJournalPager(filename);
+            }
+
+            public override (Pager2 Pager, Pager2.State State) OpenJournalPager(string filename)
+            {
+                return Pager2.Create(this, filename, 0, Pal.OpenFileFlags.ReadOnly);
             }
 
             private FileInfo GetJournalFileInfo(long journalNumber, JournalInfo journalInfo)
@@ -1049,7 +1055,14 @@ namespace Voron
                     return value.CreatePager();
                 throw new InvalidJournalException(journalNumber, journalInfo);
             }
-            
+
+            public override (Pager2 Pager, Pager2.State State) OpenJournalPager(string name)
+            {
+                if (_logs.TryGetValue(name, out JournalWriter value))
+                    return value.CreatePager();
+                throw new InvalidJournalException(name + " was not found", null);
+            }
+
             public override long GetJournalFileSize(long journalNumber, JournalInfo journalInfo)
             {
                 var name = JournalName(journalNumber);
@@ -1112,6 +1125,7 @@ namespace Voron
         public abstract (Pager2 Pager, Pager2.State State) CreateTemporaryBufferPager(string name, long initialSize, bool encrypted);
 
         public abstract (Pager2 Pager, Pager2.State State) OpenJournalPager(long journalNumber, JournalInfo journalInfo);
+        public abstract (Pager2 Pager, Pager2.State State) OpenJournalPager(string name);
 
         public abstract long GetJournalFileSize(long journalNumber, JournalInfo journalInfo);
 
