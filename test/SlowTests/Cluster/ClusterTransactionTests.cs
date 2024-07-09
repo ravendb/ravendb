@@ -1501,10 +1501,10 @@ namespace SlowTests.Cluster
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
-        public async Task ClusterTransaction_WhenLoadReturnEmptyAndCompareExchangeExit_ShouldStillThrowConcurrency(bool clusterTrxBefore)
+        public async Task ClusterTransaction_WhenLoadReturnEmptyAndCompareExchangeExit_ShouldStillThrowConcurrency(Options options, bool clusterTrxBefore)
         {
             const string id = "testObjs/1";
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             if (clusterTrxBefore)
             {
@@ -1555,12 +1555,12 @@ namespace SlowTests.Cluster
         
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task LoadAndIncludeClusterTrxCmpxchg_WhenCmpxchgIsFromLastClusterTransactionWithNoDatabaseCommand_ShouldGetCmpxchg()
+        public async Task LoadAndIncludeClusterTrxCmpxchg_WhenCmpxchgIsFromLastClusterTransactionWithNoDatabaseCommand_ShouldGetCmpxchg(Options options)
         {
             const string cmpxchgId = "cmpxchg/0";
             const string id = "testObjs/1";
 
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true}))
             {
@@ -1586,11 +1586,11 @@ namespace SlowTests.Cluster
         
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task QueryAndIncludeClusterTrxCmpxchg_WhenDocumentsCommandsDidntFinished_ShouldNotReturnNull()
+        public async Task QueryAndIncludeClusterTrxCmpxchg_WhenDocumentsCommandsDidntFinished_ShouldNotReturnNull(Options options)
         {
             const string id1 = "testObjs/0";
             const string id2 = "testObjs/1";
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             await store.ExecuteIndexAsync(new TestIndex("TestIndex"));
 
 
@@ -1651,11 +1651,11 @@ select incl(c)"
         
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task QueryIndexAndIncludeClusterTrxCmpxchg_WhenModifiedButDocumentsCommandsDidntFinished_ShouldNotBeNull()
+        public async Task QueryIndexAndIncludeClusterTrxCmpxchg_WhenModifiedButDocumentsCommandsDidntFinished_ShouldNotBeNull(Options options)
         {
             const string id1 = "testObjs/0";
             const string id2 = "testObjs/1";
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             await store.ExecuteIndexAsync(new TestIndex("TestIndex"));
 
 
@@ -1719,11 +1719,11 @@ select incl(c)"
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task QueryAndIncludeClusterTrxCmpxchg_WhenModifiedButDocumentsCommandsDidntFinished_ShouldNotBeNull()
+        public async Task QueryAndIncludeClusterTrxCmpxchg_WhenModifiedButDocumentsCommandsDidntFinished_ShouldNotBeNull(Options options)
         {
             const string id1 = "testObjs/0";
             const string id2 = "testObjs/1";
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true}))
             {
@@ -1784,10 +1784,10 @@ select incl(c)"
         
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task QueryIncludeCmpxchg_WhenEmpty_ShouldNotCreateAdditionalRequest()
+        public async Task QueryIncludeCmpxchg_WhenEmpty_ShouldNotCreateAdditionalRequest(Options options)
         {
             const string notExistCmpxchgId = "not-exist";
-            using var store = GetDocumentStore(); 
+            using var store = GetDocumentStore(options); 
             await store.ExecuteIndexAsync(new TestIndex("TestIndex"));
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -1821,12 +1821,12 @@ select incl(c)"
         
         [RavenTheory(RavenTestCategory.CompareExchange | RavenTestCategory.ClusterTransactions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void LoadIncludeCmpxchg_WhenGet_ShouldNotTriggerAdditionalRequest()
+        public void LoadIncludeCmpxchg_WhenGet_ShouldNotTriggerAdditionalRequest(Options options)
         {
             const string docId = "testObjs/0";
             const string cmpxchgId = "cmpxchg/0";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {                
                 using (var session = store.OpenSession())
                 {
@@ -1852,9 +1852,9 @@ select incl(c)"
         
         [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task LoadClusterWideSession_WhenDeletedWithoutClusterWideSessionAndClusterWideTransactionInProcess_ShouldNotReturnAtomicGuard()
+        public async Task LoadClusterWideSession_WhenDeletedWithoutClusterWideSessionAndClusterWideTransactionInProcess_ShouldNotReturnAtomicGuard(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             using var store2 = new DocumentStore{Urls = store.Urls, Database = store.Database}.Initialize();
 
             const string id = "foo/bar";
@@ -1920,12 +1920,13 @@ select incl(c)"
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
-        public async Task DatabaseRequest_WhenHasLastClusterTransaction_ShouldWaitForIndex(bool withClusterTrxBefore)
+        public async Task DatabaseRequest_WhenHasLastClusterTransaction_ShouldWaitForIndex(Options options, bool withClusterTrxBefore)
         {
             var cmpXchgKey = "cmpXchgKey";
 
             var server = GetNewServer();
-            using var store = GetDocumentStore(new Options{Server = server});
+            options.Server = server;
+            using var store = GetDocumentStore(options);
             using var store2 = new DocumentStore{Urls = store.Urls, Database = store.Database}.Initialize();
 
             if (withClusterTrxBefore)
@@ -1973,7 +1974,7 @@ select incl(c)"
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
-        public async Task DatabaseRequest_WhenLastClusterTrxWasDeleteCmpxchg_ShouldNotHang(bool withClusterTrxBefore)
+        public async Task DatabaseRequest_WhenLastClusterTrxWasDeleteCmpxchg_ShouldNotHang(Options options, bool withClusterTrxBefore)
         {
             var cmpXchgKey = "cmpXchgKey";
 
@@ -2058,11 +2059,11 @@ select incl(c)"
         
         [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task DatabaseRequest_WhenWaitForIndexAndClusterTransactionHasError_ShouldThrow()
+        public async Task DatabaseRequest_WhenWaitForIndexAndClusterTransactionHasError_ShouldThrow(Options options)
         {
             const string id = "testObjs/0";
             
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             var database = await GetDatabase(store.Database);
 
             store.SetLastTransactionIndex(store.Database, long.MaxValue);

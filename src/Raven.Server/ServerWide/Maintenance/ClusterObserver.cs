@@ -573,19 +573,9 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private CompareExchangeTombstonesCleanupState GetMaxCompareExchangeTombstonesEtagToDelete(TransactionOperationContext context, string databaseName, DatabaseObservationState state, out long maxEtag)
         {
-            List<long> periodicBackupTaskIds;
-            maxEtag = long.MaxValue;
+            maxEtag = -1;
 
-            if (state?.RawDatabase != null)
-            {
-                periodicBackupTaskIds = state.RawDatabase.PeriodicBackupsTaskIds;
-            }
-            else
-            {
-                using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(context, databaseName))
-                    periodicBackupTaskIds = rawRecord.PeriodicBackupsTaskIds;
-            }
-
+            var periodicBackupTaskIds = state.RawDatabase.PeriodicBackupsTaskIds;;
             if (periodicBackupTaskIds != null && periodicBackupTaskIds.Count > 0)
             {
                 foreach (var taskId in periodicBackupTaskIds)
@@ -618,7 +608,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         continue;
                     }
 
-                    if (lastRaftIndex < maxEtag)
+                    if (maxEtag == -1 || lastRaftIndex < maxEtag)
                         maxEtag = lastRaftIndex.Value;
 
                     if (maxEtag == 0)
@@ -626,8 +616,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
 
-            if (state != null)
-            {
+            
                 // we are checking this here, not in the main loop, to avoid returning 'NoMoreTombstones' when maxEtag is 0
                 foreach (var nodeTag in state.DatabaseTopology.AllNodes)
                 {
@@ -639,18 +628,18 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     var hasState = state.Current.TryGetValue(nodeTag, out var nodeReport);
                     Debug.Assert(hasState, $"Could not find state for node '{nodeTag}' for database '{state.Name}'.");
+                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                     if (hasState == false)
                         return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
 
-                    var tryGetValue = nodeReport.Report.TryGetValue(state.Name, out var report);
-                    Debug.Assert(tryGetValue, $"Could not find report for node '{nodeTag}' for database '{state.Name}'.");
-                    if (tryGetValue == false)
-                    {
+                    var hasReport = nodeReport.Report.TryGetValue(state.Name, out var report);
+                    Debug.Assert(hasReport, $"Could not find report for node '{nodeTag}' for database '{state.Name}'.");
+                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                    if (hasReport == false)
                         return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
-                    }
 
                     var clusterWideTransactionIndex = report.LastClusterWideTransactionRaftIndex;
-                    if (clusterWideTransactionIndex > maxEtag)
+                    if (maxEtag == -1 || clusterWideTransactionIndex < maxEtag)
                         maxEtag = clusterWideTransactionIndex;
                     
                     foreach (var kvp in report.LastIndexStats)
@@ -659,14 +648,13 @@ namespace Raven.Server.ServerWide.Maintenance
                         if (lastIndexedCompareExchangeReferenceTombstoneEtag == null)
                             continue;
 
-                        if (lastIndexedCompareExchangeReferenceTombstoneEtag < maxEtag)
+                        if (maxEtag == -1 || lastIndexedCompareExchangeReferenceTombstoneEtag < maxEtag)
                             maxEtag = lastIndexedCompareExchangeReferenceTombstoneEtag.Value;
 
                         if (maxEtag == 0)
                             return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
                     }
                 }
-            }
 
             if (maxEtag == 0)
                 return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
