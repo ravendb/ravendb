@@ -37,7 +37,7 @@ class documentPropertyProvider {
         const valueAccessor = column.valueAccessor;
         if (_.isFunction(valueAccessor)) {
             if (column instanceof customColumn) {
-                return !_.every(column.tryGuessRequiredProperties(), p => this.hasEntireValue(doc, p));
+                return !column.tryGuessRequiredProperties().every(p => this.hasEntireValue(doc, p));
             } else {
                 return false;
             }

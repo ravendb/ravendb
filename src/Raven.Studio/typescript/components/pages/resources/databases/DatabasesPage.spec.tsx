@@ -1,6 +1,6 @@
 import { rtlRender } from "test/rtlTestUtils";
 import React from "react";
-import { composeStories } from "@storybook/testing-react";
+import { composeStories } from "@storybook/react";
 
 import * as stories from "./DatabasesPage.stories";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";

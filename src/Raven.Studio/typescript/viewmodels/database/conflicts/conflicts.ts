@@ -98,7 +98,7 @@ class conflicts extends shardViewModelBase {
             required: true,
             aceValidation: true,
             validation: [{
-                validator: (val: string) => _.every(conflictTokens, t => !val.includes(t)),
+                validator: (val: string) => conflictTokens.every(t => !val.includes(t)),
                 message: "Document contains conflicts markers"
             }]
         });

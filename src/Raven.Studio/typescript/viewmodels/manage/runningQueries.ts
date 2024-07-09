@@ -195,7 +195,7 @@ class runningQueries extends viewModelBase {
     
     private onData(items: Array<Raven.Server.Documents.Queries.LiveRunningQueriesCollector.ExecutingQueryCollection>) {
         if (this.tailEnabled()) {
-            this.data(_.flatMap(items, item => {
+            this.data(items.flatMap(item => {
                 return item.RunningQueries.map(query => {
                     return {
                         DatabaseName: item.DatabaseName,
