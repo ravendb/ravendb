@@ -2179,6 +2179,64 @@ loadToUsers({
             Assert.Equal(destUser.TimeSeriesNames.First(), exitTimeSeries);
         }
 
+        // RavenDB-21681
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Etl)]
+        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentAndTimeSeriesThenDeleteTimeSeries_ShouldSrcBeAsDest()
+        {
+            string[] collections = { "Users" };
+            string script = @"
+loadToPeople(this);
+var clone = JSON.parse(JSON.stringify(this));
+loadToUsers(clone);
+
+function loadTimeSeriesOfUsersBehavior(doc, ts)
+{
+    return true;
+}";
+            var time = new DateTime(2020, 04, 27);
+            const string timeSeriesName = "Heartrate";
+            const string tag = "fitbit";
+            const double value = 58d;
+            const string documentId = "users/1";
+
+            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            using (var session = src.OpenAsyncSession())
+            {
+                var entity = new User { Name = "Joe Doe" };
+                await session.StoreAsync(entity, documentId);
+                session.TimeSeriesFor(documentId, timeSeriesName).Append(time, new[] { value }, tag);
+
+                await session.SaveChangesAsync();
+            }
+
+            await AssertWaitForNotNullAsync(async () =>
+            {
+                using var session = dest.OpenAsyncSession();
+                return await session.LoadAsync<User>(documentId);
+            }, interval: _waitInterval);
+
+            var timeSeries = await AssertWaitForTimeSeriesEntry(dest, documentId, timeSeriesName, time);
+
+            Assert.Equal(time, timeSeries.Timestamp);
+            Assert.Equal(tag, timeSeries.Tag);
+            Assert.Equal(value, timeSeries.Value);
+
+            using (var session = src.OpenAsyncSession())
+            {
+                session.TimeSeriesFor(documentId, timeSeriesName).Delete();
+                await session.SaveChangesAsync();
+            }
+
+            await AssertWaitForNullAsync(async () =>
+            {
+                using (var session = dest.OpenAsyncSession())
+                {
+                    var entries = await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync();
+                    return entries;
+                }
+            }, interval: _waitInterval);
+        }
+
         private async Task<TimeSeriesEntry> AssertWaitForTimeSeriesEntry(IDocumentStore store, string documentId, string timeSeriesName, DateTime timeDate)
         {
             return await AssertWaitForNotNullAsync(async () =>

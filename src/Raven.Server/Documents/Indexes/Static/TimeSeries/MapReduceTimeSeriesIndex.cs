@@ -6,13 +6,13 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
-using Raven.Server.Documents.Indexes.MapReduce.Workers;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Indexes.Workers.Cleanup;
 using Raven.Server.Documents.Indexes.Workers.TimeSeries;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
@@ -38,9 +38,11 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
-            var workers = new List<IIndexingWork>();
-
-            workers.Add(new CleanupDocumentsForMapReduce(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, MapReduceWorkContext));
+            var workers = new List<IIndexingWork>
+            {
+                new CleanupDocumentsForMapReduce(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, MapReduceWorkContext),
+                new CleanupTimeSeriesForMapReduce(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, MapReduceWorkContext)
+            };
 
             if (_compiled.CollectionsWithCompareExchangeReferences.Count > 0)
                 workers.Add(_handleCompareExchangeReferences = new HandleCompareExchangeTimeSeriesReferences(this, _compiled.CollectionsWithCompareExchangeReferences, DocumentDatabase.DocumentsStorage.TimeSeriesStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
@@ -162,6 +164,43 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(
                     queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalCount, overallDuration);
             progressStats.TotalNumberOfItems += totalCount;
+        }
+
+        internal void HandleTimeSeriesDelete(TombstoneIndexItem tombstone, TransactionOperationContext indexContext)
+        {
+            var toDelete = new List<Slice>();
+            using (Slice.External(indexContext.Allocator, tombstone.LuceneKey, out var prefixKey))
+            {
+                using (var it = MapReduceWorkContext.MapPhaseTree.Iterate(prefetch: true))
+                {
+                    it.SetRequiredPrefix(prefixKey);
+
+                    if (it.Seek(prefixKey) == false)
+                        return;
+
+                    do
+                    {
+                        toDelete.Add(it.CurrentKey.Clone(indexContext.Allocator));
+                    } while (it.MoveNext());
+                }
+            }
+
+            foreach (var key in toDelete)
+            {
+                MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(key, clone: false);
+
+                if (MapReduceWorkContext.DocumentMapEntries.NumberOfEntries == 0)
+                    continue;
+
+                foreach (var mapEntry in GetMapEntries(MapReduceWorkContext.DocumentMapEntries))
+                {
+                    var store = GetResultsStore(mapEntry.ReduceKeyHash, indexContext, create: false);
+
+                    store.Delete(mapEntry.Id);
+                }
+
+                MapReduceWorkContext.MapPhaseTree.DeleteFixedTreeFor(key, sizeof(ulong));
+            }
         }
     }
 }

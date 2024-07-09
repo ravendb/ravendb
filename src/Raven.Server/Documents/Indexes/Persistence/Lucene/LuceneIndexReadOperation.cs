@@ -22,7 +22,6 @@ using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Explanation;
-using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.MoreLikeThis.Lucene;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;

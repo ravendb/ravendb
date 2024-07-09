@@ -138,6 +138,7 @@ namespace Raven.Server.Documents.Indexes
 
                 tx.InnerTransaction.CreateTree(IndexSchema.EtagsTree);
                 tx.InnerTransaction.CreateTree(IndexSchema.EtagsTombstoneTree);
+                tx.InnerTransaction.CreateTree(IndexSchema.EtagsTimeSeriesDeletedRangeTree);
                 tx.InnerTransaction.CreateTree(IndexSchema.References);
                 tx.InnerTransaction.CreateTree(IndexSchema.ReferencesForCompareExchange);
 
@@ -734,6 +735,13 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public long ReadLastProcessedTombstoneEtag(IndexItemType itemType, RavenTransaction tx, string collection)
+        {
+            return itemType == IndexItemType.TimeSeries ? 
+                ReadLastProcessedTimeSeriesDeletedRangeEtag(tx, collection) : 
+                ReadLastProcessedTombstoneEtag(tx, collection);
+        }
+
         public long ReadLastProcessedTombstoneEtag(RavenTransaction tx, string collection)
         {
             var txi = tx.InnerTransaction;
@@ -749,6 +757,24 @@ namespace Raven.Server.Documents.Indexes
             using (Slice.From(txi.Allocator, collection, out Slice collectionSlice))
             {
                 return ReadLastEtag(txi, IndexSchema.EtagsTombstoneTree, collectionSlice);
+            }
+        }
+
+        public long ReadLastProcessedTimeSeriesDeletedRangeEtag(RavenTransaction tx, string collection)
+        {
+            var txi = tx.InnerTransaction;
+            if (txi.IsWriteTransaction == false)
+            {
+                if (txi.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache cache)
+                {
+                    if (cache.Collections.TryGetValue(collection, out var val))
+                        return val.LastProcessedTimeSeriesDeletedRangeEtag;
+                }
+            }
+
+            using (Slice.From(txi.Allocator, collection, out Slice collectionSlice))
+            {
+                return ReadLastEtag(txi, IndexSchema.EtagsTimeSeriesDeletedRangeTree, collectionSlice);
             }
         }
 
@@ -770,11 +796,30 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public void WriteLastTombstoneEtag(IndexItemType itemType, RavenTransaction tx, string collection, long etag)
+        {
+            if (itemType == IndexItemType.TimeSeries)
+            {
+                WriteLastTimeSeriesDeletedRangeEtag(tx, collection, etag);
+                return;
+            }
+          
+            WriteLastTombstoneEtag(tx, collection, etag);
+        }
+
         public void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
         {
             using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))
             {
                 WriteLastEtag(tx, IndexSchema.EtagsTombstoneTree, collectionSlice, etag);
+            }
+        }
+
+        public void WriteLastTimeSeriesDeletedRangeEtag(RavenTransaction tx, string collection, long etag)
+        {
+            using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))
+            {
+                WriteLastEtag(tx, IndexSchema.EtagsTimeSeriesDeletedRangeTree, collectionSlice, etag);
             }
         }
 
@@ -1099,6 +1144,8 @@ namespace Raven.Server.Documents.Indexes
             public const string FieldsTree = "Fields";
 
             public const string EtagsTombstoneTree = "Etags.Tombstone";
+
+            public const string EtagsTimeSeriesDeletedRangeTree = "Etags.TimeSeriesDeletedRange";
 
             public const string References = "References";
 

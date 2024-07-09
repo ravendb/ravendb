@@ -11,6 +11,8 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Workers.Cleanup;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
@@ -364,7 +366,8 @@ namespace Raven.Server.Documents.TimeSeries
                         return null;
                 }
 
-                if (from == DateTime.MinValue && to == DateTime.MaxValue)
+                if (from == DateTime.MinValue && to == DateTime.MaxValue ||
+                    from <= stats.Start && to >= stats.End)
                 {
                     table.DeleteByPrimaryKeyPrefix(slicer.TimeSeriesPrefixSlice);
                     Stats.DeleteStats(context, collectionName, slicer.StatsKey);
@@ -2525,6 +2528,34 @@ namespace Raven.Server.Documents.TimeSeries
             return CreateTimeSeriesItem(context, ref tvr, fields);
         }
 
+        public TimeSeriesDeletedRangeEntry GetTimeSeriesDeletedRange(DocumentsOperationContext context, long etag)
+        {
+            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
+            var index = DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice];
+
+            if (table.Read(context.Allocator, index, etag, out var tvr) == false)
+                return null;
+
+            return CreateTimeSeriesDeletedRangeItem(context, ref tvr);
+
+            static TimeSeriesDeletedRangeEntry CreateTimeSeriesDeletedRangeItem(DocumentsOperationContext context, ref TableValueReader reader)
+            {
+                var etag = *(long*)reader.Read((int)DeletedRangeTable.Etag, out _);
+                var keyPtr = reader.Read((int)DeletedRangeTable.RangeKey, out int keySize);
+
+                TimeSeriesValuesSegment.ParseTimeSeriesKey(keyPtr, keySize, context, out var docId, out var name);
+
+                return new TimeSeriesDeletedRangeEntry
+                {
+                    Key = new LazyStringValue(null, keyPtr, keySize, context),
+                    LuceneKey = GetTimeSeriesDeletedRangeLuceneKey(context, docId, name),
+                    DocId = docId,
+                    Name = name,
+                    Etag = Bits.SwapBytes(etag)
+                };
+            }
+        }
+
         public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, long etag, long take, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All) =>
             GetTimeSeries(context, etag, long.MaxValue, take, fields);
 
@@ -2543,6 +2574,43 @@ namespace Raven.Server.Documents.TimeSeries
 
                 yield return item;
             }
+        }
+
+        public IEnumerable<TombstoneIndexItem> GetTimeSeriesDeletedRangeIndexItemsFrom(DocumentsOperationContext context, long etag, long take = long.MaxValue) =>
+            GetTimeSeriesDeletedRangeIndexItems(context, etag, long.MaxValue, take);
+
+        private IEnumerable<TombstoneIndexItem> GetTimeSeriesDeletedRangeIndexItems(DocumentsOperationContext context, long fromEtag, long toEtag, long take = long.MaxValue)
+        {
+            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
+
+            foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice], fromEtag, 0))
+            {
+                if (take-- <= 0)
+                    yield break;
+
+                var item = CreateTimeSeriesDeletedRangeIndexItem(context, ref result.Reader);
+                if (item.Etag > toEtag)
+                    yield break;
+
+                yield return item;
+            }
+        }
+
+        internal static TombstoneIndexItem CreateTimeSeriesDeletedRangeIndexItem(DocumentsOperationContext context, ref TableValueReader reader)
+        {
+            var etag = *(long*)reader.Read((int)DeletedRangeTable.Etag, out _);
+            var keyPtr = reader.Read((int)DeletedRangeTable.RangeKey, out int keySize);
+
+            TimeSeriesValuesSegment.ParseTimeSeriesKey(keyPtr, keySize, context, out var docId, out var name);
+
+            return new TombstoneIndexItem
+            {
+                LuceneKey = GetTimeSeriesDeletedRangeLuceneKey(context, docId, name),
+                LowerId = docId,
+                Name = name,
+                Etag = Bits.SwapBytes(etag),
+                Type = IndexItemType.TimeSeries
+            };
         }
 
         public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long etag, long take, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All) =>
@@ -2565,6 +2633,33 @@ namespace Raven.Server.Documents.TimeSeries
                     yield break;
 
                 var item = CreateTimeSeriesItem(context, ref result.Reader, fields);
+                if (item.Etag > toEtag)
+                    yield break;
+
+                yield return item;
+            }
+        }
+
+        public IEnumerable<TombstoneIndexItem> GetTimeSeriesDeletedRangeIndexItemsFrom(DocumentsOperationContext context, string collection, long etag, long take) =>
+            GetTimeSeriesDeletedRangeIndexItems(context, collection, etag, long.MaxValue, take);
+
+        private IEnumerable<TombstoneIndexItem> GetTimeSeriesDeletedRangeIndexItems(DocumentsOperationContext context, string collection, long fromEtag, long toEtag, long take)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                yield break;
+
+            var table = GetOrCreateDeleteRangesTable(context.Transaction.InnerTransaction, collectionName);
+
+            if (table == null)
+                yield break;
+
+            foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice], fromEtag, skip: 0))
+            {
+                if (take-- <= 0)
+                    yield break;
+
+                var item = CreateTimeSeriesDeletedRangeIndexItem(context, ref result.Reader);
                 if (item.Etag > toEtag)
                     yield break;
 
@@ -2682,6 +2777,29 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     context.ReturnMemory(mem);
                 }
+            }
+        }
+
+        private static LazyStringValue GetTimeSeriesDeletedRangeLuceneKey(DocumentsOperationContext context, LazyStringValue documentId, LazyStringValue name)
+        {
+            var size = documentId.Size
+                       + 1 // Lucene separator
+                       + name.Size;
+
+            var mem = context.GetMemory(size);
+
+            try
+            {
+                var bufferSpan = new Span<byte>(mem.Address, size);
+                documentId.AsSpan().CopyTo(bufferSpan);
+                var offset = documentId.Size;
+                bufferSpan[offset++] = SpecialChars.LuceneRecordSeparator;
+                name.AsSpan().CopyTo(bufferSpan.Slice(offset));
+                return context.GetLazyString(mem.Address, size);
+            }
+            finally
+            {
+                context.ReturnMemory(mem);
             }
         }
 
@@ -2816,6 +2934,36 @@ namespace Raven.Server.Documents.TimeSeries
                 return 0;
 
             return DocumentsStorage.TableValueToEtag((int)TimeSeriesTable.Etag, ref result.Reader);
+        }
+
+        public long GetLastTimeSeriesDeletedRangesEtag(DocumentsOperationContext context)
+        {
+            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
+
+            var result = table.ReadLast(DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice]);
+            if (result == null)
+                return 0;
+
+            return DocumentsStorage.TableValueToEtag((int)DeletedRangeTable.Etag, ref result.Reader);
+        }
+
+        public long GetLastTimeSeriesDeletedRangesEtag(DocumentsOperationContext context, string collection)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                return 0;
+
+            var table = GetOrCreateDeleteRangesTable(context.Transaction.InnerTransaction, collectionName);
+
+            // ReSharper disable once UseNullPropagation
+            if (table == null)
+                return 0;
+
+            var result = table.ReadLast(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice]);
+            if (result == null)
+                return 0;
+
+            return DocumentsStorage.TableValueToEtag((int)DeletedRangeTable.Etag, ref result.Reader);
         }
 
         private static void MarkSegmentAsPendingDeletion(DocumentsOperationContext context, string collection, long etag)

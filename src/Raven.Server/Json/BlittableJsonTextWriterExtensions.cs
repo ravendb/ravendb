@@ -1297,6 +1297,10 @@ namespace Raven.Server.Json
                     writer.WriteInteger(kvp.Value.LastProcessedTombstoneEtag);
                     writer.WriteComma();
 
+                    writer.WritePropertyName(nameof(kvp.Value.LastProcessedTimeSeriesDeletedRangeEtag));
+                    writer.WriteInteger(kvp.Value.LastProcessedTimeSeriesDeletedRangeEtag);
+                    writer.WriteComma();
+
                     writer.WritePropertyName(nameof(kvp.Value.NumberOfItemsToProcess));
                     writer.WriteInteger(kvp.Value.NumberOfItemsToProcess);
                     writer.WriteComma();
