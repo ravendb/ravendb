@@ -383,6 +383,11 @@ namespace Raven.Server.ServerWide.Commands
                 }
                 else
                 {
+                    if (Index != 0)
+                    {
+                        return new CompareExchangeResult { Index = 0 };
+                    }
+
                     if (ExpirationTicks != null)
                         CompareExchangeExpirationStorage.Put(context, keySlice, ExpirationTicks.Value);
 
