@@ -12,15 +12,14 @@ namespace Corax
         public const string BeforeAllKeys = "BeforeAllKeys-a8e5f221-613e-4eae-9962-2689e7c44506";
         public const string AfterAllKeys = "AfterAllKeys-3622a0bb-1cf4-4200-b830-5e937d57ac99";
         
-        public static readonly string NullValue = Encodings.Utf8.GetString(new []{(byte)0});
+        public static readonly string NullValue = Encodings.Utf8.GetString(NullValueSpan);
         public static readonly ReadOnlyMemory<char> NullValueCharSpan = new(Constants.NullValue.ToCharArray());
-        
+        public static ReadOnlySpan<byte> NullValueSpan => new[] { (byte)0 };
         
         public const string EmptyString = "\u0003";
         public static readonly ReadOnlyMemory<char> EmptyStringCharSpan = new(Constants.EmptyString.ToCharArray());
         public static ReadOnlySpan<byte> PhraseQuerySuffix => "__PQ"u8; 
-        public const string  PhraseQuerySuffixAsStr = "__PQ"; 
-
+        public const string PhraseQuerySuffixAsStr = "__PQ"; 
         
         public const string IndexMetadata = "@index_metadata";
         public const string IndexTimeFields = "@index_time_fields";

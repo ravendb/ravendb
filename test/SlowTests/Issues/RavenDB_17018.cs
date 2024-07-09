@@ -213,14 +213,16 @@ namespace SlowTests.Issues
                         .GetFor<Company>("companies/1", pageSize: 4);
                 }
                 var database = await GetDatabase(store.Database);
-
-                var performanceHints = WaitForValue(() =>
+                
+                string reason;
+                var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out reason);
+                if (outcome == false)
                 {
-                    database.NotificationCenter.Paging.UpdatePagingInternal(null, out string _);
-                    return database.NotificationCenter.GetPerformanceHintCount();
-                }, 1);
+                    // "Queue is empty" means that the UpdatePagingInternal already invoked by the Timer
+                    // Any other reason is Failure 
+                    Assert.Equal("Queue is empty", reason); 
+                }
 
-                Assert.Equal(1, performanceHints);
 
                 using (database.NotificationCenter.GetStored(out var actions))
                 {

@@ -763,6 +763,8 @@ namespace FastTests
 
         protected override void Dispose(ExceptionAggregator exceptionAggregator)
         {
+            Etl.Dispose();
+
             foreach (var store in CreatedStores)
             {
                 if (store.WasDisposed)
@@ -770,7 +772,6 @@ namespace FastTests
 
                 exceptionAggregator.Execute(store.Dispose);
             }
-            Etl.Dispose();
             CreatedStores.Clear();
         }
 

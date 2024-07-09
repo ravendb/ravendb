@@ -80,16 +80,24 @@ namespace Raven.Server.Smuggler.Migration
                     if (smugglerResult == null)
                         return;
 
-                    if ((_buildVersion >= 40000 && _buildVersion < 41000) || _buildVersion == 40)
+                    if ((_buildVersion >= 40_000 && _buildVersion < 41_000) || _buildVersion == 40)
                     {
                         // prevent NRE, counter were added in 4.1
                         smugglerResult.Counters = new SmugglerProgressBase.CountsWithSkippedCountAndLastEtag();
                     }
 
-                    if ((_buildVersion >= 40000 && _buildVersion < 50000) || (_buildVersion >= 40 && _buildVersion < 50))
+                    if ((_buildVersion >= 40_000 && _buildVersion < 50_000) || (_buildVersion >= 40 && _buildVersion < 50))
                     {
                         // prevent NRE, time series were added in 5.0
                         smugglerResult.TimeSeries = new SmugglerProgressBase.CountsWithSkippedCountAndLastEtag();
+                    }
+
+                    if ((_buildVersion >= 40_000 && _buildVersion <= 54_133) || 
+                        (_buildVersion >= 60_000 && _buildVersion <= 60_035) ||
+                        (_buildVersion >= 40 && _buildVersion < 54))
+                    {
+                        // prevent NRE, time series deleted ranges were added in 5.4.201 and 6.0.105 
+                        smugglerResult.TimeSeriesDeletedRanges = new SmugglerProgressBase.CountsWithSkippedCountAndLastEtag();
                     }
 
                     var importInfo = new ImportInfo

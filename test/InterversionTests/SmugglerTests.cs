@@ -522,7 +522,7 @@ namespace InterversionTests
 
             var operationIdResult = JsonConvert.DeserializeObject<OperationIdResult>(rawRespond);
 
-            return new Operation(to.GetRequestExecutor(), () => to.Changes(), to.Conventions, operationIdResult.OperationId);
+            return new Operation(to.GetRequestExecutor(), () => to.Changes(to.Database, operationIdResult.OperationNodeTag), to.Conventions, operationIdResult.OperationId, operationIdResult.OperationNodeTag);
         }
 
         private static async Task<(int Counter, int Attachment, int Revision)> GetMetadataCounts(IDocumentStore importStore42)

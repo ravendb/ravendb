@@ -531,7 +531,7 @@ class notificationCenter {
             }
         }
         
-        throw new Error("Unable to find operation with id = " + operationId);
+        return null;
     }
 
     openDetails(notification: abstractNotification) {
