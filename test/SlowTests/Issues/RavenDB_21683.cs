@@ -34,6 +34,7 @@ public class RavenDB_21683 : RavenTestBase
 
             await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition));
             Indexes.WaitForIndexing(store);
+            await WaitForIndexCountAsync(store, 1);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -47,6 +48,7 @@ public class RavenDB_21683 : RavenTestBase
 
                 await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition));
                 Indexes.WaitForIndexing(store);
+                await WaitForIndexCountAsync(store, 1);
 
                 await session
                     .Query<Company, Companies_ByName>()
@@ -60,6 +62,7 @@ public class RavenDB_21683 : RavenTestBase
 
                 await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition));
                 Indexes.WaitForIndexing(store);
+                await WaitForIndexCountAsync(store, 1);
 
                 await session
                     .Query<Company, Companies_ByName>()
@@ -91,5 +94,14 @@ public class RavenDB_21683 : RavenTestBase
                                    Name = company.Name
                                };
         }
+    }
+
+    private async Task WaitForIndexCountAsync(IDocumentStore store, int count)
+    {
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+        var actualCount = WaitForValue(() => database.IndexStore.Count, count);
+
+        Assert.Equal(count, actualCount);
     }
 }

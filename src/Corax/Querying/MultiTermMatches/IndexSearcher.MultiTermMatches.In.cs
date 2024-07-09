@@ -9,6 +9,7 @@ using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.TermProviders;
 using Corax.Utils;
 using Voron;
+using Voron.Data.CompactTrees;
 
 namespace Corax.Querying;
 
@@ -153,9 +154,23 @@ public partial class IndexSearcher
                 return MultiTermMatch.CreateEmpty(_transaction.Allocator);
             }
 
-            var itemKey = llt.AcquireCompactKey();
-            itemKey.Set(itemSlice.AsReadOnlySpan());
-            queryTerms[termsCount++] = new TermQueryItem(itemKey, amount, itemSlice);
+            CompactKey itemKey;
+            
+            if (terms.TryGetValue(itemSlice.AsReadOnlySpan(), out long containerId) == false)
+            {
+                if (TryGetPostingListForNull(field, out containerId) == false)
+                {
+                    return MultiTermMatch.CreateEmpty(_transaction.Allocator);
+                }
+                itemKey = null;
+            }
+            else
+            {
+                itemKey = llt.AcquireCompactKey();
+                itemKey.Set(itemSlice.AsReadOnlySpan());
+            }
+            
+            queryTerms[termsCount++] = new TermQueryItem(itemKey, amount, itemSlice, containerId);
         }
         
         //UnaryMatch doesn't support boosting, when we want to calculate ranking we've to build query like And(Term, And(...)).
@@ -166,19 +181,19 @@ public partial class IndexSearcher
             (true, _) => termsCount
         };
         
-        
         var binaryMatchOfTermMatches = new BinaryMatch[termMatchCount / 2];
         for (int i = 0; i < termMatchCount / 2; i++)
         {
-            var term1 = TermQuery(field, queryTerms[i * 2].Item, terms);
-            var term2 = TermQuery(field, queryTerms[i * 2 + 1].Item, terms);
+            var term1 = TermMatchHandlingNullTerm(field, queryTerms[i * 2], terms);
+            var term2 = TermMatchHandlingNullTerm(field, queryTerms[i * 2 + 1], terms);
+            
             binaryMatchOfTermMatches[i] = And(term1, term2, cancellationToken);
         }
 
         if (termMatchCount % 2 == 1)
         {
-            // We need even values to make the last work. 
-            var term = TermQuery(field, queryTerms[^1].Item, terms);
+            // We need even values to make the last work.
+            var term = TermMatchHandlingNullTerm(field, queryTerms[^1], terms);
 
             if (allInTerms.Count == 1)
                 return term;
@@ -193,10 +208,10 @@ public partial class IndexSearcher
             int excessTerms = currentTerms % 2;
 
             for (int i = 0; i < termsToProcess; i++)
-                binaryMatchOfTermMatches[i] = And(binaryMatchOfTermMatches[i * 2], binaryMatchOfTermMatches[i * 2 + 1]);
+                binaryMatchOfTermMatches[i] = And(binaryMatchOfTermMatches[i * 2], binaryMatchOfTermMatches[i * 2 + 1], cancellationToken);
 
             if (excessTerms != 0)
-                binaryMatchOfTermMatches[termsToProcess - 1] = And(binaryMatchOfTermMatches[termsToProcess - 1], binaryMatchOfTermMatches[currentTerms - 1]);
+                binaryMatchOfTermMatches[termsToProcess - 1] = And(binaryMatchOfTermMatches[termsToProcess - 1], binaryMatchOfTermMatches[currentTerms - 1], cancellationToken);
 
             currentTerms = termsToProcess;
         }
@@ -212,7 +227,7 @@ public partial class IndexSearcher
         for (var i = 0; i < queryTerms.Length; ++i)
             unaryMatchItems[i] = new MultiUnaryItem(field, queryTerms[i].Term, UnaryMatchOperation.Equals);
 
-        return CreateMultiUnaryMatch(binaryMatchOfTermMatches[0], unaryMatchItems);
+        return CreateMultiUnaryMatch(binaryMatchOfTermMatches[0], unaryMatchItems, cancellationToken);
     }
 
     //We want to have terms ascending order based on density since there is much higher probability of being declined by primitive.
@@ -225,5 +240,10 @@ public partial class IndexSearcher
     public AndNotMatch NotInQuery<TInner>(in FieldMetadata field, TInner inner, List<string> notInTerms) where TInner : IQueryMatch
     {
         return AndNot(inner, MultiTermMatch.Create(new MultiTermMatch<InTermProvider<string>>(this, field, _transaction.Allocator, new InTermProvider<string>(this, field, notInTerms), streamingEnabled: false)));
+    }
+
+    private TermMatch TermMatchHandlingNullTerm(in FieldMetadata field, TermQueryItem termItem, CompactTree terms)
+    {
+        return termItem.Key != null ? TermQuery(field, termItem.Key, terms) : TermQuery(field, termItem.ContainerId, 1D);
     }
 }

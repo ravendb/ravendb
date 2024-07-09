@@ -24,7 +24,7 @@ function Get-RavenServerScheme {
 
 if ([string]::IsNullOrEmpty($env:RAVEN_ServerUrl)) {
     $RAVEN_SERVER_SCHEME = Get-RavenServerScheme
-    $env:RAVEN_ServerUrl = "$RAVEN_SERVER_SCHEME://$hostname:8080"
+    $env:RAVEN_ServerUrl = "$($RAVEN_SERVER_SCHEME)://$($hostname):8080"
 }
 
 if ([string]::IsNullOrEmpty($env:RAVEN_ARGS) -eq $False) {

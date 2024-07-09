@@ -234,16 +234,19 @@ public partial class IndexSearcher
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal long NumberOfDocumentsUnderSpecificTerm(CompactTree tree, Slice term)
     {
-        return NumberOfDocumentsUnderSpecificTerm(tree, term.AsReadOnlySpan());
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private long NumberOfDocumentsUnderSpecificTerm(CompactTree tree, ReadOnlySpan<byte> term)
-    {
-        if (tree.TryGetValue(term, out var value) == false)
+        var termAsSpan = term.AsReadOnlySpan();
+        if (tree.TryGetValue(termAsSpan, out long containerId) == false)
+        {
+            if (termAsSpan.SequenceEqual(Constants.NullValueSpan))
+            {
+                if (TryGetPostingListForNull(tree.Name, out containerId))
+                    return NumberOfDocumentsUnderSpecificTerm(containerId);
+            }
+            
             return 0;
-
-        return NumberOfDocumentsUnderSpecificTerm(value);
+        }
+        
+        return NumberOfDocumentsUnderSpecificTerm(containerId);
     }
     
     private long NumberOfDocumentsUnderSpecificTerm(long containerId)
