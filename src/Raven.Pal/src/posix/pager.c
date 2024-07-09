@@ -89,7 +89,7 @@ int32_t _open_pager_file(int fd,
         goto Error;
     }
 
-    if (min_file_size > st.st_size)
+    if (min_file_size > st.st_size && !(open_flags & OPEN_FILE_READ_ONLY))
     {
         st.st_size = min_file_size;
         rc = _allocate_file_space(fd, st.st_size, detailed_error_code);

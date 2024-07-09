@@ -214,7 +214,7 @@ int32_t _open_pager_file(HANDLE h,
         (req_file_size + ALLOCATION_GRANULARITY - 1) & ~(ALLOCATION_GRANULARITY - 1),
         ALLOCATION_GRANULARITY);
 
-    if (min_file_size > file_size.QuadPart)
+    if (min_file_size > file_size.QuadPart && !(open_flags & OPEN_FILE_READ_ONLY))
     {
         file_size.QuadPart = min_file_size;
         rc = _resize_file(h, min_file_size, detailed_error_code);
