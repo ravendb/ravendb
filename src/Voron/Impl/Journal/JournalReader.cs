@@ -23,6 +23,7 @@ namespace Voron.Impl.Journal
 {
     public sealed unsafe class JournalReader : IDisposable
     {
+        private readonly StorageEnvironment _environment;
         private readonly Pager2 _journalPager;
         private readonly Pager2.State _journalPagerState;
         private readonly Pager2 _dataPager;
@@ -44,9 +45,10 @@ namespace Voron.Impl.Journal
 
         public long Next4Kb => _readAt4Kb;
 
-        public JournalReader(Pager2 journalPager, Pager2.State journalPagerState, Pager2 dataPager, Pager2 recoveryPager, HashSet<long> modifiedPages, JournalInfo journalInfo, FileHeader currentFileHeader, TransactionHeader* previous)
+        public JournalReader(StorageEnvironment environment,Pager2 journalPager, Pager2.State journalPagerState, Pager2 dataPager, Pager2 recoveryPager, HashSet<long> modifiedPages, JournalInfo journalInfo, FileHeader currentFileHeader, TransactionHeader* previous)
         {
             RequireHeaderUpdate = false;
+            _environment = environment;
             _journalPager = journalPager;
             _journalPagerState = journalPagerState;
             _dataPager = dataPager;
@@ -64,7 +66,7 @@ namespace Voron.Impl.Journal
 
         public TransactionHeader* LastTransactionHeader { get; private set; }
 
-        private bool ReadOneTransactionToDataFile(ref Pager2.State dataPagerState, ref Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState,
+        public bool ReadOneTransactionToDataFile(ref Pager2.State dataPagerState, ref Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState,
             SafeFileHandle fileHandle, StorageEnvironmentOptions options)
         {
             if (_readAt4Kb >= _journalPagerNumberOfAllocated4Kb)
@@ -320,13 +322,13 @@ namespace Voron.Impl.Journal
             return transactionHeaders;
         }
 
-        private void ZeroRecoveryBufferIfNeeded(Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState, StorageEnvironmentOptions options)
+        public void ZeroRecoveryBufferIfNeeded(Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState, StorageEnvironmentOptions options)
         {
             if (options.Encryption.IsEnabled == false)
                 return;
             var recoveryBufferSize = recoveryPagerState.NumberOfAllocatedPages * Constants.Storage.PageSize;
             _recoveryPager.EnsureMapped(recoveryPagerState, ref txState, 0, checked((int)recoveryPagerState.NumberOfAllocatedPages));
-            var pagePointer = _recoveryPager.AcquirePagePointer(recoveryPagerState, ref txState, 0);
+            var pagePointer = _recoveryPager.AcquireRawPagePointer(recoveryPagerState, ref txState, 0);
             Sodium.sodium_memzero(pagePointer, (UIntPtr)recoveryBufferSize);
         }
 
@@ -799,8 +801,8 @@ namespace Voron.Impl.Journal
                 }
             }
             
-            txState.InvokeBeforeCommitFinalization(_dataPager, state, ref txState);
-            txState.InvokeDispose(_dataPager, state, ref txState);
+            txState.InvokeBeforeCommitFinalization(_environment, ref state, ref txState);
+            txState.InvokeDispose(_environment, ref state, ref txState);
         }
 
         private static int GetNumberOfPagesFor(long size)

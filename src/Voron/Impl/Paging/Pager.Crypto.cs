@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Platform;
 using Sparrow.Server.Platform;
 using Voron.Global;
+using Voron.Impl.Scratch;
 
 namespace Voron.Impl.Paging;
 
@@ -201,54 +203,69 @@ public unsafe partial class Pager2
             return cryptoState;
         }
 
-        private static void TxOnCommit(Pager2 pager, State state, ref PagerTransactionState txState)
+        private static void TxOnCommit(StorageEnvironment environment, ref State dataPagerState,ref PagerTransactionState txState)
         {
-            if (txState.ForCrypto?.TryGetValue(pager, out var cryptoState) != true)
+            if (txState.ForCrypto is null)
                 return;
-            
-            foreach (var buffer in cryptoState)
+
+            foreach (var (pager, cryptoState) in txState.ForCrypto)
             {
-                if (buffer.Value.SkipOnTxCommit)
-                    continue;
+                ref State state = ref dataPagerState;
 
-                if (buffer.Value.Modified == false)
+                if (pager != environment.DataPager)
                 {
-                     
-                    if (buffer.Value.ExcessStorageFromAllocationBreakup)
-                        continue;// do not attempt to validate memory that we are ignoring
-
-                    Debug_VerifyDidNotChanged(pager, state, ref txState, buffer.Key, buffer.Value);
-                    continue; // No modification
+                    var file = environment.ScratchBufferPool.GetScratchBufferFile(pager);
+                    if (file == null)
+                        throw new InvalidOperationException("Unable to get scratch file pager for: " + pager.FileName);
+                    state = ref file.GetStateRef();
                 }
+                foreach (var buffer in cryptoState)
+                {
+                    if (buffer.Value.SkipOnTxCommit)
+                        continue;
 
-                // Encrypt the local buffer, then copy the encrypted value to the pager
-                var pageHeader = (PageHeader*)buffer.Value.Pointer;
-                var dataSize = EncryptPage(pager, pageHeader);
-                var numPages = Pager.GetNumberOfOverflowPages(dataSize);
+                    if (buffer.Value.Modified == false)
+                    {
 
-                pager.EnsureContinuous(ref state, buffer.Key, numPages);
-                pager.EnsureMapped(state, ref txState, buffer.Key, numPages);
+                        if (buffer.Value.ExcessStorageFromAllocationBreakup)
+                            continue; // do not attempt to validate memory that we are ignoring
 
-                var pagePointer = pager.AcquireRawPagePointer(state, ref txState, buffer.Key);
-                Debug.Assert(pager._flags.HasFlag( Pal.OpenFileFlags.WritableMap),
-                    "pager._flags.HasFlag( Pal.OpenFileFlags.WritableMap) - expected a scratch file pager, not a data pager!");
-                Memory.Copy(pagePointer, buffer.Value.Pointer, dataSize);
+                        Debug_VerifyDidNotChanged(pager, state, ref txState, buffer.Key, buffer.Value);
+                        continue; // No modification
+                    }
+
+                    // Encrypt the local buffer, then copy the encrypted value to the pager
+                    var pageHeader = (PageHeader*)buffer.Value.Pointer;
+                    var dataSize = EncryptPage(pager, pageHeader);
+                    var numPages = Pager.GetNumberOfOverflowPages(dataSize);
+
+                    pager.EnsureContinuous(ref state, buffer.Key, numPages);
+                    pager.EnsureMapped(state, ref txState, buffer.Key, numPages);
+
+                    var pagePointer = pager.AcquireRawPagePointer(state, ref txState, buffer.Key);
+                    Debug.Assert(pager._flags.HasFlag(Pal.OpenFileFlags.WritableMap),
+                        "pager._flags.HasFlag( Pal.OpenFileFlags.WritableMap) - expected a scratch file pager, not a data pager!");
+                    Memory.Copy(pagePointer, buffer.Value.Pointer, dataSize);
+                }
             }
         }
 
-        private static void TxOnDispose(Pager2 pager, State state, ref PagerTransactionState txState)
+        private static void TxOnDispose(StorageEnvironment environment,ref State dataPagerState,ref PagerTransactionState txState)
         {
-            if (txState.ForCrypto?.Remove(pager, out var cryptoState) != true)
+            if (txState.ForCrypto is null)
                 return;
 
-            foreach (var buffer in cryptoState)
+            foreach (var (pager, cryptoState) in txState.ForCrypto)
             {
-                if (CanReturnBuffer(buffer.Value))
-                    continue;
+                foreach (var buffer in cryptoState)
+                {
+                    if (CanReturnBuffer(buffer.Value))
+                        continue;
 
-                buffer.Value.ReleaseRef();
+                    buffer.Value.ReleaseRef();
 
-                ReturnBuffer(pager, buffer.Value);
+                    ReturnBuffer(pager, buffer.Value);
+                }
             }
         }
 
@@ -256,7 +273,7 @@ public unsafe partial class Pager2
         [Conditional("DEBUG")]
         private static void Debug_VerifyDidNotChanged(Pager2 pager, State state, ref PagerTransactionState txState, long pageNumber, EncryptionBuffer buffer)
         {
-            var pagePointer = pager.AcquirePagePointerWithOverflowHandling(state, ref txState, pageNumber);
+            var pagePointer = pager.AcquireRawPagePointerWithOverflowHandling(state, ref txState, pageNumber);
             var pageHeader = (PageHeader*)pagePointer;
             int numberOfPages = Pager.GetNumberOfPages(pageHeader);
 
