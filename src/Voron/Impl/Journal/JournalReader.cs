@@ -326,7 +326,7 @@ namespace Voron.Impl.Journal
                 return;
             var recoveryBufferSize = recoveryPagerState.NumberOfAllocatedPages * Constants.Storage.PageSize;
             _recoveryPager.EnsureMapped(recoveryPagerState, ref txState, 0, checked((int)recoveryPagerState.NumberOfAllocatedPages));
-            var pagePointer = _recoveryPager.AcquirePagePointer(recoveryPagerState, ref txState, 0);
+            var pagePointer = _recoveryPager.AcquireRawPagePointer(recoveryPagerState, ref txState, 0);
             Sodium.sodium_memzero(pagePointer, (UIntPtr)recoveryBufferSize);
         }
 

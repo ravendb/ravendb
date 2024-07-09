@@ -277,7 +277,7 @@ public unsafe partial class Pager2 : IDisposable
         return null; // never hit
     }
 
-    private byte* AcquireRawPagePointer(State state, ref PagerTransactionState txState, long pageNumber)
+    public byte* AcquireRawPagePointer(State state, ref PagerTransactionState txState, long pageNumber)
     {
         if (pageNumber <= state.NumberOfAllocatedPages && pageNumber >= 0)
             return _functions.AcquireRawPagePointer(this, state, ref txState, pageNumber);
