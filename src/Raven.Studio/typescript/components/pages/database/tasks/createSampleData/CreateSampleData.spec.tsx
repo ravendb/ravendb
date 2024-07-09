@@ -1,7 +1,7 @@
 import React from "react";
 import { rtlRender } from "test/rtlTestUtils";
 import * as stories from "./CreateSampleData.stories";
-import { composeStories } from "@storybook/testing-react";
+import { composeStories } from "@storybook/react";
 
 const { DatabaseWithDocuments, DatabaseWithoutDocuments } = composeStories(stories);
 

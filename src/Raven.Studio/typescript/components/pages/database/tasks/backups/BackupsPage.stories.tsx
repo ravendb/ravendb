@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import { Meta, StoryFn } from "@storybook/react";
-import { withBootstrap5, forceStoryRerender, withStorybookContexts } from "test/storybookTestUtils";
+import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { mockServices } from "test/mocks/services/MockServices";
 import { TasksStubs } from "test/stubs/TasksStubs";
@@ -12,7 +12,7 @@ import { mockStore } from "test/mocks/store/MockStore";
 export default {
     title: "Pages/Backups",
     component: BackupsPage,
-    decorators: [withStorybookContexts, withBootstrap5],
+    decorators: [withStorybookContexts, withForceRerender, withBootstrap5],
     excludeStories: /Template$/,
 } satisfies Meta<typeof BackupsPage>;
 
@@ -77,7 +77,7 @@ export const PeriodicBackupTemplate = (args: {
 
     tasksService.withGetManualBackup();
 
-    return <BackupsPage {...forceStoryRerender()} />;
+    return <BackupsPage />;
 };
 
 export const PeriodicBackupDisabled = boundCopy(PeriodicBackupTemplate, {

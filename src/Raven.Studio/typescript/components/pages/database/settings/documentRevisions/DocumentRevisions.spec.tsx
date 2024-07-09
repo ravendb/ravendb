@@ -1,7 +1,7 @@
 import React from "react";
 import { RtlScreen, rtlRender } from "test/rtlTestUtils";
 import * as stories from "./DocumentRevisions.stories";
-import { composeStories } from "@storybook/testing-react";
+import { composeStories } from "@storybook/react";
 import { documentRevisionsConfigNames } from "./store/documentRevisionsSlice";
 
 const { DefaultDocumentRevisions } = composeStories(stories);

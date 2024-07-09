@@ -984,7 +984,7 @@ class certificates extends viewModelBase {
 
             const usedOptions = this.databasesToShow().filter(k => k !== key);
 
-            const filteredOptions = _.difference(options, usedOptions);
+            const filteredOptions: string[] = _.difference(options, usedOptions);
 
             if (key) {
                 return filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));

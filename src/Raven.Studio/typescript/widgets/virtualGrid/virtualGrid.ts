@@ -645,7 +645,7 @@ class virtualGrid<T extends object> {
     }
 
     private syncVirtualWidth() {
-        if (_.every(this.columns(), x => x.width.endsWith("px"))) {
+        if (this.columns().every(x => x.width.endsWith("px"))) {
             const widths = this.columns().map(x => virtualGridUtils.widthToPixels(x));
             this.virtualWidth(_.sum(widths));
         } else {
