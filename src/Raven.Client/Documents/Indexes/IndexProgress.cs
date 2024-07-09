@@ -30,13 +30,22 @@ namespace Raven.Client.Documents.Indexes
 
             public long LastProcessedTombstoneEtag { get; set; }
 
+            public long LastProcessedTimeSeriesDeletedRangeEtag { get; set; }
+
             public long NumberOfTombstonesToProcess { get; set; }
 
             public long TotalNumberOfTombstones { get; set; }
-            internal void UpdateLastEtag(long lastEtag, bool isTombstone)
+
+            internal void UpdateLastEtag(long lastEtag, bool isTombstone, bool isTimeSeriesDeletedRange = false)
             {
                 if (isTombstone)
                 {
+                    if (isTimeSeriesDeletedRange)
+                    {
+                        LastProcessedTimeSeriesDeletedRangeEtag = lastEtag;
+                        return;
+                    }
+
                     LastProcessedTombstoneEtag = lastEtag;
                 }
                 else

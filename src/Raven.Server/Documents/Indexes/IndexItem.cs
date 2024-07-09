@@ -86,6 +86,19 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
+    public class TimeSeriesDeletedRangeIndexItem : IndexItem
+    {
+        public TimeSeriesDeletedRangeIndexItem(LazyStringValue id, LazyStringValue sourceDocumentId, long etag, string timeSeriesName, int size, TimeSeriesDeletedRangeEntry item)
+            : base(id, id, sourceDocumentId, sourceDocumentId, etag, default, timeSeriesName, size, item, empty: true, IndexItemType.TimeSeriesDeletedRange)
+        {
+        }
+
+        protected override string ToStringInternal()
+        {
+            return $"@key: '{SourceDocumentId}|{IndexingKey}'";
+        }
+    }
+
     public class CounterIndexItem : IndexItem
     {
         public CounterIndexItem(LazyStringValue id, LazyStringValue sourceDocumentId, long etag, LazyStringValue counterName, int size, object item)

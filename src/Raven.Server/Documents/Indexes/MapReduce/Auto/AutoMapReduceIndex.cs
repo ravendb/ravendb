@@ -9,6 +9,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Indexes.Workers.Cleanup;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;

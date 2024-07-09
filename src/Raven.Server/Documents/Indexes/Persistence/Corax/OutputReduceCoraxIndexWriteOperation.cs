@@ -41,7 +41,12 @@ public class OutputReduceCoraxIndexWriteOperation : CoraxIndexWriteOperation
         else
             _outputScope.Delete(key, stats);
     }
-    
+
+    public override void DeleteTimeSeries(LazyStringValue docId, LazyStringValue key, IndexingStatsScope stats)
+    {
+        // Lucene method
+    }
+
     public override void UpdateDocument(string keyFieldName, LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
     {
         if (_outputScope.IsActive)

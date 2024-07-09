@@ -4,14 +4,12 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Indexes.Workers.Cleanup;
 using Raven.Server.Documents.Queries;
-using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Voron;
 

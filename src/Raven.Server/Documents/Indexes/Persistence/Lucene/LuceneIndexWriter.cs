@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.IO;
 using System.Threading;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
@@ -62,6 +61,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public void DeleteDocuments(Term term, IState state)
         {
+            _indexWriter.DeleteDocuments(term, state);
+        }
+
+        public void DeleteTimeSeries(Term term, IState state)
+        {
+            using var reader = _indexWriter.GetReader(state);
+            using var termsEnumerator = reader.Terms(term, state);
+            
+            if (termsEnumerator.Term == null)
+                return;
+
+            // found by prefix
+            term = termsEnumerator.Term;
+
             _indexWriter.DeleteDocuments(term, state);
         }
 

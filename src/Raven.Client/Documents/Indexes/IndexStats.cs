@@ -197,6 +197,8 @@ namespace Raven.Client.Documents.Indexes
 
             public long LastProcessedTombstoneEtag { get; set; }
 
+            public long LastProcessedTimeSeriesDeletedRangeEtag { get; set; }
+
             public long DocumentLag { get; set; }
 
             public long TombstoneLag { get; set; }
