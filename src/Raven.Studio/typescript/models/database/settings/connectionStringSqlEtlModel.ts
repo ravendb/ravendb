@@ -9,11 +9,12 @@ import sqlConnectionStringSyntax = require("common/helpers/database/sqlConnectio
 class connectionStringSqlEtlModel extends connectionStringModel {
 
     static sqlProviders: Array<valueAndLabelItem<string, string> & { tooltip: string }> = [
-        { value: "System.Data.SqlClient", label: "Microsoft SQL Server", tooltip: sqlConnectionStringSyntax.mssqlSyntax },
+        { value: "Microsoft.Data.SqlClient", label: "Microsoft SQL Server", tooltip: sqlConnectionStringSyntax.mssqlSyntax },
         { value: "MySqlConnector.MySqlConnectorFactory", label: "MySQL Server", tooltip: sqlConnectionStringSyntax.mysqlSyntax },
         { value: "Npgsql", label: "PostgreSQL", tooltip: sqlConnectionStringSyntax.npgsqlSyntax },
         { value: "Oracle.ManagedDataAccess.Client", label: "Oracle Database", tooltip: sqlConnectionStringSyntax.oracleSyntax },
         { value: "MySql.Data.MySqlClient", label: "DEPRECATED: MySQL Server", tooltip: sqlConnectionStringSyntax.mysqlSyntax },
+        { value: "System.Data.SqlClient", label: "DEPRECATED: Microsoft SQL Server", tooltip: sqlConnectionStringSyntax.mssqlSyntax },
     ];
     
     connectionString = ko.observable<string>();

@@ -262,6 +262,10 @@ namespace Raven.Server.Smuggler.Documents
                     counts = await ProcessTimeSeriesAsync(result);
                     break;
 
+                case DatabaseItemType.TimeSeriesDeletedRanges:
+                    counts = await ProcessTimeSeriesDeletedRangesAsync(result);
+                    break;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -377,6 +381,10 @@ namespace Raven.Server.Smuggler.Documents
 
                 case DatabaseItemType.ReplicationHubCertificates:
                     counts = result.ReplicationHubCertificates;
+                    break;
+
+                case DatabaseItemType.TimeSeriesDeletedRanges:
+                    counts = result.TimeSeriesDeletedRanges;
                     break;
 
                 default:
@@ -1225,6 +1233,39 @@ namespace Raven.Server.Smuggler.Documents
                 return patcher != null && patcher.ShouldSkip(ts.DocId);
             }
         }
+
+        protected virtual async Task<SmugglerProgressBase.Counts> ProcessTimeSeriesDeletedRangesAsync(SmugglerResult result)
+        {
+            result.TimeSeriesDeletedRanges.Start();
+
+            await using (var actions = _destination.TimeSeriesDeletedRanges())
+            {
+                await foreach (var deletedRange in _source.GetTimeSeriesDeletedRangesAsync(actions, _options.Collections))
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.TimeSeriesDeletedRanges.ReadCount++;
+
+                    if (result.TimeSeriesDeletedRanges.ReadCount % 1000 == 0)
+                        AddInfoToSmugglerResult(result, $"Time Series deleted ranges entries {result.TimeSeriesDeletedRanges}");
+
+                    if (ShouldSkip(deletedRange, _patcher) == false) 
+                        await actions.WriteTimeSeriesDeletedRangeAsync(deletedRange);
+                    
+                    else
+                        result.TimeSeriesDeletedRanges.SkippedCount++;
+                    
+                    result.TimeSeriesDeletedRanges.LastEtag = deletedRange.Etag;
+                }
+            }
+
+            return result.TimeSeriesDeletedRanges;
+
+            static bool ShouldSkip(TimeSeriesDeletedRangeItemForSmuggler deletedRange, SmugglerPatcher patcher)
+            {
+                return patcher != null && patcher.ShouldSkip(deletedRange.DocId);
+            }
+        }
+
 
         private static void SkipDocument(DocumentItem item, SmugglerProgressBase.CountsWithSkippedCountAndLastEtagAndAttachments counts)
         {

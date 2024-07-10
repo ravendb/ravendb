@@ -52,6 +52,8 @@ namespace Sparrow.Json
 
         public void Reset()
         {
+            AssertNotDisposed();
+
             _debugTag = null;
             _mode = UsageMode.None;
 
@@ -63,6 +65,8 @@ namespace Sparrow.Json
 
         public void Renew(string debugTag, UsageMode mode)
         {
+            AssertNotDisposed();
+
             _writeToken = default;
             _debugTag = debugTag;
             _mode = mode;
@@ -77,21 +81,29 @@ namespace Sparrow.Json
 
         public void ReadArrayDocument()
         {
+            AssertNotDisposed();
+
             _continuationState.Push(new BuildingState(ContinuationState.ReadArrayDocument));
         }
 
         public void ReadObjectDocument()
         {
+            AssertNotDisposed();
+
             _continuationState.Push(new BuildingState(ContinuationState.ReadObjectDocument));
         }
 
         public void ReadNestedObject()
         {
+            AssertNotDisposed();
+
             _continuationState.Push(new BuildingState(ContinuationState.ReadObject));
         }
 
         public void ReadProperty()
         {
+            AssertNotDisposed();
+
             var state = new BuildingState(ContinuationState.ReadPropertyName)
             {
                 State = ContinuationState.ReadPropertyName,
@@ -102,7 +114,15 @@ namespace Sparrow.Json
             _continuationState.Push(state);
         }
 
-        public int SizeInBytes => _writer.SizeInBytes;
+        public int SizeInBytes
+        {
+            get
+            {
+                AssertNotDisposed();
+
+                return _writer.SizeInBytes;
+            }
+        }
 
         public override void Dispose()
         {
@@ -298,6 +318,8 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Read()
         {
+            AssertNotDisposed();
+
             if (_continuationState.Count == 0)
                 return false; //nothing to do
 
@@ -462,6 +484,8 @@ namespace Sparrow.Json
 
         public void FinalizeDocument()
         {
+            AssertNotDisposed();
+
             var documentToken = _writeToken.WrittenToken;
             var rootOffset = _writeToken.ValuePos;
 
@@ -470,11 +494,15 @@ namespace Sparrow.Json
 
         public BlittableJsonReaderObject CreateReader()
         {
+            AssertNotDisposed();
+
             return _writer.CreateReader();
         }
 
         public BlittableJsonReaderArray CreateArrayReader(bool noCache)
         {
+            AssertNotDisposed();
+
             var reader = CreateReader();
             reader.NoCache = noCache;
             if (reader.TryGet("_", out BlittableJsonReaderArray array))

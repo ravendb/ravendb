@@ -9,7 +9,6 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
-using Sparrow.Threading;
 using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems

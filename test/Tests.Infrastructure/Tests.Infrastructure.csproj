@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.5</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.7</RuntimeFrameworkVersion>
     <AssemblyName>Tests.Infrastructure</AssemblyName>
     <PackageId>Tests.Infrastructure</PackageId>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
@@ -24,7 +24,8 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="JunitXml.TestLogger" Version="3.1.12" />
-    <PackageReference Include="MongoDB.Driver" Version="2.25.0" />
+    <PackageReference Include="MongoDB.Driver" Version="2.27.0" />
+    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
     <PackageReference Include="xRetry" Version="1.9.0" />
     <PackageReference Include="xunit" Version="2.4.2" />
     <PackageReference Include="xunit.runner.utility" Version="2.4.2" />

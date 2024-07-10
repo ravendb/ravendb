@@ -18,6 +18,7 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.Features;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server.Integrations.PostgreSQL.Handlers
 {
@@ -138,6 +139,11 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
 
                     using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
                         await DatabaseConfigurations(ServerStore.ModifyPostgreSqlConfiguration, transactionOperationContext, RaftIdGenerator.DontCareId, config);
+
+                    if (LoggingSource.AuditLog.IsInfoEnabled)
+                    {
+                        LogAuditFor(Database.Name, "PUT", $"User '{newUser.Username}' in Postgres integration");
+                    }
                 }
             }
 
@@ -192,6 +198,11 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
 
                     using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
                         await DatabaseConfigurations(ServerStore.ModifyPostgreSqlConfiguration, transactionOperationContext, RaftIdGenerator.DontCareId, config);
+
+                    if (LoggingSource.AuditLog.IsInfoEnabled)
+                    {
+                        LogAuditFor(Database.Name, "DELETE", $"User '{userToDelete.Username}' in Postgres integration");
+                    }
                 }
             }
 

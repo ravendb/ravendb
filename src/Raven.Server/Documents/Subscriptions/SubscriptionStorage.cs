@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Subscriptions
             _db = db;
             _serverStore = serverStore;
             _logger = LoggingSource.Instance.GetLogger<SubscriptionStorage>(db.Name);
-
+            WaitForClusterStabilizationTimeout = TimeSpan.FromMilliseconds(Math.Max(30000, (int)(2 * serverStore.Engine.OperationTimeout.TotalMilliseconds)));
             _concurrentConnectionsSemiSemaphore = new SemaphoreSlim(db.Configuration.Subscriptions.MaxNumberOfConcurrentConnections);
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
@@ -272,7 +272,7 @@ namespace Raven.Server.Documents.Subscriptions
                         RegisterConnectionDurationInTicks = registerConnectionDurationInTicks
                     };
                 }
-                if (subscription.Disabled)
+                if (subscription.Disabled || _db.DisableOngoingTasks)
                     throw new SubscriptionClosedException($"The subscription with id '{id}' and name '{name}' is disabled and cannot be used until enabled");
 
                 return subscription;
@@ -675,6 +675,35 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionData;
         }
 
+        public TimeSpan WaitForClusterStabilizationTimeout;
+
+        public bool ShouldWaitForClusterStabilization()
+        {
+            var lastState = _serverStore.Engine.LastState;
+            if (lastState == null)
+                return false;
+
+            switch (lastState.To)
+            {
+                // get last cluster state
+                case RachisState.Passive:
+                    // if the last state was passive, we will throw on next cluster command
+                    return false;
+                case RachisState.Candidate:
+                    {
+                        if (DateTime.UtcNow - lastState.When < WaitForClusterStabilizationTimeout)
+                        {
+                            return true;
+                        }
+
+                        return false;
+                    }
+                default:
+                    // we are fine to proceed with the subscription on this node
+                    return false;
+            }
+        }
+
         public void HandleDatabaseRecordChange(DatabaseTopology topology)
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -698,7 +727,7 @@ namespace Raven.Server.Documents.Subscriptions
                         continue;
 
                     var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
-                    if (subscriptionState.Disabled)
+                    if (subscriptionState.Disabled || _db.DisableOngoingTasks)
                     {
                         DropSubscriptionConnections(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} is disabled and cannot be used until enabled"));
                         continue;
@@ -720,11 +749,18 @@ namespace Raven.Server.Documents.Subscriptions
                         continue;
                     }
 
-                    var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, topology, subscriptionState, subscriptionState, _db.NotificationCenter);
+                    if (_serverStore.Engine.CurrentState == RachisState.Passive)
+                    {
+                        DropSubscriptionConnections(subscriptionStateKvp.Key,
+                            new SubscriptionDoesNotBelongToNodeException($"Subscription operation was stopped on '{_serverStore.NodeTag}', because current node state is '{RachisState.Passive}'."));
+                    }
+
+                    // we pass here RachisState.Follower so the task won't be disconnected if the node is in candidate state
+                    var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, topology, RachisState.Follower, subscriptionState, subscriptionState, _db.NotificationCenter);
                     if (whoseTaskIsIt != _serverStore.NodeTag)
                     {
                         DropSubscriptionConnections(subscriptionStateKvp.Key,
-                            new SubscriptionDoesNotBelongToNodeException("Subscription operation was stopped, because it's now under a different server's responsibility"));
+                            new SubscriptionDoesNotBelongToNodeException($"Subscription operation was stopped on '{_serverStore.NodeTag}', because it's now under node '{whoseTaskIsIt}' responsibility"));
                     }
                 }
             }

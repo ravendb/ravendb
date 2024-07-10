@@ -283,6 +283,9 @@ namespace Raven.Server.Monitoring.Snmp
 
             public const string ServerLimitsPrefix = "1.17.{0}";
 
+            [Description("Monitor lock contention count")]
+            public const string MonitorLockContentionCount = "1.18.1";
+
             public static DynamicJsonArray ToJson()
             {
                 var array = new DynamicJsonArray();
@@ -642,6 +645,66 @@ namespace Raven.Server.Monitoring.Snmp
 
                 [Description("Number of faulted databases")]
                 public const string FaultedCount = "5.1.10";
+
+                [Description("Number of enabled ongoing tasks for all databases")]
+                public const string TotalNumberOfOngoingTasks = "5.1.11.1";
+
+                [Description("Number of active ongoing tasks for all databases")]
+                public const string TotalNumberOfActiveOngoingTasks = "5.1.11.2";
+
+                [Description("Number of enabled external replication tasks for all databases")]
+                public const string TotalNumberOfExternalReplicationTasks = "5.1.11.3";
+
+                [Description("Number of active external replication tasks for all databases")]
+                public const string TotalNumberOfActiveExternalReplicationTasks = "5.1.11.4";
+
+                [Description("Number of enabled RavenDB ETL tasks for all databases")]
+                public const string TotalNumberOfRavenEtlTasks = "5.1.11.5";
+
+                [Description("Number of active RavenDB ETL tasks for all databases")]
+                public const string TotalNumberOfActiveRavenEtlTasks = "5.1.11.6";
+
+                [Description("Number of enabled SQL ETL tasks for all databases")]
+                public const string TotalNumberOfSqlEtlTasks = "5.1.11.7";
+
+                [Description("Number of active SQL ETL tasks for all databases")]
+                public const string TotalNumberOfActiveSqlEtlTasks = "5.1.11.8";
+
+                [Description("Number of enabled OLAP ETL tasks for all databases")]
+                public const string TotalNumberOfOlapEtlTasks = "5.1.11.9";
+
+                [Description("Number of active OLAP ETL tasks for all databases")]
+                public const string TotalNumberOfActiveOlapEtlTasks = "5.1.11.10";
+
+                [Description("Number of enabled Elasticsearch ETL tasks for all databases")]
+                public const string TotalNumberOfElasticSearchEtlTasks = "5.1.11.11";
+
+                [Description("Number of active Elasticsearch ETL tasks for all databases")]
+                public const string TotalNumberOfActiveElasticSearchEtlTasks = "5.1.11.12";
+
+                [Description("Number of enabled Queue ETL tasks for all databases")]
+                public const string TotalNumberOfQueueEtlTasks = "5.1.11.13";
+
+                [Description("Number of active Queue ETL tasks for all databases")]
+                public const string TotalNumberOfActiveQueueEtlTasks = "5.1.11.14";
+
+                [Description("Number of enabled Backup tasks for all databases")]
+                public const string TotalNumberOfBackupTasks = "5.1.11.15";
+
+                [Description("Number of active Backup tasks for all databases")]
+                public const string TotalNumberOfActiveBackupTasks = "5.1.11.16";
+
+                [Description("Number of enabled Subscription tasks for all databases")]
+                public const string TotalNumberOfSubscriptionTasks = "5.1.11.17";
+
+                [Description("Number of active Subscription tasks for all databases")]
+                public const string TotalNumberOfActiveSubscriptionTasks = "5.1.11.18";
+
+                [Description("Number of enabled Pull Replication As Sink tasks for all databases")]
+                public const string TotalNumberOfPullReplicationAsSinkTasks = "5.1.11.19";
+
+                [Description("Number of active Pull Replication As Sink tasks for all databases")]
+                public const string TotalNumberOfActivePullReplicationAsSinkTasks = "5.1.11.20";
 
                 public static DynamicJsonArray ToJson()
                 {

@@ -108,7 +108,7 @@ loadToOrders(orderData);
                 {
                     Name = "abc",
                     ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store.Database};",
-                    FactoryName = "System.Data.SqlClient"
+                    FactoryName = "Microsoft.Data.SqlClient"
                 };
                 var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
                 Assert.NotNull(result2.RaftCommandIndex);
@@ -265,7 +265,7 @@ loadToOrders(orderData);
                 {
                     Name = "abc",
                     ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store.Database};",
-                    FactoryName = "System.Data.SqlClient"
+                    FactoryName = "Microsoft.Data.SqlClient"
                 };
                 var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
                 Assert.NotNull(result2.RaftCommandIndex);

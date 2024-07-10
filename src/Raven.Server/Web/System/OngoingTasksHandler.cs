@@ -44,6 +44,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 
@@ -641,6 +642,11 @@ namespace Raven.Server.Web.System
 
             await ServerStore.EnsureNotPassiveAsync();
 
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                LogAuditFor(Database.Name, "DELETE", $"Connection string '{connectionStringName}'");
+            }
+
             var (index, _) = await ServerStore.RemoveConnectionString(Database.Name, connectionStringName, type, GetRaftRequestIdFromQuery());
             await ServerStore.Cluster.WaitForIndexNotification(index);
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -787,7 +793,16 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutConnectionString()
         {
-            await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid),
+            await DatabaseConfigurations((_, databaseName, connectionString, guid) =>
+                {
+                    if (LoggingSource.AuditLog.IsInfoEnabled)
+                    {
+                        if (connectionString.TryGet(nameof(ConnectionString.Name), out string name))
+                            LogAuditFor(Database.Name, "PUT", $"Connection string '{name}'");
+                    }
+
+                    return ServerStore.PutConnectionString(_, databaseName, connectionString, guid);
+                },
                 PutConnectionStringDebugTag, GetRaftRequestIdFromQuery(),
                 beforeSetupConfiguration: (string databaseName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) =>
                 {

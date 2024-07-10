@@ -15,6 +15,7 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Smuggler.Documents.Data
 {
@@ -47,6 +48,8 @@ namespace Raven.Server.Smuggler.Documents.Data
         IReplicationHubCertificateActions ReplicationHubCertificates();
 
         ITimeSeriesActions TimeSeries();
+
+        ITimeSeriesActions TimeSeriesDeletedRanges();
     }
 
     public interface IDocumentActions : INewDocumentActions, IAsyncDisposable
@@ -69,6 +72,10 @@ namespace Raven.Server.Smuggler.Documents.Data
     public interface INewItemActions
     {
         DocumentsOperationContext GetContextForNewDocument();
+
+        BlittableJsonDocumentBuilder GetBuilderForNewDocument(UnmanagedJsonParser parser, JsonParserState state, BlittableMetadataModifier modifier = null);
+
+        BlittableMetadataModifier GetMetadataModifierForNewDocument(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false, bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None);
     }
     
     public interface INewDocumentActions : INewItemActions
@@ -124,7 +131,10 @@ namespace Raven.Server.Smuggler.Documents.Data
     public interface ITimeSeriesActions : IAsyncDisposable, INewItemActions
     {
         ValueTask WriteTimeSeriesAsync(TimeSeriesItem ts);
-        
+
+        ValueTask WriteTimeSeriesDeletedRangeAsync(TimeSeriesDeletedRangeItemForSmuggler deletedRange);
+
+
         void RegisterForDisposal(IDisposable data);
 
         void RegisterForReturnToTheContext(AllocatedMemoryData data);

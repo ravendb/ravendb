@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,6 +27,7 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;
 using Voron.Impl;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Raven.Server
 {
@@ -68,6 +70,20 @@ namespace Raven.Server
             if (CommandLineSwitches.PrintVersionAndExit)
             {
                 Console.WriteLine(ServerVersion.FullVersion);
+                return 0;
+            }
+
+            if (CommandLineSwitches.PrintInfoAndExit)
+            {
+                Console.WriteLine($"{nameof(ServerVersion.Version)}: {ServerVersion.Version}");
+                Console.WriteLine($"{nameof(ServerVersion.FullVersion)}: {ServerVersion.FullVersion}");
+                Console.WriteLine($"{nameof(ServerVersion.AssemblyVersion)}: {ServerVersion.AssemblyVersion}");
+                Console.WriteLine($"{nameof(ServerVersion.Build)}: {ServerVersion.Build}");
+                Console.WriteLine($"{nameof(ServerVersion.CommitHash)}: {ServerVersion.CommitHash}");
+                Console.WriteLine($"{nameof(ServerVersion.ReleaseDate)}: {ServerVersion.ReleaseDate}");
+                Console.WriteLine($"Framework: {RuntimeInformation.FrameworkDescription}");
+                Console.WriteLine($"Runtime: {RuntimeInformation.RuntimeIdentifier}");
+                Console.WriteLine($"Architecture: {RuntimeInformation.ProcessArchitecture}");
                 return 0;
             }
 

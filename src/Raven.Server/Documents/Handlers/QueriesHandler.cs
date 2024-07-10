@@ -26,6 +26,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers
@@ -372,6 +373,9 @@ namespace Raven.Server.Documents.Handlers
 
                     if (TrafficWatchManager.HasRegisteredClients)
                         TrafficWatchQuery(query);
+                    
+                    if (LoggingSource.AuditLog.IsInfoEnabled)
+                        LogAuditFor(Database.Name, "DELETE", $"Documents matching the query: {query}");
 
                     await ExecuteQueryOperation(query,
                         (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, queryContext, onProgress, token),

@@ -116,7 +116,7 @@ namespace Raven.Server.Web.System
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    LogAuditFor("DbMgmt", $"Database '{dbName}' topology is being modified " +
+                    LogAuditFor("DbMgmt", "CHANGE", $"Database '{dbName}' topology. " +
                                           $"Old topology: {databaseRecord.Topology} " +
                                           $"New topology: {databaseTopology}.");
                 }

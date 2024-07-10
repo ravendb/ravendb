@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.TcpHandlers
             await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
                 SubscriptionState.SubscriptionName, SubscriptionState.MentorNode);
 
-            await SubscriptionConnectionsState.SendNoopAck();
+            await SubscriptionConnectionsState.SendNoopAck(force: true);
             await WriteJsonAsync(new DynamicJsonValue
             {
                 [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
@@ -818,20 +818,28 @@ namespace Raven.Server.Documents.TcpHandlers
             SubscriptionConnectionClientMessage clientReply;
             while (true)
             {
-                var result = await Task.WhenAny(replyFromClientTask,
-                    TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(5000), CancellationTokenSource.Token)).ConfigureAwait(false);
+                var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(5000), CancellationTokenSource.Token);
+                var result = await Task.WhenAny(replyFromClientTask, timeoutTask).ConfigureAwait(false);
                 CancellationTokenSource.Token.ThrowIfCancellationRequested();
                 if (result == replyFromClientTask)
                 {
-                    clientReply = await replyFromClientTask;
-                    if (clientReply.Type == SubscriptionConnectionClientMessage.MessageType.DisposedNotification)
+                    if (TcpConnection.DocumentDatabase.SubscriptionStorage.ShouldWaitForClusterStabilization())
                     {
-                        CancellationTokenSource.Cancel();
+                        // we have unstable cluster
+                        await timeoutTask;
+                    }
+                    else
+                    {
+                        clientReply = await replyFromClientTask;
+                        if (clientReply.Type == SubscriptionConnectionClientMessage.MessageType.DisposedNotification)
+                        {
+                            await CancellationTokenSource.CancelAsync();
+                            break;
+                        }
+
+                        replyFromClientTask = _lastReplyFromClientTask = GetReplyFromClientAsync();
                         break;
                     }
-
-                    replyFromClientTask = _lastReplyFromClientTask = GetReplyFromClientAsync();
-                    break;
                 }
 
                 await SendHeartBeatAsync("Waiting for client ACK");
@@ -1149,9 +1157,9 @@ namespace Raven.Server.Documents.TcpHandlers
             do
             {
                 var hasMoreDocsTask = _subscriptionConnectionsState.WaitForMoreDocs();
-
+                var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(WaitForChangedDocumentsTimeoutInMs));
                 var resultingTask = await Task
-                    .WhenAny(hasMoreDocsTask, pendingReply, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(WaitForChangedDocumentsTimeoutInMs))).ConfigureAwait(false);
+                    .WhenAny(hasMoreDocsTask, pendingReply, timeoutTask).ConfigureAwait(false);
 
                 TcpConnection.DocumentDatabase.ForTestingPurposes?.Subscription_ActionToCallDuringWaitForChangedDocuments?.Invoke();
 
@@ -1163,8 +1171,16 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 if (hasMoreDocsTask == resultingTask)
                 {
-                    _subscriptionConnectionsState.NotifyNoMoreDocs();
-                    return true;
+                    if (TcpConnection.DocumentDatabase.SubscriptionStorage.ShouldWaitForClusterStabilization())
+                    {
+                        // we have unstable cluster
+                        await timeoutTask;
+                    }
+                    else
+                    {
+                        _subscriptionConnectionsState.NotifyNoMoreDocs();
+                        return true;
+                    }
                 }
 
                 await SendHeartBeatAsync("Waiting for changed documents");
@@ -1237,6 +1253,11 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         // it's supposed this task will fail here since we disposed all resources used by connection
                         // but we must wait for it before we release _copiedBuffer
+                        _lastReplyFromClientTask.Wait();
+                    }
+                    else if (_lastReplyFromClientTask is { IsFaulted: true })
+                    {
+                        // need to catch the exception here to prevent UnobservedTaskException 
                         _lastReplyFromClientTask.Wait();
                     }
                 }

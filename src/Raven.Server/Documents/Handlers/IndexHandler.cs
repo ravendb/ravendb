@@ -576,6 +576,11 @@ namespace Raven.Server.Documents.Handlers
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                LogAuditFor(Database.Name, "RESET", $"Index '{name}'");
+            }
+
             IndexDefinition indexDefinition;
             lock (Database)
             {
@@ -626,7 +631,7 @@ namespace Raven.Server.Documents.Handlers
 
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
-                LogAuditFor(Database.Name, $"Index {name} DELETE");
+                LogAuditFor(Database.Name, "DELETE", $"Index '{name}'");
             }
 
             HttpContext.Response.StatusCode = await Database.IndexStore.TryDeleteIndexIfExists(name, GetRaftRequestIdFromQuery())

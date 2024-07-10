@@ -4,6 +4,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -18,6 +19,7 @@ using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Enumerators;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Streaming
 {
@@ -164,6 +166,10 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 var ignoreLimit = GetBoolValueQueryString("ignoreLimit", required: false) ?? false;
                 var properties = GetStringValuesQueryString("field", false);
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
+
+                if (LoggingSource.AuditLog.IsInfoEnabled && query.Metadata.CollectionName == Constants.Documents.Collections.AllDocumentsCollection)
+                    LogAuditFor(Database.Name, "QUERY", $"Streaming all documents (query: {query}, format: {format}, debug: {debug}, ignore limit: {ignoreLimit})");
+
                 // set the exported file name prefix
                 var fileNamePrefix = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
                 fileNamePrefix = $"{Database.Name}_{fileNamePrefix}";
@@ -247,11 +253,15 @@ namespace Raven.Server.Documents.Handlers.Streaming
                     AddStringToHttpContext(sb.ToString(), TrafficWatchChangeType.Streams);
                 }
 
+
                 var format = GetStringQueryString("format", false);
                 var debug = GetStringQueryString("debug", false);
                 var ignoreLimit = GetBoolValueQueryString("ignoreLimit", required: false) ?? false;
                 var properties = GetStringValuesQueryString("field", false);
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
+
+                if (LoggingSource.AuditLog.IsInfoEnabled && query.Metadata.CollectionName == Constants.Documents.Collections.AllDocumentsCollection)
+                    LogAuditFor(Database.Name, "QUERY", $"Streaming all documents (query: {query}, format: {format}, debug: {debug}, ignore limit: {ignoreLimit})");
 
                 // set the exported file name prefix
                 var fileNamePrefix = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";

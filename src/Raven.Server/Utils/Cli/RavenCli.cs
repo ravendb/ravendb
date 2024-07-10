@@ -1017,6 +1017,12 @@ namespace Raven.Server.Utils.Cli
             using (cli._server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var adminJsScript = new AdminJsScript(jsCli.Script);
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                {
+                    var auditLog = LoggingSource.AuditLog.GetLogger("Server", "Audit");
+                    auditLog.Info($"RavenCli, no certificate, Execute AdminJSConsole Script: \"{adminJsScript.Script}\"");
+                }
+
                 var result = jsCli.AdminConsole.ApplyScript(adminJsScript);
 
                 if (cli._consoleColoring)

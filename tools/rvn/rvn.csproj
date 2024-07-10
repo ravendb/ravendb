@@ -4,7 +4,7 @@
     <Authors>Hibernating Rhinos</Authors>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.5</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.7</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageTags>database;nosql;doc db</PackageTags>
     <PackageProjectUrl>https://ravendb.net</PackageProjectUrl>
@@ -161,7 +161,7 @@
     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
-    <PackageReference Include="YamlDotNet" Version="15.1.4" />
+    <PackageReference Include="YamlDotNet" Version="15.3.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />

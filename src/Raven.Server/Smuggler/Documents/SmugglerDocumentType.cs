@@ -88,4 +88,29 @@ namespace Raven.Server.Smuggler.Documents
             Collection?.Dispose();
         }
     }
+
+    public sealed class TimeSeriesDeletedRangeItemForSmuggler : IDisposable
+    {
+        public LazyStringValue DocId;
+
+        public LazyStringValue Name;
+
+        public LazyStringValue Collection;
+
+        public LazyStringValue ChangeVector;
+
+        public DateTime From;
+
+        public DateTime To;
+
+        public long Etag;
+
+        public void Dispose()
+        {
+            DocId?.Dispose();
+            Name?.Dispose();
+            Collection?.Dispose();
+            ChangeVector?.Dispose();
+        }
+    }
 }

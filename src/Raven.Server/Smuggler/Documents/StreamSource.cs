@@ -680,7 +680,7 @@ namespace Raven.Server.Smuggler.Documents
                             _log.Info("Wasn't able to import the IndexesHistory from smuggler file. Skipping.", e);
                     }
                 }
-                
+
             });
 
             return databaseRecord;
@@ -786,7 +786,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
         }
-        
+
         public async IAsyncEnumerable<TimeSeriesItem> GetTimeSeriesAsync(ITimeSeriesActions action, List<string> collectionsToOperate)
         {
             var collectionsHashSet = new HashSet<string>(collectionsToOperate, StringComparer.OrdinalIgnoreCase);
@@ -794,7 +794,7 @@ namespace Raven.Server.Smuggler.Documents
             await foreach (var reader in ReadArrayAsync(action))
             {
                 if (reader.TryGet(Constants.Documents.Blob.Size, out int size) == false)
-                        throw new InvalidOperationException($"Trying to read time series entry without size specified: doc: {reader}");
+                    throw new InvalidOperationException($"Trying to read time series entry without size specified: doc: {reader}");
 
                 if (reader.TryGet(Constants.Documents.Blob.Document, out BlittableJsonReaderObject blobMetadata) == false ||
                     blobMetadata.TryGet(nameof(TimeSeriesItem.Collection), out LazyStringValue collection) == false)
@@ -820,7 +820,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 var segment = await ReadSegmentAsync(action, size);
                 action.RegisterForDisposal(reader);
-                
+
                 yield return new TimeSeriesItem
                 {
                     DocId = docId,
@@ -831,7 +831,7 @@ namespace Raven.Server.Smuggler.Documents
                     Segment = segment
                 };
             }
-            
+
             async Task SkipEntryAsync(BlittableJsonReaderObject reader, int size, bool skipDueToReadError)
             {
                 if (skipDueToReadError)
@@ -839,7 +839,7 @@ namespace Raven.Server.Smuggler.Documents
                     _result.TimeSeries.ErroredCount++;
                     _result.AddWarning($"Could not read time series entry. {reader}");
                 }
-                
+
                 reader.Dispose();
                 await SkipAsync(size);
             }
@@ -1035,6 +1035,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Counters:
 #pragma warning restore 618
                 case DatabaseItemType.CounterGroups:
+                case DatabaseItemType.TimeSeriesDeletedRanges:
                     return await SkipArrayAsync(onSkipped, null, token);
 
                 case DatabaseItemType.TimeSeries:
@@ -1055,6 +1056,42 @@ namespace Raven.Server.Smuggler.Documents
         {
             return SmugglerSourceType.Import;
         }
+
+        public async IAsyncEnumerable<TimeSeriesDeletedRangeItemForSmuggler> GetTimeSeriesDeletedRangesAsync(ITimeSeriesActions action, List<string> collectionsToExport)
+        {
+            var collectionsHashSet = new HashSet<string>(collectionsToExport, StringComparer.OrdinalIgnoreCase);
+
+            await foreach (var reader in ReadArrayAsync(action))
+            {
+                if (reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.Collection), out LazyStringValue collection) == false ||
+                    reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.DocId), out LazyStringValue docId) == false ||
+                    reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.Name), out LazyStringValue name) == false ||
+                    reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.ChangeVector), out LazyStringValue cv) == false ||
+                    reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.From), out DateTime from) == false ||
+                    reader.TryGet(nameof(TimeSeriesDeletedRangeItemForSmuggler.To), out DateTime to) == false)
+                {
+                    _result.TimeSeriesDeletedRanges.ErroredCount++;
+                    _result.AddWarning("Could not read timeseries deleted range entry.");
+                    continue;
+                }
+
+                if (collectionsHashSet.Count > 0 && collectionsHashSet.Contains(collection) == false)
+                    continue;
+
+                action.RegisterForDisposal(reader);
+
+                yield return new TimeSeriesDeletedRangeItemForSmuggler
+                {
+                    DocId = docId,
+                    Name = name,
+                    Collection = collection,
+                    ChangeVector = cv,
+                    From = from,
+                    To = to
+                };
+            }
+        }
+
 
         public IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToOperate, INewDocumentActions actions)
         {
@@ -1292,7 +1329,7 @@ namespace Raven.Server.Smuggler.Documents
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             var context = _context;
-            var builder = CreateBuilder(context);
+            BlittableJsonDocumentBuilder builder = null;
 
             try
             {
@@ -1306,14 +1343,11 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (actions != null)
                     {
-                        var oldContext = context;
                         context = actions.GetContextForNewDocument();
-                        if (context != oldContext)
-                        {
-                            builder.Dispose();
-                            builder = CreateBuilder(context);
-                        }
+                        builder = actions.GetBuilderForNewDocument(_parser, _state);
                     }
+                    else if (builder == null)
+                        builder = CreateBuilder(context);
 
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
@@ -1338,7 +1372,8 @@ namespace Raven.Server.Smuggler.Documents
             }
             finally
             {
-                builder.Dispose();
+                if (actions == null)
+                    builder?.Dispose();
             }
         }
 
@@ -1362,8 +1397,8 @@ namespace Raven.Server.Smuggler.Documents
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             var context = _context;
-            var builder = CreateBuilder(context);
-            var modifier = new BlittableMetadataModifier(context);
+            BlittableJsonDocumentBuilder builder = null;
+            BlittableMetadataModifier modifier = null;
             try
             {
                 while (true)
@@ -1376,16 +1411,16 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (actions != null)
                     {
-                        var oldContext = context;
                         context = actions.GetContextForNewDocument();
-                        if (oldContext != context)
-                        {
-                            builder.Dispose();
-                            modifier.Dispose();
-                            modifier = new BlittableMetadataModifier(context);
-                            builder = CreateBuilder(context, modifier);
-                        }
+                        modifier = actions.GetMetadataModifierForNewDocument();
+                        builder = actions.GetBuilderForNewDocument(_parser, _state, modifier);
                     }
+                    else if (builder == null)
+                    {
+                        modifier = new BlittableMetadataModifier(context);
+                        builder = CreateBuilder(context, modifier);
+                    }
+
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     _context.CachedProperties.NewDocument();
@@ -1426,8 +1461,11 @@ namespace Raven.Server.Smuggler.Documents
             }
             finally
             {
-                builder.Dispose();
-                modifier.Dispose();
+                if (actions == null)
+                {
+                    builder?.Dispose();
+                    modifier?.Dispose();
+                }
             }
         }
 
@@ -1474,8 +1512,8 @@ namespace Raven.Server.Smuggler.Documents
 
             var context = _context;
             var legacyImport = _buildVersionType == BuildVersionType.V3;
-            var modifier = new BlittableMetadataModifier(context, legacyImport, _readLegacyEtag, _operateOnTypes);
-            var builder = CreateBuilder(context, modifier);
+            BlittableMetadataModifier modifier = null;
+            BlittableJsonDocumentBuilder builder = null;
             var collectionsHashSet = new HashSet<string>(collectionsToOperate, StringComparer.OrdinalIgnoreCase);
 
             try
@@ -1491,20 +1529,16 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (actions != null)
                     {
-                        var oldContext = context;
                         context = actions.GetContextForNewDocument();
-                        if (oldContext != context)
-                        {
-                            builder.Dispose();
-                            modifier.Dispose();
-                            modifier = new BlittableMetadataModifier(context, legacyImport, _readLegacyEtag, _operateOnTypes)
-                            {
-                                FirstEtagOfLegacyRevision = modifier.FirstEtagOfLegacyRevision,
-                                LegacyRevisionsCount = modifier.LegacyRevisionsCount
-                            };
-                            builder = CreateBuilder(context, modifier);
-                        }
+                        modifier = actions.GetMetadataModifierForNewDocument(modifier?.FirstEtagOfLegacyRevision, modifier?.LegacyRevisionsCount ?? 0, legacyImport, _readLegacyEtag, _operateOnTypes);
+                        builder = actions.GetBuilderForNewDocument(_parser, _state, modifier);
                     }
+                    else if (builder == null)
+                    {
+                        modifier = new BlittableMetadataModifier(context, legacyImport, _readLegacyEtag, _operateOnTypes);
+                        builder = CreateBuilder(context, modifier);
+                    }
+
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     context.CachedProperties.NewDocument();
@@ -1526,7 +1560,7 @@ namespace Raven.Server.Smuggler.Documents
                                 continue;
                             }
                         }
-                        
+
                         if (metadata.TryGet(DocumentItem.ExportDocumentType.Key, out string type))
                         {
                             if (type != DocumentItem.ExportDocumentType.Attachment)
@@ -1587,8 +1621,11 @@ namespace Raven.Server.Smuggler.Documents
             }
             finally
             {
-                builder.Dispose();
-                modifier.Dispose();
+                if (actions == null)
+                {
+                    builder?.Dispose();
+                    modifier?.Dispose();
+                }
             }
         }
 
@@ -1601,7 +1638,7 @@ namespace Raven.Server.Smuggler.Documents
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             var context = _context;
-            var builder = CreateBuilder(context);
+            BlittableJsonDocumentBuilder builder = null;
             var collectionsHashSet = new HashSet<string>(collectionsToOperate, StringComparer.OrdinalIgnoreCase);
 
             try
@@ -1616,14 +1653,12 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (actions != null)
                     {
-                        var oldContext = context;
                         context = actions.GetContextForNewDocument();
-                        if (oldContext != context)
-                        {
-                            builder.Dispose();
-                            builder = CreateBuilder(context);
-                        }
+                        builder = actions.GetBuilderForNewDocument(_parser, _state);
                     }
+                    else if (builder == null)
+                        builder = CreateBuilder(context);
+
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     _context.CachedProperties.NewDocument();
@@ -1690,7 +1725,8 @@ namespace Raven.Server.Smuggler.Documents
             }
             finally
             {
-                builder.Dispose();
+                if (actions == null)
+                    builder?.Dispose();
             }
 
             void SkipEntry(BlittableJsonReaderObject data)
@@ -1713,7 +1749,7 @@ namespace Raven.Server.Smuggler.Documents
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             var context = _context;
-            var builder = CreateBuilder(context);
+            BlittableJsonDocumentBuilder builder = null;
             var collectionsHashSet = new HashSet<string>(collectionsToOperate, StringComparer.OrdinalIgnoreCase);
 
             try
@@ -1728,14 +1764,12 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (actions != null)
                     {
-                        var oldContext = context;
                         context = actions.GetContextForNewDocument();
-                        if (oldContext != context)
-                        {
-                            builder.Dispose();
-                            builder = CreateBuilder(context);
-                        }
+                        builder = actions.GetBuilderForNewDocument(_parser, _state);
                     }
+                    else if (builder == null)
+                        builder = CreateBuilder(context);
+
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     _context.CachedProperties.NewDocument();
@@ -1778,7 +1812,8 @@ namespace Raven.Server.Smuggler.Documents
             }
             finally
             {
-                builder.Dispose();
+                if (actions == null)
+                    builder?.Dispose();
             }
 
             void SkipEntry(BlittableJsonReaderObject data)
@@ -1921,17 +1956,11 @@ namespace Raven.Server.Smuggler.Documents
             return attachment;
         }
 
-        private BlittableJsonDocumentBuilder CreateBuilder(JsonOperationContext context, BlittableMetadataModifier modifier)
+        private BlittableJsonDocumentBuilder CreateBuilder(JsonOperationContext context, BlittableMetadataModifier modifier = null)
         {
             return new BlittableJsonDocumentBuilder(context,
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/object", _parser, _state,
                 modifier: modifier);
-        }
-
-        private BlittableJsonDocumentBuilder CreateBuilder(JsonOperationContext context)
-        {
-            return new BlittableJsonDocumentBuilder(context,
-                BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/object", _parser, _state);
         }
 
         private DatabaseItemType GetType(string type)
@@ -1993,6 +2022,9 @@ namespace Raven.Server.Smuggler.Documents
 
             if (type.Equals("AttachmentsDeletions", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.LegacyAttachmentDeletions;
+
+            if (type.Equals(nameof(DatabaseItemType.TimeSeriesDeletedRanges), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.TimeSeriesDeletedRanges;
 
             return DatabaseItemType.Unknown;
         }

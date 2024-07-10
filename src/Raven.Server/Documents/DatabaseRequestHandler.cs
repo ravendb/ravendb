@@ -180,6 +180,12 @@ namespace Raven.Server.Documents
         {
             switch (name)
             {
+                case RevisionsHandler.ReadRevisionsConfigTag:
+                    return JsonDeserializationServer.RevisionsConfiguration(configuration).ToAuditJson();
+
+                case RevisionsHandler.ConflictedRevisionsConfigTag:
+                    return JsonDeserializationServer.RevisionsCollectionConfiguration(configuration).ToAuditJson();
+
                 case OngoingTasksHandler.BackupDatabaseOnceTag:
                     return JsonDeserializationServer.BackupConfiguration(configuration).ToAuditJson();
 
@@ -258,7 +264,7 @@ namespace Raven.Server.Documents
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
                 DynamicJsonValue conf = GetCustomConfigurationAuditJson(description, configuration);
-                var line = $"Task: '{description}' with taskId: '{id}'";
+                var line = $"'{description}' with taskId: '{id}'";
 
                 if (conf != null)
                 {
@@ -271,7 +277,7 @@ namespace Raven.Server.Documents
                     line += ($" Configuration: {confString}");
                 }
 
-                LogAuditFor(Database.Name, line);
+                LogAuditFor(Database.Name, "TASK", line);
             }
         }
     }

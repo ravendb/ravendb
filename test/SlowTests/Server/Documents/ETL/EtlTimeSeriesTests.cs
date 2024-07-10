@@ -2004,7 +2004,7 @@ function loadTimeSeriesOfUsersBehavior(docId, counter)
                 var actualUsers = await session.Query<User>().ToArrayAsync();
                 foreach (var user in actualUsers)
                 {
-                    var ts = session.TimeSeriesFor(user.Id, timeSeriesName).GetAsync(DateTime.MinValue, DateTime.MaxValue);
+                    var ts = await session.TimeSeriesFor(user.Id, timeSeriesName).GetAsync(DateTime.MinValue, DateTime.MaxValue);
                     Assert.True(user.Age < 18 ^ ts != null);
                 }
             }

@@ -57,6 +57,7 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.CompareExchangeTombstones,
             DatabaseItemType.CounterGroups,
             DatabaseItemType.Subscriptions,
+            DatabaseItemType.TimeSeriesDeletedRanges,
             DatabaseItemType.TimeSeries,
             DatabaseItemType.ReplicationHubCertificates,
             DatabaseItemType.None
@@ -602,5 +603,90 @@ namespace Raven.Server.Smuggler.Documents
         {
             return _type;
         }
+
+        public IAsyncEnumerable<TimeSeriesDeletedRangeItemForSmuggler> GetTimeSeriesDeletedRangesAsync(ITimeSeriesActions action, List<string> collectionsToExport) =>
+            GetTimeSeriesDeletedRanges(collectionsToExport).ToAsyncEnumerable();
+
+        private IEnumerable<TimeSeriesDeletedRangeItemForSmuggler> GetTimeSeriesDeletedRanges(IEnumerable<string> collectionsToExport)
+        {
+            Debug.Assert(_context != null);
+
+            var initialState = new TimeSeriesDeletedRangeIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit)
+            {
+                StartEtag = _startDocumentEtag,
+                StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
+            };
+
+            var enumerator = new PulsedTransactionEnumerator<TimeSeriesDeletedRangeItemForSmuggler, TimeSeriesDeletedRangeIterationState>(_context,
+                state =>
+                {
+                    if (state.StartEtagByCollection.Count != 0)
+                        return GetTimeSeriesDeletedRangesFromCollections(_context, state);
+
+                    return GetAlTimeSeriesDeletedRanges(_context, state.StartEtag);
+                }, initialState);
+
+            while (enumerator.MoveNext())
+            {
+                yield return enumerator.Current;
+            }
+        }
+
+
+        private static IEnumerable<TimeSeriesDeletedRangeItemForSmuggler> GetAlTimeSeriesDeletedRanges(DocumentsOperationContext context, long startEtag)
+        {
+            var database = context.DocumentDatabase;
+            foreach (var deletedRange in database.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(context, startEtag))
+            {
+                using (deletedRange)
+                {
+                    TimeSeriesValuesSegment.ParseTimeSeriesKey(deletedRange.Key, context, out var docId, out var name);
+
+                    yield return new TimeSeriesDeletedRangeItemForSmuggler
+                    {
+                        DocId = docId,
+                        Name = name,
+                        From = deletedRange.From,
+                        To = deletedRange.To,
+                        Collection = deletedRange.Collection.Clone(context),
+                        ChangeVector = context.GetLazyString(deletedRange.ChangeVector),
+                        Etag = deletedRange.Etag
+                    };
+                }
+            }
+        }
+
+        private static IEnumerable<TimeSeriesDeletedRangeItemForSmuggler> GetTimeSeriesDeletedRangesFromCollections(DocumentsOperationContext context, TimeSeriesDeletedRangeIterationState state)
+        {
+            var database = context.DocumentDatabase;
+            var collections = state.StartEtagByCollection.Keys.ToList();
+
+            foreach (var collection in collections)
+            {
+                var etag = state.StartEtagByCollection[collection];
+
+                state.CurrentCollection = collection;
+
+                foreach (var deletedRange in database.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(context, collection, etag))
+                {
+                    using (deletedRange)
+                    {
+                        TimeSeriesValuesSegment.ParseTimeSeriesKey(deletedRange.Key, context, out var docId, out var name);
+
+                        yield return new TimeSeriesDeletedRangeItemForSmuggler
+                        {
+                            DocId = docId,
+                            Name = name,
+                            From = deletedRange.From,
+                            To = deletedRange.To,
+                            Collection = deletedRange.Collection.Clone(context),
+                            ChangeVector = context.GetLazyString(deletedRange.ChangeVector),
+                            Etag = deletedRange.Etag
+                        };
+                    }
+                }
+            }
+        }
+
     }
 }

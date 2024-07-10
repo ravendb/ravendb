@@ -70,6 +70,8 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly CompareExchangeReferences ReferencesForCompareExchange;
 
+        public long CreatedTimestampAsBinary;
+
         public IndexStorage(Index index, TransactionContextPool contextPool, DocumentDatabase database)
         {
             _index = index;
@@ -121,12 +123,15 @@ namespace Raven.Server.Documents.Indexes
                 using (Slice.External(context.Allocator, (byte*)&sourceTypeInt, sizeof(int), out Slice tmpSlice))
                     statsTree.Add(IndexSchema.SourceTypeSlice, tmpSlice);
 
-                if (statsTree.Read(IndexSchema.CreatedTimestampSlice) == null)
+                var createdTimestampResult = statsTree.Read(IndexSchema.CreatedTimestampSlice);
+                if (createdTimestampResult == null)
                 {
-                    var binaryDate = SystemTime.UtcNow.ToBinary();
+                    var binaryDate = CreatedTimestampAsBinary = SystemTime.UtcNow.ToBinary();
                     using (Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long), out Slice tmpSlice))
                         statsTree.Add(IndexSchema.CreatedTimestampSlice, tmpSlice);
                 }
+                else
+                    CreatedTimestampAsBinary = createdTimestampResult.Reader.ReadLittleEndianInt64();
 
                 using (Slice.From(context.Allocator, documentDatabase.DbBase64Id, out var dbId))
                     statsTree.Add(IndexSchema.DatabaseIdSlice, dbId);
@@ -151,7 +156,7 @@ namespace Raven.Server.Documents.Indexes
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultAnalyzer), _index.Configuration.DefaultAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.Default);
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultExactAnalyzer), _index.Configuration.DefaultExactAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.DefaultExact);
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultSearchAnalyzer), _index.Configuration.DefaultSearchAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.DefaultSearch);
-                    
+
                 }
 
                 void AssertAndPersistAnalyzer(Tree configurationTree, string configurationKey, string expectedAnalyzer, string defaultAnalyzer)
@@ -178,11 +183,11 @@ namespace Raven.Server.Documents.Indexes
                 {
                     string configurationKey = nameof(SearchEngineType);
                     string configurationName = _index.Type.IsAuto() ? RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType) : RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType);
-                   
+
                     SearchEngineType defaultEngineType =
                         _index.Type.IsAuto() ? _index.Configuration.AutoIndexingEngineType : _index.Configuration.StaticIndexingEngineType;
-                    
-                    if(defaultEngineType == SearchEngineType.None)
+
+                    if (defaultEngineType == SearchEngineType.None)
                         throw new InvalidDataException($"Default search engine is {SearchEngineType.None}. Please set {configurationName}.");
                     var result = configurationTree.Read(configurationKey);
                     if (result != null)
@@ -385,7 +390,7 @@ namespace Raven.Server.Documents.Indexes
 
             var stats = new IndexStats
             {
-                CreatedTimestamp = DateTime.FromBinary(statsTree.Read(IndexSchema.CreatedTimestampSlice).Reader.ReadLittleEndianInt64()),
+                CreatedTimestamp = DateTime.FromBinary(CreatedTimestampAsBinary),
                 ErrorsCount = (int)(table?.NumberOfEntries ?? 0)
             };
 
@@ -407,8 +412,8 @@ namespace Raven.Server.Documents.Indexes
             {
                 var entriesCountSize = entriesCountReader.Value.Length;
                 //backward compatibility https://github.com/ravendb/ravendb/commit/5c53b01ee2b4fad8f3ef410f3e4976144d72c023
-                entriesCount = entriesCountSize == sizeof(long) 
-                    ? entriesCountReader.Value.ReadLittleEndianInt64() 
+                entriesCount = entriesCountSize == sizeof(long)
+                    ? entriesCountReader.Value.ReadLittleEndianInt64()
                     : entriesCountReader.Value.ReadLittleEndianInt32();
             }
 
@@ -879,7 +884,7 @@ namespace Raven.Server.Documents.Indexes
 
                 if (stats.EntriesCount != null) // available only when tx was committed
                     statsTree.Add(IndexSchema.EntriesCount, stats.EntriesCount.Value);
-               
+
                 var binaryDate = indexingTime.ToBinary();
                 using (Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long), out Slice binaryDateslice))
                     statsTree.Add(IndexSchema.LastIndexingTimeSlice, binaryDateslice);
@@ -975,11 +980,11 @@ namespace Raven.Server.Documents.Indexes
                 {
                     throw new InvalidOperationException($"Index '{name}' does not contain valid {nameof(SearchEngineType)} property. It contains: {result.Reader.ToStringValue()}.");
                 }
-               
+
                 return persistedSearchEngineType;
             }
-        }        
-        
+        }
+
         public static IndexSourceType ReadIndexSourceType(string name, StorageEnvironment environment)
         {
             using (var tx = environment.ReadTransaction())
@@ -1039,8 +1044,8 @@ namespace Raven.Server.Documents.Indexes
             var searchEngineType = ReadSearchEngineType(_index.Name, _environment);
             using (var tx = _environment.ReadTransaction())
             {
-                fields = searchEngineType == SearchEngineType.Corax 
-                    ? Corax.Utils.TimeFields.ReadTimeFieldsNames(tx) 
+                fields = searchEngineType == SearchEngineType.Corax
+                    ? Corax.Utils.TimeFields.ReadTimeFieldsNames(tx)
                     : ReadLuceneTimeFields(tx);
             }
 
@@ -1063,7 +1068,7 @@ namespace Raven.Server.Documents.Indexes
                         }
                     }
                 }
-                
+
                 return container;
             }
         }
@@ -1140,7 +1145,7 @@ namespace Raven.Server.Documents.Indexes
             public static readonly Slice TimeSlice;
 
             public static readonly Slice SearchEngineType;
-            
+
             static IndexSchema()
             {
                 using (StorageEnvironment.GetStaticContext(out var ctx))

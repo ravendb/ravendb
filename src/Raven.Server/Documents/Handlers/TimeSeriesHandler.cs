@@ -11,6 +11,7 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TimeSeries;
@@ -1178,7 +1179,9 @@ namespace Raven.Server.Documents.Handlers
             private readonly DocumentDatabase _database;
 
             private readonly Dictionary<string, List<TimeSeriesItem>> _dictionary;
-            
+
+            private readonly Dictionary<string, List<TimeSeriesDeletedRangeItemForSmuggler>> _deletedRanges;
+
             private readonly DocumentsOperationContext _context;
 
             public DocumentsOperationContext Context => _context;
@@ -1193,13 +1196,17 @@ namespace Raven.Server.Documents.Handlers
 
             public string LastChangeVector;
 
+            private BlittableJsonDocumentBuilder _builder;
+            private BlittableMetadataModifier _metadataModifier;
+
             public SmugglerTimeSeriesBatchCommand(DocumentDatabase database)
             {
                 _database = database;
-                _dictionary = new Dictionary<string, List<TimeSeriesItem>>();
+                _dictionary = new Dictionary<string, List<TimeSeriesItem>>(StringComparer.OrdinalIgnoreCase);
                 _toDispose = new();
                 _toReturn = new();
                 _releaseContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
+                _deletedRanges = new Dictionary<string, List<TimeSeriesDeletedRangeItemForSmuggler>>(StringComparer.OrdinalIgnoreCase);
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -1207,6 +1214,27 @@ namespace Raven.Server.Documents.Handlers
                 var tss = _database.DocumentsStorage.TimeSeriesStorage;
 
                 var changes = 0L;
+
+                foreach (var (docId, items) in _deletedRanges)
+                {
+                    foreach (var item in items)
+                    {
+                        using (item)
+                        {
+                            var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
+                            {
+                                DocumentId = docId,
+                                Collection = item.Collection,
+                                Name = item.Name,
+                                From = item.From,
+                                To = item.To
+                            };
+                            tss.DeleteTimestampRange(context, deletionRangeRequest, remoteChangeVector: null, updateMetadata: false);
+                        }
+                    }
+
+                    changes += items.Count;
+                }
 
                 foreach (var (docId, items) in _dictionary)
                 {
@@ -1250,6 +1278,20 @@ namespace Raven.Server.Documents.Handlers
                 return newItem;
             }
 
+            public bool AddToDeletedRanges(TimeSeriesDeletedRangeItemForSmuggler item)
+            {
+                bool newItem = false;
+
+                if (_deletedRanges.TryGetValue(item.DocId, out var deletedRangesList) == false)
+                {
+                    _deletedRanges[item.DocId] = deletedRangesList = [];
+                    newItem = true;
+                }
+
+                deletedRangesList.Add(item);
+                return newItem;
+            }
+
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 throw new System.NotImplementedException();
@@ -1263,6 +1305,21 @@ namespace Raven.Server.Documents.Handlers
             public void AddToReturn(AllocatedMemoryData allocatedMemoryData)
             {
                 _toReturn.Add(allocatedMemoryData);
+            }
+
+            public BlittableJsonDocumentBuilder GetOrCreateBuilder(UnmanagedJsonParser parser, JsonParserState state, string debugTag, BlittableMetadataModifier modifier = null)
+            {
+                return _builder ??= new BlittableJsonDocumentBuilder(_context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag, parser, state, modifier: modifier);
+            }
+
+            public BlittableMetadataModifier GetOrCreateMetadataModifier(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false,
+                bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+            {
+                _metadataModifier ??= new BlittableMetadataModifier(_context, legacyImport, readLegacyEtag, operateOnTypes);
+                _metadataModifier.FirstEtagOfLegacyRevision = firstEtagOfLegacyRevision;
+                _metadataModifier.LegacyRevisionsCount = legacyRevisionsCount;
+
+                return _metadataModifier;
             }
 
             public void Dispose()
@@ -1281,7 +1338,10 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var returnable in _toReturn)
                     _context.ReturnMemory(returnable);
                 _toReturn.Clear();
-                
+
+                _builder?.Dispose();
+                _metadataModifier?.Dispose();
+
                 _releaseContext?.Dispose();
                 _releaseContext = null;
             }

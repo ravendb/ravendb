@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
-                        LogAuditFor(Database.Name, $"Sorter {sorterDefinition.Name} PUT with definition: {sorterToAdd}");
+                        LogAuditFor(Database.Name, "PUT", $"Sorter '{sorterDefinition.Name}' with definition: {sorterToAdd}");
                     }
 
                     sorterDefinition.Validate();
@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
-                LogAuditFor(Database.Name, $"Sorter {name} DELETE");
+                LogAuditFor(Database.Name, "DELETE", $"Sorter '{name}'");
             }
 
             var command = new DeleteSorterCommand(name, Database.Name, GetRaftRequestIdFromQuery());

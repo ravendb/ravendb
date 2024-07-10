@@ -88,21 +88,25 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        public const string ConflictedRevisionsConfigTag = "conflicted-revisions-config";
+
         [RavenAction("/databases/*/admin/revisions/conflicts/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task ConfigConflictedRevisions()
         {
             return DatabaseConfigurations(
                 ServerStore.ModifyRevisionsForConflicts,
-                "conflicted-revisions-config",
+                ConflictedRevisionsConfigTag,
                 GetRaftRequestIdFromQuery());
         }
+
+        public const string ReadRevisionsConfigTag = "read-revisions-config";
 
         [RavenAction("/databases/*/admin/revisions/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task ConfigRevisions()
         {
             return DatabaseConfigurations(
                 ServerStore.ModifyDatabaseRevisions,
-                "read-revisions-config",
+                ReadRevisionsConfigTag,
                 GetRaftRequestIdFromQuery(),
                 beforeSetupConfiguration: (string name, ref BlittableJsonReaderObject configuration, JsonOperationContext context) =>
                 {

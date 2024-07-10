@@ -9,7 +9,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         private readonly OctetString _wellKnownAdminCertificates;
 
         public WellKnownAdminIssuers(ServerStore store)
-            : base(SnmpOids.Server.WellKnownAdminCertificates)
+            : base(SnmpOids.Server.WellKnownAdminIssuers)
         {
             var wellKnownIssuersThumbprints = store.Server.WellKnownIssuersThumbprints;
             if (wellKnownIssuersThumbprints == null || wellKnownIssuersThumbprints.Length == 0)
