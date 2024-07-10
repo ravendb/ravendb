@@ -13,6 +13,7 @@ export function EmptySets() {
     return (
         <div>
             <EmptySet>Use whenever a list is empty</EmptySet>
+            <EmptySet compact>Use whenever a list is empty</EmptySet>
         </div>
     );
 }

@@ -1,3 +1,4 @@
+import "./DatabaseSwitcher.scss";
 import React, { useEffect, useState } from "react";
 import databasesManager from "common/shell/databasesManager";
 import { Icon } from "components/common/Icon";
@@ -29,23 +30,23 @@ export default function DatabaseSwitcher() {
 
     return (
         <UncontrolledDropdown direction="down">
-            <DropdownToggle caret>
+            <DropdownToggle caret className="database-switcher">
                 <Icon icon="database" />
                 {activeDatabaseNameWithDelay || "No database selected"}
+                <DropdownMenu className="w-fit-content">
+                    {allDatabaseNames.map((databaseName) => (
+                        <DropdownItem
+                            key={databaseName}
+                            onClick={() => {
+                                const db = databasesManager.default.getDatabaseByName(databaseName);
+                                databasesManager.default.activate(db);
+                            }}
+                        >
+                            {databaseName}
+                        </DropdownItem>
+                    ))}
+                </DropdownMenu>
             </DropdownToggle>
-            <DropdownMenu className="w-100">
-                {allDatabaseNames.map((databaseName) => (
-                    <DropdownItem
-                        key={databaseName}
-                        onClick={() => {
-                            const db = databasesManager.default.getDatabaseByName(databaseName);
-                            databasesManager.default.activate(db);
-                        }}
-                    >
-                        {databaseName}
-                    </DropdownItem>
-                ))}
-            </DropdownMenu>
         </UncontrolledDropdown>
     );
 }
