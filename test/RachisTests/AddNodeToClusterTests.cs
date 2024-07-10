@@ -152,7 +152,18 @@ namespace RachisTests
             var (_, leader) = await CreateRaftCluster(5, leaderIndex: 0);
             var serverToDispose = Servers[1];
             await DisposeServerAndWaitForFinishOfDisposalAsync(serverToDispose);
-            Assert.Equal(WaitForValue(() => leader.ServerStore.GetNodesStatuses().Count(n => n.Value.Connected), 3), 3);
+
+            var actual = await WaitForValueAsync(async () =>
+            {
+                var count = -1;
+                await ActionWithLeader(l =>
+                {
+                    count = l.ServerStore.GetNodesStatuses().Count(n => n.Value.Connected);
+                });
+                return count;
+            }, 3);
+
+            Assert.Equal(3, actual);
 
             for (int i = 0; i < 5; i++)
             {
