@@ -8,11 +8,8 @@ namespace FastTests.Voron.CompactTrees;
 
 public class RavenDB_19937 : CompactTreeReplayTest
 {
-    private readonly ITestOutputHelper _testOutputHelper;
-
-    public RavenDB_19937(ITestOutputHelper output, ITestOutputHelper testOutputHelper) : base(output)
+    public RavenDB_19937(ITestOutputHelper output) : base(output)
     {
-        _testOutputHelper = testOutputHelper;
     }
 
     [RavenTheory(RavenTestCategory.Voron)]

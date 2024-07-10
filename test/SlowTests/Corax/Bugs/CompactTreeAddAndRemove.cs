@@ -14,11 +14,8 @@ namespace SlowTests.Corax.Bugs;
 
 public class CompactTreeAddAndRemove : StorageTest
 {
-    private readonly ITestOutputHelper _testOutputHelper;
-
-    public CompactTreeAddAndRemove(ITestOutputHelper output, ITestOutputHelper testOutputHelper) : base(output)
+    public CompactTreeAddAndRemove(ITestOutputHelper output) : base(output)
     {
-        _testOutputHelper = testOutputHelper;
     }
 
     [RavenTheory(RavenTestCategory.Voron)]
