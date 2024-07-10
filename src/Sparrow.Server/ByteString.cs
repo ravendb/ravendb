@@ -790,7 +790,7 @@ namespace Sparrow.Server
 
         public void Reset()
         {
-            ThrowIfDisposed();
+            ThrowIfDisposed(this);
 
 #if DEBUG
             Generation++;
@@ -1046,7 +1046,7 @@ namespace Sparrow.Server
 
         private ByteString AllocateInternal(int length, ByteStringType type)
         {
-            ThrowIfDisposed();
+            ThrowIfDisposed(this);
 
             Debug.Assert((type & ByteStringType.External) == 0, "This allocation routine is only for use with internal storage byte strings.");
             type &= ~ByteStringType.External; // We are allocating internal, so we will force it (even if we are checking for it in debug).
@@ -1272,7 +1272,7 @@ namespace Sparrow.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ReleaseExternal(ref ByteString value)
         {
-            ThrowIfDisposed();
+            ThrowIfDisposed(this);
 
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
 
@@ -1315,7 +1315,7 @@ namespace Sparrow.Server
 
         public void Release(ref ByteString value)
         {
-            ThrowIfDisposed();
+            ThrowIfDisposed(this);
 
 #if DEBUG
             Debug.Assert(value.Generation == Generation, "value.Generation == Generation");
@@ -1401,15 +1401,6 @@ namespace Sparrow.Server
             Throw<InvalidOperationException>("Allocate gave us a segment that was already disposed.");
         }
 
-        private void ThrowIfDisposed()
-        {
-            if (IsDisposed)
-            {
-                _allocationFailureListener?.OnAllocationFailure(this);
-                Throw(this, $"The {nameof(ByteStringContext)} has been disposed.");
-            }
-        }
-
         private void AllocateExternalSegment(int size)
         {
             var memorySegment = Allocator.Allocate(size);
@@ -1428,8 +1419,7 @@ namespace Sparrow.Server
         public ByteString Skip(ByteString value, int bytesToSkip, ByteStringType type = ByteStringType.Mutable)
         {
             Debug.Assert(value._pointer != null, "ByteString cant be null.");
-
-            ThrowIfDisposed();
+            ThrowIfDisposed(this);
 
             if (bytesToSkip < 0)
                 throw new ArgumentException($"'{nameof(bytesToSkip)}' cannot be smaller than 0.");
@@ -1447,8 +1437,8 @@ namespace Sparrow.Server
 
         public ByteString Slice(ByteString value, int offset, int size, ByteStringType type = ByteStringType.Mutable)
         {
-            PortableExceptions.ThrowIfNull(value._pointer);
-            ThrowIfDisposed();
+            ThrowIfNull(value._pointer);
+            ThrowIfDisposed(this);
             
             if (offset < 0)
                 throw new ArgumentException($"'{nameof(offset)}' cannot be smaller than 0.");
