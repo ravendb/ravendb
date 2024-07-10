@@ -6,13 +6,15 @@ using Xunit.Abstractions;
 
 namespace FastTests.Corax
 {
-    public class SortingComparersTests : RavenTestBase
+    public class SortingComparersTests : NoDisposalNeeded
     {
         public SortingComparersTests(ITestOutputHelper output) : base(output)
-        {}
+        {
+        }
 
         [RavenTheory(RavenTestCategory.Corax)]
         [InlineData("a1a", "a1b", true)]
+        [InlineData("fields-51-A", "fields-507-A", true)]
         [InlineData("a1b", "a1a", false)]
         [InlineData("x2-y08", "x2-y7", true)]
         [InlineData("x2-y08", "x2-g8", false)]
@@ -30,8 +32,7 @@ namespace FastTests.Corax
         {
             var x = Encoding.UTF8.GetBytes(input);
             var y = Encoding.UTF8.GetBytes(compareWith);
-
-            var result = BasicComparers.CompareAlphanumericAscending(x, y);            
+            var result = AlphanumericalComparer.Instance.Compare(x, y, false);
             Assert.Equal(isAscending, result < 0);
         }
     }
