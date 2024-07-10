@@ -8,11 +8,7 @@ interface StudioSearchDatabaseGroupHeaderProps {
 }
 
 export default function StudioSearchDatabaseGroupHeader({ groupType }: StudioSearchDatabaseGroupHeaderProps) {
-    return (
-        <strong className="text-uppercase">
-            <GroupHeaderBody groupType={groupType} />
-        </strong>
-    );
+    return <GroupHeaderBody groupType={groupType} />;
 }
 
 interface GroupHeaderBodyProps {
@@ -24,42 +20,42 @@ function GroupHeaderBody({ groupType }: GroupHeaderBodyProps) {
         case "collections":
             return (
                 <>
-                    <Icon icon="documents" style={{ color: "#2f9ef3" }} />
+                    <Icon icon="documents" />
                     Collections
                 </>
             );
         case "documents":
             return (
                 <>
-                    <Icon icon="document" style={{ color: "#2f9ef3" }} />
+                    <Icon icon="document" />
                     Documents
                 </>
             );
         case "indexes":
             return (
                 <>
-                    <Icon icon="index" style={{ color: "#945ab5" }} />
+                    <Icon icon="index" />
                     Indexes
                 </>
             );
         case "tasks":
             return (
                 <>
-                    <Icon icon="tasks" style={{ color: "#f06582" }} />
+                    <Icon icon="tasks" />
                     Tasks
                 </>
             );
         case "settings":
             return (
                 <>
-                    <Icon icon="settings" style={{ color: "#f0b362" }} />
+                    <Icon icon="settings" />
                     Settings
                 </>
             );
         case "stats":
             return (
                 <>
-                    <Icon icon="stats" style={{ color: "#7bd85d" }} />
+                    <Icon icon="stats" />
                     Stats
                 </>
             );

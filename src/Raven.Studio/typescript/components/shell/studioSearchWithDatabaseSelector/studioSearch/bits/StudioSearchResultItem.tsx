@@ -11,7 +11,11 @@ interface StudioSearchDropdownItemProps {
 
 export default function StudioSearchDropdownItem({ item, activeItemId }: StudioSearchDropdownItemProps) {
     return (
-        <DropdownItem onClick={item.onSelected} className="d-flex align-items-center" active={activeItemId === item.id}>
+        <DropdownItem
+            onClick={item.onSelected}
+            className="d-flex align-items-center omnisearch__dropdown-item"
+            active={activeItemId === item.id}
+        >
             <Icon icon={item.icon} />
             <div className="lh-1">
                 {item.innerActionText ? (
@@ -21,7 +25,7 @@ export default function StudioSearchDropdownItem({ item, activeItemId }: StudioS
                             indices={item.innerActionIndices}
                         />
                         <br />
-                        <span className="fs-6 fw-lighter text-capitalize">{item.route}</span>
+                        <span className="omnisearch__route">{item.route}</span>
                     </>
                 ) : (
                     <StudioSearchFuzzyHighlightedText text={item.text} indices={item.indices} />

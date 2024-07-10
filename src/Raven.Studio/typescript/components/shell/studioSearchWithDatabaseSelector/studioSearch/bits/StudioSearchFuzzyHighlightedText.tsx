@@ -16,7 +16,7 @@ export default function StudioSearchFuzzyHighlightedText({ text, indices }: Stud
                 const isHighlighted = flatMatchedIndices.includes(index);
                 if (isHighlighted) {
                     return (
-                        <mark key={index} className="p-0">
+                        <mark key={index} className="bg-faded-warning p-0">
                             {char}
                         </mark>
                     );
