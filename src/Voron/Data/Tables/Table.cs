@@ -2442,7 +2442,8 @@ namespace Voron.Data.Tables
 
             report.AddData(ActiveDataSmallSection, includeDetails);
 
-            report.AddPreAllocatedBuffers(TablePageAllocator, includeDetails);
+            var allocator = new NewPageAllocator(_tx.LowLevelTransaction, _tableTree);
+            report.AddPreAllocatedBuffers(allocator, includeDetails);
 
             return report;
         }
