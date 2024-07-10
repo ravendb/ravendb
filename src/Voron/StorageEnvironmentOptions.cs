@@ -1043,8 +1043,9 @@ namespace Voron
                     var flags = Pal.OpenFileFlags.Temporary | Pal.OpenFileFlags.WritableMap;
                     if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
                         flags |= Pal.OpenFileFlags.DoNotMap;
-                    return Pager2.Create(this, TempPath.Combine(filename).FullPath, initialSize,
-                        flags);
+                    if(encrypted) 
+                        flags |= Pal.OpenFileFlags.Encrypted;
+                    return Pager2.Create(this, TempPath.Combine(filename).FullPath, initialSize, flags);
                 }
             }
 

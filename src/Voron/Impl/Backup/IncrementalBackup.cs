@@ -391,7 +391,7 @@ namespace Voron.Impl.Backup
                             toDispose.Add(recoveryPager);
                             toDispose.Add(recoverPagerState);
                             
-                            using (var reader = new JournalReader(journalPager, journalPagerState, txw.DataPager, recoveryPager, new HashSet<long>(),
+                            using (var reader = new JournalReader(env, journalPager, journalPagerState, txw.DataPager, recoveryPager, new HashSet<long>(),
                                        new JournalInfo { LastSyncedTransactionId = lastTxId }, new FileHeader { HeaderRevision = -1 }, lastTxHeader))
                             {
                                 while (reader.ReadOneTransactionToDataFile(ref txw.DataPagerState, ref recoverPagerState, ref txw.PagerTransactionState,fileHandle, env.Options))

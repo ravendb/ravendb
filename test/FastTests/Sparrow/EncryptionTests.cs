@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Elastic.Clients.Elasticsearch;
 using FastTests.Voron;
 using FastTests.Voron.FixedSize;
 using Raven.Server.Documents;
@@ -28,33 +29,31 @@ namespace FastTests.Sparrow
         [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
         public unsafe void WriteAndReadPageUsingCryptoPager()
         {
-            using (var options = StorageEnvironmentOptions.ForPath(DataDir))
+            Options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
+
+            var file = Env.ScratchBufferPool.GetScratchBufferFile(0);
+            var (pager, state) = file.GetPagerAndState();
+
+            Pager2.PagerTransactionState txState = new(){IsWriteTransaction = true};
+            try
             {
-                options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
+                pager.EnsureContinuous(ref state, 17, 1); // We're gonna try to read and write to page 17
+                var pagePointer = pager.AcquirePagePointerForNewPage(state, ref txState, 17, 1);
 
-                var (pager, state) = Pager2.Create(options,  Path.Combine(DataDir, "Raven.Voron"),0, 
-                    Pal.OpenFileFlags.Encrypted | Pal.OpenFileFlags.WritableMap);
-                using var _ = pager;
-                Pager2.PagerTransactionState txState = new(){IsWriteTransaction = true};
-                try
-                {
-                    pager.EnsureContinuous(ref state, 17, 1); // We're gonna try to read and write to page 17
-                    var pagePointer = pager.AcquirePagePointerForNewPage(state, ref txState, 17, 1);
+                var header = (PageHeader*)pagePointer;
+                header->PageNumber = 17;
+                header->Flags = PageFlags.Single | PageFlags.FixedSizeTreePage;
 
-                    var header = (PageHeader*)pagePointer;
-                    header->PageNumber = 17;
-                    header->Flags = PageFlags.Single | PageFlags.FixedSizeTreePage;
+                Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', Constants.Storage.PageSize - PageHeader.SizeOf);
+                txState.InvokeBeforeCommitFinalization(Env, ref state, ref txState);
+            }
+            finally
+            {
+                txState.InvokeDispose(Env, ref state, ref txState);
+            }
 
-                    Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', Constants.Storage.PageSize - PageHeader.SizeOf);
-                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState);
-                }
-                finally
-                {
-                    txState.InvokeDispose(pager, state, ref txState);
-                }
-
-                txState = default;
-                try
+            txState = default;
+            try
                 {
                     var pagePointer = pager.AcquirePagePointerWithOverflowHandling(state, ref txState, 17);
 
@@ -62,13 +61,12 @@ namespace FastTests.Sparrow
                     Assert.True(pagePointer[PageHeader.SizeOf] == 'X');
                     Assert.True(pagePointer[666] == 'X');
                     Assert.True(pagePointer[1039] == 'X');
-                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState);
+                    txState.InvokeBeforeCommitFinalization(Env, ref state, ref txState);
                 }
                 finally
                 {
-                    txState.InvokeDispose(pager, state, ref txState);
+                    txState.InvokeDispose(Env, ref state, ref txState);
                 }
-            }
         }
 
         [Theory]
@@ -202,37 +200,34 @@ namespace FastTests.Sparrow
         [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
         public unsafe void RavenDB_15975()
         {
-            using (var options = StorageEnvironmentOptions.ForPath(DataDir))
+            Options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
+
+            var file = Env.ScratchBufferPool.GetScratchBufferFile(0);
+            var (pager, state) = file.GetPagerAndState();
+
+            Pager2.PagerTransactionState txState = new(){IsWriteTransaction = true};
+            try
             {
-                options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
+                var overflowSize = 4 * Constants.Storage.PageSize + 100;
 
+                pager.EnsureContinuous(ref state, 26, 5);
+                var pagePointer = pager.AcquirePagePointerForNewPage(state, ref txState, 26, 5);
 
-                var (pager, state) = Pager2.Create(options,  Path.Combine(DataDir, "Raven.Voron"),0, Pal.OpenFileFlags.Encrypted | Pal.OpenFileFlags.WritableMap);
-                using var _ = pager;
+                var header = (PageHeader*)pagePointer;
+                header->PageNumber = 26;
+                header->Flags = PageFlags.Overflow;
+                header->OverflowSize = overflowSize;
 
-                Pager2.PagerTransactionState txState = new(){IsWriteTransaction = true};
-                try
-                {
-                    var overflowSize = 4 * Constants.Storage.PageSize + 100;
+                Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', overflowSize);
+                txState.InvokeBeforeCommitFinalization(Env, ref state, ref txState);
+            }
+            finally
+            {
+                txState.InvokeDispose(Env, ref state, ref txState);
+            }
 
-                    pager.EnsureContinuous(ref state, 26, 5);
-                    var pagePointer = pager.AcquirePagePointerForNewPage(state, ref txState, 26, 5);
-
-                    var header = (PageHeader*)pagePointer;
-                    header->PageNumber = 26;
-                    header->Flags = PageFlags.Overflow;
-                    header->OverflowSize = overflowSize;
-
-                    Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', overflowSize);
-                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState);
-                }
-                finally
-                {
-                    txState.InvokeDispose(pager, state, ref txState);
-                }
-
-                txState = default;
-                try
+            txState = default;
+            try
                 {
                     var pagePointer = pager.AcquirePagePointerWithOverflowHandling(state, ref txState, 26);
 
@@ -240,92 +235,91 @@ namespace FastTests.Sparrow
                     Assert.True(pagePointer[PageHeader.SizeOf] == 'X');
                     Assert.True(pagePointer[666] == 'X');
                     Assert.True(pagePointer[1039] == 'X');
-                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState);
+                    txState.InvokeBeforeCommitFinalization(Env, ref state, ref txState);
                 }
                 finally
                 {
-                    txState.InvokeDispose(pager, state, ref txState);
+                    txState.InvokeDispose(Env, ref state, ref txState);
                 }
-            }
         }
 
         [RavenMultiplatformFact(RavenTestCategory.Encryption | RavenTestCategory.Voron, RavenPlatform.Windows | RavenPlatform.Linux)]
         public unsafe void RavenDB_159751()
         {
-            using (var options = StorageEnvironmentOptions.ForPath(DataDir))
+            Options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
+
+            var file = Env.ScratchBufferPool.GetScratchBufferFile(0);
+            var (pager, state) = file.GetPagerAndState();
+
+            Pager2.PagerTransactionState txState = new(){IsWriteTransaction = true};
+            try
             {
-                options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
-                var (pager, state) = Pager2.Create(options,  Path.Combine(DataDir, "Raven.Voron"),0, Pal.OpenFileFlags.Encrypted| Pal.OpenFileFlags.WritableMap);
-                using var _ = pager;
-                Pager2.PagerTransactionState txState = new(){IsWriteTransaction = true};
-                try
-                {
-                    var overflowSize = 4 * Constants.Storage.PageSize + 100;
+                var overflowSize = 4 * Constants.Storage.PageSize + 100;
 
-                    pager.EnsureContinuous(ref state, 26, 5);
-                    var pagePointer = pager.AcquirePagePointerForNewPage(state, ref txState, 26, 5);
+                pager.EnsureContinuous(ref state, 26, 5);
+                var pagePointer = pager.AcquirePagePointerForNewPage(state, ref txState, 26, 5);
 
-                    var header = (PageHeader*)pagePointer;
-                    header->PageNumber = 26;
-                    header->Flags = PageFlags.Overflow;
-                    header->OverflowSize = overflowSize;
+                var header = (PageHeader*)pagePointer;
+                header->PageNumber = 26;
+                header->Flags = PageFlags.Overflow;
+                header->OverflowSize = overflowSize;
 
-                    Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', overflowSize);
+                Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', overflowSize);
 
-                    Assert.True(PageExistsInCache(txState, pager, 26, out var usages));
-                    Assert.Equal(1, usages);
+                Assert.True(PageExistsInCache(txState, pager, 26, out var usages));
+                Assert.Equal(1, usages);
 
-                    pager.TryReleasePage(ref txState, 26);
+                pager.TryReleasePage(ref txState, 26);
 
-                    Assert.True(PageExistsInCache(txState, pager, 26, out usages));
-                    Assert.Equal(1, usages);
+                Assert.True(PageExistsInCache(txState, pager, 26, out usages));
+                Assert.Equal(1, usages);
 
-                    pager.AcquirePagePointer(state, ref txState, 26);
+                pager.AcquirePagePointer(state, ref txState, 26);
 
-                    Assert.True(PageExistsInCache(txState, pager, 26, out usages));
-                    Assert.Equal(2, usages);
-                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState);
-                }
-                finally
-                {
-                    txState.InvokeDispose(pager, state, ref txState);
-                }
+                Assert.True(PageExistsInCache(txState, pager, 26, out usages));
+                Assert.Equal(2, usages);
+                txState.InvokeBeforeCommitFinalization(Env, ref state, ref txState);
+            }
+            finally
+            {
+                txState.InvokeDispose(Env, ref state, ref txState);
+            }
 
-                txState = default;
-                try
-                {
-                    var pagePointer = pager.AcquirePagePointerWithOverflowHandling(state, ref txState, 26);
+            txState = default;
+            try
+            {
+                var pagePointer = pager.AcquirePagePointerWithOverflowHandling(state, ref txState, 26);
 
-                    // Making sure that the data was decrypted and still holds those 'X' chars
-                    Assert.True(pagePointer[PageHeader.SizeOf] == 'X');
-                    Assert.True(pagePointer[666] == 'X');
-                    Assert.True(pagePointer[1039] == 'X');
+                // Making sure that the data was decrypted and still holds those 'X' chars
+                Assert.True(pagePointer[PageHeader.SizeOf] == 'X');
+                Assert.True(pagePointer[666] == 'X');
+                Assert.True(pagePointer[1039] == 'X');
 
-                    Assert.True(PageExistsInCache(txState, pager, 26, out var usages));
-                    Assert.Equal(1, usages);
+                Assert.True(PageExistsInCache(txState, pager, 26, out var usages));
+                Assert.Equal(1, usages);
 
-                    pager.AcquirePagePointerWithOverflowHandling(state, ref txState, 26);
+                pager.AcquirePagePointerWithOverflowHandling(state, ref txState, 26);
 
-                    Assert.True(PageExistsInCache(txState, pager, 26, out usages));
-                    Assert.Equal(2, usages);
+                Assert.True(PageExistsInCache(txState, pager, 26, out usages));
+                Assert.Equal(2, usages);
 
-                    pager.TryReleasePage(ref txState, 26);
+                pager.TryReleasePage(ref txState, 26);
 
-                    Assert.True(PageExistsInCache(txState, pager, 26, out usages));
-                    Assert.Equal(1, usages);
+                Assert.True(PageExistsInCache(txState, pager, 26, out usages));
+                Assert.Equal(1, usages);
 
-                    pager.TryReleasePage(ref txState, 26);
+                pager.TryReleasePage(ref txState, 26);
 
-                    Assert.False(PageExistsInCache(txState, pager, 26, out usages));
-                    Assert.Equal(0, usages);
-                    txState.InvokeBeforeCommitFinalization(pager, state, ref txState);
-                }
-                finally
-                {
-                    txState.InvokeDispose(pager, state, ref txState);
-                }
+                Assert.False(PageExistsInCache(txState, pager, 26, out usages));
+                Assert.Equal(0, usages);
+                txState.InvokeBeforeCommitFinalization(Env, ref state, ref txState);
+            }
+            finally
+            {
+                txState.InvokeDispose(Env, ref state, ref txState);
+            }
 
-                bool PageExistsInCache(Pager2.PagerTransactionState txState, Pager2 pager, long page, out int usages)
+            bool PageExistsInCache(Pager2.PagerTransactionState txState, Pager2 pager, long page, out int usages)
                 {
                     if (txState.ForCrypto.TryGetValue(pager, out var s) == false)
                     {
@@ -342,7 +336,6 @@ namespace FastTests.Sparrow
                     usages = buffer.Usages;
                     return true;
                 }
-            }
         }
     }
 }

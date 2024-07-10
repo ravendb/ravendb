@@ -206,7 +206,7 @@ namespace Voron.Impl.Journal
 
                     Pager2.PagerTransactionState txState = default;
                     var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
-                    using (var journalReader = new JournalReader(journalPager, journalPagerState, dataPager, recoveryPager, modifiedPages, logInfo, currentFileHeader, transactionHeader))
+                    using (var journalReader = new JournalReader(_env, journalPager, journalPagerState, dataPager, recoveryPager, modifiedPages, logInfo, currentFileHeader, transactionHeader))
                     {
                         var transactionHeaders = journalReader.RecoverAndValidate(ref dataPagerState, ref recoveryPagerState, ref txState, _env.Options);
 
@@ -321,7 +321,7 @@ namespace Voron.Impl.Journal
                         }
                         finally
                         {
-                            state.InvokeDispose(dataPager, dataPagerState, ref state);
+                            state.InvokeDispose(_env, ref dataPagerState, ref state);
                         }
                     }
 
@@ -1243,7 +1243,7 @@ namespace Voron.Impl.Journal
                     finally
                     {
                         ArrayPool<Page>.Shared.Return(pagesBuffer);
-                        txState.InvokeDispose(dataPager, dataPagerState, ref txState);
+                        txState.InvokeDispose(_waj._env, ref dataPagerState, ref txState);
                     }
                         
                     _waj._env.UpdateDataPagerState(dataPagerState);
@@ -1515,7 +1515,7 @@ namespace Voron.Impl.Journal
                 }
                 finally
                 {
-                    tempTxState.InvokeDispose(_compressionPager, _compressionPagerState, ref tempTxState);
+                    tempTxState.InvokeDispose(_env, ref _compressionPagerState, ref tempTxState);
                 }
             }
         }

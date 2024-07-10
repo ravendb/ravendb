@@ -36,7 +36,7 @@ namespace SlowTests.Issues
             var options = new Options
             {
                 Server = leader,
-                ReplicationFactor = 2,
+                ReplicationFactor = 1,
                 ClientCertificate = certificates.ClientCertificate1.Value,
                 AdminCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = _ => databaseName,

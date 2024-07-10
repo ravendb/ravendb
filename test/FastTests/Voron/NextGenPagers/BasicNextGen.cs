@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sparrow.Platform;
 using Voron;
+using Voron.Data.Tables;
 using Voron.Global;
 using Xunit;
 using Xunit.Abstractions;
@@ -14,6 +16,20 @@ public class BasicNextGen : StorageTest
     }
 
     private unsafe static Span<byte> AsSpan(Page p) => new Span<byte>(p.Pointer, Constants.Storage.PageSize);
+
+    [Fact]
+    public void EncryptedStorage()
+    {
+        RequireFileBasedPager();
+        Options.Encryption.MasterKey = Sodium.GenerateRandomBuffer(32);
+        Options.ManualFlushing = true;
+       
+        using (var tx = Env.WriteTransaction())
+        {
+            tx.LowLevelTransaction.RootObjects.Add("hi", "there");
+            tx.Commit();
+        }
+    }
 
     [Fact]
     public unsafe void CanHandleUpdatesAndFlushing()

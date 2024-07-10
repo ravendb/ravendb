@@ -16,6 +16,7 @@ using Sparrow.Platform;
 using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron.Global;
+using Voron.Impl.Scratch;
 using Voron.Platform.Win32;
 
 namespace Voron.Impl.Paging;
@@ -105,11 +106,8 @@ public unsafe partial class Pager2
         public long StartPage;
     }
     
-    public sealed unsafe class EncryptionBuffer(EncryptionBuffersPool pool)
+    public sealed class EncryptionBuffer(EncryptionBuffersPool pool)
     {
-        public static readonly UIntPtr HashSize = Sodium.crypto_generichash_bytes();
-        public static readonly int HashSizeInt = (int)Sodium.crypto_generichash_bytes();
-        
         public readonly long Generation = pool.Generation;
         public long Size;
         public long OriginalSize;
@@ -139,6 +137,7 @@ public unsafe partial class Pager2
     {
         public Dictionary<Pager2, TxStateFor32Bits>? For32Bits;
         public Dictionary<Pager2, CryptoTransactionState>? ForCrypto;
+        public LowLevelTransaction Llt;
         public bool IsWriteTransaction;
         
         /// <summary>
@@ -148,10 +147,10 @@ public unsafe partial class Pager2
         public event TxStateDelegate OnDispose;
         public event TxStateDelegate OnBeforeCommitFinalization;
         
-        public delegate void TxStateDelegate(Pager2 pager, State state, ref PagerTransactionState txState);
+        public delegate void TxStateDelegate(StorageEnvironment environment, ref State dataPagerState, ref PagerTransactionState txState);
 
-        public void InvokeBeforeCommitFinalization(Pager2 pager, State state, ref PagerTransactionState txState) => OnBeforeCommitFinalization?.Invoke(pager, state, ref txState);
-        public void InvokeDispose(Pager2 pager, State state, ref PagerTransactionState txState) => OnDispose?.Invoke(pager, state, ref txState);
+        public void InvokeBeforeCommitFinalization(StorageEnvironment environment, ref State dataPagerState, ref PagerTransactionState txState) => OnBeforeCommitFinalization?.Invoke(environment, ref dataPagerState,  ref txState);
+        public void InvokeDispose(StorageEnvironment environment, ref State dataPagerState,ref PagerTransactionState txState) => OnDispose?.Invoke(environment, ref dataPagerState, ref txState);
 
         public Size GetTotal32BitsMappedSize()
         {

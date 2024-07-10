@@ -205,6 +205,7 @@ namespace Voron.Impl
 
             Debug.Assert(previous.Flags is TransactionFlags.ReadWrite);
 
+            PagerTransactionState.IsWriteTransaction = true;
             var env = previous._env;
             env.Options.AssertNoCatastrophicFailure();
 
@@ -252,7 +253,10 @@ namespace Voron.Impl
             TxStartTime = DateTime.UtcNow;
 
             if (flags == TransactionFlags.ReadWrite)
+            {
                 env.Options.AssertNoCatastrophicFailure();
+                PagerTransactionState.IsWriteTransaction = true;
+            }
 
             _envRecord = env.CurrentStateRecord;
             DataPagerState = _envRecord.DataPagerState;
@@ -740,7 +744,8 @@ namespace Voron.Impl
                     }
                     _allocator.Dispose();
                 }
-
+                
+                PagerTransactionState.InvokeDispose(_env, ref DataPagerState, ref PagerTransactionState);
                 OnDispose?.Invoke(this);
             }
         }
@@ -1046,6 +1051,8 @@ namespace Voron.Impl
             try
             {
                 ValidateAllPages();
+                
+                PagerTransactionState.InvokeBeforeCommitFinalization(_env, ref DataPagerState, ref PagerTransactionState);
 
                 Committed = true;
 
