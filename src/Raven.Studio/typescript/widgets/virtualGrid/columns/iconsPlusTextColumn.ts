@@ -41,7 +41,7 @@ class iconsPlusTextColumn<T extends object> implements virtualColumn {
         const data = this.dataForHtml(item);
         let innerHtml = "";
         
-        if (_.isArray(data)) {
+        if (Array.isArray(data)) {
             for (let i = 0; i < data.length; i++) {
                 const iconAndText = data[i];
                 

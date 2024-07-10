@@ -18,6 +18,7 @@ import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
 import app = require("durandal/app");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import generalUtils = require("common/generalUtils");
+import { isBoolean } from "common/typeUtils";
 
 type columnOptionsDto = {
     extraClass?: (item: document) => string;
@@ -58,12 +59,12 @@ class documentBasedColumnsProvider {
     private static readonly externalIdRegex = /^\w+\/\w+/ig;
 
     constructor(db: database | string, gridController: virtualGridController<document>, opts: documentBasedColumnsProviderOpts) {
-        this.showRowSelectionCheckbox = _.isBoolean(opts.showRowSelectionCheckbox) ? opts.showRowSelectionCheckbox : false;
+        this.showRowSelectionCheckbox = isBoolean(opts.showRowSelectionCheckbox) ? opts.showRowSelectionCheckbox : false;
         this.db = db;
         this.gridController = gridController;
-        this.enableInlinePreview = _.isBoolean(opts.enableInlinePreview) ? opts.enableInlinePreview : false;
-        this.showSelectAllCheckbox = _.isBoolean(opts.showSelectAllCheckbox) ? opts.showSelectAllCheckbox : false;
-        this.createHyperlinks = _.isBoolean(opts.createHyperlinks) ? opts.createHyperlinks : true;
+        this.enableInlinePreview = isBoolean(opts.enableInlinePreview) ? opts.enableInlinePreview : false;
+        this.showSelectAllCheckbox = isBoolean(opts.showSelectAllCheckbox) ? opts.showSelectAllCheckbox : false;
+        this.createHyperlinks = isBoolean(opts.createHyperlinks) ? opts.createHyperlinks : true;
         this.columnOptions = opts.columnOptions;
         this.customInlinePreview = opts.customInlinePreview || documentBasedColumnsProvider.showPreview;
         this.collectionTracker = collectionsTracker.default;
@@ -96,7 +97,7 @@ class documentBasedColumnsProvider {
         if (includeInlineTimeSeriesColumn) {
             // result contains inline time series result, replace Count and Results column with single TimeSeries column
             const keysToStrip: Array<keyof timeSeriesQueryResultDto> = ["Count", "Results"];
-            columnNames = _.without(columnNames, ...keysToStrip);
+            columnNames = columnNames.filter(x => !keysToStrip.includes(x as any));
             columnNames.push(documentBasedColumnsProvider.rootedTimeSeriesResultMarker);
         }
         
@@ -128,7 +129,7 @@ class documentBasedColumnsProvider {
             handler: this.timeSeriesActionHandler
         };
 
-        const initialColumnsWidth = _.sumBy(initialColumns, x => virtualGridUtils.widthToPixels(x));
+        const initialColumnsWidth = initialColumns.reduce((p, c) => p + virtualGridUtils.widthToPixels(c), 0);
         const rightScrollWidth = 5;
         const remainingSpaceForOtherColumns = viewportWidth - initialColumnsWidth - rightScrollWidth;
         const columnWidth = Math.floor(remainingSpaceForOtherColumns / columnNames.length) + "px";
@@ -201,10 +202,9 @@ class documentBasedColumnsProvider {
     static extractUniquePropertyNames(results: pagedResult<document>) {
         const uniquePropertyNames = new Set<string>();
 
-        results.items
-            .map(i => _.keys(i).forEach(key => uniquePropertyNames.add(key)));
+        results.items.forEach(i => Object.keys(i).forEach(key => uniquePropertyNames.add(key)));
 
-        if (!_.every(results.items, (x: document) => x.__metadata && x.getId())) {
+        if (!results.items.every((x: document) => x.__metadata && x.getId())) {
             uniquePropertyNames.delete("__metadata");
         }
 
@@ -260,7 +260,7 @@ class documentBasedColumnsProvider {
             const value = (item as any)[property];
 
             //TODO: support url's in data as well
-            if (_.isString(value) && value.match(documentBasedColumnsProvider.externalIdRegex)) {
+            if (typeof value === "string" && value.match(documentBasedColumnsProvider.externalIdRegex)) {
                 const extractedCollectionName = value.split("/")[0].toLowerCase();
                 const matchedCollection = this.collectionTracker.getCollectionNames().find(collection => extractedCollectionName.startsWith(collection.toLowerCase()));
                 return matchedCollection ? appUrl.forEditDoc(value, this.db, matchedCollection) : null;

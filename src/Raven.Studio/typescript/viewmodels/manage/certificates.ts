@@ -295,7 +295,7 @@ class certificates extends viewModelBase {
         const nameLower = this.nameFilter().toLocaleLowerCase();
         
         if (wellKnownAdminCerts.length && this.showAdminCertificates()) {
-            const thumbprintMatch = _.some(wellKnownAdminCerts, x => x.toLocaleLowerCase().includes(nameLower));
+            const thumbprintMatch = wellKnownAdminCerts.some(x => x.toLocaleLowerCase().includes(nameLower));
             this.wellKnownAdminCertsVisible(thumbprintMatch);
         } else {
             this.wellKnownAdminCertsVisible(false);
@@ -304,7 +304,7 @@ class certificates extends viewModelBase {
         const wellKnownIssues = this.wellKnownIssuers();
 
         if (wellKnownIssues.length && this.showAdminCertificates()) {
-            const thumbprintMatch = _.some(wellKnownIssues, x => x.toLocaleLowerCase().includes(nameLower));
+            const thumbprintMatch = wellKnownIssues.some(x => x.toLocaleLowerCase().includes(nameLower));
             this.wellKnownIssuersVisible(thumbprintMatch);
         } else {
             this.wellKnownIssuersVisible(false);
@@ -315,7 +315,7 @@ class certificates extends viewModelBase {
         const textFilter = this.nameFilter().toLocaleLowerCase();
         
         const nameMatch = certificate.Name.toLocaleLowerCase().includes(textFilter);
-        const thumbprintMatch = _.some(certificate.Thumbprints, x => x.toLocaleLowerCase().includes(textFilter));
+        const thumbprintMatch = certificate.Thumbprints.some(x => x.toLocaleLowerCase().includes(textFilter));
         
         return nameMatch || thumbprintMatch;
     }
@@ -404,12 +404,12 @@ class certificates extends viewModelBase {
         
         this.canExportServerCertificates = ko.pureComputed(() => {
             const certs = this.certificates();
-            return _.some(certs, x => x.SecurityClearance === "ClusterNode");
+            return certs.some(x => x.SecurityClearance === "ClusterNode");
         });
         
         this.canReplaceServerCertificate = ko.pureComputed(() => {
             const certs = this.certificates();
-            return _.some(certs, x => x.SecurityClearance === "ClusterNode");
+            return certs.some(x => x.SecurityClearance === "ClusterNode");
         });
 
         this.allDatabasesSelected = ko.pureComputed(() => !this.databasesToShow().length);
@@ -984,7 +984,7 @@ class certificates extends viewModelBase {
 
             const usedOptions = this.databasesToShow().filter(k => k !== key);
 
-            const filteredOptions: string[] = _.difference(options, usedOptions);
+            const filteredOptions: string[] = options.filter(x => !usedOptions.includes(x));
 
             if (key) {
                 return filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));

@@ -76,7 +76,7 @@ class pagingDetails extends abstractPerformanceHintDetails {
             const value = column.getCellValue(details);
             if (column.header === "Date") {
                 onValue(moment.utc(details.Occurrence), details.Occurrence);
-            } else if (!_.isUndefined(value)) {
+            } else if (value !== undefined) {
                 onValue(generalUtils.escapeHtml(value), value);
             }
         });
@@ -91,7 +91,7 @@ class pagingDetails extends abstractPerformanceHintDetails {
     }
 
     private mapItems(details: Raven.Server.NotificationCenter.Notifications.Details.PagingPerformanceDetails): pagingDetailsItemDto[] {
-        return _.flatMap(details.Actions, (value, key) => {
+        return Object.entries(details.Actions).flatMap(([key, value]) => {
             return value.map(item => 
                 ({
                     Action: key,

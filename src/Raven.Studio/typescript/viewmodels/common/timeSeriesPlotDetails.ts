@@ -5,6 +5,7 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import colorsManager = require("common/colorsManager");
 import genUtils = require("common/generalUtils");
 import moment = require("moment");
+import { range } from "common/typeUtils";
 
 interface graphData {
     pointSeries: graphSeries<dataPoint>[];
@@ -92,7 +93,7 @@ abstract class timeSeriesContainer<T> {
     abstract getClosestItems(pointInTime: Date): Array<closestItem<T>>;
     
     protected getSeriesValuesNames(valuesCount: number, dto: timeSeriesQueryResultDto) {
-        const seriesValuesName = _.range(valuesCount).map((_, idx) => "Value #" + (idx + 1));
+        const seriesValuesName = range(valuesCount).map((_, idx) => "Value #" + (idx + 1));
 
         if (dto && dto["@metadata"] && dto["@metadata"]["@timeseries-named-values"]) {
             const namedValues = dto["@metadata"]["@timeseries-named-values"];
@@ -141,7 +142,7 @@ class groupedTimeSeriesContainer extends timeSeriesContainer<dataRangePoint> {
         return this.series()
             .filter(x => x.visible())
             .map(x => {
-                const approxIndex = _.sortedIndexBy<dataRangePoint>(x.points, { from: pointInTime } as dataRangePoint, p => p.from);
+                const approxIndex = _.sortedIndexBy<dataRangePoint>(x.points, { from: pointInTime } as dataRangePoint, (p: dataRangePoint) => p.from);
                 
                 if (approxIndex > 0) {
                     // check if point in time is between
@@ -189,7 +190,7 @@ class rawTimeSeriesContainer extends timeSeriesContainer<dataPoint> {
         return this.series()
             .filter(x => x.visible())
             .map(x => {
-                const approxIndex = _.clamp(_.sortedIndexBy<dataPoint>(x.points, { date: pointInTime } as dataPoint, p => p.date), 0, x.points.length - 1);
+                const approxIndex = _.clamp(_.sortedIndexBy<dataPoint>(x.points, { date: pointInTime } as dataPoint, (p: dataPoint) => p.date), 0, x.points.length - 1);
 
                 let effectiveIndex = approxIndex;
                 if (effectiveIndex > 0) {
@@ -332,7 +333,7 @@ class timeSeriesPlotDetails extends viewModelBase {
         _.bindAll(this, "getColor", "getColorClass");
 
         this.colorClassScale = d3.scale.ordinal<string>()
-            .range(_.range(1, 11).map(x => "color-" + x));
+            .range(range(1, 11).map(x => "color-" + x));
     }
     
     isEqual(other: timeSeriesPlotDetails) {
@@ -610,8 +611,8 @@ class timeSeriesPlotDetails extends viewModelBase {
         if (location) {
             const cursorDate = this.x.invert(location[0] - this.margin.left);
 
-            const rangeItems = _.flatten(this.rangeTimeSeries.map(x => x.getClosestItems(cursorDate)));
-            const pointItems = _.flatten(this.pointTimeSeries.map(x => x.getClosestItems(cursorDate)));
+            const rangeItems: closestItem<dataRangePoint>[] = _.flatten(this.rangeTimeSeries.map(x => x.getClosestItems(cursorDate)));
+            const pointItems: closestItem<dataPoint>[] = _.flatten(this.pointTimeSeries.map(x => x.getClosestItems(cursorDate)));
 
             const tooltipHtml = this.tooltipContents(rangeItems, pointItems);
             this.tooltip.html(tooltipHtml);
@@ -879,8 +880,8 @@ class timeSeriesPlotDetails extends viewModelBase {
             for (let i = 0; i < data.pointSeries.length; i++) {
                 const points = data.pointSeries[i];
                 
-                const startIdx = Math.max(_.sortedIndexBy<dataPoint>(points.points, { date: visibleRange[0] } as dataPoint, x => x.date) - 1, 0); 
-                const endIdx = Math.min(points.points.length, _.sortedIndexBy<dataPoint>(points.points, { date: visibleRange[1] } as dataPoint, x => x.date) + 1); 
+                const startIdx = Math.max(_.sortedIndexBy<dataPoint>(points.points, { date: visibleRange[0] } as dataPoint, (x: dataPoint) => x.date) - 1, 0); 
+                const endIdx = Math.min(points.points.length, _.sortedIndexBy<dataPoint>(points.points, { date: visibleRange[1] } as dataPoint, (x: dataPoint) => x.date) + 1); 
                 
                 if (points.points.length) {
                     focusContext.beginPath();

@@ -55,12 +55,12 @@ class timeSeriesQueryResult {
     
     static detectGroupKeys(groupedValues: Array<timeSeriesQueryGroupedItemResultDto>): string[] {
         const allKeys = Object.keys(groupedValues[0]);
-        const keyWithOutRange = _.without(allKeys, "From", "To", "Key");
+        const keyWithOutRange = allKeys.filter(x => !["From", "To", "Key"].includes(x));
         // server added Count property every time, so we filter it out, unless only Count is available in result
         if (keyWithOutRange.length === 1 && keyWithOutRange[0] === "Count") {
             return ["Count"];
         }
-        return _.without(keyWithOutRange, "Count"); 
+        return keyWithOutRange.filter(x => x !== "Count"); 
     }
     
     static detectValuesCount(dto: timeSeriesQueryResultDto): number {

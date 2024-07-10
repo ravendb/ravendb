@@ -86,13 +86,13 @@ abstract class abstractSqlTable {
             return false;
         }
         
-        if (_.some(this.references(), x => x.type !== "ManyToOne")) {
+        if (this.references().some(x => x.type !== "ManyToOne")) {
             // each reference should be manyToOne
             return false;
         }
         
         // at this point we have 2 many-to-one references
-        const allJoinColumns = _.flatMap(this.references(), r => r.joinColumns);
+        const allJoinColumns = this.references().flatMap(r => r.joinColumns);
         const primaryColumns = this.getPrimaryKeyColumnNames();
         
         return _.isEqual(allJoinColumns.sort(), primaryColumns.sort()); // references covers all primary key columns

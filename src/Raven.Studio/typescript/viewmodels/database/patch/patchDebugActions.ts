@@ -27,7 +27,7 @@ class patchDebugActions {
     formatAsJson(input: KnockoutObservable<any> | any) {
         return ko.pureComputed(() => {
             const value = ko.unwrap(input);
-            if (_.isUndefined(value)) {
+            if (value === undefined) {
                 return "";
             } else {
                 const json = JSON.stringify(value, null, 4);

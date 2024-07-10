@@ -428,7 +428,7 @@ class reduceTreeItem {
 
         const relevantPageNumbers = this.itemsAtDepth
             .get(this.depth - 1)
-            .filter((x: leafPageItem) => _.some(x.entries, (e: layoutableItem) => (e instanceof entryItem) && e.source))
+            .filter((x: leafPageItem) => x.entries.some((e: layoutableItem) => (e instanceof entryItem) && e.source))
             .map((x: leafPageItem) => x.pageNumber);
 
         const collapsedItems: Array<pageItem | collapsedLeafsItem> = [];

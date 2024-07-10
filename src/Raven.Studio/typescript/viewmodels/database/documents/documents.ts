@@ -279,7 +279,7 @@ class documents extends shardViewModelBase {
                     onValue(doc.__metadata.changeVector());
                 } else {
                     fullDocumentsProvider.resolvePropertyValue(doc, column, (v: any) => {
-                        if (!_.isUndefined(v)) {
+                        if (v !== undefined) {
                             const json = JSON.stringify(v, null, 4);
                             const html = highlight(json, languages.javascript, "js");
                             onValue(html, json);

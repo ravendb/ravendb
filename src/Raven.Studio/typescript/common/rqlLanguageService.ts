@@ -27,7 +27,6 @@ class rqlLanguageService implements LanguageService {
         
         _.bindAll(this, "complete");
         
-        
         this.pendingMessages = new Map<number, (response: LanguageServiceResponse) => void>();
         
         this.configure();

@@ -31,7 +31,7 @@ class downloader {
         Object.keys(object).forEach(key => {
             const value = object[key];
             
-            if (_.isArray(value)) {
+            if (Array.isArray(value)) {
                 value.forEach(v => addField(key, v));
             } else {
                 addField(key, value);

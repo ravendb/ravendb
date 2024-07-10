@@ -268,7 +268,7 @@ class serverSetup {
             
             // here we don't take ip variable into account, so user can easily change 
             // from 127.0.0.1 to 192.168.0.1 etc.            
-            return _.difference(options, usedOptions);
+            return options.filter(x => !usedOptions.includes(x));
         });
     }
 }

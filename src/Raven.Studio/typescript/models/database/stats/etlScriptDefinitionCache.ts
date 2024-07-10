@@ -26,7 +26,7 @@ class etlScriptDefinitionCache {
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl |
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl>;
 
-            const databaseName = (_.isString(this.db) ? this.db : this.db.name);
+            const databaseName = (typeof this.db === "string" ? this.db : this.db.name);
             
             switch (etlType) {
                 case "Raven":

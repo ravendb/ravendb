@@ -59,7 +59,7 @@ class viewHelpers {
         const deferred = $.Deferred<void>();
 
         const validationGroup = (context as any)();
-        const keys = _.keys(validationGroup);
+        const keys = Object.keys(validationGroup);
 
         const asyncValidations: Array<KnockoutObservable<boolean>> = [];
 
@@ -69,7 +69,7 @@ class viewHelpers {
             }
         });
 
-        if (asyncValidations.length === 0 || _.every(asyncValidations, x => !x())) {
+        if (asyncValidations.length === 0 || asyncValidations.every(x => !x())) {
             cb();
             deferred.resolve();
             return deferred.promise();
@@ -80,7 +80,7 @@ class viewHelpers {
         let subscriptions: KnockoutSubscription[] = [];
 
         const onUpdate = () => {
-            if (_.every(asyncValidations, x => !x())) {
+            if (asyncValidations.every(x => !x())) {
                 // all validators completed its work, clean up and call callback
                 subscriptions.forEach(x => x.dispose());
                 cb();

@@ -141,7 +141,7 @@ class appUrl {
     }
 
     static forDebugAdvancedRecordTransactionCommands(databaseToHighlight: string = undefined): string {
-        const dbPart = _.isUndefined(databaseToHighlight) ? "" : "?highlight=" + encodeURIComponent(databaseToHighlight);
+        const dbPart = databaseToHighlight === undefined ? "" : "?highlight=" + encodeURIComponent(databaseToHighlight);
         return "#admin/settings/debug/advanced/recordTransactionCommands" + dbPart;
     }
 
@@ -154,7 +154,7 @@ class appUrl {
     }
 
     static forTrafficWatch(initialFilter: string = undefined): string {
-        const filter = _.isUndefined(initialFilter) ? "" : "?filter=" + encodeURIComponent(initialFilter);
+        const filter = initialFilter === undefined ? "" : "?filter=" + encodeURIComponent(initialFilter);
         return "#admin/settings/trafficWatch" + filter;
     }
 
@@ -514,7 +514,7 @@ class appUrl {
 
     static forDatabaseQuery(db: database | string): string {
         if (db) {
-            return appUrl.baseUrl + "/databases/" + (_.isString(db) ? db : db.name);
+            return appUrl.baseUrl + "/databases/" + (typeof db === "string" ? db : db.name);
         }
 
         return this.baseUrl;
@@ -666,7 +666,7 @@ class appUrl {
     }
 
     static forEssentialStatsRawData(db: database | string): string {
-        return window.location.protocol + "//" + window.location.host + "/databases/" + (_.isString(db) ? db : db.name) + "/stats/essential";
+        return window.location.protocol + "//" + window.location.host + "/databases/" + (typeof db === "string" ? db : db.name) + "/stats/essential";
     }
 
     static forIndexesRawData(db: database): string {
@@ -747,7 +747,7 @@ class appUrl {
             return "";
         }
         
-        return "&database=" + encodeURIComponent(_.isString(db) ? db : db.name);
+        return "&database=" + encodeURIComponent(typeof db === "string" ? db : db.name);
     }
     
     private static getEncodedIndexNamePart(indexName?: string) {

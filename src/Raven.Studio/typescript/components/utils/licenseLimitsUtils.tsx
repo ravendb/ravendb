@@ -110,7 +110,7 @@ export function useLimitedFeatureAvailability({
 }: UseLimitedFeatureAvailabilityProps) {
     const licenseType = useAppSelector(licenseSelectors.licenseType);
 
-    const featureAvailability = _.cloneDeep(defaultFeatureAvailability);
+    const featureAvailability: FeatureAvailabilityData[] = _.cloneDeep(defaultFeatureAvailability);
 
     const type = getLicenseAvailabilityType(licenseType);
     if (!type) {

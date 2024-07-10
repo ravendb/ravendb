@@ -160,7 +160,7 @@ class conflicts extends shardViewModelBase {
                         onValue(moment.utc(item.LastModified), item.LastModified);
                     } else {
                         const value = column.getCellValue(item);
-                        if (!_.isUndefined(value)) {
+                        if (value !== undefined) {
                             const json = JSON.stringify(value, null, 4);
                             const html = highlight(json, languages.javascript, "js");
                             onValue(html, json);

@@ -25,8 +25,8 @@ class colorsManager {
         const sourceKeys = Object.keys(source);
         const targetKeys = Object.keys(target);
         
-        const onlyInTarget = _.without(targetKeys, ...sourceKeys);
-        const onlyInSource = _.without(sourceKeys, ...targetKeys);
+        const onlyInTarget = targetKeys.filter(x => !sourceKeys.includes(x));
+        const onlyInSource = sourceKeys.filter(x => !targetKeys.includes(x));
         
         if (onlyInSource.length) {
             console.warn("Found missing color definitions (in TS file): " + onlyInSource.join(", ") + ", at path: /" + path.join("/"));

@@ -56,7 +56,7 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
             const value = column.getCellValue(details);
             if (column.header === "Date") {
                 onValue(moment.utc(details.Date), details.Date);
-            } else if (_.isUndefined(value)) {
+            } else if (value === undefined) {
                 onValue(generalUtils.escapeHtml(value), value);
             } else if (column.header === "Query") {
                 onValue(generalUtils.escapeHtml(details.Query), details.Query);
@@ -73,7 +73,7 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
     }
 
     private mapItems(details: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyDetail): Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo[] {
-        return _.flatMap(details.RequestLatencies, (value, key) => {
+        return Object.entries(details.RequestLatencies).flatMap(([key, value]) => {
             return (value as any).map((item: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo) =>
                 ({
                     Action: key,

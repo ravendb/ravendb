@@ -805,7 +805,7 @@ class virtualGrid<T extends object> {
             return this.selection().included;
         } else {
             const excluded = this.selection().excluded;
-            if (_.some(this.items, x => !x)) {
+            if (Object.values(this.items).some(x => !x)) {
                 throw new Error("Can't provide list of selected items!");
             }
 

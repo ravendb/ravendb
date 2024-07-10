@@ -1,6 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
 import d3 = require("d3");
+import { range } from "common/typeUtils";
 
 interface chartItemData {
     x: Date;
@@ -105,7 +106,7 @@ export class lineChart {
     }
     
     private drawGrid(gridContainer: d3.Selection<any>) {
-        const gridLocation = _.range(0, this.width, 40)
+        const gridLocation = range(0, this.width, 40)
             .map(x => this.width - x);
         
         const lines = gridContainer.selectAll("line")

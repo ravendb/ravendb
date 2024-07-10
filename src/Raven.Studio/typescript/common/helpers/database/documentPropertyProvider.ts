@@ -35,7 +35,7 @@ class documentPropertyProvider {
 
     private needsToFetchValue(doc: document, column: textColumn<document>): boolean {
         const valueAccessor = column.valueAccessor;
-        if (_.isFunction(valueAccessor)) {
+        if (typeof valueAccessor === "function") {
             if (column instanceof customColumn) {
                 return !column.tryGuessRequiredProperties().every(p => this.hasEntireValue(doc, p));
             } else {

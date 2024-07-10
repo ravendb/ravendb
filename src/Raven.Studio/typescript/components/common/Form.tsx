@@ -143,8 +143,8 @@ export function getFormSelectedOptions<Option>(
     const allOptions: Option[] = [...optionsFromGroups, ...basicOptions];
 
     return Array.isArray(formValues)
-        ? formValues.map((value) => allOptions.find((option) => _.isEqual(valueAccessor(option), value)))
-        : allOptions.find((option) => _.isEqual(valueAccessor(option), formValues));
+        ? formValues.map((value) => allOptions.find((option) => valueAccessor(option) === value))
+        : allOptions.find((option) => valueAccessor(option) === formValues);
 }
 
 export function FormSelect<

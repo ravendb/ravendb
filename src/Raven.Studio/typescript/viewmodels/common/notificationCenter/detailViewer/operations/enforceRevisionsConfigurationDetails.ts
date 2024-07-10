@@ -46,7 +46,7 @@ class enforceRevisionsConfigurationDetail extends abstractOperationDetails {
 
         this.progress.subscribe(result => {
             if (result) {
-                this.allWarnings(_.map(result.Warnings, (value, key): gridItem => {
+                this.allWarnings(Object.entries(result.Warnings).map(([key, value]) => {
                     return {
                         Id: key,
                         Description: value

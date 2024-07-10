@@ -123,7 +123,7 @@ class cmpXchg extends shardViewModelBase {
              (doc: Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy: string) => void) => {
             if (column instanceof textColumn) {
                 const value = column.getCellValue(doc);
-                if (!_.isUndefined(value)) {
+                if (value !== undefined) {
                     const json = JSON.stringify(value, null, 4);
                     const html = highlight(json, languages.javascript, "js");
                     onValue(html, json);

@@ -40,7 +40,7 @@ class addNewOrchestratorToDatabaseGroup extends dialogViewModelBase {
         this.nodesCanBeAdded = ko.pureComputed<string[]>(() => {
             const tags = clusterTopologyManager.default.topology().nodes().map(x => x.tag());
             const existingTags = this.nodes.map(x => x.tag);
-            return _.without(tags, ...existingTags);
+            return tags.filter(x => !existingTags.includes(x));
         });
     }
     

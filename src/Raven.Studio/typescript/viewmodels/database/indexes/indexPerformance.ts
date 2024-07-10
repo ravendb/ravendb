@@ -15,6 +15,7 @@ import moment = require("moment");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
 import DatabaseUtils from "components/utils/DatabaseUtils";
+import { sumBy } from "common/typeUtils";
 
 type rTreeLeaf = {
     minX: number;
@@ -537,7 +538,7 @@ class indexPerformance extends shardViewModelBase {
     }
     
     private checkBufferUsage() {
-        const dataCount = _.sumBy(this.data, x => x.Performance.length);
+        const dataCount = sumBy(this.data, x => x.Performance.length);
         const usage = Math.min(100, dataCount * 100.0 / indexPerformance.bufferSize);
         this.bufferUsage(usage.toFixed(1));
         
@@ -1392,7 +1393,7 @@ class indexPerformance extends shardViewModelBase {
             const importedData: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = JSON.parse(result);
 
             // Data validation
-            if (!_.isArray(importedData)) {
+            if (!Array.isArray(importedData)) {
                 messagePublisher.reportError("Invalid indexing performance file format", undefined, undefined);
             } else {
                 this.data = importedData;

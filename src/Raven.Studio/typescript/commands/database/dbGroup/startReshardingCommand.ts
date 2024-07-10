@@ -14,7 +14,7 @@ class startReshardingCommand extends commandBase {
 
     constructor(db: database | string,  range: Range, targetShard: number) {
         super();
-        this.databaseName = (_.isString(db) ? db : db.name);
+        this.databaseName = typeof db === "string" ? db : db.name;
         this.range = range;
         this.targetShard = targetShard;
     }

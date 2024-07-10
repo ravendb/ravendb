@@ -50,7 +50,7 @@ class heightCalculator {
     
     // try to compute max numbers of characters in single line
     ensureCacheFilled(row: virtualListRow<string>) {
-        if (!_.isUndefined(this.charactersPerLine)) {
+        if (this.charactersPerLine !== undefined) {
             return;
         }
         

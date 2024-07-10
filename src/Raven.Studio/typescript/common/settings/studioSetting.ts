@@ -30,13 +30,13 @@ abstract class studioSetting<T> {
 
     loadUsingValue(value: any) {
         if (this.saveLocation === "local") {
-            if (_.isUndefined(value)) {
+            if (value === undefined) {
                 this.value = this.defaultValue;
                 return;
             }
             this.value = JSON.parse(value);
         } else {
-            if (_.isUndefined(value)) {
+            if (value === undefined) {
                 this.value = this.defaultValue;
             } else {
                 this.value = value;    
