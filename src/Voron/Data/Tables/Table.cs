@@ -54,6 +54,9 @@ namespace Voron.Data.Tables
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
+                if (_tx.IsWriteTransaction == false)
+                    return null;
+
                 _tablePageAllocator ??= new NewPageAllocator(_tx.LowLevelTransaction, _tableTree);
                 return _tablePageAllocator;
             }
@@ -64,6 +67,9 @@ namespace Voron.Data.Tables
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
+                if (_tx.IsWriteTransaction == false)
+                    return null;
+
                 _globalPageAllocator ??= new NewPageAllocator(_tx.LowLevelTransaction, _tx.LowLevelTransaction.RootObjects);
                 return _globalPageAllocator;
             }
@@ -2418,7 +2424,8 @@ namespace Voron.Data.Tables
 
             report.AddData(ActiveDataSmallSection, includeDetails);
 
-            report.AddPreAllocatedBuffers(TablePageAllocator, includeDetails);
+            var allocator = new NewPageAllocator(_tx.LowLevelTransaction, _tableTree);
+            report.AddPreAllocatedBuffers(allocator, includeDetails);
 
             return report;
         }
