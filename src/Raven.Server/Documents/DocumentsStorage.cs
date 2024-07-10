@@ -1146,7 +1146,7 @@ namespace Raven.Server.Documents
 
             if (table.ReadByKey(lowerId, out tvr) == false)
             {
-                if (throwOnConflict && ConflictsStorage.HasNoConflicts(context))
+                if (throwOnConflict && ConflictsStorage.NumberOfConflicts(context) > 0)
                     ConflictsStorage.ThrowOnDocumentConflict(context, lowerId);
 
                 return false;
@@ -2559,7 +2559,7 @@ namespace Raven.Server.Documents
             var nonPersistentFlags = NonPersistentDocumentFlags.None;
             var fromReplication = flags.Contain(DocumentFlags.FromReplication);
 
-            if (ConflictsStorage.HasNoConflicts(context))
+            if (ConflictsStorage.NumberOfConflicts(context) != 0)
             {
                 // Since this document resolve the conflict we don't need to alter the change vector.
                 // This way we avoid another replication back to the source

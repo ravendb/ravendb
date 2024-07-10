@@ -211,7 +211,7 @@ namespace Raven.Server.Documents
 
         public long GetConflictsMaxEtagFor(DocumentsOperationContext context, Slice prefixSlice)
         {
-            if (HasNoConflicts(context) == false) 
+            if (NumberOfConflicts(context) == 0) 
                 return 0;
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
@@ -227,7 +227,7 @@ namespace Raven.Server.Documents
 
         public bool HasHigherChangeVector(DocumentsOperationContext context, Slice prefixSlice, string expectedChangeVector)
         {
-            if (HasNoConflicts(context) == false)
+            if (NumberOfConflicts(context) == 0)
                 return false;
 
 
@@ -244,7 +244,7 @@ namespace Raven.Server.Documents
         public (List<string> ChangeVectors, NonPersistentDocumentFlags NonPersistentFlags) DeleteConflictsFor(
             DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document)
         {
-            if (HasNoConflicts(context) == false)
+            if (NumberOfConflicts(context) == 0)
                 return (null, NonPersistentDocumentFlags.None);
 
             var changeVectors = new List<string>();
@@ -325,7 +325,7 @@ namespace Raven.Server.Documents
 
         public void DeleteConflictsFor(DocumentsOperationContext context, string changeVector)
         {
-            if (HasNoConflicts(context) == false)
+            if (NumberOfConflicts(context) == 0)
                 return;
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
@@ -338,7 +338,7 @@ namespace Raven.Server.Documents
 
         public bool HasConflictsFor(DocumentsOperationContext context, LazyStringValue id)
         {
-            if (HasNoConflicts(context) == false)
+            if (NumberOfConflicts(context) == 0)
                 return false;
 
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
@@ -355,7 +355,7 @@ namespace Raven.Server.Documents
 
         public IReadOnlyList<DocumentConflict> GetConflictsFor(DocumentsOperationContext context, string id)
         {
-            if (HasNoConflicts(context) == false)
+            if (NumberOfConflicts(context) == 0)
                 return ImmutableAppendOnlyList<DocumentConflict>.Empty;
 
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
@@ -380,7 +380,7 @@ namespace Raven.Server.Documents
 
         public ChangeVector GetMergedConflictChangeVectorsAndDeleteConflicts(DocumentsOperationContext context, Slice lowerId, long newEtag, string existingChangeVector = null)
         {
-            if (HasNoConflicts(context) == false)
+            if (NumberOfConflicts(context) == 0)
                 return MergeVectorsWithoutConflicts(context, newEtag, existingChangeVector);
 
             var conflictChangeVectors = DeleteConflictsFor(context, lowerId, null).ChangeVectors;
@@ -679,10 +679,8 @@ namespace Raven.Server.Documents
 
         public long GetNumberOfDocumentsConflicts(DocumentsOperationContext context)
         {
-            if (HasNoConflicts(context) == false)
-                return 0;
-
-            return GetNumberOfConflicts(context);
+            Debug.Assert(GetNumberOfConflicts(context) == NumberOfConflicts(context), "GetNumberOfConflicts(context) == NumberOfConflicts(context)");
+            return NumberOfConflicts(context);
         }
 
         public long GetNumberOfConflicts(DocumentsOperationContext context)
@@ -732,10 +730,10 @@ namespace Raven.Server.Documents
             return null;
         }
 
-        public bool HasNoConflicts(DocumentsOperationContext context)
+        public long NumberOfConflicts(DocumentsOperationContext context)
         {
             var record = context.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord;
-            return record.ClientState is DocumentTransactionCache { ConflictsCount: 0 };
+            return record.ClientState is DocumentTransactionCache dtc ? dtc.ConflictsCount : 0;
         }
     }
 }
