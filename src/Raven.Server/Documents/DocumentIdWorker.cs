@@ -412,7 +412,7 @@ namespace Raven.Server.Documents
             throw new ArgumentException(
                 $"{type} change vector cannot exceed {RevisionMaxKeySize} bytes, but the change vector was {Encoding.GetByteCount(changeVector)} bytes. " +
                 $"The invalid change vector for {type} '{id}' is '{changeVector}'.{Environment.NewLine}" +
-                $"For more details visit https://ravendb.net/l/ZH9AK4/5.4. {Environment.NewLine}",
+                $"For more details visit https://ravendb.net/l/PKAD18/5.4/Csharp. {Environment.NewLine}",
                 nameof(changeVector));
         }
 
