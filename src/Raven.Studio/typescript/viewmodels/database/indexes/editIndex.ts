@@ -883,7 +883,7 @@ class editIndex extends shardViewModelBase {
             const options = configurationItem.PerDatabaseIndexingConfigurationOptions;
             const usedOptions = this.editedIndex().configuration().filter(f => f !== item).map(x => x.key());
 
-            const filteredOptions = _.difference(options, usedOptions);
+            const filteredOptions = options.filter(x => !usedOptions.includes(x));
 
             if (key) {
                 return filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));
@@ -899,7 +899,7 @@ class editIndex extends shardViewModelBase {
             const fieldNames = this.fieldNames();
             const otherFieldNames = this.editedIndex().fields().filter(f => f !== field).map(x => x.name());
 
-            const filteredFieldNames = _.difference(fieldNames, otherFieldNames);
+            const filteredFieldNames = fieldNames.filter(x => !otherFieldNames.includes(x));
 
             if (name) {
                 return filteredFieldNames.filter(x => x.toLowerCase().includes(name.toLowerCase()));
@@ -1220,7 +1220,7 @@ class editIndex extends shardViewModelBase {
             // eslint-disable-next-line no-constant-condition
             while (true) {
                 const suggestedName = fileNameWoExtension + idx + ".cs";
-                if (_.every(sources(), x => x.name() !== suggestedName)) {
+                if (sources().every( x => x.name() !== suggestedName)) {
                     return suggestedName;
                 }
                 idx++;

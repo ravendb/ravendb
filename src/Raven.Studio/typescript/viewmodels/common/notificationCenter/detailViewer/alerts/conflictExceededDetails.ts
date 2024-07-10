@@ -58,7 +58,7 @@ class conflictExceededDetails extends abstractAlertDetails {
                 const value = column.getCellValue(details);
                 if (column.header === "Date") {
                     onValue(moment.utc(details.Time), details.Time);
-                } else if (!_.isUndefined(value)) {
+                } else if (value !== undefined) {
                     onValue(generalUtils.escapeHtml(value), value);
                 }
             });

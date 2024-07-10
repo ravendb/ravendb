@@ -2,6 +2,7 @@
 
 import listViewController = require("widgets/listView/listViewController");
 import virtualListRow = require("widgets/listView/virtualListRow");
+import { sortBy } from "common/typeUtils";
 
 /**
  * This list view is optimized to handle following lists:
@@ -260,7 +261,7 @@ class listView<T> {
             parent.removeChild(parent.childNodes[i]);
         }
 
-        children = _.sortBy(children, x => parseInt(x.style.top));
+        children = sortBy(children, x => parseInt(x.style.top));
         
         children.forEach(c => {
             parent.appendChild(c);

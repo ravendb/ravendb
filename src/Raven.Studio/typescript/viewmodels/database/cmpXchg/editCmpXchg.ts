@@ -43,7 +43,7 @@ class editorInfo {
 
     private initializeObservables() {
         this.content.subscribe(content => {
-            if (!_.isUndefined(content)) {
+            if (content !== undefined) {
                 const text = genUtils.stringify(content);
                 this.contentText(text);
             }

@@ -105,7 +105,7 @@ class columnPreviewPlugin<T extends object> {
                     previewContextProvider(element, column, e, (value, valueToCopy, wrapValue) => {
                         const markup = markupProvider(value, column, element, wrapValue);
                         this.show(markup, e);
-                        this.currentValue = _.isUndefined(valueToCopy) ? value : valueToCopy;
+                        this.currentValue = valueToCopy === undefined ? value : valueToCopy;
                         this.currentElement = element;
                     });
                 }

@@ -2,6 +2,7 @@
 import { SelectOption } from "components/common/select/Select";
 import { loadableData } from "components/models/common";
 import { StoryFn } from "@storybook/react";
+import { sortBy } from "common/typeUtils";
 
 export function withPreventDefault(action: (...args: any[]) => void): MouseEventHandler<HTMLElement> {
     return (e: MouseEvent<HTMLElement>) => {
@@ -108,7 +109,7 @@ export const availableGlacierRegions: SelectOption<string>[] = [
     { label: "US West (Oregon) - us-west-2", value: "us-west-2" },
 ];
 
-export const availableS3Regions: SelectOption<string>[] = _.sortBy(
+export const availableS3Regions: SelectOption<string>[] = sortBy(
     [
         ...availableGlacierRegions,
         { label: "Asia Pacific (Hyderabad) - ap-south-2", value: "ap-south-2" },
@@ -117,7 +118,7 @@ export const availableS3Regions: SelectOption<string>[] = _.sortBy(
         { label: "Europe (Zurich) - eu-central-2", value: "eu-central-2" },
         { label: "Middle East (UAE) - me-central-1", value: "me-central-1" },
     ],
-    [(region) => region.label.toLowerCase()]
+    (region) => region.label.toLowerCase()
 );
 
 export type OmitIndexSignature<T> = {

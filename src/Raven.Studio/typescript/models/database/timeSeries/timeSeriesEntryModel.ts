@@ -1,6 +1,7 @@
 import timeSeriesValue = require("models/database/timeSeries/timeSeriesValue");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
+import { sortBy } from "common/typeUtils";
 
 class rollupDataModel {
     first: timeSeriesValue;
@@ -96,7 +97,7 @@ class timeSeriesEntryModel {
         this.isCreatingNewTimeSeries(!timeSeriesName);
         
         if (timeSeriesName && timeSeriesEntryModel.isIncrementalName(timeSeriesName)) {
-            const details = _.map(dto.NodeValues, (valuesList, nodeDetails): nodeData => {
+            const details = Object.entries(dto.NodeValues).map(([nodeDetails, valuesList]) => {
                 const [tag, dbId] = nodeDetails.split('-');
                 return {
                     nodeTag: tag,
@@ -105,7 +106,7 @@ class timeSeriesEntryModel {
                 };
             })
             
-            const detailsSorted = _.sortBy(details, x => x.nodeTag);
+            const detailsSorted = sortBy(details, x => x.nodeTag);
             this.nodesDetails(detailsSorted);
         }
         

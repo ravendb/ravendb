@@ -2,6 +2,7 @@
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import moment = require("moment");
 import { MouseEvent } from "react";
+import { isBoolean } from "common/typeUtils";
 
 type SelectionState = "AllSelected" | "SomeSelected" | "Empty";
 
@@ -493,9 +494,9 @@ class genUtils {
 
         if (stripNullAndEmptyValues) {
             return JSON.stringify(obj, (key, val) => {
-                const isNull = _.isNull(val);
-                const isEmptyObj = _.isEqual(val, {});
-                const isEmptyArray = _.isEqual(val, []);
+                const isNull = val === null;
+                const isEmptyObj = val instanceof Object && Object.keys(val).length === 0;
+                const isEmptyArray = Array.isArray(val) && val.length === 0;
 
                 return isNull || isEmptyObj || isEmptyArray ? undefined : val;
 
@@ -563,7 +564,7 @@ class genUtils {
                            internalCallback: (result: { isValid: boolean, message: string } | boolean) => void) => {
                                             func(val, params, (currentValue, result) => {
                                                    if (currentValue === val) {
-                                                       if (_.isBoolean(result)) {
+                                                       if (isBoolean(result)) {
                                                            internalCallback(result);
                                                        } else if (result) {
                                                            internalCallback({ isValid: false, message: result});

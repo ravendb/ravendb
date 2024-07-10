@@ -79,7 +79,7 @@ class deleteIndexesConfirm extends dialogViewModelBase {
             this.subTitleHtml = `You're deleting <strong>${this.indexesInfoForDelete.length}</strong> indexes:`;
         }
 
-        this.showWarning = _.some(this.indexesInfoForDelete, x => x.reduceOutputCollection);
+        this.showWarning = this.indexesInfoForDelete.some(x => x.reduceOutputCollection);
     }
 
     deleteIndexes() {

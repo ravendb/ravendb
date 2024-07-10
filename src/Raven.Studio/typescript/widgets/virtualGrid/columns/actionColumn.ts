@@ -30,7 +30,7 @@ class actionColumn<T extends object> implements virtualColumn {
         this.gridController = gridController;
         this.action = action;
         this.header = header;
-        this.buttonText = _.isString(buttonText) ? (item: T) => buttonText : buttonText;
+        this.buttonText = typeof buttonText === "string" ? (item: T) => buttonText : buttonText;
         this.width = width;
         this.opts = opts || {};
     }

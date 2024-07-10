@@ -22,7 +22,7 @@ class slowIoDetails extends abstractPerformanceHintDetails {
         super(hint, notificationCenter);
 
         // extract values - ignore keys
-        this.tableItems = _.map((this.hint.details() as Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails).Writes, v => v);
+        this.tableItems = Object.values((this.hint.details() as Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails).Writes);
 
         // newest first
         this.tableItems.reverse();

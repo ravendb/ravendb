@@ -152,7 +152,7 @@ class indexErrorInfoModel {
                 onValue(moment.utc(indexError.Timestamp), indexError.Timestamp);
             } else {
                 const value = column.getCellValue(indexError);
-                if (!_.isUndefined(value)) {
+                if (value !== undefined) {
                     onValue(generalUtils.escapeHtml(value), value);
                 }
             }

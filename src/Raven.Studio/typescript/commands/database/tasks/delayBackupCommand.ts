@@ -13,7 +13,7 @@ class delayBackupCommand extends commandBase {
         super();
         this.duration = duration;
         this.taskId = taskId;
-        this.databaseName = (_.isString(db) ? db : db.name);
+        this.databaseName = (typeof db === "string" ? db : db.name);
     }
  
     execute(): JQueryPromise<Raven.Client.Documents.Operations.Backups.StartBackupOperationResult> {

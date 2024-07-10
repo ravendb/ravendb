@@ -21,7 +21,7 @@ class certificateInfo {
     private initObservables() {
         this.wildcardCertificate = ko.pureComputed(() => {
             const cns = this.certificateCNs();
-            return _.some(cns, x => x.startsWith("*"));
+            return cns.some(x => x.startsWith("*"));
             
             // Currently, for the Setup Wizard flow, the server supports only the following 2 cases:
             // 1. pfx file with Single Wildcard value (*.someDomain)

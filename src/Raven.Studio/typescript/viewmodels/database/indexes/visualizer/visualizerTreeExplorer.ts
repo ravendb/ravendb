@@ -40,7 +40,7 @@ class visualizerTreeExplorer extends dialogViewModelBase {
                 (details: Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf, column: textColumn<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>,
                  e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy: string) => void) => {
                     const value = column.getCellValue(details);
-                    if (!_.isUndefined(value)) {
+                    if (value !== undefined) {
                         const json = JSON.stringify(value, null, 4);
                         const html = highlight(json, languages.javascript, "js");
                         onValue(html, json);

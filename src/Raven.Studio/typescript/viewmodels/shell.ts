@@ -527,7 +527,7 @@ class shell extends viewModelBase {
             studioSettings.default.globalSettings()
                 .done(settings => {
                     const shouldTraceUsageMetrics = settings.sendUsageStats.getValue();
-                    if (_.isUndefined(shouldTraceUsageMetrics)) {
+                    if (shouldTraceUsageMetrics === undefined) {
                         // using location.hash instead of shell activation data - which is not available in shell activate method
                         const suppressTraceUsage = window.location.hash ? window.location.hash.includes("disableAnalytics=true") : false; 
                         

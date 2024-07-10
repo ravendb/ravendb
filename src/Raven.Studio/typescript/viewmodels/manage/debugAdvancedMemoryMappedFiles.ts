@@ -6,6 +6,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import getDebugMemoryStatsCommand = require("commands/database/debug/getDebugMemoryStatsCommand");
 import { highlight, languages } from "prismjs";
+import { sortBy } from "common/typeUtils";
 
 type memoryMappingItem = {
     Directory: string;
@@ -136,8 +137,8 @@ class memoryMappedFiles extends viewModelBase {
             .execute()
             .done(response => {
                 
-                const mappedResults: memoryMappingItem[] = _.flatMap(response.Mappings, m => {
-                    return _.map(m.Details, (details: Raven.Server.Documents.Handlers.Debugging.MemoryDebugHandler.MemoryInfoMappingFileInfo, fileName: string) => {
+                const mappedResults: memoryMappingItem[] = response.Mappings.flatMap(m => {
+                    return Object.entries(m.Details).map(([fileName, details]) => {
                         return {
                             Directory: m.Directory,
                             FileName: fileName,
@@ -150,7 +151,7 @@ class memoryMappedFiles extends viewModelBase {
                     })
                 });
                 
-                this.allData(_.sortBy(mappedResults, x => x.Directory + x.FileName));
+                this.allData(sortBy(mappedResults, x => x.Directory + x.FileName));
                 this.filterEntries();
             });
     }

@@ -23,7 +23,7 @@ class hugeDocumentsDetails extends abstractPerformanceHintDetails {
         super(hint, notificationCenter);
 
         const hugeDocumentsMap = (hint.details() as Raven.Server.NotificationCenter.Notifications.Details.HugeDocumentsDetails).HugeDocuments;
-        this.tableItems = _.map(hugeDocumentsMap, x => x);
+        this.tableItems = Object.values(hugeDocumentsMap);
         
         // newest first
         this.tableItems.reverse();
@@ -57,7 +57,7 @@ class hugeDocumentsDetails extends abstractPerformanceHintDetails {
             const value = column.getCellValue(details);
             if (column.header === "Last access") {
                 onValue(moment.utc(details.Date), details.Date);
-            } else if (!_.isUndefined(value)) {
+            } else if (value !== undefined) {
                 onValue(generalUtils.escapeHtml(value));
             }
         });

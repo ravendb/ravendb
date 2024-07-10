@@ -33,6 +33,7 @@ import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import licenseModel from "models/auth/licenseModel";
 import { EditOlapEtlInfoHub } from "viewmodels/database/tasks/EditOlapEtlInfoHub";
+import { sortBy } from "common/typeUtils";
 
 class partitionTable {
     key: string;
@@ -371,7 +372,7 @@ class editOlapEtlTask extends shardViewModelBase {
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStringsNames = Object.keys(result.OlapConnectionStrings);
-                this.olapEtlConnectionStringsNames(_.sortBy(connectionStringsNames, x => x.toUpperCase()));
+                this.olapEtlConnectionStringsNames(sortBy(connectionStringsNames, x => x.toUpperCase()));
             });
     }
 
@@ -740,7 +741,7 @@ class editOlapEtlTask extends shardViewModelBase {
 
             const usedOptions = usedCollections().filter(k => k !== key);
 
-            const filteredOptions = _.difference(options, usedOptions);
+            const filteredOptions = options.filter(x => !usedOptions.includes(x));
 
             if (key) {
                 result = filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));

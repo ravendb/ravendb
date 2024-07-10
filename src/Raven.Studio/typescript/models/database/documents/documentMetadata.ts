@@ -148,10 +148,10 @@ class documentMetadata {
             this.timeSeries(dto['@timeseries']);
             
             const revisionCounter = dto['@counters-snapshot'];
-            this.revisionCounters(revisionCounter ? _.map(revisionCounter, (v, k) => ({ name: k, value: v })): []);
+            this.revisionCounters(revisionCounter ? Object.entries(revisionCounter).map(([k, v]) => ({ name: k, value: v })): []);
             
             const revisionTimeSeries = dto["@timeseries-snapshot"];
-            this.revisionTimeSeries(revisionTimeSeries ? _.map(revisionTimeSeries, (v, k) => ({ name: k, count: v.Count, start: v.Start, end: v.End })): []);
+            this.revisionTimeSeries(revisionTimeSeries ? Object.entries(revisionTimeSeries).map(([k, v]) => ({ name: k, count: v.Count, start: v.Start, end: v.End })): []);
 
             this.changeVector(dto['@change-vector']);
 

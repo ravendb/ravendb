@@ -315,7 +315,7 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
     }
 
     addDiscoveryUrlWithBlink() {
-        if (!_.find(this.nodesUrls(), x => x.discoveryUrlName() === this.inputUrl().discoveryUrlName())) {
+        if (!this.nodesUrls().find(x => x.discoveryUrlName() === this.inputUrl().discoveryUrlName())) {
             const newUrl = new discoveryUrl(this.inputUrl().discoveryUrlName());
             newUrl.dirtyFlag().forceDirty();
             this.nodesUrls.unshift(newUrl);

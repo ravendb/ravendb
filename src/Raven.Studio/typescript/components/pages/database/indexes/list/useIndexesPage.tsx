@@ -795,12 +795,14 @@ function getSortedRegularIndexes(
         case "name":
             return _.orderBy(indexes, [sortBy], [sortDirection]);
         case "createdTimestamp":
-            return _.orderBy(indexes, (index) => IndexUtils.getEarliestCreatedTimestamp(index), [sortDirection]);
+            return _.orderBy(indexes, (index: IndexSharedInfo) => IndexUtils.getEarliestCreatedTimestamp(index), [
+                sortDirection,
+            ]);
         case "lastIndexingTime":
         case "lastQueryingTime":
             return _.orderBy(
                 indexes,
-                (index) => _.max(index.nodesInfo.map((nodesInfo) => nodesInfo.details?.[sortBy])),
+                (index: IndexSharedInfo) => _.max(index.nodesInfo.map((nodesInfo) => nodesInfo.details?.[sortBy])),
                 [sortDirection]
             );
         default:
