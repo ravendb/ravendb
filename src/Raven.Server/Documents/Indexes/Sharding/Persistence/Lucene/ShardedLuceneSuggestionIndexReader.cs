@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Queries.Suggestions;
+﻿using Lucene.Net.Search;
+using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Sharding.Queries;
@@ -9,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Sharding.Persistence.Lucene;
 
 public sealed class ShardedLuceneSuggestionIndexReader : LuceneSuggestionIndexReader
 {
-    public ShardedLuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory,  Transaction readTransaction) : base(index, directory, readTransaction)
+    public ShardedLuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory, Transaction readTransaction, IndexSearcher indexSearcher) : base(index, directory, readTransaction, indexSearcher)
     {
     }
 

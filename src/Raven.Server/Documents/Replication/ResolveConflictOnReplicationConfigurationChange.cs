@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Replication
                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         context.OpenReadTransaction();
-                        if (_database.DocumentsStorage.ConflictsStorage.HasNoConflicts(context) && solver?.IsEmpty() == false)
+                        if (_database.DocumentsStorage.ConflictsStorage.NumberOfConflicts(context) > 0 && solver?.IsEmpty() == false)
                         {
                             await ResolveConflictsInBackground(solver);
                         }    
@@ -372,7 +372,7 @@ namespace Raven.Server.Documents.Replication
             }
 
             // we have conflicts and we will resolve them in the put method, rest of the function is when we resolve on the fly
-            if (_database.DocumentsStorage.ConflictsStorage.HasNoConflicts(context) == false) 
+            if (_database.DocumentsStorage.ConflictsStorage.NumberOfConflicts(context) != 0) 
                 return;
 
             SaveLocalAsRevision(context, id);

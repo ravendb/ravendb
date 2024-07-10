@@ -308,6 +308,14 @@ namespace Voron.Impl
             _root = root;
         }
 
+        internal void UpdateDataPagerState(Pager2.State dataPagerState)
+        {
+            Debug.Assert(Flags is TransactionFlags.ReadWrite, "Flags is TransactionFlags.ReadWrite");
+            if (dataPagerState == _envRecord.DataPagerState)
+                return;
+            _envRecord = _envRecord with { DataPagerState = dataPagerState };
+        }
+        
         internal void UpdateClientState(object state)
         {
             Debug.Assert(_envRecord.ClientState == null || state == null || _envRecord.ClientState.GetType() == state.GetType(),

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Server.Documents;
 using Sparrow.Platform;
 using Voron;
 using Voron.Data.Tables;
@@ -17,6 +18,31 @@ public class BasicNextGen : StorageTest
 
     private unsafe static Span<byte> AsSpan(Page p) => new Span<byte>(p.Pointer, Constants.Storage.PageSize);
 
+    [Fact]
+    public void WithTables()
+    {
+        var schema = new TableSchema()
+            .DefineKey(new TableSchema.IndexDef { StartIndex = 0, Count = 1 });
+
+        Options.ManualFlushing = true;
+        using (var tx = Env.WriteTransaction())
+        {
+            // force growth of the file
+            tx.LowLevelTransaction.AllocatePage(1024);
+            schema.Create(tx, "Test", 128);
+            tx.Commit();
+        }
+        Env.FlushLogToDataFile();
+        
+        using (var tx = Env.WriteTransaction())
+        {
+            Table openTable = tx.OpenTable(schema, "Test");
+            openTable.GetReport(false);
+            tx.Commit();
+        }
+        
+    }
+    
     [Fact]
     public void EncryptedStorage()
     {
