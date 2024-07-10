@@ -65,6 +65,8 @@ public partial class ShardedDatabaseContext
             return DropSubscriptionConnections(subscriptionId, ex);
         }
 
+        public override bool DisableSubscriptionTasks => false;
+
         public override ArchivedDataProcessingBehavior GetDefaultArchivedDataProcessingBehavior()
         {
             return _context.Configuration.Subscriptions.ArchivedDataProcessingBehavior;

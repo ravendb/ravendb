@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents
                 [typeof(byte[])] = new FieldType("byte", true, true),
                 [typeof(int[])] = new FieldType("int", true, true),
                 [typeof(Guid)] = new FieldType(typeof(Guid)),
-                [typeof(DateTime)] = new FieldType(typeof(DateTimeOffset).Name, false, true),
+                [typeof(DateTime)] = new FieldType(typeof(DateTime).Name, false, true),
                 [typeof(DateTimeOffset)] = new FieldType(typeof(DateTimeOffset)),
                 [typeof(TimeSpan)] = new FieldType(typeof(TimeSpan)),
                 [typeof(Uri)] = new FieldType(typeof(Uri))
@@ -206,16 +207,16 @@ namespace Raven.Server.Documents
 
             document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
 
-            var @class = "Class";
-            var @namespace = "Unknown";
+            string @class = null;
+            string @namespace = "My.RavenDB";
             if (metadata != null)
             {
                 // retrieve the class and metadata if available.
                 // "Raven-Clr-Type": "Namespace.ClassName, AssemblyName"
 
-                if (metadata.TryGet(Constants.Documents.Metadata.RavenClrType, out LazyStringValue lazyStringValue))
+                if (metadata.TryGet(Constants.Documents.Metadata.RavenClrType, out LazyStringValue lsvClrType) && lsvClrType != null)
                 {
-                    var values = lazyStringValue.ToString().Split(',');
+                    var values = lsvClrType.ToString().Split(',');
                     if (values.Length == 2)
                     {
                         var data = values[0];
@@ -232,7 +233,12 @@ namespace Raven.Server.Documents
                         }
                     }
                 }
+
+                if (@class == null && metadata.TryGet(Constants.Documents.Metadata.Collection, out LazyStringValue lsvCollection) && lsvCollection != null)
+                    @class = Inflector.Singularize(lsvCollection);
             }
+
+            @class ??= "Class";
 
             var classes = GenerateClassesTypesFromObject(@class, document);
 
@@ -251,19 +257,19 @@ namespace Raven.Server.Documents
             for (var i = 0; i < classes.Count; i++)
             {
                 var @class = classes[i];
-                codeBuilder.Append("\tpublic class " + @class.Name + Environment.NewLine);
-                codeBuilder.Append("\t{" + Environment.NewLine);
+                codeBuilder.Append("    public class " + @class.Name + Environment.NewLine);
+                codeBuilder.Append("    {" + Environment.NewLine);
 
                 foreach (var field in @class.Properties)
                 {
-                    codeBuilder.Append("\t\tpublic ");
+                    codeBuilder.Append("        public ");
                     codeBuilder.Append(field.Value.IsArray ? $"List<{field.Value.Name}>" : field.Value.Name);
                     codeBuilder.Append(" ");
                     codeBuilder.Append(field.Key + " { get; set; } ");
                     codeBuilder.Append(Environment.NewLine);
                 }
 
-                codeBuilder.Append("\t}");
+                codeBuilder.Append("    }");
 
                 if (i < classes.Count - 1)
                     codeBuilder.Append(Environment.NewLine + Environment.NewLine);
@@ -420,14 +426,33 @@ namespace Raven.Server.Documents
                 case BlittableJsonToken.Integer: // could be integer or long               
                 case BlittableJsonToken.String: // could be anything
                 case BlittableJsonToken.CompressedString:
-                    return GuessTokenTypeFromContent(value);
+                    return GuessTokenTypeFromContent(value, token);
                 default:
                     throw new NotSupportedException("We shouldn't have hit this. This is a bug in the caller routine.");
             }
         }
 
-        private FieldType GuessTokenTypeFromContent(object value)
+        private unsafe FieldType GuessTokenTypeFromContent(object value, BlittableJsonToken token)
         {
+            LazyStringValue lsv = token switch
+            {
+                BlittableJsonToken.String => (LazyStringValue)value,
+                BlittableJsonToken.CompressedString => ((LazyCompressedStringValue)value).ToLazyStringValue(),
+                _ => null
+            };
+
+            if (lsv != null)
+            {
+                var result = LazyStringParser.TryParseDateTime(lsv.Buffer, lsv.Length, out var dt, out var dto, properlyParseThreeDigitsMilliseconds: true);
+                switch (result)
+                {
+                    case LazyStringParser.Result.DateTime:
+                        return KnownTypes[typeof(DateTime)];
+                    case LazyStringParser.Result.DateTimeOffset:
+                        return KnownTypes[typeof(DateTimeOffset)];
+                }
+            }
+
             var content = value.ToString();
 
             if (ParseHelper.TryAction<bool>(x => bool.TryParse(content, out x)))
@@ -444,8 +469,11 @@ namespace Raven.Server.Documents
 
             if (ParseHelper.TryAction<Guid>(x => Guid.TryParse(content, out x)))
                 return KnownTypes[typeof(Guid)];
+
             if (ParseHelper.TryAction<TimeSpan>(x => TimeSpan.TryParse(content, out x)))
                 return KnownTypes[typeof(TimeSpan)];
+            if (ParseHelper.TryAction<DateTime>(x => DateTime.TryParse(content, out x)))
+                return KnownTypes[typeof(DateTime)];
             if (ParseHelper.TryAction<DateTimeOffset>(x => DateTimeOffset.TryParse(content, out x)))
                 return KnownTypes[typeof(DateTimeOffset)];
 

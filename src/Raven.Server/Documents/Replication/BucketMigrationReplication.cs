@@ -44,6 +44,16 @@ namespace Raven.Server.Documents.Replication
 
         public override string FromString() => $"Migrating bucket '{Bucket}' to shard '{Shard}' on node '{Node}' @ {MigrationIndex}";
 
+        public override bool IsEqualTo(ReplicationNode other)
+        {
+            if (other is BucketMigrationReplication migrationNode)
+            {
+                return base.IsEqualTo(migrationNode) &&
+                       ForBucketMigration(migrationNode.ShardBucketMigration);
+            }
+            return false;
+        }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();

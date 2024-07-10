@@ -3,13 +3,16 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Raven.Client;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Logging;
 using HttpMethod = System.Net.Http.HttpMethod;
 
 namespace Raven.Server.Documents.Handlers.Processors.Streaming
@@ -24,10 +27,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
         {
             if (method != HttpMethod.Post && method != HttpMethod.Get)
                 throw new ArgumentException($"Expected method 'POST' or 'GET' but got '{method.Method}'");
-            
+
             _method = method;
         }
-        
+
         protected abstract RequestTimeTracker GetTimeTracker();
 
         protected abstract ValueTask<BlittableJsonReaderObject> GetDocumentDataAsync(TOperationContext context, string fromDocument);
@@ -56,7 +59,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
             // ReSharper disable once ArgumentsStyleLiteral
             using (var tracker = GetTimeTracker())
             using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
-            using(AllocateContext(out TOperationContext context))
+            using (AllocateContext(out TOperationContext context))
             {
                 IndexQueryServerSide query;
                 string overrideQuery = null;
@@ -103,6 +106,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                     RequestHandler.TrafficWatchStreamQuery(query);
 
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
+
+                if (LoggingSource.AuditLog.IsInfoEnabled && query.Metadata.CollectionName == Constants.Documents.Collections.AllDocumentsCollection)
+                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "QUERY", $"Streaming all documents (query: {query}, format: {format}, debug: {debug}, ignore limit: {ignoreLimit})");
+
                 // set the exported file name prefix
                 var fileNamePrefix = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
                 fileNamePrefix = $"{RequestHandler.DatabaseName}_{ServerStore.NodeTag}_{fileNamePrefix}";
@@ -127,15 +134,25 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
             }
         }
 
-        protected static bool IsCsvFormat(string format)
+        protected static QueryResultFormat GetQueryResultFormat(string format)
         {
-            return string.IsNullOrEmpty(format) == false && string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase);
+            return Enum.TryParse<QueryResultFormat>(format, ignoreCase: true, out var queryFormat)
+                ? queryFormat
+                : QueryResultFormat.Default;
         }
 
         [DoesNotReturn]
         protected void ThrowUnsupportedException(string message)
         {
             throw new NotSupportedException(message);
+        }
+
+        protected enum QueryResultFormat
+        {
+            Default,
+            Json,
+            Jsonl,
+            Csv
         }
     }
 }

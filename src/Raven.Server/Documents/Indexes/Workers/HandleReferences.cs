@@ -437,18 +437,26 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                 if (item.Etag > lastIndexedEtag)
                 {
-                    item.Dispose();
+                    DisposeItem();
                     continue;
                 }
 
                 if (ItemsAndReferencesAreUsingSameEtagPool && item.Etag > referencedItem.Etag)
                 {
                     // if the map worker already mapped this "doc" version it must be with this version of "referencedItem" and if the map worker didn't mapped the "doc" so it will process it later
-                    item.Dispose();
+                    DisposeItem();
                     continue;
                 }
 
                 yield return item;
+
+                void DisposeItem()
+                {
+                    if (item.Item is Document doc)
+                        queryContext.Documents.Transaction.ForgetAbout(doc);
+
+                    item.Dispose();
+                }
             }
         }
 

@@ -254,7 +254,7 @@ namespace Raven.Server.ServerWide
             });
         }
 
-        private Lazy<ClusterRequestExecutor> CreateClusterRequestExecutor() => new(() => ClusterRequestExecutor.Create(new[] { GetNodeHttpServerUrl() }, Server.Certificate.Certificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
+        private Lazy<ClusterRequestExecutor> CreateClusterRequestExecutor() => new(() => ClusterRequestExecutor.Create(new[] { GetNodeHttpServerUrl() }, Server.Certificate.Certificate, Server.Conventions), LazyThreadSafetyMode.ExecutionAndPublication);
 
         internal readonly FifoSemaphore ServerWideConcurrentlyRunningIndexesLock;
 
@@ -3353,7 +3353,7 @@ namespace Raven.Server.ServerWide
         {
             await Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
 
-            using (var requester = ClusterRequestExecutor.CreateForShortTermUse(GetClusterTopology().GetUrlFromTag(node), Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requester = ClusterRequestExecutor.CreateForShortTermUse(GetClusterTopology().GetUrlFromTag(node), Server.Certificate.Certificate, Server.Conventions))
             using (var oct = new OperationCancelToken(cancelAfter: Configuration.Cluster.OperationTimeout.AsTimeSpan, token: ServerShutdown))
                 await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: oct.Token);
         }
@@ -3365,7 +3365,7 @@ namespace Raven.Server.ServerWide
             if (members == null || members.Count == 0)
                 throw new InvalidOperationException("Cannot wait for execution when there are no nodes to execute on.");
 
-            using (var requestExecutor = ClusterRequestExecutor.Create(GetClusterTopology().Members.Values.ToArray(), Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.Create(GetClusterTopology().Members.Values.ToArray(), Server.Certificate.Certificate, Server.Conventions))
             using (var oct = new OperationCancelToken(cancelAfter: Configuration.Cluster.OperationTimeout.AsTimeSpan, token: ServerShutdown))
             {
                 List<Exception> exceptions = null;
@@ -3427,8 +3427,8 @@ namespace Raven.Server.ServerWide
 
         internal ClusterRequestExecutor CreateNewClusterRequestExecutor(string leaderUrl)
         {
-            var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
-            requestExecutor.DefaultTimeout = Engine.OperationTimeout;
+            var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.Certificate.Certificate, Server.Conventions);
+            requestExecutor.DefaultTimeout = Engine.OperationTimeout;   
 
             return requestExecutor;
         }

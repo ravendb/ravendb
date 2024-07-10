@@ -86,11 +86,15 @@ namespace Raven.Server.Documents.Indexes
         private int UpdateIndexEntriesCorax(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             var it = mapResults.GetEnumerator();
+            bool shouldRollbackCurrentScope = true;
+            
             try
             {
                 if (it.MoveNext() == false)
                 {
                     writer.Value.Delete(indexItem.LowerId, stats);
+
+                    shouldRollbackCurrentScope = false;
                     return 0; // no results at all
                 }
 
@@ -109,6 +113,8 @@ namespace Raven.Server.Documents.Indexes
                         writer.Value.UpdateDocument(
                             indexItem.LowerId, indexItem.LowerSourceDocumentId, first, stats, indexContext);
                     }
+
+                    shouldRollbackCurrentScope = false;
                     return 1;
                 }
                 else
@@ -122,12 +128,15 @@ namespace Raven.Server.Documents.Indexes
                         writer.Value.IndexDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, it.Current, stats, indexContext);
                     } while (it.MoveNext());
 
+                    shouldRollbackCurrentScope = false;
                     return numberOfOutputs;
                 }
-
             }
             finally
             {
+                if (shouldRollbackCurrentScope)
+                    writer.Value.Delete(indexItem.LowerId, stats);
+                
                 if(it is IDisposable d)
                     d.Dispose();
             }
@@ -135,58 +144,68 @@ namespace Raven.Server.Documents.Indexes
 
         private int UpdateIndexEntriesLucene(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            var numberOfOutputs = 0;
-            var first = true;
-
-            foreach (var mapResult in mapResults)
+            bool shouldRollbackCurrentDocument = true;
+            try
             {
-                if (first)
+                var numberOfOutputs = 0;
+                var first = true;
+
+                foreach (var mapResult in mapResults)
                 {
-                    if (indexItem.KnownToBeNew)
+                    if (first)
                     {
-                        // we skip deleting from lucene for the initial indexing run.
-                        // we already know that the ids that we get here are unique,
-                        // so we can directly add the id to the current filter without checking if it was already added.
-                        using (_stats.BloomStats.Start())
-                            _filters.DirectAdd(indexItem.LowerId);
-                    }
-                    else
-                    {
-                        // this isn't the initial indexing run.
-                        // if we already indexed that document in the past, we must delete it from the index before we index it again.
-                        bool mustDelete;
-                        using (_stats.BloomStats.Start())
+                        if (indexItem.KnownToBeNew)
                         {
-                            mustDelete = _filters.Add(indexItem.LowerId) == false;
+                            // we skip deleting from lucene for the initial indexing run.
+                            // we already know that the ids that we get here are unique,
+                            // so we can directly add the id to the current filter without checking if it was already added.
+                            using (_stats.BloomStats.Start())
+                                _filters.DirectAdd(indexItem.LowerId);
+                        }
+                        else
+                        {
+                            // this isn't the initial indexing run.
+                            // if we already indexed that document in the past, we must delete it from the index before we index it again.
+                            bool mustDelete;
+                            using (_stats.BloomStats.Start())
+                            {
+                                mustDelete = _filters.Add(indexItem.LowerId) == false;
+                            }
+
+                            if (mustDelete)
+                                writer.Value.Delete(indexItem.LowerId, stats);
                         }
 
-                        if (mustDelete)
-                            writer.Value.Delete(indexItem.LowerId, stats);
+                        first = false;
                     }
 
-                    first = false;
+                    writer.Value.IndexDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, mapResult, stats, indexContext);
+
+                    numberOfOutputs++;
                 }
 
-                writer.Value.IndexDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, mapResult, stats, indexContext);
-
-                numberOfOutputs++;
-            }
-
-            if (indexItem.KnownToBeNew == false && numberOfOutputs == 0)
-            {
-                // this isn't the first indexing run and we didn't have any outputs for this document.
-                // however, if the document was already indexed in the past and now it isn't, we must delete it from the index.
-                bool mustDelete;
-                using (_stats.BloomStats.Start())
+                if (indexItem.KnownToBeNew == false && numberOfOutputs == 0)
                 {
-                    mustDelete = _filters.Contains(indexItem.LowerId);
+                    // this isn't the first indexing run and we didn't have any outputs for this document.
+                    // however, if the document was already indexed in the past and now it isn't, we must delete it from the index.
+                    bool mustDelete;
+                    using (_stats.BloomStats.Start())
+                    {
+                        mustDelete = _filters.Contains(indexItem.LowerId);
+                    }
+
+                    if (mustDelete)
+                        writer.Value.Delete(indexItem.LowerId, stats);
                 }
 
-                if (mustDelete)
+                shouldRollbackCurrentDocument = false;
+                return numberOfOutputs;
+            }
+            finally
+            {
+                if (shouldRollbackCurrentDocument)
                     writer.Value.Delete(indexItem.LowerId, stats);
             }
-
-            return numberOfOutputs;
         }
 
         public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)

@@ -205,10 +205,7 @@ namespace Raven.Server.Web.System
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    var clientCert = GetCurrentCertificate();
-
-                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
-                    auditLog.Info($"Database {databaseRecord.DatabaseName} PUT by {clientCert?.Subject} ({clientCert?.Thumbprint})");
+                    LogAuditFor("DbMgmt", "PUT", $"Database '{databaseRecord.DatabaseName}'");
                 }
 
                 if (ServerStore.LicenseManager.LicenseStatus.HasDocumentsCompression && databaseRecord.DocumentsCompression == null)
@@ -545,7 +542,7 @@ namespace Raven.Server.Web.System
 
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
-                LogAuditFor(databaseName, $"Backup task with task id '{id}' was delayed until '{delayUntil}' UTC");
+                LogAuditFor(databaseName, "DELAY", $"Backup task with task id '{id}' until '{delayUntil}' UTC");
             }
 
             NoContentStatus();
@@ -569,7 +566,7 @@ namespace Raven.Server.Web.System
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    LogAuditFor("DbMgmt", $"Attempt to delete [{string.Join(", ", parameters.DatabaseNames)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())})");
+                    LogAuditFor("DbMgmt", "DELETE", $"Attempt to delete database(s) [{string.Join(", ", parameters.DatabaseNames)}] from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())})");
                 }
 
                 using (context.OpenReadTransaction())
@@ -647,7 +644,7 @@ namespace Raven.Server.Web.System
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    LogAuditFor("DbMgmt", $"Delete [{string.Join(", ", databasesToDelete)}] database(s) from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())})");
+                    LogAuditFor("DbMgmt", "DELETE", $"Database(s) [{string.Join(", ", databasesToDelete)}] from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())})");
                 }
 
                 long index = -1;
@@ -916,6 +913,8 @@ namespace Raven.Server.Web.System
                     {
                         console.Log.Operations($"The certificate that was used to initiate the operation: {clientCert ?? "None"}");
                     }
+                    if (LoggingSource.AuditLog.IsInfoEnabled)
+                        LogAuditFor("Server", "Execute", $"AdminJSConsole Script: \"{adminJsScript.Script}\"");
 
                     result = console.ApplyScript(adminJsScript);
                 }
@@ -933,6 +932,9 @@ namespace Raven.Server.Web.System
                     {
                         console.Log.Operations($"The certificate that was used to initiate the operation: {clientCert ?? "None"}");
                     }
+                    if (LoggingSource.AuditLog.IsInfoEnabled)
+                        LogAuditFor("Database", "Execute", $"AdminJSConsole Script: \"{adminJsScript.Script}\"");
+
                     result = console.ApplyScript(adminJsScript);
                 }
                 else

@@ -61,10 +61,15 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
         protected override IStreamQueryResultWriter<BlittableJsonReaderObject> GetBlittableQueryResultWriter(string format, bool isDebug, JsonOperationContext context, HttpResponse response, Stream responseBodyStream, bool fromSharded,
             string[] propertiesArray, string fileNamePrefix = null)
         {
-            if (IsCsvFormat(format))
+            var queryFormat = GetQueryResultFormat(format);
+            switch (queryFormat)
             {
-                //does not write query stats to stream
-                return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
+                case QueryResultFormat.Json:
+                    //does not write query stats to stream
+                    return new StreamJsonFileBlittableQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileNamePrefix);
+                case QueryResultFormat.Csv:
+                    //does not write query stats to stream
+                    return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
             }
 
             if (isDebug)

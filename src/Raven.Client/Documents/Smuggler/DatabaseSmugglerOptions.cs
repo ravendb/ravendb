@@ -16,7 +16,8 @@ namespace Raven.Client.Documents.Smuggler
                                                               DatabaseItemType.Attachments |
                                                               DatabaseItemType.CounterGroups |
                                                               DatabaseItemType.Subscriptions |
-                                                              DatabaseItemType.TimeSeries;
+                                                              DatabaseItemType.TimeSeries | 
+                                                              DatabaseItemType.TimeSeriesDeletedRanges;
 
         public const DatabaseRecordItemType DefaultOperateOnDatabaseRecordTypes = DatabaseRecordItemType.Client |
                                                                                   DatabaseRecordItemType.ConflictSolverConfig |

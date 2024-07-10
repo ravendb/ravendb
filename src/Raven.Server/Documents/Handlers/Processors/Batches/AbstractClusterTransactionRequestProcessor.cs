@@ -46,9 +46,9 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         var waitForIndexesTimeout = RequestHandler.GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
         var waitForIndexThrow = RequestHandler.GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
         var specifiedIndexesQueryString = RequestHandler.HttpContext.Request.Query["waitForSpecificIndex"];
-
         var disableAtomicDocumentWrites = RequestHandler.GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ??
                                           GetClusterConfiguration().DisableAtomicDocumentWrites;
+
         CheckBackwardCompatibility(ref disableAtomicDocumentWrites);
 
         ValidateCommands(parsedCommands, disableAtomicDocumentWrites);
@@ -64,32 +64,27 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
                 SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToArray() : null
             };
 
-        ClusterTransactionCommand clusterTransactionCommand = CreateClusterTransactionCommand(parsedCommands, options, raftRequestId);
+        var clusterTransactionCommand = CreateClusterTransactionCommand(parsedCommands, options, raftRequestId);
         clusterTransactionCommand.Timeout = Timeout.InfiniteTimeSpan; // we rely on the http token to cancel the command
-
-        DynamicJsonArray array;
-        long index;
 
         using (RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(id: options.TaskId, out var tcs))
         await using (token.Register(() => tcs.TrySetCanceled()))
         {
-            (index, object result) = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand, token);
-            array = await GetClusterTransactionDatabaseCommandsResults(result, clusterTransactionCommand.DatabaseCommandsCount, index, options, onDatabaseCompletionTask: tcs.Task, token);
-        }
+            (long index, object result) = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand, token);
+            var array = await GetClusterTransactionDatabaseCommandsResults(result, clusterTransactionCommand.DatabaseCommandsCount, index, options, tcs.Task, token);
 
-        token.ThrowIfCancellationRequested();
-
-        foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
-        {
-            array.Add(new DynamicJsonValue
+            foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
             {
-                [nameof(ICommandData.Type)] = clusterCommands.Type,
-                [nameof(ICompareExchangeValue.Key)] = clusterCommands.Id,
-                [nameof(ICompareExchangeValue.Index)] = index
-            });
-        }
+                array.Add(new DynamicJsonValue
+                {
+                    [nameof(ICommandData.Type)] = clusterCommands.Type,
+                    [nameof(ICompareExchangeValue.Key)] = clusterCommands.Id,
+                    [nameof(ICompareExchangeValue.Index)] = index
+                });
+            }
 
-        return (index, array);
+            return (index, array);
+        }
     }
 
     private async Task<DynamicJsonArray> GetClusterTransactionDatabaseCommandsResults(object result, long databaseCommandsCount, long index, ClusterTransactionOptions options, Task<HashSet<string>> onDatabaseCompletionTask, CancellationToken token)
@@ -108,7 +103,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
             return clusterTxResult.GeneratedResult;
         }
 
-        // leader isn't updated (thats why the result is empty),
+        // leader isn't updated (that is why the result is empty),
         // so we'll try to take the result from the local history log.
         await RequestHandler.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, Timeout.InfiniteTimeSpan, token);
         using (RequestHandler.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))

@@ -2970,7 +2970,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: fullBackupFrequency);
                     var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
-
                     // Let's delay the backup task
                     var taskBackupInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
                     Assert.NotNull(taskBackupInfo);
@@ -2978,7 +2977,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.NotNull(taskBackupInfo.OnGoingBackup.StartTime);
 
                     var delayDuration = TimeSpan.FromMinutes(delayDurationInMinutes);
-                    var delayUntil = DateTime.UtcNow + delayDuration;
+                    var delayUntil = DateTime.Now + delayDuration;
                     await store.Maintenance.SendAsync(new DelayBackupOperation(taskBackupInfo.OnGoingBackup.RunningBackupTaskId, delayDuration));
 
                     // There should be no OnGoingBackup operation in the OngoingTaskBackup
@@ -3004,7 +3003,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(backupStatus.OriginalBackupTime,
                         delayUntil < nextFullBackup
                             ? taskBackupInfo.OnGoingBackup.StartTime    // until the next scheduled backup time.
-                            : nextFullBackup.Value);  // after the next scheduled backup.
+                            : nextFullBackup.Value.ToUniversalTime());  // after the next scheduled backup.
                 }, tcs: new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
             }
         }
@@ -3095,7 +3094,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.NotNull(taskBackupInfo);
                     Assert.NotNull(taskBackupInfo.OnGoingBackup);
 
-                    var expectedNextBackupDateTime = new DateTime(DateTime.UtcNow.Year + 1, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                    var expectedNextBackupDateTime = new DateTime(DateTime.Now.Year + 1, 1, 1, 0, 0, 0, DateTimeKind.Local).ToUniversalTime();
                     Assert.Equal(expectedNextBackupDateTime, taskBackupInfo.NextBackup.DateTime);
 
                     // Let's delay the backup task to next occurence + 1 hour
@@ -3972,6 +3971,346 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
                 subscriptionsConfig = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
                 Assert.Equal(2, subscriptionsConfig.Count);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task can_backup_and_restore_with_deleted_timeseries_ranges(Options options)
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            const string id = "users/1";
+
+            using (var store = GetDocumentStore(options))
+            {
+                var baseline = DateTime.UtcNow;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "fitzchak" }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "heartrate");
+                    for (int i = 0; i < 10; i++)
+                    {
+                        tsf.Append(baseline.AddHours(i), i);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "aviv" }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Null(ts);
+                }
+
+                await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode, isFullBackup: false, backupTaskId);
+            }
+
+            using (var store = GetDocumentStore(options))
+            {
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    // import from each shard backup dir
+                    var dirs = Directory.GetDirectories(backupPath);
+                    Assert.Equal(3, dirs.Length);
+
+                    foreach (var dir in dirs)
+                    {
+                        await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                    }
+                }
+                else
+                {
+                    var dir = Directory.GetDirectories(backupPath).First();
+                    Assert.Equal(2, Directory.GetFiles(dir).Length);
+
+                    await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    Assert.Equal("aviv", user.Name);
+
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Null(ts); // fails, we get 10 entries
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task deleted_ranges_should_be_processed_before_timeseries(Options options)
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            const string id = "users/1";
+
+            using (var store = GetDocumentStore(options))
+            {
+                var baseline = DateTime.UtcNow;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "fitzchak" }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "heartrate");
+                    for (int i = 0; i < 10; i++)
+                    {
+                        tsf.Append(baseline.AddHours(i), i);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+
+                var backupTaskId = await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // delete the document to create a timeseries deleted range 
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // recreate the document and time series, and append a new entry to the series
+                    // importing the deleted range should not delete this new entry
+
+                    await session.StoreAsync(new User { Name = "aviv" }, id);
+                    session.TimeSeriesFor(id, "heartrate").Append(baseline.AddYears(1), 100);
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Equal(1, ts.Length);
+                }
+
+                await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode, isFullBackup: false, backupTaskId);
+            }
+
+            using (var store = GetDocumentStore(options))
+            {
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    // import from each shard backup dir
+                    var dirs = Directory.GetDirectories(backupPath);
+                    Assert.Equal(3, dirs.Length);
+
+                    foreach (var dir in dirs)
+                    {
+                        await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                    }
+                }
+                else
+                {
+                    var dir = Directory.GetDirectories(backupPath).First();
+                    Assert.Equal(2, Directory.GetFiles(dir).Length);
+
+                    await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    Assert.Equal("aviv", user.Name);
+
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Equal(1, ts.Length);
+                    Assert.Equal(100, ts[0].Value);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task deleted_ranges_should_be_processed_before_timeseries2(Options options)
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            const string id = "users/1";
+
+            using (var store = GetDocumentStore(options))
+            {
+                var baseline = DateTime.UtcNow;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "fitzchak" }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "heartrate");
+                    for (int i = 0; i < 10; i++)
+                    {
+                        tsf.Append(baseline.AddHours(i), i);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // delete the document to create a timeseries deleted range 
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // recreate the document and time series, and append a new entry to the series
+
+                    await session.StoreAsync(new User { Name = "aviv" }, id);
+                    session.TimeSeriesFor(id, "heartrate").Append(baseline.AddYears(1), 100);
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // delete the document once again to create another deleted range
+                    // after importing this deleted range we should end up without timeseries
+
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // recreate the document so that we won't have a tombstone to backup
+                    await session.StoreAsync(new User { Name = "egor" }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Null(ts);
+                }
+
+                await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode, isFullBackup: false, backupTaskId);
+            }
+
+            using (var store = GetDocumentStore(options))
+            {
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    // import from each shard backup dir
+                    var dirs = Directory.GetDirectories(backupPath);
+                    Assert.Equal(3, dirs.Length);
+
+                    foreach (var dir in dirs)
+                    {
+                        await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                    }
+                }
+                else
+                {
+                    var dir = Directory.GetDirectories(backupPath).First();
+                    Assert.Equal(2, Directory.GetFiles(dir).Length);
+
+                    await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    Assert.Equal("egor", user.Name);
+
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Null(ts);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task can_skip_deleted_timeseries_ranges_on_import(Options options)
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            const string id = "users/1";
+
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.UtcNow;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "fitzchak" }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "heartrate");
+                    for (int i = 0; i < 10; i++)
+                    {
+                        tsf.Append(baseline.AddHours(i), i);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "aviv" }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Null(ts);
+                }
+
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+
+                Assert.True(WaitForValue(() =>
+                {
+                    var dir = Directory.GetDirectories(backupPath).First();
+                    var files = Directory.GetFiles(dir);
+                    return files.Length == 2;
+                }, expectedVal: true));
+            }
+
+            using (var store = GetDocumentStore(options))
+            {
+                // skip deleted ranges on import
+                var importOptions = new DatabaseSmugglerImportOptions();
+                importOptions.OperateOnTypes &= ~DatabaseItemType.TimeSeriesDeletedRanges;
+
+                await store.Smuggler.ImportIncrementalAsync(importOptions,
+                    Directory.GetDirectories(backupPath).First());
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    Assert.Equal("aviv", user.Name);
+
+                    var ts = await session.TimeSeriesFor(id, "heartrate").GetAsync();
+                    Assert.Equal(10, ts.Length);
+                }
             }
         }
 

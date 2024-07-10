@@ -432,45 +432,45 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected IEnumerable<CoraxDynamicItem> CoraxCreateField(CurrentIndexingScope scope, string name, object value, CreateFieldOptions options)
         {
-            options = options ?? CreateFieldOptions.Default;
-
             IndexFieldOptions allFields = null;
             if (scope.IndexDefinition is MapIndexDefinition mapIndexDefinition)
+            {
                 mapIndexDefinition.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out allFields);
-
+            }
+            
             var field = IndexField.Create(name, new IndexFieldOptions
             {
-                Storage = options.Storage,
-                TermVector = options.TermVector,
-                Indexing = options.Indexing,
+                Storage = options?.Storage,
+                TermVector = options?.TermVector,
+                Indexing = options?.Indexing,
             }, allFields, Corax.Constants.IndexWriter.DynamicField);
 
-            if (scope.DynamicFields == null)
-                scope.DynamicFields = new Dictionary<string, IndexField>();
-
+            scope.DynamicFields ??= new Dictionary<string, IndexField>();
             if (scope.DynamicFields.TryGetValue(name, out var existing) == false)
             {
                 scope.DynamicFields[name] = field;
                 scope.IncrementDynamicFields();
             }
-            else if (options.Indexing != null && existing.Indexing != field.Indexing)
+            else if (options?.Indexing != null && existing.Indexing != field.Indexing)
             {
                 throw new InvalidDataException($"Inconsistent dynamic field creation options were detected. Field '{name}' was created with '{existing.Indexing}' analyzer but now '{field.Indexing}' analyzer was specified. This is not supported");
             }
 
 
-            var result = new List<CoraxDynamicItem>();
-            result.Add(new CoraxDynamicItem()
+            var result = new List<CoraxDynamicItem>
             {
-                Field = field,
-                FieldName = name,
-                Value = value
-            });
-           
+                new()
+                {
+                    Field = field,
+                    FieldName = name,
+                    Value = value
+                }
+            };
+
             return result;
         }
         
-        protected IEnumerable<AbstractField> LuceneCreateField(CurrentIndexingScope scope, string name, object value, CreateFieldOptions options)
+        private IEnumerable<AbstractField> LuceneCreateField(CurrentIndexingScope scope, string name, object value, CreateFieldOptions options)
         {
             // IMPORTANT: Do not delete this method, it is used by the indexes code when using CreateField
 
@@ -712,7 +712,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return Convert.ToDouble(value);
         }
 
-        private struct StaticIndexLuceneDocumentWrapper : ILuceneDocumentWrapper
+        internal struct StaticIndexLuceneDocumentWrapper : ILuceneDocumentWrapper
         {
             private readonly List<AbstractField> _fields;
 

@@ -69,6 +69,7 @@ namespace Raven.Client.Documents.Operations.Backups
             Counters = bp.Counters;
             TimeSeries = bp.TimeSeries;
             CompareExchangeTombstones = bp.CompareExchangeTombstones;
+            TimeSeriesDeletedRanges = bp.TimeSeriesDeletedRanges;
         }
 
         public override DynamicJsonValue ToJson()

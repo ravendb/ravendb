@@ -21,6 +21,12 @@ namespace Raven.Client.Documents.Session
         Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default);
 
         /// <summary>
+        ///     Registers the lazy-count query and returns its lazy instance that will be evaluated on request.
+        /// </summary>
+        /// <param name="token">Cancellation token for this operation.</param>
+        Lazy<Task<long>> LongCountLazilyAsync(CancellationToken token = default);
+
+        /// <summary>
         ///     Executes the query and returns the results as a list.
         /// </summary>
         /// <param name="token">Cancellation token for this operation.</param>

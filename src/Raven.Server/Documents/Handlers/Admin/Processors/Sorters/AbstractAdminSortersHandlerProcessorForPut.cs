@@ -35,7 +35,7 @@ internal abstract class AbstractAdminSortersHandlerProcessorForPut<TRequestHandl
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    RequestHandler.LogAuditFor(databaseName, $"Sorter {sorterDefinition.Name} PUT with definition: {sorterToAdd}");
+                    RequestHandler.LogAuditFor(databaseName, "PUT", $"Sorter '{sorterDefinition.Name}' with definition: {sorterToAdd}");
                 }
 
                 sorterDefinition.Validate();

@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Session
     {
         private int _valsCount;
         private int _customCount;
-        private readonly Lazy<JavascriptCompilationOptions> _javascriptCompilationOptions;
+        private readonly Lazy<JavascriptCompilationOptions> _pathScriptCompilationOptions;
 
         public void Increment<T, U>(T entity, Expression<Func<T, U>> path, U valToAdd)
         {
@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Session
 
         public void Increment<T, U>(string id, Expression<Func<T, U>> path, U valToAdd)
         {
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
+            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
 
             var variable = $"this.{pathScript}";
             var value = $"args.val_{_valsCount}";
@@ -64,7 +64,7 @@ namespace Raven.Client.Documents.Session
         public void AddOrIncrement<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU valueToAdd)
         {
 
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
+            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
 
             var variable = $"this.{pathScript}";
             var value = $"args.val_{_valsCount}";
@@ -105,8 +105,12 @@ namespace Raven.Client.Documents.Session
 
         public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, List<TU>>> path, Expression<Func<JavaScriptArray<TU>, object>> arrayAdder)
         {
-            var extension = new JavascriptConversionExtensions.CustomMethods { Suffix = _customCount++ };
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
+            var extension = new JavascriptConversionExtensions.CustomMethods
+            {
+                Suffix = _customCount++,
+                SaveEnumsAsIntegersForPatching = DocumentStore.Conventions.SaveEnumsAsIntegersForPatching,
+            };
+            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
             var adderScript = arrayAdder.CompileToJavascript(
                 new JavascriptCompilationOptions(
                     JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
@@ -138,8 +142,12 @@ namespace Raven.Client.Documents.Session
 
         public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU value)
         {
-            var patchScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
+            var patchScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
             var valueToUse = AddTypeNameToValueIfNeeded(path.Body.Type, value);
+            if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
+            {
+                valueToUse = Convert.ToInt32(value);
+            }
             var patchRequest = new PatchRequest
             {
                 Script = $"this.{patchScript} = args.val_{_valsCount};",
@@ -182,9 +190,13 @@ namespace Raven.Client.Documents.Session
 
         public void Patch<T, U>(string id, Expression<Func<T, U>> path, U value)
         {
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
+            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
 
             var valueToUse = AddTypeNameToValueIfNeeded(path.Body.Type, value);
+            if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
+            {
+                valueToUse = Convert.ToInt32(value);
+            }
 
             var patchRequest = new PatchRequest { Script = $"this.{pathScript} = args.val_{_valsCount};", Values = { [$"val_{_valsCount}"] = valueToUse } };
 
@@ -207,8 +219,12 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, U>(string id, Expression<Func<T, IEnumerable<U>>> path,
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder)
         {
-            var extension = new JavascriptConversionExtensions.CustomMethods { Suffix = _customCount++ };
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
+            var extension = new JavascriptConversionExtensions.CustomMethods
+            {
+                Suffix = _customCount++,
+                SaveEnumsAsIntegersForPatching = DocumentStore.Conventions.SaveEnumsAsIntegersForPatching,
+            };
+            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
             var adderScript = arrayAdder.CompileToJavascript(
                 new JavascriptCompilationOptions(
                     JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
@@ -228,7 +244,7 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, TKey, TValue>(string id, Expression<Func<T, IDictionary<TKey, TValue>>> path,
             Expression<Func<JavaScriptDictionary<TKey, TValue>, object>> dictionaryAdder)
         {
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions.Value);
+            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
 
             if (!(dictionaryAdder.Body is MethodCallExpression call))
             {
@@ -244,6 +260,10 @@ namespace Raven.Client.Documents.Session
                     object value;
                     (key, value) = GetKeyAndValue<TKey, TValue>(call);
                     patchRequest.Script = $"this.{pathScript}.{key} = args.val_{_valsCount};";
+                    if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
+                    {
+                        value = Convert.ToInt32(value);
+                    }
                     patchRequest.Values[$"val_{_valsCount}"] = value;
                     _valsCount++;
                     break;

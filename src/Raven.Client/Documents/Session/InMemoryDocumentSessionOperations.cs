@@ -243,7 +243,7 @@ namespace Raven.Client.Documents.Session
             NoTracking = options.NoTracking;
             UseOptimisticConcurrency = _requestExecutor.Conventions.UseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
-            GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
+            GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => _requestExecutor.Conventions.GenerateDocumentIdAsync(DatabaseName, entity));
             JsonConverter = _requestExecutor.Conventions.Serialization.CreateConverter(this);
             _sessionInfo = new SessionInfo(this, options, _documentStore, asyncCommandRunning: false);
             TransactionMode = options.TransactionMode;
@@ -254,12 +254,13 @@ namespace Raven.Client.Documents.Session
             if (shardedBatchOptions != null)
                 _saveChangesOptions = new BatchOptions { ShardedOptions = shardedBatchOptions };
 
-            _javascriptCompilationOptions = new Lazy<JavascriptCompilationOptions>(() => new JavascriptCompilationOptions(
+            _pathScriptCompilationOptions = new Lazy<JavascriptCompilationOptions>(() => new JavascriptCompilationOptions(
                 flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
                 extensions:
                 [
                     JavascriptConversionExtensions.LinqMethodsSupport.Instance,
-                    JavascriptConversionExtensions.NullableSupport.Instance
+                    JavascriptConversionExtensions.NullableSupport.Instance,
+                    JavascriptConversionExtensions.PatchDictionaryEnumSupport.Instance,
                 ])
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(RequestExecutor.Conventions)
@@ -784,6 +785,7 @@ more responsive application.
             return new AsyncTaskHolder(this);
         }
 
+        [Obsolete("InMemoryDocumentSessionOperations.GenerateId is not supported anymore. Will be removed in next major version of the product.")]
         protected abstract string GenerateId(object entity);
 
         protected virtual void RememberEntityForDocumentIdGeneration(object entity)
@@ -793,21 +795,7 @@ more responsive application.
 
         protected internal async Task<string> GenerateDocumentIdForStorageAsync(object entity)
         {
-            if (Conventions.AddIdFieldToDynamicObjects && entity is IDynamicMetaObjectProvider)
-            {
-                if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out string id))
-                    return id;
-
-                id = await GenerateIdAsync(entity).ConfigureAwait(false);
-                // If we generated a new id, store it back into the Id field so the client has access to it
-                if (id != null)
-                    GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, id);
-                return id;
-            }
-
-            var result = await GetOrGenerateDocumentIdAsync(entity).ConfigureAwait(false);
-            GenerateEntityIdOnTheClient.TrySetIdentity(entity, result);
-            return result;
+            return await GenerateEntityIdOnTheClient.GenerateDocumentIdForStorageAsync(entity).ConfigureAwait(false);
         }
 
         protected abstract Task<string> GenerateIdAsync(object entity);
@@ -855,6 +843,7 @@ more responsive application.
             throw new NonUniqueObjectException("Attempted to associate a different object with id '" + id + "'.");
         }
 
+        [Obsolete("InMemoryDocumentSessionOperations.GetOrGenerateDocumentIdAsync is not supported anymore. Will be removed in next major version of the product.")]
         protected async Task<string> GetOrGenerateDocumentIdAsync(object entity)
         {
             GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out var id);

@@ -95,6 +95,7 @@ namespace Raven.Client.Documents.Session
         /// </remarks>
         public IAsyncAdvancedSessionOperations Advanced => this;
 
+        [Obsolete("InMemoryDocumentSessionOperations.GenerateId is not supported anymore. Will be removed in next major version of the product.")]
         protected override string GenerateId(object entity)
         {
             throw new NotSupportedException("Async session cannot generate IDs synchronously");

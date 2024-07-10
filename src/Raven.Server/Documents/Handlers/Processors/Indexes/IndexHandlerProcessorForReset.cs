@@ -4,7 +4,9 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web.Http;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
@@ -30,6 +32,11 @@ internal sealed class IndexHandlerProcessorForReset : AbstractIndexHandlerProces
             indexResetMode = Enum.Parse<IndexResetMode>(indexResetModeQueryParam);
         
         RequestHandler.Database.IndexStore.ResetIndex(name, indexResetMode);
+
+        if (LoggingSource.AuditLog.IsInfoEnabled)
+        {
+            RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "RESET", $"Index '{name}'");
+        }
 
         return ValueTask.CompletedTask;
     }

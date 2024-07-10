@@ -1139,10 +1139,6 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(statistics.DatabaseChangeVector)));
-            writer.WriteString(statistics.DatabaseChangeVector);
-            writer.WriteComma();
-
             writer.WritePropertyName(nameof(statistics.LastIndexingTime));
             if (statistics.LastIndexingTime.HasValue)
                 writer.WriteDateTime(statistics.LastIndexingTime.Value, isUtc: true);

@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 AssertBackup(backupConfiguration);
 
                 var sw = Stopwatch.StartNew();
-                ServerStore.ConcurrentBackupsCounter.StartBackup(backupName, Logger);
+                ServerStore.ConcurrentBackupsCounter.StartBackup(RequestHandler.DatabaseName, backupName, Logger);
                 try
                 {
                     var cancelToken = RequestHandler.CreateBackgroundOperationToken();
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 }
                 catch (Exception e)
                 {
-                    ServerStore.ConcurrentBackupsCounter.FinishBackup(backupName, backupStatus: null, sw.Elapsed, Logger);
+                    ServerStore.ConcurrentBackupsCounter.FinishBackup(RequestHandler.DatabaseName, backupName, backupStatus: null, sw.Elapsed, Logger);
 
                     var message = $"Failed to run backup: '{backupName}'";
 

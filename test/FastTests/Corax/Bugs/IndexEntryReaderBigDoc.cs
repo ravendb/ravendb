@@ -1,5 +1,4 @@
 ﻿using Corax;
-using Corax.Querying;
 using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow.Server;
@@ -14,11 +13,8 @@ namespace FastTests.Corax.Bugs;
 
 public class IndexEntryReaderBigDoc : StorageTest
 {
-    private readonly ITestOutputHelper _testOutputHelper;
-
-    public IndexEntryReaderBigDoc(ITestOutputHelper output, ITestOutputHelper testOutputHelper) : base(output)
+    public IndexEntryReaderBigDoc(ITestOutputHelper output) : base(output)
     {
-        _testOutputHelper = testOutputHelper;
     }
 
     [Fact]
@@ -49,6 +45,7 @@ public class IndexEntryReaderBigDoc : StorageTest
                     }
                 }
                 writer.DecrementList();
+                writer.EndWriting();
             }
             indexWriter.Commit();
         }

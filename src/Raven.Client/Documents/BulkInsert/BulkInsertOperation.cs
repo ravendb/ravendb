@@ -122,7 +122,7 @@ namespace Raven.Client.Documents.BulkInsert
         private bool _onProgressInitialized = false;
 
         private readonly WeakReferencingTimer _timer;
-        private DateTime _lastWriteToStream;
+
         private readonly SemaphoreSlim _streamLock;
         private readonly TimeSpan _heartbeatCheckInterval = TimeSpan.FromSeconds(StreamWithTimeout.DefaultReadTimeout.TotalSeconds / 3);
 
@@ -162,10 +162,9 @@ namespace Raven.Client.Documents.BulkInsert
             _timeSeriesBatchSize = _conventions.BulkInsert.TimeSeriesBatchSize;
 
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions,
-                entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
+                entity => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity));
 
             _streamLock = new SemaphoreSlim(1, 1);
-            _lastWriteToStream = DateTime.UtcNow;
 
             if (_options.ForTestingPurposes?.OverrideHeartbeatCheckInterval > 0)
                 _heartbeatCheckInterval = TimeSpan.FromMilliseconds(_options.ForTestingPurposes.OverrideHeartbeatCheckInterval / 3);
@@ -242,7 +241,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task SendHeartBeatAsync()
         {
-            if (DateTime.UtcNow.Ticks - _lastWriteToStream.Ticks < _heartbeatCheckInterval.Ticks)
+            if (IsHeartbeatIntervalExceeded() == false)
                 return;
 
             if (_streamLock.Wait(0) == false)
@@ -258,7 +257,6 @@ namespace Raven.Client.Documents.BulkInsert
 
                 if (_first == false)
                 {
-
                     WriteComma();
                 }
 
@@ -266,9 +264,7 @@ namespace Raven.Client.Documents.BulkInsert
                 _inProgressCommand = CommandType.None;
                 _writer.Write("{\"Type\":\"HeartBeat\"}");
 
-                
                 await FlushIfNeeded(force: true).ConfigureAwait(false);
-                await _writer._requestBodyStream.FlushAsync(_token).ConfigureAwait(false);
             }
             catch (Exception)
             {
@@ -285,8 +281,12 @@ namespace Raven.Client.Documents.BulkInsert
             if (serverVersion != null && Version.TryParse(serverVersion, out var ver))
             {
                 // Version 6 only from 6.0.2
-                if (ver.Major == 6 && ver.Build < 2)
+                if (ver.Major == 6 && ver.Minor > 0)
+                    return true;
+
+                if (ver.Major == 6 && ver.Minor == 0 && ver.Build < 2)
                     return false;
+
                 // 5.4.108 or higher
                 if (ver.Major > 5 || (ver.Major == 5 && ver.Minor >= 4 && ver.Build >= 110))
                     return true;
@@ -343,7 +343,7 @@ namespace Raven.Client.Documents.BulkInsert
         public async Task<string> StoreAsync(object entity, IMetadataDictionary metadata = null)
         {
             if (metadata == null || metadata.TryGetValue(Constants.Documents.Metadata.Id, out var id) == false)
-                id = GetId(entity);
+                id = await GetIdAsync(entity).ConfigureAwait(false);
 
             await StoreAsync(entity, id, metadata).ConfigureAwait(false);
 
@@ -607,12 +607,12 @@ namespace Raven.Client.Documents.BulkInsert
             await _disposeOnce.DisposeAsync().ConfigureAwait(false);
         }
 
-        private string GetId(object entity)
+        private async ValueTask<string> GetIdAsync(object entity)
         {
             if (_generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out var id))
                 return id;
 
-            id = _generateEntityIdOnTheClient.GenerateDocumentIdForStorage(entity);
+            id = await _generateEntityIdOnTheClient.GenerateDocumentIdForStorageAsync(entity).ConfigureAwait(false);
             _generateEntityIdOnTheClient.TrySetIdentity(entity, id); //set Id property if it was null
             return id;
         }
@@ -665,12 +665,13 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task FlushIfNeeded(bool force = false)
         {
-            if (DateTime.UtcNow.Ticks - _lastWriteToStream.Ticks < _heartbeatCheckInterval.Ticks)
-            {
-                _lastWriteToStream = DateTime.UtcNow;
-                force = true;
-            }
+            force =  force || IsHeartbeatIntervalExceeded();
             await _writer.FlushIfNeeded(force).ConfigureAwait(false);
+        }
+
+        private bool IsHeartbeatIntervalExceeded()
+        {
+            return DateTime.UtcNow.Ticks - _writer.LastFlushToStream.Ticks >= _heartbeatCheckInterval.Ticks;
         }
 
         public readonly struct CountersBulkInsert

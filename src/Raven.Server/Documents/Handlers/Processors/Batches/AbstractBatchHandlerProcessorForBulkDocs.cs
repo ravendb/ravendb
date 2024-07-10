@@ -98,8 +98,7 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                 if (command.IsClusterTransaction)
                 {
                     var processor = GetClusterTransactionRequestProcessor();
-                    (long index, DynamicJsonArray clusterResults) = await processor.ProcessAsync(context, command, token.Token)
-                                                                                   .ConfigureAwait(false);
+                    var result = await processor.ProcessAsync(context, command, token.Token).ConfigureAwait(false);
 
                     RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -107,8 +106,8 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(BatchCommandResult.Results)] = clusterResults,
-                            [nameof(BatchCommandResult.TransactionIndex)] = index
+                            [nameof(BatchCommandResult.Results)] = result.Results,
+                            [nameof(BatchCommandResult.TransactionIndex)] = result.Index
                         });
                     }
 

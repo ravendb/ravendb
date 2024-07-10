@@ -1,4 +1,5 @@
-﻿using Sparrow.Json;
+﻿using System;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
@@ -16,6 +17,7 @@ namespace Raven.Client.Documents.Commands
 
         public BlittableJsonReaderObject CompareExchangeValueIncludes { get; set; }
 
+        [Obsolete("Will be removed in next major version of the product.")]
         public int NextPageStart { get; set; }
     }
 }

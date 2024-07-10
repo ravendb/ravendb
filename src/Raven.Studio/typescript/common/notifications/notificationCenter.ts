@@ -68,6 +68,7 @@ import complexFieldsAlertDetails
     from "viewmodels/common/notificationCenter/detailViewer/alerts/complexFieldsAlertDetails";
 import cpuCreditsBalanceDetails
     from "viewmodels/common/notificationCenter/detailViewer/alerts/cpuCreditsBalanceDetails";
+import groupedVirtualNotification from "common/notifications/models/groupedVirtualNotification";
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
     showDetailsFor(notification: abstractNotification, notificationCenter: notificationCenter): JQueryPromise<void> | void;
@@ -515,7 +516,22 @@ class notificationCenter {
 
     private getOperationById(db: database, operationId: number) {
         const notificationsArray = db ? this.databaseNotifications() : this.globalNotifications();
-        return notificationsArray.find(x => x instanceof operation && x.operationId() === operationId);
+        const topLevelNotification = notificationsArray.find(x => x instanceof operation && x.operationId() === operationId);
+        if (topLevelNotification) {
+            return topLevelNotification;
+        }
+        
+        // merge operation was merged into other virtual operation?
+        for (const array of notificationsArray) {
+            if (array instanceof groupedVirtualNotification) {
+                const match = array.operations().find(x => x.id === operationId);
+                if (match) {
+                    return match;
+                }
+            }
+        }
+        
+        return null;
     }
 
     openDetails(notification: abstractNotification) {

@@ -9,6 +9,8 @@ using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Integrations.PostgreSQL.Handlers.Processors;
 
@@ -69,6 +71,11 @@ internal abstract class AbstractPostgreSqlIntegrationHandlerProcessorForDeleteUs
         }
 
         users.Remove(userToDelete);
+
+        if (LoggingSource.AuditLog.IsInfoEnabled)
+        {
+            RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "DELETE", $"User '{userToDelete.Username}' in Postgres integration");
+        }
 
         return ValueTask.FromResult(config);
     }

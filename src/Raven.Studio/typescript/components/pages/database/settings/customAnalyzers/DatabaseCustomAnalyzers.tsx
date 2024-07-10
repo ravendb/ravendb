@@ -27,7 +27,8 @@ export default function DatabaseCustomAnalyzers() {
 
     const { analyzers, setAnalyzers, addNewAnalyzer, removeAnalyzer, mapFromDto } = useCustomAnalyzers();
 
-    const asyncGetDatabaseAnalyzers = useAsync(() => databasesService.getCustomAnalyzers(db.name), [db.name], {
+    // Changing the database causes re-mount
+    const asyncGetDatabaseAnalyzers = useAsync(() => databasesService.getCustomAnalyzers(db.name), [], {
         onSuccess(result) {
             setAnalyzers(mapFromDto(result));
         },

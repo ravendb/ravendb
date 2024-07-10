@@ -53,7 +53,7 @@ internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, $"Index {indexDefinition.Name} PUT with definition: {indexToAdd}");
+                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "PUT", $"Index '{indexDefinition.Name}' with definition: {indexToAdd}");
                 }
 
                 if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)

@@ -221,4 +221,8 @@ export default class IndexUtils {
 
         return Array.from(perShardMax.values()).reduce((a, b) => a + b, 0);
     }
+
+    static getEarliestCreatedTimestamp(index: IndexSharedInfo): Date {
+        return _.min(index.nodesInfo.map((nodeInfo) => nodeInfo.createdTimestamp)) ?? null;
+    }
 }

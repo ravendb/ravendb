@@ -12,11 +12,8 @@ namespace StressTests.Corax.Bugs;
 
 public class CompactTreeOptimizedLookup : StorageTest
 {
-    private readonly ITestOutputHelper _testOutputHelper;
-
-    public CompactTreeOptimizedLookup(ITestOutputHelper output, ITestOutputHelper testOutputHelper) : base(output)
+    public CompactTreeOptimizedLookup(ITestOutputHelper output) : base(output)
     {
-        _testOutputHelper = testOutputHelper;
     }
 
     [Fact]

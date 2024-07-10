@@ -246,6 +246,31 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenMultiplatformTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ClusterTransactionSession(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            using (var session = store.OpenAsyncSession(new SessionOptions
+                   {
+                       TransactionMode = TransactionMode.ClusterWide
+                   }))
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    var user = new User { Name = "users/" + i };
+                    await session.StoreAsync(user, "users/" + i);
+                }
+
+                await session.SaveChangesAsync();
+
+                foreach (var (key, value) in session.Advanced.GetTrackedEntities())
+                {
+                    var u = value.Entity as User;
+                    Assert.Equal(key, u.Name);
+                }
+            }
+        }
         [RavenMultiplatformTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster, RavenArchitecture.X64)]
         [RavenData(1, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(5, DatabaseMode = RavenDatabaseMode.All)]

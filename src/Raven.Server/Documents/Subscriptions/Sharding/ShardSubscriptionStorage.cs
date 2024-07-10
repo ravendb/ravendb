@@ -52,8 +52,15 @@ public sealed class ShardSubscriptionStorage : SubscriptionStorage
                     DropSubscriptionConnections(id, new SubscriptionChangeVectorUpdateConcurrencyException($"The subscription '{subscriptionName}' was modified on shard '{_shardName}', connection must be restarted"));
                     continue;
                 }
-               
-                var whoseTaskIsIt = GetSubscriptionResponsibleNode(context, taskState);
+
+                if (_serverStore.Engine.CurrentState == RachisState.Passive)
+                {
+                    DropSubscriptionConnections(id,
+                        new SubscriptionDoesNotBelongToNodeException($"Subscription operation was stopped on '{_serverStore.NodeTag}', because current node state is '{RachisState.Passive}'."));
+                }
+
+                // we pass here RachisState.Follower so the task won't be disconnected if the node is in candidate state
+                var whoseTaskIsIt = GetSubscriptionResponsibleNode(context, RachisState.Follower, taskState);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
                     string reason = string.IsNullOrEmpty(whoseTaskIsIt) ? "could not get responsible node for subscription task." : $"because it's now under node '{whoseTaskIsIt}' responsibility.";

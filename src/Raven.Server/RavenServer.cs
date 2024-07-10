@@ -27,6 +27,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
@@ -131,8 +132,12 @@ namespace Raven.Server
 
         internal CipherSuitesPolicy CipherSuitesPolicy => _httpsConnectionMiddleware?.CipherSuitesPolicy;
 
-        public RavenServer(RavenConfiguration configuration)
+        internal DocumentConventions Conventions;
+
+        public RavenServer(RavenConfiguration configuration, DocumentConventions conventions = null)
         {
+            Conventions = conventions ?? DocumentConventions.DefaultForServer;
+
             JsonDeserializationValidator.Validate();
 
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));

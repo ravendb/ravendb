@@ -389,6 +389,18 @@ namespace FastTests
 
         public class ServerCreationOptions
         {
+            private DocumentConventions _conventions;
+
+            public DocumentConventions Conventions
+            {
+                get => _conventions;
+                set
+                {
+                    AssertNotFrozen();
+                    _conventions = value;
+                }
+            }
+
             private IDictionary<string, string> _customSettings;
 
             public IDictionary<string, string> CustomSettings
@@ -566,7 +578,7 @@ namespace FastTests
                 if (options.DeletePrevious)
                     IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
 
-                var server = new RavenServer(configuration)
+                var server = new RavenServer(configuration, options.Conventions)
                 {
                     ThrowOnLicenseActivationFailure = true,
                     DebugTag = caller

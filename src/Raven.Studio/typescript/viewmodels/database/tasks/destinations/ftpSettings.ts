@@ -11,6 +11,7 @@ class ftpSettings extends backupSettings {
     url = ko.observable<string>();
     userName = ko.observable<string>();
     password = ko.observable<string>();
+    isPasswordHidden = ko.observable<boolean>(true);
     certificateAsBase64 = ko.observable<string>();
 
     isLoadingFile = ko.observable<boolean>();
@@ -135,6 +136,10 @@ class ftpSettings extends backupSettings {
             CertificateAsBase64: null,
             GetBackupConfigurationScript: null
         }, targetOperation);
+    }
+
+    toggleIsPasswordHidden() {
+        this.isPasswordHidden(!this.isPasswordHidden());
     }
 }
 

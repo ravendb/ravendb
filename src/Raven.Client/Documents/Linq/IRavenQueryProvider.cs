@@ -76,7 +76,17 @@ namespace Raven.Client.Documents.Linq
         /// <summary>
         /// Convert the Linq query to a lazy-count Lucene query and provide a function to execute when it is being evaluated
         /// </summary>
-        Lazy<Task<int>> CountLazilyAsync<T>(Expression expression, CancellationToken token = default(CancellationToken));
+        Lazy<long> LongCountLazily<T>(Expression expression);
+
+        /// <summary>
+        /// Convert the Linq query to a lazy-count Lucene query and provide a function to execute when it is being evaluated
+        /// </summary>
+        Lazy<Task<int>> CountLazilyAsync<T>(Expression expression, CancellationToken token = default);
+
+        /// <summary>
+        /// Convert the Linq query to a lazy-count Lucene query and provide a function to execute when it is being evaluated
+        /// </summary>
+        Lazy<Task<long>> LongCountLazilyAsync<T>(Expression expression, CancellationToken token = default);
 
         /// <summary>
         /// Set the fields to fetch

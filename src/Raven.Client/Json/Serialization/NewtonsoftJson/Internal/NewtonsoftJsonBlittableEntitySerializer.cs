@@ -20,7 +20,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
         public NewtonsoftJsonBlittableEntitySerializer(ISerializationConventions conventions)
         {
-            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions.Conventions, null);
+            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions.Conventions, generateIdAsync: null);
             _deserializer = new LightWeightThreadLocal<IJsonSerializer>(() => conventions.CreateDeserializer());
             _reader = new LightWeightThreadLocal<BlittableJsonReader>(() => new BlittableJsonReader());
         }

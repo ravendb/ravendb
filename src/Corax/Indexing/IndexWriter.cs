@@ -45,7 +45,6 @@ namespace Corax.Indexing
         private readonly SupportedFeatures _supportedFeatures;
         private FixedSizeTree _documentBoost;
         private Tree _indexMetadata;
-        private Tree _persistedDynamicFieldsAnalyzers;
         private long _numberOfTermModifications;
         private CompactKeyCacheScope _compactKeyScope;
 
@@ -131,7 +130,6 @@ namespace Corax.Indexing
             _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
             _fieldsTree = _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-            _persistedDynamicFieldsAnalyzers = _transaction.CreateTree(Constants.IndexWriter.DynamicFieldsAnalyzersSlice);
 
             _indexMetadata = _transaction.CreateTree(Constants.IndexMetadataSlice);
             _initialNumberOfEntries = _indexMetadata?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
@@ -168,7 +166,7 @@ namespace Corax.Indexing
                 _fieldsTree ??= _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
                 _transaction.Allocator.Allocate(field.Name.Size + Constants.PhraseQuerySuffix.Length, out var memory);
                 var memAsSpan = memory.ToSpan();
-                field.Name.CopyTo(memAsSpan);
+                field.Name.AsReadOnlySpan().CopyTo(memAsSpan);
                 Constants.PhraseQuerySuffix.CopyTo(memAsSpan.Slice(field.Name.Size));
                 var storedName = new Slice(memory);
                 field.TermsVectorFieldRootPage = _fieldsCache.GetFieldRootPage(storedName, _fieldsTree);
@@ -193,7 +191,7 @@ namespace Corax.Indexing
 
             _indexedEntries.Add(keySlice); // Register entry by key.
             int index = InsertTermsPerEntry(entryId);
-            _builder.Init(entryId, index);
+            _builder.Init(entryId, index, keySlice);
             return _builder;
         }
 
@@ -217,7 +215,7 @@ namespace Corax.Indexing
             Slice.From(_transaction.Allocator, key, ByteStringType.Immutable, out var keySlice);
             _indexedEntries.Add(keySlice);  // Register entry by key. 
             int index = InsertTermsPerEntry(entryId);
-            _builder.Init(entryId, index);
+            _builder.Init(entryId, index, keySlice);
 
             return _builder;
         }
@@ -280,65 +278,28 @@ namespace Corax.Indexing
             //We have to use transaction context here for storing slices in _dynamicFieldsTerms since we may reset other
             //allocators during the document insertion.
             var context = _transaction.LowLevelTransaction.Allocator;
-            if (_fieldsMapping.TryGetByFieldName(fieldName, out var indexFieldBinding))
-                return _knownFieldsTerms[indexFieldBinding.FieldId];
-
             _dynamicFieldsTerms ??= new(SliceComparer.Instance);
             if (_dynamicFieldsTerms.TryGetValue(fieldName, out var indexedField))
                 return indexedField;
 
+            IndexedField source = null;
+            if (_fieldsMapping.TryGetByFieldName(fieldName, out var knownField))
+                source = _knownFieldsTerms[knownField.FieldId];
+            
             var clonedFieldName = fieldName.Clone(context);
-            if (_dynamicFieldsMapping is null || _persistedDynamicFieldsAnalyzers is null)
-            {
-                indexedField = CreateDynamicField(null, FieldIndexingMode.Normal);
-                indexedField.FieldRootPage = _fieldsCache.GetFieldRootPage(indexedField.Name, _fieldsTree);
-                return indexedField;
-            }
-
-            var persistedAnalyzer = _persistedDynamicFieldsAnalyzers.Read(clonedFieldName);
             if (_dynamicFieldsMapping?.TryGetByFieldName(clonedFieldName, out var binding) is true)
             {
-                indexedField = new IndexedField(Constants.IndexWriter.DynamicField, binding.FieldName, binding.FieldNameLong,
+                indexedField = source?.CreateVirtualIndexedField(binding) 
+                               ?? new IndexedField(Constants.IndexWriter.DynamicField, binding.FieldName, binding.FieldNameLong,
                     binding.FieldNameDouble, binding.FieldTermTotalSumField, binding.Analyzer,
                     binding.FieldIndexingMode, binding.HasSuggestions, binding.ShouldStore, _supportedFeatures);
-
-                if (persistedAnalyzer != null)
-                {
-                    var originalIndexingMode = (FieldIndexingMode)persistedAnalyzer.Reader.ReadByte();
-                    if (binding.FieldIndexingMode != originalIndexingMode) 
-                        ThrowInconsistentDynamicFieldCreation(binding, originalIndexingMode);
-                }
-
-                if (binding.FieldIndexingMode != FieldIndexingMode.Normal && persistedAnalyzer == null)
-                {
-                    _persistedDynamicFieldsAnalyzers.Add(clonedFieldName, (byte)binding.FieldIndexingMode);
-                }
-
-                _dynamicFieldsTerms[clonedFieldName] = indexedField;
             }
             else
             {
-                FieldIndexingMode mode;
-                if (persistedAnalyzer == null)
-                {
-                    mode = FieldIndexingMode.Normal;
-                }
-                else
-                {
-                    mode = (FieldIndexingMode)persistedAnalyzer.Reader.ReadByte();
-                }
-
-                Analyzer analyzer = mode switch
-                {
-                    FieldIndexingMode.No => null,
-                    FieldIndexingMode.Exact => _dynamicFieldsMapping!.ExactAnalyzer(clonedFieldName.ToString()),
-                    FieldIndexingMode.Search => _dynamicFieldsMapping!.SearchAnalyzer(clonedFieldName.ToString()),
-                    _ => _dynamicFieldsMapping!.DefaultAnalyzer
-                };
-
-                indexedField = CreateDynamicField(analyzer, mode);
+                indexedField = CreateDynamicField(null, FieldIndexingMode.Normal);
             }
-            
+
+            _dynamicFieldsTerms[clonedFieldName] = indexedField;
             InitializeFieldRootPage(indexedField);
             return indexedField;
 
@@ -347,8 +308,9 @@ namespace Corax.Indexing
                 IndexFieldsMappingBuilder.GetFieldNameForLongs(context, clonedFieldName, out var fieldNameLong);
                 IndexFieldsMappingBuilder.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
                 IndexFieldsMappingBuilder.GetFieldForTotalSum(context, clonedFieldName, out var nameSum);
-                var field = new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, analyzer, mode, hasSuggestions: false, shouldStore: false, _supportedFeatures);
-                _dynamicFieldsTerms[clonedFieldName] = field;
+                var field = source is null 
+                    ? new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, analyzer, mode, hasSuggestions: false, shouldStore: false, _supportedFeatures)
+                    : source.CreateVirtualIndexedField(new IndexFieldBinding(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, true, analyzer, hasSuggestions: false, FieldIndexingMode.Normal));
                 return field;
             }
         }
@@ -865,6 +827,10 @@ namespace Corax.Indexing
             uniquePostingList.Sort(sortedFields);
             foreach (var indexedField in sortedFields)
             {
+                //Dynamic terms will be indexed with explicit field terms.
+                if (indexedField.IsVirtual)
+                    continue;
+                
                 using var staticFieldScope = stats.For(indexedField.NameForStatistics);
 
                 if (indexedField.Textual.Count == 0)
@@ -1752,8 +1718,7 @@ namespace Corax.Indexing
             
             return EntryIdEncodings.Encode(termIdInTree, 0, TermIdMask.SmallPostingList);
         }
-
-
+        
         private AddEntriesToTermResult AddEntriesToTermResultSingleValue(Span<byte> tmpBuf, long idInTree, ref EntriesModifications entries, out long termId)
         {
             entries.AssertPreparationIsNotFinished();

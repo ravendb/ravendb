@@ -52,6 +52,7 @@ namespace FastTests
             }
 
             private DocumentStore _src;
+            private DocumentStore _dest;
 
             public static readonly BackupConfiguration DefaultBackupConfiguration;
 
@@ -130,10 +131,10 @@ namespace FastTests
             public (DocumentStore src, DocumentStore dest, AddEtlOperationResult result) CreateSrcDestAndAddEtl(IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null, Options srcOptions = null, [CallerMemberName] string caller = null)
             {
                 _src = _parent.GetDocumentStore(srcOptions, caller);
-                var dest = _parent.GetDocumentStore(caller: caller);
+                _dest = _parent.GetDocumentStore(caller: caller);
 
-                var result = AddEtl(_src, dest, collections, script, applyToAllDocuments);
-                return (_src, dest, result);
+                var result = AddEtl(_src, _dest, collections, script, applyToAllDocuments);
+                return (_src, _dest, result);
             }
 
             public ManualResetEventSlim WaitForEtlToComplete(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate = null, int numOfProcessesToWaitFor = 1)
@@ -357,25 +358,29 @@ namespace FastTests
             {
                 try
                 {
-                    if (_src == null)
-                        return;
+                    using (_src)
+                    using (_dest)
+                    {
 
-                    if (_parent.Context.TestException == null || _parent.Context.TestOutput == null)
-                        return;
+                        if (_src == null)
+                            return;
 
-                    var notifications = GetEtlErrorNotifications(_src).Result;
-                    if (notifications.Any() == false)
-                        return;
+                        if (_parent.Context.TestException == null || _parent.Context.TestOutput == null)
+                            return;
 
-                    string message = string.Join(",\n", notifications);
-                    _parent.Context.TestOutput.WriteLine(message);
+                        var notifications = GetEtlErrorNotifications(_src).Result;
+                        if (notifications.Any() == false)
+                            return;
+
+                        string message = string.Join(",\n", notifications);
+                        _parent.Context.TestOutput.WriteLine(message);
+                    }
                 }
                 catch
                 {
                     // ignored
                 }
             }
-
         }
     }
 }

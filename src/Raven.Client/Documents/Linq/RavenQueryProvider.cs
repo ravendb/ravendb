@@ -294,12 +294,36 @@ namespace Raven.Client.Documents.Linq
         /// Register the query as a lazy-count query in the session and return a lazy
         /// instance that will evaluate the query only when needed
         /// </summary>
-        public Lazy<Task<int>> CountLazilyAsync<TS>(Expression expression, CancellationToken token = default(CancellationToken))
+        public Lazy<long> LongCountLazily<TS>(Expression expression)
+        {
+            var processor = GetQueryProviderProcessor<TS>();
+            var query = processor.GetDocumentQueryFor(expression);
+
+            return query.LongCountLazily();
+        }
+
+        /// <summary>
+        /// Register the query as a lazy-count query in the session and return a lazy
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+        public Lazy<Task<int>> CountLazilyAsync<TS>(Expression expression, CancellationToken token = default)
         {
             var processor = GetQueryProviderProcessor<TS>();
             var query = processor.GetAsyncDocumentQueryFor(expression);
 
             return query.CountLazilyAsync(token);
+        }
+
+        /// <summary>
+        /// Register the query as a lazy-count query in the session and return a lazy
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+        public Lazy<Task<long>> LongCountLazilyAsync<TS>(Expression expression, CancellationToken token = default)
+        {
+            var processor = GetQueryProviderProcessor<TS>();
+            var query = processor.GetAsyncDocumentQueryFor(expression);
+
+            return query.LongCountLazilyAsync(token);
         }
 
         private RavenQueryProviderProcessor<TS> GetQueryProviderProcessor<TS>()

@@ -398,6 +398,13 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/indexes/auto/convert", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task ConvertAutoIndex()
+        {
+            using (var processor = new IndexHandlerProcessorForConvertAutoIndex<DatabaseRequestHandler, DocumentsOperationContext>(this))
+                await processor.ExecuteAsync();
+        }
+
         private IEnumerable<Index> GetIndexesToReportOn()
         {
             IEnumerable<Index> indexes;

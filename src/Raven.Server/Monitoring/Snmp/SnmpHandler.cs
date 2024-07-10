@@ -2,6 +2,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using Lextm.SharpSnmpLib;
+using Raven.Client;
 using Raven.Server.Config;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -92,6 +93,20 @@ namespace Raven.Server.Monitoring.Snmp
                     writer.WriteObject(json);
                 }
             }
+        }
+
+        [RavenAction("/monitoring/snmp/mib", "GET", AuthorizationStatus.Operator)]
+        public async Task GetMib()
+        {
+            var includeServer = GetBoolValueQueryString("includeServer", required: false) ?? true;
+            var includeCluster = GetBoolValueQueryString("includeCluster", required: false) ?? false;
+            var includeDatabases = GetBoolValueQueryString("includeDatabases", required: false) ?? false;
+
+            const string fileName = "RavenDB-MIB.txt";
+            HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{fileName}";
+
+            await using (var writer = new SnmpMibWriter(ResponseBodyStream(), includeServer, includeCluster, includeDatabases))
+                await writer.WriteAsync();
         }
 
         private async ValueTask BulkInternal(string[] oids, JsonOperationContext context)

@@ -16,7 +16,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
-using static Raven.Server.Documents.Subscriptions.SubscriptionStorage;
 
 namespace Raven.Server.Documents.Subscriptions;
 
@@ -31,18 +30,54 @@ public abstract class AbstractSubscriptionStorage
     protected abstract DatabaseTopology GetTopology(ClusterOperationContext context);
     public abstract bool DropSingleSubscriptionConnection(long subscriptionId, string workerId, SubscriptionException ex);
 
+    public abstract bool DisableSubscriptionTasks { get; }
+    private readonly TimeSpan _waitForClusterStabilizationTimeout;
+
     protected AbstractSubscriptionStorage(ServerStore serverStore, int maxNumberOfConcurrentConnections)
     {
         _serverStore = serverStore;
         _concurrentConnectionsSemiSemaphore = new SemaphoreSlim(maxNumberOfConcurrentConnections);
+        _waitForClusterStabilizationTimeout = TimeSpan.FromMilliseconds(Math.Max(30000, (int)(2 * serverStore.Engine.OperationTimeout.TotalMilliseconds)));
+    }
+
+    public bool ShouldWaitForClusterStabilization()
+    {
+        var lastState = _serverStore.Engine.LastState;
+        if (lastState == null)
+            return false;
+
+        switch (lastState.To)
+        {
+            // get last cluster state
+            case RachisState.Passive:
+                // if the last state was passive, we will throw on next cluster command
+                return false;
+            case RachisState.Candidate:
+            {
+                if (DateTime.UtcNow - lastState.When < _waitForClusterStabilizationTimeout)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+            default:
+                // we are fine to proceed with the subscription on this node
+                return false;
+        }
     }
 
     public string GetSubscriptionResponsibleNode(ClusterOperationContext context, SubscriptionState taskStatus)
     {
+        return GetSubscriptionResponsibleNode(context, _serverStore.Engine.CurrentState, taskStatus);
+    }
+
+    internal string GetSubscriptionResponsibleNode(ClusterOperationContext context, RachisState currentState, SubscriptionState taskStatus)
+    {
         var topology = GetTopology(context);
         var tag = GetNodeFromState(taskStatus);
         var lastFunc = UpdateValueForDatabaseCommand.GetLastResponsibleNode(_serverStore.LicenseManager.HasHighlyAvailableTasks(), topology, tag);
-        return topology.WhoseTaskIsIt(_serverStore.Engine.CurrentState, taskStatus, lastFunc);
+        return topology.WhoseTaskIsIt(currentState, taskStatus, lastFunc);
     }
 
     public static string GetSubscriptionResponsibleNodeForProgress(RawDatabaseRecord record, string shardName, SubscriptionState taskStatus, bool hasHighlyAvailableTasks)
@@ -260,7 +295,7 @@ public abstract class AbstractSubscriptionStorage<TState> : AbstractSubscription
                     continue;
 
                 SubscriptionState subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionStateRaw);
-                if (subscriptionState.Disabled)
+                if (subscriptionState.Disabled || DisableSubscriptionTasks)
                 {
                     DropSubscriptionConnections(id, new SubscriptionClosedException($"The subscription {subscriptionName} is disabled and cannot be used until enabled"));
                     continue;
@@ -283,7 +318,13 @@ public abstract class AbstractSubscriptionStorage<TState> : AbstractSubscription
                     continue;
                 }
 
-                var whoseTaskIsIt = GetSubscriptionResponsibleNode(context, subscriptionState);
+                if (_serverStore.Engine.CurrentState == RachisState.Passive)
+                {
+                    DropSubscriptionConnections(id,
+                        new SubscriptionDoesNotBelongToNodeException($"Subscription operation was stopped on '{_serverStore.NodeTag}', because current node state is '{RachisState.Passive}'."));
+                }
+
+                var whoseTaskIsIt = GetSubscriptionResponsibleNode(context, RachisState.Follower, subscriptionState);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
                     var reason = string.IsNullOrEmpty(whoseTaskIsIt) ? "could not get responsible node for subscription task." : $"because it's now under node '{whoseTaskIsIt}' responsibility.";

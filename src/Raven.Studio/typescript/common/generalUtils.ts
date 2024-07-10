@@ -351,16 +351,16 @@ class genUtils {
             message = message.toString();
         }
         
-        const lineBreakIdx = Math.min(message.indexOf("\r"), message.indexOf("\r"));
-        if (lineBreakIdx !== -1 && lineBreakIdx < 256) {
-            return message.substr(0, lineBreakIdx);
+        const lineBreakIdx = Math.min(message.indexOf("\n"), message.indexOf("\r"));
+        if (lineBreakIdx !== -1 && lineBreakIdx < limit) {
+            return message.substring(0, lineBreakIdx);
         }
 
         if (message.length < limit) {
             return message;
         }
 
-        return message.substr(0, limit) + "...";
+        return message.substring(0, limit) + "...";
     }
 
     static sortedAlphaNumericIndex<T>(items: T[], newItem: T, extractor: (item: T) => string): number {

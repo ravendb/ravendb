@@ -193,6 +193,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new NotSupportedInShardingProcessor(this, $"Database '{DatabaseName}' is a sharded database and does not support PutRollingIndex command."))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/indexes/auto/convert", "GET")]
+        public async Task ConvertAutoIndex()
+        {
+            using (var processor = new IndexHandlerProcessorForConvertAutoIndex<ShardedDatabaseRequestHandler, TransactionOperationContext>(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
 

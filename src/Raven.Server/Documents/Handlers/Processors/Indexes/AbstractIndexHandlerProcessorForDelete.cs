@@ -24,7 +24,7 @@ internal abstract class AbstractIndexHandlerProcessorForDelete<TRequestHandler, 
 
         if (LoggingSource.AuditLog.IsInfoEnabled)
         {
-           RequestHandler.LogAuditFor(RequestHandler.DatabaseName, $"Index {name} DELETE");
+           RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "DELETE", $"Index '{name}'");
         }
 
         var processor = GetIndexDeleteProcessor();

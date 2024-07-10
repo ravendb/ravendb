@@ -645,7 +645,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task UpdateDefinitionWithoutState()
         {
-            var (_, leader) = await CreateRaftCluster(3);
+            var (_, leader) = await CreateRaftCluster(3, watcherCluster: true);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             var indexName = "SimpleIndex";
@@ -692,7 +692,7 @@ namespace SlowTests.Issues
                         return documentDatabase.IndexStore.GetIndex(indexName).State;
                     }, IndexState.Normal);
                     Assert.Equal(IndexState.Normal, documentDatabase.IndexStore.GetIndex(indexName).State);
-                }
+                } 
                 //Change priority cluster wide
                 (index, _) = await leader.ServerStore.Engine.PutAsync(new SetIndexPriorityCommand(indexName, IndexPriority.Low, database, Guid.NewGuid().ToString()));
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));

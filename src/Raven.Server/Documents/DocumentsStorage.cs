@@ -846,6 +846,9 @@ namespace Raven.Server.Documents
 
             public ManualResetEventSlim DelayDocumentLoad;
             public Action<string> OnBeforeOpenTableWhenPutDocumentWithSpecificId { get; set; }
+
+            public bool DisableDebugAssertionForTableThrowNotOwned;
+
             public bool? IsDocumentCompressed(DocumentsOperationContext context, Slice lowerDocumentId, out bool? isLargeValue)
             {
                 var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
@@ -1775,6 +1778,9 @@ namespace Raven.Server.Documents
                     revisionsStorage.Delete(context, id, lowerId, collectionName, tombstoneChangeVector,
                         modifiedTicks, nonPersistentFlags, newFlags);
                 }
+
+                if (_forTestingPurposes?.DisableDebugAssertionForTableThrowNotOwned == true)
+                    table.ForTestingPurposesOnly().DisableDebugAssertionForThrowNotOwned = true;
 
                 table.Delete(doc.StorageId);
 

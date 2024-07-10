@@ -526,7 +526,7 @@ namespace Raven.Server.ServerWide.Commands
             private readonly ClusterTransactionOptions _options;
             private long _initialCount;
             private readonly Dictionary<int, List<SingleCommandForShard>> _commands;
-
+            private int _processed = 0;
             public CommandsPerShard(RawDatabaseRecord record, long index, ClusterTransactionOptions options, long initialCount)
             {
                 _record = record;
@@ -545,23 +545,20 @@ namespace Raven.Server.ServerWide.Commands
 
                 list.Add(new SingleCommandForShard
                 {
+                    OriginalPosition = _processed,
                     Id = id,
                     Command = command,
                     ShardNumber = shardNumber,
                 });
+
+                _processed++;
             }
 
-            public IEnumerable<BlittableJsonReaderObject> BuildCommandsPerShard(JsonOperationContext context, DynamicJsonArray output)
+            public IEnumerable<(BlittableJsonReaderObject Command, long Size)> BuildCommandsPerShard(JsonOperationContext context)
             {
                 foreach (var commands in _commands)
                 {
                     var shardNumber = commands.Key;
-
-                    foreach (var command in commands.Value)
-                    {
-                        var result = GetCommandResult(command.Command, command.Id, command.ShardNumber);
-                        output.Add(result);
-                    }
 
                     var cmd = context.ReadObject(
                         new DynamicJsonValue
@@ -573,12 +570,26 @@ namespace Raven.Server.ServerWide.Commands
 
                     using (cmd)
                     {
-                        yield return cmd;
+                        yield return (cmd, commands.Value.Count);
                     }
                 }
             }
 
-            private DynamicJsonValue GetCommandResult(
+            public DynamicJsonArray Results()
+            {
+                var array = new DynamicJsonValue[_processed];
+                foreach (var commands in _commands)
+                {
+                    foreach (var singleCommand in commands.Value)
+                    {
+                        array[singleCommand.OriginalPosition] = GetCommandResult(singleCommand.Command, singleCommand.Id, commands.Key);
+                    }
+                }
+               
+                return new DynamicJsonArray(array);
+            }
+
+            public DynamicJsonValue GetCommandResult(
                 BlittableJsonReaderObject command,
                 string id,
                 int shardNumber)
@@ -594,6 +605,7 @@ namespace Raven.Server.ServerWide.Commands
 
             private struct SingleCommandForShard
             {
+                public int OriginalPosition;
                 public BlittableJsonReaderObject Command;
                 public string Id;
                 public int ShardNumber;
@@ -652,6 +664,7 @@ namespace Raven.Server.ServerWide.Commands
 
             if (HasDocumentsInTransaction == false)
                 return result;
+
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsCountPerDatabase);
 
@@ -676,30 +689,26 @@ namespace Raven.Server.ServerWide.Commands
                     perShard.Add(id, command, shardNumber);
                 }
 
-                var size = 0;
-                foreach (var command in perShard.BuildCommandsPerShard(context, result))
+                foreach (var (command, size) in perShard.BuildCommandsPerShard(context))
                 {
-                    size = result.Count - size;
                     SaveCommandBatch(context, index, rawRecord.DatabaseName, commandsCountPerDatabase, items, command, size);
                 }
+
+                return perShard.Results();
             }
-            else
+
+            var clusterTransactionCommand = context.ReadObject(SerializedDatabaseCommands, "serialized-tx-commands");
+            foreach (BlittableJsonReaderObject command in commands)
             {
-                var clusterTransactionCommand = context.ReadObject(SerializedDatabaseCommands, "serialized-tx-commands");
-                foreach (BlittableJsonReaderObject command in commands)
-                {
-                    if (command.TryGet(nameof(ClusterTransactionDataCommand.Id), out string id) == false)
-                        throw new InvalidOperationException($"Got cluster transaction database command without an id: {command}");
+                if (command.TryGet(nameof(ClusterTransactionDataCommand.Id), out string id) == false)
+                    throw new InvalidOperationException($"Got cluster transaction database command without an id: {command}");
 
-                    var dataCmdRes = GetCommandResult(command, id, ref prevCount, Options.DisableAtomicDocumentWrites, index, rawRecord.Topology.DatabaseTopologyIdBase64,
-                        rawRecord.GetClusterTransactionId());
-                    result.Add(dataCmdRes);
-                }
-
-                SaveCommandBatch(context, index, DatabaseName, commandsCountPerDatabase, items, clusterTransactionCommand, DatabaseCommandsCount);
+                var dataCmdRes = GetCommandResult(command, id, ref prevCount, Options.DisableAtomicDocumentWrites, index, rawRecord.Topology.DatabaseTopologyIdBase64,
+                    rawRecord.GetClusterTransactionId());
+                result.Add(dataCmdRes);
             }
 
-
+            SaveCommandBatch(context, index, DatabaseName, commandsCountPerDatabase, items, clusterTransactionCommand, DatabaseCommandsCount);
 
             return result;
         }

@@ -17,6 +17,8 @@ namespace Raven.Server.Documents
 {
     public sealed class BlittableMetadataModifier : IDisposable, IBlittableDocumentModifier
     {
+        private bool _disposed;
+
         private bool _readingMetadataObject;
         private int _depth;
         private State _state = State.None;
@@ -131,6 +133,8 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void StartObject()
         {
+            AssertNotDisposed();
+
             if (_readingMetadataObject == false)
                 return;
 
@@ -140,6 +144,8 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EndObject()
         {
+            AssertNotDisposed();
+
             if (_readingMetadataObject == false)
                 return;
 
@@ -153,6 +159,8 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool AboutToReadPropertyName(IJsonParser reader, JsonParserState state)
         {
+            AssertNotDisposed();
+
             if (reader is UnmanagedJsonParser unmanagedParser)
                 return AboutToReadPropertyNameInternal(unmanagedParser, state);
             if (reader is ObjectJsonParser objectParser)
@@ -592,7 +600,7 @@ namespace Raven.Server.Documents
                         aboutToReadPropertyName = true;
                         return true;
                     }
-                    
+
                     if ("Raven-Replication-Version"u8.IsEqualConstant(state.StringBuffer) == false ||
                         "Raven-Replication-History"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
@@ -847,10 +855,14 @@ namespace Raven.Server.Documents
                 _ctx.ReturnMemory(_allocations[i]);
             }
             _allocations.Clear();
+
+            _disposed = true;
         }
 
         public void Reset(JsonOperationContext ctx)
         {
+            AssertNotDisposed();
+
             if (_ctx == null) // should never happen
             {
                 _ctx = ctx;
@@ -871,6 +883,13 @@ namespace Raven.Server.Documents
             _ctx = ctx;
             _metadataCollections = _ctx.GetLazyStringForFieldWithCaching(CollectionName.MetadataCollectionSegment);
             _metadataExpires = _ctx.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Expires);
+        }
+
+        [Conditional("DEBUG")]
+        private void AssertNotDisposed()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(BlittableMetadataModifier));
         }
     }
 }

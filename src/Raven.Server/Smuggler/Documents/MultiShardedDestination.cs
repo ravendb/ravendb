@@ -137,6 +137,9 @@ namespace Raven.Server.Smuggler.Documents
         public ITimeSeriesActions TimeSeries() =>
             new ShardedTimeSeriesActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.TimeSeries()), _options);
 
+        public ITimeSeriesActions TimeSeriesDeletedRanges() =>
+            new ShardedTimeSeriesActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.TimeSeriesDeletedRanges()), _options);
+
         public ILegacyActions LegacyDocumentDeletions() =>
             new ShardedLegacyActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.LegacyDocumentDeletions()), _options);
 
@@ -153,6 +156,9 @@ namespace Raven.Server.Smuggler.Documents
             protected readonly ShardedDatabaseContext DatabaseContext;
             protected readonly Dictionary<int, T> _actions;
             protected readonly T _last;
+
+            private BlittableJsonDocumentBuilder _builder;
+            private BlittableMetadataModifier _metadataModifier;
 
             protected ShardedActions(ShardedDatabaseContext databaseContext, Dictionary<int, T> actions, DatabaseSmugglerOptionsServerSide options)
             {
@@ -178,12 +184,30 @@ namespace Raven.Server.Smuggler.Documents
                 return _context;
             }
 
+            public BlittableJsonDocumentBuilder GetBuilderForNewDocument(UnmanagedJsonParser parser, JsonParserState state, BlittableMetadataModifier modifier = null)
+            {
+                return _builder ??= new BlittableJsonDocumentBuilder(_context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "stream/object", parser, state, modifier: modifier);
+            }
+
+            public BlittableMetadataModifier GetMetadataModifierForNewDocument(string firstEtagOfLegacyRevision = null, long legacyRevisionsCount = 0, bool legacyImport = false,
+                bool readLegacyEtag = false, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+            {
+                _metadataModifier ??= new BlittableMetadataModifier(_context, legacyImport, readLegacyEtag, operateOnTypes);
+                _metadataModifier.FirstEtagOfLegacyRevision = firstEtagOfLegacyRevision;
+                _metadataModifier.LegacyRevisionsCount = legacyRevisionsCount;
+
+                return _metadataModifier;
+            }
+
             public virtual async ValueTask DisposeAsync()
             {
                 foreach (var action in _actions.Values)
                 {
                     await action.DisposeAsync();
                 }
+
+                _metadataModifier?.Dispose();
+                _builder?.Dispose();
 
                 _rtnCtx.Dispose();
                 _prevRtnCtx?.Dispose();
@@ -353,6 +377,12 @@ namespace Raven.Server.Smuggler.Documents
             {
                 var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, ts.DocId);
                 await _actions[shardNumber].WriteTimeSeriesAsync(ts);
+            }
+
+            public async ValueTask WriteTimeSeriesDeletedRangeAsync(TimeSeriesDeletedRangeItemForSmuggler deletedRange)
+            {
+                var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, deletedRange.DocId);
+                await _actions[shardNumber].WriteTimeSeriesDeletedRangeAsync(deletedRange);
             }
 
             public void RegisterForDisposal(IDisposable data)

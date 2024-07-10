@@ -28,7 +28,8 @@ export default function DatabaseCustomSorters() {
 
     const { sorters, setSorters, addNewSorter, removeSorter, mapFromDto } = useCustomSorters();
 
-    const asyncGetDatabaseSorters = useAsync(() => databasesService.getCustomSorters(db.name), [db.name], {
+    // Changing the database causes re-mount
+    const asyncGetDatabaseSorters = useAsync(() => databasesService.getCustomSorters(db.name), [], {
         onSuccess(result) {
             setSorters(mapFromDto(result));
         },

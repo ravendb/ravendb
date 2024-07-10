@@ -33,7 +33,6 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             where TComparer3 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer;
     }
     
-    
     private struct Descending<TInnerCmp> : IEntryComparer, IComparer<UnmanagedSpan>, IComparer<int>
         where TInnerCmp : struct, IEntryComparer, IComparer<UnmanagedSpan>, IComparer<int>
     {
@@ -77,6 +76,16 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(int x, int y) => cmp.Compare(y, x); // note the reversed args
+    }
+    
+    private struct DescendingWrapper<TComparer> : IComparer<UnmanagedSpan>
+        where TComparer : struct, IComparer<UnmanagedSpan>
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Compare(UnmanagedSpan x, UnmanagedSpan y)
+        {
+            return new TComparer().Compare(y, x); // note the reversed args
+        }
     }
 
     private struct EntryComparerByScore : IEntryComparer, IComparer<UnmanagedSpan>, IComparer<int>
@@ -244,9 +253,14 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageLocator);
             match._token.ThrowIfCancellationRequested();
             bool isDescending = orderMetadata[0].Ascending == false;
-            var indirectComparer =
-                new IndirectComparer<CompactKeyComparer, TComparer2, TComparer3>(ref match, batchTerms, new CompactKeyComparer(), comparer2, comparer3, isDescending);
-            var indexes = SortByTerms(ref match, batchTermIds, batchTerms, isDescending, indirectComparer);
+            object indirectComparer = isDescending ?
+                new IndirectComparer<DescendingWrapper<CompactKeyComparer>, TComparer2, TComparer3>(ref match, batchTerms, new DescendingWrapper<CompactKeyComparer>(), comparer2, comparer3)
+                : new IndirectComparer<CompactKeyComparer, TComparer2, TComparer3>(ref match, batchTerms, new CompactKeyComparer(), comparer2, comparer3);
+
+            var indexes = isDescending
+                ? SortByTerms(ref match, batchTermIds, batchTerms, (IndirectComparer<DescendingWrapper<CompactKeyComparer>, TComparer2, TComparer3>)indirectComparer)
+                : SortByTerms(ref match, batchTermIds, batchTerms, (IndirectComparer<CompactKeyComparer, TComparer2, TComparer3>)indirectComparer);
+
             for (int i = 0; i < indexes.Length; i++)
             {
                 int bIdx = indexes[i];
@@ -254,7 +268,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             }
         }
 
-        private static void MaybeBreakTies<TComparer>(Span<long> buffer, TComparer tieBreaker, bool isDescending) 
+        private static void MaybeBreakTies<TComparer>(Span<long> buffer, TComparer tieBreaker) 
             where TComparer : struct, IComparer<long>
         {
             // We may have ties, have to resolve that before we can continue
@@ -262,11 +276,6 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             {
                 var x = buffer[i - 1];
                 var y = buffer[i];
-                if (isDescending)
-                {
-                    x = -x;
-                    y = -y;
-                }
 
                 x >>= 15;
                 y >>= 15;
@@ -278,8 +287,6 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 for (; end < buffer.Length; end++)
                 {
                     y = buffer[end];
-                    if (isDescending)
-                        y = -y;
                     y >>= 15;
                     if (x != y)
                         break;
@@ -290,7 +297,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             }
         }
 
-        private static Span<int> SortByTerms<TComparer>(ref SortingMultiMatch<TInner> match, Span<long> buffer, UnmanagedSpan* batchTerms, bool isDescending,
+        private static Span<int> SortByTerms<TComparer>(ref SortingMultiMatch<TInner> match, Span<long> buffer, UnmanagedSpan* batchTerms,
             TComparer tieBreaker)
             where TComparer : struct, IComparer<long>, IComparer<int>
         {
@@ -316,15 +323,14 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
                 l = BinaryPrimitives.ReverseEndianness(l) >>> 1;
                 long sortKey = l | (uint)i;
-                if (isDescending)
-                    sortKey = -sortKey;
+                
                 buffer[i] = sortKey;
             }
 
             Sort.Run(buffer);
-            MaybeBreakTies(buffer, tieBreaker, isDescending);
+            MaybeBreakTies(buffer, tieBreaker);
 
-            return ExtractIndexes(buffer, isDescending);
+            return ExtractIndexes(buffer);
         }
         
         private static Span<int> SortDirectly<TComparer>(Span<long> buffer, TComparer tieBreaker)
@@ -341,15 +347,13 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             return indexes;
         }
 
-        private static Span<int> ExtractIndexes(Span<long> buffer, bool isDescending)
+        private static Span<int> ExtractIndexes(Span<long> buffer)
         {
             // note - we reuse the memory
             var indexes = MemoryMarshal.Cast<long, int>(buffer)[..(buffer.Length)];
             for (int i = 0; i < buffer.Length; i++)
             {
                 var sortKey = buffer[i];
-                if (isDescending)
-                    sortKey = -sortKey;
                 var idx = (ushort)sortKey & 0x7FFF;
                 indexes[i] = idx;
             }
@@ -700,17 +704,15 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         private readonly TComparer1 _cmp1;
         private readonly TComparer2 _cmp2;
         private readonly TComparer3 _cmp3;
-        private readonly bool _descending;
         private readonly IEntryComparer[] _nextComparers;
         private readonly int _maxDegreeOfInnerComparer;
 
-        public IndirectComparer(ref SortingMultiMatch<TInner> match, UnmanagedSpan* terms, TComparer1 entryComparer, TComparer2 cmp2, TComparer3 cmp3, bool descending)
+        public IndirectComparer(ref SortingMultiMatch<TInner> match, UnmanagedSpan* terms, TComparer1 entryComparer, TComparer2 cmp2, TComparer3 cmp3)
         {
             _terms = terms;
             _cmp1 = entryComparer;
             _cmp2 = cmp2;
             _cmp3 = cmp3;
-            _descending = descending;
             _nextComparers = match._nextComparers;
 
             if (typeof(TComparer1) == typeof(NullComparer))
@@ -727,16 +729,10 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
         public int Compare(long x, long y)
         {
-            if (_descending)
-            {
-                x = -x;
-                y = -y;
-            }
-
             var xIdx = (ushort)x & 0X7FFF;
             var yIdx = (ushort)y & 0X7FFF;
 
-             Debug.Assert(yIdx < SortingMatch.SortBatchSize && xIdx < SortingMatch.SortBatchSize);
+            Debug.Assert(yIdx < SortingMatch.SortBatchSize && xIdx < SortingMatch.SortBatchSize);
 
             var cmp = 0;
             for (int comparerId = 0; cmp == 0 && comparerId < _maxDegreeOfInnerComparer; ++comparerId)
@@ -750,9 +746,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 };
             }
             
-            return _descending 
-                ? -cmp
-                : cmp;
+            return cmp;
         }
 
 

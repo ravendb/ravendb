@@ -9,6 +9,7 @@ namespace Corax.Indexing;
 
 internal sealed class IndexedField
 {
+    private readonly IndexedField _parent;
     public struct SpatialEntry
     {
         public List<(double, double)> Locations;
@@ -22,7 +23,9 @@ internal sealed class IndexedField
     /// <summary>
     /// Position matches position from _entryToTerms from IndexWriter which creates relation between entry and field
     /// </summary>
-    public NativeList<NativeList<int>> EntryToTerms;
+    
+    private NativeList<NativeList<int>> _entryToTerms;
+    public ref NativeList<NativeList<int>> EntryToTerms => ref _parent == null ? ref _entryToTerms : ref _parent._entryToTerms;
     public readonly Dictionary<long, int> Longs;
     public readonly Dictionary<double, int> Doubles;
     public Dictionary<Slice, int> Suggestions;
@@ -38,11 +41,12 @@ internal sealed class IndexedField
     public readonly bool HasSuggestions;
     public readonly bool ShouldStore;
     public readonly SupportedFeatures SupportedFeatures;
+    public readonly bool IsVirtual;
     public bool HasMultipleTermsPerField;
     public long FieldRootPage;
     public long TermsVectorFieldRootPage;
     public bool FieldSupportsPhraseQuery => SupportedFeatures.PhraseQuery && FieldIndexingMode is FieldIndexingMode.Search;
-
+    
     public override string ToString()
     {
         return Name.ToString() + " Id: " + Id;
@@ -53,6 +57,33 @@ internal sealed class IndexedField
     {
     }
 
+    private IndexedField(int id, Slice name, Slice nameLong, Slice nameDouble, Slice nameTotalLengthOfTerms, Analyzer analyzer,
+        FieldIndexingMode fieldIndexingMode, bool hasSuggestions, bool shouldStore, in SupportedFeatures supportedFeatures, string nameForStatistics, long fieldRootPage, long termsVectorFieldRootPage, FastList<EntriesModifications> storage, Dictionary<Slice, int> textual, Dictionary<long, int> longs, Dictionary<double, int> doubles, IndexedField parent)
+    {
+        _parent = parent;
+        Name = name;
+        NameLong = nameLong;
+        NameDouble = nameDouble;
+        NameTotalLengthOfTerms = nameTotalLengthOfTerms;
+        Id = id;
+        Analyzer = analyzer;
+        HasSuggestions = hasSuggestions;
+        ShouldStore = shouldStore;
+        SupportedFeatures = supportedFeatures;
+        FieldRootPage = fieldRootPage;
+        TermsVectorFieldRootPage = termsVectorFieldRootPage;
+        Storage = storage;
+        Textual = textual;
+        Longs = longs;
+        Doubles = doubles;
+        FieldIndexingMode = fieldIndexingMode;
+        ShouldIndex = supportedFeatures.StoreOnly == false || fieldIndexingMode != FieldIndexingMode.No;
+        NameForStatistics = nameForStatistics ?? $"Field_{Name}";
+        IsVirtual = true;
+        if (fieldIndexingMode is FieldIndexingMode.Search && _parent.EntryToTerms.IsValid == false)
+            EntryToTerms = new();
+    }
+    
     public IndexedField(int id, Slice name, Slice nameLong, Slice nameDouble, Slice nameTotalLengthOfTerms, Analyzer analyzer,
         FieldIndexingMode fieldIndexingMode, bool hasSuggestions, bool shouldStore, in SupportedFeatures supportedFeatures, string nameForStatistics = null, long fieldRootPage = -1, long termsVectorFieldRootPage = -1)
     {
@@ -77,6 +108,28 @@ internal sealed class IndexedField
 
         if (fieldIndexingMode is FieldIndexingMode.Search)
             EntryToTerms = new();
+    }
+
+    public IndexedField CreateVirtualIndexedField(IndexFieldBinding dynamicField)
+    {
+        Analyzer analyzer;
+        FieldIndexingMode fieldIndexingMode;
+        //backward compatibility
+        switch (dynamicField.FieldIndexingMode)
+        {
+            case FieldIndexingMode.No:
+                analyzer = null;
+                fieldIndexingMode = FieldIndexingMode.No;
+                break;
+            default:
+                analyzer = Analyzer ?? dynamicField.Analyzer;
+                fieldIndexingMode = Analyzer is null ? dynamicField.FieldIndexingMode : FieldIndexingMode;
+                break;
+        }
+        
+        return new IndexedField(Constants.IndexWriter.DynamicField, dynamicField.FieldName, dynamicField.FieldNameLong, dynamicField.FieldNameDouble,
+            dynamicField.FieldTermTotalSumField, analyzer, fieldIndexingMode, dynamicField.HasSuggestions, dynamicField.ShouldStore,
+            SupportedFeatures, dynamicField.FieldNameForStatistics, FieldRootPage, TermsVectorFieldRootPage, Storage, Textual, Longs, Doubles, this);
     }
 
     public void Clear()

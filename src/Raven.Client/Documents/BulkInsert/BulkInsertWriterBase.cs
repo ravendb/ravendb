@@ -23,8 +23,9 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
     private JsonOperationContext.MemoryBuffer _memoryBuffer;
     private JsonOperationContext.MemoryBuffer _backgroundMemoryBuffer;
     private bool _isInitialWrite = true;
+    internal DateTime LastFlushToStream { get; private set; }
 
-    internal Stream _requestBodyStream;
+    private Stream _requestBodyStream;
 
     internal readonly BulkInsertOperation.BulkInsertStreamExposerContent StreamExposer;
 
@@ -39,6 +40,7 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
 
         var returnMemoryBuffer = ctx.GetMemoryBuffer(out _memoryBuffer);
         var returnBackgroundMemoryBuffer = ctx.GetMemoryBuffer(out _backgroundMemoryBuffer);
+        UpdateFlushTime();
 
         _disposeOnce = new DisposeOnceAsync<SingleAttempt>(async () =>
         {
@@ -106,6 +108,11 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
         return false;
     }
 
+    private void UpdateFlushTime()
+    {
+        LastFlushToStream = DateTime.UtcNow;
+    }
+
     protected virtual void OnCurrentWriteStreamSet(MemoryStream currentWriteStream)
     {
 
@@ -135,7 +142,10 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
             await dst.WriteAsync(buffer.Memory.Memory.Slice(0, bytesRead), _token).ConfigureAwait(false);
 
             if (forceDstFlush)
+            {
+                UpdateFlushTime();
                 await dst.FlushAsync(_token).ConfigureAwait(false);
+            }
         }
     }
 

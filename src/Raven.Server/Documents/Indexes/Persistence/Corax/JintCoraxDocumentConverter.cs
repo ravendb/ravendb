@@ -39,6 +39,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
 {
     private readonly IndexFieldOptions _allFields;
     private readonly bool _ticksSupport;
+    private readonly bool _dynamicFieldsProperlyHandleDynamicConfiguration;
 
     protected CoraxJintDocumentConverterBase(Index index, IndexDefinition definition, bool storeValue, int numberOfBaseFields, string keyFieldName,
         string storeValueFieldName, ICollection<IndexField> fields = null, bool canContainSourceDocumentId = false) :
@@ -49,6 +50,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         Debug.Assert(index.Type.IsJavaScript());
 
         _ticksSupport = IndexDefinitionBaseServerSide.IndexVersion.IsTimeTicksInJavaScriptIndexesSupported(index.Definition.Version);
+        _dynamicFieldsProperlyHandleDynamicConfiguration = IndexDefinitionBaseServerSide.IndexVersion.JavaScriptProperlyHandleDynamicFieldsIndexFields <= index.Definition.Version;
     }
 
     protected override bool SetDocumentFields<TBuilder>(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, TBuilder builder,
@@ -76,7 +78,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             bool innerShouldSkip = false;
             var propertyAsString = property.AsString();
             var field = GetFieldObjectForProcessing(propertyAsString, indexingScope);
-            var isDynamicFieldEnumerable = IsDynamicFieldEnumerable(propertyDescriptor.Value, propertyAsString, field, indexingScope, out var iterator);
+            var isDynamicFieldEnumerable = IsDynamicFieldEnumerable(propertyDescriptor.Value, propertyAsString, ref field, indexingScope, out var iterator);
             bool shouldSaveAsBlittable;
             object value;
             JsValue actualValue;
@@ -84,7 +86,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             {
                 do
                 {
-                    ProcessObject(iterator.Current, propertyAsString, field, out shouldSaveAsBlittable, out value, out actualValue, out innerShouldSkip);
+                    ProcessObject(iterator.Current, propertyAsString, ref field, out shouldSaveAsBlittable, out value, out actualValue, out innerShouldSkip);
                     if (shouldSaveAsBlittable)
 {                        ProcessAsJson(actualValue, field, documentToProcess, out innerShouldSkip);}
                     hasFields |= innerShouldSkip == false;
@@ -94,7 +96,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             }
             else
             {
-                ProcessObject(propertyDescriptor.Value, propertyAsString, field,
+                ProcessObject(propertyDescriptor.Value, propertyAsString, ref field,
                     out shouldSaveAsBlittable, out value, out actualValue, out innerShouldSkip);
                 if (shouldSaveAsBlittable)
                     ProcessAsJson(actualValue, field, documentToProcess, out innerShouldSkip);
@@ -155,7 +157,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             return value.IsObject() && value.IsArray() == false;
         }
 
-        void ProcessObject(JsValue valueToInsert, in string propertyAsString, IndexField field, out bool shouldProcessAsBlittable, out object value, out JsValue actualValue, out bool shouldSkip)
+        void ProcessObject(JsValue valueToInsert, in string propertyAsString, ref IndexField field, out bool shouldProcessAsBlittable, out object value, out JsValue actualValue, out bool shouldSkip)
         {
             shouldSkip = false;
             value = null;
@@ -170,7 +172,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
 
                 //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name
                 //so we must use field.Name and not property from this point on.
-                var val = TryDetectDynamicFieldCreation(propertyAsString, actualValue.AsObject(), field, indexingScope);
+                var val = TryDetectDynamicFieldCreation(propertyAsString, actualValue.AsObject(), ref field, indexingScope);
                 if (val != null)
                 {
                     if (val.IsObject() && val.AsObject().TryGetValue(JavaScriptFieldName.SpatialPropertyName, out _))
@@ -298,7 +300,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         return field;
     }
 
-    private bool IsDynamicFieldEnumerable(JsValue propertyDescriptorValue, string propertyAsString, IndexField field, CurrentIndexingScope indexingScope,
+    private bool IsDynamicFieldEnumerable(JsValue propertyDescriptorValue, string propertyAsString, ref IndexField field, CurrentIndexingScope indexingScope,
         out IEnumerator<JsValue> iterator)
     {
         iterator = Enumerable.Empty<JsValue>().GetEnumerator();
@@ -312,12 +314,12 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
 
         var valueAsObject = iterator.Current.AsObject();
 
-        return TryDetectDynamicFieldCreation(propertyAsString, valueAsObject, field, indexingScope) is not null
+        return TryDetectDynamicFieldCreation(propertyAsString, valueAsObject, ref field, indexingScope) is not null
                || valueAsObject.HasOwnProperty(JavaScriptFieldName.SpatialPropertyName);
     }
 
 
-    private static JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, IndexField field, CurrentIndexingScope scope)
+    private JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, ref IndexField field, CurrentIndexingScope scope)
     {
         //We have a field creation here _ = {"$value":val, "$name","$options":{...}}
         if (!valueAsObject.HasOwnProperty(JavaScriptFieldName.ValuePropertyName))
@@ -325,18 +327,23 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
 
         var value = valueAsObject.GetOwnProperty(JavaScriptFieldName.ValuePropertyName).Value;
         PropertyDescriptor nameProperty = valueAsObject.GetOwnProperty(JavaScriptFieldName.NamePropertyName);
-        if (nameProperty != null)
+
+        string fieldName;
+        FieldIndexing? fieldIndexing = null;
+        FieldStorage? fieldStorage = null;
+        
+        if (nameProperty.Value.IsUndefined() == false)
         {
             var fieldNameObj = nameProperty.Value;
             if (fieldNameObj.IsString() == false)
                 throw new ArgumentException($"Dynamic field {property} is expected to have a string {JavaScriptFieldName.NamePropertyName} property but got {fieldNameObj}");
 
-            field.Name = fieldNameObj.AsString();
+            fieldName = fieldNameObj.AsString();
             field.Id = CoraxLib.Constants.IndexWriter.DynamicField;
         }
         else
         {
-            field.Name = property;
+            fieldName = property;
         }
 
         if (valueAsObject.HasOwnProperty(JavaScriptFieldName.OptionsPropertyName))
@@ -359,7 +366,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 var propertyNameAsString = propertyName.AsString();
                 if (string.Equals(propertyNameAsString, nameof(CreateFieldOptions.Indexing), StringComparison.OrdinalIgnoreCase))
                 {
-                    field.Indexing = GetEnum<FieldIndexing>(optionValue, propertyNameAsString);
+                    fieldIndexing = GetEnum<FieldIndexing>(optionValue, propertyNameAsString);
 
                     continue;
                 }
@@ -367,29 +374,42 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 if (string.Equals(propertyNameAsString, nameof(CreateFieldOptions.Storage), StringComparison.OrdinalIgnoreCase))
                 {
                     if (optionValue.IsBoolean())
-                        field.Storage = optionValue.AsBoolean()
+                        fieldStorage = optionValue.AsBoolean()
                             ? FieldStorage.Yes
                             : FieldStorage.No;
                     else
-                        field.Storage = GetEnum<FieldStorage>(optionValue, propertyNameAsString);
+                        fieldStorage = GetEnum<FieldStorage>(optionValue, propertyNameAsString);
 
                     continue;
                 }
 
                 if (string.Equals(propertyNameAsString, nameof(CreateFieldOptions.TermVector), StringComparison.OrdinalIgnoreCase))
                 {
-                    field.TermVector = GetEnum<FieldTermVector>(optionValue, propertyNameAsString);
+                    //Ignore: Corax will build TermVector only for field with 'Search' analyzer and will do it automatically.
+                    //There is no need to parsing it since it will be unused anyway.
+                    //field.TermVector = GetEnum<FieldTermVector>(optionValue, propertyNameAsString);
 
                     continue;
                 }
             }
         }
 
-        if (scope.DynamicFields.ContainsKey(field.Name) == false)
+        scope.DynamicFields ??= new();
+        if (scope.DynamicFields.TryGetValue(fieldName, out var persistedIndexField))
         {
-            scope.DynamicFields[field.Name] = field;
-            scope.IncrementDynamicFields();
+            if (persistedIndexField.Indexing != fieldIndexing && _dynamicFieldsProperlyHandleDynamicConfiguration)
+                throw new InvalidDataException($"Inconsistent dynamic field creation options were detected. Field '{fieldName}' was created with '{persistedIndexField.Indexing}' analyzer but now '{field.Indexing}' analyzer was specified. This is not supported");
+            field = persistedIndexField;
         }
+        else
+        {
+            var newField = IndexField.Create(fieldName, new IndexFieldOptions() { Indexing = fieldIndexing, Storage = fieldStorage }, _allFields,
+                global::Corax.Constants.IndexWriter.DynamicField);
+            scope.DynamicFields.Add(fieldName, newField);
+            scope.IncrementDynamicFields();
+            field = newField;
+        }
+            
 
         return value;
         

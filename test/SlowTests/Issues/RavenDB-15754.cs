@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Sparrow.Platform;
@@ -62,7 +63,7 @@ namespace SlowTests.Issues
                 }
 
                 var index = new DocumentsIndex();
-                await new DocumentsIndex().ExecuteAsync(store);
+                await index.ExecuteAsync(store);
 
                 Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
                 await AssertCount(store, _companyName1, _employeesCount);
@@ -91,6 +92,75 @@ namespace SlowTests.Issues
                 await AssertCount(store, _companyName2, _employeesCount);
                 Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
                 Assert.True(batchCount > 1);
+
+                var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
+                Assert.Equal(_employeesCount, indexStats.MapAttempts);
+                Assert.Equal(_employeesCount, indexStats.MapReferenceAttempts);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public async Task CanIndexReferencedCompressedDocumentsAndParentDocumentChange()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = x =>
+                {
+                    x.DocumentsCompression = new DocumentsCompressionConfiguration(compressRevisions: false, compressAllCollections: true);
+                }
+            }))
+            {
+                var company = new Company
+                {
+                    Name = _companyName1
+                };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+
+                    using (var bulk = store.BulkInsert())
+                    {
+                        for (var i = 0; i < _employeesCount; i++)
+                        {
+                            await bulk.StoreAsync(new Employee
+                            {
+                                CompanyId = company.Id
+                            }, i.ToString());
+                        }
+                    }
+                }
+
+                var index = new DocumentsIndex();
+                await index.ExecuteAsync(store);
+
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+                await AssertCount(store, _companyName1, _employeesCount);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    company.Name = _companyName2;
+                    await session.StoreAsync(company, company.Id);
+
+                    for (var i = 0; i < _employeesCount; i++)
+                    {
+                        await session.StoreAsync(new Employee
+                        {
+                            CompanyId = company.Id
+                        }, i.ToString());
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
+                await AssertCount(store, _companyName1, 0);
+                await AssertCount(store, _companyName2, _employeesCount);
+
+                var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
+                Assert.Equal(2 * _employeesCount, indexStats.MapAttempts);
+                Assert.Equal(0, indexStats.MapReferenceAttempts);
             }
         }
 

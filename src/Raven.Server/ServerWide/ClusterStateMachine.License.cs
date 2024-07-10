@@ -279,7 +279,8 @@ public sealed partial class ClusterStateMachine
             return;
 
         if (licenseStatus.CanSetupDefaultRevisionsConfiguration == false &&
-            databaseRecord.Revisions.Default != null)
+            databaseRecord.Revisions.Default != null &&
+            databaseRecord.Revisions.Default.Disabled == false)
         {
             throw new LicenseLimitException(LimitType.RevisionsConfiguration, "Your license doesn't allow the creation of a default configuration for revisions.");
         }
@@ -289,13 +290,16 @@ public sealed partial class ClusterStateMachine
 
         foreach (KeyValuePair<string, RevisionsCollectionConfiguration> revisionPerCollectionConfiguration in databaseRecord.Revisions.Collections)
         {
+            if (revisionPerCollectionConfiguration.Value.Disabled)
+                continue;
+
             if (revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep != null &&
                 maxRevisionsToKeep != null &&
                 revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep > maxRevisionsToKeep)
             {
                 throw new LicenseLimitException(LimitType.RevisionsConfiguration,
                     $"The defined minimum revisions to keep '{revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep}' " +
-                    $" exceeds the licensed one '{maxRevisionsToKeep}'");
+                    $"for collection '{revisionPerCollectionConfiguration.Key}' exceeds the licensed one '{maxRevisionsToKeep}'");
             }
 
             if (revisionPerCollectionConfiguration.Value.MinimumRevisionAgeToKeep != null &&
@@ -304,7 +308,7 @@ public sealed partial class ClusterStateMachine
             {
                 throw new LicenseLimitException(LimitType.RevisionsConfiguration,
                     $"The defined minimum revisions age to keep '{revisionPerCollectionConfiguration.Value.MinimumRevisionAgeToKeep}' " +
-                    $" exceeds the licensed one '{maxRevisionAgeToKeepInDays}'");
+                    $"for collection '{revisionPerCollectionConfiguration.Key}' exceeds the licensed one '{maxRevisionAgeToKeepInDays}'");
             }
         }
     }

@@ -33,6 +33,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
             if (RequestRouter.TryGetClientVersion(HttpContext, out var version) == false)
                 return;
 
+            if (version.Major == 5 && (version.Minor < 4 || version.Minor == 4 && version.Build < 200) &&
+                options.OperateOnTypes.HasFlag(DatabaseItemType.TimeSeries))
+            {
+                // version is older than 5.4.200
+                options.OperateOnTypes |= DatabaseItemType.TimeSeriesDeletedRanges;
+            }
+
             if (version.Major != RavenVersionAttribute.Instance.MajorVersion)
                 return;
 

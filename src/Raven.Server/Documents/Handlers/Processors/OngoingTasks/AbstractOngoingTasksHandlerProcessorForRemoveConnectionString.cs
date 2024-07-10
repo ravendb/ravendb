@@ -1,8 +1,11 @@
 ﻿using System.Threading.Tasks;
+using Elastic.Clients.Elasticsearch;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
@@ -20,6 +23,11 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
             var connectionStringName = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("connectionString");
             var type = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "DELETE", $"Connection string '{connectionStringName}'");
+            }
 
             return await RequestHandler.ServerStore.RemoveConnectionString(RequestHandler.DatabaseName, connectionStringName, type, raftRequestId);
         }

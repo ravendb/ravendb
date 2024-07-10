@@ -119,9 +119,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
         private IStreamQueryResultWriter<Document> GetDocumentQueryResultWriter(string format, HttpResponse response, JsonOperationContext context, Stream responseBodyStream,
             string[] propertiesArray, string fileNamePrefix = null)
         {
-            if (IsCsvFormat(format))
+            var queryFormat = GetQueryResultFormat(format);
+            switch (queryFormat)
             {
-                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
+                case QueryResultFormat.Json:
+                    return new StreamJsonFileDocumentQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileNamePrefix);
+                case QueryResultFormat.Csv:
+                    return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
             }
 
             if (propertiesArray != null)
@@ -129,12 +133,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                 ThrowUnsupportedException("Using json output format with custom fields is not supported.");
             }
 
-            if (string.IsNullOrEmpty(format) == false && string.Equals(format, "jsonl", StringComparison.OrdinalIgnoreCase))
+            switch (queryFormat)
             {
-                return new StreamJsonlDocumentQueryResultWriter(responseBodyStream, context);
+                case QueryResultFormat.Jsonl:
+                    return new StreamJsonlDocumentQueryResultWriter(responseBodyStream, context);
+                default:
+                    return new StreamJsonDocumentQueryResultWriter(responseBodyStream, context);
             }
-
-            return new StreamJsonDocumentQueryResultWriter(responseBodyStream, context);
         }
 
         protected override IStreamQueryResultWriter<BlittableJsonReaderObject> GetBlittableQueryResultWriter(string format, bool isDebug, JsonOperationContext context, HttpResponse response, Stream responseBodyStream, bool fromSharded,
@@ -144,12 +149,20 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
             {
                 return new StreamBlittableDocumentQueryResultWriter(responseBodyStream, context);
             }
-            
-            if (IsCsvFormat(format) == false)
-                ThrowUnsupportedException($"You have selected \"{format}\" file format, which is not supported.");
 
-            //does not write query stats to stream
-            return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
+            var queryFormat = GetQueryResultFormat(format);
+            switch (queryFormat)
+            {
+                case QueryResultFormat.Json:
+                    //does not write query stats to stream
+                    return new StreamJsonFileBlittableQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileNamePrefix);
+                case QueryResultFormat.Csv:
+                    //does not write query stats to stream
+                    return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
+                default:
+                    ThrowUnsupportedException($"You have selected \"{format}\" file format, which is not supported.");
+                    return null;
+            }
         }
     }
 }

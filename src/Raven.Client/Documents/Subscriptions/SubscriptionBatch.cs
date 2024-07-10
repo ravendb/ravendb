@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Subscriptions
         public SubscriptionBatch(RequestExecutor requestExecutor, IDocumentStore store, string dbName, Logger logger) : base(requestExecutor, dbName, logger)
         {
             _store = store;
-            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => throw new InvalidOperationException("Shouldn't be generating new ids here"));
+            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, generateIdAsync: entity => throw new InvalidOperationException("Shouldn't be generating new ids here"));
         }
 
 

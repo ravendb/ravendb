@@ -25,6 +25,7 @@ function CreateSampleData() {
 
     const docsLink = useRavenLink({ hash: "SUTS29" });
 
+    // Changing the database causes re-mount
     const asyncFetchCollectionsStats = useAsync(() => tasksService.fetchCollectionsStats(databaseName), []);
     const asyncGetSampleDataClasses = useAsync(() => tasksService.getSampleDataClasses(databaseName), []);
 

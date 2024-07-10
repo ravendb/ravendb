@@ -398,6 +398,7 @@ namespace FastTests.Corax
 
                 if (entry.Boost.HasValue)
                     builder.Boost(entry.Boost.Value);
+                builder.EndWriting();
             }
 
             indexWriter.Commit();

@@ -58,6 +58,8 @@ namespace Raven.Server.Smuggler.Documents.Data
         SmugglerSourceType GetSourceType();
 
         Stream GetAttachmentStream(LazyStringValue hash, out string tag);
+
+        IAsyncEnumerable<TimeSeriesDeletedRangeItemForSmuggler> GetTimeSeriesDeletedRangesAsync(ITimeSeriesActions action, List<string> collectionsToExport);
     }
 
     public enum SmugglerSourceType

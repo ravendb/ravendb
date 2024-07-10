@@ -22,6 +22,8 @@ import TaskUtils from "components/utils/TaskUtils";
 import EtlType = Raven.Client.Documents.Operations.ETL.EtlType;
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import liveQueueSinkStatsWebSocketClient from "common/liveQueueSinkStatsWebSocketClient";
+import showDataDialog from "viewmodels/common/showDataDialog";
+import app from "durandal/app";
 
 type treeActionType = "toggleTrack" | "trackItem" | "gapItem" | "previewEtlScript" | "previewSinkScript" |
                       "subscriptionErrorItem" | "subscriptionPendingItem" | "subscriptionConnectionItem" | "previewSubscriptionQuery";
@@ -208,17 +210,43 @@ class hitTest {
     }
 
     onMouseDown() {
+        if (!this.overTooltip()) {
+            this.removeTooltip();
+        }
         this.cursor(graphHelper.prefixStyle("grabbing"));
     }
 
     onMouseUp() {
         this.cursor(graphHelper.prefixStyle("grab"));
     }
+    private overTooltip(): boolean {
+        const tooltip = document.querySelector(".tooltip");
+        if (!tooltip) {
+            return false;
+        }
+        
+        const [mouseX, mouseY] = d3.mouse(document.querySelector("body"));
+        const tooltipPosition = tooltip.getBoundingClientRect();
+        if (mouseX < tooltipPosition.x - 2 || mouseX > tooltipPosition.x + tooltipPosition.width) {
+            return false;
+        }
+        
+        if (mouseY < tooltipPosition.y - 2 || mouseY > tooltipPosition.y + tooltipPosition.height) {
+            return false;
+        }
+        
+        return true;
+    }
 
     onMouseMove() {
         const clickLocation = d3.mouse(this.container.node());
         const items = this.findItems(clickLocation[0], clickLocation[1]);
-
+        
+        if (this.overTooltip()) {
+            // over tooltip - do nothing
+            return;
+        }
+        
         const overToggleTrack = items.find(x => x.actionType === "toggleTrack");
 
         const currentPreviewEtlItem = items.find(x => x.actionType === "previewEtlScript");
@@ -241,21 +269,21 @@ class hitTest {
 
         const currentTrackEventItem = items.find(x => x.actionType === "subscriptionErrorItem");
         if (currentTrackEventItem) {
-            this.handleSubscriptionErrorTooltip(currentTrackEventItem.arg as subscriptionErrorItemInfo , clickLocation[0], clickLocation[1]);
+            this.handleSubscriptionErrorTooltip(currentTrackEventItem.arg as subscriptionErrorItemInfo , clickLocation[0], currentTrackEventItem.maxY + ongoingTasksStats.brushSectionHeight);
             this.cursor("auto");
             return;
         }
 
         const currentTrackPendingItem = items.find(x => x.actionType === "subscriptionPendingItem");
         if (currentTrackPendingItem) {
-            this.handleSubscriptionPendingTooltip(currentTrackPendingItem.arg as subscriptionPendingItemInfo, clickLocation[0], clickLocation[1]);
+            this.handleSubscriptionPendingTooltip(currentTrackPendingItem.arg as subscriptionPendingItemInfo, clickLocation[0], currentTrackPendingItem.maxY + ongoingTasksStats.brushSectionHeight);
             this.cursor("auto");
             return;
         }
 
         const currentTrackConnectionItem = items.find(x => x.actionType === "subscriptionConnectionItem");
         if (currentTrackConnectionItem) {
-            this.handleSubscriptionConnectionTooltip(currentTrackConnectionItem.arg as subscriptionConnectionItemInfo, clickLocation[0], clickLocation[1]);
+            this.handleSubscriptionConnectionTooltip(currentTrackConnectionItem.arg as subscriptionConnectionItemInfo, clickLocation[0], currentTrackConnectionItem.maxY + ongoingTasksStats.brushSectionHeight);
             this.cursor("auto");
             return;
         }
@@ -292,6 +320,12 @@ class ongoingTasksStats extends shardViewModelBase {
 
     view = require("views/database/status/ongoingTasksStats.html");
 
+    private static readonly showDetailsButton = `<div class="margin-left-sm">
+    <a href="#" class="btn btn-default btn-sm js-task-details-btn" title="Show details">
+        <i class="icon-preview"></i>
+    </a>
+</div>`;
+    
     /* static */
     static readonly brushSectionHeight = 40;
     private static readonly brushSectionTrackWorkHeight = 22;
@@ -396,6 +430,8 @@ class ongoingTasksStats extends shardViewModelBase {
 
     private inProgressAnimator: inProgressAnimator;
     private firstDataChunkDrawn = false;
+    
+    private currentDetails: string = null;
 
     /* d3 */
 
@@ -562,6 +598,14 @@ class ongoingTasksStats extends shardViewModelBase {
             () => this.hideTooltip());
 
         this.enableLiveView();
+
+        const $body = $("body");
+        this.registerDisposableDelegateHandler($body, "click", ".js-task-details-btn", (event: JQueryEventObject) => {
+            event.preventDefault();
+            app.showBootstrapDialog(new showDataDialog("Error details", this.currentDetails, "plain"));
+            
+            this.hideTooltip();
+        });
     }
 
     private initCanvases() {
@@ -1763,11 +1807,11 @@ class ongoingTasksStats extends shardViewModelBase {
         if (errorType === "ConnectionRejected") {
             errorIcon = "\uea45";
             iconStyle = this.colors.tracks.ConnectionRejected;
-            this.drawErrorBackgound(context, iconStyle, x, y - 1);
+            this.drawErrorBackground(context, iconStyle, x, y - 1);
         } else {
             errorIcon = "\uea44";
             iconStyle = this.colors.tracks.ConnectionAborted;
-            this.drawErrorBackgound(context, iconStyle, x, y - 1);
+            this.drawErrorBackground(context, iconStyle, x, y - 1);
         }
         
         context.fillStyle = iconStyle;
@@ -1775,7 +1819,7 @@ class ongoingTasksStats extends shardViewModelBase {
         context.fillText(errorIcon, x - 8, y + 6);
     }
     
-    private drawErrorBackgound(context: CanvasRenderingContext2D, outlineColor: string, x: number, y: number): void {
+    private drawErrorBackground(context: CanvasRenderingContext2D, outlineColor: string, x: number, y: number): void {
         // draw background
         context.beginPath();
         context.arc(x, y, 9, 0, 2 * Math.PI);
@@ -1821,7 +1865,7 @@ class ongoingTasksStats extends shardViewModelBase {
                 }
             }
 
-            // 3. Draw inner/nested operations/stripes..
+            // 3. Draw inner/nested operations/stripes...
             if (op.Operations && op.Operations.length > 0) {
                 this.drawStripes(context, op.Operations, currentX, yStart + yOffset, yOffset, extentFunc, perfItemWithCache, trackName);
             }
@@ -2003,10 +2047,10 @@ class ongoingTasksStats extends shardViewModelBase {
             tooltipHtml += `<div class="tooltip-li">Size of all batches: <div class="value">${generalUtils.formatBytesToSize(itemInfo.totalBatchSize)} </div></div>`;
             
             if (itemInfo.exceptionText) {
-                tooltipHtml += `<div class="tooltip-li">Message: <div class="value">${itemInfo.exceptionText}</div></div>`;
+                tooltipHtml += `<div class="tooltip-li">Message: <div class="value">${generalUtils.trimMessage(itemInfo.exceptionText, 1024)}</div>${ongoingTasksStats.showDetailsButton}</div>`;
             }
             
-            this.handleTooltip(itemInfo, x, y, tooltipHtml);
+            this.handleTooltip(itemInfo, x, y, tooltipHtml, itemInfo.exceptionText);
         }
     }
 
@@ -2017,13 +2061,14 @@ class ongoingTasksStats extends shardViewModelBase {
             let tooltipHtml = `<div class="tooltip-header">  ${itemInfo.title} </div>`;
             tooltipHtml += `<div class="tooltip-li">Client URI: <div class="value">${itemInfo.clientUri} </div></div>`;
             tooltipHtml += `<div class="tooltip-li">Strategy: <div class="value">${itemInfo.strategy} </div></div>`;
-            tooltipHtml += `<div class="tooltip-li">Message: <div class="value">${itemInfo.exceptionText} </div></div>`;
-            this.handleTooltip(itemInfo, x, y, tooltipHtml);
+            tooltipHtml += `<div class="tooltip-li">Message: <div class="value">${generalUtils.trimMessage(itemInfo.exceptionText, 1024)} </div>${ongoingTasksStats.showDetailsButton}</div>`;
+            this.handleTooltip(itemInfo, x, y, tooltipHtml, itemInfo.exceptionText);
         }
     }
     
     private handleTrackTooltip(context: trackItemContext, x: number, y: number) {
         const currentDatum = this.tooltip.datum();
+        let details: string = null;
 
         if (currentDatum !== context.item) {
             const type = context.rootStats.Type;
@@ -2129,7 +2174,8 @@ class ongoingTasksStats extends shardViewModelBase {
                         tooltipHtml += `<div class="tooltip-li">Included Time Series entries: <div class="value">${elementWithData.NumberOfIncludedTimeSeriesEntries.toLocaleString()} (size: ${generalUtils.formatBytesToSize(elementWithData.SizeOfIncludedTimeSeriesInBytes)})</div></div>`;
 
                         if (elementWithData.Exception) {
-                            tooltipHtml += `<div class="tooltip-li">Message: <div class="value">${elementWithData.Exception} </div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Message: <div class="value">${generalUtils.trimMessage(elementWithData.Exception, 1024)} </div></div>`;
+                            details = elementWithData.Exception;
                         }
                     }
                         break;
@@ -2144,7 +2190,10 @@ class ongoingTasksStats extends shardViewModelBase {
                     const baseElement = context.rootStats as Raven.Client.Documents.Replication.ReplicationPerformanceBase;
                     if (baseElement.Errors) {
                         tooltipHtml += `<div class="tooltip-header text-danger">Errors:</div>`;
-                        baseElement.Errors.forEach(err => tooltipHtml += `<div class="tooltip-li">Errors: <div class="value">${err.Error} </div></div>`);
+                        baseElement.Errors.forEach(err => 
+                            tooltipHtml += `<div class="tooltip-li">Errors: <div class="value">${generalUtils.trimMessage(err.Error, 1024)} </div></div>`);
+                        
+                        details = baseElement.Errors.map(x => x.Timestamp + ": " + x.Error).join("\r\n");
                     }
                 }
             } else { // child item
@@ -2309,7 +2358,11 @@ class ongoingTasksStats extends shardViewModelBase {
                 }
             }
             
-            this.handleTooltip(context.item, x, y, tooltipHtml);
+            if (details) {
+                tooltipHtml += `<div class="tooltip-li">Details: <div class="value">${ongoingTasksStats.showDetailsButton}</div></div>`;
+            }
+            
+            this.handleTooltip(context.item, x, y, tooltipHtml, details);
         }
     }
     
@@ -2342,8 +2395,11 @@ class ongoingTasksStats extends shardViewModelBase {
     }
 
     private handleTooltip(element: taskOperation | timeGapInfo | performanceBaseWithCache | subscriptionErrorItemInfo | subscriptionPendingItemInfo,
-                          x: number, y: number, tooltipHtml: string) {
+                          x: number, y: number, tooltipHtml: string, details: string = undefined) {
         if (element && !this.dialogVisible) {
+            
+            this.currentDetails = details;
+            
             this.tooltip
                 .style('display', undefined)
                 .html(tooltipHtml)
@@ -2353,25 +2409,25 @@ class ongoingTasksStats extends shardViewModelBase {
             const tooltipWidth = $tooltip.width();
             const tooltipHeight = $tooltip.height();
             
-            x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
+            x = Math.min(x - 80, Math.max(this.totalWidth - tooltipWidth, 0));
             y = Math.min(y, Math.max(this.totalHeight - tooltipHeight, 0));
 
             this.tooltip
-                .style("left", (x + 10) + "px")
-                .style("top", (y + 10) + "px");
+                .style("left", (x + 2) + "px")
+                .style("top", (y + 1) + "px");
 
             this.tooltip
                 .transition()
                 .duration(250)
                 .style("opacity", 1);
-
-           
         } else {
             this.hideTooltip();
         }
     }
 
     private hideTooltip() {
+        this.currentDetails = null;
+        
         this.tooltip.transition()
             .duration(250)
             .style("opacity", 0)
