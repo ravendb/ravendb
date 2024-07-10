@@ -24,11 +24,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly IState _state;
 
-        public LuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory, Transaction readTransaction)
+        public LuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory, Transaction readTransaction, IndexSearcher indexSearcher)
             : base(index, LoggingSource.Instance.GetLogger<LuceneSuggestionIndexReader>(index._indexStorage.DocumentDatabase.Name))
         {
             _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
-            _searcher = ((LuceneIndexPersistence)index.IndexPersistence).GetSearcher(readTransaction, _state);
+            _searcher = indexSearcher;
         }
 
         public override SuggestionResult Suggestions(IndexQueryServerSide query, SuggestionField field, JsonOperationContext documentsContext, CancellationToken token)

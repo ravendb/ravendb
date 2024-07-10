@@ -1,4 +1,5 @@
 ﻿using Corax.Mappings;
+using Lucene.Net.Search;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -25,9 +26,9 @@ public sealed class ShardedIndexReadOperationFactory : IIndexReadOperationFactor
         return new ShardedCoraxIndexReadOperation(index, logger, readTransaction, queryBuilderFactories, fieldsMapping, query);
     }
 
-    public LuceneSuggestionIndexReader CreateLuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory, 
-        Transaction readTransaction)
+    public LuceneSuggestionIndexReader CreateLuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory,
+        Transaction readTransaction, IndexSearcher indexSearcher)
     {
-        return new ShardedLuceneSuggestionIndexReader(index, directory,  readTransaction);
+        return new ShardedLuceneSuggestionIndexReader(index, directory,  readTransaction, indexSearcher);
     }
 }
