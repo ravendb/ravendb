@@ -84,8 +84,8 @@ namespace FastTests.Corax
                 Assert.Equal("list/1", idsName[0]); // most unique 
                 Assert.Equal("list/11", idsName[1]); // 2nd
                 Assert.Equal("list/111", idsName[2]); // 3th
-                Assert.Equal("list/2", idsName[3]); // those scoring has no impact
-                Assert.Equal("list/4", idsName[4]); //
+                Assert.Equal("list/4", idsName[3]); // those scoring has no impact
+                Assert.Equal("list/2", idsName[4]); //
             }
         }
 

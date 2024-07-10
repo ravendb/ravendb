@@ -551,8 +551,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
         return l;
     }
-
-
+    
     private static void SortResults<TEntryComparer>(ref SortingMatch<TInner> match, Span<long> batchResults) 
         where TEntryComparer : struct,  IEntryComparer, IComparer<UnmanagedSpan>
     {

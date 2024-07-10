@@ -83,6 +83,14 @@ public unsafe struct TermsReader : IDisposable
         return xTerm;
     }
     
+    public void GetDecodedTermsByIds(long dictionaryId, long xIds, out ReadOnlySpan<byte> xTerm, long yIds, out ReadOnlySpan<byte> yTerm)
+    {
+        var xKey = GetTerm(xIds);
+        var yKey = GetTerm(yIds);
+        DecodeKey(_xKeyScope, xKey.Address, xKey.Length, dictionaryId, out xTerm);
+        DecodeKey(_yKeyScope, yKey.Address, yKey.Length, dictionaryId, out yTerm);
+    }
+    
     public void GetDecodedTerms(long dictionaryId, UnmanagedSpan x, out ReadOnlySpan<byte> xTerm, UnmanagedSpan y, out ReadOnlySpan<byte> yTerm)
     {
         // we have to do this so we won't get both terms from the same scope, maybe overwriting one another

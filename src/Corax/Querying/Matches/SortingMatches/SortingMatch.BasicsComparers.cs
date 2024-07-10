@@ -185,16 +185,9 @@ internal sealed class AlphanumericalComparer
         }
     }
     
-    public int Compare(ReadOnlySpan<byte> string1, ReadOnlySpan<byte> string2, bool descending)
+    public int Compare(ReadOnlySpan<byte> string1, ReadOnlySpan<byte> string2)
     {
         Span<char> buffers = stackalloc char[8];
-        if (descending)
-        {
-            var t = string2;
-            string2 = string1;
-            string1 = t;
-        }
-        
         var string1State = new AlphanumericStringComparisonState(string1, buffers.Slice(0, 4));
         var string2State = new AlphanumericStringComparisonState(string2, buffers.Slice(4));
 
@@ -207,7 +200,6 @@ internal sealed class AlphanumericalComparer
             string2State.ScanNextAlphabeticOrNumericSequence();
 
             var result = string1State.CompareWithAnotherState(ref string2State);
-
             if (result != 0)
             {
                 return result;

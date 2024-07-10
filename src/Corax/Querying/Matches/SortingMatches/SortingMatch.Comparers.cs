@@ -2,9 +2,6 @@
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net.Mail;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Mappings;
@@ -17,7 +14,6 @@ using Voron;
 using Voron.Data.Containers;
 using Voron.Data.Lookups;
 using Voron.Impl;
-using Voron.Util;
 
 namespace Corax.Querying.Matches.SortingMatches;
 
@@ -32,8 +28,7 @@ unsafe partial struct SortingMatch<TInner>
             UnmanagedSpan* batchTerms,
             bool descending = false);
     }
-
-
+    
     private struct Descending<TInnerCmp> : IEntryComparer, IComparer<UnmanagedSpan>
         where TInnerCmp : struct, IEntryComparer, IComparer<UnmanagedSpan>
     {
@@ -101,22 +96,19 @@ unsafe partial struct SortingMatch<TInner>
             }
 
             // Note! readScores & indexes are aliased and same as batchTermIds
+            var heapSize = Math.Min(match._take, batchResults.Length);
+            heapSize = heapSize < 0 ? batchResults.Length : heapSize;
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+            using var _ = llt.Allocator.Allocate(heapSize, out Span<float> terms);
+            var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter(indexes.Slice(0, heapSize), terms, descending == false);
+            
             for (int i = 0; i < batchTermIds.Length; i++)
-            {
-                batchTerms[i] = new UnmanagedSpan(readScores[i]);
-                indexes[i] = i;
-            }
-
-            EntryComparerHelper.IndirectSort<EntryComparerByScore>(indexes, batchTerms, descending);
-
-            ref var scoreResults = ref match._scoresResults;
-            for (int i = 0; i < indexes.Length; i++)
-            {
-                match._results.Add(batchResults[indexes[i]]);
-                if (match._sortingDataTransfer.IncludeScores)
-                    scoreResults.Add((float)batchTerms[indexes[i]].Double);
-            }
+                heapSorter.Insert(i, readScores[i]);
+            
+            if (match._sortingDataTransfer.IncludeScores)
+                heapSorter.FillWithTerms(batchResults, ref match._results, ref match._scoresResults);
+            else
+                heapSorter.Fill(batchResults, ref match._results);
         }
 
         private static void BoostDocuments(SortingMatch<TInner> match, Span<long> batchResults, Span<float> readScores)
@@ -357,11 +349,16 @@ unsafe partial struct SortingMatch<TInner>
 
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
             match._cancellationToken.ThrowIfCancellationRequested();
-            var indexes = EntryComparerHelper.NumericSortBatch<EntryComparerByLong>(batchTermIds, batchTerms, descending);
-            for (int i = 0; i < indexes.Length; i++)
-            {
-                match._results.Add(batchResults[indexes[i]]);
-            }
+            var heapSize = Math.Min(match._take, batchResults.Length);
+            heapSize = heapSize <= 0 ? batchResults.Length : heapSize;
+            var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+            using var _ = llt.Allocator.Allocate(heapSize, out Span<long> terms);
+            var sorter = HeapSorterBuilder.BuildSingleNumericalSorter(indexes.Slice(0, heapSize), terms, descending);
+
+            for (var i = 0; i < batchResults.Length; ++i)
+                sorter.Insert(i, batchTermIds[i]);
+            
+            sorter.Fill(batchResults, ref match._results);
         }
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
@@ -386,11 +383,16 @@ unsafe partial struct SortingMatch<TInner>
 
             _lookup.GetFor(batchResults, batchTermIds, BitConverter.DoubleToInt64Bits(double.MinValue));
             match._cancellationToken.ThrowIfCancellationRequested();
-            var indexes = EntryComparerHelper.NumericSortBatch<EntryComparerByDouble>(batchTermIds, batchTerms, descending);
-            for (int i = 0; i < indexes.Length; i++)
-            {
-                match._results.Add(batchResults[indexes[i]]);
-            }
+            var heapSize = Math.Min(match._take, batchResults.Length);
+            heapSize = heapSize <= 0 ? batchResults.Length : heapSize;
+            var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+            using var _ = llt.Allocator.Allocate(heapSize, out Span<double> terms);
+            var sorter = HeapSorterBuilder.BuildSingleNumericalSorter(indexes.Slice(0, heapSize), terms, descending);
+
+            for (var i = 0; i < batchResults.Length; ++i)
+                sorter.Insert(i, BitConverter.Int64BitsToDouble(batchTermIds[i]));
+            
+            sorter.Fill(batchResults, ref match._results);
         }
 
         public Slice GetSortFieldName(ref SortingMatch<TInner> match)
@@ -428,6 +430,8 @@ unsafe partial struct SortingMatch<TInner>
             _allocator = match._searcher.Allocator;
         }
 
+  
+        
         public void SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
             UnmanagedSpan* batchTerms,
             bool descending = false)
@@ -446,9 +450,7 @@ unsafe partial struct SortingMatch<TInner>
 
             using var _ = _allocator.Allocate(heapCapacity, out Span<ByteString> terms);
 
-            var heap = new AlphanumericalHeapSorter();
-            heap.Init(documents, terms, _allocator, descending);
-
+            var heap = HeapSorterBuilder.BuildSingleAlphanumericalSorter(documents, terms, _allocator, descending);
             for (int i = 0; i < batchTermIds.Length; i++)
                 heap.Insert(i, _reader.GetDecodedTerm(_dictionaryId, batchTerms[i]));
 
@@ -488,41 +490,38 @@ unsafe partial struct SortingMatch<TInner>
                 return;
             }
 
+            var heapSize = Math.Min(match._take, batchResults.Length);
+            heapSize = heapSize < 0 ? batchResults.Length : heapSize;
+            
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
-            var spatialResults = match._sortingDataTransfer.IncludeDistances
-                ? new Span<SpatialResult>((byte*)batchTerms + batchResults.Length * sizeof(UnmanagedSpan), batchResults.Length)
-                : Span<SpatialResult>.Empty;
+            var spatialResults = llt.Allocator.Allocate(heapSize, out Span<SpatialResult> terms);
+
+
+            var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter<SpatialResult>(indexes.Slice(0, heapSize), terms, descending);
+            
+
 
             for (int i = 0; i < batchResults.Length; i++)
             {
-                double distance;
+                SpatialResult distance; 
                 if (_reader.TryGetSpatialPoint(batchResults[i], out var coords) == false)
                 {
-                    if (match._sortingDataTransfer.IncludeDistances)
-                        spatialResults[i] = SpatialResult.Invalid;
-                    // always at the bottom, then, desc & asc
-                    distance = descending ? double.MinValue : double.MaxValue;
+                    distance = new SpatialResult() { Distance = descending ? double.MinValue : double.MaxValue, Latitude = Double.NaN, Longitude = Double.NaN };
                 }
                 else
                 {
-                    distance = SpatialUtils.GetGeoDistance(coords, _center, _round, _units);
-                    if (match._sortingDataTransfer.IncludeDistances)
-                        spatialResults[i] = new SpatialResult() { Distance = distance, Latitude = coords.Lat, Longitude = coords.Lng };
+                    distance = new SpatialResult()
+                    {
+                        Distance = SpatialUtils.GetGeoDistance(coords, _center, _round, _units), Longitude = coords.Lng, Latitude = coords.Lat
+                    };
                 }
-
-                batchTerms[i] = new UnmanagedSpan(distance);
-                indexes[i] = i;
+                heapSorter.Insert(i, distance);
             }
 
-            EntryComparerHelper.IndirectSort<EntryComparerByDouble>(indexes, batchTerms, descending);
-
-            for (int i = 0; i < indexes.Length; i++)
-            {
-                match._results.Add(batchResults[indexes[i]]);
-
-                if (match._sortingDataTransfer.IncludeDistances)
-                    match._distancesResults.Add(spatialResults[indexes[i]]);
-            }
+            if (match._sortingDataTransfer.IncludeDistances)
+                heapSorter.FillWithTerms(batchResults, ref match._results, ref match._distancesResults);
+            else
+                heapSorter.Fill(batchResults, ref match._results);
         }
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
