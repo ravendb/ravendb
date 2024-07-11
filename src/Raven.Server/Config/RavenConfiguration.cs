@@ -526,7 +526,6 @@ namespace Raven.Server.Config
                     {
                         if (createdDirectory != null)
                         {
-                            Interlocked.Decrement(ref _pathCounter);
                             IOExtensions.DeleteDirectory(createdDirectory);
                         }
                     }
