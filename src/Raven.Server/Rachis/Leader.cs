@@ -799,6 +799,8 @@ namespace Raven.Server.Rachis
                         existing?.TrySetException(te);
                     }
 
+                    ObserveTask(faulted.Task);
+
                     _newEntry.Dispose();
                     _voterResponded.Dispose();
                     _promotableUpdated.Dispose();
@@ -814,6 +816,19 @@ namespace Raven.Server.Rachis
                     if (lockTaken)
                         Monitor.Exit(this);
                 }
+            }
+        }
+
+        void ObserveTask(Task task)
+        {
+            // Can be replaced with 'GC.KeepAlive(task.Exception)';
+
+            try
+            {
+                task.GetAwaiter().GetResult();
+            }
+            catch
+            {
             }
         }
 
