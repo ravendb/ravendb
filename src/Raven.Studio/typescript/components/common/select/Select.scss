@@ -78,6 +78,12 @@
                 color: bs5variables.$link-color;
             }
 
+            .react-select__option--is-disabled {
+                opacity: 0.5;
+                color: bs5variables.$text-muted-var;
+                cursor: default;
+            }
+
             hr {
                 margin: 0 bs5variables.$gutter-xxs;
             }

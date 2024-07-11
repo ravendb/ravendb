@@ -4,41 +4,18 @@
 @use "Content/scss/variables";
 
 .database-switcher {
-    .dropdown-toggle {
-        height: 100%;
-        display: flex !important;
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-        border-radius: 0 sizes.$border-radius-pill sizes.$border-radius-pill 0 !important;
-        border: 1px solid colors.$border-color-light-var !important;
-        background-color: colors.$panel-header-bg-var !important;
-        font-size: 0.875rem !important;
-        transition: none;
+    min-width: 300px;
+    max-width: 300px;
+    width: 300px;
+    border-top-right-radius: var(--bs-border-radius-pill) !important;
+    border-bottom-right-radius: var(--bs-border-radius-pill) !important;
+
+    .react-select__control {
+        min-height: 35px;
+        height: 35px;
+        border-top-right-radius: var(--bs-border-radius-pill) !important;
+        border-bottom-right-radius: var(--bs-border-radius-pill) !important;
     }
 
-    .dropdown-menu-container {
-        position: relative;
-
-        .dropdown-menu {
-            min-width: 100%;
-            margin-top: sizes.$gutter-xxs;
-            font-size: 0.875rem !important;
-            max-height: 640px;
-            overflow-y: auto;
-
-            &:hover {
-                filter: colors.$hover-filter-var;
-                transition: bs5variables.$transition-base;
-            }
-        }
-    }
-
-    .dropdown-item {
-        background-color: colors.$panel-bg-1-var;
-        color: colors.$text-emphasis-var !important;
-        &:active {
-            background-color: colors.$panel-header-bg-var !important;
-        }
-    }
+    // TODO @mateusz: format long database name
 }
