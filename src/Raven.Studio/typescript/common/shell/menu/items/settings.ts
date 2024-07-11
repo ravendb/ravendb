@@ -26,7 +26,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
     
     const settingsItems: menuItem[] = [
         new leafMenuItem({
-            route: ['databases/settings/databaseSettings'],
+            route: 'databases/settings/databaseSettings',
             moduleId: require('viewmodels/database/settings/databaseSettings'),
             shardingMode: "allShards",
             title: 'Database Settings',

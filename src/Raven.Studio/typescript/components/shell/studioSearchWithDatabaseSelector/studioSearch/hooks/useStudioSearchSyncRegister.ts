@@ -90,40 +90,25 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
         );
     }, [allDatabaseNames, appUrl, omniSearch, handleDatabaseSwitch]);
 
-    const getMenuItemType = useCallback(
-        (route: string): StudioSearchMenuItemType => {
-            if (route === "virtual") {
-                return null;
-            }
+    const getMenuItemType = useCallback((route: string): StudioSearchMenuItemType => {
+        if (route === "virtual") {
+            return null;
+        }
 
-            const isDatabaseRoute = getIsDatabaseRoute(route);
+        const isDatabaseRoute = route.startsWith(databaseRoutePrefix);
 
-            if (isDatabaseRoute && !activeDatabaseName) {
-                return "serverMenuItem";
-            }
+        if (isDatabaseRoute) {
+            const databaseRoute = route.replace(databaseRoutePrefix, "");
 
-            if (isDatabaseRoute) {
-                if (route.startsWith("databases/tasks")) {
-                    return "tasksMenuItem";
-                }
-                if (route.startsWith("databases/indexes") || route.startsWith("databases/query")) {
-                    return "indexesMenuItem";
-                }
-                if (route.startsWith("databases/documents")) {
-                    return "documentsMenuItem";
-                }
-                if (route.startsWith("databases/settings")) {
-                    return "settingsMenuItem";
-                }
-                if (route.startsWith("databases/status")) {
-                    return "statsMenuItem";
+            for (const [prefix, databaseMenuItemType] of Object.entries(databaseRouteMappings)) {
+                if (databaseRoute.startsWith(prefix)) {
+                    return databaseMenuItemType;
                 }
             }
+        }
 
-            return "serverMenuItem";
-        },
-        [activeDatabaseName]
-    );
+        return "serverMenuItem";
+    }, []);
 
     // Register menu items
     useEffect(() => {
@@ -140,8 +125,9 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
 
         menuItems.forEach(crawlMenu);
 
-        menuLeafs.forEach((item) => {
-            if (ko.unwrap(item.nav) && !item.alias) {
+        menuLeafs
+            .filter((item) => ko.unwrap(item.nav) && !item.alias)
+            .forEach((item) => {
                 const canHandle = item.requiredAccess
                     ? accessManager.canHandleOperation(item.requiredAccess, activeDatabaseName)
                     : true;
@@ -150,27 +136,28 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
                     return;
                 }
 
-                const firstRoute = (Array.isArray(item.route) ? item.route[0] : item.route) ?? "";
-                const type = getMenuItemType(firstRoute);
+                const route = Array.isArray(item.route) ? item.route.find((x) => x) : item.route;
+                const type = getMenuItemType(route);
 
                 if (type === null) {
                     return;
                 }
 
+                const innerActions = (item.search?.innerActions ?? []).map((x) => ({
+                    text: x.name,
+                    alternativeTexts: x.alternativeNames,
+                }));
+
                 searchItems.push({
                     type,
                     text: item.title,
-                    route: firstRoute,
+                    route,
                     alternativeTexts: item.search?.alternativeTitles ?? [],
                     icon: item.css.replace("icon-", "") as IconName,
                     onSelected: (e) => goToMenuItem(item, e),
-                    innerActions: (item.search?.innerActions ?? []).map((x) => ({
-                        text: x.name,
-                        alternativeTexts: x.alternativeNames,
-                    })),
+                    innerActions,
                 });
-            }
-        });
+            });
 
         const allMenuItemTypes = exhaustiveStringTuple<StudioSearchMenuItemType>()(
             "serverMenuItem",
@@ -190,10 +177,18 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
     }, [activeDatabaseName, menuItems, omniSearch, goToMenuItem, getMenuItemType]);
 }
 
-function getIsDatabaseRoute(route: string): boolean {
-    if (route === "databases") {
-        return false;
-    }
+const databaseRoutePrefix = "databases/";
 
-    return route.startsWith("databases");
-}
+const databaseRouteMappings: Record<string, StudioSearchMenuItemType> = {
+    tasks: "tasksMenuItem",
+    indexes: "indexesMenuItem",
+    query: "indexesMenuItem",
+    documents: "documentsMenuItem",
+    patch: "documentsMenuItem",
+    identities: "documentsMenuItem",
+    cmpXchg: "documentsMenuItem",
+    settings: "settingsMenuItem",
+    manageDatabaseGroup: "settingsMenuItem",
+    advanced: "settingsMenuItem",
+    status: "statsMenuItem",
+};
