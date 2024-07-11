@@ -807,15 +807,9 @@ namespace Voron.Impl.Journal
                 _forTestingPurposes?.OnUpdateJournalStateUnderWriteTransactionLock?.Invoke();
 
                 JournalFile journalFile = _waj._files.First(x => x.Number == flushedRecord.FlushedToJournal);
-                SetLastFlushed(new LastFlushState(
-                    flushedRecord.TransactionId,
-                    flushedRecord.FlushedToJournal,
-                    journalFile,
-                    _journalsToDelete.Values.ToList()));
                 
                 var unusedJournals = new List<JournalFile>();
                 _waj._files = _waj._files.RemoveWhile(x => x.Number < flushedRecord.FlushedToJournal, unusedJournals);
-
 
                 if (_waj._logger.IsInfoEnabled)
                 {
@@ -827,6 +821,13 @@ namespace Voron.Impl.Journal
                 {
                     AddJournalToDelete(unused);
                 }
+                
+                SetLastFlushed(new LastFlushState(
+                    flushedRecord.TransactionId,
+                    flushedRecord.FlushedToJournal,
+                    journalFile,
+                    _journalsToDelete.Values.ToList()));
+
 
                 if (_waj._files.Count == 0)
                     _waj.CurrentFile = null;
