@@ -8,7 +8,10 @@ using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Compression;
+using Voron.Util.Conversion;
 
 namespace Voron.Data.Tables
 {
@@ -21,7 +24,6 @@ namespace Voron.Data.Tables
 
         private readonly int _elementSize;
 
-
         public TableValueReader(byte* ptr, int size) : this(-1, ptr, size)
         {
             
@@ -33,12 +35,12 @@ namespace Voron.Data.Tables
             Pointer = ptr;
             Size = size;
 
-            if (size > ushort.MaxValue)
-                _elementSize = 4;
-            else if (size > byte.MaxValue)
-                _elementSize = 2;
-            else
-                _elementSize = 1;
+            _elementSize = size switch
+            {
+                > ushort.MaxValue => 4,
+                > byte.MaxValue => 2,
+                _ => 1
+            };
 
             VariableSizeEncoding.Read<int>(ptr, out _offset);
         }
@@ -64,35 +66,43 @@ namespace Voron.Data.Tables
             return Encoding.UTF8.GetString(read + bytesToSkip, size - bytesToSkip);
         }
 
+        // PERF: This table allow us to access the <mask, shift, indexAdjustment> tuple directly from a location in memory.
+        // The reason why we use an extra integer is to avoid having to multiply by 3, by multiplying by 4 we can
+        // multiply by applying shifts (the JIT will take care of that).
+        private static ReadOnlySpan<int> ElementsTable => new int[] 
+            {
+                0, 0, 0, 0,                             // Index 0 (not used)
+                0x000000FF, 24, 3, 0,                   // Index 1 when _elementSize == 1
+                0x0000FFFF, 16, 2, 0,                   // Index 2 when _elementSize == 2
+                0, 0, 0, 0,                             // Index 3 (not used)
+                unchecked((int)0xFFFFFFFF), 0, 0, 0     // Index 4 when _elementSize == 4
+            };
+        
         public byte* Read(int index, out int size)
         {
-            var hasNext = index + 1 < Count;
+            PortableExceptions.ThrowIfOnDebug<ArgumentOutOfRangeException>(index < 0 || index >= Count);
 
-            if ((index < 0) || (index >= Count))
-                ThrowIndexOutOfRange();
-
-            int position;
-            int nextPos;
-
+            // Calculate the starting pointer to the data, adjusted by the offset.
             var dataPtr = (Pointer + _offset);
-            switch (_elementSize)
-            {
-                case 1:
-                    position = dataPtr[index];
-                    nextPos = hasNext ? dataPtr[index + 1] : (Size - _offset);
-                    break;
-                case 2:
-                    position = ((ushort*)dataPtr)[index];
-                    nextPos = hasNext ? ((ushort*)dataPtr)[index + 1] : (Size - _offset);
-                    break;
-                case 4:
-                    position = ((int*)dataPtr)[index];
-                    nextPos = hasNext ? ((int*)dataPtr)[index + 1] : (Size - _offset);
-                    break;
-                default:
-                    ThrowInvalidElementSize();
-                    goto case 1; // never hit
-            }
+
+            // Retrieve mask, shift, and index adjustment values from the table.
+            int elementsLoc = 4 * _elementSize;
+            uint mask = (uint)ElementsTable[elementsLoc];
+            int shift = ElementsTable[elementsLoc + 1];
+            int indexAdjustment = ElementsTable[elementsLoc + 2];
+
+            // Calculate the pointer to the exact byte position of the element, adjusted for indexing.
+            // The key idea is that to avoid tripping on memory we don't own, indexing will consider the
+            // element as the last memory address accessed. The index adjustment ensures this safety.
+            byte* byteIndexPtr = dataPtr + index * _elementSize - indexAdjustment;
+
+            // Decode the position of the element within the data array using bit manipulation.
+            int position = (int)((*(uint*)byteIndexPtr >> shift) & mask);
+
+            // Determine if there is a subsequent element and calculate its position.
+            // This helps to determine the boundary of the current element.
+            var hasNext = index + 1 < Count;
+            int nextPos = hasNext ? (int)((*(uint*)(byteIndexPtr + _elementSize) >> shift) & mask) : (Size - _offset);
 
             size = nextPos - position;
             return dataPtr + position;
@@ -104,11 +114,5 @@ namespace Voron.Data.Tables
             throw new ArgumentOutOfRangeException(nameof(_elementSize), "Unknown element size " + _elementSize);
         }
 
-        [DoesNotReturn]
-        private static void ThrowIndexOutOfRange()
-        {
-            // ReSharper disable once NotResolvedInText
-            throw new ArgumentOutOfRangeException("index");
-        }
     }
 }
