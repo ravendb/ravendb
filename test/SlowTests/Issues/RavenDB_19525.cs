@@ -36,7 +36,7 @@ public class RavenDB_19525 : RavenTestBase
 
         Indexes.WaitForIndexing(store);
         var indexes = await store.Maintenance.SendAsync(new GetIndexErrorsOperation());
-        Assert.Empty(indexes.Where(idx => idx.Errors.Any()));
+        Assert.DoesNotContain(indexes, idx => idx.Errors.Any());
     }
 
     private class DateOnlyIndex : AbstractIndexCreationTask<TestDocument>
@@ -44,12 +44,12 @@ public class RavenDB_19525 : RavenTestBase
         public DateOnlyIndex()
         {
             Map = entities => from entity in entities
-                select new
-                {
-                    DateOnly = AsDateOnly(entity.Values["DateOnly"]),
-                    TimeOnly = AsTimeOnly(entity.Values["TimeOnly"]), 
-                    TimeSpan = (TimeSpan)entity.Values["TimeSpan"]
-                };
+                              select new
+                              {
+                                  DateOnly = AsDateOnly(entity.Values["DateOnly"]),
+                                  TimeOnly = AsTimeOnly(entity.Values["TimeOnly"]),
+                                  TimeSpan = (TimeSpan)entity.Values["TimeSpan"]
+                              };
         }
     }
 
