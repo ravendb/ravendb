@@ -72,7 +72,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenRetryTheory(RavenTestCategory.BulkInsert)]
         [RavenData(100, 100, 16 * 1024, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(75, 75, 64 * 1024, DatabaseMode = RavenDatabaseMode.All)]
         public async Task StoreManyAttachmentsAndDocs(Options options, int count, int attachments, int size)

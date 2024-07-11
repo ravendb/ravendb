@@ -799,6 +799,8 @@ namespace Raven.Server.Rachis
                         existing?.TrySetException(te);
                     }
 
+                    faulted.Task.IgnoreUnobservedExceptions();
+
                     _newEntry.Dispose();
                     _voterResponded.Dispose();
                     _promotableUpdated.Dispose();
