@@ -1,4 +1,5 @@
 ﻿using Corax.Mappings;
+using Lucene.Net.Search;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries;
@@ -17,6 +18,6 @@ public interface IIndexReadOperationFactory
         IndexFieldsMapping fieldsMapping, IndexQueryServerSide query);
 
     public LuceneSuggestionIndexReader CreateLuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory,
-        Transaction readTransaction);
+        Transaction readTransaction, IndexSearcher indexSearcher);
 
 }

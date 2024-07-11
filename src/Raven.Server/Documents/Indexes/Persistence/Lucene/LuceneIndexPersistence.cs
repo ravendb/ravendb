@@ -390,6 +390,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 var dir = _suggestionsDirectories[field.Key];
                 dic.Add(field.Key, CreateSuggestions(dir));
             }
+
+            var stateRecord = (IndexStateRecord)tx.LowLevelTransaction.CurrentStateRecord.ClientState;
+            tx.LowLevelTransaction.UpdateClientState(stateRecord with
+            {
+                LuceneSuggestionStates = dic.ToImmutable()
+            });
         }
 
         private static LuceneIndexState CreateSuggestions(Directory dir) => new(() => new IndexSearcher(dir, true, _currentIndexState));
@@ -453,10 +459,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             CheckDisposed();
             CheckInitialized();
 
-            if (!_suggestionsDirectories.TryGetValue(field, out LuceneVoronDirectory directory))
+            var stateRecord = (IndexStateRecord)readTransaction.LowLevelTransaction.CurrentStateRecord.ClientState;
+            if (!_suggestionsDirectories.TryGetValue(field, out LuceneVoronDirectory directory) || 
+                !stateRecord.LuceneSuggestionStates.TryGetValue(field, out var state))
                 throw new InvalidOperationException($"No suggestions index found for field '{field}'.");
+            IndexSearcher indexSearcherValue;
+            _currentIndexState = new VoronState(readTransaction);
+            try
+            {
+                indexSearcherValue = state.IndexSearcher.Value;
+            }
+            finally
+            {
+                _currentIndexState = null;
+            }
 
-            return IndexReadOperationFactory.CreateLuceneSuggestionIndexReader(_index, directory, readTransaction);
+            return IndexReadOperationFactory.CreateLuceneSuggestionIndexReader(_index, directory, readTransaction, indexSearcherValue);
         }
 
         internal override void RecreateSearcher(Transaction asOfTx)
@@ -477,6 +495,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 builder[suggestion.Key] = CreateSuggestions(suggestion.Value);
             }
+            asOfTx.LowLevelTransaction.UpdateClientState(record with
+            {
+                LuceneSuggestionStates = builder.ToImmutable()
+            });
         }
 
         internal LuceneIndexWriter EnsureIndexWriter(IState state)
