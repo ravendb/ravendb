@@ -104,5 +104,10 @@ namespace Raven.Client.Documents.Operations.Revisions
                 [nameof(Collections)] = collections
             };
         }
+
+        public DynamicJsonValue ToAuditJson()
+        {
+            return ToJson();
+        }
     }
 }

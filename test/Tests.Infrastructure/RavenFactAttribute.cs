@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using Xunit;
+﻿using Xunit;
 using Xunit.Sdk;
 
 namespace Tests.Infrastructure;
@@ -19,8 +18,8 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
     public bool MsSqlRequired { get; set; }
 
     public bool ElasticSearchRequired { get; set; }
-    
-    public bool AzureQueueStorageRequired {get; set; }
+
+    public bool AzureQueueStorageRequired { get; set; }
 
     public bool NightlyBuildRequired { get; set; }
 
@@ -28,33 +27,47 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
     {
         get
         {
-            var skip = _skip;
-            if (skip != null)
-                return skip;
-            if (RuntimeInformation.ProcessArchitecture == Architecture.X86)
-            {
-                if (_category.HasFlag(RavenTestCategory.Sharding))
-                    return RavenDataAttributeBase.ShardingSkipMessage;
-            }
-
-            if (LicenseRequired && LicenseRequiredFactAttribute.ShouldSkip())
-                return LicenseRequiredFactAttribute.SkipMessage;
-
-            if (MsSqlRequired && RequiresMsSqlFactAttribute.ShouldSkip(out skip))
-                return skip;
-
-            if (ElasticSearchRequired && RequiresElasticSearchRetryFactAttribute.ShouldSkip(out skip))
-                return skip;
-
-            if (NightlyBuildRequired && NightlyBuildFactAttribute.ShouldSkip(out skip))
-                return skip;
-
-            if (AzureQueueStorageRequired && AzureQueueStorageHelper.ShouldSkip(out skip))
-                return skip;
-
-            return null;
+            return ShouldSkip(_skip, _category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, msSqlRequired: MsSqlRequired, elasticSearchRequired: ElasticSearchRequired, azureQueueStorageRequired: AzureQueueStorageRequired);
         }
 
         set => _skip = value;
+    }
+
+    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool msSqlRequired, bool elasticSearchRequired, bool azureQueueStorageRequired)
+    {
+        var s = ShouldSkip(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
+        if (s != null)
+            return s;
+
+        if (msSqlRequired && RequiresMsSqlFactAttribute.ShouldSkip(out skip))
+            return skip;
+
+        if (elasticSearchRequired && RequiresElasticSearchRetryFactAttribute.ShouldSkip(out skip))
+            return skip;
+
+        if (azureQueueStorageRequired && AzureQueueStorageHelper.ShouldSkip(out skip))
+            return skip;
+
+        return null;
+    }
+
+    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired)
+    {
+        if (skip != null)
+            return skip;
+
+        if (RavenDataAttributeBase.Is32Bit)
+        {
+            if (category.HasFlag(RavenTestCategory.Sharding))
+                return RavenDataAttributeBase.ShardingSkipMessage;
+        }
+
+        if (licenseRequired && LicenseRequiredFactAttribute.ShouldSkip())
+            return LicenseRequiredFactAttribute.SkipMessage;
+
+        if (nightlyBuildRequired && NightlyBuildFactAttribute.ShouldSkip(out skip))
+            return skip;
+
+        return null;
     }
 }

@@ -24,6 +24,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -33,7 +34,6 @@ using Raven.Server.TrafficWatch;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Web
@@ -818,6 +818,12 @@ namespace Raven.Server.Web
         {
             switch (name)
             {
+                case RevisionsHandler.ReadRevisionsConfigTag:
+                    return JsonDeserializationServer.RevisionsConfiguration(configuration).ToAuditJson();
+                
+                case RevisionsHandler.ConflictedRevisionsConfigTag:
+                    return JsonDeserializationServer.RevisionsCollectionConfiguration(configuration).ToAuditJson();
+
                 case BackupDatabaseOnceTag:
                     return JsonDeserializationServer.BackupConfiguration(configuration).ToAuditJson();
 
