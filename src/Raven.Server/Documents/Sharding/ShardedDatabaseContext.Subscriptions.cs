@@ -45,7 +45,7 @@ public partial class ShardedDatabaseContext
 
         protected override string GetNodeFromState(SubscriptionState taskStatus) => taskStatus.NodeTag;
 
-        protected override DatabaseTopology GetTopology(ClusterOperationContext context) => _serverStore.Cluster.ReadShardingConfiguration(context, _databaseName).Orchestrator.Topology;
+        protected override DatabaseTopology GetTopology(ClusterOperationContext context) => _serverStore.Cluster.ReadShardingConfiguration(context, _databaseName)?.Orchestrator.Topology;
 
         protected override bool SubscriptionChangeVectorHasChanges(SubscriptionConnectionsStateOrchestrator state, SubscriptionState taskStatus)
         {
