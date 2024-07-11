@@ -13,8 +13,6 @@ todo(
     "Damian",
     "Filter Settings > Advanced section, Manage Database Group, Query, Patching etc. There are some db-related items in Server column"
 );
-todo("Feature", "Damian", "Show sharded database icon for sharded database");
-todo("Feature", "Damian", "Move Server Environment (shell.html) to DatabaseSelector");
 
 export default function StudioSearch() {
     const {

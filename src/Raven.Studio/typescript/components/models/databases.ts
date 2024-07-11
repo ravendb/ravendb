@@ -60,6 +60,7 @@ export interface NonShardedDatabaseInfo {
         isBeingDeleted: boolean;
     };
     isSharded: false;
+    environment: Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment;
 }
 
 export interface ShardedDatabaseInfo extends Omit<NonShardedDatabaseInfo, "isSharded"> {

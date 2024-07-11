@@ -31,7 +31,7 @@ export default class DatabaseUtils {
     }
 
     static isSharded(name: string) {
-        return name.includes("$");
+        return name?.includes("$");
     }
 
     static shardGroupKey(name: string) {

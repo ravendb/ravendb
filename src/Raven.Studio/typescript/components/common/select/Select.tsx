@@ -43,7 +43,15 @@ export default function Select<
     IsMulti extends boolean = false,
     Group extends GroupBase<Option> = GroupBase<Option>,
 >(props: ComponentProps<typeof ReactSelect<Option, IsMulti, Group>>) {
-    return <ReactSelect {...props} className="bs5 react-select-container" classNamePrefix="react-select" />;
+    const { className, ...rest } = props;
+
+    return (
+        <ReactSelect
+            {...rest}
+            className={classNames("bs5", "react-select-container", className)}
+            classNamePrefix="react-select"
+        />
+    );
 }
 
 export function OptionWithIcon(props: OptionProps<SelectOptionWithIcon>) {
