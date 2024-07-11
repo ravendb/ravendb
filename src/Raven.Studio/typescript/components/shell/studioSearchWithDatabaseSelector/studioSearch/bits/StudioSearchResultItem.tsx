@@ -1,6 +1,6 @@
 import { Icon } from "components/common/Icon";
-import StudioSearchFuzzyHighlightedText from "components/shell/studioSearchWithDatabaseSelector/studioSearch/bits/StudioSearchFuzzyHighlightedText";
-import { StudioSearchResultItem } from "components/shell/studioSearchWithDatabaseSelector/studioSearch/studioSearchTypes";
+import StudioSearchFuzzyHighlightedText from "../bits/StudioSearchFuzzyHighlightedText";
+import { StudioSearchResultItem } from "../studioSearchTypes";
 import React from "react";
 import { DropdownItem } from "reactstrap";
 

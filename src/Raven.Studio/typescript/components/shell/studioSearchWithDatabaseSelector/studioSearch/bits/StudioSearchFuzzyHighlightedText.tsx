@@ -12,22 +12,34 @@ export default function StudioSearchFuzzyHighlightedText({ text, indices }: Stud
 
     return (
         <span className="m-0">
-            {characters.map((char, index) => {
-                const isHighlighted = flatMatchedIndices.includes(index);
-                if (isHighlighted) {
-                    return (
-                        <mark key={index} className="bg-faded-warning p-0">
-                            {char}
-                        </mark>
-                    );
-                }
-                return char;
-            })}
+            {characters.map((char, index) => (
+                <Char key={index} char={char} index={index} flatMatchedIndices={flatMatchedIndices} />
+            ))}
         </span>
     );
 }
 
-function getFlatFlatMatchedIndexes(indices: readonly RangeTuple[] | undefined) {
+interface CharProps {
+    char: string;
+    index: number;
+    flatMatchedIndices: number[];
+}
+
+function Char({ char, index, flatMatchedIndices }: CharProps) {
+    const isHighlighted = flatMatchedIndices.includes(index);
+
+    if (isHighlighted) {
+        return (
+            <mark key={index} className="bg-faded-warning p-0">
+                {char}
+            </mark>
+        );
+    }
+
+    return char;
+}
+
+function getFlatFlatMatchedIndexes(indices: readonly RangeTuple[]) {
     if (!indices) {
         return [];
     }

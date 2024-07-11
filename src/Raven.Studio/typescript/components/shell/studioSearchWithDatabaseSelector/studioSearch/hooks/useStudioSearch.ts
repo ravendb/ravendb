@@ -1,11 +1,11 @@
+import { useState, useRef } from "react";
 import useBoolean from "components/hooks/useBoolean";
+import { StudioSearchResultDatabaseGroup, StudioSearchResultItem } from "../studioSearchTypes";
 import { useStudioSearchAsyncRegister } from "./useStudioSearchAsyncRegister";
 import { useStudioSearchKeyboardEvents } from "./useStudioSearchKeyboardEvents";
 import { useStudioSearchSyncRegister } from "./useStudioSearchSyncRegister";
-import { StudioSearchResultDatabaseGroup, StudioSearchResultItem } from "../studioSearchTypes";
-import { useState, useRef } from "react";
-import { useStudioSearchOmniSearch } from "components/shell/studioSearchWithDatabaseSelector/studioSearch/hooks/useStudioSearchOmniSearch";
-import { useStudioSearchUtils } from "components/shell/studioSearchWithDatabaseSelector/studioSearch/hooks/useStudioSearchUtils";
+import { useStudioSearchOmniSearch } from "./useStudioSearchOmniSearch";
+import { useStudioSearchUtils } from "./useStudioSearchUtils";
 
 export function useStudioSearch() {
     const { value: isSearchDropdownOpen, setValue: setIsDropdownOpen } = useBoolean(false);
