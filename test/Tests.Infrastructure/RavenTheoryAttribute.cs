@@ -26,31 +26,25 @@ public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
     {
         get
         {
-            var skip = _skip;
-            if (skip != null)
-                return skip;
-
-            if (RavenDataAttributeBase.Is32Bit)
-            {
-                if (_category.HasFlag(RavenTestCategory.Sharding))
-                    return RavenDataAttributeBase.ShardingSkipMessage;
-            }
-
-            if (LicenseRequired && LicenseRequiredFactAttribute.ShouldSkip())
-                return LicenseRequiredFactAttribute.SkipMessage;
-
-            if (NightlyBuildRequired && NightlyBuildFactAttribute.ShouldSkip(out skip))
-                return skip;
-
-            if (S3Required && AmazonS3RetryTheoryAttribute.ShouldSkip(out skip))
-                return skip;
-
-            if (AzureRequired && AzureRetryTheoryAttribute.ShouldSkip(out skip))
-                return skip;
-
-            return null;
+            return ShouldSkip(_skip, _category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, s3Required: S3Required, azureRequired: AzureRequired);
         }
 
         set => _skip = value;
     }
+
+    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool s3Required, bool azureRequired)
+    {
+        var s = RavenFactAttribute.ShouldSkip(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
+        if (s != null)
+            return s;
+
+        if (s3Required && AmazonS3RetryTheoryAttribute.ShouldSkip(out skip))
+            return skip;
+
+        if (azureRequired && AzureRetryTheoryAttribute.ShouldSkip(out skip))
+            return skip;
+
+        return null;
+    }
+
 }

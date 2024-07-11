@@ -56,5 +56,11 @@ namespace Raven.Client.Documents.Operations.Revisions
                 [nameof(MaximumRevisionsToDeleteUponDocumentUpdate)] = MaximumRevisionsToDeleteUponDocumentUpdate
             };
         }
+
+
+        public DynamicJsonValue ToAuditJson()
+        {
+            return ToJson();
+        }
     }
 }
