@@ -92,7 +92,8 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (it.MoveNext() == false)
                 {
-                    writer.Value.Delete(indexItem.LowerId, stats);
+                    if (indexItem.KnownToBeNew == false)
+                        writer.Value.Delete(indexItem.LowerId, stats);
 
                     shouldRollbackCurrentScope = false;
                     return 0; // no results at all
@@ -139,7 +140,7 @@ namespace Raven.Server.Documents.Indexes
                 if (shouldRollbackCurrentScope)
                     writer.Value.Delete(indexItem.LowerId, stats);
                 
-                if(it is IDisposable d)
+                if (it is IDisposable d)
                     d.Dispose();
             }
         }
