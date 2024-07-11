@@ -18,6 +18,8 @@
         width: 100%;
         margin-top: sizes.$gutter-xxs !important;
         padding: 0 !important;
+        cursor: default;
+
         .dropdown-item {
             font-size: 0.875rem;
         }
@@ -191,6 +193,7 @@
                 border-bottom-right-radius: sizes.$border-radius;
                 padding: sizes.$gutter-xs var(--bs-dropdown-header-padding-x) !important;
                 display: flex !important;
+                flex-wrap: wrap;
                 gap: sizes.$gutter-sm !important;
                 font-size: 0.75rem !important;
                 kbd {

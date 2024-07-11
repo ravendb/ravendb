@@ -1,5 +1,5 @@
 import React from "react";
-import { Meta } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
@@ -11,9 +11,9 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta;
 
-export const DefaultStory = {
+export const DefaultStory: StoryObj<{ isDatabaseSelected: boolean }> = {
     name: "Studio Search With Database Switcher",
-    render: () => {
+    render: (args) => {
         const { databasesService, indexesService, tasksService } = mockServices;
         const { databases, collectionsTracker } = mockStore;
 
@@ -22,14 +22,17 @@ export const DefaultStory = {
             DatabasesStubs.nonShardedClusterDatabase().toDto(),
         ]);
 
-        // comment all to toggle active database
-        databases.withActiveDatabase();
-        databasesService.withDocumentsMetadataByIDPrefix();
-        indexesService.withGetSampleStats();
-        tasksService.withGetTasks();
-        collectionsTracker.with_Collections();
-        // end comment
+        if (args.isDatabaseSelected) {
+            databases.withActiveDatabase();
+            databasesService.withDocumentsMetadataByIDPrefix();
+            indexesService.withGetSampleStats();
+            tasksService.withGetTasks();
+            collectionsTracker.with_Collections();
+        }
 
         return <StudioSearchWithDatabaseSwitcher />;
+    },
+    args: {
+        isDatabaseSelected: true,
     },
 };

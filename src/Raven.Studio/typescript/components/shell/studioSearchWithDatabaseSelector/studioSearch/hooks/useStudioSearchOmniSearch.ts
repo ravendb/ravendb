@@ -1,9 +1,5 @@
 import { OmniSearch } from "common/omniSearch/omniSearch";
-import {
-    StudioSearchItem,
-    StudioSearchItemType,
-    StudioSearchResult,
-} from "components/shell/studioSearchWithDatabaseSelector/studioSearch/studioSearchTypes";
+import { StudioSearchItem, StudioSearchItemType, StudioSearchResult } from "../studioSearchTypes";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { useState, useCallback, useEffect, useMemo } from "react";
 

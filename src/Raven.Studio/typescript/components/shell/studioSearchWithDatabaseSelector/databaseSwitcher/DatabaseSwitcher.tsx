@@ -29,24 +29,28 @@ export default function DatabaseSwitcher() {
     }, [activeDatabaseName]);
 
     return (
-        <UncontrolledDropdown direction="down">
-            <DropdownToggle caret className="database-switcher">
-                <Icon icon="database" />
-                {activeDatabaseNameWithDelay || "No database selected"}
-                <DropdownMenu className="w-fit-content">
-                    {allDatabaseNames.map((databaseName) => (
-                        <DropdownItem
-                            key={databaseName}
-                            onClick={() => {
-                                const db = databasesManager.default.getDatabaseByName(databaseName);
-                                databasesManager.default.activate(db);
-                            }}
-                        >
-                            {databaseName}
-                        </DropdownItem>
-                    ))}
-                </DropdownMenu>
-            </DropdownToggle>
+        <UncontrolledDropdown direction="down" className="elo">
+            <div className="database-switcher">
+                <DropdownToggle caret>
+                    <Icon icon="database" />
+                    {activeDatabaseNameWithDelay || "No database selected"}
+                </DropdownToggle>
+                <div className="dropdown-menu-container">
+                    <DropdownMenu>
+                        {allDatabaseNames.map((databaseName) => (
+                            <DropdownItem
+                                key={databaseName}
+                                onClick={() => {
+                                    const db = databasesManager.default.getDatabaseByName(databaseName);
+                                    databasesManager.default.activate(db);
+                                }}
+                            >
+                                {databaseName}
+                            </DropdownItem>
+                        ))}
+                    </DropdownMenu>
+                </div>
+            </div>
         </UncontrolledDropdown>
     );
 }

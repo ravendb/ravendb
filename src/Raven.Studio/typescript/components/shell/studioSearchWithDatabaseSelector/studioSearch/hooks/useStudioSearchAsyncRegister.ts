@@ -8,7 +8,7 @@ import {
     StudioSearchItemType,
     StudioSearchItemEvent,
     OngoingTaskWithBroker,
-} from "components/shell/studioSearchWithDatabaseSelector/studioSearch/studioSearchTypes";
+} from "../studioSearchTypes";
 import { useAppSelector } from "components/store";
 import assertUnreachable from "components/utils/assertUnreachable";
 import DatabaseUtils from "components/utils/DatabaseUtils";

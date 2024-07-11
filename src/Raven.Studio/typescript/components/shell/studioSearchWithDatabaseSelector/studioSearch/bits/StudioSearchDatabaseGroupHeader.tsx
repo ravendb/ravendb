@@ -1,5 +1,5 @@
 import { Icon } from "components/common/Icon";
-import { StudioSearchResultDatabaseGroup } from "components/shell/studioSearchWithDatabaseSelector/studioSearch/studioSearchTypes";
+import { StudioSearchResultDatabaseGroup } from "../studioSearchTypes";
 import assertUnreachable from "components/utils/assertUnreachable";
 import React from "react";
 
@@ -8,14 +8,6 @@ interface StudioSearchDatabaseGroupHeaderProps {
 }
 
 export default function StudioSearchDatabaseGroupHeader({ groupType }: StudioSearchDatabaseGroupHeaderProps) {
-    return <GroupHeaderBody groupType={groupType} />;
-}
-
-interface GroupHeaderBodyProps {
-    groupType: StudioSearchResultDatabaseGroup;
-}
-
-function GroupHeaderBody({ groupType }: GroupHeaderBodyProps) {
     switch (groupType) {
         case "collections":
             return (
