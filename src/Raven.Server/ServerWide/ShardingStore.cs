@@ -81,7 +81,7 @@ namespace Raven.Server.ServerWide
         {
             var config = _serverStore.Cluster.ReadShardingConfiguration(database);
 
-            return config.HasActiveMigrations();
+            return config?.HasActiveMigrations() ?? false;
         }
 
         public DocumentConventions DocumentConventionsForShard =>
@@ -136,7 +136,9 @@ namespace Raven.Server.ServerWide
                     case nameof(DestinationMigrationConfirmCommand):
                     case nameof(SourceMigrationCleanupCommand):
                         var config = _serverStore.Cluster.ReadShardingConfiguration(database);
-                        
+                        if (config == null)
+                            break;
+
                         if (config.BucketMigrations.Count == 0)
                         {
                             messages.Enqueue($"command {type} was skipped.");

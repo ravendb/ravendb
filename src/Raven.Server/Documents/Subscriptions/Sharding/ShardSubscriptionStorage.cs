@@ -73,7 +73,7 @@ public sealed class ShardSubscriptionStorage : SubscriptionStorage
         }
     }
 
-    protected override DatabaseTopology GetTopology(ClusterOperationContext context) => _serverStore.Cluster.ReadShardingConfiguration(context, _databaseName).Shards[_shardNumber];
+    protected override DatabaseTopology GetTopology(ClusterOperationContext context) => _serverStore.Cluster.ReadShardingConfiguration(context, _databaseName)?.Shards[_shardNumber];
     
     protected override string GetNodeFromState(SubscriptionState taskStatus)
     {
