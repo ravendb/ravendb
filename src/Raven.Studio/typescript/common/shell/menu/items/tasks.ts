@@ -16,7 +16,13 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             title: 'Backups',
             nav: true,
             css: 'icon-backups',
-            dynamicHash: appUrls.backupsUrl
+            dynamicHash: appUrls.backupsUrl,
+            search: {
+                innerActions: [
+                    { name: "Create a backup" },
+                    { name: "Create a periodic backup" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/tasks/ongoingTasks',
@@ -25,7 +31,29 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             title: 'Ongoing Tasks',
             nav: true,
             css: 'icon-manage-ongoing-tasks',
-            dynamicHash: appUrls.ongoingTasksUrl
+            dynamicHash: appUrls.ongoingTasksUrl,
+            search: {
+                innerActions: [
+                    {
+                        name: "Add a Database Task" ,
+                        alternativeNames: [
+                            "External Replication",
+                            "Replication Hub",
+                            "Replication Sink",
+                            "RavenDB ETL",
+                            "Elastic Search ETL",
+                            "Kafka ETL",
+                            "SQL ETL",
+                            "OLAP ETL",
+                            "RabbitMQ ETL",
+                            "Kafka Sink",
+                            "RabbitMQ Sink",
+                            "Periodic Backup",
+                            "Subscription",
+                        ]
+                    },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/tasks/import*details',
@@ -34,7 +62,21 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-import-database',
             dynamicHash: appUrls.importDatabaseFromFileUrl,
-            requiredAccess: "DatabaseReadWrite"
+            requiredAccess: "DatabaseReadWrite",
+            search: {
+                innerActions: [
+                    {
+                        name: "Import database" ,
+                        alternativeNames: [
+                            "From file",
+                            "From RavenDB Server",
+                            "From CSV file",
+                            "From SQL",
+                            "From NoSQL",
+                        ]
+                    },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/tasks/exportDatabase',

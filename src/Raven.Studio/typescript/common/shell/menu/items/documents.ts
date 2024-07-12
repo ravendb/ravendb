@@ -68,7 +68,12 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             title: "Identities",
             nav: true,
             css: "icon-identities",
-            dynamicHash: appUrls.identities
+            dynamicHash: appUrls.identities,
+            search: {
+                innerActions: [
+                    { name: "Add new identity" }
+                ],
+            },
         }),
         new leafMenuItem({
             route: "databases/cmpXchg",
