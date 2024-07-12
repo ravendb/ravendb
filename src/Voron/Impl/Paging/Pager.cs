@@ -271,7 +271,6 @@ public unsafe partial class Pager2 : IDisposable
     {
         if (pageNumber <= state.NumberOfAllocatedPages && pageNumber >= 0)
             return _functions.AcquirePagePointer(this, state, ref txState, pageNumber);
-
         VoronUnrecoverableErrorException.Raise(Options,
             "The page " + pageNumber + " was not allocated, allocated pages: " + state.NumberOfAllocatedPages + " in " + FileName);
         return null; // never hit

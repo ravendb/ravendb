@@ -627,10 +627,11 @@ namespace Voron.Impl.Journal
                     
                     var currentTotalCommittedSinceLastFlushPages = TotalCommittedSinceLastFlushPages;
 
+                    Pager2.State dataPagerState;
                     try
                     {
                         byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None);
-                        ApplyPagesToDataFileFromScratch(record);
+                        dataPagerState = ApplyPagesToDataFileFromScratch(record);
                     }
                     catch (Exception e) when (e is OutOfMemoryException || e is EarlyOutOfMemoryException)
                     {
@@ -654,7 +655,7 @@ namespace Voron.Impl.Journal
 
                     Interlocked.Add(ref TotalCommittedSinceLastFlushPages, -currentTotalCommittedSinceLastFlushPages);
 
-                    ApplyJournalStateAfterFlush(token, bufferOfPageFromScratchBuffersToFree, record, byteStringContext);
+                    ApplyJournalStateAfterFlush(token, bufferOfPageFromScratchBuffersToFree, record, dataPagerState, byteStringContext);
 
                     _waj._env.SuggestSyncDataFile();
                 }
@@ -675,6 +676,7 @@ namespace Voron.Impl.Journal
             private void ApplyJournalStateAfterFlush(CancellationToken token,
                 List<PageFromScratchBuffer> bufferOfPageFromScratchBuffersToFree,
                 EnvironmentStateRecord record,
+                Pager2.State dataPagerState,
                 ByteStringContext byteStringContext)
             {
                 // the idea here is that even though we need to run the journal through its state update under the transaction lock
@@ -698,6 +700,7 @@ namespace Voron.Impl.Journal
 
                         try
                         {
+                            txw.UpdateDataPagerState(dataPagerState);
                             UpdateJournalStateUnderWriteTransactionLock(txw,bufferOfPageFromScratchBuffersToFree, record);
 
                             if (_waj._logger.IsInfoEnabled)
@@ -800,7 +803,7 @@ namespace Voron.Impl.Journal
                 } while (currentAction == _updateJournalStateAfterFlush);
             }
 
-            private void UpdateJournalStateUnderWriteTransactionLock(LowLevelTransaction txw, 
+            private void UpdateJournalStateUnderWriteTransactionLock(LowLevelTransaction txw,
                 List<PageFromScratchBuffer> bufferOfPageFromScratchBuffersToFree,
                 EnvironmentStateRecord flushedRecord)
             {
@@ -1206,7 +1209,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            private void ApplyPagesToDataFileFromScratch(EnvironmentStateRecord record)
+            private Pager2.State ApplyPagesToDataFileFromScratch(EnvironmentStateRecord record)
             {
                 long written = 0;
                 var sp = Stopwatch.StartNew();
@@ -1247,7 +1250,6 @@ namespace Voron.Impl.Journal
                         txState.InvokeDispose(_waj._env, ref dataPagerState, ref txState);
                     }
                         
-                    _waj._env.UpdateDataPagerState(dataPagerState);
                     meter.SetFileSize(dataPagerState.TotalAllocatedSize);
                     meter.IncrementSize(written);
                 }
@@ -1258,6 +1260,8 @@ namespace Voron.Impl.Journal
                     _waj._logger.Operations($"Very long data flushing. It took {sp.Elapsed} to flush {record.ScratchPagesTable.Count:#,#} pages to { dataPager.FileName} with {new Size(written, SizeUnit.Bytes)}.");
 
                 Interlocked.Add(ref _totalWrittenButUnsyncedBytes, written);
+                
+                return dataPagerState;
             }
 
             private Span<Page> GetSortedPages(ref Pager2.PagerTransactionState txState, EnvironmentStateRecord record, Page[] pagesBuffer)

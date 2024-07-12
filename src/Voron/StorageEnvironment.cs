@@ -1582,60 +1582,32 @@ namespace Voron
             return dictionary;
         }
 
-        public void UpdateDataPagerState(Pager2.State dataPagerState)
-        {
-            if (_currentStateRecordRecord.DataPagerState == dataPagerState)
-                return;
-            
-            dataPagerState.BeforePublishing();
-            while (true)
-            {
-                var currentState = _currentStateRecordRecord!;
-                var updatedState = currentState with {DataPagerState = dataPagerState};
-                if (Interlocked.CompareExchange(ref _currentStateRecordRecord, updatedState, currentState) == currentState)
-                    break;
-            }
-        }
-        
         private void UpdateStateOnCommit(LowLevelTransaction tx)
         {
-            // ensure that we have disjointed sets and not a case of both free & used at once
-            var (txId, txFlushedToJournal) = tx.FlushedToJournal switch
+            // we must be running under the write lock
+            Debug.Assert(tx.Flags is TransactionFlags.ReadWrite,"tx.Flags is TransactionFlags.ReadWrite");
+            Debug.Assert(tx.ModifiedPagesInTransaction != null, "tx.ModifiedPagesInTransaction != null");
+            Debug.Assert(ReferenceEquals(tx.RootObjects.State, tx.CurrentStateRecord.Root), "ReferenceEquals(tx.RootObjects.State, tx.CurrentStateRecord.Root)");
+            EnvironmentStateRecord currentStateRecord = tx.CurrentStateRecord;
+            var updatedState = currentStateRecord with
             {
                 // we may want to update the state of the transaction (scratch table, data pager state, etc)
                 // without incrementing the transaction id, since we didn't commit a transaction to the journal
-                -1 => (tx.CurrentStateRecord.TransactionId - 1, tx.CurrentStateRecord.FlushedToJournal),
-                _ => (tx.Id, tx.FlushedToJournal)
+                TransactionId = tx.FlushedToJournal == -1 ? currentStateRecord.TransactionId-1 : currentStateRecord.TransactionId,
+                FlushedToJournal = tx.FlushedToJournal == -1 ? currentStateRecord.FlushedToJournal : tx.FlushedToJournal,
+                ScratchPagesTable = tx.ModifiedPagesInTransaction,
+                NextPageNumber = tx.GetNextPageNumber(),
+                Root = tx.RootObjects.State,
             };
-            var pagesInScratch = tx.ModifiedPagesInTransaction;
-            Debug.Assert(pagesInScratch != null, "pagesInScratch != null");
-            Debug.Assert(pagesInScratch != null);
-            long nextPageNumber = tx.GetNextPageNumber();
-            var rootObjectsState = tx.RootObjects.State;
-            var clientState = tx.CurrentStateRecord.ClientState;
-            Debug.Assert(ReferenceEquals(rootObjectsState, tx.CurrentStateRecord.Root), "ReferenceEquals(rootObjectsState, tx.CurrentStateRecord.Root)");
-            while (true)
+
+            // we don't _have_ to make it using interlocked, but let's publish it immediately
+            Interlocked.Exchange(ref _currentStateRecordRecord, updatedState);
+            
+            // We only want to flush to data pager transactions that have been flushed to the journal.
+            // Transactions that _haven't_ been flushed are mostly book-keeping (updating scratch table, etc)
+            if (tx.FlushedToJournal >= 0)
             {
-                var currentState = _currentStateRecordRecord!;
-                var updatedState = currentState with
-                {
-                    TransactionId = txId,
-                    ScratchPagesTable = pagesInScratch,
-                    FlushedToJournal = txFlushedToJournal,
-                    NextPageNumber = nextPageNumber,
-                    Root = rootObjectsState,
-                    ClientState = clientState
-                };
-                if (Interlocked.CompareExchange(ref _currentStateRecordRecord, updatedState, currentState) == currentState)
-                {
-                    // We only want to flush to data pager transactions that have been flushed to the journal.
-                    // Transactions that _haven't_ been flushed are mostly book-keeping (updating scratch table, etc)
-                    if (tx.FlushedToJournal >= 0)  
-                    {
-                        _transactionsToFlush.Enqueue(updatedState);
-                    }
-                    break;
-                }
+                _transactionsToFlush.Enqueue(updatedState);
             }
         }
 
@@ -1665,6 +1637,13 @@ namespace Voron
                 Debug.Assert(ReferenceEquals(record, maybe));
                 found = true;
             }
+        }
+
+        public void UpdateDataPagerState(Pager2.State dataPagerState)
+        {
+            // this should only happen during recovery, never during active operations
+            Debug.Assert(ActiveTransactions.AllTransactions.Count == 0 , "ActiveTransactions.AllTransactions.Count == 0");
+            _currentStateRecordRecord = _currentStateRecordRecord with { DataPagerState = dataPagerState };
         }
     }
 
