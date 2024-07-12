@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow;
+using Sparrow.Server;
 using Voron.Data.BTrees;
 using Voron.Global;
 using Voron.Impl;
@@ -9,9 +10,7 @@ namespace Voron.Data.Compression
 {
     public sealed unsafe class DecompressedLeafPage : TreePage, IDisposable
     {
-        private bool _disposed;
-
-        public DecompressedLeafPage(byte* basePtr, int pageSize, DecompressionUsage usage, TreePage original, IDisposable disposable) : base(basePtr, pageSize)
+        public DecompressedLeafPage(byte* basePtr, int pageSize, DecompressionUsage usage, TreePage original, ByteStringContext.InternalScope disposable) : base(basePtr, pageSize)
         {
             Original = original;
             _disposable = disposable;
@@ -23,7 +22,7 @@ namespace Voron.Data.Compression
         }
 
         public TreePage Original;
-        private readonly IDisposable _disposable;
+        private ByteStringContext.InternalScope _disposable;
 
         public bool Cached;
 
@@ -31,16 +30,10 @@ namespace Voron.Data.Compression
 
         public void Dispose()
         {
-            // RavenDB-22090: We must not dispose leaf pages more than once.
-            if (_disposed)
-                return;
-
             if (Cached)
                 return;
 
             _disposable.Dispose();
-
-            _disposed = true;
         }
 
         public void CopyToOriginal(LowLevelTransaction tx, bool defragRequired, bool wasModified, Tree tree)

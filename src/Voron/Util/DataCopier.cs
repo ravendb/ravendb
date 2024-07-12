@@ -63,7 +63,7 @@ namespace Voron.Util
 
                         var pagesToCopy = (int) (i + steps > numberOfPages ? numberOfPages - i : steps);
                         src.EnsureMapped(txr.DataPagerState, ref txState, i, pagesToCopy);
-                        var ptr = src.AcquirePagePointer(txr.DataPagerState, ref txState, i);
+                        var ptr = src.AcquireRawPagePointer(txr.DataPagerState, ref txState, i);
                         var copiedInBytes = pagesToCopy * Constants.Storage.PageSize;
                         Memory.Copy(pBuffer, ptr, copiedInBytes);
                         output.Write(_buffer, 0, copiedInBytes);
