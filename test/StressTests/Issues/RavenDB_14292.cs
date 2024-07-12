@@ -97,6 +97,8 @@ namespace StressTests.Issues
 
                     var serverWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
                     Assert.NotNull(serverWideConfiguration);
+                    Backup.WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, serverWideConfiguration.TaskId);
+
                     periodicBackupStatusOperation = new GetPeriodicBackupStatusOperation(serverWideConfiguration.TaskId);
 
                     // the configuration is applied to existing databases
