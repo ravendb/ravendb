@@ -308,7 +308,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                 NotificationCenter = _database.NotificationCenter,
                 OnParsingError = OnParsingError,
                 OnMissingNextBackupInfo = OnMissingNextBackupInfo,
-                ServerStore = _serverStore
+                ServerStore = _serverStore,
+                IsIdle = false
             });
         }
 

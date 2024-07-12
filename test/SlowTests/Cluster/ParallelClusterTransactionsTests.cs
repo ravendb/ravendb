@@ -73,26 +73,29 @@ namespace SlowTests.Cluster
                         CreateDatabase = false
                     }))
                     {
-                        for (int j = 0; j < 10; j++)
+                        using (store.SetRequestTimeout(TimeSpan.FromSeconds(30), db))
                         {
-                            if (token.IsCancellationRequested)
-                                return;
-
-                            try
+                            for (int j = 0; j < 10; j++)
                             {
-                                await store.Operations.ForDatabase(db).SendAsync(new PutCompareExchangeValueOperation<User>($"usernames/{Interlocked.Increment(ref count)}", new User(), 0), token: token);
+                                if (token.IsCancellationRequested)
+                                    return;
 
-                                using (var session = store.OpenAsyncSession(db))
+                                try
                                 {
-                                    session.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
-                                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue($"usernames/{Interlocked.Increment(ref count)}", new User());
-                                    await session.StoreAsync(new User(), token);
-                                    await session.SaveChangesAsync(token);
+                                    await store.Operations.ForDatabase(db).SendAsync(new PutCompareExchangeValueOperation<User>($"usernames/{Interlocked.Increment(ref count)}", new User(), 0), token: token);
+
+                                    using (var session = store.OpenAsyncSession(db))
+                                    {
+                                        session.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
+                                        session.Advanced.ClusterTransaction.CreateCompareExchangeValue($"usernames/{Interlocked.Increment(ref count)}", new User());
+                                        await session.StoreAsync(new User(), token);
+                                        await session.SaveChangesAsync(token);
+                                    }
                                 }
-                            }
-                            catch
-                            {
-                                //
+                                catch
+                                {
+                                    //
+                                }
                             }
                         }
                     }
