@@ -74,9 +74,7 @@ namespace Raven.Server.Documents
 
         private static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId(ByteStringContext allocator, ReadOnlySpan<char> id, out Slice idSlice, byte? separator = null)
         {
-            if (_jsonParserState == null)
-                _jsonParserState = new JsonParserState();
-
+            _jsonParserState ??= new JsonParserState();
             _jsonParserState.Reset();
 
             var strLength = id.Length;
@@ -87,7 +85,7 @@ namespace Raven.Server.Documents
             if (strLength > MaxIdSize)
                 ThrowDocumentIdTooBig(id.ToString());
 
-            var internalScope = allocator.Allocate(
+            var internalScope = allocator.AllocateDirect(
                 maxStrSize // this buffer is allocated to also serve the GetSliceFromUnicodeKey
                 + sizeof(char) * id.Length
                 + escapePositionsSize
@@ -105,10 +103,8 @@ namespace Raven.Server.Documents
                     goto Finish;
                 }
 
-                if ((ch >= 65) && (ch <= 90))
-                    buffer.Ptr[i] = (byte)(ch | 0x20);
-                else
-                    buffer.Ptr[i] = (byte)ch;
+                // PERF: We are making it easy for .Net 8.0+ to convert this to CMOV instead.
+                buffer.Ptr[i] = (ch >= 65) && (ch <= 90) ? (byte)(ch | 0x20) : (byte)ch;
             }
 
             _jsonParserState.FindEscapePositionsIn(buffer.Ptr, ref strLength, escapePositionsSize);
@@ -275,9 +271,7 @@ namespace Raven.Server.Documents
             // The total length of the string is stored in the actual table (and include the var int size 
             // prefix.
 
-            if (_jsonParserState == null)
-                _jsonParserState = new JsonParserState();
-
+            _jsonParserState ??= new JsonParserState();
             _jsonParserState.Reset();
 
             int originalStrLength = str.Length;
@@ -300,7 +294,7 @@ namespace Raven.Server.Documents
 
             int idSize = JsonParserState.VariableSizeIntSize(maxStrSize);
 
-            var scope = allocator.Allocate(maxStrSize // lower key
+            var scope = allocator.AllocateDirect(maxStrSize // lower key
                                            + idSize // the size of var int for the len of the key
                                            + maxStrSize // actual key
                                            + escapePositionsSize, out ByteString buffer);
@@ -374,7 +368,7 @@ namespace Raven.Server.Documents
 
             int strLength = str.Length;
 
-            var scope = allocator.Allocate(
+            var scope = allocator.AllocateDirect(
                 sizeof(char) * strLength // for the lower calls
                 + maxStrSize // lower ID
                 + maxIdLenSize // the size of var int for the len of the ID
