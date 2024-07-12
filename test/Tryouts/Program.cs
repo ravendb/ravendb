@@ -13,6 +13,7 @@ using FastTests.Voron.FixedSize;
 using FastTests.Client.Indexing;
 using FastTests;
 using Sparrow.Server.Platform;
+using SlowTests.Authentication;
 
 namespace Tryouts;
 
@@ -23,7 +24,7 @@ public static class Program
         XunitLogging.RedirectStreams = false;
     }
 
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         Console.WriteLine(Process.GetCurrentProcess().Id);
 
@@ -34,11 +35,15 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new FixedSizeBugs(testOutputHelper))
+                using (var test = new AuthenticationEncryptionTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
                     //test.CanRoundTripSmallContainer("GreaterThan42B");
-                    test.CanAddDuplicate();
+                    await test.CanUseEncryption(new RavenTestParameters
+                    {
+                        SearchEngine = RavenSearchEngineMode.Lucene,
+                        DatabaseMode = RavenDatabaseMode.Single,
+                    });
                 }
             }
             catch (Exception e)

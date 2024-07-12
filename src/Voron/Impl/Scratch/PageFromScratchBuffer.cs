@@ -52,6 +52,11 @@ namespace Voron.Impl.Scratch
             throw new InvalidOperationException($"Attempt to read page {PageNumberInDataFile} that was deleted");
         }
 
+        public unsafe Page ReadNewPage(LowLevelTransaction tx)
+        {
+            return new Page(File.Pager.AcquirePagePointerForNewPage(State, ref tx.PagerTransactionState, PositionInScratchBuffer, NumberOfPages));
+        }
+
         public unsafe Page ReadRawPage(LowLevelTransaction tx)
         {
             return new Page(ReadRaw(ref tx.PagerTransactionState));
@@ -60,7 +65,7 @@ namespace Voron.Impl.Scratch
         public unsafe byte* ReadRaw(ref Pager2.PagerTransactionState txState)
         {
             if (IsDeleted == false) 
-                return File.Pager.AcquirePagePointerForNewPage(State, ref txState, PositionInScratchBuffer, NumberOfPages);
+                return File.Pager.AcquireRawPagePointerWithOverflowHandling(State, ref txState, PositionInScratchBuffer);
             throw new InvalidOperationException($"Attempt to read page {PageNumberInDataFile} that was deleted");
         }
     }

@@ -144,7 +144,7 @@ namespace Voron
                 _headerAccessor = new HeaderAccessor(this);
                 TimeToSyncAfterFlushInSec = options.TimeToSyncAfterFlushInSec;
 
-                _currentStateRecordRecord = new EnvironmentStateRecord(
+                _currentStateRecord = new EnvironmentStateRecord(
                     dataPagerState,
                     0,
                     ImmutableDictionary<long, PageFromScratchBuffer>.Empty, 
@@ -314,7 +314,7 @@ namespace Voron
             var entry = _headerAccessor.CopyHeader();
             var nextPageNumber = (header->TransactionId == 0 ? entry.LastPageNumber : header->LastPageNumber) + 1;
             
-            _currentStateRecordRecord = _currentStateRecordRecord with
+            _currentStateRecord = _currentStateRecord with
             {
                 TransactionId = header->TransactionId == 0 ? entry.TransactionId : header->TransactionId,
                 NextPageNumber = nextPageNumber
@@ -453,7 +453,7 @@ namespace Voron
 
         private void CreateNewDatabase()
         {
-            _currentStateRecordRecord = _currentStateRecordRecord with { NextPageNumber = 0 };
+            _currentStateRecord = _currentStateRecord with { NextPageNumber = 0 };
 
             if (Options.SimulateFailureOnDbCreation)
                 ThrowSimulateFailureOnDbCreation();
@@ -485,7 +485,7 @@ namespace Voron
 
         public HeaderAccessor HeaderAccessor => _headerAccessor;
 
-        public long NextPageNumber => _currentStateRecordRecord.NextPageNumber;
+        public long NextPageNumber => _currentStateRecord.NextPageNumber;
 
         public StorageEnvironmentOptions Options => _options;
 
@@ -795,7 +795,7 @@ namespace Voron
             throw new TimeoutException(message);
         }
 
-        public long CurrentReadTransactionId => _currentStateRecordRecord.TransactionId;
+        public long CurrentReadTransactionId => _currentStateRecord.TransactionId;
         public CancellationToken Token => _cancellationTokenSource.Token;
 
         public long PossibleOldestReadTransaction(LowLevelTransaction tx)
@@ -913,7 +913,7 @@ namespace Voron
 
         private long GetNumberOfAllocatedPages()
         {
-            return Math.Max(_currentStateRecordRecord.DataPagerState.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
+            return Math.Max(_currentStateRecord.DataPagerState.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
         }
 
         public StorageReport GenerateReport(Transaction tx)
@@ -1344,14 +1344,14 @@ namespace Voron
             var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read))
             {
-                var numberOfAllocatedPages = Math.Max(tx.DataPagerState.NumberOfAllocatedPages, _currentStateRecordRecord.NextPageNumber - 1); // async apply to data file task
+                var numberOfAllocatedPages = Math.Max(tx.DataPagerState.NumberOfAllocatedPages, _currentStateRecord.NextPageNumber - 1); // async apply to data file task
 
                 return new EnvironmentStats
                 {
                     FreePagesOverhead = FreeSpaceHandling.GetFreePagesOverhead(tx),
                     RootPages = tx.RootObjects.State.Header.PageCount,
                     UnallocatedPagesAtEndOfFile = tx.DataPagerState.NumberOfAllocatedPages - NextPageNumber,
-                    UsedDataFileSizeInBytes = (_currentStateRecordRecord.NextPageNumber - 1) * Constants.Storage.PageSize,
+                    UsedDataFileSizeInBytes = (_currentStateRecord.NextPageNumber - 1) * Constants.Storage.PageSize,
                     AllocatedDataFileSizeInBytes = numberOfAllocatedPages * Constants.Storage.PageSize,
                     CommittedTransactionId = CurrentReadTransactionId,
                 };
@@ -1545,10 +1545,10 @@ namespace Voron
         }
 
         internal TestingStuff _forTestingPurposes;
-        private EnvironmentStateRecord _currentStateRecordRecord;
+        private EnvironmentStateRecord _currentStateRecord;
         private ConcurrentQueue<EnvironmentStateRecord> _transactionsToFlush = new();
 
-        public EnvironmentStateRecord CurrentStateRecord => _currentStateRecordRecord;
+        public EnvironmentStateRecord CurrentStateRecord => _currentStateRecord;
 
         internal TestingStuff ForTestingPurposesOnly()
         {
@@ -1601,7 +1601,7 @@ namespace Voron
             };
 
             // we don't _have_ to make it using interlocked, but let's publish it immediately
-            Interlocked.Exchange(ref _currentStateRecordRecord, updatedState);
+            Interlocked.Exchange(ref _currentStateRecord, updatedState);
             
             // We only want to flush to data pager transactions that have been flushed to the journal.
             // Transactions that _haven't_ been flushed are mostly book-keeping (updating scratch table, etc)
@@ -1643,7 +1643,7 @@ namespace Voron
         {
             // this should only happen during recovery, never during active operations
             Debug.Assert(ActiveTransactions.AllTransactions.Count == 0 , "ActiveTransactions.AllTransactions.Count == 0");
-            _currentStateRecordRecord = _currentStateRecordRecord with { DataPagerState = dataPagerState };
+            _currentStateRecord = _currentStateRecord with { DataPagerState = dataPagerState };
         }
     }
 

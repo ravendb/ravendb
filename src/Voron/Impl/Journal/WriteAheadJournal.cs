@@ -1577,7 +1577,7 @@ namespace Voron.Impl.Journal
             var pagesEncountered = 0;
             foreach (var txPage in txPages)
             {
-                var scratchPage =txPage.Read(ref tx.PagerTransactionState);
+                var scratchPage =txPage.ReadRaw(ref tx.PagerTransactionState);
                 var pageHeader = (PageHeader*)scratchPage;
 
                 // When encryption is off, we do validation by checksum

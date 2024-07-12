@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Operations;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Platform;
 using Voron;
 using Voron.Data.Tables;
@@ -65,6 +67,24 @@ public class BasicNextGen : StorageTest
             tx5.Commit();
         }
     }
+    
+    
+    [Fact]
+    public void EncryptedStorageAnd_Flush()
+    {
+        RequireFileBasedPager();
+        Options.Encryption.MasterKey = Sodium.GenerateRandomBuffer(32);
+        Options.ManualFlushing = true;
+        
+        Env.FlushLogToDataFile(); // flush pages from db init
+       
+        using (var tx = Env.WriteTransaction())
+        {
+            tx.LowLevelTransaction.RootObjects.Add("hi", "there");
+            tx.Commit();
+        }
+    }
+
     
     [Fact]
     public void EncryptedStorage()

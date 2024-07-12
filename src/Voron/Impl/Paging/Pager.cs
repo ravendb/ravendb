@@ -252,7 +252,7 @@ public unsafe partial class Pager2 : IDisposable
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private byte* AcquireRawPagePointerWithOverflowHandling(State state, ref PagerTransactionState txState, long pageNumber)
+    public byte* AcquireRawPagePointerWithOverflowHandling(State state, ref PagerTransactionState txState, long pageNumber)
     {
         // Case 1: Page is not overflow ==> no problem, returning a pointer to existing mapping
         var pageHeader = (PageHeader*)AcquireRawPagePointer(state, ref txState, pageNumber);
