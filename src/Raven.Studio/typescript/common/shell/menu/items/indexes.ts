@@ -24,7 +24,18 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             route: "databases/indexes",
             moduleId: bridgeToReact(IndexesPage, "shardedView"),
             css: 'icon-list-of-indexes',
-            dynamicHash: appUrls.indexes
+            dynamicHash: appUrls.indexes,
+            search: {
+                innerActions: [
+                    { name: "New index" },
+                    { name: "Set priority", alternativeNames: ["Set low priority", "Set normal priority", "Set high priority"] },
+                    { name: "Set lock mode", alternativeNames: ["Unlock index", "Lock index"] },
+                    { name: "Set state", alternativeNames: ["Start indexing", "Disable indexing", "Pause indexing until restart"] },
+                    { name: "Delete index", alternativeNames: ["Remove index"] },
+                    { name: "Edit index" },
+                    { name: "Reset index (rebuild)", alternativeNames: ["Reset in place", "Reset side by side"] }, 
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/indexes/performance',
@@ -34,7 +45,13 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             tooltip: "Shows details about indexing performance",
             nav: true,
             css: 'icon-indexing-performance',
-            dynamicHash: appUrls.indexPerformance
+            dynamicHash: appUrls.indexPerformance,
+            search: {
+                innerActions: [
+                    { name: "Export indexing performance" },
+                    { name: "Import indexing performance" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/indexes/visualizer',
@@ -52,7 +69,15 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             title: 'Index Cleanup',
             nav: true,
             css: 'icon-index-cleanup',
-            dynamicHash: appUrls.indexCleanup
+            dynamicHash: appUrls.indexCleanup,
+            search: {
+                innerActions: [
+                    { name: "Merge indexes" },
+                    { name: "Remove sub-indexes" },
+                    { name: "Remove unused indexes" },
+                    { name: "Unmergable indexes" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/indexes/indexErrors',

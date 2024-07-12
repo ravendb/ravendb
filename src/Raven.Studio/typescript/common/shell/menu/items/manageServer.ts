@@ -20,7 +20,16 @@ function getManageServerMenuItem() {
             title: "Cluster",
             nav: true,
             css: 'icon-cluster',
-            dynamicHash: appUrl.forCluster
+            dynamicHash: appUrl.forCluster,
+            search: {
+                alternativeTitles: ["Cluster Topology"],
+                innerActions: [
+                    { name: "Add Node to Cluster" },
+                    { name: "Remove Node from Cluster" },
+                    { name: "Reassign cores" },
+                    { name: "Force timeout" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/addClusterNode',
@@ -37,7 +46,16 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-client-configuration',
             dynamicHash: appUrl.forGlobalClientConfiguration,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Identity parts separator" },
+                    { name: "Maximum number of requests per session" },
+                    { name: "Load Balance Behavior" },
+                    { name: "Seed" },
+                    { name: "Read Balance Behavior" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/studioConfiguration',
@@ -46,7 +64,15 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-studio-configuration',
             dynamicHash: appUrl.forGlobalStudioConfiguration,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Server Environment" },
+                    { name: "Default Replication Factor" },
+                    { name: "Collapse documents when opening" },
+                    { name: "Help improve the Studio by gathering anonymous usage statistics" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/serverSettings',
@@ -82,7 +108,14 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-server-wide-tasks',
             dynamicHash: appUrl.forServerWideTasks,
-            requiredAccess: "ClusterAdmin"
+            requiredAccess: "ClusterAdmin",
+            search: {
+                innerActions: [
+                    { name: "Add a Server-Wide Task" },
+                    { name: "Server-Wide External Replication" },
+                    { name: "Server-Wide Periodic Backup" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/editServerWideBackup',
@@ -107,7 +140,17 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-server-wide-custom-analyzers',
             dynamicHash: appUrl.forServerWideCustomAnalyzers,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Add a server-wide custom analyzer" },
+                    { name: "Edit server-wide custom analyzer" },
+                    {
+                        name: "Remove server-wide custom analyzer",
+                        alternativeNames: ["Delete server-wide custom analyzer"],
+                    },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/editServerWideCustomAnalyzer',
@@ -124,7 +167,17 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-server-wide-custom-sorters',
             dynamicHash: appUrl.forServerWideCustomSorters,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Add a server-wide custom sorter" },
+                    { name: "Edit server-wide custom sorter" },
+                    {
+                        name: "Remove server-wide custom sorter",
+                        alternativeNames: ["Delete server-wide custom sorter"],
+                    },
+                ],
+            },
         }),
         new separatorMenuItem(),
         new separatorMenuItem('Debug'),
@@ -135,7 +188,13 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-admin-logs',
             dynamicHash: appUrl.forAdminLogs,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Export logs" },
+                    { name: "Download logs" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/trafficWatch',
@@ -144,7 +203,12 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-traffic-watch',
             dynamicHash: appUrl.forTrafficWatch,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Export Traffic Logs" }
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/debugInfo',
@@ -153,7 +217,14 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-gather-debug-information',
             dynamicHash: appUrl.forDebugInfo,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                alternativeTitles: ["Create Debug Package"],
+                innerActions: [
+                    { name: "Gather Debug Info" },
+                    { name: "Download Debug Package" },
+                ],
+            }
         }),
         new leafMenuItem({
             route: 'admin/settings/storageReport',
@@ -173,7 +244,13 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-manage-server-io-test',
             dynamicHash: appUrl.forSystemIoStats,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Export IO stats" },
+                    { name: "Import IO stats" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/captureStackTraces',
@@ -182,7 +259,14 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-stack-traces', 
             dynamicHash: appUrl.forCaptureStackTraces,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Capture Stack Trace" },
+                    { name: "Export Stack Traces" },
+                    { name: "Import Stack Traces" },
+                ]
+            }
         }),
         new leafMenuItem({
             route: 'admin/settings/runningQueries',
@@ -199,10 +283,18 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-debug-advanced',
             hash: appUrl.forDebugAdvancedThreadsRuntime(),
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Threads Runtime Info" },
+                    { name: "Memory Mapped Files" },
+                    { name: "Cluster Observer Log" },
+                    { name: "Record Transaction Commands" },
+                    { name: "Replay Transaction Commands" },
+                ],
+            },
         }),
     ];
 
     return new intermediateMenuItem('Manage Server', items, 'icon-manage-server', null);
 }
-

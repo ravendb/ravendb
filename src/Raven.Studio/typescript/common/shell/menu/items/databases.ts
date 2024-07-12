@@ -13,22 +13,25 @@ function getDatabasesMenuItem(appUrls: computedAppUrls) {
     return new leafMenuItem({
         route: "databases",
         title: "Databases",
-        search: {
-            alternativeTitles: ["or1", "or2", "or3"],
-            innerActions: [
-                {
-                    name: "New Database",
-                    alternativeNames: ["or", "second", "third"] //TODO:
-                },
-                {
-                    name: "fruits",
-                    alternativeNames: ["or", "or2"] //TODO:
-                }
-            ],
-        },
         moduleId: databasesView,
         nav: true,
-        css: 'icon-resources',
-        dynamicHash: appUrls.databasesManagement
+        css: "icon-resources",
+        dynamicHash: appUrls.databasesManagement,
+        search: {
+            innerActions: [
+                { name: "New Database" },
+                { name: "Restore database from backup" },
+                { name: "Disable database" },
+                { name: "Enable database" },
+                { name: "Pause indexing until restart" },
+                { name: "Disable indexing" },
+                { name: "Resume indexing" },
+                { name: "Restart database" },
+                { name: "Compact database" },
+                { name: "Remove database", alternativeNames: ["Delete database"] },
+                { name: "Allow database delete" },
+                { name: "Prevent database delete" },
+            ],
+        },
     });
 }

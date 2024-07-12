@@ -12,7 +12,25 @@ function aboutItem() {
         tooltip: "About",
         nav: true,
         css: 'icon-info',
-        dynamicHash: appUrl.forAbout
+        dynamicHash: appUrl.forAbout,
+        search: {
+            innerActions: [
+                {
+                    name: "License",
+                    alternativeNames: [
+                        "Renew license",
+                        "Replace license",
+                        "Upgrade license",
+                        "Force update license",
+                        "License details",
+                    ],
+                },
+                { name: "Version", alternativeNames: ["Server version", "Software version"] },
+                { name: "Check for updates" },
+                { name: "Support" },
+                { name: "Send Feedback" },
+            ],
+        },
     });
 }
 
@@ -41,8 +59,15 @@ function clusterDashboard() {
         tooltip: "Cluster Dashboard",
         nav: true, // todo - this needs issue RavenDB-16618 to work...
         css: 'icon-cluster-dashboard',
-        dynamicHash: appUrl.forClusterDashboard
-    }); 
+        dynamicHash: appUrl.forClusterDashboard,
+        search: {
+            innerActions: [
+                { name: "Add widgets to board" },
+                { name: "Remove widget from board" },
+                { name: "Maximize widget" },
+            ],
+        },
+    });
 }
 
 export = {

@@ -42,7 +42,28 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-manage-connection-strings',
             dynamicHash: appUrls.connectionStrings,
-            requiredAccess: "DatabaseAdmin"
+            requiredAccess: "DatabaseAdmin",
+            search: {
+                innerActions: [
+                    {
+                        name: "Add new connection string",
+                        alternativeNames: [
+                            "RavenDB",
+                            "SQL",
+                            "OLAP",
+                            "ElasticSearch",
+                            "Kafka",
+                            "RabbitMQ",
+                        ],
+                    },
+                    {
+                        name: "Delete connection string",
+                        alternativeNames: ["Remove connection string"]
+                    },
+                    { name: "Edit connection string" },
+                    { name: "Test connection string" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/settings/conflictResolution',
@@ -58,12 +79,11 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: bridgeToReact(ClientDatabaseConfiguration, "nonShardedView"),
             search: {
                 innerActions: [
-                    {
-                        name: "Identity parts separator"
-                    },
-                    {
-                        name: "Maximum number of requests per session"
-                    }
+                    { name: "Identity parts separator" },
+                    { name: "Maximum number of requests per session" },
+                    { name: "Load Balance Behavior" },
+                    { name: "Seed" },
+                    { name: "Read Balance Behavior" },
                 ],
             },
             shardingMode: "allShards",
@@ -77,12 +97,8 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             route: 'databases/settings/studioConfiguration',
             search: {
                 innerActions: [
-                    {
-                        name: "Database Environment",
-                    },
-                    {
-                        name: "Storage Environment",
-                    }
+                    { name: "Database Environment" },
+                    { name: "Disable creating new Auto-Indexes" }
                 ],
             },
             moduleId: bridgeToReact(StudioDatabaseConfiguration, "nonShardedView"),
@@ -100,12 +116,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Document Revisions',
             search: {
                 innerActions: [
-                    {
-                        name: "Revert revisions"
-                    },
-                    {
-                        name: "Enforce revisions configuration"
-                    }
+                    { name: "Revert revisions" },
+                    { name: "Enforce revisions configuration" },
+                    { name: "Disable revision creation" },
+                    { name: "Create a revision configuration" },
+                    { name: "Delete revision configuration" },
+                    { name: "Edit revision configuration" },
+                    { name: "Enable revision collection" },
+                    { name: "Disable revision collection" },
                 ],
             },
             nav: true,
@@ -130,7 +148,13 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-expos-refresh',
             dynamicHash: appUrls.refresh,
-            requiredAccess: "DatabaseAdmin"
+            requiredAccess: "DatabaseAdmin",
+            search: {
+                innerActions: [
+                    { name: "Enable Document Refresh" },
+                    { name: "Set custom refresh frequency" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/settings/expiration',
@@ -140,7 +164,13 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-document-expiration',
             dynamicHash: appUrls.expiration,
-            requiredAccess: "DatabaseAdmin"
+            requiredAccess: "DatabaseAdmin",
+            search: {
+                innerActions: [
+                    { name: "Enable Document Expiration" },
+                    { name: "Set custom expiration frequency" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/settings/documentsCompression',
@@ -149,7 +179,12 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Document Compression',
             nav: true,
             css: 'icon-documents-compression',
-            dynamicHash: appUrls.documentsCompression
+            dynamicHash: appUrls.documentsCompression,
+            search: {
+                innerActions: [
+                    { name: "Compress revisions for all collections" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/settings/dataArchival',
@@ -159,7 +194,13 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-data-archival',
             dynamicHash: appUrls.dataArchival,
-            requiredAccess: "DatabaseAdmin"
+            requiredAccess: "DatabaseAdmin",
+            search: {
+                innerActions: [
+                    { name: "Enable Data Archival" },
+                    { name: "Set custom archival frequency" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/settings/timeSeries',
@@ -168,7 +209,17 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Time Series',
             nav: true, 
             css: 'icon-timeseries-settings',
-            dynamicHash: appUrls.timeSeries
+            dynamicHash: appUrls.timeSeries,
+            search: {
+                innerActions: [
+                    { name: "Enable Time Series" },
+                    { name: "Disable Time Series" },
+                    { name: "Policy Check Frequency" },
+                    { name: "Delete Time Series" },
+                    { name: "Edit Time Series" },
+                    { name: "Add a collection specific configuration" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/settings/customSorters',
@@ -177,7 +228,15 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             shardingMode: "allShards",
             nav: true,
             css: 'icon-custom-sorters',
-            dynamicHash: appUrls.customSorters
+            dynamicHash: appUrls.customSorters,
+            search: {
+                innerActions: [
+                    { name: "Add a custom sorter" },
+                    { name: "Delete custom sorter" },
+                    { name: "Edit custom sorter" },
+                    { name: "Test custom sorter" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/settings/customAnalyzers',
@@ -186,7 +245,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Custom Analyzers',
             nav: true,
             css: 'icon-custom-analyzers',
-            dynamicHash: appUrls.customAnalyzers
+            dynamicHash: appUrls.customAnalyzers,
+            search: {
+                innerActions: [
+                    { name: "Add a custom analyzer" },
+                    { name: "Delete custom analyzer" },
+                    { name: "Edit custom analyzer" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/settings/editCustomAnalyzer',
@@ -202,7 +268,16 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Manage Database Group',
             nav: true,
             css: 'icon-manage-dbgroup',
-            dynamicHash: appUrls.manageDatabaseGroup
+            dynamicHash: appUrls.manageDatabaseGroup,
+            search: {
+                innerActions: [
+                    { name: "Add node" },
+                    { name: "Reorder nodes" },
+                    { name: "Allow dynamic database distribution" },
+                    { name: "Add shard" },
+                    { name: "Delete from group" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/settings/integrations',
@@ -212,7 +287,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-integrations',
             dynamicHash: appUrls.integrations,
-            requiredAccess: "DatabaseAdmin"
+            requiredAccess: "DatabaseAdmin",
+            search: {
+                alternativeTitles: ["PostgreSQL protocol credentials"],
+                innerActions: [
+                    { name: "Add new credentials" },
+                    { name: "Delete credentials" },
+                ]
+            }
         }),
         new separatorMenuItem(),
         new separatorMenuItem('Advanced'),
@@ -244,7 +326,12 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             shardingMode: "singleShard",
             css: 'icon-revisions-bin',
             dynamicHash: appUrls.tombstonesState,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Force cleanup" },
+                ],
+            },
         })
     ];
 
