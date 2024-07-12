@@ -525,6 +525,8 @@ namespace Voron.Impl.Journal
             private DateTime _lastFlushTime;
             private DateTime _lastSyncTime;
 
+            public bool HasUpdateJournalStateAfterFlush => _updateJournalStateAfterFlush != null;
+            
             public void SetLastFlushed(LastFlushState state)
             {
                 Interlocked.Exchange(ref _lastFlushed, state);
@@ -1292,7 +1294,7 @@ namespace Voron.Impl.Journal
 
             private Page PreparePage(ref Pager2.PagerTransactionState txState, PageFromScratchBuffer pageValue)
             {
-                byte* page = pageValue.Read(ref txState);
+                byte* page = pageValue.ReadRaw(ref txState);
 
                 if (_waj._env.Options.Encryption.IsEnabled == false)
                 {
@@ -1575,7 +1577,7 @@ namespace Voron.Impl.Journal
             var pagesEncountered = 0;
             foreach (var txPage in txPages)
             {
-                var scratchPage =txPage.Read(ref tx.PagerTransactionState);
+                var scratchPage =txPage.ReadRaw(ref tx.PagerTransactionState);
                 var pageHeader = (PageHeader*)scratchPage;
 
                 // When encryption is off, we do validation by checksum

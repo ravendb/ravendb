@@ -44,7 +44,6 @@ public unsafe partial class Pager2 : IDisposable
     private readonly EncryptionBuffersPool _encryptionBuffersPool;
     private readonly byte[] _masterKey;
     private PrefetchTableHint _prefetchState;
-    private readonly Logger _logger;
     private DateTime _lastIncrease;
     private long _increaseSize;
 
@@ -109,7 +108,6 @@ public unsafe partial class Pager2 : IDisposable
         _flags = flags;
         FileName = filename;
         _canPrefetch = PlatformDetails.CanPrefetch == false || options.EnablePrefetching == false;
-        _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{filename}");
         _encryptionBuffersPool = options.Encryption.EncryptionBuffersPool;
         _masterKey = options.Encryption.MasterKey;
         _functions = functions;
@@ -252,7 +250,7 @@ public unsafe partial class Pager2 : IDisposable
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private byte* AcquireRawPagePointerWithOverflowHandling(State state, ref PagerTransactionState txState, long pageNumber)
+    public byte* AcquireRawPagePointerWithOverflowHandling(State state, ref PagerTransactionState txState, long pageNumber)
     {
         // Case 1: Page is not overflow ==> no problem, returning a pointer to existing mapping
         var pageHeader = (PageHeader*)AcquireRawPagePointer(state, ref txState, pageNumber);
@@ -548,7 +546,6 @@ public unsafe partial class Pager2 : IDisposable
         if (!buffer.CanRelease) 
             return;
         
-        cyprtoState.RemoveBuffer(pageNumber);
-        _encryptionBuffersPool.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread, buffer.Generation);
+        cyprtoState.RemoveBuffer(this,pageNumber);
     }
 }

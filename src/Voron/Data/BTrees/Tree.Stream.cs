@@ -372,11 +372,7 @@ namespace Voron.Data.BTrees
                     buffer.ReleaseRef();
 
                     _llt._pageLocator.Reset(page.PageNumber);
-                    pagerStates.RemoveBuffer(page.PageNumber);
-
-                    throw new NotImplementedException();
-                    // var cryptoPager = (CryptoPager)pager;
-                    // cryptoPager.ReturnBuffer(buffer);
+                    pagerStates.RemoveBuffer(pager, page.PageNumber);
                     return;
                 }
             }

@@ -28,7 +28,7 @@ namespace SlowTests.Voron.LeafsCompression
 
                 TreePage treePage = tree.NewPage(TreePageFlags.Leaf, 0);
 
-                var decompressed = tx.LowLevelTransaction.Environment.DecompressionBuffers.GetPage(tx.LowLevelTransaction, 16 * 1024, DecompressionUsage.Write, treePage);
+                var decompressed = tree.GetDecompressedPage(16 * 1024, DecompressionUsage.Write, treePage);
 
                 tree.DecompressionsCache.Add(decompressed);
 
