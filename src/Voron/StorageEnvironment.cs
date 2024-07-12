@@ -828,7 +828,6 @@ namespace Voron
             if (!tx.Committed) 
                 return;
             
-            Journal.Applicator.OnTransactionCommitted(tx);
             UpdateStateOnCommit(tx);
         }
 
@@ -1598,6 +1597,7 @@ namespace Voron
                 ScratchPagesTable = tx.ModifiedPagesInTransaction,
                 NextPageNumber = tx.GetNextPageNumber(),
                 Root = tx.RootObjects.State,
+                DataPagerState = tx.DataPagerState
             };
 
             // we don't _have_ to make it using interlocked, but let's publish it immediately

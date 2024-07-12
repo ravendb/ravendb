@@ -311,9 +311,7 @@ namespace Voron.Impl
         internal void UpdateDataPagerState(Pager2.State dataPagerState)
         {
             Debug.Assert(Flags is TransactionFlags.ReadWrite, "Flags is TransactionFlags.ReadWrite");
-            if (dataPagerState == _envRecord.DataPagerState)
-                return;
-            _envRecord = _envRecord with { DataPagerState = dataPagerState };
+            DataPagerState = dataPagerState;
         }
         
         internal void UpdateClientState(object state)
@@ -1043,6 +1041,8 @@ namespace Voron.Impl
             LastChanceToReadFromWriteTransactionBeforeCommit?.Invoke(this);
 
             ModifiedPagesInTransaction = _env.WriteTransactionPool.ScratchPagesInUse.ToImmutable();
+            
+            _env.Journal.Applicator.OnTransactionCommitted(this);
         }
 
         [DoesNotReturn]

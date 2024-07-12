@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Sparrow.Platform;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Global;
+using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,28 +22,48 @@ public class BasicNextGen : StorageTest
     private unsafe static Span<byte> AsSpan(Page p) => new Span<byte>(p.Pointer, Constants.Storage.PageSize);
 
     [Fact]
-    public void WithTables()
+    public void WithAsyncCommit()
     {
-        var schema = new TableSchema()
-            .DefineKey(new TableSchema.IndexDef { StartIndex = 0, Count = 1 });
-
         Options.ManualFlushing = true;
-        using (var tx = Env.WriteTransaction())
+        long pageId;
+        using (var tx2 = Env.WriteTransaction())
         {
             // force growth of the file
-            tx.LowLevelTransaction.AllocatePage(1024);
-            schema.Create(tx, "Test", 128);
-            tx.Commit();
+            tx2.LowLevelTransaction.AllocatePage(1024);
+            Page allocatePage = tx2.LowLevelTransaction.AllocatePage(1);
+            pageId = allocatePage.PageNumber;
+            tx2.Commit();
         }
-        Env.FlushLogToDataFile();
-        
-        using (var tx = Env.WriteTransaction())
+        using (var tx3 = Env.WriteTransaction())
         {
-            Table openTable = tx.OpenTable(schema, "Test");
-            openTable.GetReport(false);
-            tx.Commit();
+            using Transaction tx4 = tx3.BeginAsyncCommitAndStartNewTransaction(new TransactionPersistentContext());
+
+            Task flushTask = Task.Run(Env.FlushLogToDataFile);
+
+            while (Env.Journal.Applicator.HasUpdateJournalStateAfterFlush == false)
+            {
+                Thread.Sleep(100);
+            }
+            
+            using (tx3)
+            {
+                tx3.EndAsyncCommit();
+            }
+
+            flushTask.Wait(100);
+
+            tx4.LowLevelTransaction.GetPage(pageId);
+
+            using Transaction tx5 = tx4.BeginAsyncCommitAndStartNewTransaction(new TransactionPersistentContext());
+            using (tx4)
+            {
+                tx4.EndAsyncCommit();
+            }
+
+            tx5.LowLevelTransaction.GetPage(pageId);
+            
+            tx5.Commit();
         }
-        
     }
     
     [Fact]

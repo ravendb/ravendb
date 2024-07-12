@@ -525,6 +525,8 @@ namespace Voron.Impl.Journal
             private DateTime _lastFlushTime;
             private DateTime _lastSyncTime;
 
+            public bool HasUpdateJournalStateAfterFlush => _updateJournalStateAfterFlush != null;
+            
             public void SetLastFlushed(LastFlushState state)
             {
                 Interlocked.Exchange(ref _lastFlushed, state);
