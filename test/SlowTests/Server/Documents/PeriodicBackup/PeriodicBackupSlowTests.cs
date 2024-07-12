@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
 using Newtonsoft.Json;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
@@ -56,6 +55,7 @@ using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
 using static Raven.Server.Utils.BackupUtils;
+using Constants = Raven.Client.Constants;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
