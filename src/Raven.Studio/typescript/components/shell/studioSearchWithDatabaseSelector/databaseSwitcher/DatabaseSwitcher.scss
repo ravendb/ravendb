@@ -17,5 +17,9 @@
         border-bottom-right-radius: var(--bs-border-radius-pill) !important;
     }
 
-    // TODO @mateusz: format long database name
+    .database-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 }

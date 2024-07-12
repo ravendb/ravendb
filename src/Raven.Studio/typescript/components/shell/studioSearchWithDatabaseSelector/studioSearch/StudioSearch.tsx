@@ -6,13 +6,6 @@ import { StudioSearchResultDatabaseGroup } from "./studioSearchTypes";
 import { studioSearchInputId, useStudioSearch } from "./hooks/useStudioSearch";
 import React from "react";
 import { Col, Dropdown, DropdownItem, DropdownMenu, Input, Row, DropdownToggle } from "reactstrap";
-import { todo } from "common/developmentHelper";
-
-todo(
-    "Feature",
-    "Damian",
-    "Filter Settings > Advanced section, Manage Database Group, Query, Patching etc. There are some db-related items in Server column"
-);
 
 export default function StudioSearch() {
     const {
@@ -32,9 +25,9 @@ export default function StudioSearch() {
                 isOpen={isSearchDropdownOpen}
                 toggle={toggleDropdown}
                 ref={refs.dropdownRef}
-                className="omnisearch"
+                className="studio-search"
             >
-                <DropdownToggle className="omnisearch__toggle">
+                <DropdownToggle className="studio-search__toggle">
                     <Input
                         id={studioSearchInputId}
                         innerRef={refs.inputRef}
@@ -42,17 +35,18 @@ export default function StudioSearch() {
                         placeholder="Use Ctrl + K to search"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="flex-grow-1 omnisearch__input"
+                        className="flex-grow-1 studio-search__input"
                         autoComplete="off"
                     />
-                    <DropdownMenu className="omnisearch__results">
+
+                    <DropdownMenu className="studio-search__results">
                         <Row className="m-0">
                             <Col
                                 sm={12}
                                 md={matchStatus.hasServerMatch ? 8 : 12}
-                                className="omnisearch__database-col p-0"
+                                className="studio-search__database-col p-0"
                             >
-                                <DropdownItem header className="omnisearch__database-col__header--sticky">
+                                <DropdownItem header className="studio-search__database-col__header--sticky">
                                     <span className="small-label">Active database</span>
                                 </DropdownItem>
                                 {matchStatus.hasDatabaseMatch ? (
@@ -62,10 +56,10 @@ export default function StudioSearch() {
                                                 results.database[groupType].length > 0
                                         )
                                         .map((groupType: StudioSearchResultDatabaseGroup) => (
-                                            <div key={groupType} className="omnisearch__database-col__group">
+                                            <div key={groupType} className="studio-search__database-col__group">
                                                 <DropdownItem
                                                     header
-                                                    className="omnisearch__database-col__group__header"
+                                                    className="studio-search__database-col__group__header"
                                                 >
                                                     <StudioSearchDatabaseGroupHeader groupType={groupType} />
                                                 </DropdownItem>
@@ -79,16 +73,16 @@ export default function StudioSearch() {
                                             </div>
                                         ))
                                 ) : (
-                                    <DropdownItem disabled className="omnisearch__database-col__group pt-0">
+                                    <DropdownItem disabled className="studio-search__database-col__group pt-0">
                                         <EmptySet compact>No results found</EmptySet>
                                     </DropdownItem>
                                 )}
 
                                 {matchStatus.hasSwitchToDatabaseMatch && (
-                                    <div className="omnisearch__database-col__group omnisearch__switch-database">
+                                    <div className="studio-search__database-col__group studio-search__switch-database">
                                         <DropdownItem
                                             header
-                                            className="omnisearch__database-col__group__header omnisearch__database-col__group__header--sticky"
+                                            className="studio-search__database-col__group__header studio-search__database-col__group__header--sticky"
                                         >
                                             <span className="small-label">Switch active database</span>
                                         </DropdownItem>
@@ -104,11 +98,11 @@ export default function StudioSearch() {
                             </Col>
 
                             {matchStatus.hasServerMatch && (
-                                <Col sm={12} md={4} className="omnisearch__server-col p-0">
-                                    <DropdownItem header className="omnisearch__server-col__header--sticky">
+                                <Col sm={12} md={4} className="studio-search__server-col p-0">
+                                    <DropdownItem header className="studio-search__server-col__header--sticky">
                                         <span className="small-label">Server</span>
                                     </DropdownItem>
-                                    <div className="omnisearch__server-col__group">
+                                    <div className="studio-search__server-col__group">
                                         {results.server.map((item) => (
                                             <StudioSearchDropdownItem
                                                 key={item.id}
@@ -119,9 +113,9 @@ export default function StudioSearch() {
                                     </div>
                                 </Col>
                             )}
-                            <Col sm={12} className="omnisearch__legend-col p-0">
-                                <div className="omnisearch__legend-col__group">
-                                    <DropdownItem header className="omnisearch__legend-col__group__header">
+                            <Col sm={12} className="studio-search__legend-col p-0">
+                                <div className="studio-search__legend-col__group">
+                                    <DropdownItem header className="studio-search__legend-col__group__header">
                                         <div className="d-flex align-items-center gap-1">
                                             <kbd>↑</kbd> <span>Move up</span>
                                         </div>
