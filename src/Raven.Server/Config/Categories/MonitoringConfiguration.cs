@@ -59,13 +59,13 @@ namespace Raven.Server.Config.Categories
             [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool ServerMetersEnabled { get; set; }
             
-            [Description("Indicates if AspNetCore metric is enabled or not. Default: true")]
-            [DefaultValue(true)]
+            [Description("Indicates if AspNetCore metric is enabled or not. Default: false")]
+            [DefaultValue(false)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.AspNetCore.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool AspNetCoreInstrumentationMetersEnabled { get; set; }
             
-            [Description("Indicates if Runtime metric is enabled or not. Default: true")]
-            [DefaultValue(true)]
+            [Description("Indicates if Runtime metric is enabled or not. Default: false")]
+            [DefaultValue(false)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Runtime.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool RuntimeInstrumentationMetersEnabled { get; set; }
             
@@ -134,7 +134,7 @@ namespace Raven.Server.Config.Categories
             [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.GC.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool GcEnabled { get; set; }
             
-            [Description("Expose metric related to general.")]
+            [Description("Expose metrics related to general information about the cluster and its licensing.")]
             [DefaultValue(true)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.General.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool GeneralEnabled { get; set; }

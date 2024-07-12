@@ -445,7 +445,8 @@ namespace Raven.Server
 
             if (ClusterStateMachine.TryReadNodeTag(ServerStore, out var nodeTag) == false)
             {
-                Logger.Info("OpenTelemetry monitoring requires the node tag of the server for initialization; however, it is still unavailable. Therefore, OpenTelemetry initialization is skipped.");
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("OpenTelemetry monitoring requires the node tag of the server for initialization; however, it is still unavailable. Therefore, OpenTelemetry initialization is skipped.");
                 return;
             }
             
