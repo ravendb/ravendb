@@ -20,7 +20,7 @@ namespace Sparrow.Utils
 
         public static ThreadStats GetByThreadId(int threadId)
         {
-            return ThreadAllocations.Values.FirstOrDefault(x => x.ManagedThreadId == threadId);
+            return ThreadAllocations.Values.FirstOrDefault(x => x != null && x.ManagedThreadId == threadId);
         } 
         
         public static void NotifyCurrentThreadAboutToClose()

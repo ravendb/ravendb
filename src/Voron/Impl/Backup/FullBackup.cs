@@ -80,11 +80,9 @@ namespace Voron.Impl.Backup
                 infoNotify(($"Voron backup {e.Name} started", 0));
                 var basePath = Path.Combine(e.Folder, e.Name);
 
-                throw new NotImplementedException();
-                // var env = e.Env;
-                // var dataPager = env.Options.DataPager;
-                // var copier = new DataCopier(Constants.Storage.PageSize * 16);
-                // Backup(env, compressionAlgorithm, compressionLevel, dataPager, archive, basePath, copier, infoNotify, cancellationToken);
+                var env = e.Env;
+                var copier = new DataCopier(Constants.Storage.PageSize * 16);
+                Backup(env, compressionAlgorithm, compressionLevel, env.DataPager, archive, basePath, copier, infoNotify, cancellationToken);
             }
 
             infoNotify(("Voron backup db finished", 0));

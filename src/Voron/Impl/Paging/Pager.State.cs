@@ -60,9 +60,12 @@ public unsafe partial class Pager2
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool RemoveBuffer(long pageNumber)
+        public void RemoveBuffer(Pager2 pager, long pageNumber)
         {
-            return _loadedBuffers.Remove(pageNumber);
+            if (_loadedBuffers.Remove(pageNumber, out var buffer))
+            {
+                pager._encryptionBuffersPool.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread, buffer.Generation);
+            }
         }
 
         public EncryptionBuffer this[long index]
