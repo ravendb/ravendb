@@ -58,6 +58,7 @@ namespace Voron.Impl
         public Pager2.PagerTransactionState PagerTransactionState;
         private readonly WriteAheadJournal _journal;
         public ImmutableDictionary<long, PageFromScratchBuffer> ModifiedPagesInTransaction;
+        private ImmutableDictionary<long, PageFromScratchBuffer> _scratchBuffersSnapshotToRollbackTo;
         internal sealed class WriteTransactionPool
         {
 #if DEBUG
@@ -214,6 +215,8 @@ namespace Voron.Impl
             Debug.Assert((PlatformDetails.Is32Bits || env.Options.ForceUsing32BitsPager) == false,
                 $"Async commit isn't supported in 32bits environments. We don't carry 32 bits state from previous tx");
 
+            // if we are rolling back *this* transaction, we do that to the one committed previously
+            _scratchBuffersSnapshotToRollbackTo = previous.ModifiedPagesInTransaction;
             CurrentTransactionIdHolder = previous.CurrentTransactionIdHolder;
             TxStartTime = DateTime.UtcNow;
             DataPager = previous.DataPager;
@@ -261,7 +264,9 @@ namespace Voron.Impl
             _envRecord = env.CurrentStateRecord;
             DataPagerState = _envRecord.DataPagerState;
             DataPager = env.DataPager;
-            
+
+            _scratchBuffersSnapshotToRollbackTo = env.CurrentStateRecord.ScratchPagesTable;
+
             _env = env;
             _journal = env.Journal;
             _freeSpaceHandling = freeSpaceHandling;
@@ -1040,9 +1045,9 @@ namespace Voron.Impl
 
             LastChanceToReadFromWriteTransactionBeforeCommit?.Invoke(this);
 
-            ModifiedPagesInTransaction = _env.WriteTransactionPool.ScratchPagesInUse.ToImmutable();
-            
             _env.Journal.Applicator.OnTransactionCommitted(this);
+
+            ModifiedPagesInTransaction = _env.WriteTransactionPool.ScratchPagesInUse.ToImmutable();
         }
 
         [DoesNotReturn]
@@ -1116,7 +1121,7 @@ namespace Voron.Impl
             var rollbackPages = _env.WriteTransactionPool.ScratchPagesInUse;
             
             // we need to roll back all the changes we made here
-            _env.WriteTransactionPool.ScratchPagesInUse = _envRecord.ScratchPagesTable.ToBuilder(); 
+            _env.WriteTransactionPool.ScratchPagesInUse = _scratchBuffersSnapshotToRollbackTo.ToBuilder(); 
             foreach (var (k, maybeRollBack) in rollbackPages)
             {
                 if(_envRecord.ScratchPagesTable.TryGetValue(k, out var committed) &&

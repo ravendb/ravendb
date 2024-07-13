@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Platform;
 using Sparrow.Server.Platform;
@@ -190,15 +191,20 @@ public unsafe partial class Pager2
         
         private static CryptoTransactionState GetTransactionState(Pager2 pager, ref PagerTransactionState txState)
         {
-            txState.ForCrypto ??= new Dictionary<Pager2, CryptoTransactionState>();
-            if (txState.ForCrypto.TryGetValue(pager, out var cryptoState) == false)
+            if (txState.ForCrypto == null)
             {
+                txState.ForCrypto = new Dictionary<Pager2, CryptoTransactionState>();
                 txState.OnDispose += TxOnDispose;
-                txState.ForCrypto[pager] = cryptoState = new CryptoTransactionState();
                 if (txState.IsWriteTransaction)
                 {
                     txState.OnBeforeCommitFinalization += TxOnCommit;
                 }
+            }
+
+            ref var cryptoState = ref CollectionsMarshal.GetValueRefOrAddDefault(txState.ForCrypto, pager, out var exists);
+            if(exists is false)
+            {
+                cryptoState = new CryptoTransactionState();
             }
             return cryptoState;
         }

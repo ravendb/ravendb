@@ -1294,7 +1294,7 @@ namespace Voron.Impl.Journal
 
             private Page PreparePage(ref Pager2.PagerTransactionState txState, PageFromScratchBuffer pageValue)
             {
-                byte* page = pageValue.Read(ref txState);
+                byte* page = pageValue.ReadRaw(ref txState);
 
                 if (_waj._env.Options.Encryption.IsEnabled == false)
                 {

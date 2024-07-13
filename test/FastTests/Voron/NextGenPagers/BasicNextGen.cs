@@ -99,6 +99,84 @@ public class BasicNextGen : StorageTest
             tx.Commit();
         }
     }
+    
+    [Fact]
+    public void EncryptedStorage_MultipleTransactions_WithRollback()
+    {
+        RequireFileBasedPager();
+        Options.ManualFlushing = true;
+        
+        using (var tx = Env.WriteTransaction())
+        {
+            tx.CreateTree("Test");
+            tx.Commit();
+        }
+
+
+        using (var tx = Env.WriteTransaction())
+        {
+            tx.CreateTree("Test").Add("hi", "there");
+            Task task = Task.Run(Env.FlushLogToDataFile);
+
+            while (Env.Journal.Applicator.HasUpdateJournalStateAfterFlush == false)
+            {
+                Thread.Sleep(100);
+            }
+
+            var txNext = tx.BeginAsyncCommitAndStartNewTransaction(new TransactionPersistentContext());
+            
+            tx.EndAsyncCommit();
+            
+            txNext.CreateTree("Test").Add("byte", "song");
+            
+            txNext.Dispose(); // rollback
+        }
+        
+        using (var tx = Env.WriteTransaction())
+        {
+            tx.LowLevelTransaction.AllocatePage(1);
+            // rollback
+        }
+        
+        using (var tx = Env.WriteTransaction())
+        {
+            tx.LowLevelTransaction.AllocatePage(1);
+            tx.Commit();
+        }
+    }
+    
+    
+    [Fact]
+    public void EncryptedStorage_MultipleTransactions_AndFlush()
+    {
+        RequireFileBasedPager();
+        Options.Encryption.MasterKey = Sodium.GenerateRandomBuffer(32);
+        Options.ManualFlushing = true;
+        
+        using (var tx = Env.WriteTransaction())
+        {
+            tx.CreateTree("Test");
+            tx.Commit();
+        }
+
+        Env.FlushLogToDataFile();  // tree is now in data pager
+
+        using (var tx = Env.WriteTransaction())
+        {
+            // here we access *both* data pager and scratch
+            tx.CreateTree("Test").Add("hi", "there");
+            tx.Commit();
+            
+            // on dispose, we may encrypt the data *twice*!
+        }
+        
+        using (var tx = Env.WriteTransaction())
+        {
+            // now we read from both
+            tx.CreateTree("Test").Add("byte", "song");
+            tx.Commit();
+        }
+    }
 
     [Fact]
     public unsafe void CanHandleUpdatesAndFlushing()

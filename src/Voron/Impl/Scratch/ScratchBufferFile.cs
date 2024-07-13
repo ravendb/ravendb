@@ -340,5 +340,19 @@ namespace Voron.Impl.Scratch
                 return pages;
             }
         }
+
+        [Conditional("DEBUG")]
+        public void VerifyMatch(long pageNumberInDataFile, long positionInScratchBuffer, int numberOfPages)
+        {
+            if (_allocatedPages.TryGetValue(positionInScratchBuffer, out var allocated) is false)
+                return;
+            
+            if(allocated.PageNumberInDataFile != pageNumberInDataFile || 
+               allocated.NumberOfPages != numberOfPages)
+                throw new InvalidOperationException(
+                    $"Failed to verify page {pageNumberInDataFile} when reading scratch page {positionInScratchBuffer}, values different!" +
+                    $"Page: {pageNumberInDataFile} vs. {allocated.PageNumberInDataFile} ({numberOfPages} vs {allocated.NumberOfPages})!");
+
+        }
     }
 }
