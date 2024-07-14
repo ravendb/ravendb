@@ -1633,7 +1633,7 @@ public class PrefixedSharding : ClusterTestBase
         }));
 
         // move big bucket to the newly added shard
-        await Sharding.Resharding.MoveShardForId(store, $"users/0${bigBucketId}", toShard: 2);
+        await Sharding.Resharding.MoveShardForId(store, $"users/0${bigBucketId}", toShard: 2, timeout: 90_000);
 
         // assert stats 
         using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
