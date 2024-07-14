@@ -32,28 +32,6 @@ public unsafe partial class Pager2
         
         private const int NumberOfPagesInAllocationGranularity = Win64.AllocationGranularity / Constants.Storage.PageSize;
 
-        private static void SyncAfterDirectWrite(Pager2 pager, State state, ref PagerTransactionState txState)
-        {
-            var stateFor32Bits = GetTxState(pager, ref txState);
-            foreach (var kvp in stateFor32Bits.LoadedPages)
-            {
-                var page = kvp.Value;
-                if (!Win32MemoryMapNativeMethods.FlushViewOfFile((byte*)page.Pointer, (IntPtr)(page.NumberOfPages * Constants.Storage.PageSize)))
-                {
-                    var lastWinError = Marshal.GetLastSystemError();
-                    throw new Win32Exception(lastWinError, "Failed to flush to file " + pager.FileName);
-                }
-            }
-
-            var canCleanup = false;
-            foreach (var addr in stateFor32Bits.AddressesToUnload)
-            {
-                canCleanup |= Interlocked.Decrement(ref addr.Usages) == 0;
-            }
-            if (canCleanup)
-                CleanupMemory(pager, stateFor32Bits);
-        }
-
         public static bool EnsureMapped(Pager2 pager, State state, ref PagerTransactionState txState, long pageNumber, int numberOfPages)
         {
             var pagerTxState = GetTxState(pager, ref txState);
@@ -74,13 +52,15 @@ public unsafe partial class Pager2
 
         private static TxStateFor32Bits GetTxState(Pager2 pager, ref PagerTransactionState txState)
         {
-            txState.For32Bits ??= new Dictionary<Pager2, TxStateFor32Bits>();
+            if (txState.For32Bits is null)
+            {
+                txState.For32Bits = new Dictionary<Pager2, TxStateFor32Bits>();
+                txState.OnDispose += OnTxDispose;
+            }
             if (txState.For32Bits.TryGetValue(pager, out var pagerTxState) == false)
             {
                 txState.For32Bits[pager] = pagerTxState = new TxStateFor32Bits();
-                txState.OnDispose += OnTxDispose;
             }
-
             return pagerTxState;
         }
 
@@ -141,7 +121,7 @@ public unsafe partial class Pager2
 
         private static byte* AcquirePagePointerForNewPage(Pager2 pager, long pageNumber, int numberOfPages, State state, ref PagerTransactionState txState)
         {
-            _ = numberOfPages;
+            EnsureMapped(pager, state, ref txState, pageNumber, numberOfPages);
             return AcquirePagePointer(pager, state, ref txState, pageNumber);
         }
 
