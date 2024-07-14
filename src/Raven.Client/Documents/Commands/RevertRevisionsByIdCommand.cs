@@ -7,11 +7,11 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    internal sealed class RevertDocumentsToRevisionsCommand : RavenCommand
+    internal sealed class RevertRevisionsByIdCommand : RavenCommand
     {
         private readonly Dictionary<string, string> _idToChangeVector;
 
-        public RevertDocumentsToRevisionsCommand(Dictionary<string, string> idToChangeVector)
+        public RevertRevisionsByIdCommand(Dictionary<string, string> idToChangeVector)
         {
             _idToChangeVector = idToChangeVector;
         }

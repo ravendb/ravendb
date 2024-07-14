@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Revisions
 {
-    public class RevertDocumentsToRevisionsOperation : IOperation
+    public class RevertRevisionsByIdOperation : IOperation
     {
         private readonly Dictionary<string, string> _idToChangeVector;
 
@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// <param name="idToChangeVector">A dictionary where each key is a document ID and each value is the revision change vector for that document.
         /// each pair contains the ID of the document to revert (as a key), and the change vector of the revision to which the document should be reverted (as a value).
         /// </param>
-        public RevertDocumentsToRevisionsOperation(Dictionary<string, string> idToChangeVector)
+        public RevertRevisionsByIdOperation(Dictionary<string, string> idToChangeVector)
         {
             if (idToChangeVector == null)
             {
@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </summary>
         /// <param name="id">The ID of the document to revert.</param>
         /// <param name="cv">The change vector of the revision to which the document should be reverted.</param>
-        public RevertDocumentsToRevisionsOperation(string id, string cv)
+        public RevertRevisionsByIdOperation(string id, string cv)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Operations.Revisions
             _idToChangeVector = new Dictionary<string, string>() { { id, cv } };
         }
 
-        public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache) => new RevertDocumentsToRevisionsCommand(_idToChangeVector);
+        public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache) => new RevertRevisionsByIdCommand(_idToChangeVector);
     }
 
 }

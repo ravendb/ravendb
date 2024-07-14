@@ -6,11 +6,11 @@ using Raven.Server.Documents.Sharding.Operations;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 {
-    public readonly struct ShardedRevertDocumentsToRevisionsOperation : IShardedOperation
+    public readonly struct ShardedRevertRevisionsByIdOperation : IShardedOperation
     {
         private readonly Dictionary<int, Dictionary<string, string>> _shardsToDocs;
 
-        public ShardedRevertDocumentsToRevisionsOperation(Dictionary<int, Dictionary<string, string>> shardsToDocs)
+        public ShardedRevertRevisionsByIdOperation(Dictionary<int, Dictionary<string, string>> shardsToDocs)
         {
             _shardsToDocs = shardsToDocs;
         }
@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 
         public RavenCommand<object> CreateCommandForShard(int shardNumber)
         {
-            return new RevertDocumentsToRevisionsCommand(_shardsToDocs[shardNumber]);
+            return new RevertRevisionsByIdCommand(_shardsToDocs[shardNumber]);
         }
     }
 }
