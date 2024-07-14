@@ -76,10 +76,10 @@ public partial class ClusterTestBase
             return new TTopology { Members = members };
         }
 
-        public async Task<IDictionary<string, List<DocumentDatabase>>> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, List<RavenServer> Nodes, string database = null)
+        public async Task<IDictionary<string, List<DocumentDatabase>>> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, List<RavenServer> nodes, string database = null)
         {
             var dbs = new Dictionary<string, List<DocumentDatabase>>();
-            foreach (var server in Nodes)
+            foreach (var server in nodes)
             {
                 dbs.Add(server.ServerStore.NodeTag, new List<DocumentDatabase>());
                 foreach (var task in server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database ?? store.Database))
