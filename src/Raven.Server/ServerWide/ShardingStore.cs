@@ -81,7 +81,7 @@ namespace Raven.Server.ServerWide
         {
             var config = _serverStore.Cluster.ReadShardingConfiguration(database);
 
-            return config?.HasActiveMigrations() ?? false;
+            return config.HasActiveMigrations();
         }
 
         public DocumentConventions DocumentConventionsForShard =>
