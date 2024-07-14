@@ -2,7 +2,7 @@
     <div class="align-items-center justify-content-between d-flex gap-2 margin-bottom-md padding-top-xs">
         <div class="flex-horizontal gap-2">
             <i class="icon-azure-queue-storage-etl"></i>
-            <h2 data-bind="text: $root.isAddingNewEtlTask() ? 'New Azure Storage Queue ETL' : 'Edit Azure Storage Queue ETL'" class="mb-0"></h2>
+            <h2 data-bind="text: $root.isAddingNewEtlTask() ? 'New Azure Queue Storage ETL' : 'Edit Azure Queue Storage ETL'" class="mb-0"></h2>
             <span class="badge license-restricted-badge enterprise" data-bind="if: !hasQueueEtl">Enterprise</span>
         </div>
         <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
@@ -26,7 +26,7 @@
                         <div class="form-group margin-top">
                             <label for="taskName" class="control-label">Task Name</label>
                             <div class="flex-grow">
-                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the Azure Storage Queue ETL task (optional)" data-bind="textInput: taskName">
+                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the Azure Queue Storage ETL task (optional)" data-bind="textInput: taskName">
                             </div>
                         </div>
                         <div class="form-group">
@@ -71,7 +71,7 @@
                             <label class="control-label">&nbsp;</label>
                             <div class="toggle">
                                 <input id="createNewString" type="checkbox" data-bind="checked: $root.createNewConnectionString">
-                                <label for="createNewString">Create new Azure Storage Queue connection string</label>
+                                <label for="createNewString">Create new Azure Queue Storage connection string</label>
                             </div>
                         </div>
                         <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString">
