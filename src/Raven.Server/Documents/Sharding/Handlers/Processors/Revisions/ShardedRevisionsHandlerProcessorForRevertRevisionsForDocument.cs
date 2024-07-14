@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
                 }
             }
 
-            var op = new ShardedRevertDocumentsToRevisionsOperation(shardsToDocs);
+            var op = new ShardedRevertRevisionsByIdOperation(shardsToDocs);
             await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToDocs.Keys.ToArray(), op, token.Token);
         }
     }

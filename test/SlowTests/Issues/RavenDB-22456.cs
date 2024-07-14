@@ -139,7 +139,7 @@ namespace SlowTests.Issues
                 user1revertCv = u1Metadata[5].GetString(Constants.Documents.Metadata.ChangeVector);
             }
 
-            await store.Operations.SendAsync(new RevertDocumentsToRevisionsOperation(user1.Id, user1revertCv));
+            await store.Operations.SendAsync(new RevertRevisionsByIdOperation(user1.Id, user1revertCv));
 
             using (var session = store.OpenAsyncSession())
             {
@@ -223,7 +223,7 @@ namespace SlowTests.Issues
             }
 
             await store.Operations.SendAsync(
-                new RevertDocumentsToRevisionsOperation(new Dictionary<string, string>() { { user1.Id, user1revertCv }, { company1.Id, company1revertCv } }));
+                new RevertRevisionsByIdOperation(new Dictionary<string, string>() { { user1.Id, user1revertCv }, { company1.Id, company1revertCv } }));
 
             using (var session = store.OpenAsyncSession())
             {
@@ -312,14 +312,14 @@ namespace SlowTests.Issues
 
 
             Exception e = await Assert.ThrowsAsync<RavenException>(() => store.Operations.SendAsync(
-                new RevertDocumentsToRevisionsOperation(user1.Id, "A:253-jyJQ+3eQ5kuHIGZ+aqSVow")));
+                new RevertRevisionsByIdOperation(user1.Id, "A:253-jyJQ+3eQ5kuHIGZ+aqSVow")));
 
             e = e.InnerException;
 
             Assert.Contains("Revision with the cv \"A:253-jyJQ+3eQ5kuHIGZ+aqSVow\" doesn't exist (id: 'Users/1-A')", e.Message);
 
             e = await Assert.ThrowsAsync<RavenException>(() => store.Operations.SendAsync(
-                new RevertDocumentsToRevisionsOperation(user1.Id, user2revertCv)));
+                new RevertRevisionsByIdOperation(user1.Id, user2revertCv)));
 
             e = e.InnerException;
 
