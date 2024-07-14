@@ -7,6 +7,7 @@ using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Platform.Win32;
 using Voron;
 using Voron.Global;
+using Voron.Impl.Paging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -60,8 +61,8 @@ namespace SlowTests.Voron.Storage
         [InlineData(250)]
         public void Should_be_able_to_allocate_new_pages(int growthMultiplier)
         {
-            throw new NotImplementedException();
-            //Env.Options.DataPager.EnsureContinuous(0, growthMultiplier / Constants.Storage.PageSize);
+            var dataPagerState = Env.CurrentStateRecord.DataPagerState;
+            Env.DataPager.EnsureContinuous(ref dataPagerState,0, growthMultiplier / Constants.Storage.PageSize);
         }
 
         private void CreatTestSchema()
@@ -77,11 +78,11 @@ namespace SlowTests.Voron.Storage
         public void Should_be_able_to_allocate_new_pages_multiple_times()
         {
             var numberOfPages = PagerInitialSize / Constants.Storage.PageSize;
+            var dataPagerState = Env.CurrentStateRecord.DataPagerState;
             for (int allocateMorePagesCount = 0; allocateMorePagesCount < 5; allocateMorePagesCount++)
             {
                 numberOfPages *= 2;
-                //Env.Options.DataPager.EnsureContinuous(0, (int)(numberOfPages));
-                throw new NotImplementedException();
+                Env.DataPager.EnsureContinuous(ref dataPagerState, 0, (int)(numberOfPages));
             }
         }
 
