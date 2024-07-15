@@ -2,9 +2,13 @@ import { StudioSearchResult, StudioSearchResultItem } from "../studioSearchTypes
 import { useEffect } from "react";
 
 interface UseStudioSearchKeyboardEventsProps {
-    inputRef: React.RefObject<HTMLInputElement>;
+    refs: {
+        inputRef: React.RefObject<HTMLInputElement>;
+        dropdownRef: React.RefObject<any>;
+        serverColumnRef: React.RefObject<HTMLDivElement>;
+        databaseColumnRef: React.RefObject<HTMLDivElement>;
+    };
     results: StudioSearchResult;
-    dropdownRef: React.RefObject<any>;
     activeItem: StudioSearchResultItem;
     setIsDropdownOpen: (isOpen: boolean) => void;
     setActiveItem: (item: StudioSearchResultItem) => void;
@@ -13,16 +17,9 @@ interface UseStudioSearchKeyboardEventsProps {
 }
 
 export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEventsProps) {
-    const {
-        inputRef,
-        results,
-        dropdownRef,
-        activeItem,
-        setIsDropdownOpen,
-        setActiveItem,
-        setSearchQuery,
-        studioSearchInputId,
-    } = props;
+    const { refs, results, activeItem, setIsDropdownOpen, setActiveItem, setSearchQuery, studioSearchInputId } = props;
+
+    const { inputRef, dropdownRef, serverColumnRef, databaseColumnRef } = refs;
 
     // Handle toggle dropdown by keyboard
     useEffect(() => {
@@ -104,8 +101,8 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
             const flatItems = activeGroup === "left" ? leftFlatItems : rightFlatItems;
             const index = activeGroup === "left" ? activeLeftIndex : activeRightIndex;
 
-            const activeItem = flatItems[index];
-            setActiveItem(activeItem);
+            const newActiveItem = flatItems[index];
+            setActiveItem(newActiveItem);
             isFirstRun = false;
         };
 
@@ -115,7 +112,27 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
         return () => {
             current.removeEventListener("keydown", handleKeyboardNavigation);
         };
-    }, [inputRef, results, setActiveItem]);
+    }, [inputRef, serverColumnRef, results, setActiveItem]);
+
+    // Handle scroll on active item change
+    useEffect(() => {
+        const activeElement = document.getElementById(activeItem?.id);
+        if (!activeElement) {
+            return;
+        }
+
+        const columnElement =
+            activeItem.type === "serverMenuItem" ? serverColumnRef.current : databaseColumnRef.current;
+
+        const activeElementPage = getScrollPageNumber(
+            activeElement.offsetTop + activeElement.clientHeight,
+            columnElement.clientHeight
+        );
+
+        const scrollToY = activeElementPage * columnElement.clientHeight - activeElement.clientHeight;
+
+        columnElement.scrollTo(0, scrollToY);
+    }, [activeItem?.id, activeItem?.type, databaseColumnRef, serverColumnRef]);
 
     // Prevent space from closing the dropdown
     useEffect(() => {
@@ -130,3 +147,7 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
         };
     }, [dropdownRef, setSearchQuery, studioSearchInputId]);
 }
+
+const getScrollPageNumber = (y: number, height: number): number => {
+    return y === 0 ? 0 : Math.ceil(y / height) - 1;
+};
