@@ -15,6 +15,7 @@ export default function StudioSearchDropdownItem({ item, activeItemId }: StudioS
             onClick={item.onSelected}
             className="d-flex align-items-center studio-search__dropdown-item"
             active={activeItemId === item.id}
+            id={item.id}
         >
             <Icon icon={item.icon} />
             <div className="lh-1">

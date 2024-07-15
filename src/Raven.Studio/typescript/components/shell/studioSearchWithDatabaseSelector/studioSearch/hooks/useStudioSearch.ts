@@ -13,10 +13,20 @@ export function useStudioSearch() {
     const dropdownRef = useRef<any>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
+    const serverColumnRef = useRef<HTMLDivElement>(null);
+    const databaseColumnRef = useRef<HTMLDivElement>(null);
+
     const [searchQuery, setSearchQuery] = useState("");
     const [activeItem, setActiveItem] = useState<StudioSearchResultItem>(null);
 
     const { omniSearch, results, handleOmniSearch } = useStudioSearchOmniSearch(searchQuery);
+
+    const refs = {
+        inputRef,
+        dropdownRef,
+        serverColumnRef,
+        databaseColumnRef,
+    };
 
     const { toggleDropdown, goToUrl, resetDropdown } = useStudioSearchUtils({
         inputRef,
@@ -40,10 +50,9 @@ export function useStudioSearch() {
     });
 
     useStudioSearchKeyboardEvents({
-        inputRef,
+        refs,
         studioSearchInputId,
         results,
-        dropdownRef,
         activeItem,
         setIsDropdownOpen,
         setActiveItem,
@@ -59,10 +68,7 @@ export function useStudioSearch() {
     };
 
     return {
-        refs: {
-            inputRef,
-            dropdownRef,
-        },
+        refs,
         isSearchDropdownOpen,
         toggleDropdown,
         searchQuery,
