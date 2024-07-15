@@ -15,6 +15,7 @@ using FastTests;
 using Sparrow.Server.Platform;
 using SlowTests.Authentication;
 using SlowTests.Issues;
+using SlowTests.Server.Documents.PeriodicBackup;
 
 namespace Tryouts;
 
@@ -36,7 +37,7 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new RavenDB_15700(testOutputHelper))
+                using (var test = new EncryptedBackupTest(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
                     //test.CanRoundTripSmallContainer("GreaterThan42B");
@@ -45,7 +46,7 @@ public static class Program
                     //    SearchEngine = RavenSearchEngineMode.Lucene,
                     //    DatabaseMode = RavenDatabaseMode.Single,
                     //});
-                    await test.CanGetMapReduceIndexDebugTrees();
+                    await test.snapshot_encrypted_db_and_restore_to_encrypted_DB_2();
                 }
             }
             catch (Exception e)
