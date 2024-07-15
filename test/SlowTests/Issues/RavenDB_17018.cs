@@ -169,6 +169,8 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.PerformanceHints.MaxNumberOfResults)] = "1"
             }))
             {
+                var database = await GetDatabase(store.Database);
+                database.NotificationCenter.Paging.ForTestingPurposesOnly().DisableTimer = true;
 
                 using (var session = store.OpenSession())
                 {
@@ -212,17 +214,9 @@ namespace SlowTests.Issues
                         .Revisions
                         .GetFor<Company>("companies/1", pageSize: 4);
                 }
-                var database = await GetDatabase(store.Database);
-                
-                string reason;
-                var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out reason);
-                if (outcome == false)
-                {
-                    // "Queue is empty" means that the UpdatePagingInternal already invoked by the Timer
-                    // Any other reason is Failure 
-                    Assert.Equal("Queue is empty", reason); 
-                }
 
+                var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out string reason);
+                Assert.True(outcome, reason);
 
                 using (database.NotificationCenter.GetStored(out var actions))
                 {
