@@ -180,13 +180,18 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#if NET8_0_OR_GREATER                
+        internal static int CompareAvx256(scoped ref readonly byte p1, scoped ref readonly byte p2, int size)
+#elif NET7_0_OR_GREATER
         internal static int CompareAvx256(ref byte p1, ref byte p2, int size)
+#endif
         {
             Debug.Assert(AdvInstructionSet.X86.IsSupportedAvx256);
             
-            ref byte bpx = ref p1;
-            ref byte bpy = ref p2;
-            ref byte bpxEnd = ref Unsafe.AddByteOffset(ref p1, size);
+            ref byte bpx = ref Unsafe.AsRef(in p1);
+            ref byte bpy = ref Unsafe.AsRef(in p2);
+            ref byte bpxEnd = ref Unsafe.AddByteOffset(ref bpx, size);
+            
             if (size >= Vector256<byte>.Count)
             {
                 ref byte loopEnd = ref Unsafe.SubtractByteOffset(ref bpxEnd, (nuint)Vector256<byte>.Count);
@@ -221,7 +226,7 @@ namespace Sparrow
                     return 0;
 
                 bpx = ref loopEnd;
-                bpy = ref Unsafe.AddByteOffset(ref p2, size - Vector256<byte>.Count);
+                bpy = ref Unsafe.AddByteOffset(ref Unsafe.AsRef(in p2), size - Vector256<byte>.Count);
                 matches = (uint)Avx2.MoveMask(
                     Vector256.Equals(
                         Vector256.LoadUnsafe(ref bpx),
@@ -241,14 +246,14 @@ namespace Sparrow
                 return bpx - bpy;
             }
 
-            return CompareSmallInlineNet7(ref p1, ref p2, size);
+            return CompareSmallInlineNet7(in p1, in p2, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static int CompareSmallInlineNet7(ref byte p1, ref byte p2, int size)
+        internal static int CompareSmallInlineNet7(scoped ref readonly byte p1, scoped ref readonly byte p2, int size)
         {
-            ref byte bpx = ref Unsafe.AddByteOffset(ref p1, size);
-            ref byte bpy = ref Unsafe.AddByteOffset(ref p2, size);
+            ref byte bpx = ref Unsafe.AddByteOffset(ref Unsafe.AsRef(in p1), size);
+            ref byte bpy = ref Unsafe.AddByteOffset(ref Unsafe.AsRef(in p2), size);
 
             // PERF: This allows us to do pointer arithmetics and use relative addressing using the 
             //       hardware instructions without needed an extra register.            
@@ -769,21 +774,34 @@ namespace Sparrow
 #endif
         }
 
+#if NET8_0_OR_GREATER
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CompareInline(scoped ref readonly byte p1, scoped ref readonly byte p2, int size)
+        {
+            if (AdvInstructionSet.X86.IsSupportedAvx256)
+            {
+                return CompareAvx256(in p1, in p2, size);
+            }
+
+            return MemoryMarshal.CreateReadOnlySpan(in p1, size)
+                .SequenceCompareTo(MemoryMarshal.CreateReadOnlySpan(in p2, size));
+        }
+
+#elif NET7_0_OR_GREATER
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int CompareInline(ref byte p1, ref byte p2, int size)
         {
-#if NET7_0_OR_GREATER
             if (AdvInstructionSet.X86.IsSupportedAvx256)
             {
                 return CompareAvx256(ref p1, ref p2, size);
             }
 
             return MemoryMarshal.CreateReadOnlySpan(ref p1, size)
-                                .SequenceCompareTo(MemoryMarshal.CreateReadOnlySpan(ref p2, size));
-#else
-            throw new NotSupportedException($"{nameof(CompareInline)} by-ref overload is not supported in frameworks lesser than 7.0");
-#endif
+                .SequenceCompareTo(MemoryMarshal.CreateReadOnlySpan(ref p2, size));
         }
+#endif
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int CompareInline(ReadOnlySpan<byte> p1, ReadOnlySpan<byte> p2, int size)
