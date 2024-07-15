@@ -1,7 +1,10 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit.Abstractions;
 
@@ -17,22 +20,38 @@ public class RavenDB_21173 : ClusterTestBase
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task ClusterTransaction_Failover_Shouldnt_Throw_ConcurrencyException(Options options)
     {
-        var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 3);
+        var customSettings = new Dictionary<string, string> { [RavenConfiguration.GetKey(x => x.Databases.RecentNotificationsMaxEntries)] = "4000", };
+        var customSettingsList = new List<IDictionary<string, string>>() {
+            customSettings,
+            customSettings,
+            customSettings
+        };
+
+        var (nodes, leader) = await CreateRaftCluster(customSettingsList: customSettingsList, numberOfNodes: 3);
         options.ReplicationFactor = 3;
         options.Server = leader;
         using var store = GetDocumentStore(options);
         var databaseName = store.Database;
 
-        var disposeNodeTask = Task.Run(async () =>
+        try
         {
-            await Task.Delay(400);
-            var tag = store.GetRequestExecutor(databaseName).TopologyNodes.First().ClusterTag;
-            var server = nodes.Single(n => n.ServerStore.NodeTag == tag);
-            await DisposeServerAndWaitForFinishOfDisposalAsync(server);
-        });
-        await ProcessDocument(store, "Docs/1-A");
+            var disposeNodeTask = Task.Run(async () =>
+            {
+                await Task.Delay(400);
+                var tag = store.GetRequestExecutor(databaseName).TopologyNodes.First().ClusterTag;
+                var server = nodes.Single(n => n.ServerStore.NodeTag == tag);
+                await DisposeServerAndWaitForFinishOfDisposalAsync(server);
+            });
+            await ProcessDocument(store, "Docs/1-A");
 
-        await disposeNodeTask;
+            await disposeNodeTask;
+        }
+        catch
+        {
+            if(options.DatabaseMode == RavenDatabaseMode.Sharded)
+                Console.WriteLine(await Sharding.GetNotificationInfoAsync(databaseName, nodes));
+            throw;
+        }
     }
 
     private async Task ProcessDocument(IDocumentStore store, string id)
@@ -63,3 +82,4 @@ public class RavenDB_21173 : ClusterTestBase
 
 }
 
+;
