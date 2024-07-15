@@ -35,8 +35,6 @@ namespace SlowTests.Issues
 
                 var index = db.IndexStore.GetIndex(new TestIndexVakanz_WithFiltering().IndexName);
 
-                WaitForUserToContinueTheTest(store);
-
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, new MemoryStream()))
                 using (index.GetReduceTree(new[] { searchedVakanzId, "bewerbung/000d7605-a581-4f3e-8c73-dc2eb4e3f95c" }, out var trees))

@@ -1,5 +1,8 @@
 param ( [switch]$skip_version_increment = $false )
 
+# winget install -e --id zig.zig
+
+
 $PalVerStr = (Get-Content pal.ver)
 [int]$PalVer = [convert]::ToInt32($PalVerStr, 10)
 

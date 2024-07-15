@@ -14,6 +14,7 @@ using FastTests.Client.Indexing;
 using FastTests;
 using Sparrow.Server.Platform;
 using SlowTests.Authentication;
+using SlowTests.Issues;
 
 namespace Tryouts;
 
@@ -35,15 +36,16 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new AuthenticationEncryptionTests(testOutputHelper))
+                using (var test = new RavenDB_15700(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
                     //test.CanRoundTripSmallContainer("GreaterThan42B");
-                    await test.CanUseEncryption(new RavenTestParameters
-                    {
-                        SearchEngine = RavenSearchEngineMode.Lucene,
-                        DatabaseMode = RavenDatabaseMode.Single,
-                    });
+                    //await test.CanRestartEncryptedDbWithIndexes(new RavenTestParameters
+                    //{
+                    //    SearchEngine = RavenSearchEngineMode.Lucene,
+                    //    DatabaseMode = RavenDatabaseMode.Single,
+                    //});
+                    await test.CanGetMapReduceIndexDebugTrees();
                 }
             }
             catch (Exception e)

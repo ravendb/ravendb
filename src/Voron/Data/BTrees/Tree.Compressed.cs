@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
 using Sparrow;
 using Voron.Global;
 using Sparrow.Binary;
 using Sparrow.Compression;
+using Sparrow.Server;
 using Voron.Data.Compression;
 
 namespace Voron.Data.BTrees
@@ -97,9 +99,30 @@ namespace Voron.Data.BTrees
             }
         }
 
+        internal DecompressedLeafPage GetDecompressedPage(int pageSize, DecompressionUsage usage, TreePage original)
+        {
+            if (pageSize < Constants.Storage.PageSize)
+            {
+                throw new ArgumentException(
+                    $"Page cannot be smaller than {Constants.Storage.PageSize} bytes while {pageSize} bytes were requested.");
+            }
+
+            if (pageSize > Constants.Compression.MaxPageSize)
+            {
+                throw new ArgumentException($"Max page size is {Constants.Compression.MaxPageSize} while you requested {pageSize} bytes");
+            }
+
+            Debug.Assert(pageSize == Bits.PowerOf2(pageSize));
+            
+            var disposable = _llt.Allocator.Allocate(pageSize, out ByteString buffer);
+            TreePage.Initialize(buffer.Ptr, pageSize);
+            return new DecompressedLeafPage(buffer.Ptr, pageSize,usage, original, disposable);
+
+        }
+
         private DecompressedLeafPage DecompressFromBuffer(DecompressionUsage usage, ref DecompressionInput input)
         {
-            var result = _llt.Environment.DecompressionBuffers.GetPage(_llt, input.DecompressedPageSize, usage, input.Page);
+            var result = GetDecompressedPage(input.DecompressedPageSize, usage, input.Page);
 
             var decompressedNodesOffset = (ushort)(result.PageSize - input.DecompressedSize);
 
@@ -124,27 +147,24 @@ namespace Voron.Data.BTrees
 
         private DecompressedLeafPage ReuseCachedPage(DecompressedLeafPage cached, DecompressionUsage usage, ref DecompressionInput input)
         {
-            DecompressedLeafPage result;
 
             var sizeDiff = input.DecompressedPageSize - cached.PageSize;
-            if (sizeDiff > 0)
+            if (sizeDiff <= 0)
+                return cached;
+
+            var result = GetDecompressedPage(input.DecompressedPageSize, usage, input.Page);
+
+            Memory.Copy(result.Base, cached.Base, cached.Lower);
+            Memory.Copy(result.Base + cached.Upper + sizeDiff,
+                cached.Base + cached.Upper,
+                cached.PageSize - cached.Upper);
+
+            result.Upper += (ushort)sizeDiff;
+
+            for (var i = 0; i < result.NumberOfEntries; i++)
             {
-                result = _llt.Environment.DecompressionBuffers.GetPage(_llt, input.DecompressedPageSize, usage, input.Page);
-
-                Memory.Copy(result.Base, cached.Base, cached.Lower);
-                Memory.Copy(result.Base + cached.Upper + sizeDiff,
-                    cached.Base + cached.Upper,
-                    cached.PageSize - cached.Upper);
-
-                result.Upper += (ushort)sizeDiff;
-
-                for (var i = 0; i < result.NumberOfEntries; i++)
-                {
-                    result.KeysOffsets[i] += (ushort)sizeDiff;
-                }
+                result.KeysOffsets[i] += (ushort)sizeDiff;
             }
-            else
-                result = cached;
 
             return result;
         }

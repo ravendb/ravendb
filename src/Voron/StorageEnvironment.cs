@@ -104,7 +104,6 @@ namespace Voron
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         private readonly HeaderAccessor _headerAccessor;
-        private readonly DecompressionBuffersPool _decompressionBuffers;
 
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly ScratchBufferPool _scratchBufferPool;
@@ -160,8 +159,6 @@ namespace Voron
 
                 _validPagesAfterLoad = new long[_lastValidPageAfterLoad / (8 * sizeof(long)) + (remainingBits == 0 ? 0 : 1)];
                 _validPagesAfterLoad[^1] |= unchecked(((long)ulong.MaxValue << (int)remainingBits));
-
-                _decompressionBuffers = new DecompressionBuffersPool(options);
 
                 options.InvokeOnDirectoryInitialize();
 
@@ -491,8 +488,6 @@ namespace Voron
 
         public WriteAheadJournal Journal => _journal;
 
-        public DecompressionBuffersPool DecompressionBuffers => _decompressionBuffers;
-
         public void Dispose()
         {
             if (_envDispose.IsSet)
@@ -555,7 +550,6 @@ namespace Voron
                     _journal,
                     _headerAccessor,
                     _scratchBufferPool,
-                    _decompressionBuffers,
                     _options.OwnsPagers ? _options : null,
                     _options.OwnsPagers ? _dataPager : null,
                 })
@@ -1520,7 +1514,6 @@ namespace Voron
         {
             Journal.TryReduceSizeOfCompressionBufferIfNeeded();
             ScratchBufferPool.Cleanup();
-            DecompressionBuffers.Cleanup();
         }
 
         public override string ToString()

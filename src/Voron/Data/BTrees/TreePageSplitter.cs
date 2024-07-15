@@ -252,7 +252,7 @@ namespace Voron.Data.BTrees
             if (decompressedPageSize != null)
             {
                 // splitting the decompressed page, let's allocate the page of the same size to ensure enough space
-                rightDecompressed = _tx.Environment.DecompressionBuffers.GetPage(_tx, decompressedPageSize.Value, DecompressionUsage.Write, rightPage);
+                rightDecompressed = _tree.GetDecompressedPage(decompressedPageSize.Value, DecompressionUsage.Write, rightPage);
                 rightPage = rightDecompressed;
             }
 
