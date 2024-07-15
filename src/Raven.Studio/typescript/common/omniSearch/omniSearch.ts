@@ -49,7 +49,7 @@ export class OmniSearch<TItem extends OmniSearchItem<TType>, TType> {
 
         this.engine = new Fuse<TItem>([], {
             includeMatches: true,
-            threshold: 0.2,
+            threshold: 0.3,
             ignoreLocation: true,
             keys,
         });

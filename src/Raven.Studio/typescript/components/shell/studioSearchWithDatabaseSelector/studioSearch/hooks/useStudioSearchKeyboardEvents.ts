@@ -71,13 +71,8 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
         let activeGroup: "left" | "right" = leftFlatItems.length > 0 ? "left" : "right";
 
         const handleKeyboardNavigation = (e: KeyboardEvent) => {
-            if (!e.key.startsWith("Arrow")) {
-                return;
-            }
-
-            e.preventDefault();
-
             if (e.key === "ArrowDown" && !isFirstRun) {
+                e.preventDefault();
                 if (activeGroup === "left") {
                     activeLeftIndex = (activeLeftIndex + 1) % leftFlatItems.length;
                 } else {
@@ -85,6 +80,7 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
                 }
             }
             if (e.key === "ArrowUp" && !isFirstRun) {
+                e.preventDefault();
                 if (activeGroup === "left") {
                     activeLeftIndex = (activeLeftIndex - 1 + leftFlatItems.length) % leftFlatItems.length;
                 } else {
@@ -92,9 +88,11 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
                 }
             }
             if (e.altKey && e.key === "ArrowLeft") {
+                e.preventDefault();
                 activeGroup = "left";
             }
             if (e.altKey && e.key === "ArrowRight") {
+                e.preventDefault();
                 activeGroup = "right";
             }
 
