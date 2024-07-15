@@ -295,6 +295,19 @@ public partial class RavenTestBase
             }
         }
 
+        public async Task<string> GetNotificationInfoAsync(string databaseName, List<RavenServer> nodes)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("Shards RachisLogIndexNotifications:");
+            var shards = GetShardsDocumentDatabaseInstancesFor(databaseName, nodes);
+            await foreach (var shard in shards)
+            {
+                sb.AppendLine($"Node {shard.ServerStore.NodeTag} Shard {shard.ShardNumber}");
+                sb.AppendLine(shard.RachisLogIndexNotifications.PrintLastNotifications());
+            }
+            return sb.ToString();
+        }
+
         public async ValueTask<ShardedDocumentDatabase> GetAnyShardDocumentDatabaseInstanceFor(string shardDatabase, List<RavenServer> servers = null)
         {
             if (ShardHelper.IsShardName(shardDatabase) == false)

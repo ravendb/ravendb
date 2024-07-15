@@ -309,7 +309,7 @@ namespace Raven.Server.ServerWide
 
         public long LastNotifiedIndex => Interlocked.Read(ref _rachisLogIndexNotifications.LastModifiedIndex);
 
-        public readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
+        public RachisLogIndexNotifications _rachisLogIndexNotifications;
 
         public override void Dispose()
         {
@@ -2856,6 +2856,8 @@ namespace Raven.Server.ServerWide
         public override void Initialize(RachisConsensus parent, ClusterOperationContext context, ClusterChanges changes)
         {
             base.Initialize(parent, context, changes);
+
+            _rachisLogIndexNotifications = new RachisLogIndexNotifications(_parent.ServerStore.Configuration.Cluster.RecentNotificationsMaxEntries, CancellationToken.None);
 
             _rachisLogIndexNotifications.Log = _parent.Log;
 
