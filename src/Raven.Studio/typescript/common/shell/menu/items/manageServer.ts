@@ -153,14 +153,6 @@ function getManageServerMenuItem() {
             },
         }),
         new leafMenuItem({
-            route: 'admin/settings/editServerWideCustomAnalyzer',
-            moduleId: require("viewmodels/manage/editServerWideCustomAnalyzer"),
-            title: "Edit Server-Wide Custom Analyzer",
-            nav: false,
-            dynamicHash: appUrl.forEditServerWideCustomAnalyzer,
-            itemRouteToHighlight: 'admin/settings/serverWideCustomAnalyzers'
-        }),
-        new leafMenuItem({
             route: 'admin/settings/serverWideCustomSorters',
             moduleId: bridgeToReact(ServerWideCustomSorters, "nonShardedView"),
             title: "Server-Wide Sorters",

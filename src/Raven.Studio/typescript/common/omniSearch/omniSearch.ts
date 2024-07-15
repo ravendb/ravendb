@@ -61,7 +61,7 @@ export class OmniSearch<TItem extends OmniSearchItem<TType>, TType> {
     }
 
     public search(input: string): OmniSearchResults<TItem> {
-        const rawResults = this.engine.search(input, { limit: 20 });
+        const rawResults = this.engine.search(input, { limit: 15 });
         const items: OmniSearchResultItem<TItem>[] = [];
 
         const addItem = (item: TItem, additionalFields?: Partial<OmniSearchResultItem<TItem>>) => {

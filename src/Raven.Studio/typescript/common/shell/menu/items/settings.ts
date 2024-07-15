@@ -255,14 +255,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             },
         }),
         new leafMenuItem({
-            route: 'databases/settings/editCustomAnalyzer',
-            moduleId: require('viewmodels/database/settings/editCustomAnalyzer'),
-            title: 'Custom Analyzer',
-            nav: false,
-            dynamicHash: appUrls.editCustomAnalyzer,
-            itemRouteToHighlight: 'databases/settings/customAnalyzers'
-        }),
-        new leafMenuItem({
             route: 'databases/manageDatabaseGroup',
             moduleId: bridgeToReact(ManageDatabaseGroupPage, "nonShardedView"),
             title: 'Manage Database Group',

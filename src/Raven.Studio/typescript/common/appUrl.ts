@@ -104,7 +104,6 @@ class appUrl {
         refresh: ko.pureComputed(() => appUrl.forRefresh(appUrl.currentDatabase())),
         customSorters: ko.pureComputed(() => appUrl.forCustomSorters(appUrl.currentDatabase())),
         customAnalyzers: ko.pureComputed(() => appUrl.forCustomAnalyzers(appUrl.currentDatabase())),
-        editCustomAnalyzer: ko.pureComputed(() => appUrl.forEditCustomAnalyzer(appUrl.currentDatabase())),
         integrations: ko.pureComputed(() => appUrl.forIntegrations(appUrl.currentDatabase())),
         connectionStrings: ko.pureComputed(() => appUrl.forConnectionStrings(appUrl.currentDatabase())),
         conflictResolution: ko.pureComputed(() => appUrl.forConflictResolution(appUrl.currentDatabase())),
@@ -217,11 +216,6 @@ class appUrl {
 
     static forServerWideCustomAnalyzers(): string {
         return "#admin/settings/serverWideCustomAnalyzers";
-    }
-
-    static forEditServerWideCustomAnalyzer(serverWideCustomAnalyzerName? : string): string {
-        const analyzerNamePart = serverWideCustomAnalyzerName ? "?&analyzerName=" + encodeURIComponent(serverWideCustomAnalyzerName) : "";
-        return "#admin/settings/editServerWideCustomAnalyzer" + analyzerNamePart;
     }
 
     static forServerWideCustomSorters(): string {
@@ -402,13 +396,6 @@ class appUrl {
 
     static forCustomAnalyzers(db: database): string {
         return "#databases/settings/customAnalyzers?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forEditCustomAnalyzer(db: database | string, analyzerName?: string): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        const namePart = analyzerName ? "&name=" + encodeURIComponent(analyzerName) : "";
-
-        return "#databases/settings/editCustomAnalyzer?" + databasePart + namePart;
     }
 
     static forIntegrations(db: database): string {
