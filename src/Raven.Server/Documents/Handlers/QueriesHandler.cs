@@ -62,6 +62,8 @@ namespace Raven.Server.Documents.Handlers
                         }
 
                         await Query(queryContext, token, tracker, httpMethod);
+                        
+                        tracker.Dispose();
                     }
                 }
                 catch (Exception e)
@@ -79,10 +81,12 @@ namespace Raven.Server.Documents.Handlers
                                            HttpContext.Request.Path.Value +
                                            e.ToString();
                         }
+
                         tracker.Query = errorMessage;
                         if (TrafficWatchManager.HasRegisteredClients)
                             AddStringToHttpContext(errorMessage, TrafficWatchChangeType.Queries);
                     }
+
                     throw;
                 }
             }
