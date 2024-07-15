@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -31,14 +32,74 @@ namespace Voron.Data.BTrees
         public int FirstKeyLength;
         public int LastKeyLength;
 
-        public Span<byte> FirstKey => MemoryMarshal.CreateSpan(ref KeyStorage[0], FirstKeyLength);
-        public Span<byte> LastKey => MemoryMarshal.CreateSpan(ref KeyStorage[FirstKeyLength], LastKeyLength);
+        public ReadOnlySpan<byte> FirstKey => MemoryMarshal.CreateSpan(ref KeyStorage[0], FirstKeyLength);
+        public ReadOnlySpan<byte> LastKey => MemoryMarshal.CreateSpan(ref KeyStorage[FirstKeyLength], LastKeyLength);
 
         public ReadOnlySpan<long> Cursor => MemoryMarshal.CreateReadOnlySpan(ref PathSequence[0], PathLength);
+
+        public void SetFirstKey(ReadOnlySpan<byte> key, SliceOptions option)
+        {
+            FirstKeyLength = key.Length;
+            FirstKeyOptions = option;
+
+            Debug.Assert(FirstKey.Length == key.Length);
+
+            if (key.Length <= 0)
+                return;
+
+            Unsafe.CopyBlock(ref KeyStorage[0], in key[0], (uint)key.Length);
+        }
+
+        public void SetLastKey(ReadOnlySpan<byte> key, SliceOptions option)
+        {
+            LastKeyLength = key.Length;
+            LastKeyOptions = option;
+
+            Debug.Assert(LastKey.Length == key.Length);
+
+            if (key.Length <= 0)
+                return;
+
+            Unsafe.CopyBlock(ref KeyStorage[FirstKeyLength], in key[0], (uint)key.Length);
+        }
+
+        public void SetCursor(ReadOnlySpan<long> cursorPath)
+        {
+            PathLength = cursorPath.Length;
+            if (cursorPath.Length <= 0)
+                return;
+
+            Span<byte> pathSequence = MemoryMarshal.Cast<long, byte>(MemoryMarshal.CreateSpan(ref PathSequence[0], MaxCursorPath));
+            Unsafe.CopyBlock(ref pathSequence[0], in MemoryMarshal.Cast<long, byte>(cursorPath)[0], (uint)cursorPath.Length * sizeof(long));
+        }
+
+        public int CompareFirstKey(ReadOnlySpan<byte> key)
+        {
+            int x1Length = key.Length;
+            int y1Length = FirstKeyLength;
+
+            ref readonly byte firstKeyStart = ref KeyStorage[0];
+            ref readonly byte keyStart = ref key[0];
+            var r = Memory.CompareInline(in keyStart, in firstKeyStart, Math.Min(x1Length, y1Length));
+
+            return r != 0 ? r : x1Length - y1Length;
+        }
+
+        public int CompareLastKey(ReadOnlySpan<byte> key)
+        {
+            int x1Length = key.Length;
+            int y1Length = LastKeyLength;
+
+            ref readonly byte firstKeyStart = ref KeyStorage[FirstKeyLength];
+            ref readonly byte keyStart = ref key[0];
+            var r = Memory.CompareInline(in keyStart, in firstKeyStart, Math.Min(x1Length, y1Length));
+
+            return r != 0 ? r : x1Length - y1Length;
+        }
     }
 
     [SkipLocalsInit]
-    public unsafe class RecentlyFoundTreePages()
+    public unsafe class RecentlyFoundTreePages
     {
         // PERF: We are using a cache size that we can access directly from a 512 bits instruction when supported
         // or two 256 instructions.
@@ -51,16 +112,6 @@ namespace Voron.Data.BTrees
         private uint _currentGeneration = 1;
 
         private readonly FoundTreePageDescriptor[] _pageDescriptors = new FoundTreePageDescriptor[CacheSize];
-
-        private int Compare(ReadOnlySpan<byte> x1, ReadOnlySpan<byte> y1)
-        {
-            int x1Length = x1.Length;
-            int y1Length = y1.Length;
-            var keyDiff = x1Length - y1Length;
-
-            var r = Memory.CompareInline(x1, y1, Math.Min(x1Length, y1Length));
-            return r != 0 ? r : keyDiff;
-        }
 
         public bool TryFind(Slice key, out FoundTreePageDescriptor foundPage)
         {
@@ -92,9 +143,9 @@ namespace Voron.Data.BTrees
                 switch (keyOption)
                 {
                     case SliceOptions.Key:
-                        if ((current.FirstKeyOptions != SliceOptions.BeforeAllKeys && Compare(key, current.FirstKey) < 0))
+                        if (current.FirstKeyOptions != SliceOptions.BeforeAllKeys && current.CompareFirstKey(key) < 0)
                             break;
-                        if (current.LastKeyOptions != SliceOptions.AfterAllKeys && Compare(key, current.LastKey) > 0)
+                        if (current.LastKeyOptions != SliceOptions.AfterAllKeys && current.CompareLastKey(key) > 0)
                             break;
 
                         foundPage = current;
@@ -114,8 +165,6 @@ namespace Voron.Data.BTrees
                         }
 
                         break;
-                    default:
-                        throw new ArgumentException(keyOption.ToString());
                 }
             }
 
@@ -219,27 +268,11 @@ namespace Voron.Data.BTrees
             ref var current = ref _pageDescriptors[(int)position];
             current.Page = page;
             current.Number = page.PageNumber;
-            current.PathLength = cursorPath.Length;
-            if (cursorPath.Length > 0)
-                cursorPath.CopyTo(MemoryMarshal.CreateSpan(ref current.PathSequence[0], cursorPath.Length));
 
             // We update the information regarding the keys to ensure we can get the Span<byte> representing it.
-            current.FirstKeyLength = firstKey.Length;
-            current.FirstKeyOptions = firstKeyOption;
-            current.LastKeyLength = lastKey.Length;
-            current.LastKeyOptions = lastKeyOption;
-
-            if (firstKey.Length > 0)
-            {
-                Debug.Assert(current.FirstKey.Length == firstKey.Length);
-                firstKey.CopyTo(current.FirstKey);
-            }
-
-            if (lastKey.Length > 0)
-            {
-                Debug.Assert(current.LastKey.Length == lastKey.Length);
-                lastKey.CopyTo(current.LastKey);
-            }
+            current.SetFirstKey(firstKey, firstKeyOption);
+            current.SetLastKey(lastKey, lastKeyOption);
+            current.SetCursor(cursorPath);
 
             _pageGenerationCache = _pageGenerationCache.WithElement((int)position, _currentGeneration);
             _pageNumberCache = _pageNumberCache.WithElement((int)position, page.PageNumber);
