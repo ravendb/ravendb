@@ -70,15 +70,16 @@ $bounceinonce-properties: bounceInOnce 0.15s 1 both;
         gap: 1rem;
 
         .navbar-brand {
-            line-height: $navbar-height;
             height: 100%;
-            transition: $transition-base;
             display: flex;
             justify-content: center;
             align-items: center;
 
             .main-logo {
-                width: 170px;
+                width: 9.375rem;
+                position: relative;
+                display: flex;
+                flex-direction: column;
             }
 
             .icon-raven {
@@ -88,6 +89,12 @@ $bounceinonce-properties: bounceInOnce 0.15s 1 both;
 
             &:hover {
                 filter: $hover-filter-var;
+            }
+        }
+
+        .server-environment-label {
+            &__collapsed {
+                display: none;
             }
         }
     }

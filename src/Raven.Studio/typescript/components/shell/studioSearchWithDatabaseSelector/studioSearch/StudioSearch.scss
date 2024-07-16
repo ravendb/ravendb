@@ -19,6 +19,8 @@
         margin-top: sizes.$gutter-xxs !important;
         padding: 0 !important;
         cursor: default;
+        max-height: 640px;
+        overflow-y: auto;
 
         .dropdown-item {
             font-size: 0.875rem;
@@ -89,7 +91,7 @@
         min-height: 35px !important;
     }
     &__database-col {
-        max-height: 640px;
+        max-height: 540px;
         overflow-y: auto;
         &__header {
             &--sticky {
@@ -138,9 +140,9 @@
         }
     }
     &__server-col {
-        max-height: 640px;
+        max-height: 540px;
         overflow-y: auto;
-        @media (min-width: sizes.$screen-md-max) {
+        @media (min-width: sizes.$screen-sm-max) {
             border-left: 1px solid colors.$border-color-light-var;
         }
         &__group {
@@ -185,6 +187,9 @@
         @include make-icon-color(info, colors.$color-5, colors.$color-5);
     }
     &__legend-col {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
         &__group {
             &__header {
                 background-color: colors.$panel-header-bg-var;
@@ -202,5 +207,12 @@
                 }
             }
         }
+    }
+    &__ellipsis-overflow {
+        flex: 1 !important;
+        line-height: 1.07;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 }

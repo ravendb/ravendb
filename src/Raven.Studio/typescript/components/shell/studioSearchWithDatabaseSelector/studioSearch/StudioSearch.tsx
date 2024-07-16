@@ -5,8 +5,9 @@ import StudioSearchDropdownItem from "./bits/StudioSearchResultItem";
 import { StudioSearchResultDatabaseGroup } from "./studioSearchTypes";
 import { studioSearchInputId, useStudioSearch } from "./hooks/useStudioSearch";
 import React from "react";
-import { Col, Dropdown, DropdownItem, DropdownMenu, Input, Row, DropdownToggle } from "reactstrap";
+import { Dropdown, DropdownItem, DropdownMenu, Input, Row, DropdownToggle } from "reactstrap";
 import classNames from "classnames";
+import StudioSearchLegend from "components/shell/studioSearchWithDatabaseSelector/studioSearch/bits/StudioSearchLegend";
 
 export default function StudioSearch(props: { menuItems: menuItem[] }) {
     const {
@@ -36,7 +37,7 @@ export default function StudioSearch(props: { menuItems: menuItem[] }) {
                         placeholder="Use Ctrl + K to search"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="flex-grow-1 studio-search__input"
+                        className="flex-grow-1 studio-search__input align-self-stretch"
                         autoComplete="off"
                     />
                 </DropdownToggle>
@@ -114,30 +115,7 @@ export default function StudioSearch(props: { menuItems: menuItem[] }) {
                                 </div>
                             </div>
                         )}
-                        <Col sm={12} className="studio-search__legend-col p-0">
-                            <div className="studio-search__legend-col__group">
-                                <DropdownItem header className="studio-search__legend-col__group__header">
-                                    <div className="d-flex align-items-center gap-1">
-                                        <kbd>↑</kbd> <span>Move up</span>
-                                    </div>
-                                    <div className="d-flex align-items-center gap-1">
-                                        <kbd>↓</kbd> <span>Move down</span>
-                                    </div>
-                                    <div className="d-flex align-items-center gap-1">
-                                        <kbd>ALT</kbd> + <kbd>→</kbd> <span>Move right</span>
-                                    </div>
-                                    <div className="d-flex align-items-center gap-1">
-                                        <kbd>ALT</kbd> + <kbd>←</kbd> <span>Move left</span>
-                                    </div>
-                                    <div className="d-flex align-items-center gap-1">
-                                        <kbd>Enter</kbd> <span>Select</span>
-                                    </div>
-                                    <div className="d-flex align-items-center gap-1">
-                                        <kbd>Esc</kbd> <span>Close</span>
-                                    </div>
-                                </DropdownItem>
-                            </div>
-                        </Col>
+                        <StudioSearchLegend />
                     </Row>
                 </DropdownMenu>
             </Dropdown>
