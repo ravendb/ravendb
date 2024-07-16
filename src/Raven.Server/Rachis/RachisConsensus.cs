@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -126,24 +127,24 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe List<BlittableJsonReaderObject> GetLogEntries<TTransaction>(long first, TransactionOperationContext<TTransaction> context, int max)
-            where TTransaction : RavenTransaction
+        public IEnumerable<BlittableJsonReaderObject> GetLogEntries(ClusterOperationContext context, long first, int start, int take)
         {
-            var entries = new List<BlittableJsonReaderObject>();
             var reveredNextIndex = Bits.SwapBytes(first);
+            Span<byte> span = stackalloc byte[sizeof(long)];
+            if (BitConverter.TryWriteBytes(span, reveredNextIndex) == false)
+                throw new InvalidOperationException($"Couldn't convert {first} to span<byte>");
+
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
-            using (Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long), out Slice key))
+            using (Slice.From(context.Allocator, span, out Slice key))
             {
-                foreach (var value in table.SeekByPrimaryKey(key, 0))
+                foreach (var value in table.SeekByPrimaryKey(key, start))
                 {
-                    var entry = FollowerAmbassador.BuildRachisEntryToSend(context, value);
-                    Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, entry);
-                    entries.Add(entry);
-                    if (entries.Count >= max)
-                        break;
+                    if (take-- <= 0)
+                        yield break;
+
+                    yield return FollowerAmbassador.BuildRachisEntryToSend(context, value);
                 }
             }
-            return entries;
         }
     }
 
@@ -151,14 +152,15 @@ namespace Raven.Server.Rachis
     {
         public DateTime At = DateTime.UtcNow;
         public string Message;
-        public long Ticks;
+        public long MsFromCycleStart;
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Message)] = Message,
-                [nameof(Ticks)] = Ticks
+                [nameof(At)] = At,
+                [nameof(MsFromCycleStart)] = MsFromCycleStart,
+                [nameof(Message)] = Message
             };
         }
     }
@@ -187,7 +189,7 @@ namespace Raven.Server.Rachis
             Timings.Add(new RachisLogEntry
             {
                 Message = "Start",
-                Ticks = 0
+                MsFromCycleStart = 0
             });
             _sp.Restart();
         }
@@ -200,7 +202,7 @@ namespace Raven.Server.Rachis
             Timings.Add(new RachisLogEntry
             {
                 Message = message,
-                Ticks = _sp.ElapsedMilliseconds
+                MsFromCycleStart = _sp.ElapsedMilliseconds
             });
         }
     }

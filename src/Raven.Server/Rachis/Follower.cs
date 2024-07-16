@@ -109,7 +109,7 @@ namespace Raven.Server.Rachis
 
                     ClusterCommandsVersionManager.SetClusterVersion(appendEntries.MinCommandVersion);
 
-                    _debugRecorder.Record("Got entries");
+                    _debugRecorder.Record($"Got {appendEntries.EntriesCount} entries");
                     _engine.Timeout.Defer(_connection.Source);
                     if (appendEntries.EntriesCount != 0)
                     {
@@ -139,6 +139,7 @@ namespace Raven.Server.Rachis
                                 );
                         }
                     }
+                    _debugRecorder.Record($"Finished reading {entries.Count} entries from stream");
 
                     // don't start write transaction for noop
                     if (lastCommit != appendEntries.LeaderCommit ||
@@ -476,7 +477,7 @@ namespace Raven.Server.Rachis
             // the reason we send this is to simplify the # of states in the protocol
 
             var snapshot = _connection.ReadInstallSnapshot(context);
-            _debugRecorder.Record("Start receiving snapshot");
+            _debugRecorder.Record($"Got snapshot info: last included index:{snapshot.LastIncludedIndex} at term {snapshot.LastIncludedTerm}");
 
             // reading the snapshot from network and committing it to the disk might take a long time. 
             Task onFullSnapshotInstalledTask = null;
@@ -488,7 +489,6 @@ namespace Raven.Server.Rachis
                 }, cts, "ReadAndCommitSnapshot");
             }
 
-            _debugRecorder.Record("Snapshot was received and committed");
 
             // notify the state machine, we do this in an async manner, and start
             // the operator in a separate thread to avoid timeouts while this is
@@ -558,6 +558,7 @@ namespace Raven.Server.Rachis
         private Task ReadAndCommitSnapshot(InstallSnapshot snapshot, CancellationToken token)
         {
             Task onFullSnapshotInstalledTask = null;
+            _debugRecorder.Record("Start receiving the snapshot");
 
             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenWriteTransaction())
@@ -642,6 +643,8 @@ namespace Raven.Server.Rachis
 
                 context.Transaction.Commit();
             }
+            _debugRecorder.Record("Snapshot was successfully received and committed");
+
             return onFullSnapshotInstalledTask;
         }
 
@@ -654,13 +657,13 @@ namespace Raven.Server.Rachis
 
             using (var temp = new StreamsTempFile(filePath.FullPath, context.Environment))
             using (var stream = temp.StartNewStream())
-            using (var remoteReader = _connection.CreateReaderToStream(stream))
+            using (var remoteReader = _connection.CreateReaderToStream(_debugRecorder, stream))
             {
                 if (ReadSnapshot(remoteReader, context, txw, dryRun: true, token) == false)
                     return false;
 
                 stream.Seek(0, SeekOrigin.Begin);
-                using (var fileReader = new StreamSnapshotReader(stream))
+                using (var fileReader = new StreamSnapshotReader(_debugRecorder, stream))
                 {
                     ReadSnapshot(fileReader, context, txw, dryRun: false, token);
                 }
@@ -677,6 +680,7 @@ namespace Raven.Server.Rachis
 
             while (true)
             {
+                _debugRecorder.Record($"Read root type {(RootObjectType)type}");
                 token.ThrowIfCancellationRequested();
 
                 int size;
@@ -822,7 +826,7 @@ namespace Raven.Server.Rachis
 
         private void ReadInstallSnapshotAndIgnoreContent(CancellationToken token)
         {
-            var reader = _connection.CreateReader();
+            var reader = _connection.CreateReader(_debugRecorder);
             while (true)
             {
                 token.ThrowIfCancellationRequested();

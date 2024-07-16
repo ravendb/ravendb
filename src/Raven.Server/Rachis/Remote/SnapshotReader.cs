@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.IO;
+using Sparrow;
 using Sparrow.Binary;
 
 namespace Raven.Server.Rachis.Remote
@@ -9,8 +10,8 @@ namespace Raven.Server.Rachis.Remote
     {
         private readonly Stream _stream;
 
-        public RemoteToStreamSnapshotReader(RemoteConnection parent, Stream stream) 
-            : base(parent)
+        public RemoteToStreamSnapshotReader(RachisLogRecorder logger, RemoteConnection parent, Stream stream) 
+            : base(logger, parent)
         {
             _stream = stream;
         }
@@ -26,7 +27,7 @@ namespace Raven.Server.Rachis.Remote
     {
         private readonly Stream _stream;
 
-        public StreamSnapshotReader(Stream stream)
+        public StreamSnapshotReader(RachisLogRecorder logger, Stream stream) : base(logger)
         {
             _stream = stream;
         }
@@ -38,7 +39,7 @@ namespace Raven.Server.Rachis.Remote
     {
         private readonly RemoteConnection _parent;
 
-        public RemoteSnapshotReader(RemoteConnection parent)
+        public RemoteSnapshotReader(RachisLogRecorder logger, RemoteConnection parent) : base(logger)
         {
             _parent = parent;
         }
@@ -48,10 +49,14 @@ namespace Raven.Server.Rachis.Remote
     
     public abstract class SnapshotReader : IDisposable
     {
+        private readonly RachisLogRecorder _logger;
         public byte[] Buffer { get; private set;}
 
-        protected SnapshotReader()
+        private uint _readAttempts;
+        private long _totalBytes;
+        protected SnapshotReader(RachisLogRecorder logger)
         {
+            _logger = logger;
             Buffer = ArrayPool<byte>.Shared.Rent(1024);
         }
         
@@ -69,6 +74,12 @@ namespace Raven.Server.Rachis.Remote
 
         public virtual void ReadExactly(int size)
         {
+            _totalBytes += size;
+            if (++_readAttempts % 256 == 0)
+            {
+                _logger.Record($"Read snapshot total size {new Size(_totalBytes, SizeUnit.Bytes)}");
+            }
+
             if (Buffer.Length < size)
             {
                 ArrayPool<byte>.Shared.Return(Buffer);
