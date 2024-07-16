@@ -34,6 +34,18 @@ function aboutItem() {
     });
 }
 
+function whatsNewItem() {
+    return new leafMenuItem({
+        route: 'whatsNew',
+        moduleId: bridgeToReact(AboutPage, "nonShardedView"),
+        title: 'What\'s new',
+        tooltip: "What's new",
+        nav: true,
+        css: 'icon-sparkles',
+        dynamicHash: appUrl.forAbout
+    });
+}
+
 function bs5Item() {
     return new leafMenuItem({
         route: 'bs5',
@@ -75,6 +87,7 @@ function clusterDashboard() {
 
 export = {
     about: aboutItem,
+    whatsNew: whatsNewItem,
     bs: bs5Item,
     clusterDashboard
 };
