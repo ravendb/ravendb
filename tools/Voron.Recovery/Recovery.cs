@@ -223,8 +223,7 @@ namespace Voron.Recovery
                         {
                             var page = mem;
                             if (IsEncrypted)
-                                throw new NotImplementedException();
-                            //var page = DecryptPageIfNeeded(mem, startOffset, ref tx, maybePulseTransaction: true);
+                                 page = DecryptPageIfNeeded(se, mem, startOffset, ref tempTx, maybePulseTransaction: true);
 
                             if (ct.IsCancellationRequested)
                             {
@@ -575,8 +574,9 @@ namespace Voron.Recovery
             }
             finally
             {
-                //tx?.Dispose();
+                tempTx.InvokeDispose(se, ref _dataPagerState, ref tempTx);
                 se?.Dispose();
+                
                 if (_config.LoggingMode != LogMode.None)
                     LoggingSource.Instance.EndLogging();
             }
@@ -748,23 +748,22 @@ namespace Voron.Recovery
 
         private Size _maxTransactionSize = new Size(64, SizeUnit.Megabytes);
 
-        private byte* DecryptPageIfNeeded(byte* mem, long start, ref object tx, bool maybePulseTransaction = false)
+        private byte* DecryptPageIfNeeded(StorageEnvironment env,byte* mem, long start, ref Pager2.PagerTransactionState txState, bool maybePulseTransaction = false)
         {
-            throw new NotImplementedException();
-            // if (IsEncrypted == false)
-            //     return mem;
-            //
-            // //We must make sure we can close the transaction since it may hold buffers for memory we still need e.g. attachments chunks.
-            // if (maybePulseTransaction && tx?.AdditionalMemoryUsageSize > _maxTransactionSize)
-            // {
-            //     tx.Dispose();
-            //     tx = new TempPagerTransaction();
-            // }
-            //
-            // long pageNumber = (long)((PageHeader*)mem)->PageNumber;
-            // var res = Pager.AcquirePagePointer(tx, pageNumber);
-            //
-            // return res;
+            if (IsEncrypted == false)
+                return mem;
+            
+            //We must make sure we can close the transaction since it may hold buffers for memory we still need e.g. attachments chunks.
+            if (maybePulseTransaction && txState.AdditionalMemoryUsageSize > _maxTransactionSize)
+            {
+                txState.InvokeDispose(env, ref _dataPagerState, ref txState);
+                txState = default;
+            }
+            
+            long pageNumber = (long)((PageHeader*)mem)->PageNumber;
+            var res = Pager.AcquirePagePointer(_dataPagerState, ref txState, pageNumber);
+            
+            return res;
         }
 
         private static void ExtractTagFromLastPage(PageHeader* nextPage, StreamPageHeader* streamPageHeader, ref string tag)

@@ -109,20 +109,9 @@ namespace Voron.Impl
         {
             get
             {
-                
-                var cryptoTransactionStates = PagerTransactionState.ForCrypto;
-                
-                var total = DecompressedBufferBytes;
-
-                if (cryptoTransactionStates != null)
-                {
-                    foreach (var state in cryptoTransactionStates.Values)
-                    {
-                        total += state.TotalCryptoBufferSize;
-                    }
-                }
-
-                return new Size(total, SizeUnit.Bytes);
+                var additionalMemoryUsageSize = PagerTransactionState.AdditionalMemoryUsageSize;
+                additionalMemoryUsageSize.Add(DecompressedBufferBytes, SizeUnit.Bytes);
+                return additionalMemoryUsageSize;
             }
         }
         public event Action<LowLevelTransaction> OnDispose;

@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using FastTests.Voron;
 using Sparrow.LowMemory;
 using Voron;
 using Voron.Impl;
+using Voron.Impl.Paging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -51,15 +53,16 @@ namespace SlowTests.Voron
                 {
                     using (var tx = startWriteTransaction ? Env.WriteTransaction() : Env.ReadTransaction())
                     {
-                        Assert.Fail("need to think how to test this");
-                        // var pagerStates = tx.LowLevelTransaction.ForTestingPurposesOnly().GetPagerStates();
-                        //
-                        // Assert.Equal(2, pagerStates.Count); // data file, and one scratch file
-                        //
-                        // foreach (PagerState pagerState in pagerStates)
-                        // {
-                        //     Assert.False(pagerState.CurrentPager.Disposed);
-                        // }
+                        var pagerStates = tx.LowLevelTransaction.CurrentStateRecord.ScratchPagesTable.Select(x => x.Value.State)
+                            .Concat(new[] { tx.LowLevelTransaction.DataPagerState })
+                            .ToHashSet();
+
+                        Assert.Equal(2, pagerStates.Count); // data file, and one scratch file
+
+                        foreach (var pagerState in pagerStates)
+                        {
+                            Assert.False(pagerState.Disposed);
+                        }
                     }
                 }
                 catch (Exception e)
@@ -134,15 +137,16 @@ namespace SlowTests.Voron
                 {
                     using (var tx = Env.ReadTransaction())
                     {
-                        Assert.Fail("Need to think how to test this");
-                        // var pagerStates = tx.LowLevelTransaction.ForTestingPurposesOnly().GetPagerStates();
-                        //
-                        // Assert.Equal(2, pagerStates.Count); // data file, and one scratch file
-                        //
-                        // foreach (PagerState pagerState in pagerStates)
-                        // {
-                        //     Assert.False(pagerState.CurrentPager.Disposed);
-                        // }
+                        var pagerStates = tx.LowLevelTransaction.CurrentStateRecord.ScratchPagesTable.Select(x => x.Value.State)
+                            .Concat(new[] { tx.LowLevelTransaction.DataPagerState })
+                            .ToHashSet();
+                        
+                        Assert.Equal(2, pagerStates.Count); // data file, and one scratch file
+                        
+                        foreach (var pagerState in pagerStates)
+                        {
+                            Assert.False(pagerState.Disposed);
+                        }
                     }
                 }
                 catch (Exception e)
@@ -185,20 +189,18 @@ namespace SlowTests.Voron
 
             var (tempPager, state) = Env.Options.CreateTemporaryBufferPager($"temp-{Guid.NewGuid()}", 16 * 1024, encrypted: false);
 
+            using var __ = state;
             tempPager.Dispose();
-          
-            using (var tx = Env.ReadTransaction())
-            {
-                Assert.Throws<ObjectDisposedException>(() => tempPager.AcquirePagePointer(state, ref tx.LowLevelTransaction.PagerTransactionState, 0));
-            }
 
-            using (var tx = Env.ReadTransaction())
-            {
-                throw new NotImplementedException();
-                // Env.Options.DataPager.Dispose();
-                //
-                // Assert.Throws<ObjectDisposedException>(() => Env.Options.DataPager.AcquirePagePointer(tx.LowLevelTransaction, 0));
-            }
+            Pager2.PagerTransactionState txState = default;
+
+            Assert.Throws<ObjectDisposedException>(() => tempPager.AcquirePagePointer(state, ref txState, 0));
+
+            (tempPager, state) = Env.Options.CreateTemporaryBufferPager($"temp-{Guid.NewGuid()}", 16 * 1024, encrypted: false);
+            using var _ = tempPager;
+            state.Dispose();
+            Assert.Throws<ObjectDisposedException>(() => tempPager.AcquirePagePointer(state, ref txState, 0));
+
         }
 
 

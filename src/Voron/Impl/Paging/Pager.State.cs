@@ -140,7 +140,6 @@ public unsafe partial class Pager2
     {
         public Dictionary<Pager2, TxStateFor32Bits>? For32Bits;
         public Dictionary<Pager2, CryptoTransactionState>? ForCrypto;
-        public LowLevelTransaction Llt;
         public bool IsWriteTransaction;
         
         /// <summary>
@@ -166,6 +165,26 @@ public unsafe partial class Pager2
                 result += state.Value.TotalLoadedSize;
             }
             return new Size(result, SizeUnit.Bytes);
+        }
+        
+        
+        public Size AdditionalMemoryUsageSize
+        {
+            get
+            {
+                
+                var cryptoTransactionStates = ForCrypto;
+                if( cryptoTransactionStates== null)
+                    return Size.Zero;
+
+
+                long total = 0;
+                foreach (var state in cryptoTransactionStates.Values)
+                {
+                    total += state.TotalCryptoBufferSize;
+                }
+                return new Size(total, SizeUnit.Bytes);
+            }
         }
     }
     
