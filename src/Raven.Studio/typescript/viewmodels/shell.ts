@@ -215,7 +215,13 @@ class shell extends viewModelBase {
         this.bindToCurrentInstance("toggleMenu");
 
         this.upgradeModalView = ko.pureComputed(() => ({ component: UpgradeModal }))
-        this.studioSearchWithDatabaseSwitcherView = ko.pureComputed(() => ({ component: StudioSearchWithDatabaseSwitcher }));
+        
+        this.studioSearchWithDatabaseSwitcherView = ko.pureComputed(() => ({
+            component: StudioSearchWithDatabaseSwitcher,
+            props: {
+                menuItems: this.mainMenu.getItems()
+            }
+        }));
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.

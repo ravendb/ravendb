@@ -22,7 +22,7 @@ export function EmptySet(props: EmptySetProps) {
     return (
         <div className={classNames("empty-set", className, compact ? "compact my-2" : "mb-2 mx-auto text-center")}>
             <Icon icon={icon || defaultIcon} color={color} margin="m-0" size={compact ? "sm" : iconSize} />
-            <p className={classNames("mb-0", compact ? "lh-1" : "lead")}>{children}</p>
+            <div className={classNames("mb-0", compact ? "lh-1" : "lead")}>{children}</div>
         </div>
     );
 }

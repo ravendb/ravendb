@@ -9,29 +9,27 @@ import {
     StudioSearchItemEvent,
 } from "../studioSearchTypes";
 import { exhaustiveStringTuple } from "components/utils/common";
-import { useEffect, useCallback, useMemo } from "react";
+import { useEffect, useCallback } from "react";
 import IconName from "typings/server/icons";
 import { OmniSearch } from "common/omniSearch/omniSearch";
 import { useAppUrls } from "components/hooks/useAppUrls";
-import generateMenuItems from "common/shell/menu/generateMenuItems";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 
 interface UseStudioSearchSyncRegisterParams {
     omniSearch: OmniSearch<StudioSearchItem, StudioSearchItemType>;
+    menuItems: menuItem[];
     goToUrl: (url: string, newTab: boolean) => void;
     resetDropdown: () => void;
 }
 
 export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterParams) {
-    const { omniSearch, goToUrl, resetDropdown } = props;
+    const { omniSearch, menuItems, goToUrl, resetDropdown } = props;
 
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const allDatabaseNames = useAppSelector(databaseSelectors.allDatabaseNames);
     const collectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
-
-    const menuItems = useMemo(() => generateMenuItems(activeDatabaseName), [activeDatabaseName]);
 
     const { appUrl } = useAppUrls();
 
@@ -159,15 +157,6 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
                 });
             });
 
-        const allMenuItemTypes = exhaustiveStringTuple<StudioSearchMenuItemType>()(
-            "serverMenuItem",
-            "documentsMenuItem",
-            "indexesMenuItem",
-            "tasksMenuItem",
-            "settingsMenuItem",
-            "statsMenuItem"
-        );
-
         allMenuItemTypes.forEach((type) => {
             omniSearch.register(
                 type,
@@ -192,3 +181,12 @@ const databaseRouteMappings: Record<string, StudioSearchMenuItemType> = {
     advanced: "settingsMenuItem",
     status: "statsMenuItem",
 };
+
+const allMenuItemTypes = exhaustiveStringTuple<StudioSearchMenuItemType>()(
+    "serverMenuItem",
+    "documentsMenuItem",
+    "indexesMenuItem",
+    "tasksMenuItem",
+    "settingsMenuItem",
+    "statsMenuItem"
+);

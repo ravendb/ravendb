@@ -183,6 +183,10 @@ class menu {
                 document.documentElement.style.setProperty('--menu-width', widthFromSettings.toString() + 'px');
             });
     }
+
+    getItems(): menuItem[] {
+        return this.items();
+    }
     
     private handleResize(e: JQuery.TriggeredEvent) {
 

@@ -7,7 +7,7 @@ import { useStudioSearchSyncRegister } from "./useStudioSearchSyncRegister";
 import { useStudioSearchOmniSearch } from "./useStudioSearchOmniSearch";
 import { useStudioSearchUtils } from "./useStudioSearchUtils";
 
-export function useStudioSearch() {
+export function useStudioSearch(menuItems: menuItem[]) {
     const { value: isSearchDropdownOpen, setValue: setIsDropdownOpen } = useBoolean(false);
 
     const dropdownRef = useRef<any>(null);
@@ -38,6 +38,7 @@ export function useStudioSearch() {
 
     useStudioSearchSyncRegister({
         omniSearch,
+        menuItems,
         goToUrl,
         resetDropdown,
     });
