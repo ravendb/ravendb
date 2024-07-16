@@ -18,7 +18,7 @@ export default function StudioSearchDropdownItem({ item, activeItemId }: StudioS
             id={item.id}
         >
             <Icon icon={item.icon} />
-            <div className="lh-1">
+            <div className="studio-search__ellipsis-overflow">
                 {item.innerActionText ? (
                     <>
                         <StudioSearchFuzzyHighlightedText

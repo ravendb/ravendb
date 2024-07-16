@@ -69,19 +69,20 @@
 
                 &:hover {
                     background-color: bs5variables.$panel-bg-3-var;
-                    color: bs5variables.$link-color;
+                    color: bs5variables.$text-emphasis-var;
                 }
             }
 
             .react-select__option--is-focused {
                 background-color: bs5variables.$panel-bg-3-var;
-                color: bs5variables.$link-color;
+                color: bs5variables.$text-emphasis-var;
             }
 
             .react-select__option--is-disabled {
                 opacity: 0.5;
                 color: bs5variables.$text-muted-var;
-                cursor: default;
+                cursor: not-allowed;
+                pointer-events: none;
             }
 
             hr {

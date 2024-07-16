@@ -121,8 +121,8 @@ class shell extends viewModelBase {
     studioLoadingFakeRequest: requestExecution;
     
     serverEnvironment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
-    serverEnvironmentClass = database.createEnvironmentColorComputed("text", this.serverEnvironment);
-    
+    serverEnvironmentClass = database.createEnvironmentColorComputed("bg", this.serverEnvironment);
+
     private onBootstrapFinishedTask = $.Deferred<void>();
 
     upgradeModalView: ReactInKnockout<typeof UpgradeModal>;

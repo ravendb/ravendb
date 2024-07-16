@@ -12,15 +12,21 @@
     <nav class="bs5 navbar">
         <div class="navbar-header">
             <a class="navbar-brand no-decor" data-bind="attr: { href: appUrls.clusterDashboard }">
-                <img src="../../Content/img/ravendb_logo.svg" class="main-logo" />
-                <i class="icon-raven"></i>
+                <div class="main-logo">
+                    <img src="../../Content/img/ravendb_logo.svg" />
+                    <div data-bind="if: serverEnvironment, visible: serverEnvironment, attr: { class: 'badge rounded-pill ms-auto text-uppercase margin-bottom-xxs ' + serverEnvironmentClass() }" title="Server environment">
+                        <span data-bind="text: serverEnvironment"></span>
+                    </div>
+                </div>
+                <div class="collapsed-logo">
+                    <i class="icon-raven"></i>
+                    <div data-bind="if: serverEnvironment, visible: serverEnvironment, attr: { class: 'badge rounded-pill server-environment-label__collapsed text-uppercase ' + serverEnvironmentClass() }" title="Server environment">
+                        <span>PROD</span>
+                    </div>
+                </div>
             </a>
         </div>
         <div id="navbar">
-            <div class="server-environment" data-bind="if: serverEnvironment, visible: serverEnvironment">
-                <small class="on-base-background">Server environment</small>
-                <div><strong data-bind="text: serverEnvironment, attr: { class: 'text-uppercase ' + serverEnvironmentClass() }"></strong></div>
-            </div>
             <div style="flex-grow: 1;" data-bind="react: $root.studioSearchWithDatabaseSwitcherView"></div>
             <ul class="nav navbar-nav navbar-right">
                 <li>
