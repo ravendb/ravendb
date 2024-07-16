@@ -30,7 +30,8 @@ function generateNoActiveDatabaseMenuItems() {
         getDatabasesMenuItem(appUrls),
         rootItems.clusterDashboard(),
         getManageServerMenuItem(),
-        rootItems.about()
+        rootItems.about(),
+        rootItems.whatsNew()
     ];
 }
 
@@ -47,7 +48,8 @@ function generateActiveDatabaseMenuItems() {
         getDatabasesMenuItem(appUrls),
         rootItems.clusterDashboard(),
         getManageServerMenuItem(),
-        rootItems.about()
+        rootItems.about(),
+        rootItems.whatsNew()
     ];
 }
 
