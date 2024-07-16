@@ -152,11 +152,14 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/log", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GetLogs()
         {
+            var start = GetStart();
+            var take = GetPageSize(defaultPageSize: 1024);
+
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
             await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
-                context.OpenReadTransaction();
-                context.Write(writer, ServerStore.GetLogDetails(context));
+                context.Write(writer, ServerStore.GetLogDetails(context, start, take));
             }
         }
 

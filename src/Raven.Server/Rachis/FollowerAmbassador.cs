@@ -172,6 +172,7 @@ namespace Raven.Server.Rachis
                         {
                             if (needNewConnection)
                             {
+                                _debugRecorder.Record("Creating new connection to follower");
                                 if (_engine.Log.IsInfoEnabled)
                                 {
                                     _engine.Log.Info($"FollowerAmbassador for {_tag}: Creating new connection to {_tag}");
@@ -243,11 +244,11 @@ namespace Raven.Server.Rachis
                             continue;
                         }
 
+                        _debugRecorder.Record("Start negotiation with follower");
                         var matchIndex = InitialNegotiationWithFollower();
-                        _debugRecorder.Record("start negotiation with follower");
+                        _debugRecorder.Record($"Found highest common index: {matchIndex}");
                         UpdateLastMatchFromFollower(matchIndex);
                         SendSnapshot(_connection.Stream);
-                        _debugRecorder.Record("Send snapshot");
 
                         var entries = new List<BlittableJsonReaderObject>();
                         var readWatcher = Stopwatch.StartNew();
@@ -311,7 +312,10 @@ namespace Raven.Server.Rachis
                                     );
                                 }
 
-                                _debugRecorder.Record("Sending entries");
+                                _debugRecorder.Record(entries.Count > 0
+                                    ? $"Sending {entries.Count} Entries"
+                                    : "Sending Heartbeat");
+
                                 _connection.Send(context, UpdateFollowerTicks, appendEntries, entries);
                                 _debugRecorder.Record("Waiting for response");
                                 AppendEntriesResponse aer = null;
@@ -424,7 +428,6 @@ namespace Raven.Server.Rachis
                                 return;
                             }
                         }
-
                         // This is an unexpected exception which indicate the something is wrong with the connection.
                         // So we will retry to reconnect. 
                         _connection?.Dispose();
@@ -434,7 +437,6 @@ namespace Raven.Server.Rachis
 
                 Status = AmbassadorStatus.Disconnected;
                 StatusMessage = "Graceful shutdown";
-                _debugRecorder.Record(StatusMessage);
             }
             catch (RachisException e)
             {
@@ -458,6 +460,7 @@ namespace Raven.Server.Rachis
             }
             finally
             {
+                _debugRecorder.Record(StatusMessage);
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info($"{ToString()}: Node {_tag} is finished with the message '{StatusMessage}'.");
@@ -513,6 +516,7 @@ namespace Raven.Server.Rachis
             {
                 hadConnectionFailure = true;
             }
+            _debugRecorder.Record(e.ToString());
         }
 
         private bool IsGracefulError(Exception e)
@@ -534,6 +538,8 @@ namespace Raven.Server.Rachis
 
         private void SendSnapshot(Stream stream)
         {
+            _debugRecorder.Record("Begin sending Snapshot...");
+
             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -582,7 +588,7 @@ namespace Raven.Server.Rachis
                     WriteSnapshotToFile(context, new BufferedStream(stream));
                     UpdateFollowerTicks();
                 }
-
+                _debugRecorder.Record("Sending snapshot is completed, waiting for an ack from the follower");
                 while (true)
                 {
                     var aer = _connection.Read<InstallSnapshotResponse>(context);
@@ -591,8 +597,10 @@ namespace Raven.Server.Rachis
                         UpdateLastMatchFromFollower(aer.LastLogIndex);
                         break;
                     }
+                    _debugRecorder.Record("Follower is alive, but didn't completed to commit the snapshot yet");
                     UpdateFollowerTicks();
                 }
+                _debugRecorder.Record("Sending and installing the snapshot is completed");
 
                 if (_engine.Log.IsInfoEnabled)
                 {
@@ -606,6 +614,7 @@ namespace Raven.Server.Rachis
             var dueTime = (int)(_engine.ElectionTimeout.TotalMilliseconds / 3);
             var timer = new Timer(_ => UpdateFollowerTicks(), null, dueTime, dueTime);
             long totalSizeInBytes = 0;
+            long items = 0;
             var sp = Stopwatch.StartNew();
 
             try
@@ -625,13 +634,14 @@ namespace Raven.Server.Rachis
                             var rootObjectType = txr.GetRootObjectType(rootIterator.CurrentKey);
                             if (_engine.ShouldSnapshot(rootIterator.CurrentKey, rootObjectType) == false)
                                 continue;
+                            
+                            _debugRecorder.Record($"Start sending type: '{rootObjectType}'");
 
                             var currentTreeKey = rootIterator.CurrentKey;
-
                             binaryWriter.Write((int)rootObjectType);
                             binaryWriter.Write(currentTreeKey.Size);
                             copier.Copy(currentTreeKey.Content.Ptr, currentTreeKey.Size);
-                            totalSizeInBytes += sizeof(long) + currentTreeKey.Size;
+                            CalculateTotalSize(ref items, ref totalSizeInBytes, sizeof(long) + currentTreeKey.Size);
 
                             switch (rootObjectType)
                             {
@@ -639,13 +649,13 @@ namespace Raven.Server.Rachis
                                     var tree = txr.ReadTree(currentTreeKey);
                                     
                                     binaryWriter.Write(tree.State.NumberOfEntries);
-                                    totalSizeInBytes += sizeof(long);
+                                    CalculateTotalSize(ref items, ref totalSizeInBytes, sizeof(long));
 
                                     var type = tree.State.Flags;
                                     if (_connection.Features.MultiTree)
                                     {
                                         binaryWriter.Write((int)type);
-                                        totalSizeInBytes += sizeof(int);
+                                        CalculateTotalSize(ref items, ref totalSizeInBytes, sizeof(int));
                                     }
                                     
                                     using (var treeIterator = tree.Iterate(false))
@@ -657,7 +667,7 @@ namespace Raven.Server.Rachis
                                                 var currentTreeValueKey = treeIterator.CurrentKey;
                                                 binaryWriter.Write(currentTreeValueKey.Size);
                                                 copier.Copy(currentTreeValueKey.Content.Ptr, currentTreeValueKey.Size);
-                                                totalSizeInBytes += sizeof(int) + currentTreeValueKey.Size;
+                                                CalculateTotalSize(ref items, ref totalSizeInBytes, sizeof(int) + currentTreeValueKey.Size);
 
                                                 switch (type)
                                                 {
@@ -666,7 +676,7 @@ namespace Raven.Server.Rachis
                                                         binaryWriter.Write(reader.Length);
                                                         copier.Copy(reader.Base, reader.Length);
 
-                                                        totalSizeInBytes += sizeof(int) + reader.Length;
+                                                        CalculateTotalSize(ref items, ref totalSizeInBytes, sizeof(int) + reader.Length);
                                                         break;
 
                                                     case TreeFlags.MultiValueTrees:
@@ -677,7 +687,7 @@ namespace Raven.Server.Rachis
 
                                                         long count = tree.MultiCount(currentTreeValueKey);
                                                         binaryWriter.Write(count);
-                                                        totalSizeInBytes += sizeof(long);
+                                                        CalculateTotalSize(ref items, ref totalSizeInBytes, sizeof(long));
 
                                                         using (var multiIt = tree.MultiRead(currentTreeValueKey))
                                                         {
@@ -688,8 +698,7 @@ namespace Raven.Server.Rachis
                                                                     var val = multiIt.CurrentKey;
                                                                     binaryWriter.Write(val.Size);
                                                                     copier.Copy(val.Content.Ptr, val.Size);
-                                                                    totalSizeInBytes += val.Size + sizeof(int);
-
+                                                                    CalculateTotalSize(ref items, ref totalSizeInBytes, val.Size + sizeof(int));
                                                                 } while (multiIt.MoveNext());
                                                             }
                                                         }
@@ -713,13 +722,13 @@ namespace Raven.Server.Rachis
                                     // Load table into structure 
                                     var inputTable = txr.OpenTable(schema, currentTreeKey);
                                     binaryWriter.Write(inputTable.NumberOfEntries);
-                                    totalSizeInBytes += sizeof(long);
+                                    CalculateTotalSize(ref items, ref totalSizeInBytes, sizeof(long));
 
                                     foreach (var holder in inputTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                                     {
                                         binaryWriter.Write(holder.Reader.Size);
                                         copier.Copy(holder.Reader.Pointer, holder.Reader.Size);
-                                        totalSizeInBytes += sizeof(int) + holder.Reader.Size;
+                                        CalculateTotalSize(ref items, ref totalSizeInBytes, sizeof(int) + holder.Reader.Size);
                                     }
                                     break;
                                 default:
@@ -730,7 +739,7 @@ namespace Raven.Server.Rachis
                     }
 
                     binaryWriter.Write((int)RootObjectType.None);
-                    totalSizeInBytes += sizeof(int);
+                    CalculateTotalSize(ref items, ref totalSizeInBytes, sizeof(int));
                 }
 
                 dest.Flush();
@@ -750,6 +759,15 @@ namespace Raven.Server.Rachis
                 _engine.Log.Info($"Sending snapshot to {_tag}, " +
                                  $"total size: {new Size(totalSizeInBytes, SizeUnit.Bytes)}, " +
                                  $"took: {sp.ElapsedMilliseconds}ms");
+            }
+        }
+
+        private void CalculateTotalSize(ref long items, ref long totalSizeInBytes, long sizeToIncrease)
+        {
+            totalSizeInBytes += sizeToIncrease;
+            if (++items % 128 == 0)
+            {
+                _debugRecorder.Record($"Sent total of {new Size(totalSizeInBytes, SizeUnit.Bytes)}");
             }
         }
 
@@ -797,7 +815,7 @@ namespace Raven.Server.Rachis
 
                 writer.WritePropertyName("Type");
                 writer.WriteValue(nameof(RachisEntry));
-
+                
                 writer.WritePropertyName(nameof(RachisEntry.Index));
 
                 var index = Bits.SwapBytes(*(long*)value.Reader.Read(0, out int size));
