@@ -1,5 +1,5 @@
 import { StudioSearchResult, StudioSearchResultItem } from "../studioSearchTypes";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface UseStudioSearchKeyboardEventsProps {
     refs: {
@@ -132,18 +132,35 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
         columnElement.scrollTo(0, scrollToY);
     }, [activeItem?.id, activeItem?.type, databaseColumnRef, serverColumnRef]);
 
-    // Prevent space from closing the dropdown
+    // Prevent space from closing the dropdown (reactstrap issue)
+    // https://github.com/reactstrap/reactstrap/issues/1945
+    // Workaround
+    const [cursorPosition, setCursorPosition] = useState([0, 0]);
+
     useEffect(() => {
         dropdownRef.current.handleKeyDown = (e: KeyboardEvent) => {
+            setCursorPosition([inputRef.current.selectionStart, inputRef.current.selectionEnd]);
+
             if (e.code === "Space") {
                 e.preventDefault();
 
                 if (document.activeElement?.id === studioSearchInputId) {
-                    setSearchQuery((prev) => prev + " ");
+                    setSearchQuery((prev) => {
+                        const part1 = prev.substring(0, inputRef.current.selectionEnd);
+                        const part2 = prev.substring(inputRef.current.selectionEnd);
+
+                        return part1 + " " + part2;
+                    });
+                    setCursorPosition([inputRef.current.selectionStart + 1, inputRef.current.selectionEnd + 1]);
                 }
             }
         };
-    }, [dropdownRef, setSearchQuery, studioSearchInputId]);
+    }, [inputRef, dropdownRef, setSearchQuery, studioSearchInputId]);
+
+    useEffect(() => {
+        inputRef.current.setSelectionRange(cursorPosition[0], cursorPosition[1]);
+    }, [cursorPosition, inputRef]);
+    // end of workaround
 }
 
 const getScrollPageNumber = (y: number, height: number): number => {
