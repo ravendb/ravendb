@@ -17,7 +17,7 @@ namespace Raven.Server.NotificationCenter
         private readonly string _source;
         private readonly bool _doPerformanceHintIfTooLong;
         private readonly Stopwatch _sw;
-        public bool IsDisposed;
+        private bool _isDisposed;
         
         public RequestTimeTracker(HttpContext context, Logger logger, DocumentDatabase database, string source, bool doPerformanceHintIfTooLong = true)
         {
@@ -43,10 +43,10 @@ namespace Raven.Server.NotificationCenter
 
         public void Dispose()
         {
-            if (IsDisposed)
+            if (_isDisposed)
                 return;
             
-            IsDisposed = true;
+            _isDisposed = true;
             
             if (_sw.Elapsed <= _database.Configuration.PerformanceHints.TooLongRequestThreshold.AsTimeSpan)
                 return;
