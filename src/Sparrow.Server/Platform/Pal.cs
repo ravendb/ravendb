@@ -68,6 +68,7 @@ namespace Sparrow.Server.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_unmap_memory(void* mem,
+            Int64 size,
             out Int32 errorCode);
         
         [DllImport(LIBRVNPAL, SetLastError = true)]

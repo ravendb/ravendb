@@ -122,8 +122,10 @@ Exit:
 EXPORT
 int32_t rvn_unmap_memory(
     void *mem,
+    int64_t size,
     int32_t *detailed_error_code)
 {
+    (void)size;
     *detailed_error_code = 0;
     if (!UnmapViewOfFile(mem))
     {
