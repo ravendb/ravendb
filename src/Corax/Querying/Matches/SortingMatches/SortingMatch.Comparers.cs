@@ -79,7 +79,9 @@ unsafe partial struct SortingMatch<TInner>
             UnmanagedSpan* batchTerms,
             bool descending = false)
         {
-            var readScores = MemoryMarshal.Cast<long, float>(batchTermIds)[..batchResults.Length];
+            //We don't want to wrap our terms in UnmanagedSpans since we don't need them, so let's take batchTerms memory and cast it into float space and use it as a holder of score...
+            Debug.Assert(sizeof(float) <= sizeof(UnmanagedSpan));
+            var readScores = new Span<float>((float*)batchTerms, batchResults.Length);
             match._cancellationToken.ThrowIfCancellationRequested();
 
             // We have to initialize the score buffer with a positive number to ensure that multiplication (document-boosting) is taken into account when BM25 relevance returns 0 (for example, with AllEntriesMatch).
@@ -98,17 +100,18 @@ unsafe partial struct SortingMatch<TInner>
             // Note! readScores & indexes are aliased and same as batchTermIds
             var heapSize = Math.Min(match._take, batchResults.Length);
             heapSize = heapSize < 0 ? batchResults.Length : heapSize;
-            var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+            var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[(batchTermIds.Length)..];
             using var _ = llt.Allocator.Allocate(heapSize, out Span<float> terms);
             var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter(indexes.Slice(0, heapSize), terms, descending == false);
             
-            for (int i = 0; i < batchTermIds.Length; i++)
-                heapSorter.Insert(i, readScores[i]);
             
-            if (match._sortingDataTransfer.IncludeScores)
-                heapSorter.FillWithTerms(batchResults, ref match._results, ref match._scoresResults);
-            else
-                heapSorter.Fill(batchResults, ref match._results);
+            for (int i = 0; i < batchTermIds.Length; i++)
+            {
+                
+                heapSorter.Insert(i, readScores[i]);
+            }
+            
+            heapSorter.Fill(batchResults, ref match._results, ref match._scoresResults, readScores);
         }
 
         private static void BoostDocuments(SortingMatch<TInner> match, Span<long> batchResults, Span<float> readScores)
@@ -358,7 +361,7 @@ unsafe partial struct SortingMatch<TInner>
             for (var i = 0; i < batchResults.Length; ++i)
                 sorter.Insert(i, batchTermIds[i]);
             
-            sorter.Fill(batchResults, ref match._results);
+            sorter.Fill(batchResults, ref match._results, ref match._scoresResults, Span<float>.Empty);
         }
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
@@ -392,7 +395,7 @@ unsafe partial struct SortingMatch<TInner>
             for (var i = 0; i < batchResults.Length; ++i)
                 sorter.Insert(i, BitConverter.Int64BitsToDouble(batchTermIds[i]));
             
-            sorter.Fill(batchResults, ref match._results);
+            sorter.Fill(batchResults, ref match._results, ref match._scoresResults, Span<float>.Empty);
         }
 
         public Slice GetSortFieldName(ref SortingMatch<TInner> match)
@@ -454,7 +457,7 @@ unsafe partial struct SortingMatch<TInner>
             for (int i = 0; i < batchTermIds.Length; i++)
                 heap.Insert(i, _reader.GetDecodedTerm(_dictionaryId, batchTerms[i]));
 
-            heap.Fill(batchResults, ref match._results);
+            heap.Fill(batchResults, ref match._results, ref match._scoresResults, Span<float>.Empty);
         }
         
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
@@ -494,13 +497,11 @@ unsafe partial struct SortingMatch<TInner>
             heapSize = heapSize < 0 ? batchResults.Length : heapSize;
             
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
-            var spatialResults = llt.Allocator.Allocate(heapSize, out Span<SpatialResult> terms);
+            using var _ = llt.Allocator.Allocate(heapSize, out Span<SpatialResult> terms);
 
 
             var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter<SpatialResult>(indexes.Slice(0, heapSize), terms, descending);
             
-
-
             for (int i = 0; i < batchResults.Length; i++)
             {
                 SpatialResult distance; 
@@ -519,9 +520,9 @@ unsafe partial struct SortingMatch<TInner>
             }
 
             if (match._sortingDataTransfer.IncludeDistances)
-                heapSorter.FillWithTerms(batchResults, ref match._results, ref match._distancesResults);
+                heapSorter.FillWithTerms(batchResults, ref match._results, ref match._distancesResults, ref match._scoresResults, Span<float>.Empty);
             else
-                heapSorter.Fill(batchResults, ref match._results);
+                heapSorter.Fill(batchResults, ref match._results, ref match._scoresResults, Span<float>.Empty);
         }
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)

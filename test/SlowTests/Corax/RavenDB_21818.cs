@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
+using Raven.Client.Documents.Session;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
@@ -19,8 +20,10 @@ public class RavenDB_21818 : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-    public void ScoreAsSecondaryComparer()
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [InlineData(OrderingType.AlphaNumeric)]
+    [InlineData(OrderingType.String)]
+    public void ScoreAsSecondaryComparer(OrderingType type)
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         using var session = store.OpenSession();
@@ -33,7 +36,7 @@ public class RavenDB_21818 : RavenTestBase
             .WhereEquals(nameof(Dto.Numbers), 1)
             .AndAlso()
             .WhereEquals(x => x.Name, "maciej")
-            .OrderBy(x => x.SomeNum)
+            .OrderBy(x => x.SomeNum, type)
             .OrderByScore()
             .ToList();
         
@@ -42,8 +45,11 @@ public class RavenDB_21818 : RavenTestBase
         Assert.Equal(2, results[1].ExpectedOrder);
     }
     
-    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-    public void ScoreAsBoxedComparer()
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [InlineData(OrderingType.AlphaNumeric)]
+    [InlineData(OrderingType.String)]
+    [InlineData(OrderingType.Long)]
+    public void ScoreAsBoxedComparer(OrderingType type)
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         using var session = store.OpenSession();
@@ -56,7 +62,7 @@ public class RavenDB_21818 : RavenTestBase
             .WhereEquals(nameof(Dto.Numbers), 1)
             .AndAlso()
             .WhereEquals(x => x.Name, "maciej")
-            .OrderBy(x => x.SomeNum)
+            .OrderBy(x => x.SomeNum, type)
             .OrderBy(x => x.Name)
             .OrderBy(x => x.SomeNum)
             .OrderByScore()
@@ -67,8 +73,11 @@ public class RavenDB_21818 : RavenTestBase
         Assert.Equal(2, results[1].ExpectedOrder);
     }
     
-    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-    public void ScoreAsSecondaryComparerWithIndexBoost()
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [InlineData(OrderingType.AlphaNumeric)]
+    [InlineData(OrderingType.String)]
+    [InlineData(OrderingType.Long)]
+    public void ScoreAsSecondaryComparerWithIndexBoost(OrderingType type)
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         using var session = store.OpenSession();
@@ -84,7 +93,7 @@ public class RavenDB_21818 : RavenTestBase
             .WhereEquals(nameof(Dto.Numbers), 1)
             .AndAlso()
             .WhereEquals(x => x.Name, "maciej")
-            .OrderBy(x => x.SomeNum)
+            .OrderBy(x => x.SomeNum, type)
             .OrderByScore()
             .ToList();
         
@@ -94,8 +103,11 @@ public class RavenDB_21818 : RavenTestBase
         Assert.Equal(2, results[1].ExpectedOrder);
     }
 
-    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-    public void ScoreAsSecondaryComparerWithIndexBoostAndIncludeScore()
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [InlineData(OrderingType.AlphaNumeric)]
+    [InlineData(OrderingType.String)]
+    [InlineData(OrderingType.Long)]
+    public void ScoreAsSecondaryComparerWithIndexBoostAndIncludeScore(OrderingType type)
     {
         var options = Options.ForSearchEngine(RavenSearchEngineMode.Corax);
         options.ModifyDatabaseRecord += record =>
@@ -144,7 +156,7 @@ public class RavenDB_21818 : RavenTestBase
                 .WhereEquals(nameof(Dto.Numbers), 1)
                 .AndAlso()
                 .WhereEquals(x => x.Name, "maciej")
-                .OrderBy(x => x.SomeNum)
+                .OrderBy(x => x.SomeNum, type)
                 .OrderByScore();
 
 
@@ -166,8 +178,11 @@ public class RavenDB_21818 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-    public void ScoreAsSecondaryComparerWithIndexBoostAndIncludeScorePaging()
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [InlineData(OrderingType.AlphaNumeric)]
+    [InlineData(OrderingType.String)]
+    [InlineData(OrderingType.Long)]
+    public void ScoreAsSecondaryComparerWithIndexBoostAndIncludeScorePaging(OrderingType type)
     {
         var options = Options.ForSearchEngine(RavenSearchEngineMode.Corax);
         options.ModifyDatabaseRecord += record =>
@@ -193,7 +208,7 @@ public class RavenDB_21818 : RavenTestBase
                 .WhereEquals(nameof(Dto.Numbers), 1)
                 .AndAlso()
                 .WhereEquals(x => x.Name, "maciej")
-                .OrderBy(x => x.SomeNum)
+                .OrderBy(x => x.SomeNum, type)
                 .OrderByScore();
             using IEnumerator<StreamResult<Dto>> streamResults = session.Advanced.Stream(query, out _);
             while (streamResults.MoveNext())

@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Issues;
+namespace SlowTests.Issues;
 
 public class RavenDB_22504 : RavenTestBase
 {
@@ -52,7 +53,7 @@ public class RavenDB_22504 : RavenTestBase
         }
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(99)]
     [InlineData(101)]
     [InlineData(1001)]
@@ -62,7 +63,7 @@ public class RavenDB_22504 : RavenTestBase
     //This sometimes doesn't work as expected
     public void TestAlphaNumericOrderByCorax(int numberOfDocuments) => Test(numberOfDocuments, Options.ForSearchEngine(RavenSearchEngineMode.Corax));
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(99)]
     [InlineData(101)]
     [InlineData(1001)]

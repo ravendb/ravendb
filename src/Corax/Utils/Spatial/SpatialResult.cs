@@ -12,11 +12,6 @@ public struct SpatialResult : IComparable
 
     public static readonly SpatialResult Invalid = new() {Distance = double.NaN, Latitude = double.NaN, Longitude = double.NaN};
 
-    public int CompareTo(SpatialResult other)
-    {
-        return Distance.CompareTo(other.Distance);
-    }
-
     public int CompareTo(object other)
     {
         return Distance.CompareTo(((SpatialResult)other!).Distance);
