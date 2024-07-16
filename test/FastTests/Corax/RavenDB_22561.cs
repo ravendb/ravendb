@@ -17,6 +17,8 @@ namespace FastTests.Corax;
 
 public class RavenDB_22561_LLT : NoDisposalNeeded
 {
+    private ContextBoundNativeList<float> _scorePlaceHolder = default;
+
     public RavenDB_22561_LLT(ITestOutputHelper output) : base(output)
     {
     }
@@ -46,7 +48,7 @@ public class RavenDB_22561_LLT : NoDisposalNeeded
                 sorter.Insert(docPos, table[docPos]);
 
             ContextBoundNativeList<long> result = new ContextBoundNativeList<long>(bsc);
-            sorter.Fill(table, ref result);
+            sorter.Fill(table, ref result, ref _scorePlaceHolder, Span<float>.Empty);
             Assert.Equal(table.OrderBy(x => x).Take(pageSize).ToArray().AsSpan(), result.ToSpan());
             result.Dispose();
         }
@@ -81,7 +83,7 @@ public class RavenDB_22561_LLT : NoDisposalNeeded
                 sorter.Insert(docPos, table[docPos]);
 
             ContextBoundNativeList<long> result = new ContextBoundNativeList<long>(bsc);
-            sorter.Fill(table, ref result);
+            sorter.Fill(table, ref result, ref _scorePlaceHolder, Span<float>.Empty);
             Assert.Equal(table.Zip(secondTable).OrderBy(x => x.First).ThenBy(x => x.Second).Take(pageSize).Select(x => x.First).ToArray().AsSpan(), result.ToSpan());
             result.Dispose();
         }
@@ -120,7 +122,7 @@ public class RavenDB_22561_LLT : NoDisposalNeeded
                 sorter.Insert(docPos, Encodings.Utf8.GetBytes(sourceData[docPos]));
 
             ContextBoundNativeList<long> result = new ContextBoundNativeList<long>(bsc);
-            sorter.Fill(positions, ref result);
+            sorter.Fill(positions, ref result, ref _scorePlaceHolder, Span<float>.Empty);
 
             var expectedOrder = sourceData.OrderBy(x => x, AlphaNumericFieldComparator.StringAlphanumComparer.Instance).Take(pageSize).ToArray();
             List<string> orderFromSorter = new();

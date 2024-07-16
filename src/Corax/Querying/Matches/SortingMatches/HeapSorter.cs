@@ -185,7 +185,6 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
 
         while (i != parent && parent >= 0 && _compare(ref this, _terms[parent], _documents[parent], _terms[i], _documents[i]) < 0)
         {
-            var cmp = _compare(ref this, _terms[parent], _documents[parent], _terms[i], _documents[i]);
             Swap(parent, i);
             i = parent;
             parent = Parent(i);
@@ -244,15 +243,24 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
         MaxHeapify(0);
     }
 
-    public void Fill(Span<long> batchResults, ref ContextBoundNativeList<long> results)
+    public void Fill(Span<long> batchResults, ref ContextBoundNativeList<long> results, ref ContextBoundNativeList<float> scoreDestination, Span<float> scores)
     {
         ValidateMaxHeapStructure();
         var start = results.Count;
         results.EnsureCapacityFor(_heapSize);
         int documentsToReturn = _heapSize;
+
+        var exposeScores = scoreDestination.HasContext && scores.Length != 0;
+        if (exposeScores)
+            scoreDestination.EnsureCapacityFor(_heapSize);
+        
         while (documentsToReturn > 0)
         {
             results.AddUnsafe(batchResults[_documents[0]]);
+            
+            if (exposeScores)
+                scoreDestination.AddUnsafe(scores[_documents[0]]);
+            
             RemoveMax();
             documentsToReturn--;
         }
@@ -264,7 +272,7 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
         results.ToSpan().Slice(start).Reverse();
     }
 
-    public void FillWithTerms(Span<long> batchResults, ref ContextBoundNativeList<long> results, ref ContextBoundNativeList<TTermType> terms)
+    public void FillWithTerms(Span<long> batchResults, ref ContextBoundNativeList<long> results, ref ContextBoundNativeList<TTermType> terms, ref ContextBoundNativeList<float> scoreDestination, Span<float> scores)
     {
         ValidateMaxHeapStructure();
 
@@ -272,6 +280,10 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
         var startDocuments = results.Count;
         var startTerms = terms.Count;
 
+        var exposeScores = scoreDestination.HasContext && scores.Length != 0;
+        if (exposeScores)
+            scoreDestination.EnsureCapacityFor(_heapSize);
+        
         results.EnsureCapacityFor(_heapSize);
         terms.EnsureCapacityFor(_heapSize);
         int documentsToReturn = _heapSize;
@@ -279,7 +291,10 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
         while (documentsToReturn > 0)
         {
             results.AddUnsafe(batchResults[_documents[0]]);
-            terms.AddUnsafe(_terms[_documents[0]]);
+            terms.AddUnsafe(_terms[0]);
+            if (exposeScores)
+                scoreDestination.AddUnsafe(scores[_documents[0]]);
+            
             RemoveMax();
             documentsToReturn--;
         }
@@ -394,14 +409,7 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
             ReplaceMax(mem, document);
         }
     }
-
-    private void BuildMaxHeap()
-    {
-        for (int i = (_heapSize / 2) - 1; i >= 0; --i)
-            MaxHeapify(i);
-
-    }
-
+    
     private void HeapIncreaseKey(int i)
     {
         int parent = Parent(i);
@@ -469,15 +477,24 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
         MaxHeapify(0);
     }
 
-    public void Fill(Span<long> batchResults, ref ContextBoundNativeList<long> results)
+    public void Fill(Span<long> batchResults, ref ContextBoundNativeList<long> results, ref ContextBoundNativeList<float> scoreDestination, Span<float> scores)
     {
         ValidateMaxHeapStructure();
         var start = results.Count;
         results.EnsureCapacityFor(_heapSize);
         int documentsToReturn = _heapSize;
+
+        var exposeScore = scoreDestination.HasContext && scores.IsEmpty == false;
+        if (exposeScore)
+            scoreDestination.EnsureCapacityFor(_heapSize);
+        
         while (documentsToReturn > 0)
         {
             results.AddUnsafe(batchResults[_documents[0]]);
+            
+            if (exposeScore)
+                scoreDestination.AddUnsafe(scores[_documents[0]]);
+            
             RemoveMax();
             documentsToReturn--;
         }

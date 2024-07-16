@@ -7,12 +7,13 @@ namespace Voron.Util
         where T : unmanaged
     {
         private readonly ByteStringContext _ctx;
+        public readonly bool HasContext;
         public NativeList<T> Inner;
 
         public ContextBoundNativeList(ByteStringContext ctx, int requestedSize = 0)
         {
             _ctx = ctx;
-
+            HasContext = true;
             Inner = new NativeList<T>();
             if (requestedSize > 0)
                 Inner.Initialize(ctx, requestedSize);

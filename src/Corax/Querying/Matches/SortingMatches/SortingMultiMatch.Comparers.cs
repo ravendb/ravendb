@@ -241,7 +241,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             for (int i = 0; i < indexes.Length; i++)
                 sorter.Insert(i, batchTerms[i]);
             
-            sorter.Fill(batchResults, ref match._results);
+            sorter.Fill(batchResults, ref match._results, ref match._scoresResults, match._secondaryScoreBuffer);
         }
 
         private static void MaybeBreakTies<TComparer>(Span<long> buffer, TComparer tieBreaker) 
@@ -392,7 +392,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             for (int i = 0; i < indexes.Length; i++)
                 heapSorter.Insert(i, batchTermIds[i]);
 
-            heapSorter.Fill(batchResults, ref match._results);
+            heapSorter.Fill(batchResults, ref match._results, ref match._scoresResults, match._secondaryScoreBuffer);
         }
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
@@ -482,7 +482,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             for (int i = 0; i < indexes.Length; i++)
                 heapSorter.Insert(i, BitConverter.Int64BitsToDouble(batchTermIds[i]));
 
-            heapSorter.Fill(batchResults, ref match._results);
+            heapSorter.Fill(batchResults, ref match._results, ref match._scoresResults, match._secondaryScoreBuffer);
         }
 
         public Slice GetSortFieldName(ref SortingMultiMatch<TInner> match)
@@ -571,7 +571,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             for (int i = 0; i < batchTermIds.Length; i++)
                 heapSorter.Insert(i, _reader.GetDecodedTerm(_dictionaryId, batchTerms[i]));
 
-            heapSorter.Fill(batchResults, ref match._results);
+            heapSorter.Fill(batchResults, ref match._results, ref match._scoresResults, match._secondaryScoreBuffer);
         }
         
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
@@ -649,9 +649,9 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             }
 
             if (match._sortingDataTransfer.IncludeDistances)
-                heapSorter.FillWithTerms(batchResults, ref match._results, ref match._distancesResults);
+                heapSorter.FillWithTerms(batchResults, ref match._results, ref match._distancesResults, ref match._scoresResults, match._secondaryScoreBuffer);
             else
-                heapSorter.Fill(batchResults, ref match._results);
+                heapSorter.Fill(batchResults, ref match._results, ref match._scoresResults, match._secondaryScoreBuffer);
         }
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
