@@ -47,6 +47,8 @@ export function sortBy<T>(array: T[], valueAccessor: (value: T) => any): T[] {
 
 
 export function compareSets<T>(set1: T[], set2: T[]): boolean {
+    set1 ??= [];
+    set2 ??= [];
     if (set1.length !== set2.length) {
         return false;
     }
