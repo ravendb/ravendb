@@ -763,7 +763,8 @@ namespace Voron.Impl
         internal void DiscardScratchModificationOn(long pageNumber)
         {
             var scratchPagesInUse = _env.WriteTransactionPool.ScratchPagesInUse;
-            if (scratchPagesInUse.Remove(pageNumber, out var scratchPage))
+            if (scratchPagesInUse.Remove(pageNumber, out var scratchPage) 
+                && scratchPage.AllocatedInTransaction == Id)
             {
                 _transactionPages.Remove(scratchPage);
                 scratchPagesInUse[pageNumber] = scratchPage with { IsDeleted = true };

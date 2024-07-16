@@ -1,7 +1,14 @@
 param ( [switch]$skip_version_increment = $false )
 
-# winget install -e --id zig.zig
 
+
+if ((Get-Command "zig" -ErrorAction SilentlyContinue) -eq $null) {
+    echo "Missing zig installation! Execute this command to install zig:"
+    echo "*******************************************************"
+    echo "  winget install -e --id zig.zig"
+    echo "*******************************************************"
+    exit 1
+}
 
 $PalVerStr = (Get-Content pal.ver)
 [int]$PalVer = [convert]::ToInt32($PalVerStr, 10)

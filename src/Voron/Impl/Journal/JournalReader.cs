@@ -95,7 +95,7 @@ namespace Voron.Impl.Journal
             var numberOfPages = GetNumberOfPagesFor(current->UncompressedSize);
             _recoveryPager.EnsureContinuous(ref recoveryPagerState, 0, numberOfPages);
             _recoveryPager.EnsureMapped(recoveryPagerState, ref txState, 0, numberOfPages);
-            var outputPage = _recoveryPager.AcquirePagePointer(recoveryPagerState, ref txState, 0);
+            var outputPage = _recoveryPager.AcquireRawPagePointer(recoveryPagerState, ref txState, 0);
             Memory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
 
             TransactionHeaderPageInfo* pageInfoPtr;
@@ -146,7 +146,6 @@ namespace Voron.Impl.Journal
 
                     var numberOfPagesOnDestination = GetNumberOfPagesFor(pageInfoPtr[i].Size);
                     _dataPager.EnsureContinuous(ref dataPagerState, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
-                    _dataPager.EnsureMapped(dataPagerState, ref txState, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
 
                     var pageNumber = *(long*)(outputPage + totalRead);
                     if (pageInfoPtr[i].PageNumber != pageNumber)
@@ -179,7 +178,6 @@ namespace Voron.Impl.Journal
                         if (options.Encryption.IsEnabled == false)
                         {
                             var pageHeader = (PageHeader*)journalPagePtr;
-
                             var checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageNumber, out var expectedChecksum);
                             if (checksum != expectedChecksum)
                                 ThrowInvalidChecksumOnPageFromJournal(pageNumber, current, expectedChecksum, checksum, pageHeader);
@@ -188,24 +186,6 @@ namespace Voron.Impl.Journal
                         Memory.Copy(currentBuffer, journalPagePtr, pageInfoPtr[i].Size);
 
                         totalRead += pageInfoPtr[i].Size;
-
-                        if (options.Encryption.IsEnabled)
-                        {
-                            var pageHeader = (PageHeader*)journalPagePtr;
-                            if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
-                            {
-                                // need to mark overlapped buffers as invalid for commit
-                                var encryptionBuffers = txState.ForCrypto![_dataPager];
-                                var numberOfOverflowPages = Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize);
-                                for (var j = 1; j < numberOfOverflowPages; j++)
-                                {
-                                    if (encryptionBuffers.TryGetValue(pageNumber + j, out var buffer))
-                                    {
-                                        buffer.SkipOnTxCommit = true;
-                                    }
-                                }
-                            }
-                        }
                     }
                     else
                     {
@@ -218,6 +198,11 @@ namespace Voron.Impl.Journal
                         totalRead += pageInfoPtr[i].DiffSize;
                     }
 
+                    if (options.Encryption.IsEnabled)
+                    {
+                        Pager2.Crypto.EncryptPage(options.Encryption.MasterKey, (PageHeader*)currentBuffer);
+
+                    }
                     WritePageToFile(fileHandle, currentBuffer, pageSize, pageNumber);
                 }
             }

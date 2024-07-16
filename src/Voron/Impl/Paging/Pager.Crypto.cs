@@ -90,14 +90,14 @@ public unsafe partial class Pager2
         private static ReadOnlySpan<byte> Context => "RavenDB!"u8;
         private const ulong MacLen = 16;
 
-        private static int EncryptPage(Pager2 pager, PageHeader* page)
+        public static int EncryptPage(byte[] masterKey, PageHeader* page)
         {
             var num = page->PageNumber;
             var destination = (byte*)page;
             var subKeyLen = Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
             var subKey = stackalloc byte[(int)subKeyLen];
             fixed (byte* ctx = Context)
-            fixed (byte* mk = pager._masterKey)
+            fixed (byte* mk = masterKey)
             {
                 if (Sodium.crypto_kdf_derive_from_key(subKey, subKeyLen, (ulong)num, ctx, mk) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
@@ -242,7 +242,7 @@ public unsafe partial class Pager2
 
                     // Encrypt the local buffer, then copy the encrypted value to the pager
                     var pageHeader = (PageHeader*)buffer.Value.Pointer;
-                    var dataSize = EncryptPage(pager, pageHeader);
+                    var dataSize = EncryptPage(pager._masterKey, pageHeader);
                     var numPages = Pager.GetNumberOfOverflowPages(dataSize);
 
                     pager.EnsureContinuous(ref state, buffer.Key, numPages);

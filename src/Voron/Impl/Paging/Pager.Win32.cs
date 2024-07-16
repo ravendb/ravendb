@@ -106,7 +106,7 @@ public unsafe partial class Pager2
                     }
                     
                     NativeMemory.UnregisterFileMapping(addr.File, addr.Address, addr.Size);
-                    var rc = Pal.rvn_unmap_memory((void*)addr.Address, out var errorCode);
+                    var rc = Pal.rvn_unmap_memory((void*)addr.Address, addr.Size, out var errorCode);
                     if (rc != PalFlags.FailCodes.Success)
                     {
                         PalHelper.ThrowLastError(rc, errorCode, $"Failed to unmap memory in 32 bits mode for {pager.FileName}");
