@@ -594,7 +594,12 @@ namespace Raven.Server.Documents
                         // If a database was unloaded, this is what we get from DatabasesCache.
                         // We want to keep the exception there until UnloadAndLockDatabase is disposed.
                         if (IsLockedDatabase(database.Exception))
+                        {
+                            if (_logger.IsOperationsEnabled)
+                                _logger.Operations($"Attempted to load database '{databaseName.Value}' from cache, but it is locked due to a fault. Action taken by '{caller}'.");
+
                             return database;
+                        }
                     }
 
                     if (database.IsFaulted || database.IsCanceled)
@@ -608,10 +613,21 @@ namespace Raven.Server.Documents
                         if (database.IsCompletedSuccessfully)
                             database.Result.LastAccessTime = database.Result.Time.GetUtcNow();
 
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations(database.IsCompletedSuccessfully
+                                ? $"Successfully loaded database '{databaseName.Value}' from cache. Action taken by '{caller}'."
+                                : $"Attempted to load database '{databaseName.Value}' from cache. Action taken by '{caller}'.");
+
                         return database;
                     }
                 }
-                return CreateDatabase(databaseName, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, caller, addToInitLog);
+
+                var createdDatabase = CreateDatabase(databaseName, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, caller, addToInitLog);
+
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Attempted to create database '{databaseName.Value}' as it did not exist in cache. Action taken by '{caller}'.");
+
+                return createdDatabase;
             }
             finally
             {
