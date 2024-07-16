@@ -142,6 +142,7 @@ namespace Raven.Server.Smuggler.Documents
             EnsureStepProcessed(result.Subscriptions, skipped);
             EnsureStepProcessed(result.TimeSeries, skipped);
             EnsureStepProcessed(result.ReplicationHubCertificates, skipped);
+            EnsureStepProcessed(result.TimeSeriesDeletedRanges, skipped);
 
             static void EnsureStepProcessed(SmugglerProgressBase.Counts counts, bool skipped)
             {
