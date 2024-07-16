@@ -8,7 +8,7 @@ import React from "react";
 import { Col, Dropdown, DropdownItem, DropdownMenu, Input, Row, DropdownToggle } from "reactstrap";
 import classNames from "classnames";
 
-export default function StudioSearch() {
+export default function StudioSearch(props: { menuItems: menuItem[] }) {
     const {
         refs,
         isSearchDropdownOpen,
@@ -18,7 +18,7 @@ export default function StudioSearch() {
         matchStatus,
         results,
         activeItem,
-    } = useStudioSearch();
+    } = useStudioSearch(props.menuItems);
 
     return (
         <>

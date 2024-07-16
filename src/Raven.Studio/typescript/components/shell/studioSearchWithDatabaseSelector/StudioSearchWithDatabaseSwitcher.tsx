@@ -3,10 +3,10 @@ import StudioSearch from "./studioSearch/StudioSearch";
 import React from "react";
 import { InputGroup } from "reactstrap";
 
-export default function StudioSearchWithDatabaseSwitcher() {
+export default function StudioSearchWithDatabaseSwitcher(props: { menuItems: menuItem[] }) {
     return (
         <InputGroup>
-            <StudioSearch />
+            <StudioSearch menuItems={props.menuItems} />
             <DatabaseSwitcher />
         </InputGroup>
     );
