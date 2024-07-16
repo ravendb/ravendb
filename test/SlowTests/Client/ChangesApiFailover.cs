@@ -17,6 +17,8 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Sharding;
+using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Server;
 using Tests.Infrastructure;
@@ -442,6 +444,21 @@ update {{
 
                     //wait for websocket to connect
                     await AssertWaitForTrueAsync(() => Task.FromResult(changes.Connected));
+
+                    if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                    {
+                        //wait for all shards to connect as well
+                        var shards = await Sharding.GetShardingConfigurationAsync(store);
+                        var orch = Sharding.GetOrchestrator(store.Database, leader);
+                        foreach (var (shardNumber, _) in shards.Shards)
+                        {
+                            await AssertWaitForTrueAsync(() =>
+                            {
+                                var shardChanges = orch.Operations._changes.FirstOrDefault(x => x.Key.ShardNumber == shardNumber);
+                                return Task.FromResult(shardChanges.Value != null && shardChanges.Value.Connected);
+                            });
+                        }
+                    }
 
                     //this will throw on timeout
                     var waitForCompletionErrorTask = Assert.ThrowsAsync<InvalidOperationException>(async () =>
