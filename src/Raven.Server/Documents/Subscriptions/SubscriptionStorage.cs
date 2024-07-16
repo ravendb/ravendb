@@ -588,12 +588,7 @@ namespace Raven.Server.Documents.Subscriptions
                 return null;
 
             if (subscriptionBlittable.TryGet(nameof(SubscriptionState.SubscriptionId), out long id) == false)
-            {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Info($"Could not figure out the Subscription Task ID for subscription named: '{subscriptionName}'.");
-
                 return null;
-            }
 
             if (_subscriptions.TryGetValue(id, out SubscriptionConnectionsState concurrentSubscription) == false)
                 return null;
