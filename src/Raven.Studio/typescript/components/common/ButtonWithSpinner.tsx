@@ -33,7 +33,7 @@ export default function ButtonWithSpinner(props: ButtonWithSpinnerProps) {
             disabled={disabled || isSpinning}
         >
             {isSpinning ? (
-                <Spinner size="sm" className={spinnerMargin ?? children != null ? "me-1" : "m-0"} />
+                <Spinner size="sm" className={(spinnerMargin ?? children != null) ? "me-1" : "m-0"} />
             ) : (
                 IconElement
             )}

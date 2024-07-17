@@ -6,7 +6,7 @@ import { useAppSelector } from "components/store";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { useState } from "react";
 import { useAsync, useAsyncCallback } from "react-async-hook";
-import { compareSets, sortBy } from "common/typeUtils";
+import { compareSets } from "common/typeUtils";
 
 interface LocationStats {
     databaseId: string;
