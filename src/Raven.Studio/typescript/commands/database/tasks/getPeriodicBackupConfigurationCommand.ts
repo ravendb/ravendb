@@ -8,7 +8,7 @@ class getPeriodicBackupConfigurationCommand extends commandBase {
 
     constructor( db: database | string,  taskId: number) {
         super();
-        this.databaseName = (_.isString(db) ? db : db.name);
+        this.databaseName = (typeof db === "string" ? db : db.name);
         this.taskId = taskId;
     }
  

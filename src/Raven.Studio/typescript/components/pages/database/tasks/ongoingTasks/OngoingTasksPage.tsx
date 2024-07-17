@@ -63,6 +63,7 @@ import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup
 import { AzureQueueStorageEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/AzureQueueStorageEtlPanel";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { compareSets } from "common/typeUtils";
 
 export function OngoingTasksPage() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
@@ -175,7 +176,9 @@ export function OngoingTasksPage() {
             .filter((x) => selectedTaskIds.includes(x.shared.taskId))
             .map((x) => x.shared);
 
-    const filteredDatabaseTaskIds = Object.values(_.omit(filteredTasks, ["replicationHubs"]))
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { replicationHubs: ignored, ...filteredWithoutReplicationHubs } = filteredTasks;
+    const filteredDatabaseTaskIds = Object.values(filteredWithoutReplicationHubs)
         .flat()
         .filter((x) => !x.shared.serverWide)
         .map((x) => x.shared.taskId);
@@ -185,7 +188,7 @@ export function OngoingTasksPage() {
     useEffect(() => {
         const updatedSelectedTaskIds = selectedTaskIds.filter((id) => filteredDatabaseTaskIds.includes(id));
 
-        if (!_.isEqual(updatedSelectedTaskIds, selectedTaskIds)) {
+        if (!compareSets(updatedSelectedTaskIds, selectedTaskIds)) {
             setSelectedTaskIds(updatedSelectedTaskIds);
         }
     }, [filteredDatabaseTaskIds, selectedTaskIds]);

@@ -144,7 +144,7 @@ class indexErrorInfoModel {
         const gridContainerSelector = "." + this.gridClass;
         
         this.columnPreview.install(gridContainerSelector, gridTooltipClass,
-            (indexError: IndexErrorPerDocument, column: textColumn<IndexErrorPerDocument>, e: JQueryEventObject,
+            (indexError: IndexErrorPerDocument, column: textColumn<IndexErrorPerDocument>, e: JQuery.TriggeredEvent,
              onValue: (context: any, valueToCopy?: string) => void) => {
             if (column.header === "Action" || column.header === "Show") {
                 // do nothing
@@ -152,7 +152,7 @@ class indexErrorInfoModel {
                 onValue(moment.utc(indexError.Timestamp), indexError.Timestamp);
             } else {
                 const value = column.getCellValue(indexError);
-                if (!_.isUndefined(value)) {
+                if (value !== undefined) {
                     onValue(generalUtils.escapeHtml(value), value);
                 }
             }

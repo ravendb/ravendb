@@ -11,7 +11,7 @@ import document = require("models/database/documents/document");
  */
 class timeSeriesColumn<T extends document> extends textColumn<T> {
 
-    private readonly handler: (type: timeSeriesColumnEventType, documentId: string, name: string, value: timeSeriesQueryResultDto, event: JQueryEventObject) => void;
+    private readonly handler: (type: timeSeriesColumnEventType, documentId: string, name: string, value: timeSeriesQueryResultDto, event: JQuery.TriggeredEvent) => void;
 
     tsPlotActionUniqueId = _.uniqueId("ts-plot-action-");
     tsPreviewActionUniqueId = _.uniqueId("ts-preview-action-");
@@ -47,7 +47,7 @@ class timeSeriesColumn<T extends document> extends textColumn<T> {
         return false;
     }
 
-    handle(row: virtualRow, event: JQueryEventObject, actionId: string) {
+    handle(row: virtualRow, event: JQuery.TriggeredEvent, actionId: string) {
        if (this.isInputDisabled(event.target)) {
            return;
        }

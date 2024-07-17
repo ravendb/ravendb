@@ -1,13 +1,15 @@
 ﻿/// <reference path="../../typings/tsd.d.ts" />
 
+import { sortBy } from "common/typeUtils";
+
 class changeVectorUtils {
 
     static shouldUseLongFormat(changeVectors: string[]) {
-        const parsedVectors = _.flatMap(changeVectors, x => changeVectorUtils.parse(x));
+        const parsedVectors = changeVectors.flatMap(x => changeVectorUtils.parse(x));
         
-        const byTag = _.groupBy(parsedVectors, x => x.tag);
+        const byTag = _.groupBy(parsedVectors, (x: { tag: string}) => x.tag);
         
-        return _.some(byTag, forTag => forTag.map(x => x.dbId).length > 1);
+        return Object.values(byTag).some((forTag: any) => forTag.map((x: typeof parsedVectors[0]) => x.dbId).length > 1);
     }
     
     private static parse(input: string) {
@@ -18,7 +20,7 @@ class changeVectorUtils {
         let tokens = input.split(",")
                           .map(cvEntry => changeVectorUtils.parseChangeVectorEntry(cvEntry));
         
-        tokens = _.sortBy(tokens, x => x.tag);
+        tokens = sortBy(tokens, x => x.tag);
 
         return tokens;
     }

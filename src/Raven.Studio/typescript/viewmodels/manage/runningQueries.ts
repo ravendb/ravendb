@@ -115,7 +115,7 @@ class runningQueries extends viewModelBase {
 
         this.columnPreview.install("virtual-grid", ".js-running-queries-tooltip",
             (item: ExecutingQueryInfoWithCache, column: textColumn<ExecutingQueryInfoWithCache>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
 
                 let value = column.getCellValue(item);
             
@@ -126,7 +126,7 @@ class runningQueries extends viewModelBase {
                     }
                 }
 
-                if (!_.isUndefined(value)) {
+                if (value !== undefined) {
                     const json = JSON.stringify(value, null, 4);
                     const html = highlight(json, languages.javascript, "js");
                     onValue(html, json);
@@ -195,7 +195,7 @@ class runningQueries extends viewModelBase {
     
     private onData(items: Array<Raven.Server.Documents.Queries.LiveRunningQueriesCollector.ExecutingQueryCollection>) {
         if (this.tailEnabled()) {
-            this.data(_.flatMap(items, item => {
+            this.data(items.flatMap(item => {
                 return item.RunningQueries.map(query => {
                     return {
                         DatabaseName: item.DatabaseName,

@@ -81,6 +81,27 @@ namespace Raven.Server.Rachis
         }
     }
 
+    public class TermValidationException : RachisConcurrencyException
+    {
+        public TermValidationException()
+        {
+        }
+
+        public TermValidationException(string message) : base(message)
+        {
+        }
+
+        public TermValidationException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
+
+        [DoesNotReturn]
+        public new static void Throw(string msg)
+        {
+            throw new TermValidationException(msg);
+        }
+    }
+
     public sealed class ParentStateChangedConcurrencyException : RachisConcurrencyException
     {
         public ParentStateChangedConcurrencyException()

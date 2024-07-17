@@ -21,8 +21,7 @@ abstract class abstractSettings {
     
     private serializeSettings(location: studio.settings.saveLocation) {
         const settings: any = {};
-        
-        _.forIn(this, (value, name) => {
+        Object.entries(this).forEach(([name, value]) => {
             if (value instanceof studioSetting && value.saveLocation === location) {
                 settings[studioSetting.propertyNameInStorage(name, location)] = value.prepareValueForSave();
             }
@@ -34,11 +33,11 @@ abstract class abstractSettings {
     protected findPropertyName(item: studioSetting<any>): string {
         let settingName: string = null;
 
-        _.forIn(this, (value, name) => {
+        Object.entries(this).map(([name, value]) => {
             if (value instanceof studioSetting && value.saveLocation === item.saveLocation && value === item) {
                 settingName = name;
             }
-        });
+        })
         
         return settingName;
     }
@@ -65,7 +64,7 @@ abstract class abstractSettings {
     }
     
     protected readSettings(remoteSettings: any, localSettings: any) {
-        _.forIn(this, (value, name) => {
+        Object.entries(this).forEach(([name, value]) => {
             if (value instanceof studioSetting) {
                 if (value.saveLocation === "remote") {
                     value.loadUsingValue(remoteSettings ? remoteSettings[_.upperFirst(name)] : undefined);
@@ -102,7 +101,7 @@ abstract class abstractSettings {
         const localTask = this.saveLocalSettings(localSettings);
 
         // notify handlers that settings may change
-        _.forIn(this, (value, name) => {
+        Object.entries(this).forEach(([name, value]) => {
             if (value instanceof studioSetting) {
                 this.onSettingChanged(name, value);
             }

@@ -16,7 +16,7 @@ class saveDatabaseLockModeCommand extends commandBase {
 
     execute(): JQueryPromise<void> {
         const payload: Raven.Client.ServerWide.Operations.SetDatabasesLockOperation.Parameters = {
-            DatabaseNames: this.dbs.map(x => (_.isString(x) ? x : x.name)),
+            DatabaseNames: this.dbs.map(x => (typeof x === "string" ? x : x.name)),
             Mode: this.lockMode
         };
 

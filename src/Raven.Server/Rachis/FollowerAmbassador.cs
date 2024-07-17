@@ -154,7 +154,7 @@ namespace Raven.Server.Rachis
         /// </summary>
         private unsafe void Run(object o)
         {
-            _engine.ForTestingPurposes?.BeforeNegotiatingWithFollower();
+            _engine.ForTestingPurposes?.HoldOnLeaderElect?.BeforeNegotiatingWithFollower();
 
             try
             {

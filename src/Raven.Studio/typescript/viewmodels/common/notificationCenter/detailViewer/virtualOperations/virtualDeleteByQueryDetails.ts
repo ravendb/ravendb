@@ -54,7 +54,7 @@ class virtualDeleteByQueryDetails extends dialogViewModelBase {
         this.columnPreview.install(".virtualDeleteByQueryDetails", ".js-virtual-delete-by-query-details-tooltip",
             (details: queryBasedVirtualBulkOperationItem,
              column: textColumn<queryBasedVirtualBulkOperationItem>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 if (!(column instanceof actionColumn)) {
                     if (column.header === "Date") {
                         onValue(moment.utc(details.date), details.date);

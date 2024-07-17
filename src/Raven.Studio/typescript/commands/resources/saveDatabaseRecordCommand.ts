@@ -21,7 +21,7 @@ class saveDatabaseRecordCommand extends commandBase {
     execute(): JQueryPromise<void> {
         const url = endpoints.global.adminDatabases.adminDatabases;
         
-        return this.put<void>(url, JSON.stringify(this.databaseRecord), null, { headers: { "ETag": this.etag }})
+        return this.put<void>(url, JSON.stringify(this.databaseRecord), null, { headers: { "ETag": this.etag?.toString() }})
             .done(() => this.reportSuccess("Database Record was saved successfully"))
             .fail((response: JQueryXHR) => this.reportError("Failed to save Database Record", response.responseText, response.statusText));
     }

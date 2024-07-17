@@ -133,7 +133,9 @@ namespace Raven.Server.ServerWide
                     case nameof(DestinationMigrationConfirmCommand):
                     case nameof(SourceMigrationCleanupCommand):
                         var config = _serverStore.Cluster.ReadShardingConfiguration(database);
-                        
+                        if (config == null)
+                            break;
+
                         if (config.BucketMigrations.Count == 0)
                         {
                             messages.Enqueue($"command {type} was skipped.");

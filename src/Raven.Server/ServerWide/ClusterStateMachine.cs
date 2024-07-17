@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -63,7 +60,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
-using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
@@ -1761,6 +1757,8 @@ namespace Raven.Server.ServerWide
 
         private unsafe List<string> AddDatabase(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
+            _parent.ForTestingPurposes?.BeforeExecuteAddDatabaseCommand?.Invoke();
+
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
             Exception exception = null;
             try
@@ -3577,7 +3575,7 @@ namespace Raven.Server.ServerWide
         {
             using (var raw = ReadRawDatabaseRecord(context, name))
             {
-                return raw.Sharding.MaterializedConfiguration;
+                return raw?.Sharding.MaterializedConfiguration;
             }
         }
 

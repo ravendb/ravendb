@@ -60,7 +60,7 @@ class slowSqlDetails extends abstractPerformanceHintDetails {
         this.columnPreview.install(".slowSqlDetails", ".js-slow-sql-details-tooltip",
             (details: Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo,
              column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 if (!(column instanceof actionColumn)) {
                     if (column.header === "Date") {
                         onValue(moment.utc(details.Date), details.Date);

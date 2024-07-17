@@ -1,12 +1,13 @@
 import database from "models/resources/database";
 import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo;
+import type shardedDatabase from "models/resources/shardedDatabase";
 
 class nonShardedDatabase extends database {
     get root(): database {
         return this;
     }
 
-    isSharded(): false {
+    isSharded(): this is shardedDatabase {
         return false;
     }
 

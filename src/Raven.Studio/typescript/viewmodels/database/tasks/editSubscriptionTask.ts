@@ -331,11 +331,11 @@ class editSubscriptionTask extends shardViewModelBase {
             grid.headerVisible(true);
 
             this.columnPreview.install("virtual-grid", ".js-subscription-task-tooltip", 
-                (doc: documentObject, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
+                (doc: documentObject, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy: string) => void) => {
                 if (column instanceof textColumn) {
                     const value = column.getCellValue(doc);
-                    if (!_.isUndefined(value)) {
-                        if (column.header === "Exception" && _.isString(value)) {
+                    if (value !== undefined) {
+                        if (column.header === "Exception" && typeof value === "string") {
                             const formattedValue = _.replace(generalUtils.escapeHtml(value), "\r\n", "<Br />");
                             onValue(formattedValue, value);
                         } else {
@@ -430,7 +430,7 @@ class editSubscriptionTask extends shardViewModelBase {
     }
     
     private onIncludesLoaded(includes: dictionary<any>) {
-        _.forIn(includes, (doc, id) => {
+        Object.entries(includes).forEach(([ id, doc]) => {
             const metadata = doc['@metadata'];
             const collection = (metadata ? metadata["@collection"] : null) || "@unknown";
 

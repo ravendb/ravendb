@@ -18,7 +18,7 @@ class showDataDialog extends dialogViewModelBase {
 
     inputDataFormatted = ko.pureComputed(() => {
         const input = this.inputData();
-        if (_.isUndefined(input)) {
+        if (input === undefined) {
             return "";
         }
         if (this.lang === "plain") {

@@ -1,6 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
 import colorsManager = require("common/colorsManager");
+import { sortBy } from "common/typeUtils";
 
 class graphHelper {
 
@@ -224,7 +225,7 @@ class graphHelper {
 
         const mapping = new Map<number, number>();
 
-        _.sortBy(items.map((item, idx) => ({ idx: idx, value: item.x })), x => x.value).forEach((v, k) => {
+        sortBy(items.map((item, idx) => ({ idx: idx, value: item.x })), x => x.value).forEach((v, k) => {
             mapping.set(k, v.idx);
         });
 

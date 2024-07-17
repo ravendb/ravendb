@@ -353,7 +353,8 @@ class columnsSelector<T extends object> {
     }
 
     private syncColumnLayout(columns: virtualColumn[]) {
-        _.forEachRight(columns, column => {
+        for (let i = columns.length - 1; i >= 0; i--) {
+            const column = columns[i];
             const existingColumn = this.columnLayout().find(x => x.virtualColumn().header === column.header);
             if (existingColumn) {
                 // put on top and set as visible, incoming virtualColumn overrides existing copy (in order to sync width, etc).
@@ -369,7 +370,7 @@ class columnsSelector<T extends object> {
                 newColumnItem.visible(true);
                 this.columnLayout.unshift(newColumnItem);
             }
-        });
+        }
     }
 
     private findColumnsToFetch(): { full: string[], preview: string[] } {
@@ -381,7 +382,7 @@ class columnsSelector<T extends object> {
                 if (item.visible()) {
                     if (item.virtualColumn() instanceof textColumn) {
                         const text = item.virtualColumn() as textColumn<T>;
-                        if (_.isString(text.valueAccessor)) {
+                        if (typeof text.valueAccessor === "string") {
                             previewColumns.push(text.valueAccessor);
                         }
                     }
@@ -393,8 +394,8 @@ class columnsSelector<T extends object> {
                 }
             });
 
-            const full = _.uniq(fullColumns);
-            const preview = _.without(_.uniq(previewColumns), ...full);
+            const full = [...new Set(fullColumns)];
+            const preview = [...new Set(previewColumns)].filter(x => !full.includes(x));
 
             return {
                 full: full,
@@ -425,7 +426,7 @@ class columnsSelector<T extends object> {
                 
                 if (item.virtualColumn() instanceof textColumn) {
                     const text = item.virtualColumn() as textColumn<T>;
-                    if (_.isString(text.valueAccessor)) {
+                    if (typeof text.valueAccessor === "string") {
                         columns.push(text.valueAccessor);
                     }
                 }

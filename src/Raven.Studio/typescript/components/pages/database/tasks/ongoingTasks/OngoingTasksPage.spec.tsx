@@ -2,7 +2,7 @@
 import React from "react";
 
 import * as stories from "./OngoingTasksPage.stories";
-import { composeStories, composeStory } from "@storybook/testing-react";
+import { composeStories, composeStory } from "@storybook/react";
 import { boundCopy } from "components/utils/common";
 
 const { EmptyView, FullView } = composeStories(stories);

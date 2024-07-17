@@ -5,6 +5,7 @@ import { d3adaptor, ID3StyleLayoutAdaptor, Link, Layout } from "webcola";
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import icomoonHelpers from "common/helpers/view/icomoonHelpers";
 import TaskUtils from "components/utils/TaskUtils";
+import { sortBy } from "common/typeUtils";
 
 abstract class layoutable {
     x: number;
@@ -684,18 +685,18 @@ class databaseGroupGraph {
 
         _.pullAll(this.data.databaseNodes, dbsToDelete);
 
-        _.sortBy(this.data.databaseNodes, x => x.tag);
+        sortBy(this.data.databaseNodes, x => x.tag);
 
         // clear current status
         this.data.databaseNodes.forEach(node => {
             node.status = "Ok"; 
         });
         
-        _.forIn(this.databaseInfoCache.NodesTopology.Status, (status, tag) => {
+        Object.entries(this.databaseInfoCache.NodesTopology.Status).forEach(([tag, status]) => {
             const matchingNode = this.data.databaseNodes.find(x => x.tag === tag);
             //TODO: update this logic once RavenDB-7998 will be completed
             if (matchingNode) {
-                matchingNode.status = status.LastStatus;
+                matchingNode.status = (status as Raven.Client.ServerWide.Operations.DatabaseGroupNodeStatus).LastStatus;
             }
         });
     }

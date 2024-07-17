@@ -3,6 +3,7 @@
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import generalUtils = require("common/generalUtils");
+import { isBoolean } from "common/typeUtils";
 
 type preparedValue = {
     rawText: string;
@@ -60,13 +61,13 @@ class textColumn<T extends object> implements virtualColumn {
                 case "number":
                     return this.opts.customComparator ? 
                         (input: Array<any>) => input.sort((a, b) => multiplier * this.opts.customComparator(this.getCellValue(a), this.getCellValue(b)))
-                        : (input: Array<any>) => _.orderBy(input, x => this.getCellValue(x), mode);
+                        : (input: Array<any>) => _.orderBy(input, (x: any) => this.getCellValue(x), mode);
                 default: {
                     const provider = this.opts.sortable as valueProvider<T>;
 
                     return this.opts.customComparator ?
                         (input: Array<any>) => input.sort((a, b) => multiplier * this.opts.customComparator(provider(a), provider(b)))
-                        : (input: Array<any>) => _.orderBy(input, x => provider(x), mode);
+                        : (input: Array<any>) => _.orderBy(input, (x: any) => provider(x), mode);
                 }
             }
         }
@@ -82,7 +83,7 @@ class textColumn<T extends object> implements virtualColumn {
     }
     
     getCellValue(item: T) {
-        return _.isFunction(this.valueAccessor)
+        return typeof this.valueAccessor === "function"
             ? this.valueAccessor.bind(item)(item) // item is available as this, as well as first argument
             : (item as any)[this.valueAccessor as string];
     }
@@ -114,7 +115,7 @@ class textColumn<T extends object> implements virtualColumn {
             };
         }
 
-        if (_.isString(cellValue)) {
+        if (typeof cellValue === "string") {
             const rawText = this.opts.useRawValue && this.opts.useRawValue(item) ? cellValue : generalUtils.escapeHtml(cellValue);
             
             return {
@@ -131,7 +132,7 @@ class textColumn<T extends object> implements virtualColumn {
             };
         }
 
-        if (_.isBoolean(cellValue)) {
+        if (isBoolean(cellValue)) {
             const value = !!cellValue;
             return {
                 rawText: value ? 'true' : 'false',
@@ -146,14 +147,14 @@ class textColumn<T extends object> implements virtualColumn {
             }
         }
 
-        if (_.isUndefined(cellValue)) {
+        if (cellValue === undefined) {
             return {
                 rawText: "",
                 typeCssClass: "token undefined"
             }
         }
 
-        if (_.isArray(cellValue)) {
+        if (Array.isArray(cellValue)) {
             const innerHtml = cellValue.length ? "&hellip;" : "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
 
             return {

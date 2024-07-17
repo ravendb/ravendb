@@ -25,8 +25,8 @@ class welcome extends setupStep {
             .done((localIpsResult, setupParamsResult: [Raven.Server.Commercial.SetupParameters]) => {
                 this.model.init(setupParamsResult[0]);
 
-                const ipV4 = _.filter(localIpsResult[0], (ip: string) => _.split(ip, '.').length === 4);
-                const ipV6 = _.difference(localIpsResult[0], ipV4);
+                const ipV4 = localIpsResult[0].filter((ip: string) => ip.split(".").length === 4);
+                const ipV6 = localIpsResult[0].filter((x: string) => !ipV4.includes(x));
                
                 this.model.localIps(_.uniq(_.concat(["0.0.0.0"], ipV4, ipV6)));
                 

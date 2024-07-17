@@ -62,7 +62,7 @@ class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
         this.columnPreview.install(".etlErrorDetails", ".js-etl-error-details-tooltip",
             (details: Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo,
              column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 if (!(column instanceof actionColumn)) {
                     
                     if (column.header === "Date") {
