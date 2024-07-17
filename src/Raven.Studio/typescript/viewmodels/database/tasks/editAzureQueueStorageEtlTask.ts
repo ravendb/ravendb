@@ -269,7 +269,7 @@ class editAzureQueueStorageEtlTask extends viewModelBase {
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const queueConnectionStrings = Object.values(result.QueueConnectionStrings);
                 const azureQueueStorageStrings = queueConnectionStrings.filter(x => x.BrokerType === "AzureQueueStorage");
-                this.etlConnectionStringsDetails(_.sortBy(azureQueueStorageStrings, x => x.Name.toUpperCase()));
+                this.etlConnectionStringsDetails(_.sortBy(azureQueueStorageStrings, (x: Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString) => x.Name.toUpperCase()));
             });
     }
 
@@ -510,7 +510,7 @@ class editAzureQueueStorageEtlTask extends viewModelBase {
 
             const usedOptions = usedCollections().filter(k => k !== key);
 
-            const filteredOptions = _.difference(options, usedOptions);
+            const filteredOptions = options.filter(x => !usedOptions.includes(x));
 
             if (key) {
                 result = filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));

@@ -434,7 +434,7 @@ export const AzureQueueStorageEtlTemplate = (args: {
 
     mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 
-    return <OngoingTasksPage {...forceStoryRerender()} />;
+    return <OngoingTasksPage />;
 };
 
 export const AzureQueueStorageEtlDisabled = boundCopy(AzureQueueStorageEtlTemplate, {
