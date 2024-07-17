@@ -93,7 +93,6 @@
         "sass-loader": "^14.2.1",
         "storybook": "^8.2.4",
         "terser-webpack-plugin": "^5.3.10",
-        "ts-jest": "^29.1.5",
         "ts-loader": "^9.5.1",
         "typescript": "^5.5.3",
         "webfonts-loader": "^8.0.1",
