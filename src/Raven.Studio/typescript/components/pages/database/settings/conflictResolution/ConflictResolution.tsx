@@ -66,79 +66,84 @@ export default function ConflictResolution() {
     }
 
     return (
-        <Row className="content-margin gy-sm">
-            <Col>
-                <AboutViewHeading title="Conflict Resolution" icon="conflicts-resolution" />
-                <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"}>
-                    {hasDatabaseAdminAccess && (
-                        <>
-                            <div id="saveConflictResolutionScript" className="d-flex w-fit-content gap-3 mb-3">
-                                <ButtonWithSpinner
-                                    color="primary"
-                                    icon="save"
-                                    isSpinning={asyncSave.loading}
-                                    onClick={asyncSave.execute}
-                                    disabled={!isDirty || isSomeInEditMode}
-                                >
-                                    Save
-                                </ButtonWithSpinner>
-                            </div>
-                            {isSomeInEditMode && (
-                                <UncontrolledTooltip target="saveConflictResolutionScript">
-                                    Please finish editing all scripts before saving
-                                </UncontrolledTooltip>
-                            )}
-                        </>
-                    )}
-                    <div className="mb-3">
-                        <HrHeader
-                            right={
-                                hasDatabaseAdminAccess && (
-                                    <div id="addNewScriptButton">
-                                        <Button
-                                            color="info"
-                                            size="sm"
-                                            className="rounded-pill"
-                                            title="Add a new Conflicts Resolution script"
-                                            onClick={() => dispatch(conflictResolutionActions.add())}
-                                        >
-                                            <Icon icon="plus" />
-                                            Add new
-                                        </Button>
-                                    </div>
-                                )
-                            }
-                            count={collectionConfigs.length}
-                        >
-                            <Icon icon="documents" />
-                            Collection-specific scripts
-                        </HrHeader>
-                        {collectionConfigs.length > 0 ? (
-                            collectionConfigs.map((config) => (
-                                <ConflictResolutionConfigPanel key={config.id} initialConfig={config} />
-                            ))
-                        ) : (
-                            <EmptySet>No scripts have been defined</EmptySet>
+        <div className="content-margin">
+            <Row className="gy-sm">
+                <Col>
+                    <AboutViewHeading title="Conflict Resolution" icon="conflicts-resolution" />
+                    <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"}>
+                        {hasDatabaseAdminAccess && (
+                            <>
+                                <div id="saveConflictResolutionScript" className="d-flex w-fit-content gap-3 mb-3">
+                                    <ButtonWithSpinner
+                                        color="primary"
+                                        icon="save"
+                                        isSpinning={asyncSave.loading}
+                                        onClick={asyncSave.execute}
+                                        disabled={!isDirty || isSomeInEditMode}
+                                    >
+                                        Save
+                                    </ButtonWithSpinner>
+                                </div>
+                                {isSomeInEditMode && (
+                                    <UncontrolledTooltip target="saveConflictResolutionScript">
+                                        Please finish editing all scripts before saving
+                                    </UncontrolledTooltip>
+                                )}
+                            </>
                         )}
-                    </div>
-                    <Card>
-                        <CardBody>
-                            <Switch
-                                color="primary"
-                                selected={isResolveToLatest}
-                                toggleSelection={() => dispatch(conflictResolutionActions.toggleIsResolveToLatest())}
-                                disabled={!hasDatabaseAdminAccess}
+                        <div className="mb-3">
+                            <HrHeader
+                                right={
+                                    hasDatabaseAdminAccess && (
+                                        <div id="addNewScriptButton">
+                                            <Button
+                                                color="info"
+                                                size="sm"
+                                                className="rounded-pill"
+                                                title="Add a new Conflicts Resolution script"
+                                                onClick={() => dispatch(conflictResolutionActions.add())}
+                                            >
+                                                <Icon icon="plus" />
+                                                Add new
+                                            </Button>
+                                        </div>
+                                    )
+                                }
+                                count={collectionConfigs.length}
                             >
-                                If no script was defined for a collection, resolve the conflict using the latest version
-                            </Switch>
-                        </CardBody>
-                    </Card>
-                </LazyLoad>
-            </Col>
-            <Col sm={12} lg={4}>
-                <ConflictResolutionAboutView />
-            </Col>
-        </Row>
+                                <Icon icon="documents" />
+                                Collection-specific scripts
+                            </HrHeader>
+                            {collectionConfigs.length > 0 ? (
+                                collectionConfigs.map((config) => (
+                                    <ConflictResolutionConfigPanel key={config.id} initialConfig={config} />
+                                ))
+                            ) : (
+                                <EmptySet>No scripts have been defined</EmptySet>
+                            )}
+                        </div>
+                        <Card>
+                            <CardBody>
+                                <Switch
+                                    color="primary"
+                                    selected={isResolveToLatest}
+                                    toggleSelection={() =>
+                                        dispatch(conflictResolutionActions.toggleIsResolveToLatest())
+                                    }
+                                    disabled={!hasDatabaseAdminAccess}
+                                >
+                                    If no script was defined for a collection, resolve the conflict using the latest
+                                    version
+                                </Switch>
+                            </CardBody>
+                        </Card>
+                    </LazyLoad>
+                </Col>
+                <Col sm={12} lg={4}>
+                    <ConflictResolutionAboutView />
+                </Col>
+            </Row>
+        </div>
     );
 }
 
