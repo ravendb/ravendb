@@ -7,7 +7,7 @@ import { studioSearchInputId, useStudioSearch } from "./hooks/useStudioSearch";
 import React from "react";
 import { Dropdown, DropdownItem, DropdownMenu, Input, Row, DropdownToggle } from "reactstrap";
 import classNames from "classnames";
-import StudioSearchLegend from "components/shell/studioSearchWithDatabaseSelector/studioSearch/bits/StudioSearchLegend";
+import StudioSearchLegend from "./bits/StudioSearchLegend";
 
 export default function StudioSearch(props: { menuItems: menuItem[] }) {
     const {

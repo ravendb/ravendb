@@ -1,26 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Col, DropdownItem } from "reactstrap";
-
-const getOS = () => {
-    const platform = navigator.userAgent.toLowerCase();
-    if (platform.includes("mac")) return "mac";
-    if (platform.includes("win")) return "windows";
-    return "other";
-};
+import { useOS } from "components/hooks/useOS";
 
 const KeyboardShortcuts = () => {
-    const [os, setOs] = useState(getOS());
-
-    useEffect(() => {
-        const isTesting = false; // Set this to true for testing Mac on Windows
-        if (isTesting) {
-            setOs("mac");
-        } else {
-            setOs(getOS());
-        }
-    }, []);
-
-    const isMac = os === "mac";
+    const os = useOS();
+    const isMac = os === "MacOS";
 
     return (
         <Col sm={12} className="studio-search__legend-col p-0">
