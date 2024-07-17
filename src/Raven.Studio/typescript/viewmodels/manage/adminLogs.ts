@@ -50,7 +50,7 @@ class heightCalculator {
     
     // try to compute max numbers of characters in single line
     ensureCacheFilled(row: virtualListRow<string>) {
-        if (!_.isUndefined(this.charactersPerLine)) {
+        if (this.charactersPerLine !== undefined) {
             return;
         }
         
@@ -632,7 +632,7 @@ class adminLogs extends viewModelBase {
         this.downloadLogsValidationGroup.errors.showAllMessages(false);
     }
 
-    onDownloadLogs(_: any, event: JQueryEventObject) {
+    onDownloadLogs(_: any, event: JQuery.TriggeredEvent) {
         if (!this.isValid(this.downloadLogsValidationGroup)) {
             event.stopImmediatePropagation();
             return;

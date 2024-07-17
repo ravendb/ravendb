@@ -92,7 +92,7 @@ class indexDefinition {
         this.patternForReferencesToReduceOutputCollection(dto.PatternForOutputReduceToCollectionReferences);
         this.collectionNameForReferenceDocuments(dto.PatternReferencesCollectionName);
 
-        this.fields(_.map(dto.Fields, (fieldDto, indexName) =>
+        this.fields(Object.entries(dto.Fields).map(([indexName, fieldDto]) =>
             new indexFieldOptions(indexName, fieldDto, this.hasReduce, this.searchEngine, indexFieldOptions.defaultFieldOptions(this.hasReduce, this.searchEngine))));
         
         if (dto.CompoundFields) {
@@ -119,7 +119,7 @@ class indexDefinition {
         this.priority(dto.Priority);
         this.configuration(this.parseConfiguration(dto.Configuration));
 
-        this.additionalSources(_.map(dto.AdditionalSources, (code, name) => additionalSource.create(name, code)));
+        this.additionalSources(Object.entries(dto.AdditionalSources).map(([name, code]) => additionalSource.create(name, code)));
         
         if (dto.AdditionalAssemblies) {
             this.additionalAssemblies(dto.AdditionalAssemblies.map(assembly => new additionalAssembly(assembly)));
@@ -127,7 +127,7 @@ class indexDefinition {
         
         this.hasDuplicateFieldsNames = ko.pureComputed(() => {
             const nonEmptyFields = this.fields().filter(x => x.name());
-            return _.uniqBy(nonEmptyFields, field => field.name()).length !== nonEmptyFields.length;
+            return new Set(nonEmptyFields.map(x => x.name())).size !== nonEmptyFields.length;
         });
         
         this.searchEngine.subscribe((engine: Raven.Client.Documents.Indexes.SearchEngineType) => {
@@ -246,15 +246,7 @@ class indexDefinition {
     }
     
     private parseConfiguration(config: Raven.Client.Documents.Indexes.IndexConfiguration): Array<configurationItem> {
-        const configurations: configurationItem[] = [];
-
-        if (config) {
-            _.forIn(config, (value, key) => {
-                configurations.push(new configurationItem(key, value));
-            });
-        }
-
-        return configurations;
+        return config ? Object.entries(config).map(([key, value]) => new configurationItem(key, value)) : [];
     }
 
     private detectIndexType(): Raven.Client.Documents.Indexes.IndexType {

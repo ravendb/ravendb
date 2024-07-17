@@ -10,7 +10,7 @@ class getDatabaseRecordCommand extends commandBase {
 
     constructor(db: database | string, reportRefreshProgress = false) {
         super();
-        this.databaseName = (_.isString(db) ? db : db.name);
+        this.databaseName = (typeof db === "string" ? db : db.name);
         this.reportRefreshProgress = reportRefreshProgress;
     }
 

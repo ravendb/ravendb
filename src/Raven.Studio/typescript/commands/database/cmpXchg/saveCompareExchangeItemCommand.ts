@@ -19,7 +19,7 @@ class saveCompareExchangeItemCommand extends commandBase {
             Object: this.valueData
         };
         
-        if (!_.isUndefined(this.metadata)) {
+        if (this.metadata !== undefined) {
             payload["@metadata"] = this.metadata;
         }
         

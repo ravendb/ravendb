@@ -215,7 +215,7 @@ abstract class viewModelBase {
         });
     }
     
-    protected registerDisposableHandler($element: JQuery, event: string, handler: (event: any) => void) {
+    protected registerDisposableHandler($element: JQuery<any>, event: string, handler: (event: any) => void) {
         $element.on(event as any, handler);
 
         this.disposableActions.push({

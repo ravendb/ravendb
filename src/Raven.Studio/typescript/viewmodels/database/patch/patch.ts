@@ -331,7 +331,7 @@ class patch extends shardViewModelBase {
             if (this.isValid(this.saveValidationGroup) && this.isValid(this.patchDocument().validationGroup)) {
 
                 // Verify if name already exists
-                if (_.find(savedPatchesStorage.getSavedPatches(this.db), x => x.Name.toUpperCase() === this.patchSaveName().toUpperCase())) { 
+                if (savedPatchesStorage.getSavedPatches(this.db).find(x => x.Name.toUpperCase() === this.patchSaveName().toUpperCase())) { 
                     this.confirmationMessage(`Patch ${generalUtils.escapeHtml(this.patchSaveName())} already exists`, `Overwrite existing patch ?`, {
                         buttons: ["No", "Overwrite"],
                         html: true

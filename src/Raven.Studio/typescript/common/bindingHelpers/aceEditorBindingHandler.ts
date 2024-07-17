@@ -204,7 +204,7 @@ class aceEditorBindingHandler {
             
             if ('rules' in code && ko.isObservable(code.rules)) {
                 const rules = ko.unwrap<KnockoutValidationRule[]>(code.rules);
-                if (_.some(rules, x => x.rule === "aceValidation")) {
+                if (rules.some(x => x.rule === "aceValidation")) {
                     const firstError = annotations.find(x => x.type === "error");
                     
                     if (firstError) {

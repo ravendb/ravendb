@@ -2,6 +2,7 @@
 
 import listViewController = require("widgets/listView/listViewController");
 import virtualListRow = require("widgets/listView/virtualListRow");
+import { sortBy } from "common/typeUtils";
 
 /**
  * This list view is optimized to handle following lists:
@@ -24,8 +25,8 @@ class listView<T> {
     private controller: listViewController<T>;
 
     private virtualRows: virtualListRow<T>[] = []; // These are the fixed number of elements that get displayed on screen. Each virtual row displays an element from .items array. As the user scrolls, rows will be recycled to represent different items.
-    private $listElement: JQuery;
-    private $viewportElement: JQuery;
+    private $listElement: JQuery<HTMLElement>;
+    private $viewportElement: JQuery<HTMLElement>;
     private listElementHeight: number;
     private heightMeasureVirtualRow: virtualListRow<T>;
 
@@ -162,8 +163,8 @@ class listView<T> {
         }
     }
   
-    private findListViewElement(): JQuery {
-        const element = $(document.querySelector("#" + this.listId));
+    private findListViewElement(): JQuery<HTMLElement> {
+        const element = $(document.querySelector<HTMLElement>("#" + this.listId));
         if (element.length === 0) {
             throw new Error("Couldn't find list view element with ID " + this.listId);
         }
@@ -260,7 +261,7 @@ class listView<T> {
             parent.removeChild(parent.childNodes[i]);
         }
 
-        children = _.sortBy(children, x => parseInt(x.style.top));
+        children = sortBy(children, x => parseInt(x.style.top));
         
         children.forEach(c => {
             parent.appendChild(c);

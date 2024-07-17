@@ -26,16 +26,16 @@ class commandBase {
     }
 
     query<T>(relativeUrl: string, args: any, db?: database | string, resultsSelector?: (results: any, xhr: JQueryXHR) => T, options?: JQueryAjaxSettings, timeToAlert = 9000): JQueryPromise<T> {
-        const ajax = this.ajax<T>(relativeUrl, args, "GET", db, options, timeToAlert);
+        const ajax = this.ajax<any>(relativeUrl, args, "GET", db, options, timeToAlert);
         if (resultsSelector) {
-            const task = $.Deferred<T>();
+            const task = $.Deferred<any>();
             ajax.done((results, status, xhr) => {
                 const transformedResults = resultsSelector(results, xhr);
                 task.resolve(transformedResults, status, xhr);
             });
-            ajax.fail((request, status, error) => {
+            ajax.fail((request: JQueryXHR, status, error) => {
                 task.reject(request, status, error);
-                });
+            });
             return task;
         } else {
             return ajax;
@@ -43,9 +43,9 @@ class commandBase {
     }
 
     protected head<T>(relativeUrl: string, args: any, db?: database, resultsSelector?: (results: any, xhr: JQueryXHR) => T): JQueryPromise<T> {
-        const ajax = this.ajax<T>(relativeUrl, args, "HEAD", db);
+        const ajax = this.ajax<any>(relativeUrl, args, "HEAD", db);
         if (resultsSelector) {
-            const task = $.Deferred<T>();
+            const task = $.Deferred<any>();
             ajax.done((results, status, xhr) => {
                 const allHeaders = xhr.getAllResponseHeaders();
                 if (allHeaders) {
@@ -156,7 +156,7 @@ class commandBase {
         return $.ajax(defaultOptions)
             .always(() => {
                 requestExecution.markCompleted();
-            });
+            }) as any;
     }
 
     protected extractEtag(xhr: JQueryXHR) {

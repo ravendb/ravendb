@@ -45,7 +45,7 @@ class queueSinkErrorDetails extends abstractAlertDetails {
         this.columnPreview.install(".queueSinkErrorDetails", ".js-queue-sink-error-details-tooltip",
             (details: Raven.Server.NotificationCenter.Notifications.Details.QueueSinkErrorInfo,
              column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.QueueSinkErrorInfo>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 const value = column.getCellValue(details);
                 if (value) {
                     onValue(genUtils.escapeHtml(value), value);

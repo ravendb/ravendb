@@ -46,7 +46,7 @@ class enforceRevisionsConfigurationDetail extends abstractOperationDetails {
 
         this.progress.subscribe(result => {
             if (result) {
-                this.allWarnings(_.map(result.Warnings, (value, key): gridItem => {
+                this.allWarnings(Object.entries(result.Warnings).map(([key, value]) => {
                     return {
                         Id: key,
                         Description: value
@@ -82,7 +82,7 @@ class enforceRevisionsConfigurationDetail extends abstractOperationDetails {
         this.columnPreview.install(".revisionsDetails", ".js-revisions-details-tooltip",
             (details: gridItem,
              column: textColumn<gridItem>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 const value = column.getCellValue(details);
                 if (value) {
                     onValue(generalUtils.escapeHtml(value));

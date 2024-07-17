@@ -17,7 +17,7 @@ class shard extends database {
         this.updateUsing(dbInfo);
     }
 
-    isSharded(): false {
+    isSharded(): this is shardedDatabase {
         return false;
     }
 

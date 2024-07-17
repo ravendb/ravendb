@@ -800,35 +800,47 @@ namespace Raven.Server.Rachis
 
             internal LeaderLockDebug LeaderLock;
 
-            internal ManualResetEventSlim HoldOnLeaderElect;
-
             internal List<string> NodeTagsToDisconnect;
 
-            public void OnLeaderElect()
+            internal Func<CommandBase, long, long> ModifyTermBeforeRachisMergedCommandInsertToLeaderLog;  // gets: command and term, returns: new term
+            public sealed class HoldOnLeaderElectDebug
             {
-                if (HoldOnLeaderElect == null)
-                    return;
+                public ManualResetEventSlim _mre;
 
-                HoldOnLeaderElect.Reset();
-                if (HoldOnLeaderElect.Wait(TimeSpan.FromSeconds(15)) == false)
+                public HoldOnLeaderElectDebug(ManualResetEventSlim mre)
                 {
-                    throw new TimeoutException("Something is wrong, throwing to avoid hanging");
+                    _mre = mre;
                 }
-                HoldOnLeaderElect.Reset();
-            }
 
-            public void ReleaseOnLeaderElect()
-            {
-                HoldOnLeaderElect?.Set();
-            }
-
-            public void BeforeNegotiatingWithFollower()
-            {
-                if (HoldOnLeaderElect?.Wait(TimeSpan.FromSeconds(15)) == false)
+                public void OnLeaderElect()
                 {
-                    throw new TimeoutException("Something is wrong, throwing to avoid hanging");
+                    _mre.Reset();
+                    if (_mre.Wait(TimeSpan.FromSeconds(15)) == false)
+                    {
+                        throw new TimeoutException("Something is wrong, throwing to avoid hanging");
+                    }
+                    _mre.Reset();
+                }
+
+                public void ReleaseOnLeaderElect()
+                {
+                    _mre.Set();
+                }
+
+                public void BeforeNegotiatingWithFollower()
+                {
+                    if (_mre.Wait(TimeSpan.FromSeconds(15)) == false)
+                    {
+                        throw new TimeoutException("Something is wrong, throwing to avoid hanging");
+                    }
                 }
             }
+
+            internal void CreateHoldOnLeaderElect(ManualResetEventSlim mre) => HoldOnLeaderElect = new HoldOnLeaderElectDebug(mre);
+
+            internal HoldOnLeaderElectDebug HoldOnLeaderElect;
+
+            internal Action BeforeExecuteAddDatabaseCommand;
 
             public static unsafe void InsertToLogDirectlyForDebug(ClusterOperationContext context, RachisConsensus node, long term, long index, CommandBase cmd, RachisEntryFlags flags)
             {
@@ -890,7 +902,7 @@ namespace Raven.Server.Rachis
                     [nameof(CommandBase.UniqueRequestId)] = Guid.NewGuid().ToString()
                 };
 
-                ForTestingPurposes?.OnLeaderElect();
+                ForTestingPurposes?.HoldOnLeaderElect?.OnLeaderElect();
                 InsertToLeaderLog(context, expectedTerm, context.ReadObject(noopCmd, "noop-cmd"), RachisEntryFlags.Noop);
             }
 
@@ -1983,7 +1995,7 @@ namespace Raven.Server.Rachis
         {
             if (term != CurrentTerm)
             {
-                throw new RachisConcurrencyException($"The term was changed from {term:#,#;;0} to {CurrentTerm:#,#;;0}");
+                throw new TermValidationException($"The term was changed from {term:#,#;;0} to {CurrentTerm:#,#;;0}");
             }
         }
 

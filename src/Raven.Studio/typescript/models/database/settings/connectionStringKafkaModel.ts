@@ -97,9 +97,12 @@ class connectionStringKafkaModel extends connectionStringModel {
         this.bootstrapServers(kafkaSettings.BootstrapServers);
         this.useRavenCertificate(kafkaSettings.UseRavenCertificate);
 
-        _.forIn(kafkaSettings.ConnectionOptions, (value, key) => {
-            this.connectionOptions.push(new connectionOptionModel(key, value));
-        });
+        if (kafkaSettings.ConnectionOptions) {
+            Object.entries(kafkaSettings.ConnectionOptions)
+                .forEach(([key, value]) => {
+                    this.connectionOptions.push(new connectionOptionModel(key, value));
+                });
+        }
     }
 
     initValidation() {

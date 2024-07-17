@@ -50,7 +50,7 @@ class mergedIndexesStorage {
     }
 
     static getLocalStorageKey(db: database | string, id: string) {
-        return mergedIndexesStorage.getStoragePrefixForDatabase((_.isString(db) ? db : db.name)) + "." + id;
+        return mergedIndexesStorage.getStoragePrefixForDatabase(typeof db === "string" ? db : db.name) + "." + id;
     }
 
     static onDatabaseDeleted(qualifier: string, name: string) {

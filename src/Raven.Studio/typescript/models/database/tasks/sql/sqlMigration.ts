@@ -4,6 +4,7 @@ import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
 
 import sqlColumn = require("models/database/tasks/sql/sqlColumn");
 import sqlReference = require("models/database/tasks/sql/sqlReference");
+import { sumBy } from "common/typeUtils";
 
 class sqlMigration {
 
@@ -193,7 +194,7 @@ class sqlMigration {
     onSchemaUpdated(dbSchema: Raven.Server.SqlMigration.Schema.DatabaseSchema, defaultSetup = true) {
         this.dbSchema = dbSchema;
         
-        const mapping = _.map(dbSchema.Tables, tableDto => {
+        const mapping = dbSchema.Tables.map(tableDto => {
             const table = new rootSqlTable();
             
             table.tableName = tableDto.TableName;
@@ -218,7 +219,7 @@ class sqlMigration {
         });
         
         // insert references
-        _.map(dbSchema.Tables, tableDto => {
+        dbSchema.Tables.map(tableDto => {
             const sourceTable = sqlMigration.findRootTable(mapping, tableDto.Schema, tableDto.TableName);
             tableDto.References.forEach(referenceDto => {
                 const targetTable = sqlMigration.findRootTable(mapping, referenceDto.Schema, referenceDto.Table);
@@ -276,7 +277,7 @@ class sqlMigration {
             });
         
         _.forEach(_.groupBy(table.references()
-            .filter(x => x.type === 'OneToMany'), x => x.targetTable.tableName), (refs, name) => {
+            .filter(x => x.type === 'OneToMany'), (x: sqlReference) => x.targetTable.tableName), (refs: sqlReference[], name: string) => {
             
             const basicName = this.propertyNameTransformationFunc(name);
             
@@ -295,7 +296,7 @@ class sqlMigration {
     }
     
     findLinksToTable(table: abstractSqlTable): Array<sqlReference> {
-        return _.flatMap(this.tables().filter(x => x.checked()), t => t.findLinksToTable(table));
+        return this.tables().filter(x => x.checked()).flatMap( t => t.findLinksToTable(table));
     }
 
     getFactoryName() {
@@ -418,7 +419,7 @@ class sqlMigration {
     }
     
     getSelectedTablesCount() {
-        return _.sumBy(this.tables(), t => t.checked() ? 1 : 0);
+        return sumBy(this.tables(), t => t.checked() ? 1 : 0);
     }
 
     private detectManyToMany() {

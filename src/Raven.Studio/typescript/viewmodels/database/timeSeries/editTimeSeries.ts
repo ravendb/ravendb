@@ -23,6 +23,7 @@ import queryCriteria = require("models/database/query/queryCriteria");
 import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import popoverUtils = require("common/popoverUtils");
 import moment = require("moment");
+import { range } from "common/typeUtils";
 
 class timeSeriesInfo {
     name = ko.observable<string>();
@@ -144,7 +145,7 @@ class editTimeSeries extends viewModelBase {
             const aggregationsCount = aggregationColumnNames.length;
             
             if (definedNamedValues) {
-                const columnNames = _.range(0, columnsCount)
+                const columnNames = range(0, columnsCount)
                     .map(idx => aggregationColumnNames[idx % aggregationsCount] + " (Value #" + Math.floor(idx / aggregationsCount) + ")");
                 
                 for (let i = 0; i < Math.min(columnsCount, definedNamedValues.length * aggregationsCount); i++) {
@@ -153,7 +154,7 @@ class editTimeSeries extends viewModelBase {
                 return columnNames;
             } else {
                 if (columnsCount > aggregationsCount) {
-                    return _.range(0, columnsCount)
+                    return range(0, columnsCount)
                         .map(idx => aggregationColumnNames[idx % aggregationsCount] + " (Value #" + Math.floor(idx / aggregationsCount) + ")");
                 } else {
                     return aggregationColumnNames;
@@ -167,7 +168,7 @@ class editTimeSeries extends viewModelBase {
     private getValuesNamesToUse(possibleValuesCount: number, timeSeriesName?: string): string[] {
         const definedNamedValues = this.getDefinedNamedValues(timeSeriesName);
             
-        const valuesNamesToUse = _.range(0, possibleValuesCount).map(idx => "Value #" + idx);
+        const valuesNamesToUse = range(0, possibleValuesCount).map(idx => "Value #" + idx);
 
         if (definedNamedValues) {
             for (let i = 0; i < Math.min(possibleValuesCount, definedNamedValues.length); i++) {
@@ -250,13 +251,13 @@ class editTimeSeries extends viewModelBase {
 
         this.columnPreview.install("virtual-grid", ".js-time-series-tooltip",
             (item: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry, column: textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 const value = column.getCellValue && column.getCellValue(item);
                 if (column.header === "Edit") {
                     return null;
                 } else if (column.header === "Date") {
                     onValue(moment.utc(item.Timestamp).local(), item.Timestamp);
-                } else if (!_.isUndefined(value)) {
+                } else if (value !== undefined) {
                     onValue(generalUtils.escapeHtml(value), value);
                 }
             });

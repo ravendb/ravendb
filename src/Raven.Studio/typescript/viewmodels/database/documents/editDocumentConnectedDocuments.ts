@@ -251,7 +251,7 @@ class connectedDocuments {
         this.columnPreview.install(".document-items-grid", ".document-items-tooltip",
             (item: connectedItemType,
              column: virtualColumn,
-             e: JQueryEventObject,
+             e: JQuery.TriggeredEvent,
              onValue: (context: any, valueToCopy?: string) => void) => {
                 const timeSeriesItem = (item as timeSeriesItem);
                 

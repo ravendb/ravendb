@@ -2,6 +2,7 @@
 
 import certificatePermissionModel = require("models/auth/certificatePermissionModel");
 import moment = require("moment");
+import { sortBy } from "common/typeUtils";
 
 type TwoFactorAction = "leave" | "set" | "delete";
 
@@ -157,10 +158,10 @@ class certificateModel {
                 dbAccessInfo = certificateDefinition.Permissions;
         }
         
-        const dbAccessArray = _.map(dbAccessInfo, (accessLevel: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess, dbName: string) =>
+        const dbAccessArray = Object.entries(dbAccessInfo).map(([dbName, accessLevel]) => 
             ({ accessLevel: `Database${accessLevel}` as databaseAccessLevel,  dbName: dbName }));
         
-        return _.sortBy(dbAccessArray, x => x.dbName.toLowerCase());
+        return sortBy(dbAccessArray, x => x.dbName.toLowerCase());
     }
 
     private initValidation() {
@@ -277,12 +278,12 @@ class certificateModel {
         model.thumbprints(dto.Thumbprints);
         model.hasTwoFactor(dto.HasTwoFactor);
         
-        model.permissions(_.map(dto.Permissions, (access, databaseName) => {
+        model.permissions(dto.Permissions ? Object.entries(dto.Permissions).map(([databaseName, access]) => {
             const permission = new certificatePermissionModel();
             permission.accessLevel(access);
             permission.databaseName(databaseName);
             return permission;
-        }));
+        }): []);
         return model;
     }
 

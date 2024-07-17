@@ -69,6 +69,7 @@ import complexFieldsAlertDetails
 import cpuCreditsBalanceDetails
     from "viewmodels/common/notificationCenter/detailViewer/alerts/cpuCreditsBalanceDetails";
 import groupedVirtualNotification from "common/notifications/models/groupedVirtualNotification";
+import { sortBy } from "common/typeUtils";
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
     showDetailsFor(notification: abstractNotification, notificationCenter: notificationCenter): JQueryPromise<void> | void;
@@ -212,7 +213,7 @@ class notificationCenter {
 
             const mergedNotifications = globalNotifications.concat(databaseNotifications);
 
-            return _.sortBy(mergedNotifications, x => -1 * x.displayDate().unix());
+            return sortBy(mergedNotifications, x => -1 * x.displayDate().unix());
         });
 
         this.visibleNotifications = ko.pureComputed(() => {

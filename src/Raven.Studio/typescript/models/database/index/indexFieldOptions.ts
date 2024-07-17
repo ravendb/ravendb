@@ -468,7 +468,7 @@ class indexFieldOptions {
             field = field.parent();
         }
 
-        const index = candidates.findIndex(x => !_.isNull(x) && !_.isUndefined(x));
+        const index = candidates.findIndex(x => !_.isNull(x) && x !== undefined);
         const value = candidates[index];
 
         const label = labelProvider ? labelProvider(value) : value;

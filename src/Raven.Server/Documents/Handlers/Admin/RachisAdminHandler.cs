@@ -83,6 +83,11 @@ namespace Raven.Server.Documents.Handlers.Admin
                         context.ReturnMemoryStream(ms);
                     }
                 }
+                catch (TermValidationException)
+                {
+                    HttpContext.Response.Headers["Reached-Leader"] = "false";
+                    throw;
+                }
                 catch (NotLeadingException e)
                 {
                     HttpContext.Response.Headers["Reached-Leader"] = "false";

@@ -1,5 +1,5 @@
 import React from "react";
-import { Meta, ComponentStory } from "@storybook/react";
+import { Meta, StoryFn } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import ClientGlobalConfiguration from "./ClientGlobalConfiguration";
 import { mockServices } from "test/mocks/services/MockServices";
@@ -16,7 +16,7 @@ function commonInit() {
     manageServerService.withGetGlobalClientConfiguration();
 }
 
-export const ClientConfiguration: ComponentStory<typeof ClientGlobalConfiguration> = () => {
+export const ClientConfiguration: StoryFn<typeof ClientGlobalConfiguration> = () => {
     commonInit();
 
     const { license } = mockStore;
@@ -25,7 +25,7 @@ export const ClientConfiguration: ComponentStory<typeof ClientGlobalConfiguratio
     return <ClientGlobalConfiguration />;
 };
 
-export const LicenseRestricted: ComponentStory<typeof ClientGlobalConfiguration> = () => {
+export const LicenseRestricted: StoryFn<typeof ClientGlobalConfiguration> = () => {
     commonInit();
 
     const { license } = mockStore;

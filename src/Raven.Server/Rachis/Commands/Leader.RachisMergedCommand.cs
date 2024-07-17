@@ -5,6 +5,7 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using System.Diagnostics.CodeAnalysis;
+using Raven.Client.Exceptions.Cluster;
 using Sparrow.Json;
 using Voron.Impl;
 
@@ -49,16 +50,27 @@ namespace Raven.Server.Rachis
 
             public async Task<(long Index, object Result)> Result()
             {
-                var inner = await _tcs.Task;
+                await WaitForInsertToLeaderLog();
+                return await WaitForCommit();
+            }
 
-                if (await inner.WaitWithTimeout(_timeout) == false)
+            private Task<(long Index, object Result)> _waitForCommit;
+
+            public async Task WaitForInsertToLeaderLog()
+            {
+                _waitForCommit = await _tcs.Task; // succeeded to insert to log
+            }
+
+            public async Task<(long Index, object Result)> WaitForCommit()
+            {
+                if (await _waitForCommit.WaitWithTimeout(_timeout) == false) // succeeded to commit (raft - can fail on ClusterStateMachine.Apply)
                 {
                     throw new TimeoutException($"Waited for {_timeout} but the command {Command.RaftCommandIndex} was not applied in this time.");
                 }
 
-                var r = await inner;
+                var r = await _waitForCommit;
                 return BlittableResultWriter == null ? r : (r.Index, BlittableResultWriter.Result);
-            } 
+            }
 
             protected override long ExecuteCmd(ClusterOperationContext context)
             {
@@ -76,7 +88,7 @@ namespace Raven.Server.Rachis
 
                     _leader._errorOccurred.TrySetException(e);
 
-                    _tcs.TrySetResult(Task.FromException<(long, object)>(e));
+                    _tcs.TrySetException(e);
                 }
 
                 return 1;
@@ -125,7 +137,11 @@ namespace Raven.Server.Rachis
                 else
                 {
                     _engine.InvokeBeforeAppendToRaftLog(context, this);
-                    index = _engine.InsertToLeaderLog(context, _leader.Term, Command.Raw, RachisEntryFlags.StateMachineCommand);
+                    var term = _leader.Term;
+                    if (_engine.ForTestingPurposes?.ModifyTermBeforeRachisMergedCommandInsertToLeaderLog != null)
+                        term = _engine.ForTestingPurposes.ModifyTermBeforeRachisMergedCommandInsertToLeaderLog.Invoke(Command, term);
+
+                    index = _engine.InsertToLeaderLog(context, term, Command.Raw, RachisEntryFlags.StateMachineCommand);
                 }
                
                 if (_leader._entries.TryGetValue(index, out var state) == false)

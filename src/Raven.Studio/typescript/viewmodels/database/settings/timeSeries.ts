@@ -97,7 +97,7 @@ class timeSeries extends shardViewModelBase {
         if (data) {
             this.policyCheckFrequency(generalUtils.timeSpanToSeconds(data.PolicyCheckFrequency));
             if (data.Collections) {
-                this.perCollectionConfigurations(_.map(data.Collections, (configuration, collection) => {
+                this.perCollectionConfigurations(Object.entries(data.Collections).map(([collection, configuration]) => {
                     const entry = new timeSeriesConfigurationEntry(collection);
                     entry.withRetention(configuration);
                     return entry;
@@ -105,7 +105,7 @@ class timeSeries extends shardViewModelBase {
             }
 
             if (data.NamedValues) {
-                _.map(data.NamedValues, (configuration, collection) => {
+                Object.entries(data.NamedValues).map(([collection, configuration]) => {
                     let matchingItem = this.perCollectionConfigurations().find(x => x.collection() === collection);
                     if (!matchingItem) {
                         matchingItem = new timeSeriesConfigurationEntry(collection);
@@ -129,7 +129,7 @@ class timeSeries extends shardViewModelBase {
             
             const usedOptions = this.perCollectionConfigurations().filter(f => f !== item).map(x => x.collection());
 
-            const filteredOptions = _.difference(options, usedOptions);
+            const filteredOptions = options.filter(x => !usedOptions.includes(x));
 
             if (key) {
                 return filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));

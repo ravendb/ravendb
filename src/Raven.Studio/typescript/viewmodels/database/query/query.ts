@@ -725,7 +725,7 @@ class query extends shardViewModelBase {
             });
 
         this.columnPreview.install("virtual-grid", ".js-query-tooltip", 
-            (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
+            (doc: document, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy: string) => void) => {
             if (this.currentTab() === "explanations" && column.header === "Explanation") {
                 // we don't want to show inline preview for Explanation column, as value doesn't contain full message
                 // which might be misleading - use preview button to obtain entire explanation 
@@ -733,7 +733,7 @@ class query extends shardViewModelBase {
             }
             
             const showPreview = (value: any) => {
-                if (!_.isUndefined(value)) {
+                if (value !== undefined) {
                     const json = JSON.stringify(value, null, 4);
                     const html = highlight(json, languages.javascript, "js");
                     onValue(html, json);
@@ -1137,7 +1137,7 @@ class query extends shardViewModelBase {
                         
                         const emptyFieldsResult = queryForAllFields
                             && queryResults.totalResultCount > 0
-                            && _.every(queryResults.items, x => x.getDocumentPropertyNames().length === 0);
+                            && queryResults.items.every(x => x.getDocumentPropertyNames().length === 0);
                         
                         if (emptyFieldsResult) {
                             resultsTask.resolve({
@@ -1225,7 +1225,7 @@ class query extends shardViewModelBase {
             if (this.isValid(this.saveQueryValidationGroup)) {
                 
                 // Verify if name already exists
-                if (_.find(savedQueriesStorage.getSavedQueries(this.db), x => x.name.toUpperCase() === this.querySaveName().toUpperCase())) {
+                if (savedQueriesStorage.getSavedQueries(this.db).find(x => x.name.toUpperCase() === this.querySaveName().toUpperCase())) {
                     this.confirmationMessage(`Query ${generalUtils.escapeHtml(this.querySaveName())} already exists`, `Overwrite existing query?`, {
                         buttons: ["No", "Overwrite"],
                         html: true
@@ -1400,7 +1400,7 @@ class query extends shardViewModelBase {
     }
     
     private onIncludesLoaded(includes: dictionary<any>): void {
-        _.forIn(includes, (doc, id) => {
+        Object.entries(includes).forEach(([id, doc]) => {
             const metadata = doc["@metadata"];
             const collection = (metadata ? metadata["@collection"] : null) || "@unknown";
             
@@ -1435,7 +1435,7 @@ class query extends shardViewModelBase {
     }
     
     private onHighlightingsLoaded(highlightings: dictionary<dictionary<Array<string>>>): void {
-        _.forIn(highlightings, (value, fieldName) => {
+        Object.entries(highlightings).forEach(([fieldName, value]) => {
             let existingPerFieldCache = this.highlightsCache().find(x => x.fieldName() === fieldName);
 
             if (!existingPerFieldCache) {
@@ -1444,7 +1444,7 @@ class query extends shardViewModelBase {
                 this.highlightsCache.push(existingPerFieldCache);
             }
             
-            _.forIn(value, (fragments, key) => {
+            Object.entries(value).forEach(([key, fragments]) => {
                if (!existingPerFieldCache.data.has(key)) {
                    existingPerFieldCache.data.set(key, []);
                } 
@@ -1654,7 +1654,7 @@ class query extends shardViewModelBase {
     goToHighlightsTab(highlight: highlightSection): void {
         this.currentTab(highlight);
 
-        const itemsFlattened = _.flatMap(Array.from(highlight.data.values()), items => items);
+        const itemsFlattened = Array.from(highlight.data.values()).flatMap(items => items);
         
         this.effectiveFetcher = ko.observable<fetcherType>(() => {
             return $.when({

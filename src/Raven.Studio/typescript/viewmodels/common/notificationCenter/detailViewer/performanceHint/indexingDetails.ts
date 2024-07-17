@@ -65,12 +65,12 @@ class indexingDetails extends abstractPerformanceHintDetails {
         });
 
         this.columnPreview.install(".indexingDetails", ".js-indexing-details-tooltip",
-            (details: indexingDetailsItemDto, column: textColumn<indexingDetailsItemDto>, e: JQueryEventObject,
+            (details: indexingDetailsItemDto, column: textColumn<indexingDetailsItemDto>, e: JQuery.TriggeredEvent,
              onValue: (context: any, valueToCopy?: string) => void) => {
                 const value = column.getCellValue(details);
                 if (column.header === "Date") {
                     onValue(moment.utc(details.LastWarningTime), details.LastWarningTime);
-                } else if (!_.isUndefined(value)) {
+                } else if (value !== undefined) {
                     onValue(generalUtils.escapeHtml(value), value);
                 }
             });
@@ -85,7 +85,7 @@ class indexingDetails extends abstractPerformanceHintDetails {
     }
 
     private mapItems(details: Raven.Server.NotificationCenter.Notifications.Details.WarnIndexOutputsPerDocument): indexingDetailsItemDto[] {
-        return _.flatMap(details.Warnings, (value, key) => {
+        return Object.entries(details.Warnings).flatMap(([key, value]) => {
             return value.map(item => ({ IndexName: key, ...item }));
         });
     }

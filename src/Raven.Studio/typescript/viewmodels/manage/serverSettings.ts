@@ -9,6 +9,7 @@ import genUtils = require("common/generalUtils");
 import messagePublisher = require("common/messagePublisher");
 import getServerSettingsCommand = require("commands/maintenance/getServerSettingsCommand");
 import { settingsEntry } from "models/database/settings/databaseSettingsModels";
+import { sortBy } from "common/typeUtils";
 
 class serverSettings extends viewModelBase {
 
@@ -136,7 +137,7 @@ class serverSettings extends viewModelBase {
         this.columnPreview.install(".summary-list-container", ".js-summary-details-tooltip",
             (details: models.settingsEntry,
              column: textColumn<models.settingsEntry>,
-             e: JQueryEventObject,
+             e: JQuery.TriggeredEvent, 
              onValue: (context: any, valueToCopy?: string) => void) => {
             
                 if (column.header === "Configuration Key") {
@@ -176,7 +177,7 @@ class serverSettings extends viewModelBase {
             .done((result: Raven.Server.Config.SettingsResult) => {
                 const settingsEntries = result.Settings.map(x => models.settingsEntry.getEntry(x));
 
-                this.allEntries(_.sortBy(settingsEntries, x => x.keyName()));
+                this.allEntries(sortBy(settingsEntries, x => x.keyName()));
             });
     }
     

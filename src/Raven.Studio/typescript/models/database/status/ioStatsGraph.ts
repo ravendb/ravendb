@@ -10,6 +10,7 @@ import fileImporter = require("common/fileImporter");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import moment = require("moment");
 import d3 = require("d3");
+import { sumBy } from "common/typeUtils";
 
 type rTreeLeaf = {
     minX: number;
@@ -578,7 +579,7 @@ class ioStatsGraph {
     }
 
     private checkBufferUsage() {
-        const dataCount = _.sumBy(this.data.Environments, env => _.sumBy(env.Files, files => files.Recent.length));
+        const dataCount = sumBy(this.data.Environments, env => sumBy(env.Files, files => files.Recent.length));
 
         const usage = Math.min(100, dataCount * 100.0 / ioStatsGraph.bufferSize);
         this.bufferUsage(usage.toFixed(1));

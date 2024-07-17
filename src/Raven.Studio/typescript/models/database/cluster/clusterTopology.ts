@@ -1,5 +1,6 @@
 
 import clusterNode = require("models/database/cluster/clusterNode");
+import { sortBy } from "common/typeUtils";
 
 class clusterTopology {
     leader = ko.observable<string>();
@@ -30,7 +31,7 @@ class clusterTopology {
         const watchers = this.mapNodes("Watcher", topologyDto.Watchers, dto.Status, dto.NodeLicenseDetails);
 
         this.nodes(_.concat<clusterNode>(members, promotables, watchers));
-        this.nodes(_.sortBy(this.nodes(), x => x.tag().toUpperCase()));
+        this.nodes(sortBy(this.nodes(), x => x.tag().toUpperCase()));
 
         this.membersCount = ko.pureComputed(() => {
             const nodes = this.nodes();
@@ -55,7 +56,7 @@ class clusterTopology {
     private mapNodes(type: clusterNodeType, dict: System.Collections.Generic.Dictionary<string, string>,
                      status: { [key: string]: Raven.Client.Http.NodeStatus; },
                      licenseDetails: { [key: string]: Raven.Server.Commercial.DetailsPerNode; }): Array<clusterNode> {
-        return _.map(dict, (v, k) => {
+        return Object.entries(dict).map(([k, v]) => {
             // node statuses are available for all nodes except current
             const nodeStatus = status ? status[k] : null;
             const connected = nodeStatus ? nodeStatus.Connected : true;
@@ -89,7 +90,7 @@ class clusterTopology {
         const newTopology = incomingChanges.Topology;
 
         const existingNodes = this.nodes();
-        const newNodes = _.concat<clusterNode>(
+        const newNodes: clusterNode[] = [].concat(
             this.mapNodes("Member", newTopology.Members, incomingChanges.Status, incomingChanges.NodeLicenseDetails),
             this.mapNodes("Promotable", newTopology.Promotables, incomingChanges.Status, incomingChanges.NodeLicenseDetails),
             this.mapNodes("Watcher", newTopology.Watchers, incomingChanges.Status, incomingChanges.NodeLicenseDetails)
@@ -107,7 +108,7 @@ class clusterTopology {
             if (matchedNode) {
                 matchedNode.updateWith(node);
             } else {
-                const locationToInsert = _.sortedIndexBy(this.nodes(), node, item => item.tag().toLowerCase());
+                const locationToInsert = _.sortedIndexBy(this.nodes(), node, (item: clusterNode) => item.tag().toLowerCase());
                 this.nodes.splice(locationToInsert, 0, node);
             }
         });

@@ -106,7 +106,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
     }
 
     addDiscoveryUrlWithBlink() { 
-        if ( !_.find(this.topologyDiscoveryUrls(), x => x.discoveryUrlName() === this.inputUrl().discoveryUrlName())) {
+        if (!this.topologyDiscoveryUrls().find(x => x.discoveryUrlName() === this.inputUrl().discoveryUrlName())) {
             const newUrl = new discoveryUrl(this.inputUrl().discoveryUrlName());
             newUrl.dirtyFlag().forceDirty();
             this.topologyDiscoveryUrls.unshift(newUrl);

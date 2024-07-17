@@ -17,19 +17,39 @@ customHooksToMock.forEach((name: string) => {
 });
 
 const config: StorybookConfig = {
-    babel: async (options: any) => {
+    babel: async (options) => {
+        options.plugins ??= [];
         options.plugins.push((require as any).resolve("./import_plugin.js"));
+
         return {
             ...options,
+            presets: [
+                ...(options.presets ?? []),
+                [
+                    "@babel/preset-react",
+                    {
+                        runtime: "automatic",
+                    },
+                    "preset-react-jsx-transform",
+                ],
+            ],
             sourceType: "unambiguous",
         };
     },
+
     stories: ["../typescript/**/*.stories.tsx"],
-    addons: ["@storybook/addon-links", "@storybook/addon-essentials", "@storybook/addon-interactions"],
+    addons: [
+        "@storybook/addon-links",
+        "@storybook/addon-essentials",
+        "@storybook/addon-interactions",
+        "@storybook/addon-webpack5-compiler-babel",
+    ],
+
     framework: {
         name: "@storybook/react-webpack5",
         options: {},
     },
+
     webpackFinal: async (config) => {
         if (config.resolve) {
             config.resolve.alias = {
@@ -79,10 +99,6 @@ const config: StorybookConfig = {
         config.module?.rules?.push(...incomingRules);
 
         return config;
-    },
-
-    docs: {
-        autodocs: false,
     },
 };
 export default config;

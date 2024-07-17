@@ -42,7 +42,7 @@ class document implements documentBase {
         const propertyNames: Array<string> = [];
         for (const property in this) {
             const isMeta = property === "__metadata" || property === "__moduleId__";
-            const isFunction = _.isFunction((this as any)[property]);
+            const isFunction = typeof (this as any)[property] === "function";
             if (!isMeta && !isFunction) {
                 propertyNames.push(property);
             }

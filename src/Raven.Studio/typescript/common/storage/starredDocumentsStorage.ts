@@ -23,7 +23,7 @@ class starredDocumentsStorage {
         return new verifyDocumentsIDsCommand(starred, db)
             .execute()
             .done((verifiedIds) => {
-                const invalidIds = _.difference(starred, verifiedIds);
+                const invalidIds = starred.filter(x => !verifiedIds.includes(x));
                 if (invalidIds.length) {
                     starredDocumentsStorage.saveToLocalStorage(db, verifiedIds);
                 }
