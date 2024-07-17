@@ -145,6 +145,7 @@ namespace Voron.Impl.Journal
                     Debug.Assert(performDecompression == false || recoveryPagerState.Disposed == false);
 
                     var numberOfPagesOnDestination = GetNumberOfPagesFor(pageInfoPtr[i].Size);
+                    _dataPager.EnsureContinuous(ref dataPagerState, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
 
                     var pageNumber = *(long*)(outputPage + totalRead);
                     if (pageInfoPtr[i].PageNumber != pageNumber)
