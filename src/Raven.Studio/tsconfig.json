@@ -1,69 +1,99 @@
 {
-  "compilerOptions": {
-    "baseUrl": ".",
-    "noImplicitAny": true,
-    "noEmitOnError": true,
-    "removeComments": false,
-    "declaration": false,
-    "sourceMap": true,
-    "target": "ES2020", 
-    "esModuleInterop": true,
-    "moduleResolution": "node",
-    "skipLibCheck": true,
-    "module": "AMD",
-    "lib": [
-      "DOM",
-      "es6",
-      "es2017", 
-      "ES2020"
-    ],
-    "typeRoots": [
-        "./node_modules/@types",
-        "./typings/**/*"
-    ],
-      "types": [
-          "durandal",
-          "jquery",
-          "knockout",
-          "google.analytics",
-          "knockout-postbox",
-          "knockout.validation",
-          "lodash",
-          "d3",
-          "rbush",
-          "requirejs",
-          "jquery.blockui",
-          "prismjs",
-          "toastr",
-          "diff",
-          "ace",
-          "bootstrap",
-          "eonasdan-bootstrap-datetimepicker",
-          "leaflet",
-          "leaflet.markercluster"
-      ],
-      "paths": {
-          "Favico":  ["node_modules/favico.js/favico.js"],
-          "jszip":  ["typings/jszip.d.ts"],
-          "viewmodels/*":  ["typescript/viewmodels/*"],
-          "components/*":  ["typescript/components/*"],
-          "models/*":  ["typescript/models/*"],
-          "common/*": ["typescript/common/*"],
-          "external/*": ["typescript/external/*"],
-          "test/*": ["typescript/test/*"],
-          "widgets/*": ["typescript/widgets/*"],
-          "commands/*": ["typescript/commands/*"],
-          "knockout": ["node_modules/@types/knockout"],
-          "endpoints": ["typings/server/endpoints"],
-          "configuration": ["typings/server/configuration"],
-          "node-forge": ["typings/custom_node-forge.d.ts"],
-          "hooks/*": ["typescript/components/hooks/*"]
-      },
-    "jsx": "react"
-  },
-  "exclude": [
-    "node_modules",
-    "wwwroot",
-    "aceBuild"
-  ]
+    "compilerOptions": {
+        "baseUrl": ".",
+        "noImplicitAny": true,
+        "noEmitOnError": true,
+        "removeComments": false,
+        "declaration": false,
+        "sourceMap": true,
+        "target": "ES2020",
+        "esModuleInterop": true,
+        "moduleResolution": "node",
+        "skipLibCheck": true,
+        "module": "AMD",
+        "lib": [
+            "DOM",
+            "es6",
+            "es2017",
+            "ES2020"
+        ],
+        "typeRoots": [
+            "./node_modules/@types",
+            "./typings/**/*"
+        ],
+        "types": [
+            "durandal",
+            "jquery",
+            "knockout",
+            "google.analytics",
+            "knockout-postbox",
+            "knockout.validation",
+            "lodash",
+            "d3",
+            "rbush",
+            "requirejs",
+            "jquery.blockui",
+            "prismjs",
+            "toastr",
+            "diff",
+            "ace",
+            "bootstrap",
+            "eonasdan-bootstrap-datetimepicker",
+            "leaflet",
+            "leaflet.markercluster"
+        ],
+        "paths": {
+            "Favico": [
+                "node_modules/favico.js/favico.js"
+            ],
+            "jszip": [
+                "typings/jszip.d.ts"
+            ],
+            "viewmodels/*": [
+                "typescript/viewmodels/*"
+            ],
+            "components/*": [
+                "typescript/components/*"
+            ],
+            "models/*": [
+                "typescript/models/*"
+            ],
+            "common/*": [
+                "typescript/common/*"
+            ],
+            "external/*": [
+                "typescript/external/*"
+            ],
+            "test/*": [
+                "typescript/test/*"
+            ],
+            "widgets/*": [
+                "typescript/widgets/*"
+            ],
+            "commands/*": [
+                "typescript/commands/*"
+            ],
+            "knockout": [
+                "node_modules/@types/knockout"
+            ],
+            "endpoints": [
+                "typings/server/endpoints"
+            ],
+            "configuration": [
+                "typings/server/configuration"
+            ],
+            "node-forge": [
+                "typings/custom_node-forge.d.ts"
+            ],
+            "hooks/*": [
+                "typescript/components/hooks/*"
+            ]
+        },
+        "jsx": "react"
+    },
+    "exclude": [
+        "node_modules",
+        "wwwroot",
+        "aceBuild"
+    ]
 }
