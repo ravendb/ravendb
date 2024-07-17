@@ -182,7 +182,7 @@ namespace Raven.Server.Documents
 
         public DocumentsContextPool ContextPool;
 
-        public DocumentsStorage(DocumentDatabase documentDatabase, Action<string> addToInitLog)
+        public DocumentsStorage(DocumentDatabase documentDatabase, Action<LogMode, string> addToInitLog)
         {
             DocumentDatabase = documentDatabase;
             _name = DocumentDatabase.Name;
@@ -199,7 +199,7 @@ namespace Raven.Server.Documents
         public CountersStorage CountersStorage;
         public TimeSeriesStorage TimeSeriesStorage;
         public DocumentPutAction DocumentPut;
-        private readonly Action<string> _addToInitLog;
+        private readonly Action<LogMode, string> _addToInitLog;
 
         // this is used to remember the metadata about collections / documents for
         // common operations. It always points to the latest valid transaction and is updated by

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
+using Sparrow.Logging;
 using Voron;
 using Voron.Schema;
 
@@ -101,7 +102,7 @@ namespace Raven.Server.Storage.Schema
                 if (shouldAddToInitLog)
                 {
                     var msg = $"Started schema upgrade from version #{updater.From} to version #{updater.To}";
-                    _documentsStorage.DocumentDatabase.AddToInitLog?.Invoke(msg);
+                    _documentsStorage.DocumentDatabase.AddToInitLog?.Invoke(LogMode.Information, msg);
                 }
 
                 bool result =  updater.Update(new UpdateStep(transactions)
@@ -112,9 +113,9 @@ namespace Raven.Server.Storage.Schema
 
                 if (shouldAddToInitLog)
                 {
-
                     var msg = $"{(result ? "Finished" : "Failed to")} schema upgrade from version #{updater.From} to version #{updater.To}";
-                    _documentsStorage.DocumentDatabase.AddToInitLog?.Invoke(msg);
+                    var logMode = result ? LogMode.Information : LogMode.Operations;
+                    _documentsStorage.DocumentDatabase.AddToInitLog?.Invoke(logMode, msg);
                 }
 
                 return result;

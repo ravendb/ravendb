@@ -152,7 +152,7 @@ namespace Voron.Impl.Journal
             return journal;
         }
 
-        public bool RecoverDatabase(TransactionHeader* txHeader, Action<string> addToInitLog)
+        public bool RecoverDatabase(TransactionHeader* txHeader, Action<LogMode, string> addToInitLog)
         {
             // note, we don't need to do any concurrency here, happens as a single threaded
             // fashion on db startup
@@ -192,7 +192,7 @@ namespace Voron.Impl.Journal
             var deleteLastJournal = false;
             for (var journalNumber = journalToStartReadingFrom; journalNumber <= logInfo.CurrentJournal; journalNumber++)
             {
-                addToInitLog?.Invoke($"Recovering journal {journalNumber} (up to last journal {logInfo.CurrentJournal})");
+                addToInitLog?.Invoke(LogMode.Information, $"Recovering journal {journalNumber} (up to last journal {logInfo.CurrentJournal})");
                 var initialSize = _env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize;
                 var journalRecoveryName = StorageEnvironmentOptions.JournalRecoveryName(journalNumber);
                 try
@@ -252,15 +252,17 @@ namespace Voron.Impl.Journal
                                 break;
                             }
                         }
-                        addToInitLog?.Invoke($"Journal {journalNumber} Recovered");
+                        addToInitLog?.Invoke(LogMode.Information, $"Journal {journalNumber} Recovered");
                     }
                 }
                 catch (InvalidJournalException)
                 {
                     if (_env.Options.IgnoreInvalidJournalErrors == true)
                     {
-                        addToInitLog?.Invoke(
-                            $"Encountered invalid journal {journalNumber} @ {_env.Options}. Skipping this journal and keep going the recovery operation because '{nameof(_env.Options.IgnoreInvalidJournalErrors)}' options is set");
+                        var msg =
+                            $"Encountered invalid journal {journalNumber} @ {_env.Options}. " +
+                            $"Skipping this journal and keep going the recovery operation because '{nameof(_env.Options.IgnoreInvalidJournalErrors)}' options is set";
+                        addToInitLog?.Invoke(LogMode.Information, msg);
                         continue;
                     }
 
@@ -285,7 +287,7 @@ namespace Voron.Impl.Journal
 
                     var overflowDetector = new RecoveryOverflowDetector();
 
-                    addToInitLog?.Invoke($"Validate checksum on {modifiedPages.Count} pages");
+                    addToInitLog?.Invoke(LogMode.Information, $"Validate checksum on {modifiedPages.Count} pages");
 
                     var sp = Stopwatch.StartNew();
 
@@ -296,7 +298,7 @@ namespace Voron.Impl.Journal
                         if (sp.Elapsed.TotalSeconds >= 60)
                         {
                             sp.Restart();
-                            addToInitLog?.Invoke($"Still calculating checksum... ({sortedPages.Length - i} out of {sortedPages.Length}");
+                            addToInitLog?.Invoke(LogMode.Information, $"Still calculating checksum... ({sortedPages.Length - i} out of {sortedPages.Length}");
                         }
 
                         using (tempTx) // release any resources, we just wanted to validate things
@@ -318,11 +320,11 @@ namespace Voron.Impl.Journal
                     }
 
                     sp.Stop();
-                    addToInitLog?.Invoke($"Validate of {sortedPages.Length} pages completed in {sp.Elapsed}");
+                    addToInitLog?.Invoke(LogMode.Information, $"Validate of {sortedPages.Length} pages completed in {sp.Elapsed}");
                 }
                 else
                 {
-                    addToInitLog?.Invoke($"SkipChecksumValidationOnDbLoading set to true. Skipping checksum validation of {modifiedPages.Count} pages.");
+                    addToInitLog?.Invoke(LogMode.Information, $"SkipChecksumValidationOnDbLoading set to true. Skipping checksum validation of {modifiedPages.Count} pages.");
                 }
             }
 
@@ -386,7 +388,7 @@ namespace Voron.Impl.Journal
                     // it must have at least one page for the next transaction header and one 4kb for data
                     CurrentFile = lastFile;
             }
-            addToInitLog?.Invoke($"Info: Current File = '{CurrentFile?.Number}', Position (4KB)='{CurrentFile?.WritePosIn4KbPosition}'. Require Header Update = {requireHeaderUpdate}");
+            addToInitLog?.Invoke(LogMode.Information, $"Info: Current File = '{CurrentFile?.Number}', Position (4KB)='{CurrentFile?.WritePosIn4KbPosition}'. Require Header Update = {requireHeaderUpdate}");
 
             if (requireHeaderUpdate)
             {
@@ -431,7 +433,7 @@ namespace Voron.Impl.Journal
 
             if (_env.Options.CopyOnWriteMode == false)
             {
-                addToInitLog?.Invoke($"Cleanup Newer Invalid Journal Files (Last Flushed Journal={lastProcessedJournal})");
+                addToInitLog?.Invoke(LogMode.Information, $"Cleanup Newer Invalid Journal Files (Last Flushed Journal={lastProcessedJournal})");
 
                 CleanupNewerInvalidJournalFiles(lastProcessedJournal);
             }
@@ -2261,4 +2263,3 @@ namespace Voron.Impl.Journal
     }
 
 }
-
