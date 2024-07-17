@@ -1,7 +1,6 @@
 
 import clusterNode = require("models/database/cluster/clusterNode");
 import { sortBy } from "common/typeUtils";
-import { ClusterNode } from "components/common/shell/clusterSlice";
 
 class clusterTopology {
     leader = ko.observable<string>();

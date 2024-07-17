@@ -173,7 +173,8 @@ export function OngoingTasksPage() {
             .filter((x) => selectedTaskIds.includes(x.shared.taskId))
             .map((x) => x.shared);
 
-    const { replicationHubs: _, ...filteredWithoutReplicationHubs } = filteredTasks;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { replicationHubs: ignored, ...filteredWithoutReplicationHubs } = filteredTasks;
     const filteredDatabaseTaskIds = Object.values(filteredWithoutReplicationHubs)
         .flat()
         .filter((x) => !x.shared.serverWide)
