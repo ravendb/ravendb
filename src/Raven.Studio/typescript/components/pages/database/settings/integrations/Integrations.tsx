@@ -33,35 +33,37 @@ export default function Integrations() {
     }
 
     return (
-        <Row className="gy-sm content-margin">
-            <Col>
-                <AboutViewHeading title="Integrations" icon="integrations" />
-                <div className="mb-3">
-                    <HrHeader
-                        right={
-                            <IntegrationsAddNewButton
-                                isLicenseUpgradeRequired={isLicenseUpgradeRequired}
-                                addNewUser={addNewUser}
-                            />
-                        }
-                    >
-                        PostgreSQL Protocol Credentials
-                    </HrHeader>
-                    <IntegrationsUserList
-                        fetchState={asyncGetPostgreSqlUsers.status}
-                        reload={asyncGetPostgreSqlUsers.execute}
-                        users={users}
-                        removeUser={removeUser}
+        <div className="content-margin">
+            <Row className="gy-sm">
+                <Col>
+                    <AboutViewHeading title="Integrations" icon="integrations" />
+                    <div className="mb-3">
+                        <HrHeader
+                            right={
+                                <IntegrationsAddNewButton
+                                    isLicenseUpgradeRequired={isLicenseUpgradeRequired}
+                                    addNewUser={addNewUser}
+                                />
+                            }
+                        >
+                            PostgreSQL Protocol Credentials
+                        </HrHeader>
+                        <IntegrationsUserList
+                            fetchState={asyncGetPostgreSqlUsers.status}
+                            reload={asyncGetPostgreSqlUsers.execute}
+                            users={users}
+                            removeUser={removeUser}
+                        />
+                    </div>
+                    <IntegrationsAlerts
+                        isLicenseUpgradeRequired={isLicenseUpgradeRequired}
+                        isPostgreSqlSupportEnabled={isPostgreSqlSupportEnabled}
                     />
-                </div>
-                <IntegrationsAlerts
-                    isLicenseUpgradeRequired={isLicenseUpgradeRequired}
-                    isPostgreSqlSupportEnabled={isPostgreSqlSupportEnabled}
-                />
-            </Col>
-            <Col sm={12} lg={4}>
-                <IntegrationsInfoHub />
-            </Col>
-        </Row>
+                </Col>
+                <Col sm={12} lg={4}>
+                    <IntegrationsInfoHub />
+                </Col>
+            </Row>
+        </div>
     );
 }

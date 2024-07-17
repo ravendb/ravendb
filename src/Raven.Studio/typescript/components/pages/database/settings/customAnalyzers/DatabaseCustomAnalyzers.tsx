@@ -58,7 +58,7 @@ export default function DatabaseCustomAnalyzers() {
     const isLimitReached = databaseLimitReachStatus === "limitReached" || clusterLimitReachStatus === "limitReached";
 
     return (
-        <Row className="gy-sm content-margin">
+        <div className="content-margin">
             <DatabaseLimitAlert
                 databaseLimitReachStatus={databaseLimitReachStatus}
                 databaseResultsCount={databaseResultsCount}
@@ -71,62 +71,69 @@ export default function DatabaseCustomAnalyzers() {
                 licenseClusterLimit={licenseClusterLimit}
                 upgradeLicenseLink={upgradeLicenseLink}
             />
-            <Col>
-                <AboutViewHeading title="Custom analyzers" icon="custom-analyzers" />
-                {hasDatabaseAdminAccess && (
-                    <>
-                        <div id="newCustomAnalyzer" className="w-fit-content">
-                            <Button color="primary" className="mb-3" onClick={addNewAnalyzer} disabled={isLimitReached}>
-                                <Icon icon="plus" /> Add a custom analyzer
-                            </Button>
-                            {isLimitReached && (
-                                <AddButtonLicensePopover
-                                    databaseLimitReachStatus={databaseLimitReachStatus}
-                                    upgradeLicenseLink={upgradeLicenseLink}
-                                />
-                            )}
-                        </div>
-                    </>
-                )}
-
-                <HrHeader count={databaseLimitReachStatus === "notReached" ? databaseResultsCount : null}>
-                    Database custom analyzers
-                    {databaseLimitReachStatus !== "notReached" && (
-                        <CounterBadge className="ms-2" count={databaseResultsCount} limit={licenseDatabaseLimit} />
+            <Row className="gy-sm">
+                <Col>
+                    <AboutViewHeading title="Custom analyzers" icon="custom-analyzers" />
+                    {hasDatabaseAdminAccess && (
+                        <>
+                            <div id="newCustomAnalyzer" className="w-fit-content">
+                                <Button
+                                    color="primary"
+                                    className="mb-3"
+                                    onClick={addNewAnalyzer}
+                                    disabled={isLimitReached}
+                                >
+                                    <Icon icon="plus" /> Add a custom analyzer
+                                </Button>
+                                {isLimitReached && (
+                                    <AddButtonLicensePopover
+                                        databaseLimitReachStatus={databaseLimitReachStatus}
+                                        upgradeLicenseLink={upgradeLicenseLink}
+                                    />
+                                )}
+                            </div>
+                        </>
                     )}
-                </HrHeader>
-                <DatabaseCustomAnalyzersList
-                    analyzers={analyzers}
-                    fetchStatus={asyncGetDatabaseAnalyzers.status}
-                    reload={asyncGetDatabaseAnalyzers.execute}
-                    serverWideAnalyzerNames={asyncGetServerWideAnalyzers.result?.map((x) => x.Name) ?? []}
-                    remove={removeAnalyzer}
-                />
 
-                <HrHeader
-                    right={
-                        <a
-                            href={appUrl.forServerWideCustomAnalyzers()}
-                            target="_blank"
-                            title="Navigate to the server-wide view to edit"
-                        >
-                            <Icon icon="link" />
-                            Server-wide custom analyzers
-                        </a>
-                    }
-                    count={serverWideResultsCount}
-                >
-                    Server-wide custom analyzers
-                    {!hasServerWideCustomAnalyzers && <LicenseRestrictedBadge licenseRequired="Professional +" />}
-                </HrHeader>
-                {hasServerWideCustomAnalyzers && (
-                    <DatabaseCustomAnalyzersServerWideList asyncGetAnalyzers={asyncGetServerWideAnalyzers} />
-                )}
-            </Col>
-            <Col sm={12} lg={4}>
-                <DatabaseCustomAnalyzersInfoHub databaseAnalyzersCount={databaseResultsCount} />
-            </Col>
-        </Row>
+                    <HrHeader count={databaseLimitReachStatus === "notReached" ? databaseResultsCount : null}>
+                        Database custom analyzers
+                        {databaseLimitReachStatus !== "notReached" && (
+                            <CounterBadge className="ms-2" count={databaseResultsCount} limit={licenseDatabaseLimit} />
+                        )}
+                    </HrHeader>
+                    <DatabaseCustomAnalyzersList
+                        analyzers={analyzers}
+                        fetchStatus={asyncGetDatabaseAnalyzers.status}
+                        reload={asyncGetDatabaseAnalyzers.execute}
+                        serverWideAnalyzerNames={asyncGetServerWideAnalyzers.result?.map((x) => x.Name) ?? []}
+                        remove={removeAnalyzer}
+                    />
+
+                    <HrHeader
+                        right={
+                            <a
+                                href={appUrl.forServerWideCustomAnalyzers()}
+                                target="_blank"
+                                title="Navigate to the server-wide view to edit"
+                            >
+                                <Icon icon="link" />
+                                Server-wide custom analyzers
+                            </a>
+                        }
+                        count={serverWideResultsCount}
+                    >
+                        Server-wide custom analyzers
+                        {!hasServerWideCustomAnalyzers && <LicenseRestrictedBadge licenseRequired="Professional +" />}
+                    </HrHeader>
+                    {hasServerWideCustomAnalyzers && (
+                        <DatabaseCustomAnalyzersServerWideList asyncGetAnalyzers={asyncGetServerWideAnalyzers} />
+                    )}
+                </Col>
+                <Col sm={12} lg={4}>
+                    <DatabaseCustomAnalyzersInfoHub databaseAnalyzersCount={databaseResultsCount} />
+                </Col>
+            </Row>
+        </div>
     );
 }
 
