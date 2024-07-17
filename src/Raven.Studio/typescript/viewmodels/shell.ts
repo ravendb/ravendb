@@ -121,7 +121,8 @@ class shell extends viewModelBase {
     studioLoadingFakeRequest: requestExecution;
     
     serverEnvironment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
-    serverEnvironmentClass = database.createEnvironmentColorComputed("bg", this.serverEnvironment);
+    serverEnvironmentClass: KnockoutComputed<string>;
+    serverEnvironmentShortText: KnockoutComputed<string>;
 
     private onBootstrapFinishedTask = $.Deferred<void>();
 
@@ -222,6 +223,36 @@ class shell extends viewModelBase {
                 menuItems: this.mainMenu.getItems()
             }
         }));
+
+        this.serverEnvironmentClass = ko.pureComputed(() => {
+            const env = this.serverEnvironment();
+            
+            switch (env) {
+                case "Production":
+                    return "bg-danger";
+                case "Testing":
+                    return "bg-success";
+                case "Development":
+                    return "bg-info";
+                default:
+                    return "";
+            }
+        })
+
+        this.serverEnvironmentShortText = ko.pureComputed(() => {
+            const env = this.serverEnvironment();
+            
+            switch (env) {
+                case "Production":
+                    return "PROD";
+                case "Testing":
+                    return "TEST";
+                case "Development":
+                    return "DEV";
+                default:
+                    return "";
+            }
+        });
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.

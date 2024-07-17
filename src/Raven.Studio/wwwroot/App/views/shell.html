@@ -14,14 +14,14 @@
             <a class="navbar-brand no-decor" data-bind="attr: { href: appUrls.clusterDashboard }">
                 <div class="main-logo">
                     <img src="../../Content/img/ravendb_logo.svg" />
-                    <div data-bind="if: serverEnvironment, visible: serverEnvironment, attr: { class: 'badge rounded-pill ms-auto text-uppercase margin-bottom-xxs ' + serverEnvironmentClass() }" title="Server environment">
+                    <div data-bind="visible: serverEnvironment, attr: { class: 'badge rounded-pill ms-auto text-uppercase margin-bottom-xxs ' + serverEnvironmentClass() }" title="Server environment">
                         <span data-bind="text: serverEnvironment"></span>
                     </div>
                 </div>
                 <div class="collapsed-logo">
                     <i class="icon-raven"></i>
-                    <div data-bind="if: serverEnvironment, visible: serverEnvironment, attr: { class: 'badge rounded-pill server-environment-label__collapsed text-uppercase ' + serverEnvironmentClass() }" title="Server environment">
-                        <span>PROD</span>
+                    <div data-bind="visible: serverEnvironment, attr: { class: 'badge rounded-pill server-environment-label__collapsed text-uppercase ' + serverEnvironmentClass() }" title="Server environment">
+                        <span data-bind="text: serverEnvironmentShortText"></span>
                     </div>
                 </div>
             </a>
