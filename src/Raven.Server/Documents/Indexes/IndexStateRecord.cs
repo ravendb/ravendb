@@ -22,8 +22,8 @@ public record IndexStateRecord(
 
     public static IndexStateRecord Empty = new IndexStateRecord(
         ImmutableDictionary<string, string>.Empty,
-        HandleReferencesBase.State.Empty,
-        HandleReferencesBase.State.Empty,
+        HandleReferencesBase.State.CreateEmpty(),
+        HandleReferencesBase.State.CreateEmpty(),
         ImmutableDictionary<string, CollectionEtags>.Empty,
         ImmutableDictionary<string, ImmutableDictionary<string, Tree.ChunkDetails[]>>.Empty,
         new LuceneIndexState(),

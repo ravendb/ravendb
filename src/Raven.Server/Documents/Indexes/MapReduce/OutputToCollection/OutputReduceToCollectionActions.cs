@@ -136,27 +136,23 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                 foreach (var prefix in prefixes)
                 {
-                    if (_prefixesOfReduceOutputDocumentsToDelete.ContainsKey(prefix.Key))
+                    if (_prefixesOfReduceOutputDocumentsToDelete.TryAdd(prefix.Key, prefix.Value) is false)
                         continue;
 
                     prefixesToDeleteTree.Add(prefix.Key, prefix.Value ?? string.Empty);
                 }
-
+                context.UpdatePrefixesOfReduceOutputDocumentsToDelete(_prefixesOfReduceOutputDocumentsToDelete.ToImmutable());
                 tx.Commit();
             }
 
-            foreach (var prefix in prefixes)
-            {
-                _prefixesOfReduceOutputDocumentsToDelete.TryAdd(prefix.Key, prefix.Value);
-            }
         }
 
         public ImmutableDictionary<string, string> GetPrefixesOfDocumentsToDelete()
         {
             using var _ = _index._contextPool.AllocateOperationContext(out TransactionOperationContext context);
             context.OpenReadTransaction();
-            if (context.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState is ImmutableDictionary<string, string> dic)
-                return dic;
+            if (context.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState is IndexStateRecord rec)
+                return rec.PrefixesOfReduceOutputDocumentsToDelete;
             return ImmutableDictionary<string, string>.Empty;
         }
 

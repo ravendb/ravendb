@@ -10,7 +10,7 @@ namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
-        public const int PAL_VER = 62000; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 62001; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         public static readonly PalDefinitions.SystemInformation SysInfo;
         
@@ -20,8 +20,6 @@ namespace Sparrow.Server.Platform
             int errorCode;
             try
             {
-                DynamicNativeLibraryResolver.Register(typeof(Pal).Assembly, LIBRVNPAL);
-
                 var palVer = rvn_get_pal_ver();
                 if (palVer != 0 && palVer != PAL_VER)
                 {

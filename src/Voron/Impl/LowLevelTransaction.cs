@@ -187,7 +187,7 @@ namespace Voron.Impl
             InitializeRoots();
         }
 
-        private LowLevelTransaction(LowLevelTransaction previous, TransactionPersistentContext persistentContext)
+        private LowLevelTransaction(LowLevelTransaction previous, TransactionPersistentContext persistentContext, long txId)
         {
             // this is meant to be used with transaction merging only
             // so it makes a lot of assumptions about the usage scenario
@@ -212,7 +212,7 @@ namespace Voron.Impl
             DataPagerState = previous.DataPagerState;
             _envRecord = previous._envRecord with
             {
-                TransactionId = previous._envRecord.TransactionId + 1
+                TransactionId = txId
             };
             _localTxNextPageNumber = previous._localTxNextPageNumber;
             
@@ -877,7 +877,9 @@ namespace Voron.Impl
 
             CommitStage1_CompleteTransaction();
 
-            var nextTx = new LowLevelTransaction(this, persistentContext);
+            var nextTx = new LowLevelTransaction(this, persistentContext,
+                writeToJournalIsRequired ? Id + 1 : Id
+            );
             _asyncCommitNextTransaction = nextTx;
             AsyncCommit = writeToJournalIsRequired
                   ? Task.Run(() => { CommitStage2_WriteToJournal(); return true; })

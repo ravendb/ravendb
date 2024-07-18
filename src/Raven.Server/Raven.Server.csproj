@@ -61,62 +61,6 @@
   <ItemGroup>
     <None Include="Web\Studio\EmbeddedData\NorthwindModel.cs" />
   </ItemGroup>
-  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindows64)' == 'true'">
-    <None Include="..\..\libs\librvnpal\librvnpal.win.x64.dll" Link="librvnpal.win.x64.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.win.x64.dll" Link="libzstd.win.x64.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindows32)' == 'true'">
-    <None Include="..\..\libs\librvnpal\librvnpal.win.x86.dll" Link="librvnpal.win.x86.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.win.x86.dll" Link="libzstd.win.x86.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinux64)' == 'true'">
-    <None Include="..\..\libs\librvnpal\librvnpal.linux.x64.so" Link="librvnpal.linux.x64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.linux.x64.so" Link="libzstd.linux.x64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinuxArm64)' == 'true'">
-    <None Include="..\..\libs\librvnpal\librvnpal.linux.arm.64.so" Link="librvnpal.linux.arm.64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.linux.arm.64.so" Link="libzstd.linux.arm.64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinuxArm32)' == 'true'">
-    <None Include="..\..\libs\librvnpal\librvnpal.linux.arm.32.so" Link="librvnpal.linux.arm.32.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.linux.arm.32.so" Link="libzstd.linux.arm.32.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsMacOS64)' == 'true'">
-    <None Include="..\..\libs\librvnpal\librvnpal.mac.x64.dylib" Link="librvnpal.mac.x64.dylib">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.mac.x64.dylib" Link="libzstd.mac.x64.dylib">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsMacOSArm64)' == 'true'">
-    <None Include="..\..\libs\librvnpal\librvnpal.mac.arm64.dylib" Link="librvnpal.mac.arm64.dylib">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.mac.arm64.dylib" Link="libzstd.mac.arm64.dylib">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Corax\Corax.csproj" />
     <ProjectReference Include="..\Raven.Client\Raven.Client.csproj" />
@@ -180,6 +124,7 @@
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="RavenDB.PAL" Version="6.2.0" />
     <PackageReference Include="Snappier" Version="1.1.6" />
     <PackageReference Include="System.Collections.Immutable" Version="8.0.0" />
     <PackageReference Include="System.Formats.Asn1" Version="8.0.1" />
