@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using FastTests.Voron.Util;
+using Nito.Disposables;
+using Sparrow.Server.Platform;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Platform.Win32;
 using Voron;
@@ -86,21 +88,20 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        byte* AllocateMemoryAtEndOfPager(long totalAllocationSize)
+        byte* AllocateMemoryAtEndOfPager(Pager2.State dataPagerState)
         {
-            throw new NotImplementedException();
-            // if (StorageEnvironmentOptions.RunningOnPosix)
-            // {
-            //     var p = Syscall.mmap64(new IntPtr(Env.Options.DataPager.PagerState.MapBase + totalAllocationSize), (UIntPtr)16,
-            //         MmapProts.PROT_READ | MmapProts.PROT_WRITE, MmapFlags.MAP_ANONYMOUS, -1, 0L);
-            //     if (p.ToInt64() == -1)
-            //     {
-            //         return null;
-            //     }
-            //     return (byte*)p.ToPointer();
-            // }
-            // return Win32MemoryProtectMethods.VirtualAlloc(Env.Options.DataPager.PagerState.MapBase + totalAllocationSize, new UIntPtr(16),
-            //     Win32MemoryProtectMethods.AllocationType.RESERVE, Win32MemoryProtectMethods.MemoryProtection.EXECUTE_READWRITE);
+            if (StorageEnvironmentOptions.RunningOnPosix)
+            {
+                var p = Syscall.mmap64(new IntPtr(dataPagerState.BaseAddress + dataPagerState.TotalAllocatedSize), (UIntPtr)16,
+                    MmapProts.PROT_READ | MmapProts.PROT_WRITE, MmapFlags.MAP_ANONYMOUS, -1, 0L);
+                if (p.ToInt64() == -1)
+                {
+                    return null;
+                }
+                return (byte*)p.ToPointer();
+            }
+            return Win32MemoryProtectMethods.VirtualAlloc(dataPagerState.BaseAddress + dataPagerState.TotalAllocatedSize, new UIntPtr(16),
+                Win32MemoryProtectMethods.AllocationType.RESERVE, Win32MemoryProtectMethods.MemoryProtection.EXECUTE_READWRITE);
         }
 
         static void FreeMemoryAtEndOfPager(byte* adjacentBlockAddress)
@@ -127,25 +128,24 @@ namespace SlowTests.Voron.Storage
                 Env.DataPager.EnsureContinuous(ref dataPagerState,0, (int)pagerSize);
             }
 
-            // var totalAllocationSize = Env.Options.DataPager.PagerState.AllocationInfos.Sum(info => info.Size);
-            //
-            // //prevent continuous allocation and force remapping on next pager growth			
-            // byte* adjacentBlockAddress = null;
-            // try
-            // {
-            //     //if this fails and adjacentBlockAddress == 0 or null --> this means the remapping will occur anyway. 
-            //     //the allocation is here to make sure the remapping does happen in any case
-            //     adjacentBlockAddress = AllocateMemoryAtEndOfPager(totalAllocationSize);
-            //
-            //     pagerSize *= 2;
-            //     Env.Options.DataPager.EnsureContinuous(0, (int)(pagerSize / Constants.Storage.PageSize));
-            //
-            // }
-            // finally
-            // {
-            //     FreeMemoryAtEndOfPager(adjacentBlockAddress);
-            // }
-            throw new NotImplementedException();
+            var totalAllocationSize = dataPagerState.TotalAllocatedSize;
+            
+            //prevent continuous allocation and force remapping on next pager growth			
+            byte* adjacentBlockAddress = null;
+            try
+            {
+                //if this fails and adjacentBlockAddress == 0 or null --> this means the remapping will occur anyway. 
+                //the allocation is here to make sure the remapping does happen in any case
+                adjacentBlockAddress = AllocateMemoryAtEndOfPager(dataPagerState);
+            
+                pagerSize *= 2;
+                Env.DataPager.EnsureContinuous(ref dataPagerState,0, (int)(pagerSize / Constants.Storage.PageSize));
+            
+            }
+            finally
+            {
+                FreeMemoryAtEndOfPager(adjacentBlockAddress);
+            }
         }
     }
 }
