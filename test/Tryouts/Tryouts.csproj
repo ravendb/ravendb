@@ -23,44 +23,6 @@
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\libs\librvnpal\librvnpal.win.x64.dll" Link="librvnpal.win.x64.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.win.x64.dll" Link="libzstd.win.x64.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\librvnpal\librvnpal.win.x86.dll" Link="librvnpal.win.x86.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.win.x86.dll" Link="libzstd.win.x86.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\librvnpal\librvnpal.linux.x64.so" Link="librvnpal.linux.x64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.linux.x64.so" Link="libzstd.linux.x64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\librvnpal\librvnpal.linux.arm.64.so" Link="librvnpal.linux.arm.64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.linux.arm.64.so" Link="libzstd.linux.arm.64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\librvnpal\librvnpal.linux.arm.32.so" Link="librvnpal.linux.arm.32.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.linux.arm.32.so" Link="libzstd.linux.arm.32.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\librvnpal\librvnpal.mac.x64.dylib" Link="librvnpal.mac.x64.dylib">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.mac.x64.dylib" Link="libzstd.mac.x64.dylib">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\..\src\Corax\Corax.csproj" />
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
     <ProjectReference Include="..\..\src\Sparrow.Server\Sparrow.Server.csproj" />
