@@ -50,32 +50,53 @@ $posix_files = `
     "src/posix/virtualmemory.c",
     "src/posix/writefileheader.c"
 
-mkdir artifacts -ErrorAction Ignore
+mkdir runtimes/win-x86/native -ErrorAction Ignore
+cp ../../libs/libzstd/libzstd.win.x86.dll runtimes/win-x86/native/libzstd.dll
+mkdir runtimes/win-x64/native -ErrorAction Ignore
+cp ../../libs/libzstd/libzstd.win.x64.dll runtimes/win-x64/native/libzstd.dll
+mkdir runtimes/linux-x86/native -ErrorAction Ignore
+cp ../../libs/libzstd/libzstd.linux.x64.so runtimes/linux-x86/native/libzstd.so
+mkdir runtimes/linux-x64/native -ErrorAction Ignore
+cp ../../libs/libzstd/libzstd.linux.x64.so runtimes/linux-x64/native/libzstd.so
+mkdir runtimes/linux-arm/native -ErrorAction Ignore
+cp ../../libs/libzstd/libzstd.linux.arm.32.so runtimes/linux-arm/native/libzstd.so
+mkdir runtimes/linux-arm64/native -ErrorAction Ignore
+cp ../../libs/libzstd/libzstd.linux.arm.64.so runtimes/linux-arm64/native/libzstd.so
+mkdir runtimes/osx-x64/native -ErrorAction Ignore
+cp ../../libs/libzstd/libzstd.mac.x64.dylib runtimes/osx-x64/native/libzstd.so
+mkdir runtimes/osx-arm64/native -ErrorAction Ignore
+cp ../../libs/libzstd/libzstd.mac.arm64.dylib runtimes/osx-arm64/native/libzstd.so
+
 
 echo "Building Windows x86"
-zig cc -Wall -O3  -shared -fPIC -Iinc -target x86-windows -o artifacts/librvnpal.win.x86.dll $shared $win_files 
+zig cc -Wall -O3  -shared -fPIC -Iinc -target x86-windows -o runtimes/win-x86/native/librvnpal.dll $shared $win_files 
 
 echo "Building Windows x64"
-zig cc -Wall -O3  -shared -fPIC -Iinc -target x86_64-windows -o artifacts/librvnpal.win.x64.dll $shared $win_files 
+zig cc -Wall -O3  -shared -fPIC -Iinc -target x86_64-windows -o runtimes/win-x64/native/librvnpal.dll  $shared $win_files 
 
 echo "Building Linux x86"
-zig cc -Wall -O3  -shared  -fPIC -Iinc -target x86-linux-gnu -o artifacts/librvnpal.linux.x86.so $shared $posix_files "src/posix/linuxonly.c" 
+zig cc -Wall -O3  -shared  -fPIC -Iinc -target x86-linux-gnu -o runtimes/linux-x86/native/librvnpal.so  $shared $posix_files "src/posix/linuxonly.c" 
 
 echo "Building Linux x64"
-zig cc -Wall -O3  -shared  -fPIC -Iinc -target x86_64-linux-gnu -o artifacts/librvnpal.linux.x64.so $shared $posix_files "src/posix/linuxonly.c" 
+zig cc -Wall -O3  -shared  -fPIC -Iinc -target x86_64-linux-gnu -o runtimes/linux-x64/native/librvnpal.so $shared $posix_files "src/posix/linuxonly.c" 
 
 echo "Building Linux ARM32 (Rasbperry Pi)"
-zig cc -Wall -O3  -shared  -fPIC -Iinc -target arm-linux-gnueabihf -o artifacts/librvnpal.linux.arm.32.so $shared $posix_files "src/posix/linuxonly.c" 
+zig cc -Wall -O3  -shared  -fPIC -Iinc -target arm-linux-gnueabihf -o runtimes/linux-arm/native/librvnpal.so $shared $posix_files "src/posix/linuxonly.c" 
 
 echo "Building Linux ARM64"
-zig cc -Wall -O3  -shared  -fPIC -Iinc -target aarch64-linux-gnu -o artifacts/librvnpal.linux.arm.64.so $shared $posix_files "src/posix/linuxonly.c" 
+zig cc -Wall -O3  -shared  -fPIC -Iinc -target aarch64-linux-gnu -o runtimes/linux-arm64/native/librvnpal.so $shared $posix_files "src/posix/linuxonly.c" 
 
 echo "Building Linux Mac x64"
-zig cc -Wall -O3  -shared -fPIC -Iinc -target x86_64-macos-none -o artifacts/librvnpal.mac.x64.dylib $shared $posix_files "src/posix/maconly.c" 
+zig cc -Wall -O3  -shared -fPIC -Iinc -target x86_64-macos-none -o runtimes/osx-x64/native/librvnpal.dylib $shared $posix_files "src/posix/maconly.c" 
 
 echo "Building Linux Mac ARM64"
-zig cc -Wall -O3  -shared  -fPIC -Iinc -target aarch64-macos-none -o artifacts/librvnpal.mac.arm64.dylib $shared $posix_files "src/posix/maconly.c" 
+zig cc -Wall -O3  -shared  -fPIC -Iinc -target aarch64-macos-none -o runtimes/osx-arm64/native/librvnpal.dylib $shared $posix_files "src/posix/maconly.c" 
 
-copy artifacts/*.dll ..\..\libs\librvnpal\
-copy artifacts/*.so ..\..\libs\librvnpal\
-copy artifacts/*.dylib ..\..\libs\librvnpal\
+mkdir artifacts
+mv .\runtimes artifacts  -ErrorAction Ignore
+cp .\pal.nuspec artifacts
+cd artifacts
+../../../scripts/assets/bin/nuget.exe pack .\pal.nuspec
+rm ../../../libs/RavenDB.Pal.*
+cp *.nupkg ../../../libs
+cd ..
