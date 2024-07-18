@@ -454,11 +454,11 @@ namespace Voron.Impl
 
         private Page GetPageInternal(long pageNumber)
         {
-            PageFromScratchBuffer value;
+            PageFromScratchBuffer value = null;
             var modifiedPage = Flags switch
             {
                 TransactionFlags.ReadWrite => _env.WriteTransactionPool.ScratchPagesInUse.TryGetValue(pageNumber, out value),
-                TransactionFlags.Read => _envRecord.ScratchPagesTable.TryGetValue(pageNumber, out value),
+                TransactionFlags.Read => _envRecord.ScratchPagesTable.Count > 0 && _envRecord.ScratchPagesTable.TryGetValue(pageNumber, out value),
                 _ => throw new ArgumentOutOfRangeException(nameof(Flags))
             };
             Page p;
