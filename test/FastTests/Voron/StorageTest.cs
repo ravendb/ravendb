@@ -81,9 +81,7 @@ namespace FastTests.Voron
             var ownsPagers = Options.OwnsPagers;
 
             Options.OwnsPagers = shouldDisposeOptions;
-
             _storageEnvironment.Value.Dispose();
-
             Options.OwnsPagers = ownsPagers;
         }
 

@@ -598,7 +598,12 @@ namespace Raven.Server.Documents
                             tvb.Add(collectionSlice);
                             tvb.Add(lastModified);
                             tvb.Add(documentFlags);
-                            conflictsTable.Set(tvb);
+                            if (conflictsTable.Set(tvb))
+                            {
+                                var state = (DocumentTransactionCache)tx.LowLevelTransaction.CurrentStateRecord.ClientState ?? new DocumentTransactionCache();
+                                state.ConflictsCount++;
+                                tx.LowLevelTransaction.UpdateClientState(state);
+                            }
                         }
                     }
                 }

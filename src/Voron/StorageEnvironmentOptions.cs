@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Microsoft.Win32.SafeHandles;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Logging;
@@ -896,9 +897,8 @@ namespace Voron
             private static int _counter;
 
             private readonly Dictionary<string, JournalWriter> _logs = new(StringComparer.OrdinalIgnoreCase);
-
-            private readonly Dictionary<string, IntPtr> _headers =
-                new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
+            private readonly HashSet<SafeFileHandle> _handles = [];
+            private readonly Dictionary<string, IntPtr> _headers = new(StringComparer.OrdinalIgnoreCase);
             private readonly int _instanceId;
 
 
@@ -920,14 +920,28 @@ namespace Voron
                 }
             }
 
-            public override (Pager2 Pager, Pager2.State State) InitializeDataPager()
+            public override unsafe (Pager2 Pager, Pager2.State State) InitializeDataPager()
             {
                 var flags = Pal.OpenFileFlags.Temporary;
                 if(Encryption.IsEnabled)
                     flags |= Pal.OpenFileFlags.Encrypted;
                 if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
                     flags |= Pal.OpenFileFlags.DoNotMap;
-                return Pager2.Create(this, _filename, InitialFileSize ?? 0, flags);
+                var (pager,state) = Pager2.Create(this, _filename, InitialFileSize ?? 0, flags);
+                try
+                {
+                    var rc = Pal.rvn_pager_get_file_handle(state.Handle, out var handle, out var error);
+                    if (rc != PalFlags.FailCodes.Success)
+                        PalHelper.ThrowLastError(rc, error, "Failed to get file handle for pager");
+                    _handles.Add(handle);
+                }
+                catch
+                {
+                    state.Dispose();
+                    pager.Dispose();
+                    throw;
+                }
+                return (pager,state);
             }
 
             public override string ToString()
@@ -977,6 +991,10 @@ namespace Voron
                     return;
                 Disposed = true;
 
+                foreach (SafeFileHandle handle in _handles)
+                {
+                    handle.Dispose();
+                }
                 foreach (var virtualPager in _logs)
                 {
                     virtualPager.Value.Dispose();

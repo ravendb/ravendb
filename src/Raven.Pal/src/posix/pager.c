@@ -102,6 +102,15 @@ int32_t _open_pager_file(int fd,
                 goto Error;
         }
     }
+    else if(st.st_size == 0 && (open_flags & OPEN_FILE_READ_ONLY))
+    {
+        // we allow opening zero len files with read only mode, but don't try to map them
+        handle_ptr->file_fd = fd;
+        handle_ptr->open_flags = open_flags;
+        *memory_size = 0;
+        *handle = handle_ptr;
+        return SUCCESS;
+    }
 
     if ((open_flags & OPEN_FILE_DO_NOT_MAP))
     {

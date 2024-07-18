@@ -454,11 +454,11 @@ namespace Voron.Impl
 
         private Page GetPageInternal(long pageNumber)
         {
-            PageFromScratchBuffer value;
+            PageFromScratchBuffer value = null;
             var modifiedPage = Flags switch
             {
                 TransactionFlags.ReadWrite => _env.WriteTransactionPool.ScratchPagesInUse.TryGetValue(pageNumber, out value),
-                TransactionFlags.Read => _envRecord.ScratchPagesTable.TryGetValue(pageNumber, out value),
+                TransactionFlags.Read => _envRecord.ScratchPagesTable.Count > 0 && _envRecord.ScratchPagesTable.TryGetValue(pageNumber, out value),
                 _ => throw new ArgumentOutOfRangeException(nameof(Flags))
             };
             Page p;
@@ -986,9 +986,6 @@ namespace Voron.Impl
 
         private void CommitStage2_WriteToJournal()
         {
-            // In the case of non-lazy transactions, we must flush the data from older lazy transactions
-            // to ensure the data is sequentially written.
-
             try
             {
                 var numberOfWrittenPages = _journal.WriteToJournal(this);
