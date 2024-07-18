@@ -53,6 +53,9 @@ namespace Raven.Server.NotificationCenter
             if (_pagingTimer != null)
                 return;
 
+            if (ForTestingPurposes?.DisableTimer == true)
+                return;
+
             lock (_locker)
             {
                 if (_pagingTimer != null)
@@ -175,6 +178,21 @@ namespace Raven.Server.NotificationCenter
                         throw new ArgumentOutOfRangeException(nameof(type), type, null);
                 }
             }
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal sealed class TestingStuff
+        {
+            internal bool DisableTimer;
         }
 
         public void Dispose()
