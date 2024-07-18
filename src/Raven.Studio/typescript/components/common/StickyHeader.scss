@@ -2,8 +2,9 @@
 
 .sticky-header {
     position: sticky;
-    top: 0;
+    top: -1px;
     padding: bs5variables.$gutter-sm bs5variables.$gutter bs5variables.$gutter-xs bs5variables.$gutter-sm;
+    margin: -#{bs5variables.$gutter-xs} -#{bs5variables.$gutter-sm};
     background-color: rgba(bs5variables.$body-bg-var, 0.96);
     z-index: 1000;
     backdrop-filter: blur(2px);
