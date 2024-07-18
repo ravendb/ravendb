@@ -520,7 +520,7 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
     }
 
     return (
-        <div className="position-relative flex-grow-1">
+        <div className="position-relative">
             <div className="d-flex flex-grow-1">
                 <ToggleComponent
                     selected={!!value}
