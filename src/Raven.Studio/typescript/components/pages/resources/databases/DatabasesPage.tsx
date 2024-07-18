@@ -111,7 +111,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
     const [createDatabaseMode, setCreateDatabaseMode] = useState<CreateDatabaseMode>(null);
 
     return (
-        <>
+        <div className="content-margin">
             <StickyHeader>
                 <div className="d-flex flex-wrap gap-3 align-items-end">
                     {isOperatorOrAbove && (
@@ -152,7 +152,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
                 />
             </StickyHeader>
             <div id="dropdownContainer"></div> {/*fixes rendering order bug on hover animation */}
-            <div className="p-4 pt-1">
+            <div className="mt-3">
                 {filteredDatabaseNames.map((dbName) => (
                     <DatabasePanel
                         key={dbName}
@@ -164,6 +164,6 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
                 {!databases.length && <NoDatabases />}
             </div>
-        </>
+        </div>
     );
 }
