@@ -99,7 +99,7 @@ namespace Raven.Server.Rachis
 
                     _engine.CommandsVersionManager.SetClusterVersion(appendEntries.MinCommandVersion);
 
-                    _debugRecorder.Record("Got entries");
+                    _debugRecorder.Record($"Got {appendEntries.EntriesCount} entries");
                     _engine.Timeout.Defer(_connection.Source);
                     if (appendEntries.EntriesCount != 0)
                     {
@@ -129,6 +129,7 @@ namespace Raven.Server.Rachis
                                 );
                         }
                     }
+                    _debugRecorder.Record($"Finished reading {entries.Count} entries from stream");
 
                     // don't start write transaction for noop
                     if (lastCommit != appendEntries.LeaderCommit ||
@@ -398,7 +399,7 @@ namespace Raven.Server.Rachis
             // the reason we send this is to simplify the # of states in the protocol
 
             var snapshot = _connection.ReadInstallSnapshot(context);
-            _debugRecorder.Record("Start receiving snapshot");
+            _debugRecorder.Record($"Got snapshot info: last included index:{snapshot.LastIncludedIndex} at term {snapshot.LastIncludedTerm}");
 
             // reading the snapshot from network and committing it to the disk might take a long time. 
             Task onFullSnapshotInstalledTask = null;
@@ -410,7 +411,6 @@ namespace Raven.Server.Rachis
                 }, cts, "ReadAndCommitSnapshot");
             }
 
-            _debugRecorder.Record("Snapshot was received and committed");
 
             // notify the state machine, we do this in an async manner, and start
             // the operator in a separate thread to avoid timeouts while this is
@@ -477,8 +477,12 @@ namespace Raven.Server.Rachis
 
         private async Task<Task> ReadAndCommitSnapshotAsync(InstallSnapshot snapshot, CancellationToken token)
         {
+            _debugRecorder.Record("Start receiving the snapshot");
+
             var command = new FollowerReadAndCommitSnapshotCommand(_engine, this, snapshot, token);
             await _engine.TxMerger.Enqueue(command);
+
+            _debugRecorder.Record("Snapshot was successfully received and committed");
 
             return command.OnFullSnapshotInstalledTask;
         }

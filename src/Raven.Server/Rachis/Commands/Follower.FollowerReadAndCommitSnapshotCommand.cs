@@ -131,13 +131,13 @@ public partial class Follower
 
             using (var temp = new StreamsTempFile(filePath.FullPath, context.Environment))
             using (var stream = temp.StartNewStream())
-            using (var remoteReader = _follower._connection.CreateReaderToStream(stream))
+            using (var remoteReader = _follower._connection.CreateReaderToStream(_follower._debugRecorder, stream))
             {
                 if (ReadSnapshot(remoteReader, context, txw, dryRun: true, token) == false)
                     return false;
 
                 stream.Seek(0, SeekOrigin.Begin);
-                using (var fileReader = new StreamSnapshotReader(stream))
+                using (var fileReader = new StreamSnapshotReader(_follower._debugRecorder, stream))
                 {
                     ReadSnapshot(fileReader, context, txw, dryRun: false, token);
                 }
@@ -154,6 +154,7 @@ public partial class Follower
 
             while (true)
             {
+                _follower._debugRecorder.Record($"Read root type {(RootObjectType)type}");
                 token.ThrowIfCancellationRequested();
 
                 int size;
@@ -303,7 +304,7 @@ public partial class Follower
 
         private void ReadInstallSnapshotAndIgnoreContent(CancellationToken token)
         {
-            var reader = _follower._connection.CreateReader();
+            var reader = _follower._connection.CreateReader(_follower._debugRecorder);
             while (true)
             {
                 token.ThrowIfCancellationRequested();
