@@ -62,6 +62,7 @@ int32_t rvn_pager_get_file_handle(
 EXPORT
 int32_t rvn_unmap_memory(
     void* mem,
+    int64_t size,
     int32_t *detailed_error_code);
 
 EXPORT

@@ -311,6 +311,20 @@ int32_t rvn_pager_get_file_handle(
 
 
 EXPORT
+int32_t rvn_unmap_memory(
+    void *mem,
+    int64_t size,
+    int32_t *detailed_error_code)
+{
+    *detailed_error_code = 0;
+    if (!munmap(mem, size))
+    {
+        *detailed_error_code = errno;
+        return FAIL_UNMAP_VIEW_OF_FILE;
+    }
+    return SUCCESS;
+}
+EXPORT
 int32_t rvn_map_memory(void *handle,
                        int64_t offset,
                        int64_t size,
