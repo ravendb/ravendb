@@ -10,7 +10,7 @@ public class DatabaseRaftIndexNotifications : AbstractRaftIndexNotifications<Raf
 
     private readonly RachisLogIndexNotifications _clusterStateMachineLogIndexNotifications;
 
-    public DatabaseRaftIndexNotifications(RachisLogIndexNotifications clusterStateMachineLogIndexNotifications, int recentNotificationsMaxEntries, CancellationToken token) : base(recentNotificationsMaxEntries, token)
+    public DatabaseRaftIndexNotifications(RachisLogIndexNotifications clusterStateMachineLogIndexNotifications, CancellationToken token) : base(token)
     {
         _clusterStateMachineLogIndexNotifications = clusterStateMachineLogIndexNotifications;
     }

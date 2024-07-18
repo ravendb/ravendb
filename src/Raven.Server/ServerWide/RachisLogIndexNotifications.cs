@@ -17,7 +17,7 @@ public class RachisLogIndexNotifications : AbstractRaftIndexNotifications<Recent
 
     private SingleUseFlag _isDisposed = new SingleUseFlag();
 
-    public RachisLogIndexNotifications(int recentNotificationsMaxEntries, CancellationToken token) : base(recentNotificationsMaxEntries, token)
+    public RachisLogIndexNotifications(CancellationToken token) : base(token)
     {
     }
 

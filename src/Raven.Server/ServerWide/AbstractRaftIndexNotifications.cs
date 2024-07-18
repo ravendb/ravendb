@@ -15,13 +15,12 @@ where TNotification : RaftIndexNotification
     public long LastModifiedIndex;
     protected readonly ConcurrentQueue<ErrorHolder> _errors = new ConcurrentQueue<ErrorHolder>();
     private readonly ConcurrentQueue<TNotification> _recentNotifications = new ConcurrentQueue<TNotification>();
-    private readonly int _recentNotificationsMaxEntries;
+    public int RecentNotificationsMaxEntries = 50;
     private readonly AsyncManualResetEvent _notifiedListeners;
     private int _numberOfErrors;
 
-    protected AbstractRaftIndexNotifications(int recentNotificationsMaxEntries, CancellationToken token)
+    protected AbstractRaftIndexNotifications(CancellationToken token)
     {
-        _recentNotificationsMaxEntries = recentNotificationsMaxEntries;
         _notifiedListeners = new AsyncManualResetEvent(token);
     }
 
@@ -113,7 +112,7 @@ where TNotification : RaftIndexNotification
     public void RecordNotification(TNotification notification)
     {
         _recentNotifications.Enqueue(notification);
-        while (_recentNotifications.Count > _recentNotificationsMaxEntries)
+        while (_recentNotifications.Count > RecentNotificationsMaxEntries)
             _recentNotifications.TryDequeue(out _);
     }
 

@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Sharding
             QueryRunner = new ShardedQueryRunner();
             Smuggler = new ShardedSmugglerContext(this, serverStore);
 
-            RachisLogIndexNotifications = new RachisLogIndexNotifications(Configuration.Cluster.RecentNotificationsMaxEntries, _databaseShutdown.Token);
+            RachisLogIndexNotifications = new RachisLogIndexNotifications(_databaseShutdown.Token);
             Replication = new ShardedReplicationContext(this, serverStore);
 
             CompareExchangeStorage = new ShardedCompareExchangeStorage(this);
