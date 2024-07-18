@@ -20,21 +20,24 @@ public class RavenDB_21173 : ClusterTestBase
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task ClusterTransaction_Failover_Shouldnt_Throw_ConcurrencyException(Options options)
     {
-        var customSettings = new Dictionary<string, string> { [RavenConfiguration.GetKey(x => x.Databases.RecentNotificationsMaxEntries)] = "4000", };
-        var customSettingsList = new List<IDictionary<string, string>>() {
-            customSettings,
-            customSettings,
-            customSettings
-        };
-
-        var (nodes, leader) = await CreateRaftCluster(customSettingsList: customSettingsList, numberOfNodes: 3);
+        var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 3);
         options.ReplicationFactor = 3;
         options.Server = leader;
         using var store = GetDocumentStore(options);
         var databaseName = store.Database;
 
+        if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+        {
+            var shards = Sharding.GetShardsDocumentDatabaseInstancesFor(databaseName, nodes);
+            await foreach (var shard in shards)
+            {
+                shard.RachisLogIndexNotifications.RecentNotificationsMaxEntries = 4000;
+            }
+        }
+
         try
         {
+
             var disposeNodeTask = Task.Run(async () =>
             {
                 await Task.Delay(400);
@@ -43,7 +46,7 @@ public class RavenDB_21173 : ClusterTestBase
                 await DisposeServerAndWaitForFinishOfDisposalAsync(server);
             });
             await ProcessDocument(store, "Docs/1-A");
-
+            
             await disposeNodeTask;
         }
         catch

@@ -149,10 +149,5 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Databases.RegularCleanupThresholdInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting RegularCleanupThreshold { get; set; }
-
-        [Description("Maximum number of entires to keep in the DatabaseRaftIndexNotifications.")]
-        [DefaultValue(50)]
-        [ConfigurationEntry("Databases.RecentNotificationsMaxEntries", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public int RecentNotificationsMaxEntries { get; set; }
     }
 }

@@ -133,10 +133,5 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(256)]
         [ConfigurationEntry("Cluster.MaxClusterTransactionBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MaxClusterTransactionsBatchSize { get; set; }
-
-        [Description("Maximum number of entires to keep in the RachisLogIndexNotifications.")]
-        [DefaultValue(50)]
-        [ConfigurationEntry("Cluster.RecentNotificationsMaxEntries", ConfigurationEntryScope.ServerWideOnly)]
-        public int RecentNotificationsMaxEntries { get; set; }
     }
 }
