@@ -656,7 +656,11 @@ namespace SlowTests.Server
                 await store.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
                 var command = new IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand(
-                    expectedChangeVector, 5, Guid.NewGuid().ToString(), new AsyncManualResetEvent(), isHub: false);
+                    expectedChangeVector, 5, new IncomingConnectionInfo
+                    {
+                        SourceDatabaseId = Guid.NewGuid().ToString(),
+                        SourceTag = "A"
+                    }, new AsyncManualResetEvent(), isHub: false);
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TxMerger.Enqueue(command);

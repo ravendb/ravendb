@@ -589,6 +589,7 @@ namespace Raven.Server.Documents.Replication
             {
                 ["Type"] = "GetLastEtag",
                 [nameof(ReplicationLatestEtagRequest.SourceDatabaseId)] = _database.DbId.ToString(),
+                [nameof(ReplicationLatestEtagRequest.SourceDatabaseBase64Id)] = _database.DbBase64Id,
                 [nameof(ReplicationLatestEtagRequest.SourceDatabaseName)] = _database.Name,
                 [nameof(ReplicationLatestEtagRequest.SourceUrl)] = _parent._server.GetNodeHttpServerUrl(),
                 [nameof(ReplicationLatestEtagRequest.SourceTag)] = _parent._server.NodeTag,

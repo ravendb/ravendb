@@ -382,7 +382,7 @@ namespace Raven.Server.Documents.Replication
                                         $"with etag: {_lastDocumentEtag} (new) > {lastEtag} (old)");
                                 }
 
-                                var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo.SourceDatabaseId,
+                                var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo,
                                     _replicationFromAnotherSource, _incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub);
 
                                 if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
@@ -996,15 +996,15 @@ namespace Raven.Server.Documents.Replication
         {
             private readonly string _changeVector;
             private readonly long _lastDocumentEtag;
-            private readonly string _sourceDatabaseId;
+            private readonly IncomingConnectionInfo _connectionInfo;
             private readonly AsyncManualResetEvent _trigger;
             private readonly bool _isHub;
 
-            public MergedUpdateDatabaseChangeVectorCommand(string changeVector, long lastDocumentEtag, string sourceDatabaseId, AsyncManualResetEvent trigger, bool isHub)
+            public MergedUpdateDatabaseChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger, bool isHub)
             {
                 _changeVector = changeVector;
                 _lastDocumentEtag = lastDocumentEtag;
-                _sourceDatabaseId = sourceDatabaseId;
+                _connectionInfo = connectionInfo;
                 _trigger = trigger;
                 _isHub = isHub;
             }
@@ -1012,10 +1012,10 @@ namespace Raven.Server.Documents.Replication
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 var operationsCount = 0;
-                var lastReplicatedEtag = DocumentsStorage.GetLastReplicatedEtagFrom(context, _sourceDatabaseId);
+                var lastReplicatedEtag = DocumentsStorage.GetLastReplicatedEtagFrom(context, _connectionInfo.SourceDatabaseId);
                 if (_lastDocumentEtag > lastReplicatedEtag)
                 {
-                    DocumentsStorage.SetLastReplicatedEtagFrom(context, _sourceDatabaseId, _lastDocumentEtag);
+                    DocumentsStorage.SetLastReplicatedEtagFrom(context, _connectionInfo.SourceDatabaseId, _lastDocumentEtag);
                     operationsCount++;
                 }
 
@@ -1025,7 +1025,18 @@ namespace Raven.Server.Documents.Replication
                 var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                 var conflictStatus = ChangeVectorUtils.GetConflictStatus(_changeVector, current);
                 if (conflictStatus != ConflictStatus.Update)
+                {
+                    if (string.IsNullOrEmpty(_connectionInfo.SourceDatabaseBase64Id) == false)
+                    {
+                        var result = ChangeVectorUtils.TryUpdateChangeVector(_connectionInfo.SourceTag, _connectionInfo.SourceDatabaseBase64Id, _lastDocumentEtag, current);
+                        if (result.IsValid)
+                        {
+                            context.LastDatabaseChangeVector = result.ChangeVector;
+                        }
+                    }
+                    
                     return operationsCount;
+                }
 
                 operationsCount++;
 
@@ -1051,7 +1062,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     ChangeVector = _changeVector,
                     LastDocumentEtag = _lastDocumentEtag,
-                    SourceDatabaseId = _sourceDatabaseId,
+                    IncomingConnectionInfo = _connectionInfo,
                     IsHub = _isHub
                 };
             }
@@ -1670,12 +1681,12 @@ namespace Raven.Server.Documents.Replication
     {
         public string ChangeVector;
         public long LastDocumentEtag;
-        public string SourceDatabaseId;
+        public IncomingConnectionInfo IncomingConnectionInfo;
         public bool IsHub;
 
         public IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var command = new IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand(ChangeVector, LastDocumentEtag, SourceDatabaseId,
+            var command = new IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand(ChangeVector, LastDocumentEtag, IncomingConnectionInfo,
                 new AsyncManualResetEvent(), IsHub);
             return command;
         }
