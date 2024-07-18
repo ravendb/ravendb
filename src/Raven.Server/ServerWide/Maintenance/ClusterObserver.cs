@@ -1075,6 +1075,10 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             // check every node pair, and if one of them is lagging behind, move him to rehab
             reason = null;
+
+            if (ShouldGiveMoreTimeBeforeMovingToRehab(state.DatabaseTopology.NodesModifiedAt ?? DateTime.MinValue, databaseUpTime: null))
+                return true;
+
             var members = state.DatabaseTopology.Members;
             for (int i = 0; i < members.Count; i++)
             {
