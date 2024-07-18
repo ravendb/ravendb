@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents.Indexes;
+using Raven.Server.Commercial;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -65,6 +67,22 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(RevisionsToKeep)] = RevisionsToKeep;
             json[nameof(DefaultStaticDeploymentMode)] = DefaultStaticDeploymentMode;
             json[nameof(DefaultAutoDeploymentMode)] = DefaultAutoDeploymentMode;
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+                return;
+
+            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            if (licenseStatus.HasAdditionalAssembliesFromNuGet)
+                return;
+
+            if (LicenseManager.HasAdditionalAssembliesFromNuGet(databaseRecord.Indexes) == false)
+                return;
+
+            throw new LicenseLimitException(LimitType.AdditionalAssembliesFromNuGet, "Your license doesn't support Additional Assemblies From NuGet feature.");
+
         }
     }
 }

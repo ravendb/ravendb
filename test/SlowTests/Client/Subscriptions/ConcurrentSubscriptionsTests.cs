@@ -11,6 +11,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Server.Commercial;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -873,7 +874,7 @@ namespace SlowTests.Client.Subscriptions
             DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
-                Server.ServerStore.LicenseManager.LicenseStatus.Attributes["concurrentSubscriptions"] = false;
+                Server.ServerStore.LicenseManager.LicenseStatus.Attributes[LicenseAttribute.ConcurrentSubscriptions] = false;
 
                 var id = store.Subscriptions.Create<User>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
@@ -118,6 +119,21 @@ namespace Raven.Server.ServerWide.Commands
                 Database = databaseName,
                 TopologyDiscoveryUrls = topologyDiscoveryUrls
             };
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, ClusterOperationContext context)
+        {
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+                return;
+
+            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            if (licenseStatus.HasDelayedExternalReplication)
+                return;
+
+            if (licenseStatus.HasExternalReplication == false)
+                throw new LicenseLimitException(LimitType.ExternalReplication, "Your license doesn't support adding server wide External Replication.");
+
+            throw new LicenseLimitException(LimitType.DelayedExternalReplication, "Your license doesn't support adding server wide Delayed External Replication.");
         }
     }
 }

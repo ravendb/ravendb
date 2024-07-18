@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Extensions;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;
@@ -29,6 +30,10 @@ namespace Raven.Server.ServerWide.Commands
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(Configuration)] = TypeConverter.ToBlittableSupportedType(Configuration);
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)

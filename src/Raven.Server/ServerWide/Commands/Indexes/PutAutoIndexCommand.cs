@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -51,6 +52,10 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(Definition)] = TypeConverter.ToBlittableSupportedType(Definition);
             json[nameof(CreatedAt)] = TypeConverter.ToBlittableSupportedType(CreatedAt);
             json[nameof(DefaultStaticDeploymentMode)] = TypeConverter.ToBlittableSupportedType(DefaultStaticDeploymentMode);
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
         }
 
         public static PutAutoIndexCommand Create(AutoIndexDefinitionBaseServerSide definition, string databaseName, string raftRequestId, IndexDeploymentMode mode)

@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -637,6 +638,10 @@ namespace Raven.Server.Smuggler.Documents
                 try
                 {
                     await actions.WriteDatabaseRecordAsync(databaseRecord, result, _options.AuthorizationStatus, _options.OperateOnDatabaseRecordTypes);
+                }
+                catch (LicenseLimitException)
+                {
+                    throw;
                 }
                 catch (Exception e)
                 {

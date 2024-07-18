@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Client;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -46,6 +47,10 @@ namespace Raven.Server.ServerWide.Commands.Monitoring.Snmp
             AddDatabasesIfNecessary(djv, null, Value);
 
             return context.ReadObject(djv, Name);
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, ClusterOperationContext context)
+        {
         }
 
         private static void AddDatabasesIfNecessary(DynamicJsonValue djv, BlittableJsonReaderObject previousValue, List<string> databases)

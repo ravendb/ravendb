@@ -5,7 +5,9 @@ using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -64,6 +66,23 @@ namespace Raven.Server.ServerWide.Commands.ETL
         {
             Add(ref record.RavenEtls, record, etag);
         }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+                return;
+
+            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+
+            if (licenseStatus.HasRavenEtl)
+                return;
+
+            if (databaseRecord.RavenEtls.Count == 0)
+                return;
+
+            throw new LicenseLimitException(LimitType.RavenEtl, "Your license doesn't support adding Raven ETL feature.");
+
+        }
     }
 
     public class AddSqlEtlCommand : AddEtlCommand<SqlEtlConfiguration, SqlConnectionString>
@@ -81,6 +100,22 @@ namespace Raven.Server.ServerWide.Commands.ETL
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             Add(ref record.SqlEtls, record, etag);
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+                return;
+
+            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            if (licenseStatus.HasSqlEtl)
+                return;
+
+            if (databaseRecord.SqlEtls.Count == 0)
+                return;
+
+            throw new LicenseLimitException(LimitType.SqlEtl, "Your license doesn't support adding SQL ETL feature.");
+
         }
     }
 
@@ -100,6 +135,22 @@ namespace Raven.Server.ServerWide.Commands.ETL
         {
             Add(ref record.ElasticSearchEtls, record, etag);
         }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+                return;
+
+            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            if (licenseStatus.HasElasticSearchEtl)
+                return;
+
+            if (databaseRecord.ElasticSearchEtls.Count == 0)
+                return;
+
+            throw new LicenseLimitException(LimitType.ElasticSearchEtl, "Your license doesn't support adding Elasticsearch ETL feature.");
+
+        }
     }
 
     public class AddOlapEtlCommand : AddEtlCommand<OlapEtlConfiguration, OlapConnectionString>
@@ -118,6 +169,21 @@ namespace Raven.Server.ServerWide.Commands.ETL
         {
             Add(ref record.OlapEtls, record, etag);
         }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+                return;
+
+            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            if (licenseStatus.HasOlapEtl)
+                return;
+
+            if (databaseRecord.OlapEtls.Count == 0)
+                return;
+
+            throw new LicenseLimitException(LimitType.OlapEtl, "Your license doesn't support adding Olap ETL feature.");
+        }
     }
 
     public class AddQueueEtlCommand : AddEtlCommand<QueueEtlConfiguration, QueueConnectionString>
@@ -135,6 +201,22 @@ namespace Raven.Server.ServerWide.Commands.ETL
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             Add(ref record.QueueEtls, record, etag);
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+                return;
+
+            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            if (licenseStatus.HasQueueEtl)
+                return;
+
+            if (databaseRecord.QueueEtls.Count == 0)
+                return;
+
+            throw new LicenseLimitException(LimitType.QueueEtl, "Your license doesn't support adding Queue ETL feature.");
+
         }
     }
 }

@@ -1,9 +1,12 @@
 using System;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
+using Raven.Server.Commercial;
 using Raven.Server.Extensions;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
@@ -42,7 +45,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             {
                 var indexNames = record.Indexes.Select(x => x.Value.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                if (indexNames.Add(Definition.Name) == false && record.Indexes.TryGetValue(Definition.Name, out var definition) == false)
+                if (indexNames.Add(Definition.Name) == false && record.Indexes.TryGetValue(Definition.Name, out _) == false)
                 {
                     throw new InvalidOperationException($"Can not add index: {Definition.Name} because an index with the same name but different casing already exist");
                 }
@@ -74,6 +77,22 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             }
 
             return msg;
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+                return;
+
+            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            if (licenseStatus.HasAdditionalAssembliesFromNuGet)
+                return;
+
+            if (LicenseManager.HasAdditionalAssembliesFromNuGet(databaseRecord.Indexes) == false)
+                return;
+
+            throw new LicenseLimitException(LimitType.AdditionalAssembliesFromNuGet, "Your license doesn't support Additional Assemblies From NuGet feature.");
+
         }
     }
 }

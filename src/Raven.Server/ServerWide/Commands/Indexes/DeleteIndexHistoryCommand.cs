@@ -1,4 +1,5 @@
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes;
@@ -28,5 +29,9 @@ public class DeleteIndexHistoryCommand : UpdateDatabaseCommand
     public override void FillJson(DynamicJsonValue json)
     {
         json[nameof(IndexName)] = IndexName;
+    }
+
+    public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+    {
     }
 }
