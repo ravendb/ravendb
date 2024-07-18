@@ -3727,16 +3727,10 @@ namespace Raven.Server.ServerWide
             return res;
         }
 
-        public DynamicJsonValue GetLogDetails(ClusterOperationContext context, int max = 100)
+        public DynamicJsonValue GetLogDetails(ClusterOperationContext context, int start, int take)
         {
             RachisConsensus.GetLastTruncated(context, out var index, out var term);
             var range = Engine.GetLogEntriesRange(context);
-            var entries = new DynamicJsonArray();
-            foreach (var entry in Engine.GetLogEntries(range.Min, context, max))
-            {
-                entries.Add(entry.ToString());
-            }
-
             var json = new DynamicJsonValue
             {
                 [nameof(LogSummary.CommitIndex)] = Engine.GetLastCommitIndex(context),
@@ -3744,7 +3738,7 @@ namespace Raven.Server.ServerWide
                 [nameof(LogSummary.LastTruncatedTerm)] = term,
                 [nameof(LogSummary.FirstEntryIndex)] = range.Min,
                 [nameof(LogSummary.LastLogEntryIndex)] = range.Max,
-                [nameof(LogSummary.Entries)] = entries
+                [nameof(LogSummary.Entries)] = Engine.GetLogEntries(context, range.Min, start, take)
             };
             return json;
         }
