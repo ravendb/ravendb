@@ -186,6 +186,8 @@ Exit:
     *detailed_error_code = GetLastError();
     return rc;
 }
+
+
 int32_t _open_pager_file(HANDLE h,
                          int32_t open_flags,
                          int64_t req_file_size,
@@ -222,6 +224,16 @@ int32_t _open_pager_file(HANDLE h,
         rc = _resize_file(h, min_file_size, detailed_error_code);
         if(rc != SUCCESS)
             goto Error;
+    }
+    else if( file_size.QuadPart == 0 && (open_flags & OPEN_FILE_READ_ONLY))
+    {
+        // we allow opening zero len files with read only mode, but don't try to map them
+        handle_ptr->file_handle = h;
+        handle_ptr->open_flags = open_flags;
+        handle_ptr->file_mapping_handle = INVALID_HANDLE_VALUE;
+        *memory_size = 0;
+        *handle = handle_ptr;
+        return SUCCESS;
     }
 
     DWORD flProtect = (open_flags & OPEN_FILE_WRITABLE_MAP) ? PAGE_READWRITE : PAGE_READONLY;

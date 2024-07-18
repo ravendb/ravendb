@@ -22,7 +22,7 @@ rvn_get_path_disk_space(const char* path, uint64_t* total_free_bytes, uint64_t* 
 {
     *detailed_error_code = 0;
 
-    if (!GetDiskFreeSpaceEx(path, NULL, (PULARGE_INTEGER)total_size_bytes, (PULARGE_INTEGER)total_free_bytes)) {
+    if (!GetDiskFreeSpaceExW((LPWSTR)path, NULL, (PULARGE_INTEGER)total_size_bytes, (PULARGE_INTEGER)total_free_bytes)) {
         *detailed_error_code = GetLastError();
         return FAIL_STAT_FILE;
     }
