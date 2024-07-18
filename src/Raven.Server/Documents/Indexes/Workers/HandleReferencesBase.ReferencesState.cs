@@ -28,7 +28,10 @@ namespace Raven.Server.Documents.Indexes.Workers
             ImmutableDictionary<string, ReferenceState>.Builder Owner // only used by write transactions
         )
         {
-            public static State Empty = new(ImmutableDictionary<string, ReferenceState>.Empty, ImmutableDictionary<string, ReferenceState>.Empty.ToBuilder());
+            /// <summary>
+            /// Cannot use a shared instance here, since we have a mutable builder, we create a new value each time
+            /// </summary>
+            public static State CreateEmpty() => new(ImmutableDictionary<string, ReferenceState>.Empty, ImmutableDictionary<string, ReferenceState>.Empty.ToBuilder());
         }
     }
 }
