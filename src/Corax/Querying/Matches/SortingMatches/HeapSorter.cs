@@ -6,6 +6,9 @@ using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
 using Voron.Util;
+#if DEBUG
+using Newtonsoft.Json;
+#endif
 
 namespace Corax.Querying.Matches.SortingMatches;
 
@@ -171,7 +174,7 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
 
         // Since we're gathering the smallest N keys, we can do a simple comparison cmp(Max_Heap, New),
         // as every new item will have to be smaller than the maximum in the heap.
-        var isNewTermSmallerThanCurrentMax = _compare(ref this, _terms[0], _documents[0], newTerm, document);
+        int isNewTermSmallerThanCurrentMax = Compare(_terms[0], _documents[0], newTerm, document);
 
         if (isNewTermSmallerThanCurrentMax > 0)
         {
@@ -179,11 +182,22 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
         }
     }
 
+    private int Compare(TTermType xDoc, int xIndex, TTermType yDoc, int yIndex)
+    {
+        var isNewTermSmallerThanCurrentMax = _compare(ref this, xDoc, xIndex, yDoc, yIndex);
+        if (isNewTermSmallerThanCurrentMax == 0)
+        {
+            isNewTermSmallerThanCurrentMax = xIndex - yIndex;
+        }
+
+        return isNewTermSmallerThanCurrentMax;
+    }
+
     private void HeapIncreaseKey(int i)
     {
         int parent = Parent(i);
 
-        while (i != parent && parent >= 0 && _compare(ref this, _terms[parent], _documents[parent], _terms[i], _documents[i]) < 0)
+        while (i != parent && parent >= 0 && Compare( _terms[parent], _documents[parent], _terms[i], _documents[i]) < 0)
         {
             Swap(parent, i);
             i = parent;
@@ -201,7 +215,7 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
         // left child > current
         if (leftChild < _heapSize)
         {
-            var cmp = _compare(ref this, _terms[leftChild], _documents[leftChild], _terms[i], _documents[i]);
+            var cmp = Compare(_terms[leftChild], _documents[leftChild], _terms[i], _documents[i]);
 
             largest = cmp > 0
                 ? leftChild
@@ -211,7 +225,7 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
         // right child > largest
         if (rightChild < _heapSize)
         {
-            var cmp = _compare(ref this, _terms[rightChild], _documents[rightChild], _terms[largest], _documents[largest]);
+            var cmp = Compare(_terms[rightChild], _documents[rightChild], _terms[largest], _documents[largest]);
 
             if (cmp > 0)
                 largest = rightChild;
@@ -323,6 +337,61 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
         (_terms[a], _terms[b]) = (_terms[b], _terms[a]);
     }
 
+#if DEBUG
+    public string CreateGraph(Span<long> ids, IndexSearcher searcher)
+    {
+        var root = new Node();
+        var queue = new Queue<(int NodeId, Node NodeObject)>();
+        queue.Enqueue((0, root));
+        var idReader = searcher.TermsReaderFor("id()");
+        while (queue.TryDequeue(out var n))
+        {
+            var node = n.NodeId;
+            if (node >= _heapSize)
+                continue;
+
+            var currentTerm = _terms[node];
+            var leftChild = LeftChild(node);
+            var rightChild = RightChild(node);
+            var current = n.NodeObject;
+            current.Value = currentTerm.ToString();
+            current.DocumentId = idReader.GetTermFor(ids[_documents[node]]);
+            
+            if (leftChild < _heapSize)
+            {
+                if (_compare(ref this, currentTerm, _documents[node], _terms[leftChild], _documents[leftChild]) < 0)
+                    throw new InvalidDataException($"Heap is corrupted.: `{_terms[node]}` {(IsDescending ? ">" : "<")} `{_terms[leftChild]}`");
+
+                var newNode = new Node();
+                current.LeftChild = newNode;
+                queue.Enqueue((leftChild, newNode));
+            }
+
+            if (rightChild < _heapSize)
+            {
+                if (_compare(ref this, currentTerm, _documents[node], _terms[rightChild], _documents[rightChild]) < 0)
+                    throw new InvalidDataException($"Heap is corrupted.: `{_terms[node]}` {(IsDescending ? ">" : "<")} `{_terms[leftChild]}`");
+
+                var newNode = new Node();
+                current.RightChild = newNode;
+                queue.Enqueue((rightChild, newNode));
+            }
+        }
+
+        return JsonConvert.SerializeObject(root);
+    }
+    
+    
+    private class Node
+    {
+        public Node LeftChild { get; set; }
+        public Node RightChild { get; set; }
+        public string Value { get; set; }
+        public string DocumentId { get; set; }
+    }
+#endif
+
+    
     [Conditional("DEBUG")]
     private void ValidateMaxHeapStructure()
     {
@@ -340,7 +409,7 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
 
             if (leftChild < _heapSize)
             {
-                if (_compare(ref this, currentTerm, _documents[node], _terms[leftChild], _documents[leftChild]) < 0)
+                if (Compare(currentTerm, _documents[node], _terms[leftChild], _documents[leftChild]) < 0)
                     throw new InvalidDataException($"Heap is corrupted.: `{_terms[node]}` {(IsDescending ? ">" : "<")} `{_terms[leftChild]}`");
 
                 queue.Enqueue(leftChild);
@@ -348,7 +417,7 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
 
             if (rightChild < _heapSize)
             {
-                if (_compare(ref this, currentTerm, _documents[node], _terms[rightChild], _documents[rightChild]) < 0)
+                if (Compare(currentTerm, _documents[node], _terms[rightChild], _documents[rightChild]) < 0)
                     throw new InvalidDataException($"Heap is corrupted.: `{_terms[node]}` {(IsDescending ? ">" : "<")} `{_terms[leftChild]}`");
 
                 queue.Enqueue(rightChild);
@@ -399,7 +468,7 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
 
         // Since we're gathering the smallest N keys, we can do a simple comparison cmp(Max_Heap, New),
         // as every new item will have to be smaller than the maximum in the heap.
-        var isNewTermSmallerThanCurrentMax = _compare(ref this, _terms[0].ToSpan(), _documents[0], newTerm, document);
+        int isNewTermSmallerThanCurrentMax = Compare(_terms[0].ToSpan(), _documents[0], newTerm, document);
 
         if (isNewTermSmallerThanCurrentMax > 0)
         {
@@ -414,7 +483,7 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
     {
         int parent = Parent(i);
 
-        while (parent >= 0 && _compare(ref this, _terms[parent].ToSpan(), _documents[parent], _terms[i].ToSpan(), _documents[i]) < 0)
+        while (parent >= 0 && Compare(_terms[parent].ToSpan(), _documents[parent], _terms[i].ToSpan(), _documents[i]) < 0)
         {
             Swap(parent, i);
             i = parent;
@@ -432,8 +501,7 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
         // left child > current
         if (leftChild < _heapSize)
         {
-            var cmp = _compare(ref this, _terms[leftChild].ToSpan(), _documents[leftChild],
-                _terms[i].ToSpan(), _documents[i]);
+            var cmp = Compare(_terms[leftChild].ToSpan(), _documents[leftChild], _terms[i].ToSpan(), _documents[i]);
 
             largest = cmp > 0
                 ? leftChild
@@ -443,7 +511,7 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
         // right child > largest
         if (rightChild < _heapSize)
         {
-            var cmp = _compare(ref this, _terms[rightChild].ToSpan(), _documents[rightChild], _terms[largest].ToSpan(), _documents[largest]);
+            var cmp = Compare(_terms[rightChild].ToSpan(), _documents[rightChild], _terms[largest].ToSpan(), _documents[largest]);
 
             if (cmp > 0)
                 largest = rightChild;
@@ -521,6 +589,17 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
         (_documents[a], _documents[b]) = (_documents[b], _documents[a]);
         (_terms[a], _terms[b]) = (_terms[b], _terms[a]);
     }
+    
+    private int Compare(ReadOnlySpan<byte> xDoc, int xIndex, ReadOnlySpan<byte> yDoc, int yIndex)
+    {
+        var isNewTermSmallerThanCurrentMax = _compare(ref this, xDoc, xIndex, yDoc, yIndex);
+        if (isNewTermSmallerThanCurrentMax == 0)
+        {
+            isNewTermSmallerThanCurrentMax = xIndex - yIndex;
+        }
+
+        return isNewTermSmallerThanCurrentMax;
+    }
 
     [Conditional("DEBUG")]
     private void ValidateMaxHeapStructure()
@@ -539,7 +618,7 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
 
             if (leftChild < _heapSize)
             {
-                if (_compare(ref this, currentTerm, node, _terms[leftChild].ToSpan(), _documents[leftChild]) < 0)
+                if (Compare(currentTerm, node, _terms[leftChild].ToSpan(), _documents[leftChild]) < 0)
                     throw new InvalidDataException($"Heap is corrupted.: `{_terms[node]}` {(IsDescending ? ">" : "<")} `{_terms[leftChild]}`");
 
                 queue.Enqueue(leftChild);
@@ -547,7 +626,7 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
 
             if (rightChild < _heapSize)
             {
-                if (_compare(ref this, currentTerm, _documents[node], _terms[rightChild].ToSpan(), _documents[rightChild]) < 0)
+                if (Compare(currentTerm, _documents[node], _terms[rightChild].ToSpan(), _documents[rightChild]) < 0)
                     throw new InvalidDataException($"Heap is corrupted.: `{_terms[node]}` {(IsDescending ? ">" : "<")} `{_terms[leftChild]}`");
 
                 queue.Enqueue(rightChild);
