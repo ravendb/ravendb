@@ -49,17 +49,15 @@ public class RavenDB_21247 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Querying)]
-    public async Task TestQueryCausingRequestLatencyWarning()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task TestQueryCausingRequestLatencyWarning(Options options)
     {
         DoNotReuseServer();
 
-        var storeOptions = new Options()
-        {
-            ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.PerformanceHints.TooLongRequestThreshold)] = "0"
-        };
-
-        using (var store = GetDocumentStore(storeOptions))
+        options.ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.PerformanceHints.TooLongRequestThreshold)] = "0";
+        
+        using (var store = GetDocumentStore(options))
         {
             var db = await GetDatabase(store.Database);
 
