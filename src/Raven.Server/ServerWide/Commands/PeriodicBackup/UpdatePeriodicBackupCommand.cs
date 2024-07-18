@@ -1,7 +1,9 @@
 ﻿using System;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Server.Commercial;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -79,6 +81,34 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(Configuration)] = TypeConverter.ToBlittableSupportedType(Configuration);
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+                return;
+
+            if (Configuration != null)
+            {
+                if (Configuration.BackupType == BackupType.Backup &&
+                    Configuration.HasCloudBackup() == false &&
+                    Configuration.BackupEncryptionSettings.Key == null)
+                    return;
+            }
+
+            var backupTypes = LicenseManager.GetBackupTypes(databaseRecord.PeriodicBackups);
+            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            if (backupTypes.HasSnapshotBackup)
+                if (licenseStatus.HasSnapshotBackups == false)
+                    throw new LicenseLimitException(LimitType.SnapshotBackup, "Your license doesn't support adding Snapshot backups feature.");
+
+            if (backupTypes.HasCloudBackup)
+                if (licenseStatus.HasCloudBackups == false)
+                    throw new LicenseLimitException(LimitType.CloudBackup, "Your license doesn't support adding Cloud backups feature.");
+
+            if (backupTypes.HasEncryptedBackup)
+                if (licenseStatus.HasEncryptedBackups == false)
+                    throw new LicenseLimitException(LimitType.EncryptedBackup, "Your license doesn't support adding Encrypted backups feature.");
         }
     }
 }

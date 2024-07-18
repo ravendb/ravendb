@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -32,6 +33,10 @@ namespace Raven.Server.ServerWide.Commands.Sorters
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(Sorters)] = TypeConverter.ToBlittableSupportedType(Sorters);
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
         }
     }
 }

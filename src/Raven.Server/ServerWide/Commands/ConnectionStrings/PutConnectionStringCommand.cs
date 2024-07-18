@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.ConnectionStrings
@@ -54,6 +55,10 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
             record.RavenConnectionStrings[ConnectionString.Name] = ConnectionString;
         }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
+        }
     }
 
     public class PutSqlConnectionStringCommand : PutConnectionStringCommand<SqlConnectionString>
@@ -71,6 +76,10 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.SqlConnectionStrings[ConnectionString.Name] = ConnectionString;
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
         }
     }
 
@@ -90,6 +99,10 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         {
             record.OlapConnectionStrings[ConnectionString.Name] = ConnectionString;
         }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
+        }
     }
 
     public class PutElasticSearchConnectionStringCommand : PutConnectionStringCommand<ElasticSearchConnectionString>
@@ -108,6 +121,10 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         {
             record.ElasticSearchConnectionStrings[ConnectionString.Name] = ConnectionString;
         }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
+        }
     }
 
     public class PutQueueConnectionStringCommand : PutConnectionStringCommand<QueueConnectionString>
@@ -125,6 +142,10 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.QueueConnectionStrings[ConnectionString.Name] = ConnectionString;
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
         }
     }
 }

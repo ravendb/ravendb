@@ -22,6 +22,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
@@ -532,7 +533,7 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(UpdateSnmpDatabasesMappingCommand):
-                        UpdateValue<List<string>>(context, type, cmd, index);
+                        UpdateValue<List<string>>(context, type, cmd, index, serverStore);
                         break;
 
                     case nameof(PutLicenseCommand):
@@ -544,7 +545,7 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(UpdateLicenseLimitsCommand):
-                        UpdateValue<NodeLicenseLimits>(context, type, cmd, index);
+                        UpdateValue<NodeLicenseLimits>(context, type, cmd, index, serverStore);
                         break;
 
                     case nameof(ToggleDatabasesStateCommand):
@@ -556,12 +557,12 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutServerWideBackupConfigurationCommand):
-                        var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
+                        var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, serverStore, skipNotifyValueChanged: true);
                         UpdateDatabasesWithServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
                         break;
 
                     case nameof(DeleteServerWideBackupConfigurationCommand):
-                        UpdateValue<string>(context, type, cmd, index, skipNotifyValueChanged: true);
+                        UpdateValue<string>(context, type, cmd, index, serverStore, skipNotifyValueChanged: true);
                         cmd.TryGet(nameof(DeleteServerWideBackupConfigurationCommand.Name), out string name);
                         var deleteServerWideTaskConfiguration = new DeleteServerWideTaskCommand.DeleteConfiguration
                         {
@@ -572,17 +573,17 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutServerWideExternalReplicationCommand):
-                        var serverWideExternalReplication = UpdateValue<ServerWideExternalReplication>(context, type, cmd, index, skipNotifyValueChanged: true);
+                        var serverWideExternalReplication = UpdateValue<ServerWideExternalReplication>(context, type, cmd, index, serverStore, skipNotifyValueChanged: true);
                         UpdateDatabasesWithExternalReplication(context, type, serverWideExternalReplication, index);
                         break;
 
                     case nameof(DeleteServerWideTaskCommand):
-                        var deleteConfiguration = UpdateValue<DeleteServerWideTaskCommand.DeleteConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
+                        var deleteConfiguration = UpdateValue<DeleteServerWideTaskCommand.DeleteConfiguration>(context, type, cmd, index, serverStore, skipNotifyValueChanged: true);
                         DeleteServerWideBackupConfigurationFromAllDatabases(deleteConfiguration, context, type, index);
                         break;
 
                     case nameof(ToggleServerWideTaskStateCommand):
-                        var parameters = UpdateValue<ToggleServerWideTaskStateCommand.Parameters>(context, type, cmd, index, skipNotifyValueChanged: true);
+                        var parameters = UpdateValue<ToggleServerWideTaskStateCommand.Parameters>(context, type, cmd, index, serverStore, skipNotifyValueChanged: true);
                         ToggleServerWideTaskState(cmd, parameters, context, type, index);
                         break;
 
@@ -618,7 +619,7 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(AddDatabaseCommand):
-                        var addedNodes = AddDatabase(context, cmd, index, leader);
+                        var addedNodes = AddDatabase(context, cmd, index, serverStore);
                         if (addedNodes != null)
                         {
                             result = addedNodes;
@@ -893,7 +894,8 @@ namespace Raven.Server.ServerWide
                    e is SubscriptionException ||
                    e is DatabaseDoesNotExistException ||
                    e is AuthorizationException ||
-                   e is CompareExchangeKeyTooBigException;
+                   e is CompareExchangeKeyTooBigException ||
+                   e is LicenseLimitException;
         }
 
         private void ClusterStateCleanUp(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
@@ -1603,7 +1605,7 @@ namespace Raven.Server.ServerWide
 
         };
 
-        private unsafe List<string> AddDatabase(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private unsafe List<string> AddDatabase(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
             Exception exception = null;
@@ -1631,6 +1633,7 @@ namespace Raven.Server.ServerWide
                                                                  " but was expecting " + addDatabaseCommand.RaftCommandIndex);
                         }
                     }
+                    addDatabaseCommand.AssertLicenseLimitsAddDatabase(serverStore, addDatabaseCommand.Record, context);
 
                     bool shouldSetClientConfigEtag;
                     using (var oldDatabaseRecord = ReadRawDatabaseRecord(context, addDatabaseCommand.Name))
@@ -2052,7 +2055,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private unsafe T UpdateValue<T>(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, bool skipNotifyValueChanged = false)
+        private unsafe T UpdateValue<T>(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore, bool skipNotifyValueChanged = false)
         {
             UpdateValueCommand<T> command = null;
             Exception exception = null;
@@ -2060,6 +2063,7 @@ namespace Raven.Server.ServerWide
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 command = (UpdateValueCommand<T>)JsonDeserializationCluster.Commands[type](cmd);
+                command.AssertLicenseLimits(serverStore, context);
                 if (command.Name.StartsWith(Constants.Documents.Prefix))
                     throw new RachisApplyException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated database calls");
 
@@ -2446,6 +2450,8 @@ namespace Raven.Server.ServerWide
                         DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName, serverStore);
                         return;
                     }
+
+                    updateCommand.AssertLicenseLimits(serverStore, databaseRecord, context);
 
                     UpdateIndexForBackup(databaseRecord, type, index);
                     var updatedDatabaseBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);
@@ -4547,4 +4553,5 @@ namespace Raven.Server.ServerWide
             return false;
         }
     }
+
 }

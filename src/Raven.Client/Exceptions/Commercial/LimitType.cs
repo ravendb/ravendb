@@ -89,9 +89,6 @@ namespace Raven.Client.Exceptions.Commercial
         ReadOnlyCertificates,
 
         [Description("Concurrent Subscriptions")]
-        ConcurrentSubscriptions,
-
-        [Description("TCP Data Compression")]
-        TcpDataCompression
+        ConcurrentSubscriptions
     }
 }

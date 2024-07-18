@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -135,6 +136,10 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(TaskId)] = TypeConverter.ToBlittableSupportedType(TaskId);
             json[nameof(TaskType)] = TypeConverter.ToBlittableSupportedType(TaskType);
             json[nameof(Disable)] = TypeConverter.ToBlittableSupportedType(Disable);
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
         }
     }
 }

@@ -1,4 +1,5 @@
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Analyzers
@@ -26,6 +27,10 @@ namespace Raven.Server.ServerWide.Commands.Analyzers
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(AnalyzerName)] = AnalyzerName;
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
         }
     }
 }

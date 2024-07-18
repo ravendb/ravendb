@@ -1,4 +1,5 @@
-﻿using Raven.Server.Utils;
+﻿using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -24,6 +25,10 @@ namespace Raven.Server.ServerWide.Commands
         public override BlittableJsonReaderObject GetUpdatedValue(JsonOperationContext context, BlittableJsonReaderObject previousValue, long index)
         {
             return null;
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, ClusterOperationContext context)
+        {
         }
 
         public class Parameters : IDynamicJson

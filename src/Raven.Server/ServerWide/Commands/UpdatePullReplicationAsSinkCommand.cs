@@ -1,6 +1,8 @@
 ﻿using System;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -69,6 +71,22 @@ namespace Raven.Server.ServerWide.Commands
         {
             json[nameof(PullReplicationAsSink)] = PullReplicationAsSink.ToJson();
             json[nameof(UseServerCertificate)] = UseServerCertificate;
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+                return;
+
+            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            if (licenseStatus.HasPullReplicationAsSink)
+                return;
+
+            if (databaseRecord.SinkPullReplications.Count == 0)
+                return;
+
+            throw new LicenseLimitException(LimitType.PullReplicationAsSink, "Your license doesn't support adding Sink Replication feature.");
+
         }
     }
 }

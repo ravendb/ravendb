@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Linq;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -57,6 +60,25 @@ namespace Raven.Server.ServerWide.Commands
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(Watcher)] = Watcher.ToJson();
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+                return;
+
+            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            if (licenseStatus.HasDelayedExternalReplication)
+                return;
+
+            if (licenseStatus.HasExternalReplication == false && databaseRecord.ExternalReplications.Count > 0)
+                throw new LicenseLimitException(LimitType.ExternalReplication, "Your license doesn't support adding External Replication.");
+
+            if (databaseRecord.ExternalReplications.All(exRep => exRep.DelayReplicationFor == TimeSpan.Zero))
+                return;
+
+            throw new LicenseLimitException(LimitType.DelayedExternalReplication, "Your license doesn't support adding Delayed External Replication.");
+
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -28,6 +29,10 @@ public class UpdateResponsibleNodeForTasksCommand : UpdateValueCommand<UpdateRes
     public override BlittableJsonReaderObject GetUpdatedValue(JsonOperationContext context, BlittableJsonReaderObject previousValue, long index)
     {
         return null;
+    }
+
+    public override void AssertLicenseLimits(ServerStore serverStore, ClusterOperationContext context)
+    {
     }
 
     public class Parameters : IDynamicJson

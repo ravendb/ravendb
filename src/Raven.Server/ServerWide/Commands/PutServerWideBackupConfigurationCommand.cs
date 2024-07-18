@@ -97,6 +97,10 @@ namespace Raven.Server.ServerWide.Commands
             return context.ReadObject(djv, Name);
         }
 
+        public override void AssertLicenseLimits(ServerStore serverStore, ClusterOperationContext context)
+        {
+        }
+
         private string GenerateTaskName(BlittableJsonReaderObject previousValue)
         {
             var baseTaskName = Value.GetDefaultTaskName();

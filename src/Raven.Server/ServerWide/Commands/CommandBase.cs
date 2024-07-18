@@ -1,5 +1,7 @@
 using System;
 using Raven.Client.Exceptions.Security;
+using Raven.Server.Json;
+using Raven.Server.Monitoring.Snmp.Objects.Server;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -10,6 +12,8 @@ namespace Raven.Server.ServerWide.Commands
     public abstract class CommandBase
     {
         public const string Type = nameof(Type);
+        internal const string MinBuildVersion54200 = "5.4.200";
+
         public virtual DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var json = new DynamicJsonValue
@@ -93,6 +97,42 @@ namespace Raven.Server.ServerWide.Commands
         public virtual string AdditionalDebugInformation(Exception exception)
         {
             return null;
+        }
+
+        internal bool CanAssertLicenseLimits(ClusterOperationContext context, string minBuildVersion, ServerStore serverStore)
+        {
+            var licenseLimitsBlittable = serverStore.Cluster.Read(context, ServerStore.LicenseLimitsStorageKey);
+            if (licenseLimitsBlittable == null)
+                return false;
+
+            var licenseLimits = JsonDeserializationServer.LicenseLimits(licenseLimitsBlittable);
+            if (licenseLimits.NodeLicenseDetails == null)
+                return false;
+
+            var clusterTopology = serverStore.Engine.GetTopology(context);
+
+            foreach (var clusterNode in clusterTopology.Members)
+            {
+                if (licenseLimits.NodeLicenseDetails.ContainsKey(clusterNode.Key) == false)
+                    return false;
+            }
+
+            foreach (var limit in licenseLimits.NodeLicenseDetails)
+            {
+                if (limit.Value.BuildInfo != null && Version.TryParse(limit.Value.BuildInfo.AssemblyVersion, out var ver))
+                {
+                    if (Version.TryParse(minBuildVersion, out var minVersion) == false)
+                        return false;
+
+                    if (ver.Major != minVersion.Major)
+                        return false;
+
+                    if (ver.Minor < minVersion.Minor || (ver.Minor == minVersion.Minor && ver.Build < minVersion.Build))
+                        return false;
+                }
+            }
+
+            return true;
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
@@ -40,6 +41,10 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         {
             json[nameof(IndexName)] = IndexName;
             json[nameof(Priority)] = Priority;
+        }
+
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
         }
     }
 }

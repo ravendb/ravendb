@@ -28,6 +28,10 @@ namespace Raven.Server.ServerWide.Commands
             ClusterNodes = serverStore.GetClusterTopology(context).AllNodes.Keys.ToArray();
         }
 
+        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+        {
+        }
+
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             var deletionInProgressStatus = HardDelete ? DeletionInProgressStatus.HardDelete
