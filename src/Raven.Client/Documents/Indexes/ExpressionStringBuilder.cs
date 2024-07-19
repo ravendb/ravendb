@@ -1292,8 +1292,21 @@ namespace Raven.Client.Documents.Indexes
         /// </returns>
         protected override Expression VisitListInit(ListInitExpression node)
         {
-            Visit(node.NewExpression);
-            Out(" {");
+            var isDictionaryType = JavascriptConversionExtensions.LinqMethodsSupport
+               .IsDictionary(node.Type);
+            
+            if (TypeExistsOnServer(node.Type))
+            {
+                Visit(node.NewExpression);
+                Out(" {");
+            }
+            
+            else if (isDictionaryType)
+                Out("new DynamicDictionary(new System.Collections.Generic.Dictionary<object, object>{");
+
+            else
+                Out("new DynamicArray(new[] {");
+            
             var num = 0;
             var count = node.Initializers.Count;
             while (num < count)
@@ -1302,7 +1315,9 @@ namespace Raven.Client.Documents.Indexes
                 {
                     Out(", ");
                 }
-                Out("{");
+                // For dictionary we have to wrap each kvp in brackets
+                if (isDictionaryType)
+                    Out("{");
                 bool first = true;
                 foreach (var expression in node.Initializers[num].Arguments)
                 {
@@ -1311,10 +1326,15 @@ namespace Raven.Client.Documents.Indexes
                     first = false;
                     Visit(expression);
                 }
-                Out("}");
+                if (isDictionaryType)
+                    Out("}");
                 num++;
             }
             Out("}");
+
+            if (TypeExistsOnServer(node.Type) == false)
+                Out(")");
+            
             return node;
         }
 
