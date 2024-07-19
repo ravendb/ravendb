@@ -910,14 +910,12 @@ namespace Voron.Data.BTrees
 
         private bool TryUseRecentTransactionPage(Slice key, out TreePage page, out TreeNodeHeader* node)
         {
-            node = null;
-            page = null;
-
-            if (_recentlyFoundPages == null)
+            if (_recentlyFoundPages == null || _recentlyFoundPages.TryFind(key, out var foundPage) == false)
+            {
+                page = null;
+                node = null;
                 return false;
-
-            if (_recentlyFoundPages.TryFind(key, out var foundPage) == false)
-                return false;
+            }
 
             if (foundPage.Page != null)
             {
