@@ -53,11 +53,13 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
             }
         };
 
-        document.addEventListener("keydown", handleEnterKey);
+        const current = inputRef.current;
+
+        current.addEventListener("keydown", handleEnterKey);
         return () => {
-            document.removeEventListener("keydown", handleEnterKey);
+            current.removeEventListener("keydown", handleEnterKey);
         };
-    }, [activeItem, setIsDropdownOpen]);
+    }, [inputRef, activeItem, setIsDropdownOpen]);
 
     // Handle keyboard navigation
     useEffect(() => {
