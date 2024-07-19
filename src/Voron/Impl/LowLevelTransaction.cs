@@ -986,9 +986,6 @@ namespace Voron.Impl
 
         private void CommitStage2_WriteToJournal()
         {
-            // In the case of non-lazy transactions, we must flush the data from older lazy transactions
-            // to ensure the data is sequentially written.
-
             try
             {
                 var numberOfWrittenPages = _journal.WriteToJournal(this);
