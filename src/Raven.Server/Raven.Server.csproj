@@ -119,7 +119,6 @@
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="RavenDB.PAL" Version="6.2.0" />
     <PackageReference Include="Snappier" Version="1.1.6" />
     <PackageReference Include="System.Collections.Immutable" Version="8.0.0" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" />
