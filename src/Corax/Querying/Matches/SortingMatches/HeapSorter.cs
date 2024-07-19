@@ -618,7 +618,7 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
 
             if (leftChild < _heapSize)
             {
-                if (Compare(currentTerm, node, _terms[leftChild].ToSpan(), _documents[leftChild]) < 0)
+                if (Compare(currentTerm, _documents[node], _terms[leftChild].ToSpan(), _documents[leftChild]) < 0)
                     throw new InvalidDataException($"Heap is corrupted.: `{_terms[node]}` {(IsDescending ? ">" : "<")} `{_terms[leftChild]}`");
 
                 queue.Enqueue(leftChild);

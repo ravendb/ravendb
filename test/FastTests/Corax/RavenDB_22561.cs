@@ -24,6 +24,9 @@ public class RavenDB_22561_LLT : NoDisposalNeeded
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
+    [InlineData(100, 2103911694)]
+    [InlineData(1000, 1078327866)]
+    [InlineData(10000, 52744038)]
     [InlineDataWithRandomSeed(100)]
     [InlineDataWithRandomSeed(1_000)]
     [InlineDataWithRandomSeed(10_000)]
@@ -101,6 +104,9 @@ public class RavenDB_22561_LLT : NoDisposalNeeded
     [InlineDataWithRandomSeed(100)]
     [InlineDataWithRandomSeed(1_000)]
     [InlineDataWithRandomSeed(10_000)]
+    [InlineData(100, 2103911694)]
+    [InlineData(1000, 1078327866)]
+    [InlineData(10000, 52744038)]
     public void CanHeapSortDataString(int size, int seed)
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
