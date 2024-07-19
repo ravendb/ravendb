@@ -1,6 +1,4 @@
-﻿using Raven.Client.Documents.Operations.ETL.SQL;
-using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
-using Raven.Server.SqlMigration.Schema;
+﻿using Raven.Server.SqlMigration.Schema;
 
 namespace Raven.Server.SqlMigration.MsSQL
 {
@@ -8,7 +6,7 @@ namespace Raven.Server.SqlMigration.MsSQL
     {
         protected override string FactoryName => "Microsoft.Data.SqlClient";
         
-        public MsSqlDatabaseMigrator(string connectionString) : base(OverrideConnectionStringIfNeeded(connectionString))
+        public MsSqlDatabaseMigrator(string connectionString) : base(connectionString)
         {
         }
 
@@ -79,14 +77,6 @@ namespace Raven.Server.SqlMigration.MsSQL
         protected override string GetSelectAllQueryForTable(string tableSchema, string tableName)
         {
             return "select * from " + QuoteTable(tableSchema, tableName);
-        }
-
-        private static string OverrideConnectionStringIfNeeded(string connectionString)
-        {
-            if (SqlConnectionStringParser.GetConnectionStringValue(connectionString, new string[] { "Encrypt" }) == null)
-                connectionString = SqlConnectionStringUtil.GetConnectionStringWithOptionalEncrypt(connectionString);
-
-            return connectionString;
         }
     }
 }
