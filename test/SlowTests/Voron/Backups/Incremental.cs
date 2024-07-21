@@ -176,13 +176,13 @@ namespace SlowTests.Voron.Backups
                 tx.Commit();
             }
 
-            var usedPagesInJournal = Env.Journal.CurrentFile.WritePosIn4KbPosition;
+            var usedPagesInJournal = Env.Journal.CurrentFile.GetWritePosIn4KbPosition(Env.CurrentStateRecord);
 
             var backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
             Assert.Equal(usedPagesInJournal, backedUpPages);
 
-            var writePos = Env.Journal.CurrentFile.WritePosIn4KbPosition;
+            var writePos = Env.Journal.CurrentFile.GetWritePosIn4KbPosition(Env.CurrentStateRecord);
 
             using (var tx = Env.WriteTransaction())
             {
@@ -195,7 +195,7 @@ namespace SlowTests.Voron.Backups
                 tx.Commit();
             }
 
-            var usedByLastTransaction = Env.Journal.CurrentFile.WritePosIn4KbPosition - writePos;
+            var usedByLastTransaction = Env.Journal.CurrentFile.GetWritePosIn4KbPosition(Env.CurrentStateRecord) - writePos;
 
             backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(1));
 
@@ -246,7 +246,7 @@ namespace SlowTests.Voron.Backups
                 tx.Commit();
             }
 
-            var usedPagesInJournal = Env.Journal.CurrentFile.WritePosIn4KbPosition;
+            var usedPagesInJournal = Env.Journal.CurrentFile.GetWritePosIn4KbPosition(Env.CurrentStateRecord);
 
             var backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
@@ -254,9 +254,9 @@ namespace SlowTests.Voron.Backups
 
             // We don't modify anything between backups - to create empty incremental backup
 
-            var writePos = Env.Journal.CurrentFile.WritePosIn4KbPosition;
+            var writePos = Env.Journal.CurrentFile.GetWritePosIn4KbPosition(Env.CurrentStateRecord);
 
-            var usedByLastTransaction = Env.Journal.CurrentFile.WritePosIn4KbPosition - writePos;
+            var usedByLastTransaction = Env.Journal.CurrentFile.GetWritePosIn4KbPosition(Env.CurrentStateRecord) - writePos;
             Assert.Equal(0, usedByLastTransaction);
 
             long nextPageNumberBeforeBackup = Env.NextPageNumber;

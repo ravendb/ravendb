@@ -21,22 +21,21 @@ namespace Voron.Impl.Journal
 {
     public sealed unsafe class JournalFile(StorageEnvironment env, JournalWriter journalWriter, long journalNumber) : IDisposable
     {
-        private long _writePosIn4Kb = 0;
         public long LastTransactionId;
 
         internal List<TransactionHeader> _transactionHeaders = new();
 
         public override string ToString()
         {
-            return string.Format("Number: {0}", Number);
+            return $"Number: {Number}";
         }
 
-        internal long WritePosIn4KbPosition => Interlocked.Read(ref _writePosIn4Kb);
+        internal long GetWritePosIn4KbPosition(EnvironmentStateRecord record) => record.Journal.Current == this ? record.Journal.Last4KWritePosition : 0; 
 
         public long Number { get; } = journalNumber;
 
 
-        public long Available4Kbs => journalWriter?.NumberOfAllocated4Kb - _writePosIn4Kb ?? 0;
+        public long GetAvailable4Kbs(EnvironmentStateRecord record) => (journalWriter?.NumberOfAllocated4Kb - GetWritePosIn4KbPosition(record)) ?? 0;
 
         public Size JournalSize => new Size(journalWriter?.NumberOfAllocated4Kb * 4 ?? 0, SizeUnit.Kilobytes); 
         
@@ -131,14 +130,14 @@ namespace Voron.Impl.Journal
         /// </summary>
         public void Write(LowLevelTransaction tx, CompressedPagesResult pages)
         {
-            var cur4KbPos = _writePosIn4Kb;
+            var cur4KbPos = tx.CurrentStateRecord.Journal.Current == this ? tx.CurrentStateRecord.Journal.Last4KWritePosition : 0;
 
             Debug.Assert(pages.NumberOf4Kbs > 0);
 
             try
             {
                 Write(cur4KbPos, pages.Base, pages.NumberOf4Kbs);
-                Interlocked.Add(ref _writePosIn4Kb, pages.NumberOf4Kbs);
+                tx.UpdateJournal(this, cur4KbPos + pages.NumberOf4Kbs);
                 LastTransactionId = tx.Id;
             }
             catch (Exception e)
@@ -148,9 +147,9 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public void InitFrom(JournalReader journalReader, List<TransactionHeader> transactionHeaders)
+        public void InitFrom(StorageEnvironment storageEnvironment, JournalReader journalReader, List<TransactionHeader> transactionHeaders)
         {
-            _writePosIn4Kb = journalReader.Next4Kb;
+            storageEnvironment.UpdateJournal(this, journalReader.Next4Kb);
             _transactionHeaders = [..transactionHeaders];
         }
 

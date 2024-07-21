@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Voron.Data.BTrees;
+using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 
@@ -14,5 +15,6 @@ public record EnvironmentStateRecord(
     long FlushedToJournal,
     TreeMutableState Root,
     long NextPageNumber,
+    (JournalFile Current, long Last4KWritePosition) Journal,
     object ClientState
     );

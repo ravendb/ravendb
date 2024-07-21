@@ -150,6 +150,7 @@ namespace Voron
                     0,
                     null, 
                     -1,
+                    (null, -1),
                     null);
                 
                 _lastValidPageAfterLoad = dataPagerState.NumberOfAllocatedPages;
@@ -1631,6 +1632,11 @@ namespace Voron
                 Debug.Assert(ReferenceEquals(record, maybe));
                 found = true;
             }
+        }
+
+        public void UpdateJournal(JournalFile file, long last4KWrite)
+        {
+            _currentStateRecord = _currentStateRecord with { Journal = (file, last4KWrite) };
         }
 
         public void UpdateDataPagerState(Pager2.State dataPagerState)
