@@ -104,8 +104,8 @@ namespace Raven.Embedded
             public bool EulaAccepted { get; set; }
             public bool DisableAutoUpdate { get; set; }
             public bool DisableAutoUpdateFromApi { get; set; }
-            public bool DisableLicenseSupportCheck { get; set; }
-            public bool EnforceLicense { get; set; }
+            public bool DisableLicenseSupportCheck { get; set; } = true;
+            public bool ThrowOnInvalidOrMissingLicense { get; set; }
         }
     }
 }

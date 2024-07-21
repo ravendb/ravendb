@@ -64,7 +64,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("EXPERT ONLY. Throws an exception if the license cannot be activated or is not present")]
         [DefaultValue(false)]
-        [ConfigurationEntry("License.EnforceLicense", ConfigurationEntryScope.ServerWideOnly)]
-        public bool EnforceLicense { get; set; }
+        [ConfigurationEntry("License.ThrowOnInvalidOrMissingLicense", ConfigurationEntryScope.ServerWideOnly)]
+        public bool ThrowOnInvalidOrMissingLicense { get; set; }
     }
 }
