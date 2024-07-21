@@ -212,7 +212,7 @@ namespace SlowTests.Voron
             }
 
             var lastJournal = Env.Journal.GetCurrentJournalInfo().CurrentJournal;
-            var lastJournalPosition = Env.Journal.CurrentFile.WritePosIn4KbPosition;
+            var lastJournalPosition = Env.Journal.CurrentFile.GetWritePosIn4KbPosition(Env.CurrentStateRecord);
 
             StopDatabase();
 
@@ -245,12 +245,12 @@ namespace SlowTests.Voron
             }
 
             var lastJournal = Env.Journal.GetCurrentJournalInfo().CurrentJournal;
-            var lastJournalPosition = Env.Journal.CurrentFile.WritePosIn4KbPosition;
+            var lastJournalPosition = Env.Journal.CurrentFile.GetWritePosIn4KbPosition(Env.CurrentStateRecord);
 
 
             StopDatabase();
 
-            Assert.True(Env.Journal.CurrentFile.Available4Kbs - lastJournalPosition > 0);
+            Assert.True(Env.Journal.CurrentFile.GetAvailable4Kbs(Env.CurrentStateRecord) - lastJournalPosition > 0);
 
             for (var pos = lastJournalPosition - 2;
                 pos < lastJournalPosition + 1;
@@ -299,13 +299,13 @@ namespace SlowTests.Voron
             }
 
             var middleJournal = Env.Journal.GetCurrentJournalInfo().CurrentJournal/2;
-            var lastJournalPosition = Env.Journal.CurrentFile.WritePosIn4KbPosition;
+            var lastJournalPosition = Env.Journal.CurrentFile.GetWritePosIn4KbPosition(Env.CurrentStateRecord);
 
 
             StopDatabase();
 
             for (var pos = lastJournalPosition - 3;
-                pos < lastJournalPosition + Env.Journal.CurrentFile.Available4Kbs; // the current journal info applies also for a middle one
+                pos < lastJournalPosition + Env.Journal.CurrentFile.GetAvailable4Kbs(Env.CurrentStateRecord); // the current journal info applies also for a middle one
                 pos++)
             {
                 CorruptJournal(middleJournal, pos);

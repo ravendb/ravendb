@@ -6,6 +6,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Global;
@@ -23,7 +24,7 @@ public class BasicNextGen : StorageTest
 
     private unsafe static Span<byte> AsSpan(Page p) => new Span<byte>(p.Pointer, Constants.Storage.PageSize);
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void WithAsyncCommit()
     {
         Options.ManualFlushing = true;
@@ -69,7 +70,7 @@ public class BasicNextGen : StorageTest
     }
     
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void EncryptedStorageAnd_Flush()
     {
         RequireFileBasedPager();
@@ -86,7 +87,7 @@ public class BasicNextGen : StorageTest
     }
 
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void EncryptedStorage()
     {
         RequireFileBasedPager();
@@ -100,7 +101,7 @@ public class BasicNextGen : StorageTest
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void EncryptedStorage_MultipleTransactions_WithRollback()
     {
         RequireFileBasedPager();
@@ -146,7 +147,7 @@ public class BasicNextGen : StorageTest
     }
     
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void EncryptedStorage_MultipleTransactions_AndFlush()
     {
         RequireFileBasedPager();
@@ -178,7 +179,7 @@ public class BasicNextGen : StorageTest
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public unsafe void CanHandleUpdatesAndFlushing()
     {
         Options.ManualFlushing = true;
@@ -211,7 +212,7 @@ public class BasicNextGen : StorageTest
         }
     }
     
-    [Theory]
+    [RavenTheory(RavenTestCategory.Voron)]
     [InlineData(false)]
     [InlineData(true)]
     public unsafe void CanHandleRollingBackTx(bool flushManually)

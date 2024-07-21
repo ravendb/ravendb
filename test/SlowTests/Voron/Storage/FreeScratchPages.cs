@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Voron.Impl.Scratch;
 using Xunit;
 using Xunit.Abstractions;
@@ -20,28 +21,43 @@ namespace SlowTests.Voron.Storage
         }
 
         [Fact]
-        public void UncommittedTransactionShouldFreeScratchPagesThatWillBeReusedByNextTransaction()
+        public void UncommittedTransactionShouldFreeScratchPagesThatWillBeReusedFutureTransactions()
         {
             var random = new Random();
             var buffer = new byte[1024];
             random.NextBytes(buffer);
+            Options.ManualFlushing = true;
 
-            HashSet<PageFromScratchBuffer> scratchPagesOfUncommittedTransaction;
+            PageFromScratchBuffer[] scratchPagesOfUncommittedTransaction;
 
             using (var tx = Env.WriteTransaction())
             {
-                 var tree = tx.CreateTree("foo");
-               for (int i = 0; i < 10; i++)
+                var tree = tx.CreateTree("foo");
+                for (int i = 0; i < 10; i++)
                 {
                     tree.Add("items/" + i, new MemoryStream(buffer));
                 }
 
-                scratchPagesOfUncommittedTransaction = new HashSet<PageFromScratchBuffer>(tx.LowLevelTransaction.GetTransactionPages());
+                scratchPagesOfUncommittedTransaction = tx.LowLevelTransaction.GetTransactionPages().ToArray();
 
                 // tx.Commit() - intentionally not committing
             }
 
-            HashSet<PageFromScratchBuffer> scratchPagesOfCommittedTransaction;
+            using (var tx = Env.WriteTransaction())
+            {
+                tx.LowLevelTransaction.AllocatePage(1);
+                tx.Commit();
+            }
+
+            Env.FlushLogToDataFile();
+            
+            using (var tx = Env.WriteTransaction())
+            {
+                tx.LowLevelTransaction.AllocatePage(1);
+                tx.Commit();
+            }
+            
+            PageFromScratchBuffer[] scratchPagesOfCommittedTransaction;
 
             using (var tx = Env.WriteTransaction())
             {
@@ -52,16 +68,18 @@ namespace SlowTests.Voron.Storage
                     tree.Add("items/" + i, new MemoryStream(buffer));
                 }
 
-                scratchPagesOfCommittedTransaction = new HashSet<PageFromScratchBuffer>(tx.LowLevelTransaction.GetTransactionPages());
+                scratchPagesOfCommittedTransaction = tx.LowLevelTransaction.GetTransactionPages().ToArray();
 
                 tx.Commit();
             }
 
-            Assert.Equal(scratchPagesOfUncommittedTransaction.Count, scratchPagesOfCommittedTransaction.Count);
+            Assert.Equal(scratchPagesOfUncommittedTransaction.Length, scratchPagesOfCommittedTransaction.Length);
 
             foreach (var uncommittedPage in scratchPagesOfUncommittedTransaction)
             {
-                Assert.Contains(uncommittedPage, scratchPagesOfCommittedTransaction);
+                Assert.True(
+                    scratchPagesOfCommittedTransaction.Any(p => p.File == uncommittedPage.File && p.PositionInScratchBuffer == uncommittedPage.PositionInScratchBuffer)
+                );
             }
         }
     }

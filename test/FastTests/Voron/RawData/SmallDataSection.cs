@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests.Voron.FixedSize;
 using Raven.Server.Documents;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Voron.Data.RawData;
 using Xunit.Abstractions;
@@ -17,7 +18,7 @@ namespace FastTests.Voron.RawData
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanReadAndWriteFromSection()
         {
             long pageNumber;
