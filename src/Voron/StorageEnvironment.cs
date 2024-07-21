@@ -550,9 +550,9 @@ namespace Voron
                     _journal,
                     _headerAccessor,
                     _scratchBufferPool,
+                    _currentStateRecord?.DataPagerState,
+                    _dataPager,
                     _options.OwnsPagers ? _options : null,
-                    _options.OwnsPagers ? _dataPager : null,
-                    _currentStateRecord?.DataPagerState
                 })
                 {
                     try
