@@ -32,7 +32,6 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
-using Raven.Client.Properties;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
@@ -157,7 +156,7 @@ namespace Raven.Server
             // doing this before the schema upgrade to allow to downgrade in case we cannot start the server
             BeforeSchemaUpgrade = VerifyLicense;
 
-            if (Configuration.Licensing.EnforceLicense)
+            if (Configuration.Licensing.ThrowOnInvalidOrMissingLicense)
                 AfterDatabaseCreation = VerifyLicense;
         }
 
@@ -2977,7 +2976,7 @@ namespace Raven.Server
             using (var contextPool = new TransactionContextPool(storageEnvironment, ServerStore.Configuration.Memory.MaxContextSizeToKeep))
             {
                 var inStorageLicense = ServerStore.LoadLicense(contextPool);
-                if (inStorageLicense == null && ServerStore.Configuration.Licensing.EnforceLicense == false)
+                if (inStorageLicense == null && ServerStore.Configuration.Licensing.ThrowOnInvalidOrMissingLicense == false)
                     return;
 
                 var errorBuilder = new LicenseHelper.LicenseVerificationErrorBuilder(ServerStore.Configuration, storageEnvironment, contextPool);

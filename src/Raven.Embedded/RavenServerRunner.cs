@@ -47,7 +47,7 @@ namespace Raven.Embedded
                 commandLineArgs.Add($"--License.DisableAutoUpdate={options.LicenseConfiguration.DisableAutoUpdate}");
                 commandLineArgs.Add($"--License.DisableAutoUpdateFromApi={options.LicenseConfiguration.DisableAutoUpdateFromApi}");
                 commandLineArgs.Add($"--License.DisableLicenseSupportCheck={options.LicenseConfiguration.DisableLicenseSupportCheck}");
-                commandLineArgs.Add($"--License.EnforceLicense={options.LicenseConfiguration.EnforceLicense}");
+                commandLineArgs.Add($"--License.ThrowOnInvalidOrMissingLicense={options.LicenseConfiguration.ThrowOnInvalidOrMissingLicense}");
             }
 
             commandLineArgs.Add("--Setup.Mode=None");

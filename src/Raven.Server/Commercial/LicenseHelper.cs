@@ -372,7 +372,7 @@ namespace Raven.Server.Commercial
                         _errorBuilder.AppendLine($"- As a temporary measure, consider downgrading to the last working build ({buildInfo.FullVersion}).");
                 }
 
-                AppendSuggestionToDisableEnforceLicense(_configuration.Licensing.EnforceLicense, _isInStorageLicenseExpired);
+                AppendSuggestionToDisableThrowOnInvalidOrMissingLicenseOption(_configuration.Licensing.ThrowOnInvalidOrMissingLicense, _isInStorageLicenseExpired);
             }
 
             public void AppendGeneralSuggestions()
@@ -398,10 +398,10 @@ namespace Raven.Server.Commercial
                     _errorBuilder.AppendLine($"- Could not parse the license content: '{licenseContent}'.");
             }
 
-            public void AppendSuggestionToDisableEnforceLicense(bool enforceLicenseEnabled, bool isInStorageLicenseExpired)
+            public void AppendSuggestionToDisableThrowOnInvalidOrMissingLicenseOption(bool throwOnInvalidOrMissingLicenseOptionEnabled, bool isInStorageLicenseExpired)
             {
-                if (enforceLicenseEnabled && isInStorageLicenseExpired == false)
-                    _errorBuilder.AppendLine($"- Configure the '{RavenConfiguration.GetKey(x => x.Licensing.EnforceLicense)}' option by setting it to 'False' to disable this strict licensing requirement for server startup.");
+                if (throwOnInvalidOrMissingLicenseOptionEnabled && isInStorageLicenseExpired == false)
+                    _errorBuilder.AppendLine($"- Configure the '{RavenConfiguration.GetKey(x => x.Licensing.ThrowOnInvalidOrMissingLicense)}' option by setting it to 'False' to disable this strict licensing requirement for server startup.");
             }
 
             public override string ToString() => _errorBuilder.ToString();
