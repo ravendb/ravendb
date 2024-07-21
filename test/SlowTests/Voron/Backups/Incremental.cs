@@ -176,13 +176,13 @@ namespace SlowTests.Voron.Backups
                 tx.Commit();
             }
 
-            var usedPagesInJournal = Env.Journal.CurrentFile.WritePosIn4KbPosition;
+            var usedPagesInJournal = Env.Journal.CurrentFile.GetWritePosIn4KbPosition(Env.CurrentStateRecord);
 
             var backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
             Assert.Equal(usedPagesInJournal, backedUpPages);
 
-            var writePos = Env.Journal.CurrentFile.WritePosIn4KbPosition;
+            var writePos = Env.Journal.CurrentFile.GetWritePosIn4KbPosition(Env.CurrentStateRecord);
 
             using (var tx = Env.WriteTransaction())
             {
@@ -195,7 +195,7 @@ namespace SlowTests.Voron.Backups
                 tx.Commit();
             }
 
-            var usedByLastTransaction = Env.Journal.CurrentFile.WritePosIn4KbPosition - writePos;
+            var usedByLastTransaction = Env.Journal.CurrentFile.GetWritePosIn4KbPosition(Env.CurrentStateRecord) - writePos;
 
             backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(1));
 
@@ -231,22 +231,20 @@ namespace SlowTests.Voron.Backups
         public void IncrementalBackupShouldAcceptEmptyIncrementalBackups()
         {
             RequireFileBasedPager();
-            var random = new Random();
-            var buffer = new byte[100];
-            random.NextBytes(buffer);
+            var buffer = "0-1-2-3-4-5-6-7-8-9-10-11-12-13-14-15-16-17-18-19-20-21-22-23-24-25-26-27-28-29-30-31-32-33-34-35-36"u8;
 
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 5; i++)
                 {
-                    tree.Add("items/" + i, new MemoryStream(buffer));
+                    tree.Add("items/" + i,buffer.ToArray());
                 }
 
                 tx.Commit();
             }
 
-            var usedPagesInJournal = Env.Journal.CurrentFile.WritePosIn4KbPosition;
+            var usedPagesInJournal = Env.Journal.CurrentFile.GetWritePosIn4KbPosition(Env.CurrentStateRecord);
 
             var backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
@@ -254,9 +252,9 @@ namespace SlowTests.Voron.Backups
 
             // We don't modify anything between backups - to create empty incremental backup
 
-            var writePos = Env.Journal.CurrentFile.WritePosIn4KbPosition;
+            var writePos = Env.Journal.CurrentFile.GetWritePosIn4KbPosition(Env.CurrentStateRecord);
 
-            var usedByLastTransaction = Env.Journal.CurrentFile.WritePosIn4KbPosition - writePos;
+            var usedByLastTransaction = Env.Journal.CurrentFile.GetWritePosIn4KbPosition(Env.CurrentStateRecord) - writePos;
             Assert.Equal(0, usedByLastTransaction);
 
             long nextPageNumberBeforeBackup = Env.NextPageNumber;

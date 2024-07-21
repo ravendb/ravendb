@@ -307,6 +307,11 @@ namespace Voron.Impl
             Debug.Assert(Flags is TransactionFlags.ReadWrite, "Flags is TransactionFlags.ReadWrite");
             DataPagerState = dataPagerState;
         }
+
+        internal void UpdateJournal(JournalFile file, long last4KWrite)
+        {
+            _envRecord = _envRecord with { Journal = (file, last4KWrite) };
+        }
         
         internal void UpdateClientState(object state)
         {

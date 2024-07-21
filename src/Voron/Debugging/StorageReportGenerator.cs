@@ -303,7 +303,7 @@ namespace Voron.Debugging
                     Flushed = false,
                     Number = journal.Number,
                     AllocatedSpaceInBytes = (long)journalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte,
-                    Available4Kbs = journal.Available4Kbs,
+                    Available4Kbs = journal.GetAvailable4Kbs(_tx.CurrentStateRecord),
                     LastTransaction = journal.LastTransactionId,
                 };
             });
@@ -319,7 +319,7 @@ namespace Voron.Debugging
                     Flushed = true,
                     Number = journal.Number,
                     AllocatedSpaceInBytes = (long)journalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte,
-                    Available4Kbs = journal.Available4Kbs,
+                    Available4Kbs = journal.GetAvailable4Kbs(_tx.CurrentStateRecord),
                     LastTransaction = journal.LastTransactionId,
                 };
             });

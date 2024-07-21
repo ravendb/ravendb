@@ -50,6 +50,9 @@
     <None Remove="Data\RavenDB_22498\AutoIndexes.SlowTests.json.gz" />
     <None Remove="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
     <None Remove="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
+    <None Update="Tests\fact-tests.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Tests.Infrastructure\CommonTestsAssemblyInfo.cs" Link="Properties\CommonTestsAssemblyInfo.cs" />

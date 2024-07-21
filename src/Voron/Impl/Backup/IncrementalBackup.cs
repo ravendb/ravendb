@@ -113,7 +113,7 @@ namespace Voron.Impl.Backup
                 if (env.Journal.CurrentFile != null)
                 {
                     lastWrittenLogFile = env.Journal.CurrentFile.Number;
-                    lastWrittenLog4kb = env.Journal.CurrentFile.WritePosIn4KbPosition;
+                    lastWrittenLog4kb = env.Journal.CurrentFile.GetWritePosIn4KbPosition(env.CurrentStateRecord);
                 }
 
                 // txw.Commit(); intentionally not committing

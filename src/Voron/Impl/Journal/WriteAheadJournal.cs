@@ -240,7 +240,7 @@ namespace Voron.Impl.Journal
 
                         var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize);
                         var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
-                        jrnlFile.InitFrom(journalReader, transactionHeaders);
+                        jrnlFile.InitFrom(_env, journalReader, transactionHeaders);
                         jrnlFile.AddRef(); // creator reference - write ahead log
 
                         journalFiles.Add(jrnlFile);
@@ -390,11 +390,12 @@ namespace Voron.Impl.Journal
             if (_files.Count > 0)
             {
                 var lastFile = _files.Last();
-                if (lastFile.Available4Kbs >= 2)
+                if (lastFile.GetAvailable4Kbs(_env.CurrentStateRecord) >= 2)
                     // it must have at least one page for the next transaction header and one 4kb for data
                     CurrentFile = lastFile;
             }
-            addToInitLog?.Invoke(LogMode.Information, $"Info: Current File = '{CurrentFile?.Number}', Position (4KB)='{CurrentFile?.WritePosIn4KbPosition}'. Require Header Update = {requireHeaderUpdate}");
+
+            addToInitLog?.Invoke(LogMode.Information,$"Info: Current File = '{CurrentFile?.Number}', Position (4KB)='{CurrentFile?.GetWritePosIn4KbPosition(_env.CurrentStateRecord)}'. Require Header Update = {requireHeaderUpdate}");
 
             if (requireHeaderUpdate)
             {
@@ -425,7 +426,7 @@ namespace Voron.Impl.Journal
 
                         Memory.Set(emptyFourKbPtr, 0, fourKb);
 
-                        for (long pos = CurrentFile.WritePosIn4KbPosition; pos < CurrentFile.JournalWriter.NumberOfAllocated4Kb; pos++)
+                        for (long pos = CurrentFile.GetWritePosIn4KbPosition(_env.CurrentStateRecord); pos < CurrentFile.JournalWriter.NumberOfAllocated4Kb; pos++)
                         {
                             CurrentFile.JournalWriter.Write(pos, emptyFourKbPtr, 1);
                         }
@@ -611,7 +612,6 @@ namespace Voron.Impl.Journal
                     if (_waj._env.Disposed)
                         return;
 
-                    var lastFlushed = _lastFlushed;
                     _forTestingPurposes?.OnApplyLogsToDataFileUnderFlushingLock?.Invoke();
 
                     // RavenDB-13302: we need to force a re-check this before we make decisions here
@@ -814,7 +814,12 @@ namespace Voron.Impl.Journal
                 JournalFile journalFile = _waj._files.First(x => x.Number == flushedRecord.FlushedToJournal);
                 
                 var unusedJournals = new List<JournalFile>();
-                _waj._files = _waj._files.RemoveWhile(x => x.Number < flushedRecord.FlushedToJournal, unusedJournals);
+                _waj._files = _waj._files.RemoveWhile(x =>
+                {
+                    if (x.Number < flushedRecord.FlushedToJournal)
+                        return true;
+                    return x.Number == flushedRecord.FlushedToJournal && x.GetAvailable4Kbs(txw.CurrentStateRecord) == 0;
+                }, unusedJournals);
 
                 if (_waj._logger.IsInfoEnabled)
                 {
@@ -1487,7 +1492,7 @@ namespace Voron.Impl.Journal
                     }
 
 
-                    if (CurrentFile == null || CurrentFile.Available4Kbs < journalEntry.NumberOf4Kbs)
+                    if (CurrentFile == null || CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) < journalEntry.NumberOf4Kbs)
                     {
                         CurrentFile = NextFile(journalEntry.NumberOf4Kbs);
                         if (_logger.IsInfoEnabled)
@@ -1506,7 +1511,7 @@ namespace Voron.Impl.Journal
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Writing {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
 
-                    if (CurrentFile.Available4Kbs == 0)
+                    if (CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) == 0)
                     {
                         CurrentFile = null;
                     }
@@ -1876,7 +1881,7 @@ namespace Voron.Impl.Journal
         {
             // switching transactions modes requires to close jounal,
             // truncate it (in case of recovery) and create next journal file
-            CurrentFile?.JournalWriter.Truncate(Constants.Storage.PageSize * CurrentFile.WritePosIn4KbPosition);
+            CurrentFile?.JournalWriter.Truncate(Constants.Storage.PageSize * CurrentFile.GetWritePosIn4KbPosition(_env.CurrentStateRecord));
             CurrentFile = null;
         }
 
