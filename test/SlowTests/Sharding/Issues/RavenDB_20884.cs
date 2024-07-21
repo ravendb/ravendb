@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.NotificationCenter.Notifications;
@@ -16,16 +17,17 @@ namespace SlowTests.Sharding.Issues
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
-        public void OnShardedDatabaseDeletion_ShouldDeleteNotificationsFromOrchestrator()
+        public async Task OnShardedDatabaseDeletion_ShouldDeleteNotificationsFromOrchestrator()
         {
             string databaseName;
             AlertRaised alert;
 
+            ShardingConfiguration config;
             using (var store = Sharding.GetDocumentStore())
             {
                 databaseName = store.Database;
-
                 var shardedDbCtx = Sharding.GetOrchestrator(store.Database);
+                config = Server.ServerStore.Cluster.ReadShardingConfiguration(databaseName);
 
                 // store notification 
                 var alertMsg = $"you have low disk space on node '{Server.ServerStore.NodeTag}'";
@@ -38,6 +40,18 @@ namespace SlowTests.Sharding.Issues
                     Assert.NotNull(ntv);
                     Assert.True(ntv.Json.TryGet(nameof(AlertRaised.Message), out string msg), "Unable to read stored notification");
                     Assert.Equal(alertMsg, msg);
+                }
+            }
+
+            if (config != null)
+            {
+                foreach (var name in config.Shards.Select(s => $"{databaseName}${s.Key}"))
+                {
+                    await AssertWaitForTrueAsync(() =>
+                    {
+                        var exists = Server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(name, out _);
+                        return Task.FromResult(exists == false);
+                    });
                 }
             }
 
