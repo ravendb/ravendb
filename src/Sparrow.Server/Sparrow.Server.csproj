@@ -47,7 +47,7 @@
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="RavenDB.Pal" Version="6.2.1" />
+    <PackageReference Include="RavenDB.Pal" Version="6.2.2" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>
