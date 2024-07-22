@@ -51,6 +51,9 @@ $posix_files = `
 "src/posix/virtualmemory.c",
 "src/posix/writefileheader.c"
 
+Remove-Item .\runtimes -Force -Recurse -ErrorAction Inquire
+Remove-Item .\artifacts -Force -Recurse -ErrorAction Inquire
+
 mkdir runtimes/win-x86/native -ErrorAction Ignore > $null
 Copy-Item ../../libs/libzstd/libzstd.win.x86.dll runtimes/win-x86/native/libzstd.dll
 mkdir runtimes/win-x64/native -ErrorAction Ignore > $null
