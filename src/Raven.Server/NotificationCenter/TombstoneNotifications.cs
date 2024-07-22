@@ -43,14 +43,17 @@ namespace Raven.Server.NotificationCenter
             var list = new List<BlockingTombstoneDetails>();
             using (_notificationsStorage.Read(id, out var notification))
             {
-                if (notification == null ||
-                    notification.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject details) == false ||
-                    details.TryGet(nameof(BlockingTombstonesDetails.BlockingTombstones), out BlittableJsonReaderArray blockingTombstonesDetails) == false) 
-                    return list;
+                using (notification)
+                {
+                    if (notification == null ||
+                        notification.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject details) == false ||
+                        details.TryGet(nameof(BlockingTombstonesDetails.BlockingTombstones), out BlittableJsonReaderArray blockingTombstonesDetails) == false)
+                        return list;
 
-                list.AddRange(
-                    from BlittableJsonReaderObject detail in blockingTombstonesDetails 
-                    select JsonDeserializationServer.BlockingTombstoneDetails(detail));
+                    list.AddRange(
+                        from BlittableJsonReaderObject detail in blockingTombstonesDetails
+                        select JsonDeserializationServer.BlockingTombstoneDetails(detail));
+                }
             }
 
             return list;
