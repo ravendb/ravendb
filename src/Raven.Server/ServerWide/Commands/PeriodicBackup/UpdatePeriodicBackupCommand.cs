@@ -85,19 +85,20 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
 
         public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
         {
-            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54201, serverStore) == false)
                 return;
 
             if (Configuration != null)
             {
                 if (Configuration.BackupType == BackupType.Backup &&
                     Configuration.HasCloudBackup() == false &&
-                    Configuration.BackupEncryptionSettings.Key == null)
+                    Configuration.BackupEncryptionSettings?.Key == null)
                     return;
             }
 
             var backupTypes = LicenseManager.GetBackupTypes(databaseRecord.PeriodicBackups);
-            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            var licenseStatus = serverStore.Cluster.GetLicenseStatus(context);
+
             if (backupTypes.HasSnapshotBackup)
                 if (licenseStatus.HasSnapshotBackups == false)
                     throw new LicenseLimitException(LimitType.SnapshotBackup, "Your license doesn't support adding Snapshot backups feature.");

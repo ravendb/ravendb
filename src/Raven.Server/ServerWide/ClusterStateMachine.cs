@@ -4552,6 +4552,28 @@ namespace Raven.Server.ServerWide
 
             return false;
         }
+
+        public LicenseStatus GetLicenseStatus(ClusterOperationContext context)
+        {
+            try
+            {
+                var lowerName = ServerStore.LicenseStorageKey.ToLowerInvariant();
+                using (Slice.From(context.Allocator, lowerName, out Slice key))
+                {
+                    var licenseBlittable = ClusterStateMachine.ReadInternal(context, out _, key);
+                    if (licenseBlittable == null)
+                        return LicenseStatus.Default;
+
+                    return LicenseManager.GetLicenseStatus(JsonDeserializationServer.License(licenseBlittable));
+                }
+            }
+            catch
+            {
+                // this should never fail, but `GetLicenseStatus` can throw and we cannot have an error in the cluster state machine
+                return LicenseStatus.Default;
+            }
+
+        }
     }
 
 }

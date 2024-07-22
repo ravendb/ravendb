@@ -726,12 +726,6 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public LicenseStatus LoadAndGetLicenseStatus(ServerStore serverStore)
-        {
-            var license = serverStore.LoadLicense();
-            return GetLicenseStatus(license);
-        }
-
         public async Task<LicenseRenewalResult> RenewLicense()
         {
             var license = _serverStore.LoadLicense();
