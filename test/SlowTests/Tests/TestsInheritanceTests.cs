@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using FastTests;
@@ -83,17 +84,17 @@ namespace SlowTests.Tests
         [Fact]
         public void AllTestsShouldUseRavenFactOrRavenTheoryAttributes()
         {
+            var expected = new HashSet<string>(File.ReadAllLines("Tests/fact-tests.txt"));
+
             var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
                         from test in GetAssemblyTypes(assembly)
                         from method in test.GetMethods()
-                        where Filter(method)
+                        where Filter(method) && expected.Contains(GetTestName(method)) is false
                         select method;
 
             var array = types.ToArray();
 
-            const int numberToTolerate = 4580;
-
-            if (array.Length == numberToTolerate)
+            if (array.Length > 0)
                 return;
 
             var userMessage = $"We have detected '{array.Length}' test(s) that do not have {nameof(RavenFactAttribute)} or {nameof(RavenTheoryAttribute)} attribute. Please check if tests that you have added have those attributes. List of test files:{Environment.NewLine}{string.Join(Environment.NewLine, array.Select(x => GetTestName(x)))}";
