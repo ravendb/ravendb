@@ -611,7 +611,6 @@ namespace Voron.Impl.Journal
                     if (_waj._env.Disposed)
                         return;
 
-                    var lastFlushed = _lastFlushed;
                     _forTestingPurposes?.OnApplyLogsToDataFileUnderFlushingLock?.Invoke();
 
                     // RavenDB-13302: we need to force a re-check this before we make decisions here
@@ -814,7 +813,12 @@ namespace Voron.Impl.Journal
                 JournalFile journalFile = _waj._files.First(x => x.Number == flushedRecord.FlushedToJournal);
                 
                 var unusedJournals = new List<JournalFile>();
-                _waj._files = _waj._files.RemoveWhile(x => x.Number < flushedRecord.FlushedToJournal, unusedJournals);
+                _waj._files = _waj._files.RemoveWhile(x =>
+                {
+                    if (x.Number < flushedRecord.FlushedToJournal)
+                        return true;
+                    return x.Number == _waj.CurrentFile?.Number && _waj.CurrentFile.GetAvailable4Kbs(txw.CurrentStateRecord) == 0;
+                }, unusedJournals);
 
                 if (_waj._logger.IsInfoEnabled)
                 {
