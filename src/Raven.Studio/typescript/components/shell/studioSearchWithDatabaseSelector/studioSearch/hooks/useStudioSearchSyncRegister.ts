@@ -124,7 +124,7 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
         menuItems.forEach(crawlMenu);
 
         menuLeafs
-            .filter((item) => ko.unwrap(item.nav) && !item.alias)
+            .filter((item) => item.search?.isExcluded !== true)
             .forEach((item) => {
                 const canHandle = item.requiredAccess
                     ? accessManager.canHandleOperation(item.requiredAccess, activeDatabaseName)
@@ -135,8 +135,8 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
                 }
 
                 const route = Array.isArray(item.route) ? item.route.find((x) => x) : item.route;
-                const type = getMenuItemType(route);
 
+                const type = getMenuItemType(route);
                 if (type === null) {
                     return;
                 }
@@ -148,11 +148,11 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
 
                 searchItems.push({
                     type,
-                    text: item.title,
+                    text: item.search?.overrideTitle ?? item.title,
                     route,
                     alternativeTexts: item.search?.alternativeTitles ?? [],
                     icon: item.css.replace("icon-", "") as IconName,
-                    onSelected: (e) => goToMenuItem(item, e),
+                    onSelected: (e: any) => goToMenuItem(item, e),
                     innerActions,
                 });
             });
@@ -173,6 +173,7 @@ const databaseRouteMappings: Record<string, StudioSearchMenuItemType> = {
     indexes: "indexesMenuItem",
     query: "indexesMenuItem",
     documents: "documentsMenuItem",
+    edit: "documentsMenuItem",
     patch: "documentsMenuItem",
     identities: "documentsMenuItem",
     cmpXchg: "documentsMenuItem",

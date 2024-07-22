@@ -27,7 +27,6 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.indexes,
             search: {
                 innerActions: [
-                    { name: "New index" },
                     { name: "Set priority", alternativeNames: ["Set low priority", "Set normal priority", "Set high priority"] },
                     { name: "Set lock mode", alternativeNames: ["Unlock index", "Lock index"] },
                     { name: "Set state", alternativeNames: ["Start indexing", "Disable indexing", "Pause indexing until restart"] },
@@ -73,8 +72,8 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             search: {
                 innerActions: [
                     { name: "Merge indexes" },
-                    { name: "Remove sub-indexes" },
-                    { name: "Remove unused indexes" },
+                    { name: "Remove sub-indexes", alternativeNames: ["Delete sub-indexes"] },
+                    { name: "Remove unused indexes", alternativeNames: ["Delete unused indexes"] },
                     { name: "Unmergable indexes" },
                 ],
             },
@@ -90,13 +89,29 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             badgeData: ko.pureComputed(() => { return footer.default.stats() ? footer.default.stats().countOfIndexingErrors() : null; })
         }),
         new leafMenuItem({
+            title: 'Add New Index',
+            shardingMode: "allShards",
+            route: 'databases/indexes/new',
+            moduleId: require('viewmodels/database/indexes/editIndex'),
+            css: 'icon-plus',
+            nav: false,
+            itemRouteToHighlight: 'databases/indexes',
+            dynamicHash: appUrls.newIndex,
+            search: {
+                alternativeTitles: ["Create Index"],
+            }
+        }),
+        new leafMenuItem({
             title: 'Edit Index',
             shardingMode: "allShards",
             route: 'databases/indexes/edit(/:indexName)',
             moduleId: require('viewmodels/database/indexes/editIndex'),
             css: 'icon-edit',
             nav: false,
-            itemRouteToHighlight: 'databases/indexes'
+            itemRouteToHighlight: 'databases/indexes',
+            search: {
+                isExcluded: true
+            }
         }),
         new leafMenuItem({
             title: 'Terms',
@@ -104,7 +119,10 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             moduleId: require('viewmodels/database/indexes/indexTerms'),
             shardingMode: "allShards",
             css: 'icon-terms',
-            nav: false
+            nav: false,
+            search: {
+                isExcluded: true
+            }
         })
     ];
 

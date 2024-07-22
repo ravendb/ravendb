@@ -42,7 +42,10 @@ function bs5Item() {
         tooltip: "Boostrap 5",
         nav: false,
         css: 'icon-info',
-        dynamicHash: () => "#bs5"
+        dynamicHash: () => "#bs5",
+        search: {
+            isExcluded: true
+        }
     });
 }
 
@@ -63,7 +66,7 @@ function clusterDashboard() {
         search: {
             innerActions: [
                 { name: "Add widgets to board" },
-                { name: "Remove widget from board" },
+                { name: "Delete widget from board", alternativeNames: ["Remove widget from board"] },
                 { name: "Maximize widget" },
             ],
         },

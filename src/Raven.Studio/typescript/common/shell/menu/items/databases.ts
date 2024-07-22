@@ -19,7 +19,7 @@ function getDatabasesMenuItem(appUrls: computedAppUrls) {
         dynamicHash: appUrls.databasesManagement,
         search: {
             innerActions: [
-                { name: "New Database" },
+                { name: "Add New Database", alternativeNames: ["Create Database"] },
                 { name: "Restore database from backup" },
                 { name: "Disable database" },
                 { name: "Enable database" },
@@ -28,7 +28,7 @@ function getDatabasesMenuItem(appUrls: computedAppUrls) {
                 { name: "Resume indexing" },
                 { name: "Restart database" },
                 { name: "Compact database" },
-                { name: "Remove database", alternativeNames: ["Delete database"] },
+                { name: "Delete database", alternativeNames: ["Remove database"] },
                 { name: "Allow database delete" },
                 { name: "Prevent database delete" },
             ],

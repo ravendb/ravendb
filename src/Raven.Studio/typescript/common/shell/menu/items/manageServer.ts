@@ -24,8 +24,7 @@ function getManageServerMenuItem() {
             search: {
                 alternativeTitles: ["Cluster Topology"],
                 innerActions: [
-                    { name: "Add Node to Cluster" },
-                    { name: "Remove Node from Cluster" },
+                    { name: "Delete Node from Cluster", alternativeNames: ["Remove Node from Cluster"] },
                     { name: "Reassign cores" },
                     { name: "Force timeout" },
                 ],
@@ -36,8 +35,13 @@ function getManageServerMenuItem() {
             moduleId: require("viewmodels/manage/addClusterNode"),
             title: "Add Cluster Node",
             nav: false,
+            css: "icon-plus",
             dynamicHash: appUrl.forAddClusterNode,
-            itemRouteToHighlight: 'admin/settings/cluster'
+            itemRouteToHighlight: 'admin/settings/cluster',
+            search: {
+                overrideTitle: "Add New Cluster Node",
+                alternativeTitles: ["Create Cluster Node"],
+            }
         }),
         new leafMenuItem({
             route: 'admin/settings/clientConfiguration',
@@ -111,7 +115,6 @@ function getManageServerMenuItem() {
             requiredAccess: "ClusterAdmin",
             search: {
                 innerActions: [
-                    { name: "Add a Server-Wide Task" },
                     { name: "Server-Wide External Replication" },
                     { name: "Server-Wide Periodic Backup" },
                 ],
@@ -122,16 +125,26 @@ function getManageServerMenuItem() {
             moduleId: require("viewmodels/manage/editServerWideBackup"),
             title: "Edit Server-Wide Backup Task",
             nav: false,
+            css: "icon-plus",
             dynamicHash: appUrl.forEditServerWideBackup,
-            itemRouteToHighlight: 'admin/settings/serverWideTasks'
+            itemRouteToHighlight: 'admin/settings/serverWideTasks',
+            search: {
+                overrideTitle: "Add New Server-Wide Backup Task",
+                alternativeTitles: ["Create Server-Wide Backup Task"],
+            }
         }),
         new leafMenuItem({
             route: 'admin/settings/editServerWideExternalReplication',
             moduleId: require("viewmodels/manage/editServerWideExternalReplication"),
             title: "Edit Server-Wide External Replication Task",
             nav: false,
+            css: "icon-plus",
             dynamicHash: appUrl.forEditServerWideExternalReplication,
-            itemRouteToHighlight: 'admin/settings/serverWideTasks'
+            itemRouteToHighlight: 'admin/settings/serverWideTasks',
+            search: {
+                overrideTitle: "Add New Server-Wide External Replication Task",
+                alternativeTitles: ["Create Server-Wide External Replication Task"],
+            }
         }),
         new leafMenuItem({
             route: 'admin/settings/serverWideCustomAnalyzers',
@@ -143,12 +156,9 @@ function getManageServerMenuItem() {
             requiredAccess: "Operator",
             search: {
                 innerActions: [
-                    { name: "Add a server-wide custom analyzer" },
-                    { name: "Edit server-wide custom analyzer" },
-                    {
-                        name: "Remove server-wide custom analyzer",
-                        alternativeNames: ["Delete server-wide custom analyzer"],
-                    },
+                    { name: "Add New Server-Wide Custom Analyzer", alternativeNames: ["Create Server-Wide Custom Analyzer"] },
+                    { name: "Edit Server-Wide Custom Analyzer" },
+                    { name: "DeleteServer-Wide Custom Analyzer", alternativeNames: ["Remove Server-Wide Custom Analyzer"] },
                 ],
             },
         }),
@@ -162,12 +172,9 @@ function getManageServerMenuItem() {
             requiredAccess: "Operator",
             search: {
                 innerActions: [
-                    { name: "Add a server-wide custom sorter" },
-                    { name: "Edit server-wide custom sorter" },
-                    {
-                        name: "Remove server-wide custom sorter",
-                        alternativeNames: ["Delete server-wide custom sorter"],
-                    },
+                    { name: "Add New Server-Wide Custom Sorter", alternativeNames: ["Create Server-Wide Custom Sorter"] },
+                    { name: "Edit New Server-Wide Custom Sorter" },
+                    { name: "Delete New Server-Wide Custom Sorter", alternativeNames: ["Remove New Server-Wide Custom Sorter"] },
                 ],
             },
         }),
@@ -274,17 +281,68 @@ function getManageServerMenuItem() {
             title: 'Advanced',
             nav: true,
             css: 'icon-debug-advanced',
-            hash: appUrl.forDebugAdvancedThreadsRuntime(),
+            dynamicHash: appUrl.forDebugAdvancedThreadsRuntime,
             requiredAccess: "Operator",
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/debug/advanced/threadsRuntime',
+            moduleId: require('viewmodels/manage/debugAdvancedThreadsRuntime'),
+            title: 'Advanced',
+            nav: false,
+            css: 'icon-debug-advanced',
+            dynamicHash: appUrl.forDebugAdvancedThreadsRuntime,
+            itemRouteToHighlight: 'admin/settings/debug/advanced*details',
             search: {
-                innerActions: [
-                    { name: "Threads Runtime Info" },
-                    { name: "Memory Mapped Files" },
-                    { name: "Cluster Observer Log" },
-                    { name: "Record Transaction Commands" },
-                    { name: "Replay Transaction Commands" },
-                ],
+                overrideTitle: "Threads Runtime Info",
             },
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/debug/advanced/memoryMappedFiles',
+            moduleId: require('viewmodels/manage/debugAdvancedMemoryMappedFiles'),
+            title: "Advanced",
+            nav: false,
+            css: 'icon-debug-advanced',
+            dynamicHash: appUrl.forDebugAdvancedMemoryMappedFiles,
+            itemRouteToHighlight: 'admin/settings/debug/advanced*details',
+            search: {
+                overrideTitle: 'Memory Mapped Files',
+            }
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/debug/advanced/observerLog',
+            moduleId: require('viewmodels/manage/debugAdvancedObserverLog'),
+            title: 'Advanced',
+            nav: false,
+            css: 'icon-debug-advanced',
+            dynamicHash: appUrl.forDebugAdvancedObserverLog,
+            itemRouteToHighlight: 'admin/settings/debug/advanced*details',
+            search: {
+                overrideTitle: 'Cluster Observer Log',
+            }
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/debug/advanced/recordTransactionCommands',
+            moduleId: require('viewmodels/manage/debugAdvancedRecordTransactionCommands'),
+            title: 'Advanced',
+            nav: false,
+            css: 'icon-debug-advanced',
+            dynamicHash: appUrl.forDebugAdvancedRecordTransactionCommands,
+            itemRouteToHighlight: 'admin/settings/debug/advanced*details',
+            search: {
+                overrideTitle: 'Record Transaction Commands',
+            }
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/debug/advanced/replayTransactionCommands',
+            moduleId: require('viewmodels/manage/debugAdvancedReplayTransactionCommands'),
+            title: 'Advanced',
+            nav: false,
+            css: 'icon-debug-advanced',
+            dynamicHash: appUrl.forDebugAdvancedReplayTransactionCommands,
+            itemRouteToHighlight: 'admin/settings/debug/advanced*details',
+            search: {
+                overrideTitle: 'Replay Transaction Commands',
+            }
         }),
     ];
 
