@@ -30,6 +30,7 @@ using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
+using static Raven.Server.Documents.Schemas.Collections;
 using static Raven.Server.Documents.Schemas.Revisions;
 using static Voron.Data.Tables.Table;
 using Constants = Raven.Client.Constants;
@@ -927,16 +928,16 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 Table writeTable = null;
-                if (table.ReadByKey(changeVectorSlice, out TableValueReader tvr) && table.IsOwned(tvr.Id))
+                if (table.ReadByKey(changeVectorSlice, out var tvr) && table.IsOwned(tvr.Id))
                 {
                     writeTable = table;
                 }
                 else
                 {
                     // We request to delete revision with the wrong collection
-                    var revisionData = TableValueToRevision(context, ref tvr, DocumentFields.Data);
+                    var revisionData = TableValueToRevision(context, ref tvr, DocumentFields.Data).Data;
 
-                    var collection = _documentsStorage.ExtractCollectionName(context, revisionData.Data);
+                    var collection = _documentsStorage.ExtractCollectionName(context, revisionData);
                     if (writeTables.TryGetValue(collection.Name, out writeTable) == false)
                     {
                         writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collection);
@@ -1923,6 +1924,90 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 return prevRevisionsCount - currentRevisionsCount;
+            }
+        }
+
+        public Task DeleteRevisionsByChangeVectorAsync(List<string> cvs)
+        {
+            return _database.TxMerger.Enqueue(new DeleteRevisionsByChangeVectorMergedCommand(cvs));
+        }
+
+        private void DeleteRevisionsByChangeVectorInternal(DocumentsOperationContext context, List<string> cvs)
+        {
+            var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
+
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+
+            var writeTables = new Dictionary<string, Table>();
+
+            foreach (var cv in cvs)
+            {
+                using (Slice.From(context.Allocator, cv, out var cvSlice))
+                {
+                    if (table.ReadByKey(cvSlice, out TableValueReader tvr) == false)
+                        throw new InvalidOperationException($"Revision with the cv \"{cv}\" doesn't exist");
+
+                    var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
+
+                    using (DocumentIdWorker.GetSliceFromId(context, revision.LowerId, out var lowerId))
+                    using (GetKeyPrefix(context, lowerId, out var lowerIdPrefix))
+                    {
+                        var collectionName = GetCollectionFor(context, lowerIdPrefix);
+                        var collectionTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
+
+                        DeleteRevisionFromTable(context, collectionTable, writeTables, revision, collectionName, context.GetChangeVector(cv), lastModifiedTicks, revision.Flags);
+
+                        IncrementCountOfRevisions(context, lowerIdPrefix, -1);
+                    }
+                }
+            }
+        }
+
+        internal sealed class DeleteRevisionsByChangeVectorMergedCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        {
+            private readonly List<string> _cvs;
+
+            public DeleteRevisionsByChangeVectorMergedCommand(List<string> cvs)
+            {
+                _cvs = cvs;
+            }
+
+            protected override long ExecuteCmd(DocumentsOperationContext context)
+            {
+                context.DocumentDatabase.DocumentsStorage.RevisionsStorage.DeleteRevisionsByChangeVectorInternal(context, _cvs);
+
+                return 1;
+            }
+
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public Task DeleteAllDocRevisionsAsync(string id)
+        {
+            return _database.TxMerger.Enqueue(new DeleteAllDocRevisionsMergedCommand(id));
+        }
+
+        internal sealed class DeleteAllDocRevisionsMergedCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        {
+            private readonly string _id;
+
+            public DeleteAllDocRevisionsMergedCommand(string id)
+            {
+                _id = id;
+            }
+
+            protected override long ExecuteCmd(DocumentsOperationContext context)
+            {
+                context.DocumentDatabase.DocumentsStorage.RevisionsStorage.ForceDeleteAllRevisionsFor(context, _id);
+                return 1;
+            }
+
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+            {
+                throw new NotImplementedException();
             }
         }
 
