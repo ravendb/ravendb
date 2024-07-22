@@ -86,18 +86,19 @@ namespace Raven.Server.NotificationCenter
                 using (var tx = context.OpenReadTransaction())
                 {
                     // if previous notification had postponed until value pass this value to newly saved notification
-                    var existing = Get(notification.Id, context, tx);
-
-                    if (existing != null && updateExisting == false)
-                        return false;
-
-                    if (postponeUntil == null)
+                    using (var existing = Get(notification.Id, context, tx))
                     {
-                        if (existing?.PostponedUntil == DateTime.MaxValue) // postponed until forever
+                        if (existing != null && updateExisting == false)
                             return false;
 
-                        if (existing?.PostponedUntil != null && existing.PostponedUntil.Value > SystemTime.UtcNow)
-                            postponeUntil = existing.PostponedUntil;
+                        if (postponeUntil == null)
+                        {
+                            if (existing?.PostponedUntil == DateTime.MaxValue) // postponed until forever
+                                return false;
+
+                            if (existing?.PostponedUntil != null && existing.PostponedUntil.Value > SystemTime.UtcNow)
+                                postponeUntil = existing.PostponedUntil;
+                        }
                     }
                 }
 
@@ -180,7 +181,6 @@ namespace Raven.Server.NotificationCenter
         {
             using (var scope = new DisposableScope())
             {
-
                 scope.EnsureDispose(_contextPool.AllocateOperationContext(out TransactionOperationContext context));
                 scope.EnsureDispose(context.OpenReadTransaction());
 
@@ -199,13 +199,22 @@ namespace Raven.Server.NotificationCenter
                 var action = Read(context, ref tvr.Result.Reader);
 
                 if (action.PostponedUntil == null)
+                {
+                    action.Dispose();
                     continue;
+                }
 
                 if (action.PostponedUntil > cutoff)
+                {
+                    action.Dispose();
                     break;
+                }
 
                 if (action.PostponedUntil == DateTime.MaxValue)
+                {
+                    action.Dispose();
                     break;
+                }
 
                 yield return action;
             }
@@ -288,13 +297,16 @@ namespace Raven.Server.NotificationCenter
             {
                 foreach (var action in ReadActionsByCreatedAtIndex(context))
                 {
-                    if (action.Json.TryGetMember(nameof(Notification.Type), out object type) == false)
-                        ThrowCouldNotFindNotificationType(action);
+                    using (action)
+                    {
+                        if (action.Json.TryGetMember(nameof(Notification.Type), out object type) == false)
+                            ThrowCouldNotFindNotificationType(action);
 
-                    var typeLsv = (LazyStringValue)type;
+                        var typeLsv = (LazyStringValue)type;
 
-                    if (typeLsv.CompareTo(notificationType) == 0)
-                        count++;
+                        if (typeLsv.CompareTo(notificationType) == 0)
+                            count++;
+                    }
                 }
             }
 
@@ -326,11 +338,13 @@ namespace Raven.Server.NotificationCenter
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
-                var item = Get(id, context, tx);
-                if (item == null)
-                    return null;
-                item.Json.TryGet("Database", out string db);
-                return db;
+                using (var item = Get(id, context, tx))
+                {
+                    if (item == null)
+                        return null;
+                    item.Json.TryGet("Database", out string db);
+                    return db;
+                }
             }
         }
 
@@ -339,21 +353,22 @@ namespace Raven.Server.NotificationCenter
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
-                var item = Get(id, context, tx);
+                using (var item = Get(id, context, tx))
+                {
+                    if (item == null)
+                        return;
 
-                if (item == null)
-                    return;
+                    var itemCopy = context.GetMemory(item.Json.Size);
 
-                var itemCopy = context.GetMemory(item.Json.Size);
+                    Memory.Copy(itemCopy.Address, item.Json.BasePointer, item.Json.Size);
 
-                Memory.Copy(itemCopy.Address, item.Json.BasePointer, item.Json.Size);
+                    Store(context.GetLazyString(id), item.CreatedAt, postponeUntil,
+                        //we create a copy because we can't update directly from mutated memory
+                        new BlittableJsonReaderObject(itemCopy.Address, item.Json.Size, context)
+                        , tx);
 
-                Store(context.GetLazyString(id), item.CreatedAt, postponeUntil,
-                    //we create a copy because we can't update directly from mutated memory
-                    new BlittableJsonReaderObject(itemCopy.Address, item.Json.Size, context)
-                    , tx);
-
-                tx.Commit();
+                    tx.Commit();
+                }
             }
         }
 
@@ -369,27 +384,30 @@ namespace Raven.Server.NotificationCenter
             var id = AlertRaised.GetKey(AlertType.Server_NewVersionAvailable, null);
             using (Read(id, out var ntv))
             {
-                if (ntv == null)
-                    return;
-
-                var delete = true;
-
-                if (buildNumber != ServerVersion.DevBuildNumber)
+                using (ntv)
                 {
-                    if (ntv.Json.TryGetMember(nameof(AlertRaised.Details), out var o)
-                        && o is BlittableJsonReaderObject detailsJson)
+                    if (ntv == null)
+                        return;
+
+                    var delete = true;
+
+                    if (buildNumber != ServerVersion.DevBuildNumber)
                     {
-                        if (detailsJson.TryGetMember(nameof(NewVersionAvailableDetails.VersionInfo), out o)
-                            && o is BlittableJsonReaderObject newVersionDetailsJson)
+                        if (ntv.Json.TryGetMember(nameof(AlertRaised.Details), out var o)
+                            && o is BlittableJsonReaderObject detailsJson)
                         {
-                            var value = JsonDeserializationServer.LatestVersionCheckVersionInfo(newVersionDetailsJson);
-                            delete = value.BuildNumber <= buildNumber;
+                            if (detailsJson.TryGetMember(nameof(NewVersionAvailableDetails.VersionInfo), out o)
+                                && o is BlittableJsonReaderObject newVersionDetailsJson)
+                            {
+                                var value = JsonDeserializationServer.LatestVersionCheckVersionInfo(newVersionDetailsJson);
+                                delete = value.BuildNumber <= buildNumber;
+                            }
                         }
                     }
-                }
 
-                if (delete)
-                    Delete(id);
+                    if (delete)
+                        Delete(id);
+                }
             }
         }
 
