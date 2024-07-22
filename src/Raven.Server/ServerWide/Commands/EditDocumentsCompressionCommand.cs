@@ -43,10 +43,11 @@ namespace Raven.Server.ServerWide.Commands
 
         public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
         {
-            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54201, serverStore) == false)
                 return;
 
-            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            var licenseStatus = serverStore.Cluster.GetLicenseStatus(context);
+
             if (licenseStatus.HasDocumentsCompression)
                 return;
 
@@ -57,7 +58,6 @@ namespace Raven.Server.ServerWide.Commands
                 return;
 
             throw new LicenseLimitException(LimitType.DocumentsCompression, "Your license doesn't support adding Documents Compression feature.");
-
         }
     }
 }

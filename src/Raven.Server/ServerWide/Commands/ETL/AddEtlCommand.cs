@@ -69,10 +69,10 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
         {
-            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54201, serverStore) == false)
                 return;
 
-            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            var licenseStatus = serverStore.Cluster.GetLicenseStatus(context);
 
             if (licenseStatus.HasRavenEtl)
                 return;
@@ -104,10 +104,11 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
         {
-            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54201, serverStore) == false)
                 return;
 
-            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            var licenseStatus = serverStore.Cluster.GetLicenseStatus(context);
+
             if (licenseStatus.HasSqlEtl)
                 return;
 
@@ -138,10 +139,11 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
         {
-            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54201, serverStore) == false)
                 return;
 
-            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            var licenseStatus = serverStore.Cluster.GetLicenseStatus(context);
+
             if (licenseStatus.HasElasticSearchEtl)
                 return;
 
@@ -172,10 +174,11 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
         {
-            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54201, serverStore) == false)
                 return;
 
-            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            var licenseStatus = serverStore.Cluster.GetLicenseStatus(context);
+
             if (licenseStatus.HasOlapEtl)
                 return;
 
@@ -205,10 +208,11 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
         {
-            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54200, serverStore) == false)
+            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54201, serverStore) == false)
                 return;
 
-            var licenseStatus = serverStore.LicenseManager.LoadAndGetLicenseStatus(serverStore);
+            var licenseStatus = serverStore.Cluster.GetLicenseStatus(context);
+
             if (licenseStatus.HasQueueEtl)
                 return;
 
