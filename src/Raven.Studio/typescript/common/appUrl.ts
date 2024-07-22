@@ -37,11 +37,13 @@ class appUrl {
         patch: ko.pureComputed(() => appUrl.forPatch(appUrl.currentDatabase())),
         indexes: ko.pureComputed(() => appUrl.forIndexes(appUrl.currentDatabase())),
         newIndex: ko.pureComputed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
+        newDoc: ko.pureComputed(() => appUrl.forNewDoc(appUrl.currentDatabase())),
+        newCmpXchg: ko.pureComputed(() => appUrl.forEditCmpXchg(null, appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.pureComputed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
         editExternalReplication: (taskId?: number) => ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase(), taskId)),
         editReplicationHub: (taskId?: number) => ko.pureComputed(() => appUrl.forEditReplicationHub(appUrl.currentDatabase(), taskId)),
         editReplicationSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditReplicationSink(appUrl.currentDatabase(), taskId)),
-        editPeriodicBackupTask: (sourceView: EditPeriodicBackupTaskSourceView, taskId?: number) => ko.pureComputed(() => appUrl.forEditPeriodicBackupTask(appUrl.currentDatabase(), sourceView, taskId)),
+        editPeriodicBackupTask: (sourceView: EditPeriodicBackupTaskSourceView, isManual: boolean, taskId?: number) => ko.pureComputed(() => appUrl.forEditPeriodicBackupTask(appUrl.currentDatabase(), sourceView, isManual, taskId)),
         editSubscription: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase(), taskId, taskName)),
         editRavenEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase(), taskId)),
         editSqlEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditSqlEtl(appUrl.currentDatabase(), taskId)),
@@ -572,11 +574,12 @@ class appUrl {
         return "#databases/tasks/editReplicationSinkTask?" + databasePart + taskPart;
     }
 
-    static forEditPeriodicBackupTask(db: database | string, sourceView: EditPeriodicBackupTaskSourceView, taskId?: number): string {
+    static forEditPeriodicBackupTask(db: database | string, sourceView: EditPeriodicBackupTaskSourceView, isManual: boolean, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const sourceViewPart = "&sourceView=" + sourceView;
+        const manualPart = isManual ? "&manual=true" : "";
         const taskPart = taskId ? "&taskId=" + taskId : "";
-        return "#databases/tasks/editPeriodicBackupTask?" + databasePart + sourceViewPart + taskPart;
+        return "#databases/tasks/editPeriodicBackupTask?" + databasePart + sourceViewPart + manualPart + taskPart;
     }
     
     static forEditManualBackup(db: database | string): string {

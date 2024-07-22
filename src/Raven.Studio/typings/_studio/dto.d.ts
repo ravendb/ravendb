@@ -207,6 +207,8 @@ interface menuItem {
 interface menuSearchConfig {
     alternativeTitles?: string[];
     innerActions?: innerMenuAction[];
+    overrideTitle?: string;
+    isExcluded?: boolean;
 }
 
 interface innerMenuAction {

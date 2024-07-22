@@ -46,8 +46,9 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             search: {
                 innerActions: [
                     {
-                        name: "Add new connection string",
+                        name: "Add New Connection String",
                         alternativeNames: [
+                            "Create Connection String",
                             "RavenDB",
                             "SQL",
                             "OLAP",
@@ -79,8 +80,8 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: bridgeToReact(ClientDatabaseConfiguration, "nonShardedView"),
             search: {
                 innerActions: [
-                    { name: "Identity parts separator" },
-                    { name: "Maximum number of requests per session" },
+                    { name: "Identity Parts Separator" },
+                    { name: "Maximum Number of Requests per Session" },
                     { name: "Load Balance Behavior" },
                     { name: "Seed" },
                     { name: "Read Balance Behavior" },
@@ -98,7 +99,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             search: {
                 innerActions: [
                     { name: "Database Environment" },
-                    { name: "Disable creating new Auto-Indexes" }
+                    { name: "Disable Creating New Auto-Indexes" }
                 ],
             },
             moduleId: bridgeToReact(StudioDatabaseConfiguration, "nonShardedView"),
@@ -116,14 +117,12 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Document Revisions',
             search: {
                 innerActions: [
-                    { name: "Revert revisions" },
-                    { name: "Enforce revisions configuration" },
-                    { name: "Disable revision creation" },
-                    { name: "Create a revision configuration" },
-                    { name: "Delete revision configuration" },
-                    { name: "Edit revision configuration" },
-                    { name: "Enable revision collection" },
-                    { name: "Disable revision collection" },
+                    { name: "Enforce Revisions Configuration" },
+                    { name: "Add New Revision Configuration", alternativeNames: ["Create Revision Configuration"] },
+                    { name: "Delete Revision Configuration", alternativeNames: ["Remove Revision Configuration"] },
+                    { name: "Edit Revision Configuration" },
+                    { name: "Enable Revision Configuration" },
+                    { name: "Disable Revision Configuration" },
                 ],
             },
             nav: true,
@@ -138,7 +137,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: false,
             css: 'icon-revert-revisions',
             dynamicHash: appUrls.revertRevisions,
-            itemRouteToHighlight: "databases/settings/revisions"
+            itemRouteToHighlight: "databases/settings/revisions",
         }),
         new leafMenuItem({
             route: 'databases/settings/refresh',
@@ -215,9 +214,9 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
                     { name: "Enable Time Series" },
                     { name: "Disable Time Series" },
                     { name: "Policy Check Frequency" },
-                    { name: "Delete Time Series" },
+                    { name: "Delete Time Series", alternativeNames: ["Remove Time Series"] },
                     { name: "Edit Time Series" },
-                    { name: "Add a collection specific configuration" },
+                    { name: "Add New Collection Specific Configuration", alternativeNames: ["Create Collection Specific Configuration"] },
                 ],
             },
         }),
@@ -231,8 +230,8 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.customSorters,
             search: {
                 innerActions: [
-                    { name: "Add a custom sorter" },
-                    { name: "Delete custom sorter" },
+                    { name: "Add New Custom Sorter", alternativeNames: ["Create Custom Sorter"] },
+                    { name: "Delete custom sorter", alternativeNames: ["Remove Custom Sorter"] },
                     { name: "Edit custom sorter" },
                     { name: "Test custom sorter" },
                 ],
@@ -248,8 +247,8 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.customAnalyzers,
             search: {
                 innerActions: [
-                    { name: "Add a custom analyzer" },
-                    { name: "Delete custom analyzer" },
+                    { name: "Add New Custom Analyzer", alternativeNames: ["Create Custom Analyzer"] },
+                    { name: "Delete custom analyzer", alternativeNames: ["Remove Custom Analyzer"] },
                     { name: "Edit custom analyzer" },
                 ],
             },
@@ -267,7 +266,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
                     { name: "Reorder nodes" },
                     { name: "Allow dynamic database distribution" },
                     { name: "Add shard" },
-                    { name: "Delete from group" },
+                    { name: "Delete from group", alternativeNames: ["Remove from group"] },
                 ],
             },
         }),
@@ -283,8 +282,8 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             search: {
                 alternativeTitles: ["PostgreSQL protocol credentials"],
                 innerActions: [
-                    { name: "Add new credentials" },
-                    { name: "Delete credentials" },
+                    { name: "Add New Credentials", alternativeNames: ["Create Credentials"] },
+                    { name: "Delete credentials", alternativeNames: ["Remove Credentials"] },
                 ]
             }
         }),

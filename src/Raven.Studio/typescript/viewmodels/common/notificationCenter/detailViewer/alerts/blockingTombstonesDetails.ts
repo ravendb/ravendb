@@ -78,7 +78,7 @@ class blockingTombstonesDetails extends abstractAlertDetails {
             case "Index":
                 return appUrl.forEditIndex(item.source, currentDatabase);
             case "Backup":
-                return appUrl.forEditPeriodicBackupTask(currentDatabase, "Backups", item.blockerTaskId);
+                return appUrl.forEditPeriodicBackupTask(currentDatabase, "Backups", false, item.blockerTaskId);
             case "ElasticSearchEtl":
                 return appUrl.forEditElasticSearchEtl(currentDatabase, item.blockerTaskId);
             case "ExternalReplication":

@@ -247,7 +247,7 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
 
     const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
     const isServerWide = data.shared.serverWide;
-    const editUrl = forCurrentDatabase.editPeriodicBackupTask(sourceView, data.shared.taskId)();
+    const editUrl = forCurrentDatabase.editPeriodicBackupTask(sourceView, false, data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
 

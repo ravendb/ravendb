@@ -84,7 +84,7 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
                     case "OlapEtl":
                         return getUrlFromProvider(appUrl.forEditOlapEtl);
                     case "Backup":
-                        return appUrl.forEditPeriodicBackupTask("Backups", "OngoingTasks", taskId);
+                        return appUrl.forEditPeriodicBackupTask("Backups", "OngoingTasks", false, taskId);
                     case "QueueEtl": {
                         if (brokerType === "Kafka") {
                             return getUrlFromProvider(appUrl.forEditKafkaEtl);

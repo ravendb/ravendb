@@ -18,11 +18,13 @@ interface computedAppUrls {
     identities: KnockoutComputed<string>;
     indexes: KnockoutComputed<string>;
     newIndex: KnockoutComputed<string>;
+    newDoc: KnockoutComputed<string>;
+    newCmpXchg: KnockoutComputed<string>;
     editIndex: (indexName?: string) => KnockoutComputed<string>;
     editExternalReplication: (taskId?: number) => KnockoutComputed<string>;
     editReplicationHub: (taskId?: number) => KnockoutComputed<string>;
     editReplicationSink: (taskId?: number) => KnockoutComputed<string>;
-    editPeriodicBackupTask: (sourceView: EditPeriodicBackupTaskSourceView, taskId?: number) => KnockoutComputed<string>;
+    editPeriodicBackupTask: (sourceView: EditPeriodicBackupTaskSourceView, isManual: boolean, taskId?: number) => KnockoutComputed<string>;
     editSubscription: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editRavenEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editSqlEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;

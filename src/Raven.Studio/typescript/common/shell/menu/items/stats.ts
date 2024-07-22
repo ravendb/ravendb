@@ -89,7 +89,10 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             moduleId: null,
             title: 'Debug',
             nav: false,
-            css: 'icon-debug'
+            css: 'icon-debug',
+            search: {
+                isExcluded: true
+            }
         })
     ];
 
