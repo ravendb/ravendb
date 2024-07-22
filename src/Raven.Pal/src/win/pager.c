@@ -229,7 +229,7 @@ int32_t _open_pager_file(HANDLE h,
     {
         // we allow opening zero len files with read only mode, but don't try to map them
         handle_ptr->file_handle = h;
-        handle_ptr->open_flags = open_flags;
+        handle_ptr->open_flags = open_flags | OPEN_FILE_DO_NOT_MAP;
         handle_ptr->file_mapping_handle = INVALID_HANDLE_VALUE;
         *memory_size = 0;
         *handle = handle_ptr;
