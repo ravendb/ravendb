@@ -84,6 +84,7 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
                 icon: "database",
                 onSelected: (e) => handleDatabaseSwitch(databaseName, e),
                 text: databaseName,
+                alternativeTexts: ["db", "Database", "Active Database", "Select Database"],
             }))
         );
     }, [allDatabaseNames, appUrl, omniSearch, handleDatabaseSwitch]);
