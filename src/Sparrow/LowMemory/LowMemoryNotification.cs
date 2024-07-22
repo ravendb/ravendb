@@ -18,7 +18,7 @@ namespace Sparrow.LowMemory
 
         private readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> _lowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
 
-        public MultipleUseFlag InLowMemory = new();
+        public readonly MultipleUseFlag InLowMemory = new();
         
         internal enum LowMemReason
         {
