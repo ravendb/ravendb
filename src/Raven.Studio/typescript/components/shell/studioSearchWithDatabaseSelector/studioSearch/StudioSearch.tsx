@@ -1,13 +1,12 @@
 import "./StudioSearch.scss";
-import { EmptySet } from "components/common/EmptySet";
-import StudioSearchDatabaseGroupHeader from "./bits/StudioSearchDatabaseGroupHeader";
-import StudioSearchDropdownItem from "./bits/StudioSearchResultItem";
-import { StudioSearchResultDatabaseGroup } from "./studioSearchTypes";
 import { studioSearchInputId, useStudioSearch } from "./hooks/useStudioSearch";
 import React from "react";
 import { Dropdown, DropdownItem, DropdownMenu, Input, Row, DropdownToggle } from "reactstrap";
 import classNames from "classnames";
 import StudioSearchLegend from "./bits/StudioSearchLegend";
+import StudioSearchDatabaseResults from "./bits/StudioSearchDatabaseResults";
+import StudioSearchSwitchToDatabaseResults from "./bits/StudioSearchSwitchToDatabaseResults";
+import StudioSearchServerResults from "./bits/StudioSearchServerResults";
 
 export default function StudioSearch(props: { menuItems: menuItem[] }) {
     const {
@@ -53,68 +52,23 @@ export default function StudioSearch(props: { menuItems: menuItem[] }) {
                             <DropdownItem header className="studio-search__database-col__header--sticky">
                                 <span className="small-label">Active database</span>
                             </DropdownItem>
-                            {matchStatus.hasDatabaseMatch ? (
-                                Object.keys(results.database)
-                                    .filter(
-                                        (groupType: StudioSearchResultDatabaseGroup) =>
-                                            results.database[groupType].length > 0
-                                    )
-                                    .map((groupType: StudioSearchResultDatabaseGroup) => (
-                                        <div key={groupType} className="studio-search__database-col__group">
-                                            <DropdownItem header className="studio-search__database-col__group__header">
-                                                <StudioSearchDatabaseGroupHeader groupType={groupType} />
-                                            </DropdownItem>
-                                            {results.database[groupType].map((item) => (
-                                                <StudioSearchDropdownItem
-                                                    key={item.id}
-                                                    item={item}
-                                                    activeItemId={activeItem?.id}
-                                                />
-                                            ))}
-                                        </div>
-                                    ))
-                            ) : (
-                                <DropdownItem disabled className="studio-search__database-col__group pt-0">
-                                    <EmptySet compact>No results found</EmptySet>
-                                </DropdownItem>
-                            )}
-                            {matchStatus.hasSwitchToDatabaseMatch && (
-                                <div className="studio-search__database-col__group studio-search__switch-database">
-                                    <DropdownItem
-                                        header
-                                        className="studio-search__database-col__group__header studio-search__database-col__group__header--sticky"
-                                    >
-                                        <span className="small-label">Switch active database</span>
-                                    </DropdownItem>
-                                    {results.switchToDatabase.map((item) => (
-                                        <StudioSearchDropdownItem
-                                            key={item.id}
-                                            item={item}
-                                            activeItemId={activeItem?.id}
-                                        />
-                                    ))}
-                                </div>
-                            )}
+                            <StudioSearchDatabaseResults
+                                hasDatabaseMatch={matchStatus.hasDatabaseMatch}
+                                databaseResults={results.database}
+                                activeItem={activeItem}
+                            />
+                            <StudioSearchSwitchToDatabaseResults
+                                hasSwitchToDatabaseMatch={matchStatus.hasSwitchToDatabaseMatch}
+                                switchToDatabaseResults={results.switchToDatabase}
+                                activeItem={activeItem}
+                            />
                         </div>
-                        {matchStatus.hasServerMatch && (
-                            <div
-                                className="col-md-4 col-sm-12 studio-search__server-col p-0"
-                                ref={refs.serverColumnRef as any}
-                            >
-                                <DropdownItem header className="studio-search__server-col__header--sticky">
-                                    <span className="small-label">Server</span>
-                                </DropdownItem>
-                                <div className="studio-search__server-col__group">
-                                    {results.server.map((item) => (
-                                        <StudioSearchDropdownItem
-                                            key={item.id}
-                                            item={item}
-                                            activeItemId={activeItem?.id}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                        <StudioSearchServerResults
+                            serverColumnRef={refs.serverColumnRef}
+                            hasServerMatch={matchStatus.hasServerMatch}
+                            serverResults={results.server}
+                            activeItem={activeItem}
+                        />
                         <StudioSearchLegend />
                     </Row>
                 </DropdownMenu>

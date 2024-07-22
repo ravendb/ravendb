@@ -15,6 +15,7 @@
         height: 35px;
         border-top-right-radius: var(--bs-border-radius-pill) !important;
         border-bottom-right-radius: var(--bs-border-radius-pill) !important;
+        background-color: colors.$panel-header-bg-var;
     }
 
     .database-name {
