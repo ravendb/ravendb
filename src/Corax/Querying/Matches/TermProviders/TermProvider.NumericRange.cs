@@ -1,23 +1,33 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using Corax.Indexing;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
+using Corax.Utils;
+using Sparrow;
+using Sparrow.Compression;
 using Sparrow.Extensions;
+using Sparrow.Server;
+using Voron.Data.Containers;
 using Voron.Data.Lookups;
+using Voron.Data.PostingLists;
+using Voron.Util;
 using Range = Corax.Querying.Matches.Meta.Range;
 
 
 namespace Corax.Querying.Matches.TermProviders
 {
     [DebuggerDisplay("{DebugView,nq}")]
-    public struct TermNumericRangeProvider<TLookupIterator, TLow, THigh, TVal> : ITermProvider
+    public struct TermNumericRangeProvider<TLookupIterator, TLow, THigh, TVal> : ITermProvider, IAggregationProvider
         where TLookupIterator : struct, ILookupIterator
         where TLow : struct, Range.Marker
         where THigh  : struct, Range.Marker
         where TVal : struct, ILookupKey
     {
         private readonly Querying.IndexSearcher _searcher;
+        private readonly Lookup<TVal> _set;
         private readonly FieldMetadata _field;
         private TVal _low, _high;
         private TLookupIterator _iterator;
@@ -29,6 +39,7 @@ namespace Corax.Querying.Matches.TermProviders
         public TermNumericRangeProvider(Querying.IndexSearcher searcher, Lookup<TVal> set, in FieldMetadata field, TVal low, TVal high)
         {
             _searcher = searcher;
+            _set = set;
             _field = field;
             _iterator = set.Iterate<TLookupIterator>();
             _low = low;
@@ -186,5 +197,81 @@ namespace Corax.Querying.Matches.TermProviders
         }
 
         public string DebugView => Inspect().ToString();
+        
+        public unsafe IDisposable AggregateByTerms(out List<string> terms, out Span<long> counts)
+        {
+            throw new NotSupportedException($"Primitive {nameof(TermNumericRangeProvider<TLookupIterator, TLow, THigh, TVal>)} doesnt support aggregation by terms.");
+        }
+        
+        public unsafe long AggregateByRange()
+        {
+            //we do not support Long ranges since we want to perform aggregation on doubles 
+            Debug.Assert(typeof(TVal) == typeof(DoubleLookupKey), "typeof(TVal) == typeof(DoubleLookupKey)");
+            
+            const long singleMarker = -1L;
+            if (_isEmpty)
+            {
+                return 0;
+            }
+
+            var allocator = _searcher.Allocator;
+            
+            NativeList<long> postingLists = new();
+            postingLists.Initialize(_searcher.Allocator);
+
+            NativeList<TermIdMask> postingListsType = new();
+            postingListsType.Initialize(_searcher.Allocator);
+            
+            while (_iterator.MoveNext(out var termId))
+            {
+                if (termId == _lastTermId)
+                {
+                    _isEmpty = true;
+                    if (_includeLastTerm == false)
+                        break;
+                }
+                
+                if ((termId & (long)TermIdMask.PostingList) != 0)
+                {
+                    postingLists.Add(allocator, EntryIdEncodings.GetContainerId(termId));
+                    postingListsType.Add(allocator, TermIdMask.PostingList);
+                }
+                else if ((termId & (long)TermIdMask.SmallPostingList) != 0)
+                {
+                    postingLists.Add(allocator, EntryIdEncodings.GetContainerId(termId));
+                    postingListsType.Add(allocator, TermIdMask.SmallPostingList);
+                }
+                else
+                {
+                    postingLists.Add(allocator, singleMarker);
+                    postingListsType.Add(allocator, TermIdMask.Single);
+                }
+            }
+            
+            using var _ = _searcher.Allocator.Allocate((sizeof(UnmanagedSpan*)) * postingLists.Count, out ByteString containers);
+            var containersPtr = (UnmanagedSpan*)containers.Ptr;
+            
+            Container.GetAll(_searcher._transaction.LowLevelTransaction, postingLists.ToSpan(), containersPtr, singleMarker, _searcher._transaction.LowLevelTransaction.PageLocator);
+
+            long totalCount = 0;
+            for (int i = 0; i < postingLists.Count; ++i)
+            {
+                var localCount = (postingListsType[i]) switch
+                {
+                    TermIdMask.PostingList => ((PostingListState*)(containersPtr[i].Address))->NumberOfEntries,
+                    TermIdMask.SmallPostingList => VariableSizeEncoding.Read<long>(containersPtr[i].Address, out var _),
+                    TermIdMask.Single => 1,
+                    _ => throw new InvalidDataException($"Supported posting lists types are: 'PostingList', 'SmallPostingList', 'Single' but got {postingListsType[i]}")
+                };
+
+                totalCount += localCount;
+            }
+            
+            postingLists.Dispose(allocator);
+            postingListsType.Dispose(allocator);
+            return totalCount;
+        }
+
+        public int NumberOfTerms => throw new NotSupportedException($"{nameof(NumberOfTerms)} is not supported in {nameof(TermNumericRangeProvider<TLookupIterator, TLow, THigh, TVal>)}."); // unknown
     }
 }

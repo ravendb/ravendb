@@ -98,6 +98,25 @@ public sealed partial class CompactTree : IPrepareForCommit
             Key.Set(keyLenInBits, keyPtr, parent.State.DictionaryId);
             return Key;
         }
+        
+        public void FillKey<T>(CompactKey key, Lookup<T> parent) where T : struct, ILookupKey
+        {
+            var llt = parent.Llt;
+
+            byte* keyPtr;
+            int keyLenInBits;
+            if (ContainerId == 0)
+            {
+                keyPtr = null;
+                keyLenInBits = 0;
+            }
+            else
+            {
+                GetEncodedKey(llt, ContainerId, out keyLenInBits, out keyPtr);
+            }
+            
+            key.Set(keyLenInBits, keyPtr, parent.State.DictionaryId);
+        }
 
         public void Init<T>(Lookup<T> parent) where T : struct, ILookupKey
         {
