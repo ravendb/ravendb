@@ -5,7 +5,7 @@ using System.Data.Common;
 using System.Linq;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 
-namespace Raven.Server.Documents.ETL.Providers.SQL.Test
+namespace Raven.Server.Documents.ETL.Relational.Test
 {
     public sealed class TableQuerySummary
     {
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Test
             }
             else if (param.DbType == DbType.AnsiString || param.DbType == DbType.String)
             {
-                parameterValue = $"'{RelationalDatabaseWriter.SanitizeSqlValue(parameterValue.ToString())}'";
+                parameterValue = $"'{SqlDatabaseWriter.SanitizeSqlValue(parameterValue.ToString())}'";
             }
             else if (param.DbType == DbType.Binary)
             {

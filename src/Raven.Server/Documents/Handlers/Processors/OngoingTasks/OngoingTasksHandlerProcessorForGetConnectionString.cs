@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
@@ -25,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
         }
 
-        private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>, Dictionary<string, ElasticSearchConnectionString>, Dictionary<string, QueueConnectionString>)
+        private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>, Dictionary<string, ElasticSearchConnectionString>, Dictionary<string, QueueConnectionString>, Dictionary<string, SnowflakeConnectionString>)
           GetConnectionString(RawDatabaseRecord rawRecord, string connectionStringName, ConnectionStringType connectionStringType)
         {
             var ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
@@ -33,6 +34,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             var olapConnectionStrings = new Dictionary<string, OlapConnectionString>();
             var elasticSearchConnectionStrings = new Dictionary<string, ElasticSearchConnectionString>();
             var queueConnectionStrings = new Dictionary<string, QueueConnectionString>();
+            var snowflakeConnectionStrings = new Dictionary<string, SnowflakeConnectionString>();
 
             switch (connectionStringType)
             {
@@ -80,12 +82,21 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     }
 
                     break;
+                
+                case ConnectionStringType.Snowflake:
+                    var recordSnowflakeConnectionStrings = rawRecord.SnowflakeConnectionStrings;
+                    if (recordSnowflakeConnectionStrings != null && recordSnowflakeConnectionStrings.TryGetValue(connectionStringName, out var snowflakeConnectionString))
+                    {
+                        snowflakeConnectionStrings.TryAdd(connectionStringName, snowflakeConnectionString);
+                    }
+
+                    break;
 
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
             }
 
-            return (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticSearchConnectionStrings, queueConnectionStrings);
+            return (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticSearchConnectionStrings, queueConnectionStrings, snowflakeConnectionStrings);
         }
 
         public override async ValueTask ExecuteAsync()
@@ -109,6 +120,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 Dictionary<string, OlapConnectionString> olapConnectionStrings;
                 Dictionary<string, ElasticSearchConnectionString> elasticSearchConnectionStrings;
                 Dictionary<string, QueueConnectionString> queueConnectionStrings;
+                Dictionary<string, SnowflakeConnectionString> snowflakeConnectionStrings;
 
                 using (context.OpenReadTransaction())
                 using (var rawRecord = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.DatabaseName))
@@ -122,7 +134,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                             throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
 
 
-                        (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticSearchConnectionStrings, queueConnectionStrings) = GetConnectionString(rawRecord, connectionStringName, connectionStringType);
+                        (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticSearchConnectionStrings, queueConnectionStrings, snowflakeConnectionStrings) = GetConnectionString(rawRecord, connectionStringName, connectionStringType);
                     }
                     else
                     {
@@ -131,6 +143,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                         olapConnectionStrings = rawRecord.OlapConnectionString;
                         elasticSearchConnectionStrings = rawRecord.ElasticSearchConnectionStrings;
                         queueConnectionStrings = rawRecord.QueueConnectionStrings;
+                        snowflakeConnectionStrings = rawRecord.SnowflakeConnectionStrings;
                     }
                 }
 
@@ -142,7 +155,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                         SqlConnectionStrings = sqlConnectionStrings,
                         OlapConnectionStrings = olapConnectionStrings,
                         ElasticSearchConnectionStrings = elasticSearchConnectionStrings,
-                        QueueConnectionStrings = queueConnectionStrings
+                        QueueConnectionStrings = queueConnectionStrings,
+                        SnowflakeConnectionStrings = snowflakeConnectionStrings
                     };
                     context.Write(writer, result.ToJson());
                 }

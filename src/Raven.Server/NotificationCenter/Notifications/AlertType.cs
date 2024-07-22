@@ -16,6 +16,8 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         SqlEtl_ConnectionError,
         SqlEtl_ProviderError,
+        
+        SnowflakeEtl_ConnectionError,
 
         Etl_InvalidScript,
 

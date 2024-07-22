@@ -613,6 +613,41 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
 
             result.DatabaseRecord.QueueSinksUpdated = true;
         }
+        
+        if (databaseRecord.SnowflakeConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SnowflakeConnectionStrings))
+        {
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring Snowflake connection strings from smuggler");
+
+            foreach (var connectionString in databaseRecord.SnowflakeConnectionStrings)
+            {
+                tasks.Add(_server.SendToLeaderAsync(new PutSnowflakeConnectionStringCommand(connectionString.Value, _name, RaftIdGenerator.DontCareId)));
+            }
+
+            result.DatabaseRecord.SnowflakeConnectionStringsUpdated = true;
+        }
+        
+        if (databaseRecord.SnowflakeEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SnowflakeEtls))
+        {
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring Snowflake ETLs configuration from smuggler");
+
+            foreach (var etl in databaseRecord.SnowflakeEtls)
+            {
+                _currentDatabaseRecord?.SnowflakeEtls.ForEach(x =>
+                {
+                    if (x.Name.Equals(etl.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        tasks.Add(_server.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.SnowflakeEtl, _name, RaftIdGenerator.DontCareId)));
+                    }
+                });
+                etl.TaskId = 0;
+                etl.Disabled = true;
+                tasks.Add(_server.SendToLeaderAsync(new AddSnowflakeEtlCommand(etl, _name, RaftIdGenerator.DontCareId)));
+            }
+
+            result.DatabaseRecord.SnowflakeEtlsUpdated = true;
+        }
 
         if (tasks.Count == 0)
             return;

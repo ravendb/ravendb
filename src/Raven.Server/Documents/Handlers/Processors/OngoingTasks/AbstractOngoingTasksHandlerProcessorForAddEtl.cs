@@ -81,6 +81,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 case EtlType.Queue:
                     RequestHandler.ServerStore.LicenseManager.AssertCanAddQueueEtl();
                     break;
+                case EtlType.Snowflake:
+                    RequestHandler.ServerStore.LicenseManager.AssertCanAddSnowflakeEtl();
+                    break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
             }

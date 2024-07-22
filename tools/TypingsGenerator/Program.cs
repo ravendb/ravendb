@@ -23,6 +23,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Indexes;
@@ -65,8 +66,8 @@ using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
-using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
-using Raven.Server.Documents.ETL.Providers.SQL.Test;
+using Raven.Server.Documents.ETL.Relational;
+using Raven.Server.Documents.ETL.Relational.Test;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
@@ -526,9 +527,9 @@ namespace TypingsGenerator
             // ongoing tasks - SQL ETL
             scripter.AddType(typeof(OngoingTaskSqlEtl));
             scripter.AddType(typeof(SqlEtlConfiguration));
-            scripter.AddType(typeof(TestSqlEtlScript));
+            scripter.AddType(typeof(TestRelationalEtlScript<SqlConnectionString, SqlEtlConfiguration>));
             scripter.AddType(typeof(SqlEtlTable));
-            scripter.AddType(typeof(SqlEtlTestScriptResult));
+            scripter.AddType(typeof(RelationalEtlTestScriptResult));
 
             // ongoing tasks - Olap ETL
             scripter.AddType(typeof(OngoingTaskOlapEtl));
@@ -555,6 +556,12 @@ namespace TypingsGenerator
             scripter.AddType(typeof(KafkaConnectionSettings));
             scripter.AddType(typeof(TestQueueSinkScript));
             scripter.AddType(typeof(TestQueueSinkScriptResult));
+            
+            // ongoing tasks - Snowflake ETL
+            scripter.AddType(typeof(OngoingTaskSnowflakeEtl));
+            scripter.AddType(typeof(SnowflakeEtlConfiguration));
+            scripter.AddType(typeof(TestRelationalEtlScript<SnowflakeConnectionString, SnowflakeEtlConfiguration>));
+            scripter.AddType(typeof(SnowflakeEtlTable));
 
             // connection strings
             scripter.AddType(typeof(ConnectionString));

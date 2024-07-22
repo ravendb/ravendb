@@ -4,6 +4,7 @@ using Microsoft.Data.SqlClient;
 using Npgsql;
 using Oracle.ManagedDataAccess.Client;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using DbCommandBuilder = Raven.Server.Documents.ETL.Relational.RelationalWriters.DbCommandBuilder;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {

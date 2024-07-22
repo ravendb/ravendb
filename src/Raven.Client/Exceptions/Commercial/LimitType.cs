@@ -48,6 +48,10 @@ namespace Raven.Client.Exceptions.Commercial
 
         [Description("Queue ETL")]
         QueueEtl,
+        
+        [Description("Snowflake ETL")]
+        SnowflakeEtl,
+
 
         [Description("Cores Limit")]
         Cores,

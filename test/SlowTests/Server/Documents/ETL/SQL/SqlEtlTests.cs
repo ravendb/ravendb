@@ -19,12 +19,14 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
-using Raven.Server.Documents.ETL.Providers.SQL.Test;
+using Raven.Server.Documents.ETL.Relational;
+using Raven.Server.Documents.ETL.Relational.Test;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using Raven.Tests.Core.Utils.Entities;
@@ -34,6 +36,7 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
 using Xunit.Abstractions;
+using SnowflakeConnectionString = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
 
 namespace SlowTests.Server.Documents.ETL.SQL
 {
@@ -727,7 +730,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var testResult = SqlEtl.TestScript(
-                            new TestSqlEtlScript
+                            new TestRelationalEtlScript<SqlConnectionString,SqlEtlConfiguration>
                             {
                                 PerformRolledBackTransaction = performRolledBackTransaction,
                                 DocumentId = docId,
@@ -751,7 +754,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                                 }
                             }, database, database.ServerStore, context);
                         
-                        var result = (SqlEtlTestScriptResult)testResult;
+                        var result = (RelationalEtlTestScriptResult)testResult;
                         Assert.Equal(0, result.TransformationErrors.Count);
                         Assert.Equal(0, result.LoadErrors.Count);
                         Assert.Equal(0, result.SlowSqlWarnings.Count);
@@ -811,7 +814,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var testResult = SqlEtl.TestScript(
-                            new TestSqlEtlScript
+                            new TestRelationalEtlScript<SqlConnectionString, SqlEtlConfiguration>
                             {
                                 PerformRolledBackTransaction = performRolledBackTransaction,
                                 DocumentId = docId,
@@ -830,7 +833,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                                 }
                             }, database, database.ServerStore, context);
                         
-                        var result = (SqlEtlTestScriptResult)testResult;
+                        var result = (RelationalEtlTestScriptResult)testResult;
 
                         Assert.Equal(0, result.TransformationErrors.Count);
                         Assert.Equal(0, result.LoadErrors.Count);

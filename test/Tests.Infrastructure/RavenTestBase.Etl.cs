@@ -34,6 +34,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Raven.Client.Util;
 using Raven.Server;
+using Raven.Server.Documents.ETL.Providers.Snowflake;
 using Tests.Infrastructure;
 
 namespace FastTests
@@ -250,6 +251,8 @@ namespace FastTests
                     tag = OlapEtl.OlaptEtlTag;
                 else if (typeof(T) == typeof(QueueConnectionString))
                     tag = QueueEtl<QueueItem>.QueueEtlTag;
+                else if (typeof(T) == typeof(SnowflakeConnectionString))
+                    tag = SnowflakeEtl.SnowflakeEtlTag;
                 else
                     throw new NotSupportedException($"Unknown ETL type: {typeof(T)}");
 
@@ -290,6 +293,8 @@ namespace FastTests
                     tag = OlapEtl.OlaptEtlTag;
                 else if (typeof(T) == typeof(QueueConnectionString))
                     tag = QueueEtl<QueueItem>.QueueEtlTag;
+                else if (typeof(T) == typeof(SnowflakeConnectionString))
+                    tag = SnowflakeEtl.SnowflakeEtlTag;
                 else
                     throw new NotSupportedException($"Unknown ETL type: {typeof(T)}");
 

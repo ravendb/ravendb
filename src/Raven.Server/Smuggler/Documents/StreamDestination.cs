@@ -17,6 +17,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.QueueSink;
@@ -478,6 +479,22 @@ namespace Raven.Server.Smuggler.Documents
                             _writer.WritePropertyName(nameof(databaseRecord.QueueEtls));
                             WriteQueueEtls(databaseRecord.QueueEtls);
                         }
+                        
+                        
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.SnowflakeConnectionStrings))
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.SnowflakeConnectionStrings));
+                            WriteSnowflakeConnectionStrings(databaseRecord.SnowflakeConnectionStrings);
+                        }
+                        
+                        
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.SnowflakeEtls))
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.SnowflakeEtls));
+                            WriteSnowflakeEtls(databaseRecord.SnowflakeEtls);
+                        }
 
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.QueueSinks))
                         {
@@ -840,6 +857,28 @@ namespace Raven.Server.Smuggler.Documents
 
                 _writer.WriteEndArray();
             }
+            
+            
+            private void WriteSnowflakeEtls(List<SnowflakeEtlConfiguration> snowflakeEtlConfiguration)
+            {
+                if (snowflakeEtlConfiguration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _writer.WriteStartArray();
+
+                var first = true;
+                foreach (var etl in snowflakeEtlConfiguration)
+                {
+                    if (first == false)
+                        _writer.WriteComma();
+                    first = false;
+                    _context.Write(_writer, etl.ToJson());
+                }
+
+                _writer.WriteEndArray();
+            }
 
             private void WriteExternalReplications(List<ExternalReplication> externalReplication)
             {
@@ -1061,6 +1100,26 @@ namespace Raven.Server.Smuggler.Documents
 
                 _writer.WriteEndObject();
             }
+            
+            private void WriteSnowflakeConnectionStrings(Dictionary<string, SnowflakeConnectionString> connections)
+            {
+                _writer.WriteStartObject();
+
+                var first = true;
+                foreach (var snowflakeConnectionString in connections)
+                {
+                    if (first == false)
+                        _writer.WriteComma();
+                    first = false;
+
+                    _writer.WritePropertyName(snowflakeConnectionString.Key);
+
+                    _context.Write(_writer, snowflakeConnectionString.Value.ToJson());
+                }
+
+                _writer.WriteEndObject();
+            }
+
 
             private void WritePostgreSqlConfiguration(PostgreSqlConfiguration postgreSqlConfig)
             {

@@ -38,6 +38,7 @@ public enum LicenseAttribute
     PostgreSqlIntegration,
     CanBeActivatedUntil,
     QueueEtl,
+    SnowflakeEtl,
     ServerWideBackups,
     ServerWideExternalReplications,
     ServerWideCustomSorters,

@@ -1,22 +1,22 @@
-using Raven.Server.Utils.Metrics;
+﻿using Raven.Server.Utils.Metrics;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.ETL.Providers.SQL.Metrics
-{
-    public sealed class SqlEtlTableMetrics
+namespace Raven.Server.Documents.ETL.Relational.Metrics;
+
+ public sealed class RelationalEtlTableMetrics
     {
         public readonly string TableName;
         public readonly MeterMetric DeleteActionsMeter;
         public readonly MeterMetric InsertActionsMeter;
 
-        public SqlEtlTableMetrics(string tableName)
+        public RelationalEtlTableMetrics(string tableName)
         {
             TableName = tableName;
             DeleteActionsMeter = new MeterMetric();
             InsertActionsMeter = new MeterMetric();
         }
 
-        public DynamicJsonValue ToSqlEtlTableMetricsDataDictionary()
+        public DynamicJsonValue ToRelationalEtlTableMetricsDataDictionary()
         {
             return new DynamicJsonValue
             {
@@ -25,4 +25,4 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Metrics
             };
         }
     }
-}
+

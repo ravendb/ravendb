@@ -24,7 +24,7 @@ internal sealed class SqlEtlHandlerProcessorForTestConnection<TOperationContext>
         {
             var factoryName = RequestHandler.GetStringQueryString("factoryName");
             var connectionString = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-            RelationalDatabaseWriter.TestConnection(factoryName, connectionString);
+            SqlDatabaseWriter.TestConnection(factoryName, connectionString);
 
             DynamicJsonValue result = new()
             {

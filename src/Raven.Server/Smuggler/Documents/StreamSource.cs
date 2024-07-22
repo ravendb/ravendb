@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Replication;
@@ -430,6 +431,25 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
                 }
+                
+                
+                if (reader.TryGet(nameof(databaseRecord.SnowflakeEtls), out BlittableJsonReaderArray snowflakeEtls) &&
+                    snowflakeEtls != null)
+                {
+                    databaseRecord.SnowflakeEtls = new List<SnowflakeEtlConfiguration>();
+                    foreach (BlittableJsonReaderObject etl in snowflakeEtls)
+                    {
+                        try
+                        {
+                            databaseRecord.SnowflakeEtls.Add(JsonDeserializationCluster.SnowflakeEtlConfiguration(etl));
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to import the Raven Snowflake Etls configuration from smuggler file. Skipping.", e);
+                        }
+                    }
+                }
 
                 if (reader.TryGet(nameof(databaseRecord.QueueSinks), out BlittableJsonReaderArray queueSinks) &&
                     queueSinks != null)
@@ -500,6 +520,34 @@ namespace Raven.Server.Smuggler.Documents
                         databaseRecord.SqlConnectionStrings.Clear();
                         if (_log.IsInfoEnabled)
                             _log.Info("Wasn't able to import the SQL connection strings from smuggler file. Skipping.", e);
+                    }
+                }
+                
+                
+                if (reader.TryGet(nameof(databaseRecord.SnowflakeConnectionStrings), out BlittableJsonReaderObject snowflakeConnectionStrings) &&
+                    snowflakeConnectionStrings != null)
+                {
+                    try
+                    {
+                        foreach (var connectionName in snowflakeConnectionStrings.GetPropertyNames())
+                        {
+                            if (snowflakeConnectionStrings.TryGet(connectionName, out BlittableJsonReaderObject connection) == false)
+                            {
+                                if (_log.IsInfoEnabled)
+                                    _log.Info($"Wasn't able to import the Snowflake connection string {connectionName} from smuggler file. Skipping.");
+
+                                continue;
+                            }
+
+                            var connectionString = JsonDeserializationCluster.SnowflakeConnectionString(connection);
+                            databaseRecord.SnowflakeConnectionStrings[connectionString.Name] = connectionString;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        databaseRecord.SnowflakeConnectionStrings.Clear();
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the Snowflake connection strings from smuggler file. Skipping.", e);
                     }
                 }
 

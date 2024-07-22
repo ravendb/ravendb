@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions.Documents.Patching;
@@ -28,8 +29,10 @@ using Raven.Server.Documents.ETL.Providers.Queue.Kafka;
 using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
+using Raven.Server.Documents.ETL.Providers.Snowflake;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
+using Raven.Server.Documents.ETL.Relational;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.ETL.Test;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -1081,21 +1084,21 @@ namespace Raven.Server.Documents.ETL
 
             TCS connection = null;
 
-            var sqlTestScript = testScript as TestSqlEtlScript;
+            var relationalTestScript = testScript as TestRelationalEtlScript<TCS, TC>; //todo: make it relational not only sql
 
-            if (sqlTestScript != null)
+            if (relationalTestScript != null)
             {
                 // we need to have connection string when testing SQL ETL because we need to have the factory name
                 // and if PerformRolledBackTransaction = true is specified then we need make a connection to SQL
 
                 var csErrors = new List<string>();
 
-                if (sqlTestScript.Connection != null)
+                if (relationalTestScript.Connection != null)
                 {
-                    if (sqlTestScript.Connection.Validate(ref csErrors) == false)
+                    if (relationalTestScript.Connection.Validate(ref csErrors) == false)
                         throw new InvalidOperationException($"Invalid connection string due to {string.Join(";", csErrors)}");
 
-                    connection = sqlTestScript.Connection as TCS;
+                    connection = relationalTestScript.Connection as TCS;
                 }
                 else
                 {
@@ -1178,14 +1181,14 @@ namespace Raven.Server.Documents.ETL
                         {
                             sqlEtl.EnsureThreadAllocationStats();
 
-                            var sqlItem = testScript.IsDelete ? new ToSqlItem(tombstone, docCollection) : new ToSqlItem(document, docCollection);
+                            var sqlItem = testScript.IsDelete ? new ToRelationalItem(tombstone, docCollection) : new ToRelationalItem(document, docCollection);
 
                             var transformed = sqlEtl.Transform(new[] { sqlItem }, context, new EtlStatsScope(new EtlRunStats()),
                                 new EtlProcessState());
 
-                            Debug.Assert(sqlTestScript != null);
+                            Debug.Assert(relationalTestScript != null);
 
-                            var result = sqlEtl.RunTest(context, transformed, sqlTestScript.PerformRolledBackTransaction);
+                            var result = sqlEtl.RunTest(context, transformed, relationalTestScript.PerformRolledBackTransaction);
                             result.DebugOutput = debugOutput;
                             return result;
                         }
@@ -1342,6 +1345,26 @@ namespace Raven.Server.Documents.ETL
                                     throw new NotSupportedException($"Unknown Queue ETL type in script test: {queueEtl.GetType().FullName}");
                             }
                         }
+                        
+                    case EtlType.Snowflake:
+                        using (var snowflakeEtl = new SnowflakeEtl(testScript.Configuration.Transforms[0], testScript.Configuration as SnowflakeEtlConfiguration, database,
+                            database.ServerStore))
+                        using (snowflakeEtl.EnterTestMode(out debugOutput))
+                        {
+                            snowflakeEtl.EnsureThreadAllocationStats();
+
+                            var snowflakeItem = testScript.IsDelete ? new ToRelationalItem(tombstone, docCollection) : new ToRelationalItem(document, docCollection);
+
+                            var transformed = snowflakeEtl.Transform(new[] { snowflakeItem }, context, new EtlStatsScope(new EtlRunStats()),
+                                new EtlProcessState());
+
+                            Debug.Assert(relationalTestScript != null);
+
+                            var result = snowflakeEtl.RunTest(context, transformed, relationalTestScript.PerformRolledBackTransaction);
+                            result.DebugOutput = debugOutput;
+                            return result;
+                        }
+                        
                     default:
                         throw new NotSupportedException($"Unknown ETL type in script test: {testScript.Configuration.EtlType}");
                 }

@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Refresh;
@@ -111,6 +112,17 @@ public sealed class DatabaseRecordBuilder :
 
         return this;
     }
+    
+    IConnectionStringConfigurationBuilder IConnectionStringConfigurationBuilder.AddSnowflakeConnectionString(SnowflakeConnectionString connectionString)
+    {
+        if (connectionString == null)
+            throw new ArgumentNullException(nameof(connectionString));
+
+        _databaseRecord.SnowflakeConnectionStrings ??= new Dictionary<string, SnowflakeConnectionString>();
+        _databaseRecord.SnowflakeConnectionStrings.Add(connectionString.Name, connectionString);
+
+        return this;
+    }
 
     IDatabaseRecordBuilder IDatabaseRecordBuilderInitializer.Regular(string databaseName)
     {
@@ -185,6 +197,17 @@ public sealed class DatabaseRecordBuilder :
 
         _databaseRecord.QueueEtls ??= new List<QueueEtlConfiguration>();
         _databaseRecord.QueueEtls.Add(configuration);
+
+        return this;
+    }
+    
+    IEtlConfigurationBuilder IEtlConfigurationBuilder.AddSnowflakeEtl(SnowflakeEtlConfiguration configuration)
+    {
+        if (configuration == null)
+            throw new ArgumentNullException(nameof(configuration));
+
+        _databaseRecord.SnowflakeEtls ??= new List<SnowflakeEtlConfiguration>();
+        _databaseRecord.SnowflakeEtls.Add(configuration);
 
         return this;
     }
@@ -654,6 +677,8 @@ public interface IConnectionStringConfigurationBuilder
     IConnectionStringConfigurationBuilder AddElasticSearchConnectionString(ElasticSearchConnectionString connectionString);
 
     IConnectionStringConfigurationBuilder AddQueueConnectionString(QueueConnectionString connectionString);
+    
+    IConnectionStringConfigurationBuilder AddSnowflakeConnectionString(SnowflakeConnectionString connectionString);
 }
 
 public interface IReplicationConfigurationBuilder
@@ -681,4 +706,6 @@ public interface IEtlConfigurationBuilder
     IEtlConfigurationBuilder AddOlapEtl(OlapEtlConfiguration configuration);
 
     IEtlConfigurationBuilder AddQueueEtl(QueueEtlConfiguration configuration);
+    
+    IEtlConfigurationBuilder AddSnowflakeEtl(SnowflakeEtlConfiguration configuration);
 }
