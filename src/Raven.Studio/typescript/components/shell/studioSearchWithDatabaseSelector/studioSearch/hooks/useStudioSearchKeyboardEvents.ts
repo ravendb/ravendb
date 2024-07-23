@@ -81,6 +81,9 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
         if (leftFlatItemsLength === 0 && rightFlatItemsLength > 0) {
             setActiveGroup("right");
         }
+        if (leftFlatItemsLength === 0 && rightFlatItemsLength === 0) {
+            setActiveGroup("left");
+        }
 
         setActiveIndex(0);
     }, [leftFlatItemsLength, rightFlatItemsLength, setActiveIndex, setActiveGroup]);
