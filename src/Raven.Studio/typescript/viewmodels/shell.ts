@@ -220,7 +220,7 @@ class shell extends viewModelBase {
         this.studioSearchWithDatabaseSwitcherView = ko.pureComputed(() => ({
             component: StudioSearchWithDatabaseSwitcher,
             props: {
-                menuItems: this.mainMenu.getItems()
+                mainMenu: this.mainMenu
             }
         }));
 

@@ -7,8 +7,9 @@ import StudioSearchLegend from "./bits/StudioSearchLegend";
 import StudioSearchDatabaseResults from "./bits/StudioSearchDatabaseResults";
 import StudioSearchSwitchToDatabaseResults from "./bits/StudioSearchSwitchToDatabaseResults";
 import StudioSearchServerResults from "./bits/StudioSearchServerResults";
+import menu from "common/shell/menu";
 
-export default function StudioSearch(props: { menuItems: menuItem[] }) {
+export default function StudioSearch(props: { mainMenu: menu }) {
     const {
         refs,
         isSearchDropdownOpen,
@@ -18,7 +19,7 @@ export default function StudioSearch(props: { menuItems: menuItem[] }) {
         matchStatus,
         results,
         activeItem,
-    } = useStudioSearch(props.menuItems);
+    } = useStudioSearch(props.mainMenu);
 
     return (
         <>
