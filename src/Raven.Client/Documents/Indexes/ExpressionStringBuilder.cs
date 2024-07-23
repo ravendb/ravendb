@@ -1300,10 +1300,8 @@ namespace Raven.Client.Documents.Indexes
                 Visit(node.NewExpression);
                 Out(" {");
             }
-            
             else if (isDictionaryType)
                 Out("new DynamicDictionary(new System.Collections.Generic.Dictionary<object, object>{");
-
             else
                 Out("new DynamicArray(new[] {");
             
