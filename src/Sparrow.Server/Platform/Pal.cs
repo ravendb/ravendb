@@ -12,8 +12,6 @@ namespace Sparrow.Server.Platform
     {
         public const int PAL_VER = 62001; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
-        public static readonly PalDefinitions.SystemInformation SysInfo;
-        
         static  Pal()
         {
             PalFlags.FailCodes rc;
@@ -27,14 +25,14 @@ namespace Sparrow.Server.Platform
                         $"{LIBRVNPAL} version '{palVer}' mismatches this RavenDB instance version (set to '{PAL_VER}'). Did you forget to set new value in 'rvn_get_pal_ver()'");
                 }
 
-                rc = rvn_get_system_information(out SysInfo, out errorCode);
+                rc = rvn_get_system_information(out _, out errorCode);
             }
             catch (Exception ex)
             {
                 var errString = $"{LIBRVNPAL} version might be invalid, missing or not usable on current platform.";
 
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    errString +=
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && ex is not IncorrectDllException)
+                    errString += 
                         " Initialization error could also be caused by missing 'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads.";
 
                 errString += $" Arch: {RuntimeInformation.OSArchitecture}, OSDesc: {RuntimeInformation.OSDescription}";
