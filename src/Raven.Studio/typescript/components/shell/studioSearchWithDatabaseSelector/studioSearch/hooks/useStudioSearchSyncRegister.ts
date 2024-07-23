@@ -16,16 +16,17 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
+import menu from "common/shell/menu";
 
 interface UseStudioSearchSyncRegisterParams {
     omniSearch: OmniSearch<StudioSearchItem, StudioSearchItemType>;
-    menuItems: menuItem[];
+    mainMenu: menu;
     goToUrl: (url: string, newTab: boolean) => void;
     resetDropdown: () => void;
 }
 
 export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterParams) {
-    const { omniSearch, menuItems, goToUrl, resetDropdown } = props;
+    const { omniSearch, mainMenu, goToUrl, resetDropdown } = props;
 
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const allDatabaseNames = useAppSelector(databaseSelectors.allDatabaseNames);
@@ -122,7 +123,7 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
             }
         };
 
-        menuItems.forEach(crawlMenu);
+        mainMenu.getItems().forEach(crawlMenu);
 
         menuLeafs
             .filter((item) => item.search?.isExcluded !== true)
@@ -164,7 +165,7 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
                 searchItems.filter((x) => x.type === type)
             );
         });
-    }, [activeDatabaseName, menuItems, omniSearch, goToMenuItem, getMenuItemType]);
+    }, [activeDatabaseName, mainMenu, omniSearch, goToMenuItem, getMenuItemType]);
 }
 
 const databaseRoutePrefix = "databases/";

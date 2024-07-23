@@ -7,6 +7,7 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import StudioSearchWithDatabaseSwitcher from "./StudioSearchWithDatabaseSwitcher";
 import { DatabaseSharedInfo } from "components/models/databases";
 import generateMenuItems from "common/shell/menu/generateMenuItems";
+import menu from "common/shell/menu";
 
 export default {
     title: "Shell/StudioSearchWithDatabaseSwitcher",
@@ -41,8 +42,6 @@ export const DefaultStory: StoryObj<StoryArgs> = {
             environment: "Development",
         };
 
-        let menuItems: menuItem[] = [];
-
         if (args.isDatabaseSelected) {
             databases.withActiveDatabase(db1);
             databasesService.withDocumentsMetadataByIDPrefix();
@@ -51,17 +50,11 @@ export const DefaultStory: StoryObj<StoryArgs> = {
             collectionsTracker.with_Collections();
         }
 
-        if (args.hasMenuItems) {
-            if (args.isDatabaseSelected) {
-                menuItems = generateMenuItems(db1.name);
-            } else {
-                menuItems = generateMenuItems(null);
-            }
-        }
-
         databases.withDatabases([db1, db2, db3]);
 
-        return <StudioSearchWithDatabaseSwitcher menuItems={menuItems} />;
+        const menuItems = args.hasMenuItems ? generateMenuItems(null) : [];
+
+        return <StudioSearchWithDatabaseSwitcher mainMenu={new menu(menuItems)} />;
     },
     args: {
         hasMenuItems: true,

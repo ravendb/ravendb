@@ -6,8 +6,9 @@ import { useStudioSearchKeyboardEvents } from "./useStudioSearchKeyboardEvents";
 import { useStudioSearchSyncRegister } from "./useStudioSearchSyncRegister";
 import { useStudioSearchOmniSearch } from "./useStudioSearchOmniSearch";
 import { useStudioSearchUtils } from "./useStudioSearchUtils";
+import menu from "common/shell/menu";
 
-export function useStudioSearch(menuItems: menuItem[]) {
+export function useStudioSearch(mainMenu: menu) {
     const { value: isSearchDropdownOpen, setValue: setIsDropdownOpen } = useBoolean(false);
 
     const dropdownRef = useRef<any>(null);
@@ -38,7 +39,7 @@ export function useStudioSearch(menuItems: menuItem[]) {
 
     useStudioSearchSyncRegister({
         omniSearch,
-        menuItems,
+        mainMenu,
         goToUrl,
         resetDropdown,
     });
