@@ -239,7 +239,7 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider, I
         NativeList<TermIdMask> postingListsType = new();
         postingListsType.Initialize(allocator);
         
-        while (_iterator.MoveNext(compactKey, out var termId, out var _))
+        while (_isEmpty == false && _iterator.MoveNext(compactKey, out var termId, out var _))
         {
             if (termId == _endContainerId)
             {
@@ -266,7 +266,7 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider, I
             }
         }
 
-        using var _ = allocator.Allocate((sizeof(UnmanagedSpan*)) * postingLists.Count, out ByteString containers);
+        using var _ = allocator.Allocate((sizeof(UnmanagedSpan)) * postingLists.Count, out ByteString containers);
         var containersPtr = (UnmanagedSpan*)containers.Ptr;
 
         Container.GetAll(_indexSearcher._transaction.LowLevelTransaction, postingLists.ToSpan(), containersPtr, singleMarker,
