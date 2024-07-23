@@ -4,8 +4,6 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Documents.Indexes.Static.Linq;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -43,8 +41,7 @@ public class RavenDB_22615 : RavenTestBase
 
                 Assert.Equal(1, res.Count);
                 Assert.Equal(dto1.Id, res[0].Id);
-
-                /*
+                
                 var terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(DummyIndex.IndexEntry.SomeClassList), null));
 
                 Assert.Contains("{\"name\":\"name1\"}", terms);
@@ -61,7 +58,6 @@ public class RavenDB_22615 : RavenTestBase
                 Assert.Contains("{\"name\":\"name1\"}", terms);
                 Assert.Contains("{\"name\":\"name2\"}", terms);
                 Assert.Contains("{\"name\":\"name3\"}", terms);
-                */
             }
         }
     }
@@ -71,9 +67,9 @@ public class RavenDB_22615 : RavenTestBase
         public class IndexEntry
         {
             public List<string> StringList { get; set; }
-            //public List<SomeClass> SomeClassList { get; set; }
-            //public string FirstElementOfStringList { get; set; }
-            //public SomeClass FirstElementOfSomeClassList { get; set; }
+            public List<SomeClass> SomeClassList { get; set; }
+            public string FirstElementOfStringList { get; set; }
+            public SomeClass FirstElementOfSomeClassList { get; set; }
         }
         public DummyIndex()
         {
@@ -83,9 +79,9 @@ public class RavenDB_22615 : RavenTestBase
                 select new IndexEntry()
                 {
                     StringList = new List<string> { name, otherName },
-                    //SomeClassList = new List<SomeClass>() { new SomeClass() { Name = name } },
-                    //FirstElementOfStringList = new List<string>() { name }.First(),
-                    //FirstElementOfSomeClassList = new List<SomeClass>() { new SomeClass() { Name = name } }.First()
+                    SomeClassList = new List<SomeClass>() { new SomeClass() { Name = name } },
+                    FirstElementOfStringList = new List<string>() { name }.First(),
+                    FirstElementOfSomeClassList = new List<SomeClass>() { new SomeClass() { Name = name } }.First()
                 });
             
             StoreAllFields(FieldStorage.Yes);
@@ -169,12 +165,12 @@ public class RavenDB_22615 : RavenTestBase
     private class PropertyImage
     {
         public string PropertyId { get; set; }
-        public string? Url { get; set; }
+        public string Url { get; set; }
     }
     private class PropertyIndexResult
     {
         public string Id { get; set; }
-        public List<PropertyImage>? Images { get; set; } = [];
+        public List<PropertyImage> Images { get; set; } = [];
     }
     
     [RavenFact(RavenTestCategory.Indexes)]
