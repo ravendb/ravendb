@@ -10,11 +10,11 @@ using Raven.Server.Documents.Sharding.Operations;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 {
-    internal class ShardedDeleteRevisionsOperation : IShardedOperation
+    internal class ShardedDeleteRevisionsManuallyOperation : IShardedOperation
     {
-        private readonly Dictionary<int, DeleteRevisionsRequest> _requestPerShard;
+        private readonly Dictionary<int, DeleteRevisionsIntrenalRequest> _requestPerShard;
 
-        public ShardedDeleteRevisionsOperation(Dictionary<int, DeleteRevisionsRequest> requestPerShard)
+        public ShardedDeleteRevisionsManuallyOperation(Dictionary<int, DeleteRevisionsIntrenalRequest> requestPerShard)
         {
             _requestPerShard = requestPerShard;
         }
@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
         public HttpRequest HttpRequest => null;
         public RavenCommand<object> CreateCommandForShard(int shardNumber)
         {
-            return new DeleteRevisionsCommand(_requestPerShard[shardNumber]);
+            return new DeleteRevisionsManuallyCommand(_requestPerShard[shardNumber]);
         }
     }
 }
