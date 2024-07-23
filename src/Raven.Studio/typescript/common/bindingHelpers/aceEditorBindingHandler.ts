@@ -176,6 +176,9 @@ class aceEditorBindingHandler {
             });
         }
 
+        // Remove find next command (ctrl+k is used for studio search)
+        aceEditor.commands.removeCommand(aceEditor.commands.byName.findnext);
+
         // Setup key bubbling 
         if (bubbleEscKey) {
             aceEditor.commands.addCommand({
