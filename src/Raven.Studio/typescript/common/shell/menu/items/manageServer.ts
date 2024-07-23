@@ -128,6 +128,7 @@ function getManageServerMenuItem() {
             css: "icon-plus",
             dynamicHash: appUrl.forEditServerWideBackup,
             itemRouteToHighlight: 'admin/settings/serverWideTasks',
+            requiredAccess: "ClusterAdmin",
             search: {
                 overrideTitle: "Add New Server-Wide Backup Task",
                 alternativeTitles: ["Create Server-Wide Backup Task"],
@@ -141,6 +142,7 @@ function getManageServerMenuItem() {
             css: "icon-plus",
             dynamicHash: appUrl.forEditServerWideExternalReplication,
             itemRouteToHighlight: 'admin/settings/serverWideTasks',
+            requiredAccess: "ClusterAdmin",
             search: {
                 overrideTitle: "Add New Server-Wide External Replication Task",
                 alternativeTitles: ["Create Server-Wide External Replication Task"],
@@ -292,6 +294,7 @@ function getManageServerMenuItem() {
             css: 'icon-debug-advanced',
             dynamicHash: appUrl.forDebugAdvancedThreadsRuntime,
             itemRouteToHighlight: 'admin/settings/debug/advanced*details',
+            requiredAccess: "Operator",
             search: {
                 overrideTitle: "Threads Runtime Info",
             },
@@ -304,6 +307,7 @@ function getManageServerMenuItem() {
             css: 'icon-debug-advanced',
             dynamicHash: appUrl.forDebugAdvancedMemoryMappedFiles,
             itemRouteToHighlight: 'admin/settings/debug/advanced*details',
+            requiredAccess: "Operator",
             search: {
                 overrideTitle: 'Memory Mapped Files',
             }
@@ -316,6 +320,7 @@ function getManageServerMenuItem() {
             css: 'icon-debug-advanced',
             dynamicHash: appUrl.forDebugAdvancedObserverLog,
             itemRouteToHighlight: 'admin/settings/debug/advanced*details',
+            requiredAccess: "Operator",
             search: {
                 overrideTitle: 'Cluster Observer Log',
             }
@@ -328,6 +333,7 @@ function getManageServerMenuItem() {
             css: 'icon-debug-advanced',
             dynamicHash: appUrl.forDebugAdvancedRecordTransactionCommands,
             itemRouteToHighlight: 'admin/settings/debug/advanced*details',
+            requiredAccess: "Operator",
             search: {
                 overrideTitle: 'Record Transaction Commands',
             }
@@ -340,6 +346,7 @@ function getManageServerMenuItem() {
             css: 'icon-debug-advanced',
             dynamicHash: appUrl.forDebugAdvancedReplayTransactionCommands,
             itemRouteToHighlight: 'admin/settings/debug/advanced*details',
+            requiredAccess: "Operator",
             search: {
                 overrideTitle: 'Replay Transaction Commands',
             }
