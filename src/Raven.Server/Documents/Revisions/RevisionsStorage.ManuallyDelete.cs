@@ -23,7 +23,7 @@ public partial class RevisionsStorage
 
     public Task DeleteRevisionsByChangeVectorManuallyAsync(List<string> cvs, long maxDeletes)
     {
-        if (cvs.Count == 0)
+        if (cvs == null || cvs.Count == 0)
             return Task.CompletedTask;
 
         if (cvs.Count > maxDeletes)
@@ -101,6 +101,9 @@ public partial class RevisionsStorage
 
     public Task DeleteRevisionsByDocumentIdManuallyAsync(List<string> ids, long maxDeletes)
     {
+        if (ids == null || ids.Count == 0)
+            return Task.CompletedTask;
+
         return _database.TxMerger.Enqueue(new DeleteRevisionsByDocumentIdManuallyMergedCommand(ids, maxDeletes));
     }
 

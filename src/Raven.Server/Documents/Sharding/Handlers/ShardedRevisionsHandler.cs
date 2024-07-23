@@ -62,6 +62,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
+        [RavenShardedAction("/databases/*/revisions/delete", "DELETE")]
+        public async Task DeleteRevisions()
+        {
+            using (var processor = new ShardedRevisionsHandlerProcessorForDeleteRevisions(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/revisions/resolved", "GET")]
         public async Task GetResolvedConflictsSince()
         {
