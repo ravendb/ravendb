@@ -154,7 +154,7 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
                     route,
                     alternativeTexts: item.search?.alternativeTitles ?? [],
                     icon: item.css.replace("icon-", "") as IconName,
-                    onSelected: (e: any) => goToMenuItem(item, e),
+                    onSelected: (e) => goToMenuItem(item, e),
                     innerActions,
                 });
             });
