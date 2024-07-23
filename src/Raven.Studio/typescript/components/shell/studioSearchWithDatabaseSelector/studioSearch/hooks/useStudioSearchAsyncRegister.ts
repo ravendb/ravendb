@@ -197,7 +197,7 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
     );
 
     // Register documents
-    useAsyncDebounce(
+    const asyncGetDocuments = useAsyncDebounce(
         async (searchQuery, activeDatabaseName) => {
             if (!activeDatabaseName || !searchQuery) {
                 return [];
@@ -209,6 +209,10 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
         500,
         {
             onSuccess: (results) => {
+                if (results.length === 0 && asyncGetDocuments.result.length === 0) {
+                    return;
+                }
+
                 const mappedResults = results.map((x) => x["@metadata"]["@id"]);
 
                 omniSearch.register(
