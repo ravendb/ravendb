@@ -464,6 +464,7 @@ namespace FastTests.Client
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanReplicateHiLoTombstone(Options options)
         {
+/////////////////////////
             using (var store1 = GetDocumentStore(options))
             using (var store2 = GetDocumentStore(options))
             {

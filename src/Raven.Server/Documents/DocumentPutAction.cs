@@ -157,7 +157,13 @@ namespace Raven.Server.Documents
                     // null - means, don't care, don't check
                     // "" / empty - means, must be new
                     // anything else - must match exactly
+                 var   oldId = TableValueToId(context, (int)DocumentsTable.Id, ref oldValue);
 
+                    if (oldId != id)
+                    {
+                        Debug.Assert(oldId == id, "oldId == id");
+                        ThrowConcurrentException(id, oldId, id);
+                    }
                     oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
 
                     if (expectedChangeVector != null && ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
