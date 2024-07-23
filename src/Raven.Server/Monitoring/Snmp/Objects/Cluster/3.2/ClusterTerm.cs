@@ -1,5 +1,6 @@
 using Lextm.SharpSnmpLib;
 using Raven.Server.Monitoring.OpenTelemetry;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Cluster
