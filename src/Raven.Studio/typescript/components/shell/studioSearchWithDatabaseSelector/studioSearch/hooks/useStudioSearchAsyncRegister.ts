@@ -209,6 +209,7 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
         500,
         {
             onSuccess: (results) => {
+                // When previous and current results are empty do nothing
                 if (results.length === 0 && asyncGetDocuments.result.length === 0) {
                     return;
                 }

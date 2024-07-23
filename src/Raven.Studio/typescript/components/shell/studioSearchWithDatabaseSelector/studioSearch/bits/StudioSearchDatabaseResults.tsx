@@ -18,14 +18,11 @@ export default function StudioSearchDatabaseResults(props: {
 
     if (!activeDatabase) {
         return (
-            <>
-                <DropdownItem disabled className="studio-search__database-col__group pt-0">
-                    <EmptySet compact>
-                        No results found. You can select an active database from the selector or by typing it&apos;s
-                        name.
-                    </EmptySet>
-                </DropdownItem>
-            </>
+            <DropdownItem disabled className="studio-search__database-col__group pt-0">
+                <EmptySet compact>
+                    No results found. You can select an active database from the selector or by typing it&apos;s name.
+                </EmptySet>
+            </DropdownItem>
         );
     }
 

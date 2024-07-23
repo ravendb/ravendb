@@ -124,7 +124,7 @@ export default function AdminJSConsole() {
                                                 mode="javascript"
                                                 height="200px"
                                                 setIsValid={(x) => setIsScriptValid(x)}
-                                                focus={true}
+                                                focus
                                             />
                                             <RunScriptButton
                                                 type="submit"
