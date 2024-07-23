@@ -11,11 +11,11 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Revisions
 {
-    public class DeleteRevisionsOperation : IOperation
+    public class DeleteRevisionsManuallyOperation : IOperation
     {
         private DeleteRevisionsRequest _request;
 
-        public DeleteRevisionsOperation(DeleteRevisionsRequest request)
+        public DeleteRevisionsManuallyOperation(DeleteRevisionsRequest request)
         {
             if (request == null)
             {
@@ -37,7 +37,8 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            throw new NotImplementedException();
+            var request = new DeleteRevisionsIntrenalRequest(_request);
+            return new DeleteRevisionsManuallyCommand(request);
         }
     }
 }

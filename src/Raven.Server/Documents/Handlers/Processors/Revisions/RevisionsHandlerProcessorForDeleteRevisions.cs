@@ -16,10 +16,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         {
         }
 
-        protected override async Task DeleteRevisions(DeleteRevisionsRequest request, OperationCancelToken token)
+        protected override async Task DeleteRevisions(DeleteRevisionsIntrenalRequest request, OperationCancelToken token)
         {
             await RequestHandler.Database.DocumentsStorage.RevisionsStorage.DeleteRevisionsByDocumentIdManuallyAsync(request.DocumentIds, request.MaxDeletes);
-            await RequestHandler.Database.DocumentsStorage.RevisionsStorage.DeleteRevisionsByChangeVectorManuallyAsync(request.RevisionsChangeVecotors, request.MaxDeletes);
+            await RequestHandler.Database.DocumentsStorage.RevisionsStorage.DeleteRevisionsByChangeVectorManuallyAsync(request.RevisionsChangeVecotors, request.MaxDeletes, request.ThrowIfChangeVectorsNotFound);
         }
     }
 }

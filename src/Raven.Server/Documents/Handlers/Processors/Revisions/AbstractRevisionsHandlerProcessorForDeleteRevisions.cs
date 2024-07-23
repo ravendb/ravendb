@@ -17,11 +17,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         {
         }
 
-        protected abstract Task DeleteRevisions(DeleteRevisionsRequest request, OperationCancelToken token);
+        protected abstract Task DeleteRevisions(DeleteRevisionsIntrenalRequest request, OperationCancelToken token);
 
         public override async ValueTask ExecuteAsync()
         {
-            DeleteRevisionsRequest request;
+            DeleteRevisionsIntrenalRequest request;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {

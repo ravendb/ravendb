@@ -11,11 +11,11 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    internal class DeleteRevisionsCommand : RavenCommand
+    internal class DeleteRevisionsManuallyCommand : RavenCommand
     {
-        private DeleteRevisionsRequest _request;
+        private DeleteRevisionsIntrenalRequest _request;
 
-        public DeleteRevisionsCommand(DeleteRevisionsRequest request)
+        public DeleteRevisionsManuallyCommand(DeleteRevisionsIntrenalRequest request)
         {
             _request = request;
         }
@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Commands
 
             return new HttpRequestMessage
             {
-                Method = HttpMethod.Post,
+                Method = HttpMethod.Delete,
                 Content = new BlittableJsonContent(async stream =>
                         await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_request, ctx)).ConfigureAwait(false),
                     DocumentConventions.Default)
@@ -36,9 +36,23 @@ namespace Raven.Client.Documents.Commands
 
     public class DeleteRevisionsRequest
     {
-        public long MaxDeletes { get; set; }
+        public long MaxDeletes { get; set; } = 1024;
         public List<string> DocumentIds { get; set; }
         public List<string> RevisionsChangeVecotors { get; set; }
-        internal bool ThrowAboutRevisionsChangeVecotors { get; set; } = true;
+    }
+
+    internal class DeleteRevisionsIntrenalRequest : DeleteRevisionsRequest
+    {
+        public bool ThrowIfChangeVectorsNotFound { get; set; } = true;
+
+        public DeleteRevisionsIntrenalRequest(){ }
+
+        public DeleteRevisionsIntrenalRequest(DeleteRevisionsRequest other)
+        {
+            // copy constructor
+            MaxDeletes = other.MaxDeletes;
+            DocumentIds = other.DocumentIds;
+            RevisionsChangeVecotors = other.RevisionsChangeVecotors;
+        }
     }
 }

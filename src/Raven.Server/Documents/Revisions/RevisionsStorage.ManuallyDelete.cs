@@ -21,7 +21,7 @@ public partial class RevisionsStorage
         return configuration.AllowDeleteRevisionsManually;
     }
 
-    public Task DeleteRevisionsByChangeVectorManuallyAsync(List<string> cvs, long maxDeletes)
+    public Task DeleteRevisionsByChangeVectorManuallyAsync(List<string> cvs, long maxDeletes, bool shouldThrowIfChangeVectorsNotFound = true)
     {
         if (cvs == null || cvs.Count == 0)
             return Task.CompletedTask;
@@ -29,14 +29,14 @@ public partial class RevisionsStorage
         if (cvs.Count > maxDeletes)
             return Task.FromException(new InvalidOperationException($"You are trying to delete more revisions then the limit: {maxDeletes}"));
 
-        return _database.TxMerger.Enqueue(new DeleteRevisionsByChangeVectorManuallyMergedCommand(cvs));
+        return _database.TxMerger.Enqueue(new DeleteRevisionsByChangeVectorManuallyMergedCommand(cvs, shouldThrowIfChangeVectorsNotFound));
     }
 
-    private void DeleteRevisionsByChangeVectorManuallyInternal(DocumentsOperationContext context, List<string> cvs)
+    private void DeleteRevisionsByChangeVectorManuallyInternal(DocumentsOperationContext context, List<string> cvs, bool shouldThrowIfChangeVectorsNotFound)
     {
         var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
 
-        var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+        var table = new Table(context.DocumentDatabase.DocumentsStorage.RevisionsStorage.RevisionsSchema, context.Transaction.InnerTransaction);
 
         var writeTables = new Dictionary<string, Table>();
 
@@ -49,7 +49,12 @@ public partial class RevisionsStorage
             using (Slice.From(context.Allocator, cv, out var cvSlice))
             {
                 if (table.ReadByKey(cvSlice, out TableValueReader tvr) == false)
+                {
+                    if (shouldThrowIfChangeVectorsNotFound == false)
+                        continue;
+
                     throw new InvalidOperationException($"Revision with the cv \"{cv}\" doesn't exist");
+                }
 
                 revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
             }
@@ -80,15 +85,17 @@ public partial class RevisionsStorage
     internal sealed class DeleteRevisionsByChangeVectorManuallyMergedCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
         private readonly List<string> _cvs;
+        private readonly bool _shouldThrowIfChangeVectorsNotFound;
 
-        public DeleteRevisionsByChangeVectorManuallyMergedCommand(List<string> cvs)
+        public DeleteRevisionsByChangeVectorManuallyMergedCommand(List<string> cvs, bool shouldThrowIfChangeVectorsNotFound)
         {
             _cvs = cvs;
+            _shouldThrowIfChangeVectorsNotFound = shouldThrowIfChangeVectorsNotFound;
         }
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            context.DocumentDatabase.DocumentsStorage.RevisionsStorage.DeleteRevisionsByChangeVectorManuallyInternal(context, _cvs);
+            context.DocumentDatabase.DocumentsStorage.RevisionsStorage.DeleteRevisionsByChangeVectorManuallyInternal(context, _cvs, _shouldThrowIfChangeVectorsNotFound);
             return 1;
         }
 
