@@ -185,6 +185,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, RevertRevisionsRequest> RevertRevisions = GenerateJsonDeserializationRoutine<RevertRevisionsRequest>();
 
         public static readonly Func<BlittableJsonReaderObject, RevertDocumentsToRevisionsRequest> RevertDocumentToRevision = GenerateJsonDeserializationRoutine<RevertDocumentsToRevisionsRequest>();
+        
+        public static readonly Func<BlittableJsonReaderObject, DeleteRevisionsRequest> DeleteRevisions = GenerateJsonDeserializationRoutine<DeleteRevisionsRequest>();
 
         public static readonly Func<BlittableJsonReaderObject, LicenseSupportInfo> LicenseSupportInfo = GenerateJsonDeserializationRoutine<LicenseSupportInfo>();
 
