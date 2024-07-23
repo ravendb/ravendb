@@ -21,7 +21,7 @@ using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron.Impl.Paging;
 
-public unsafe partial class Pager2
+public unsafe partial class Pager
 {
 #if VALIDATE
     public const bool ProtectPages = true;
@@ -29,7 +29,7 @@ public unsafe partial class Pager2
     public const bool ProtectPages = false;
 #endif
 
-    public static class Win64
+    public static class Bits64
     {
         public const int AllocationGranularity = 64 * Constants.Size.Kilobyte;
 
@@ -49,7 +49,7 @@ public unsafe partial class Pager2
             EnsureMapped = &EnsureMapped,
         };
 
-        private static bool EnsureMapped(Pager2 pager, State state, ref PagerTransactionState txState, long pageNumber, int numberOfPages)
+        private static bool EnsureMapped(Pager pager, State state, ref PagerTransactionState txState, long pageNumber, int numberOfPages)
         {
             _ = pager;
             _ = state;
@@ -79,13 +79,13 @@ public unsafe partial class Pager2
             }
         }
 
-        public static byte* AcquirePagePointerForNewPage(Pager2 pager, long pageNumber, int numberOfPages, State state, ref PagerTransactionState txState)
+        public static byte* AcquirePagePointerForNewPage(Pager pager, long pageNumber, int numberOfPages, State state, ref PagerTransactionState txState)
         {
             _ = numberOfPages;
             return AcquirePagePointer(pager, state, ref txState, pageNumber);
         }
 
-        public static byte* AcquirePagePointer(Pager2 pager, State state, ref PagerTransactionState txState, long pageNumber)
+        public static byte* AcquirePagePointer(Pager pager, State state, ref PagerTransactionState txState, long pageNumber)
         {
             _ = txState;
             if (pageNumber > state.NumberOfAllocatedPages || pageNumber < 0)

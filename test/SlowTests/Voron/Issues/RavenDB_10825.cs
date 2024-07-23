@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests.Voron;
 using Sparrow;
@@ -43,7 +43,7 @@ namespace SlowTests.Voron.Issues
 
                 var cryptoTxState = tx.LowLevelTransaction.PagerTransactionState.ForCrypto.Single().Value;
 
-                Dictionary<long, Pager2.EncryptionBuffer> loadedBuffers = new();
+                Dictionary<long, Pager.EncryptionBuffer> loadedBuffers = new();
 
                 var reversed = cryptoTxState.ToList();
                 reversed.Reverse();

@@ -88,7 +88,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        byte* AllocateMemoryAtEndOfPager(Pager2.State dataPagerState)
+        byte* AllocateMemoryAtEndOfPager(Pager.State dataPagerState)
         {
             if (StorageEnvironmentOptions.RunningOnPosix)
             {

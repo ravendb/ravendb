@@ -66,7 +66,7 @@ namespace Voron.Data.CompactTrees
             }
             else
             {
-                var numberOfPages = Pager.GetNumberOfOverflowPages(DefaultAllocationSizeForTable);
+                var numberOfPages = Paging.GetNumberOfOverflowPages(DefaultAllocationSizeForTable);
                 var p = llt.AllocatePage(numberOfPages);
                 p.Flags = PageFlags.Overflow;
                 p.OverflowSize = DefaultAllocationSizeForTable;
@@ -132,7 +132,7 @@ namespace Voron.Data.CompactTrees
             }
 
             int requiredTotalSize = requiredSize + PersistentDictionaryHeader.SizeOf;
-            var numberOfPages = Pager.GetNumberOfOverflowPages(requiredTotalSize);
+            var numberOfPages = Paging.GetNumberOfOverflowPages(requiredTotalSize);
             var p = llt.AllocatePage(numberOfPages);
             p.Flags = PageFlags.Overflow;
             p.OverflowSize = requiredTotalSize;           

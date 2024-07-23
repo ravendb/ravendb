@@ -37,7 +37,7 @@ namespace Voron.Util
             }
         }
 
-        public void ToStream(Pager2 src, LowLevelTransaction txr, long startPage, long numberOfPages, 
+        public void ToStream(Pager src, LowLevelTransaction txr, long startPage, long numberOfPages, 
             Stream output, Action<string> infoNotify, CancellationToken cancellationToken)
         {
             // In case of encryption, we don't want to decrypt the data for backup, 
@@ -52,7 +52,7 @@ namespace Voron.Util
             var totalSw = Stopwatch.StartNew();
             var sw = Stopwatch.StartNew();
 
-            Pager2.PagerTransactionState txState = default;
+            Pager.PagerTransactionState txState = default;
             try
             {
                 fixed (byte* pBuffer = _buffer)

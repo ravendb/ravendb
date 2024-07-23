@@ -16,23 +16,23 @@ using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron.Impl.Paging;
 
-public unsafe partial class Pager2
+public unsafe partial class Pager
 {
-    public static class Win32
+    public static class Bits32
     {
         public static Functions CreateFunctions() => new()
         {
-            AcquirePagePointer = &Win32.AcquirePagePointer,
-            AcquireRawPagePointer = &Win32.AcquirePagePointer,
-            AcquirePagePointerForNewPage = &Win32.AcquirePagePointerForNewPage,
-            ProtectPageRange = ProtectPages ? &Win64.ProtectPageRange : &Win64.ProtectPageNoop,
-            UnprotectPageRange = ProtectPages ? &Win64.UnprotectPageRange : &Win64.ProtectPageNoop,
-            EnsureMapped = &Win32.EnsureMapped,
+            AcquirePagePointer = &Bits32.AcquirePagePointer,
+            AcquireRawPagePointer = &Bits32.AcquirePagePointer,
+            AcquirePagePointerForNewPage = &Bits32.AcquirePagePointerForNewPage,
+            ProtectPageRange = ProtectPages ? &Bits64.ProtectPageRange : &Bits64.ProtectPageNoop,
+            UnprotectPageRange = ProtectPages ? &Bits64.UnprotectPageRange : &Bits64.ProtectPageNoop,
+            EnsureMapped = &Bits32.EnsureMapped,
         };
         
-        private const int NumberOfPagesInAllocationGranularity = Win64.AllocationGranularity / Constants.Storage.PageSize;
+        private const int NumberOfPagesInAllocationGranularity = Bits64.AllocationGranularity / Constants.Storage.PageSize;
 
-        public static bool EnsureMapped(Pager2 pager, State state, ref PagerTransactionState txState, long pageNumber, int numberOfPages)
+        public static bool EnsureMapped(Pager pager, State state, ref PagerTransactionState txState, long pageNumber, int numberOfPages)
         {
             var pagerTxState = GetTxState(pager, ref txState);
 
@@ -45,16 +45,16 @@ public unsafe partial class Pager2
                     return false; // already mapped large enough here
             }
 
-            var amountToMapInBytes = Win64.NearestSizeToAllocationGranularity((distanceFromStart + numberOfPages) * Constants.Storage.PageSize);
+            var amountToMapInBytes = Bits64.NearestSizeToAllocationGranularity((distanceFromStart + numberOfPages) * Constants.Storage.PageSize);
             MapPages(pager, state, pagerTxState, allocationStartPosition, amountToMapInBytes);
             return true;
         }
 
-        private static TxStateFor32Bits GetTxState(Pager2 pager, ref PagerTransactionState txState)
+        private static TxStateFor32Bits GetTxState(Pager pager, ref PagerTransactionState txState)
         {
             if (txState.For32Bits is null)
             {
-                txState.For32Bits = new Dictionary<Pager2, TxStateFor32Bits>();
+                txState.For32Bits = new Dictionary<Pager, TxStateFor32Bits>();
                 txState.OnDispose += OnTxDispose;
             }
             if (txState.For32Bits.TryGetValue(pager, out var pagerTxState) == false)
@@ -84,7 +84,7 @@ public unsafe partial class Pager2
             }
         }
         
-        private static void CleanupMemory(Pager2 pager, TxStateFor32Bits txState)
+        private static void CleanupMemory(Pager pager, TxStateFor32Bits txState)
         {
             var pager32BitsState = pager._32BitsState!;
             pager32BitsState.AllocationLock.EnterWriteLock();
@@ -119,13 +119,13 @@ public unsafe partial class Pager2
             }
         }
 
-        private static byte* AcquirePagePointerForNewPage(Pager2 pager, long pageNumber, int numberOfPages, State state, ref PagerTransactionState txState)
+        private static byte* AcquirePagePointerForNewPage(Pager pager, long pageNumber, int numberOfPages, State state, ref PagerTransactionState txState)
         {
             EnsureMapped(pager, state, ref txState, pageNumber, numberOfPages);
             return AcquirePagePointer(pager, state, ref txState, pageNumber);
         }
 
-        private static byte* AcquirePagePointer(Pager2 pager, State state, ref PagerTransactionState txState, long pageNumber)
+        private static byte* AcquirePagePointer(Pager pager, State state, ref PagerTransactionState txState, long pageNumber)
         {
             var pagerTxState = GetTxState(pager, ref txState);
             
@@ -141,7 +141,7 @@ public unsafe partial class Pager2
             if (pagerTxState.LoadedPages.TryGetValue(allocationStartPosition, out var page))
                 return page.Pointer + (distanceFromStart * Constants.Storage.PageSize);
 
-            page = MapPages(pager, state, pagerTxState, allocationStartPosition,Win64.AllocationGranularity);
+            page = MapPages(pager, state, pagerTxState, allocationStartPosition,Bits64.AllocationGranularity);
             return page.Pointer + (distanceFromStart * Constants.Storage.PageSize);
 
             
@@ -167,7 +167,7 @@ public unsafe partial class Pager2
             public uint High;
         }
         
-        private static LoadedPage MapPages(Pager2 pager, State state, TxStateFor32Bits pagerTxState, long startPage, long size)
+        private static LoadedPage MapPages(Pager pager, State state, TxStateFor32Bits pagerTxState, long startPage, long size)
         {
             pager._32BitsState!.AllocationLock.EnterReadLock();
             try

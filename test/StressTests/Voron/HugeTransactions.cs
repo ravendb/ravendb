@@ -151,7 +151,7 @@ namespace StressTests.Voron
                     long inputSize = 3L * gb;
                     var guid = Guid.NewGuid();
 
-                    Pager2.PagerTransactionState txState = default;
+                    Pager.PagerTransactionState txState = default;
 
                     var outputSize = LZ4.MaximumOutputLength(inputSize);
                     var (outputPager, outputPagerState) = CreateScratchFile($"output-{divider}-{guid}", env, ref txState, outputSize, out byte* outputBuffer);
@@ -225,7 +225,7 @@ namespace StressTests.Voron
             }
         }
 
-        private static unsafe (Pager2, Pager2.State) CreateScratchFile(string scratchName, StorageEnvironment env, ref Pager2.PagerTransactionState txState, long inputSize, out byte* buffer)
+        private static unsafe (Pager, Pager.State) CreateScratchFile(string scratchName, StorageEnvironment env, ref Pager.PagerTransactionState txState, long inputSize, out byte* buffer)
         {
             Console.WriteLine($"Creating Scratch File: {scratchName}");
 

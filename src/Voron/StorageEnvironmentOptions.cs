@@ -46,7 +46,7 @@ namespace Voron
         private static bool _skipCatastrophicFailureAssertion;
         private readonly CatastrophicFailureNotification _catastrophicFailureNotification;
 
-        public abstract (Pager2 Pager, Pager2.State State) InitializeDataPager();
+        public abstract (Pager Pager, Pager.State State) InitializeDataPager();
         
         public VoronPathSetting TempPath { get; }
 
@@ -501,14 +501,14 @@ namespace Voron
 
             public VoronPathSetting FilePath { get; }
 
-            public override (Pager2 Pager, Pager2.State State) InitializeDataPager()
+            public override (Pager Pager, Pager.State State) InitializeDataPager()
             {
                 var flags = Pal.OpenFileFlags.None;
                 if(Encryption.IsEnabled)
                     flags |= Pal.OpenFileFlags.Encrypted;
                 if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
                     flags |= Pal.OpenFileFlags.DoNotMap;
-                return Pager2.Create(this, FilePath.FullPath,
+                return Pager.Create(this, FilePath.FullPath,
                     InitialFileSize ?? 0,
                     flags);
             }
@@ -777,7 +777,7 @@ namespace Voron
 
             // This is used for special pagers that are used as temp buffers and don't 
             // require encryption: compression, recovery
-            public override (Pager2 Pager, Pager2.State State) CreateTemporaryBufferPager(string name, long initialSize, bool encrypted)
+            public override (Pager Pager, Pager.State State) CreateTemporaryBufferPager(string name, long initialSize, bool encrypted)
             {
                 // here we can afford to rename the file if needed because this is a scratch / temp
                 // file that is used. We _know_ that no one expects anything from it and that 
@@ -824,7 +824,7 @@ namespace Voron
                                 flags|=Pal.OpenFileFlags.DoNotConsiderMemoryLockFailureAsCatastrophicError;
                         }
 
-                        return Pager2.Create(this, tempFile.FullPath, initialSize, flags);
+                        return Pager.Create(this, tempFile.FullPath, initialSize, flags);
                     }
                     catch (FileNotFoundException e)
                     {
@@ -845,7 +845,7 @@ namespace Voron
                 return fileInfo.Length;
             }
 
-            public override (Pager2 Pager, Pager2.State State) OpenJournalPager(long journalNumber, JournalInfo journalInfo)
+            public override (Pager Pager, Pager.State State) OpenJournalPager(long journalNumber, JournalInfo journalInfo)
             {
                 var fileInfo = GetJournalFileInfo(journalNumber, journalInfo);
 
@@ -858,9 +858,9 @@ namespace Voron
                 return OpenJournalPager(filename);
             }
 
-            public override (Pager2 Pager, Pager2.State State) OpenJournalPager(string filename)
+            public override (Pager Pager, Pager.State State) OpenJournalPager(string filename)
             {
-                return Pager2.Create(this, filename, 0, Pal.OpenFileFlags.ReadOnly);
+                return Pager.Create(this, filename, 0, Pal.OpenFileFlags.ReadOnly);
             }
 
             private FileInfo GetJournalFileInfo(long journalNumber, JournalInfo journalInfo)
@@ -920,14 +920,14 @@ namespace Voron
                 }
             }
 
-            public override unsafe (Pager2 Pager, Pager2.State State) InitializeDataPager()
+            public override unsafe (Pager Pager, Pager.State State) InitializeDataPager()
             {
                 var flags = Pal.OpenFileFlags.Temporary;
                 if(Encryption.IsEnabled)
                     flags |= Pal.OpenFileFlags.Encrypted;
                 if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
                     flags |= Pal.OpenFileFlags.DoNotMap;
-                var (pager,state) = Pager2.Create(this, _filename, InitialFileSize ?? 0, flags);
+                var (pager,state) = Pager.Create(this, _filename, InitialFileSize ?? 0, flags);
                 try
                 {
                     var rc = Pal.rvn_pager_get_file_handle(state.Handle, out var handle, out var error);
@@ -1051,7 +1051,7 @@ namespace Voron
                 Memory.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
             }
 
-            public override (Pager2 Pager, Pager2.State State) CreateTemporaryBufferPager(string name, long initialSize, bool encrypted)
+            public override (Pager Pager, Pager.State State) CreateTemporaryBufferPager(string name, long initialSize, bool encrypted)
             {
                 var guid = Guid.NewGuid();
                 using (var currentProcess = Process.GetCurrentProcess())
@@ -1063,11 +1063,11 @@ namespace Voron
                         flags |= Pal.OpenFileFlags.DoNotMap;
                     if(encrypted) 
                         flags |= Pal.OpenFileFlags.Encrypted;
-                    return Pager2.Create(this, TempPath.Combine(filename).FullPath, initialSize, flags);
+                    return Pager.Create(this, TempPath.Combine(filename).FullPath, initialSize, flags);
                 }
             }
 
-            public override (Pager2 Pager, Pager2.State State) OpenJournalPager(long journalNumber, JournalInfo journalInfo)
+            public override (Pager Pager, Pager.State State) OpenJournalPager(long journalNumber, JournalInfo journalInfo)
             {
                 var name = JournalName(journalNumber);
                 if (_logs.TryGetValue(name, out JournalWriter value))
@@ -1075,7 +1075,7 @@ namespace Voron
                 throw new InvalidJournalException(journalNumber, journalInfo);
             }
 
-            public override (Pager2 Pager, Pager2.State State) OpenJournalPager(string name)
+            public override (Pager Pager, Pager.State State) OpenJournalPager(string name)
             {
                 if (_logs.TryGetValue(name, out JournalWriter value))
                     return value.CreatePager();
@@ -1141,10 +1141,10 @@ namespace Voron
 
         public abstract unsafe void WriteHeader(string filename, FileHeader* header);
 
-        public abstract (Pager2 Pager, Pager2.State State) CreateTemporaryBufferPager(string name, long initialSize, bool encrypted);
+        public abstract (Pager Pager, Pager.State State) CreateTemporaryBufferPager(string name, long initialSize, bool encrypted);
 
-        public abstract (Pager2 Pager, Pager2.State State) OpenJournalPager(long journalNumber, JournalInfo journalInfo);
-        public abstract (Pager2 Pager, Pager2.State State) OpenJournalPager(string name);
+        public abstract (Pager Pager, Pager.State State) OpenJournalPager(long journalNumber, JournalInfo journalInfo);
+        public abstract (Pager Pager, Pager.State State) OpenJournalPager(string name);
 
         public abstract long GetJournalFileSize(long journalNumber, JournalInfo journalInfo);
 

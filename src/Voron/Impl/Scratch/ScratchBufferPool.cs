@@ -41,7 +41,7 @@ namespace Voron.Impl.Scratch
         private int _currentScratchNumber = -1;
 
         private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers = new();
-        private readonly ConcurrentDictionary<Pager2, ScratchBufferItem> _scratchBuffersByPager = new();
+        private readonly ConcurrentDictionary<Pager, ScratchBufferItem> _scratchBuffersByPager = new();
 
         private readonly LinkedList<ScratchBufferItem> _recycleArea = new();
 
@@ -130,8 +130,8 @@ namespace Voron.Impl.Scratch
             }
             
             _currentScratchNumber++;
-            Pager2 scratchPager;
-            Pager2.State scratchPagerState;
+            Pager scratchPager;
+            Pager.State scratchPagerState;
             if (requestedSize != null)
             {
                 try
@@ -621,7 +621,7 @@ namespace Voron.Impl.Scratch
             return _scratchBuffers.TryGetValue(number, out var item) ? item.File : null;
         }
         
-        public ScratchBufferFile GetScratchBufferFile(Pager2 pager)
+        public ScratchBufferFile GetScratchBufferFile(Pager pager)
         {
             return _scratchBuffersByPager.TryGetValue(pager, out var item) ? item.File : null;
         }

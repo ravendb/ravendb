@@ -21,7 +21,7 @@ using Voron.Platform.Win32;
 
 namespace Voron.Impl.Paging;
 
-public unsafe partial class Pager2
+public unsafe partial class Pager
 {
     public class TxStateFor32Bits
     {
@@ -60,7 +60,7 @@ public unsafe partial class Pager2
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void RemoveBuffer(Pager2 pager, long pageNumber)
+        public void RemoveBuffer(Pager pager, long pageNumber)
         {
             if (_loadedBuffers.Remove(pageNumber, out var buffer))
             {
@@ -138,8 +138,8 @@ public unsafe partial class Pager2
 
     public struct PagerTransactionState
     {
-        public Dictionary<Pager2, TxStateFor32Bits>? For32Bits;
-        public Dictionary<Pager2, CryptoTransactionState>? ForCrypto;
+        public Dictionary<Pager, TxStateFor32Bits>? For32Bits;
+        public Dictionary<Pager, CryptoTransactionState>? ForCrypto;
         public bool IsWriteTransaction;
         
         /// <summary>
@@ -190,7 +190,7 @@ public unsafe partial class Pager2
     
     public class State: IDisposable
     {
-        public readonly Pager2 Pager;
+        public readonly Pager Pager;
         
         /// <summary>
         /// For the duration of the transaction that created this state, we *must*
@@ -208,7 +208,7 @@ public unsafe partial class Pager2
 
         public readonly WeakReference<State> WeakSelf;
 
-        public State(Pager2 pager, byte* baseAddress, long totalAllocatedSize, void* handle)
+        public State(Pager pager, byte* baseAddress, long totalAllocatedSize, void* handle)
         {
             BaseAddress = baseAddress;
             TotalAllocatedSize = totalAllocatedSize;

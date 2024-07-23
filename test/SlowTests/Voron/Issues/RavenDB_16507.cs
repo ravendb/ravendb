@@ -43,7 +43,7 @@ namespace SlowTests.Voron.Issues
         {
             var (tempPager, state) = Env.Options.CreateTemporaryBufferPager($"temp-{Guid.NewGuid()}", 16 * 1024, encrypted: false);
 
-            var pagerStates = new HashSet<Pager2.State> { state };
+            var pagerStates = new HashSet<Pager.State> { state };
 
             using(tempPager)
             {

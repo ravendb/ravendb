@@ -28,8 +28,8 @@ namespace Voron.Impl.Scratch
             public long ValidAfterTransactionId;
         }
 
-        private readonly Pager2 _scratchPager;
-        private Pager2.State _scratchPagerState;
+        private readonly Pager _scratchPager;
+        private Pager.State _scratchPagerState;
         private readonly int _scratchNumber;
 
         private readonly Dictionary<long, LinkedList<PendingPage>> _freePagesBySize = new();
@@ -43,7 +43,7 @@ namespace Voron.Impl.Scratch
 
         public long LastUsedPage => _lastUsedPage;
 
-        public ScratchBufferFile(Pager2 scratchPager,  Pager2.State scratchPagerState, int scratchNumber)
+        public ScratchBufferFile(Pager scratchPager,  Pager.State scratchPagerState, int scratchNumber)
         {
             _scratchPager = scratchPager;
             _scratchPagerState = scratchPagerState;
@@ -118,9 +118,9 @@ namespace Voron.Impl.Scratch
             DebugInfo.LastResetTime = DateTime.UtcNow;
         }
 
-        internal (Pager2, Pager2.State) GetPagerAndState() => (_scratchPager, _scratchPagerState);
+        internal (Pager, Pager.State) GetPagerAndState() => (_scratchPager, _scratchPagerState);
         
-        public Pager2 Pager => _scratchPager;
+        public Pager Pager => _scratchPager;
 
         public int Number => _scratchNumber;
 
@@ -246,7 +246,7 @@ namespace Voron.Impl.Scratch
             return NumberOfAllocations == 0; 
         }
 
-        public ref Pager2.State GetStateRef() => ref _scratchPagerState;
+        public ref Pager.State GetStateRef() => ref _scratchPagerState;
 
         [DoesNotReturn]
         private static void ThrowInvalidFreeOfUnusedPage(long page)

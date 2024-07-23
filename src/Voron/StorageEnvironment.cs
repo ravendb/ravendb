@@ -89,9 +89,9 @@ namespace Voron
 
         public readonly ActiveTransactions ActiveTransactions = new ActiveTransactions();
 
-        private readonly Pager2 _dataPager;
+        private readonly Pager _dataPager;
 
-        public Pager2 DataPager => _dataPager;
+        public Pager DataPager => _dataPager;
 
         internal readonly LowLevelTransaction.WriteTransactionPool WriteTransactionPool =
             new LowLevelTransaction.WriteTransactionPool();
@@ -1117,7 +1117,7 @@ namespace Voron
                             case RootObjectType.PersistentDictionary:
                                 var header = *(PersistentDictionaryRootHeader*)rootIterator.CreateReaderForCurrent().Base;
                                 Page dicPage = tx.LowLevelTransaction.GetPage(header.PageNumber);
-                                var pages = Pager.GetNumberOfOverflowPages(dicPage.OverflowSize);
+                                var pages = Paging.GetNumberOfOverflowPages(dicPage.OverflowSize);
                                 for (long i = 0; i < pages; i++)
                                 {
                                     r.Add(header.PageNumber + i, name);
@@ -1182,7 +1182,7 @@ namespace Voron
                         continue;
 
 
-                    var numberOfOverflowPages = Pager.GetNumberOfOverflowPages(pageObject.OverflowSize);
+                    var numberOfOverflowPages = Paging.GetNumberOfOverflowPages(pageObject.OverflowSize);
                     for (int overflowPage = 1; overflowPage < numberOfOverflowPages; ++overflowPage)
                         r.Add(page + overflowPage, overflowName);
                 }
@@ -1639,7 +1639,7 @@ namespace Voron
             _currentStateRecord = _currentStateRecord with { Journal = (file, last4KWrite) };
         }
 
-        public void UpdateDataPagerState(Pager2.State dataPagerState)
+        public void UpdateDataPagerState(Pager.State dataPagerState)
         {
             // this should only happen during recovery, never during active operations
             Debug.Assert(ActiveTransactions.AllTransactions.Count == 0 , "ActiveTransactions.AllTransactions.Count == 0");

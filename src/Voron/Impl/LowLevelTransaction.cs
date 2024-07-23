@@ -37,14 +37,14 @@ namespace Voron.Impl
 {
     public sealed unsafe class LowLevelTransaction : IDisposable 
     {
-        public readonly Pager2 DataPager;
+        public readonly Pager DataPager;
         private readonly StorageEnvironment _env;
         private readonly ByteStringContext _allocator;
         internal readonly PageLocator _pageLocator;
         private readonly bool _disposeAllocator;
         internal long DecompressedBufferBytes;
         internal TestingStuff _forTestingPurposes;
-        public Pager2.State DataPagerState;
+        public Pager.State DataPagerState;
 
         private Tree _root;
         public Tree RootObjects => _root;
@@ -55,7 +55,7 @@ namespace Voron.Impl
 
         public long NumberOfModifiedPages => _numberOfModifiedPages;
 
-        public Pager2.PagerTransactionState PagerTransactionState;
+        public Pager.PagerTransactionState PagerTransactionState;
         private readonly WriteAheadJournal _journal;
         public ImmutableDictionary<long, PageFromScratchBuffer> ModifiedPagesInTransaction;
         private ImmutableDictionary<long, PageFromScratchBuffer> _scratchBuffersSnapshotToRollbackTo;
@@ -302,7 +302,7 @@ namespace Voron.Impl
             _root = root;
         }
 
-        internal void UpdateDataPagerState(Pager2.State dataPagerState)
+        internal void UpdateDataPagerState(Pager.State dataPagerState)
         {
             Debug.Assert(Flags is TransactionFlags.ReadWrite, "Flags is TransactionFlags.ReadWrite");
             DataPagerState = dataPagerState;
@@ -574,7 +574,7 @@ namespace Voron.Impl
 
             Debug.Assert(overflowSize >= 0);
 
-            numberOfPages = Pager.GetNumberOfOverflowPages(overflowSize);
+            numberOfPages = Paging.Paging.GetNumberOfOverflowPages(overflowSize);
 
             var overflowPage = AllocatePage(numberOfPages, pageNumber, previousPage, zeroPage);
             overflowPage.Flags = PageFlags.Overflow;
@@ -660,9 +660,9 @@ namespace Voron.Impl
             if (page.IsOverflow == false || page.OverflowSize < newSize)
                 throw new InvalidOperationException($"The page {pageNumber} was is not an overflow page greater than {newSize}");
 
-            var prevNumberOfPages = Pager.GetNumberOfOverflowPages(page.OverflowSize);
+            var prevNumberOfPages = Paging.Paging.GetNumberOfOverflowPages(page.OverflowSize);
             page.OverflowSize = newSize;
-            var lowerNumberOfPages = Pager.GetNumberOfOverflowPages(newSize);
+            var lowerNumberOfPages = Paging.Paging.GetNumberOfOverflowPages(newSize);
 
             Debug.Assert(lowerNumberOfPages != 0);
 
@@ -1191,7 +1191,7 @@ namespace Voron.Impl
             if (page.IsOverflow == false)
                 return;
             
-            int numberOfOverflowPages = Pager.GetNumberOfOverflowPages(page.OverflowSize);
+            int numberOfOverflowPages = Paging.Paging.GetNumberOfOverflowPages(page.OverflowSize);
             for (int pageOffset = 1; pageOffset < numberOfOverflowPages; ++pageOffset)
             {
                 _overflowPagesToBeRemoved.Add(pageId + pageOffset, pageId);

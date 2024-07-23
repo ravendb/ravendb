@@ -67,9 +67,9 @@ namespace SlowTests.Voron
             // Lets corrupt something
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
             {
-                var (pager, state) = Pager2.Create(options,  Path.Combine(DataDir, "Raven.Voron"),0, Pal.OpenFileFlags.WritableMap);
+                var (pager, state) = Pager.Create(options,  Path.Combine(DataDir, "Raven.Voron"),0, Pal.OpenFileFlags.WritableMap);
                 using var _ = pager;
-                Pager2.PagerTransactionState txState = default;
+                Pager.PagerTransactionState txState = default;
                 var writePtr = pager.AcquirePagePointer(state, ref txState, 2) + PageHeader.SizeOf + 43; // just some random place on page #2
                 for (byte i = 0; i < 8; i++)
                 {

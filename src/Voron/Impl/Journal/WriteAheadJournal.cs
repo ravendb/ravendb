@@ -59,8 +59,8 @@ namespace Voron.Impl.Journal
         internal JournalFile CurrentFile;
 
         private readonly HeaderAccessor _headerAccessor;
-        private Pager2 _compressionPager;
-        private Pager2.State _compressionPagerState;
+        private Pager _compressionPager;
+        private Pager.State _compressionPagerState;
         private long _compressionPagerCounter;
 
         private readonly DiffPages _diffPage = new DiffPages();
@@ -195,16 +195,16 @@ namespace Voron.Impl.Journal
                 var journalRecoveryName = StorageEnvironmentOptions.JournalRecoveryName(journalNumber);
                 try
                 {
-                    (Pager2 journalPager, Pager2.State journalPagerState) = _env.Options.OpenJournalPager(journalNumber, logInfo);
+                    (Pager journalPager, Pager.State journalPagerState) = _env.Options.OpenJournalPager(journalNumber, logInfo);
                     using var _ = journalPager;
-                    (Pager2 recoveryPager, Pager2.State recoveryPagerState)  = _env.Options.CreateTemporaryBufferPager(journalRecoveryName, initialSize, _env.Options.Encryption.IsEnabled);
+                    (Pager recoveryPager, Pager.State recoveryPagerState)  = _env.Options.CreateTemporaryBufferPager(journalRecoveryName, initialSize, _env.Options.Encryption.IsEnabled);
                     using var __ = recoveryPager;
                     
                     RecoverCurrentJournalSize(journalPagerState, out var isMoreThanMaxFileSize);
                     if (journalNumber == logInfo.CurrentJournal)
                         deleteLastJournal = isMoreThanMaxFileSize;
 
-                    Pager2.PagerTransactionState txState = default;
+                    Pager.PagerTransactionState txState = default;
                     var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
                     using (var journalReader = new JournalReader(_env, journalPager, journalPagerState, dataPager, recoveryPager, modifiedPages, logInfo, currentFileHeader, transactionHeader))
                     {
@@ -302,12 +302,12 @@ namespace Voron.Impl.Journal
                             addToInitLog?.Invoke(LogMode.Information, $"Still calculating checksum... ({sortedPages.Length - i} out of {sortedPages.Length}");
                         }
 
-                        Pager2.PagerTransactionState state = default;
+                        Pager.PagerTransactionState state = default;
                         try
                         {
                             var ptr = (PageHeader*)dataPager.AcquirePagePointerWithOverflowHandling(dataPagerState, ref state, modifiedPage);
 
-                            int numberOfPages = Pager.GetNumberOfPages(ptr);
+                            int numberOfPages = Paging.Paging.GetNumberOfPages(ptr);
 
                             if (overflowDetector.IsOverlappingAnotherPage(modifiedPage, numberOfPages))
                             {
@@ -463,7 +463,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        private void RecoverCurrentJournalSize(Pager2.State state, out bool isMoreThanMaxFileSize)
+        private void RecoverCurrentJournalSize(Pager.State state, out bool isMoreThanMaxFileSize)
         {
             var journalSize = Bits.PowerOf2(state.TotalAllocatedSize);
             if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
@@ -629,7 +629,7 @@ namespace Voron.Impl.Journal
                     
                     var currentTotalCommittedSinceLastFlushPages = TotalCommittedSinceLastFlushPages;
 
-                    Pager2.State dataPagerState;
+                    Pager.State dataPagerState;
                     try
                     {
                         byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -678,7 +678,7 @@ namespace Voron.Impl.Journal
             private void ApplyJournalStateAfterFlush(CancellationToken token,
                 List<PageFromScratchBuffer> bufferOfPageFromScratchBuffersToFree,
                 EnvironmentStateRecord record,
-                Pager2.State dataPagerState,
+                Pager.State dataPagerState,
                 ByteStringContext byteStringContext)
             {
                 // the idea here is that even though we need to run the journal through its state update under the transaction lock
@@ -1216,7 +1216,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            private Pager2.State ApplyPagesToDataFileFromScratch(EnvironmentStateRecord record)
+            private Pager.State ApplyPagesToDataFileFromScratch(EnvironmentStateRecord record)
             {
                 long written = 0;
                 var sp = Stopwatch.StartNew();
@@ -1227,7 +1227,7 @@ namespace Voron.Impl.Journal
                 using (var meter = options.IoMetrics.MeterIoRate(dataPager.FileName, IoMetrics.MeterType.DataFlush, 0))
                 {
                     var pagesBuffer = ArrayPool<Page>.Shared.Rent(record.ScratchPagesTable.Count);
-                    Pager2.PagerTransactionState txState = default;
+                    Pager.PagerTransactionState txState = default;
                     try
                     {
                         Span<Page> pages = GetSortedPages(ref txState, record, pagesBuffer);
@@ -1271,7 +1271,7 @@ namespace Voron.Impl.Journal
                 return dataPagerState;
             }
 
-            private Span<Page> GetSortedPages(ref Pager2.PagerTransactionState txState, EnvironmentStateRecord record, Page[] pagesBuffer)
+            private Span<Page> GetSortedPages(ref Pager.PagerTransactionState txState, EnvironmentStateRecord record, Page[] pagesBuffer)
             {
                 int index = 0;
                 var pageNumsBuffer = ArrayPool<long>.Shared.Rent(record.ScratchPagesTable.Count);
@@ -1297,7 +1297,7 @@ namespace Voron.Impl.Journal
                 return pages;
             }
 
-            private Page PreparePage(ref Pager2.PagerTransactionState txState, PageFromScratchBuffer pageValue)
+            private Page PreparePage(ref Pager.PagerTransactionState txState, PageFromScratchBuffer pageValue)
             {
                 byte* page = pageValue.ReadRaw(ref txState);
 
@@ -1480,7 +1480,7 @@ namespace Voron.Impl.Journal
                 // RavenDB-12854: in 32 bits locking/unlocking the memory is done separately for each mapping
                 // we use temp tx for dealing with compression buffers pager to avoid locking (zeroing) it's content during tx dispose
                 // because we might have another transaction already using it
-                Pager2.PagerTransactionState tempTxState = new() { IsWriteTransaction = true };
+                Pager.PagerTransactionState tempTxState = new() { IsWriteTransaction = true };
 
                 try
                 {
@@ -1532,7 +1532,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        private CompressedPagesResult PrepareToWriteToJournal(LowLevelTransaction tx, ref Pager2.PagerTransactionState txState)
+        private CompressedPagesResult PrepareToWriteToJournal(LowLevelTransaction tx, ref Pager.PagerTransactionState txState)
         {
             var txPages = tx.GetTransactionPages();
             var numberOfPages = txPages.Count;
@@ -1885,7 +1885,7 @@ namespace Voron.Impl.Journal
             CurrentFile = null;
         }
 
-        private (Pager2 Pager, Pager2.State State) CreateCompressionPager(long initialSize)
+        private (Pager Pager, Pager.State State) CreateCompressionPager(long initialSize)
         {
             return _env.Options.CreateTemporaryBufferPager(
                 $"compression.{_compressionPagerCounter++:D10}{StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.BuffersFileExtension}", initialSize,
@@ -1929,7 +1929,7 @@ namespace Voron.Impl.Journal
             (_compressionPager, _compressionPagerState) = CreateCompressionPager(maxSize);
         }
 
-        public void ZeroCompressionBuffer(ref Pager2.PagerTransactionState txState)
+        public void ZeroCompressionBuffer(ref Pager.PagerTransactionState txState)
         {
             var lockTaken = false;
 

@@ -484,7 +484,7 @@ namespace Voron.Data.BTrees
                         size += StreamInfo.SizeOf + info->TagSize;
                     }
 
-                    var numberOfPages = Pager.GetNumberOfOverflowPages(size);
+                    var numberOfPages = Paging.GetNumberOfOverflowPages(size);
 
                     for (int i = 0; i < numberOfPages; i++)
                     {

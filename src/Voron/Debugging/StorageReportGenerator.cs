@@ -193,7 +193,7 @@ namespace Voron.Debugging
                 Page page = _tx.GetPage(dic.PageNumber);
                 var header = (PersistentDictionaryHeader*)page.DataPointer;
 
-                int usedPages = Pager.GetNumberOfOverflowPages(page.OverflowSize);
+                int usedPages = Paging.GetNumberOfOverflowPages(page.OverflowSize);
                 trees.Add(new TreeReport
                 {
                     Name = "Dictionary #" + dic.PageNumber,
@@ -515,7 +515,7 @@ namespace Voron.Debugging
                     Page cur = _tx.GetPage(pageNum);
                     if (cur.IsOverflow)
                     {
-                        int numberOfOverflowPages = Pager.GetNumberOfOverflowPages(cur.OverflowSize);
+                        int numberOfOverflowPages = Paging.GetNumberOfOverflowPages(cur.OverflowSize);
                         pageDensities.Add((double)cur.OverflowSize / (numberOfOverflowPages * Constants.Storage.PageSize));
                     }
                     else
@@ -641,7 +641,7 @@ namespace Voron.Debugging
                     if (info.HasValue == false)
                         continue;
 
-                    long numberOfAllocatedPages = Pager.GetNumberOfOverflowPages(info.Value.TotalSize + info.Value.TagSize + Tree.StreamInfo.SizeOf);
+                    long numberOfAllocatedPages = Paging.GetNumberOfOverflowPages(info.Value.TotalSize + info.Value.TagSize + Tree.StreamInfo.SizeOf);
 
                     var chunksTree = tree.GetStreamChunksTree(it.CurrentKey);
 
@@ -787,7 +787,7 @@ namespace Voron.Debugging
 
                 if ((pageHeaderUnion.PageHeader.Flags & PageFlags.Overflow) == PageFlags.Overflow)
                 {
-                    var numberOfPages = Pager.GetNumberOfOverflowPages(pageHeaderUnion.PageHeader.OverflowSize);
+                    var numberOfPages = Paging.GetNumberOfOverflowPages(pageHeaderUnion.PageHeader.OverflowSize);
 
                     densities.Add(((double)(pageHeaderUnion.PageHeader.OverflowSize + Constants.Tree.PageHeaderSize)) / PagesToBytes(numberOfPages));
 

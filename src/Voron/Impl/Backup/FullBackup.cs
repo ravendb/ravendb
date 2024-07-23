@@ -92,7 +92,7 @@ namespace Voron.Impl.Backup
             StorageEnvironment env,
             SnapshotBackupCompressionAlgorithm compressionAlgorithm,
             CompressionLevel compressionLevel,
-            Pager2 dataPager,
+            Pager dataPager,
             ZipArchive zipArchive,
             string basePath,
             DataCopier copier,

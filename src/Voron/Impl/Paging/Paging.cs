@@ -5,7 +5,7 @@ using Voron.Global;
 
 namespace Voron.Impl.Paging
 {
-    public static unsafe class Pager
+    public static unsafe class Paging
     {        
         public const int PageMaxSpace = Constants.Storage.PageSize - Constants.Tree.PageHeaderSize;
         // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit

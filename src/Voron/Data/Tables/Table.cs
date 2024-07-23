@@ -339,7 +339,7 @@ namespace Voron.Data.Tables
             {
                 var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
 
-                var allocated = Pager.GetNumberOfOverflowPages(page.OverflowSize);
+                var allocated = Paging.GetNumberOfOverflowPages(page.OverflowSize);
 
                 return (allocated * Constants.Storage.PageSize, page.Flags.HasFlag(PageFlags.Compressed));
             }
@@ -396,8 +396,8 @@ namespace Voron.Data.Tables
             {
                 var pageNumber = id / Constants.Storage.PageSize;
                 var page = _tx.LowLevelTransaction.GetPage(pageNumber);
-                var existingNumberOfPages = Pager.GetNumberOfOverflowPages(page.OverflowSize);
-                var newNumberOfPages = Pager.GetNumberOfOverflowPages(builder.Size);
+                var existingNumberOfPages = Paging.GetNumberOfOverflowPages(page.OverflowSize);
+                var newNumberOfPages = Paging.GetNumberOfOverflowPages(builder.Size);
 
                 if (existingNumberOfPages == newNumberOfPages)
                 {
@@ -517,7 +517,7 @@ namespace Voron.Data.Tables
             if (largeValue)
             {
                 var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
-                var numberOfPages = Pager.GetNumberOfOverflowPages(page.OverflowSize);
+                var numberOfPages = Paging.GetNumberOfOverflowPages(page.OverflowSize);
 
                 for (var i = 0; i < numberOfPages; i++)
                 {
@@ -734,7 +734,7 @@ namespace Voron.Data.Tables
 
         private Page AllocatePageForLargeValue(int size, bool compressed)
         {
-            var numberOfOverflowPages = Pager.GetNumberOfOverflowPages(size);
+            var numberOfOverflowPages = Paging.GetNumberOfOverflowPages(size);
             var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
             _stats.OverflowPageCount += numberOfOverflowPages;
 
@@ -1025,7 +1025,7 @@ namespace Voron.Data.Tables
             }
             else
             {
-                var numberOfOverflowPages = Pager.GetNumberOfOverflowPages(dataSize);
+                var numberOfOverflowPages = Paging.GetNumberOfOverflowPages(dataSize);
                 var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
                 _stats.OverflowPageCount += numberOfOverflowPages;
 
