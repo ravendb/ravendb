@@ -18,7 +18,10 @@ public partial class IndexSearcher
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IAggregationProvider TextualAggregation(in FieldMetadata field, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
     {
-        var compactTree = _fieldsTree.CompactTreeFor(field.FieldName);
+        var compactTree = _fieldsTree?.CompactTreeFor(field.FieldName);
+        if (compactTree is null)
+            return new EmptyAggregationProvider();
+        
         return forward
             ? new ExistsTermProvider<Lookup<CompactTree.CompactKeyLookup>.ForwardIterator>(this, compactTree, field, forAggregation: true)
             : new ExistsTermProvider<Lookup<CompactTree.CompactKeyLookup>.BackwardIterator>(this, compactTree, field, forAggregation: true);
