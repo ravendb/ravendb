@@ -317,7 +317,7 @@ namespace Raven.Server.Config
                         foreach (var metadata in GetConfigurationEntryMetadataFor(configurationProperty, configurationPropertyType))
                             yield return metadata;
 
-                        yield break;
+                        continue;
                     }
 
                     if (configurationProperty.GetCustomAttributes<ConfigurationEntryAttribute>(inherit: true).Any() == false)
