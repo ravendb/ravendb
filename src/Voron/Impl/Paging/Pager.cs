@@ -25,7 +25,7 @@ using Voron.Global;
 
 namespace Voron.Impl.Paging;
 
-public unsafe partial class Pager2 : IDisposable
+public unsafe partial class Pager : IDisposable
 {
     public readonly string FileName;
     public readonly StorageEnvironmentOptions Options;
@@ -56,9 +56,9 @@ public unsafe partial class Pager2 : IDisposable
     private const int MinIncreaseSize = 16 * Constants.Size.Kilobyte;
     private const int MaxIncreaseSize = Constants.Size.Gigabyte;
 
-    public static (Pager2 Pager, State State) Create(StorageEnvironmentOptions options, string filename, long initialFileSize, Pal.OpenFileFlags flags)
+    public static (Pager Pager, State State) Create(StorageEnvironmentOptions options, string filename, long initialFileSize, Pal.OpenFileFlags flags)
     {
-        var pager = new Pager2(options, filename, flags, GetFunctions(options, flags));
+        var pager = new Pager(options, filename, flags, GetFunctions(options, flags));
         var result = Pal.rvn_init_pager(filename, initialFileSize, flags, 
             out var handle, out var memory, out var memorySize, out var error);
         if (result != PalFlags.FailCodes.Success)
@@ -71,7 +71,7 @@ public unsafe partial class Pager2 : IDisposable
 
     private static Functions GetFunctions(StorageEnvironmentOptions options, Pal.OpenFileFlags flags)
     {
-        var funcs = options.RunningOn32Bits ? Win32.CreateFunctions() : Win64.CreateFunctions();
+        var funcs = options.RunningOn32Bits ? Bits32.CreateFunctions() : Bits64.CreateFunctions();
         if (flags.HasFlag(Pal.OpenFileFlags.Encrypted))
         {
             funcs.AcquirePagePointer = &Crypto.AcquirePagePointer;
@@ -99,7 +99,7 @@ public unsafe partial class Pager2 : IDisposable
         }
     }
 
-    private Pager2(StorageEnvironmentOptions options,
+    private Pager(StorageEnvironmentOptions options,
         string filename,
         Pal.OpenFileFlags flags,
         Functions functions)
@@ -241,7 +241,7 @@ public unsafe partial class Pager2 : IDisposable
             return (byte*)pageHeader;
 
         // Case 2: Page is overflow and already mapped large enough ==> no problem, returning a pointer to existing mapping
-        if (EnsureMapped(state, ref txState, pageNumber, Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize)) == false)
+        if (EnsureMapped(state, ref txState, pageNumber, Paging.GetNumberOfOverflowPages(pageHeader->OverflowSize)) == false)
             return (byte*)pageHeader;
 
         // Case 3: Page is overflow and was ensuredMapped above, view was re-mapped so we need to acquire a pointer to the new mapping.
@@ -258,7 +258,7 @@ public unsafe partial class Pager2 : IDisposable
             return (byte*)pageHeader;
 
         // Case 2: Page is overflow and already mapped large enough ==> no problem, returning a pointer to existing mapping
-        if (EnsureMapped(state, ref txState, pageNumber, Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize)) == false)
+        if (EnsureMapped(state, ref txState, pageNumber, Paging.GetNumberOfOverflowPages(pageHeader->OverflowSize)) == false)
             return (byte*)pageHeader;
 
         // Case 3: Page is overflow and was ensuredMapped above, view was re-mapped so we need to acquire a pointer to the new mapping.

@@ -31,7 +31,7 @@ namespace Voron.Impl.Scratch
 
     public sealed record PageFromScratchBuffer(
         ScratchBufferFile File,
-        Pager2.State State,
+        Pager.State State,
         long AllocatedInTransaction,
         long PositionInScratchBuffer,
         long PageNumberInDataFile,
@@ -45,7 +45,7 @@ namespace Voron.Impl.Scratch
             return new Page(Read(ref tx.PagerTransactionState));
         }
         
-        public unsafe byte* Read(ref Pager2.PagerTransactionState txState)
+        public unsafe byte* Read(ref Pager.PagerTransactionState txState)
         {
             if (IsDeleted == false)
             {
@@ -65,7 +65,7 @@ namespace Voron.Impl.Scratch
             return new Page(ReadRaw(ref tx.PagerTransactionState));
         }
         
-        public unsafe byte* ReadRaw(ref Pager2.PagerTransactionState txState)
+        public unsafe byte* ReadRaw(ref Pager.PagerTransactionState txState)
         {
             if (IsDeleted == false)
             {

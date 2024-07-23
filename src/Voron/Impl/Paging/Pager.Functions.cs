@@ -1,14 +1,14 @@
 ﻿namespace Voron.Impl.Paging;
 
-public unsafe partial class Pager2
+public unsafe partial class Pager
 {
     public class Functions
     {
-        public delegate* <Pager2, State, ref PagerTransactionState, long, byte*> AcquirePagePointer;
-        public delegate* <Pager2, State, ref PagerTransactionState, long, byte*> AcquireRawPagePointer;
-        public delegate* <Pager2, long, int, State, ref PagerTransactionState, byte*> AcquirePagePointerForNewPage;
+        public delegate* <Pager, State, ref PagerTransactionState, long, byte*> AcquirePagePointer;
+        public delegate* <Pager, State, ref PagerTransactionState, long, byte*> AcquireRawPagePointer;
+        public delegate* <Pager, long, int, State, ref PagerTransactionState, byte*> AcquirePagePointerForNewPage;
         public delegate* <byte*, ulong, void> ProtectPageRange;
         public delegate* <byte*, ulong, void> UnprotectPageRange;
-        public delegate* <Pager2, State, ref PagerTransactionState, long, int, bool> EnsureMapped;
+        public delegate* <Pager, State, ref PagerTransactionState, long, int, bool> EnsureMapped;
     }
 }

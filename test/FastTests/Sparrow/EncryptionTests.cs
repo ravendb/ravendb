@@ -34,7 +34,7 @@ namespace FastTests.Sparrow
             var file = Env.ScratchBufferPool.GetScratchBufferFile(0);
             var (pager, state) = file.GetPagerAndState();
 
-            Pager2.PagerTransactionState txState = new(){IsWriteTransaction = true};
+            Pager.PagerTransactionState txState = new(){IsWriteTransaction = true};
             try
             {
                 pager.EnsureContinuous(ref state, 17, 1); // We're gonna try to read and write to page 17
@@ -205,7 +205,7 @@ namespace FastTests.Sparrow
             var file = Env.ScratchBufferPool.GetScratchBufferFile(0);
             var (pager, state) = file.GetPagerAndState();
 
-            Pager2.PagerTransactionState txState = new(){IsWriteTransaction = true};
+            Pager.PagerTransactionState txState = new(){IsWriteTransaction = true};
             try
             {
                 var overflowSize = 4 * Constants.Storage.PageSize + 100;
@@ -251,7 +251,7 @@ namespace FastTests.Sparrow
             var file = Env.ScratchBufferPool.GetScratchBufferFile(0);
             var (pager, state) = file.GetPagerAndState();
 
-            Pager2.PagerTransactionState txState = new(){IsWriteTransaction = true};
+            Pager.PagerTransactionState txState = new(){IsWriteTransaction = true};
             try
             {
                 var overflowSize = 4 * Constants.Storage.PageSize + 100;
@@ -319,7 +319,7 @@ namespace FastTests.Sparrow
                 txState.InvokeDispose(Env, ref state, ref txState);
             }
 
-            bool PageExistsInCache(Pager2.PagerTransactionState txState, Pager2 pager, long page, out int usages)
+            bool PageExistsInCache(Pager.PagerTransactionState txState, Pager pager, long page, out int usages)
                 {
                     if (txState.ForCrypto.TryGetValue(pager, out var s) == false)
                     {

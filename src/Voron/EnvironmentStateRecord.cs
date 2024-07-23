@@ -9,7 +9,7 @@ using Voron.Impl.Scratch;
 namespace Voron;
 
 public record EnvironmentStateRecord(
-    Pager2.State DataPagerState, 
+    Pager.State DataPagerState, 
     long TransactionId,
     ImmutableDictionary<long, PageFromScratchBuffer> ScratchPagesTable,
     long FlushedToJournal,

@@ -38,7 +38,7 @@ namespace Voron.Data.BTrees
             if (!value.HasValue)
                 throw new ArgumentNullException(nameof(value));
 
-            int maxNodeSize = (Pager.PageMaxSpace / 2 - 1); // merge toward main, temp code!
+            int maxNodeSize = (Paging.PageMaxSpace / 2 - 1); // merge toward main, temp code!
             if (value.Size > maxNodeSize)
                 throw new ArgumentException("Cannot add a value to child tree that is over " + maxNodeSize + " bytes in size", nameof(value));
             if (value.Size == 0)

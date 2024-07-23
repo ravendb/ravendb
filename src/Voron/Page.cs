@@ -77,7 +77,7 @@ namespace Voron
             int numberOfPages = 1;
             if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
             {
-                numberOfPages = Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+                numberOfPages = Paging.GetNumberOfOverflowPages(pageHeader->OverflowSize);
             }
             return numberOfPages;
         }

@@ -275,7 +275,7 @@ namespace Voron.Recovery
                                 if (ValidateOverflowPage(pageHeader, eof, startOffset, ref mem) == false)
                                     continue;
 
-                                var numberOfPages = Impl.Paging.Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+                                var numberOfPages = Impl.Paging.Paging.GetNumberOfOverflowPages(pageHeader->OverflowSize);
 
                                 if (pageHeader->Flags.HasFlag(PageFlags.Stream))
                                 {
@@ -753,7 +753,7 @@ namespace Voron.Recovery
 
         private Size _maxTransactionSize = new Size(64, SizeUnit.Megabytes);
 
-        private byte* DecryptPageIfNeeded(StorageEnvironment env,byte* mem, long start, ref Pager2.PagerTransactionState txState, bool maybePulseTransaction = false)
+        private byte* DecryptPageIfNeeded(StorageEnvironment env,byte* mem, long start, ref Pager.PagerTransactionState txState, bool maybePulseTransaction = false)
         {
             if (IsEncrypted == false)
                 return mem;
@@ -1236,7 +1236,7 @@ namespace Voron.Recovery
         {
             ulong checksum;
             //pageHeader might be a buffer address we need to verify we don't exceed the original memory boundary here
-            var numberOfPages = Impl.Paging.Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+            var numberOfPages = Impl.Paging.Paging.GetNumberOfOverflowPages(pageHeader->OverflowSize);
             var sizeOfPages = numberOfPages * _pageSize;
             var endOfOverflow = (long)mem + sizeOfPages;
             // the endOfOverflow can be equal to eof if the last page is overflow
@@ -1718,7 +1718,7 @@ namespace Voron.Recovery
 
         private readonly string _output;
         private readonly int _pageSize;
-        private Pager2 Pager => throw new NotImplementedException(); // _option.DataPager;
+        private Pager Pager => throw new NotImplementedException(); // _option.DataPager;
         private const string LogFileName = "recovery.log";
         private long _numberOfFaultedPages;
         private long _numberOfDocumentsRetrieved;

@@ -11,11 +11,11 @@ using Voron.Impl.Scratch;
 
 namespace Voron.Impl.Paging;
 
-public unsafe partial class Pager2
+public unsafe partial class Pager
 {
     public static class Crypto
     {
-        public static byte* AcquirePagePointerForNewPage(Pager2 pager, long pageNumber, int numberOfPages, State state, ref PagerTransactionState txState)
+        public static byte* AcquirePagePointerForNewPage(Pager pager, long pageNumber, int numberOfPages, State state, ref PagerTransactionState txState)
         {
             Debug.Assert(pager.Options.Encryption.IsEnabled);
 
@@ -44,7 +44,7 @@ public unsafe partial class Pager2
             return buffer.Pointer;
         }
 
-        public static byte* AcquirePagePointer(Pager2 pager, State state, ref PagerTransactionState txState, long pageNumber)
+        public static byte* AcquirePagePointer(Pager pager, State state, ref PagerTransactionState txState, long pageNumber)
         {
             Debug.Assert(pager.Options.Encryption.IsEnabled);
 
@@ -60,7 +60,7 @@ public unsafe partial class Pager2
 
             var pageHeader = (PageHeader*)pagePointer;
 
-            int numberOfPages = Pager.GetNumberOfPages(pageHeader);
+            int numberOfPages = Paging.GetNumberOfPages(pageHeader);
 
             buffer = GetBufferAndAddToTxState(pager, pageNumber, cryptoState, numberOfPages);
 
@@ -102,7 +102,7 @@ public unsafe partial class Pager2
                 if (Sodium.crypto_kdf_derive_from_key(subKey, subKeyLen, (ulong)num, ctx, mk) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
 
-                var dataSize = Pager.GetNumberOfPages(page) * Constants.Storage.PageSize;
+                var dataSize = Paging.GetNumberOfPages(page) * Constants.Storage.PageSize;
 
                 var npub = (byte*)page + PageHeader.NonceOffset;
                 // here we generate 128(!) bits of random data, but xchacha20poly1305 needs
@@ -135,7 +135,7 @@ public unsafe partial class Pager2
             }
         }
 
-        private static void DecryptPage(Pager2 pager,PageHeader* page)
+        private static void DecryptPage(Pager pager,PageHeader* page)
         {
             var num = page->PageNumber;
 
@@ -148,7 +148,7 @@ public unsafe partial class Pager2
                 if (Sodium.crypto_kdf_derive_from_key(subKey, subKeyLen, (ulong)num, ctx, mk) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
 
-                var dataSize = (ulong)Pager.GetNumberOfPages(page) * Constants.Storage.PageSize;
+                var dataSize = (ulong)Paging.GetNumberOfPages(page) * Constants.Storage.PageSize;
                 var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(
                     destination + PageHeader.SizeOf,
                     null,
@@ -167,7 +167,7 @@ public unsafe partial class Pager2
             }
         }
         
-        private static EncryptionBuffer GetBufferAndAddToTxState(Pager2 pager, long pageNumber, CryptoTransactionState state, int numberOfPages)
+        private static EncryptionBuffer GetBufferAndAddToTxState(Pager pager, long pageNumber, CryptoTransactionState state, int numberOfPages)
         {
             var ptr = pager._encryptionBuffersPool.Get(numberOfPages, out var size, out var thread);
             var buffer = new EncryptionBuffer(pager._encryptionBuffersPool)
@@ -183,17 +183,17 @@ public unsafe partial class Pager2
             return buffer;
         }
 
-        private static void ReturnBuffer(Pager2 pager, EncryptionBuffer buffer)
+        private static void ReturnBuffer(Pager pager, EncryptionBuffer buffer)
         {
             pager._encryptionBuffersPool.Return(buffer.Pointer, buffer.OriginalSize, buffer.AllocatingThread, buffer.Generation);
         }
 
         
-        private static CryptoTransactionState GetTransactionState(Pager2 pager, ref PagerTransactionState txState)
+        private static CryptoTransactionState GetTransactionState(Pager pager, ref PagerTransactionState txState)
         {
             if (txState.ForCrypto == null)
             {
-                txState.ForCrypto = new Dictionary<Pager2, CryptoTransactionState>();
+                txState.ForCrypto = new Dictionary<Pager, CryptoTransactionState>();
                 txState.OnDispose += TxOnDispose;
                 if (txState.IsWriteTransaction)
                 {
@@ -243,7 +243,7 @@ public unsafe partial class Pager2
                     // Encrypt the local buffer, then copy the encrypted value to the pager
                     var pageHeader = (PageHeader*)buffer.Value.Pointer;
                     var dataSize = EncryptPage(pager._masterKey, pageHeader);
-                    var numPages = Pager.GetNumberOfOverflowPages(dataSize);
+                    var numPages = Paging.GetNumberOfOverflowPages(dataSize);
 
                     pager.EnsureContinuous(ref state, buffer.Key, numPages);
                     pager.EnsureMapped(state, ref txState, buffer.Key, numPages);
@@ -277,11 +277,11 @@ public unsafe partial class Pager2
 
         
         [Conditional("DEBUG")]
-        private static void Debug_VerifyDidNotChanged(Pager2 pager, State state, ref PagerTransactionState txState, long pageNumber, EncryptionBuffer buffer)
+        private static void Debug_VerifyDidNotChanged(Pager pager, State state, ref PagerTransactionState txState, long pageNumber, EncryptionBuffer buffer)
         {
             var pagePointer = pager.AcquireRawPagePointerWithOverflowHandling(state, ref txState, pageNumber);
             var pageHeader = (PageHeader*)pagePointer;
-            int numberOfPages = Pager.GetNumberOfPages(pageHeader);
+            int numberOfPages = Paging.GetNumberOfPages(pageHeader);
 
             PageHeader* bufferPointer = ((PageHeader*)buffer.Pointer);
             if (pageHeader->PageNumber != bufferPointer->PageNumber || 

@@ -24,17 +24,17 @@ namespace Voron.Impl.Journal
     public sealed unsafe class JournalReader : IDisposable
     {
         private readonly StorageEnvironment _environment;
-        private readonly Pager2 _journalPager;
-        private readonly Pager2.State _journalPagerState;
-        private readonly Pager2 _dataPager;
-        private readonly Pager2 _recoveryPager;
+        private readonly Pager _journalPager;
+        private readonly Pager.State _journalPagerState;
+        private readonly Pager _dataPager;
+        private readonly Pager _recoveryPager;
         private readonly HashSet<long> _modifiedPages;
         private readonly JournalInfo _journalInfo;
         private readonly FileHeader _currentFileHeader;
         private long _readAt4Kb;
         private readonly DiffApplier _diffApplier = new();
         private readonly long _journalPagerNumberOfAllocated4Kb;
-        private readonly List<Pager2.EncryptionBuffer> _encryptionBuffers;
+        private readonly List<Pager.EncryptionBuffer> _encryptionBuffers;
         private TransactionHeader* _firstValidTransactionHeader = null;
 
         private long? _firstSkippedTx;
@@ -45,7 +45,7 @@ namespace Voron.Impl.Journal
 
         public long Next4Kb => _readAt4Kb;
 
-        public JournalReader(StorageEnvironment environment,Pager2 journalPager, Pager2.State journalPagerState, Pager2 dataPager, Pager2 recoveryPager, HashSet<long> modifiedPages, JournalInfo journalInfo, FileHeader currentFileHeader, TransactionHeader* previous)
+        public JournalReader(StorageEnvironment environment,Pager journalPager, Pager.State journalPagerState, Pager dataPager, Pager recoveryPager, HashSet<long> modifiedPages, JournalInfo journalInfo, FileHeader currentFileHeader, TransactionHeader* previous)
         {
             RequireHeaderUpdate = false;
             _environment = environment;
@@ -61,12 +61,12 @@ namespace Voron.Impl.Journal
             _journalPagerNumberOfAllocated4Kb =  _journalPagerState.TotalAllocatedSize /(4*Constants.Size.Kilobyte);
 
             if (journalPager.Options.Encryption.IsEnabled)
-                _encryptionBuffers = new List<Pager2.EncryptionBuffer>();
+                _encryptionBuffers = new List<Pager.EncryptionBuffer>();
         }
 
         public TransactionHeader* LastTransactionHeader { get; private set; }
 
-        public bool ReadOneTransactionToDataFile(ref Pager2.State dataPagerState, ref Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState,
+        public bool ReadOneTransactionToDataFile(ref Pager.State dataPagerState, ref Pager.State recoveryPagerState, ref Pager.PagerTransactionState txState,
             SafeFileHandle fileHandle, StorageEnvironmentOptions options)
         {
             if (_readAt4Kb >= _journalPagerNumberOfAllocated4Kb)
@@ -200,7 +200,7 @@ namespace Voron.Impl.Journal
 
                     if (options.Encryption.IsEnabled)
                     {
-                        Pager2.Crypto.EncryptPage(options.Encryption.MasterKey, (PageHeader*)currentBuffer);
+                        Pager.Crypto.EncryptPage(options.Encryption.MasterKey, (PageHeader*)currentBuffer);
 
                     }
                     WritePageToFile(fileHandle, currentBuffer, pageSize, pageNumber);
@@ -288,7 +288,7 @@ namespace Voron.Impl.Journal
             throw new InvalidDataException(message);
         }
 
-        public List<TransactionHeader> RecoverAndValidate(ref Pager2.State dataPagerState, ref Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState, StorageEnvironmentOptions options)
+        public List<TransactionHeader> RecoverAndValidate(ref Pager.State dataPagerState, ref Pager.State recoveryPagerState, ref Pager.PagerTransactionState txState, StorageEnvironmentOptions options)
         {
             var transactionHeaders = new List<TransactionHeader>();
             var rc = Pal.rvn_pager_get_file_handle(dataPagerState.Handle, out var fileHandle, out int errorCode);
@@ -307,7 +307,7 @@ namespace Voron.Impl.Journal
             return transactionHeaders;
         }
 
-        public void ZeroRecoveryBufferIfNeeded(Pager2.State recoveryPagerState, ref Pager2.PagerTransactionState txState, StorageEnvironmentOptions options)
+        public void ZeroRecoveryBufferIfNeeded(Pager.State recoveryPagerState, ref Pager.PagerTransactionState txState, StorageEnvironmentOptions options)
         {
             if (options.Encryption.IsEnabled == false)
                 return;
@@ -362,7 +362,7 @@ namespace Voron.Impl.Journal
             ZerosOrGarbage
         }
 
-        private bool TryReadAndValidateHeader(StorageEnvironmentOptions options, ref Pager2.PagerTransactionState txState, ReadExpectation readExpectation, out TransactionHeader* current)
+        private bool TryReadAndValidateHeader(StorageEnvironmentOptions options, ref Pager.PagerTransactionState txState, ReadExpectation readExpectation, out TransactionHeader* current)
         {
             if (_readAt4Kb > _journalPagerNumberOfAllocated4Kb)
             {
@@ -495,7 +495,7 @@ namespace Voron.Impl.Journal
                 var size = (4 * Constants.Size.Kilobyte) * GetNumberOf4KbFor(sizeof(TransactionHeader) + pagesSize);
 
                 var ptr = PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out var thread);
-                var buffer = new Pager2.EncryptionBuffer(options.Encryption.EncryptionBuffersPool)
+                var buffer = new Pager.EncryptionBuffer(options.Encryption.EncryptionBuffersPool)
                 {
                     Pointer = ptr,
                     Size = size,
@@ -682,7 +682,7 @@ namespace Voron.Impl.Journal
             return false;
         }
 
-        private TransactionHeader* EnsureTransactionMapped(TransactionHeader* current, ref Pager2.PagerTransactionState txState, long pageNumber, long positionInsidePage)
+        private TransactionHeader* EnsureTransactionMapped(TransactionHeader* current, ref Pager.PagerTransactionState txState, long pageNumber, long positionInsidePage)
         {
             var size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
             var numberOfPages = GetNumberOfPagesFor(positionInsidePage + sizeof(TransactionHeader) + size);
@@ -747,7 +747,7 @@ namespace Voron.Impl.Journal
         {
         }
 
-        public void Complete(ref Pager2.State state, ref Pager2.PagerTransactionState txState)
+        public void Complete(ref Pager.State state, ref Pager.PagerTransactionState txState)
         {
             if (_encryptionBuffers != null) // Encryption enabled
             {
@@ -770,7 +770,7 @@ namespace Voron.Impl.Journal
                             continue; // No modification
                 
                         var pageHeader = (PageHeader*)buffer.Value.Pointer;
-                        var numberOfPages = Pager.GetNumberOfPages(pageHeader);
+                        var numberOfPages = Paging.Paging.GetNumberOfPages(pageHeader);
                 
                         long modifiedPage = buffer.Key;
                 

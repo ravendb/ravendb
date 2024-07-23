@@ -192,7 +192,7 @@ namespace SlowTests.Voron
             using var __ = state;
             tempPager.Dispose();
 
-            Pager2.PagerTransactionState txState = default;
+            Pager.PagerTransactionState txState = default;
 
             Assert.Throws<ObjectDisposedException>(() => tempPager.AcquirePagePointer(state, ref txState, 0));
 
