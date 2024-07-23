@@ -47,6 +47,7 @@ class createDatabase extends dialogViewModelBase {
     
     encryptionSection: setupEncryptionKey;
     isSecureServer = accessManager.default.secureServer();
+    allowEncryptedDatabasesOverHttp = accessManager.default.allowEncryptedDatabasesOverHttp();
     operationNotSupported: boolean;
     
     protected currentAdvancedSection = ko.observable<availableConfigurationSectionId>();
