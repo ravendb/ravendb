@@ -326,7 +326,7 @@ int32_t rvn_unmap_memory(
     int32_t *detailed_error_code)
 {
     *detailed_error_code = 0;
-    if (!munmap(mem, size))
+    if (munmap(mem, size))
     {
         *detailed_error_code = errno;
         return FAIL_UNMAP_VIEW_OF_FILE;
