@@ -817,7 +817,7 @@ namespace Voron.Impl.Journal
                 {
                     if (x.Number < flushedRecord.FlushedToJournal)
                         return true;
-                    return x.Number == _waj.CurrentFile?.Number && _waj.CurrentFile.GetAvailable4Kbs(txw.CurrentStateRecord) == 0;
+                    return x.Number == flushedRecord.FlushedToJournal && x.GetAvailable4Kbs(txw.CurrentStateRecord) == 0;
                 }, unusedJournals);
 
                 if (_waj._logger.IsInfoEnabled)
