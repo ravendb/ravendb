@@ -101,21 +101,16 @@ namespace Voron.Recovery
             }
 
             StorageEnvironment se = null;
-            //TempPagerTransaction tx = null;
+            Pager.PagerTransactionState tempTx = default;
             try
             {
-                if (IsEncrypted)
-                {
-                    //We need a tx for the encryption pager and we can't dispose of it while reading the page.
-              //      tx = new TempPagerTransaction();
-                }
                 var sw = new Stopwatch();
                 sw.Start();
                 byte* mem = null;
                 if (_copyOnWrite)
                 {
                     writer.WriteLine($"Recovering journal files from folder '{_option.JournalPath}', this may take a while...");
-
+                    
                     bool optionOwnsPagers = _option.OwnsPagers;
                     try
                     {
@@ -180,8 +175,8 @@ namespace Voron.Recovery
                     //for encrypted database the pointer points to the buffer and this is not what we want.
                     if (se == null /*journal recovery failed or copy on write is set to false*/)
                     {
-                        //mem = _option.DataPager.PagerState.MapBase;
-                        throw new NotImplementedException();
+                        (_dataPager, _dataPagerState) = _option.InitializeDataPager();
+                        mem = _dataPagerState.BaseAddress;
                     }
                     else
                     {
@@ -275,7 +270,7 @@ namespace Voron.Recovery
                                 if (ValidateOverflowPage(pageHeader, eof, startOffset, ref mem) == false)
                                     continue;
 
-                                var numberOfPages = Impl.Paging.Paging.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+                                var numberOfPages = Paging.GetNumberOfOverflowPages(pageHeader->OverflowSize);
 
                                 if (pageHeader->Flags.HasFlag(PageFlags.Stream))
                                 {
@@ -766,7 +761,7 @@ namespace Voron.Recovery
             }
             
             long pageNumber = (long)((PageHeader*)mem)->PageNumber;
-            var res = Pager.AcquirePagePointer(_dataPagerState, ref txState, pageNumber);
+            var res = _dataPager.AcquirePagePointer(_dataPagerState, ref txState, pageNumber);
             
             return res;
         }
@@ -1236,7 +1231,7 @@ namespace Voron.Recovery
         {
             ulong checksum;
             //pageHeader might be a buffer address we need to verify we don't exceed the original memory boundary here
-            var numberOfPages = Impl.Paging.Paging.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+            var numberOfPages = Paging.GetNumberOfOverflowPages(pageHeader->OverflowSize);
             var sizeOfPages = numberOfPages * _pageSize;
             var endOfOverflow = (long)mem + sizeOfPages;
             // the endOfOverflow can be equal to eof if the last page is overflow
@@ -1718,7 +1713,6 @@ namespace Voron.Recovery
 
         private readonly string _output;
         private readonly int _pageSize;
-        private Pager Pager => throw new NotImplementedException(); // _option.DataPager;
         private const string LogFileName = "recovery.log";
         private long _numberOfFaultedPages;
         private long _numberOfDocumentsRetrieved;
@@ -1752,6 +1746,8 @@ namespace Voron.Recovery
         private readonly byte[] _masterKey;
         private int _InvalidChecksumWithNoneZeroMac;
         private bool _shouldIgnoreInvalidPagesInARaw;
+        private Pager _dataPager;
+        private Pager.State _dataPagerState;
         private const int MaxNumberOfInvalidChecksumWithNoneZeroMac = 128;
 
         public bool IsEncrypted => _masterKey != null;
