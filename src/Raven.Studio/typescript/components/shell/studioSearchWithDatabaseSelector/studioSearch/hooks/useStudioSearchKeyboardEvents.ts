@@ -1,5 +1,5 @@
-import { StudioSearchResult, StudioSearchResultItem } from "../studioSearchTypes";
-import { useEffect, useState } from "react";
+import { StudioSearchResultItem, StudioSearchResult } from "../studioSearchTypes";
+import { useEffect, useMemo, useState } from "react";
 
 interface UseStudioSearchKeyboardEventsProps {
     refs: {
@@ -8,12 +8,12 @@ interface UseStudioSearchKeyboardEventsProps {
         serverColumnRef: React.RefObject<HTMLDivElement>;
         databaseColumnRef: React.RefObject<HTMLDivElement>;
     };
+    studioSearchInputId: string;
     results: StudioSearchResult;
     activeItem: StudioSearchResultItem;
-    setIsDropdownOpen: (isOpen: boolean) => void;
-    setActiveItem: (item: StudioSearchResultItem) => void;
+    setActiveItem: React.Dispatch<React.SetStateAction<StudioSearchResultItem>>;
+    setIsDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
-    studioSearchInputId: string;
 }
 
 export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEventsProps) {
@@ -61,49 +61,72 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
         };
     }, [inputRef, activeItem, setIsDropdownOpen]);
 
+    const [activeGroup, setActiveGroup] = useState<"left" | "right">("left");
+    const [activeIndex, setActiveIndex] = useState(0);
+
+    const leftFlatItems = useMemo(
+        () => Object.values(results.database).flat().concat(results.switchToDatabase),
+        [results]
+    );
+    const rightFlatItems = useMemo(() => results.server, [results]);
+
+    const leftFlatItemsLength = leftFlatItems.length;
+    const rightFlatItemsLength = rightFlatItems.length;
+
+    // Handle switching group when some list is empty
+    useEffect(() => {
+        if (leftFlatItemsLength > 0 && rightFlatItemsLength === 0) {
+            setActiveGroup("left");
+        }
+        if (leftFlatItemsLength === 0 && rightFlatItemsLength > 0) {
+            setActiveGroup("right");
+        }
+
+        setActiveIndex(0);
+    }, [leftFlatItemsLength, rightFlatItemsLength, setActiveIndex, setActiveGroup]);
+
+    // Handle switching active item
+    useEffect(() => {
+        const newActiveItem = activeGroup === "left" ? leftFlatItems[activeIndex] : rightFlatItems[activeIndex];
+
+        if (newActiveItem?.id !== activeItem?.id) {
+            setActiveItem(newActiveItem);
+        }
+    }, [activeGroup, activeIndex, activeItem?.id, leftFlatItems, rightFlatItems, setActiveItem]);
+
     // Handle keyboard navigation
     useEffect(() => {
-        let isFirstRun = true;
-        let activeLeftIndex = 0;
-        let activeRightIndex = 0;
-
-        const rightFlatItems = results.server;
-        const leftFlatItems = Object.values(results.database).flat().concat(results.switchToDatabase);
-
-        let activeGroup: "left" | "right" = leftFlatItems.length > 0 ? "left" : "right";
-
         const handleKeyboardNavigation = (e: KeyboardEvent) => {
-            if (e.key === "ArrowDown" && !isFirstRun) {
+            if (e.key === "ArrowDown") {
                 e.preventDefault();
                 if (activeGroup === "left") {
-                    activeLeftIndex = (activeLeftIndex + 1) % leftFlatItems.length;
+                    setActiveIndex((activeIndex + 1) % leftFlatItemsLength);
                 } else {
-                    activeRightIndex = (activeRightIndex + 1) % rightFlatItems.length;
+                    setActiveIndex((activeIndex + 1) % rightFlatItemsLength);
                 }
             }
-            if (e.key === "ArrowUp" && !isFirstRun) {
+            if (e.key === "ArrowUp") {
                 e.preventDefault();
                 if (activeGroup === "left") {
-                    activeLeftIndex = (activeLeftIndex - 1 + leftFlatItems.length) % leftFlatItems.length;
+                    setActiveIndex((activeIndex - 1 + leftFlatItemsLength) % leftFlatItemsLength);
                 } else {
-                    activeRightIndex = (activeRightIndex - 1 + rightFlatItems.length) % rightFlatItems.length;
+                    setActiveIndex((activeIndex - 1 + rightFlatItemsLength) % rightFlatItemsLength);
                 }
             }
             if (e.altKey && e.key === "ArrowLeft") {
                 e.preventDefault();
-                activeGroup = "left";
+                if (leftFlatItemsLength > 0) {
+                    setActiveIndex(Math.min(activeIndex, leftFlatItemsLength - 1));
+                    setActiveGroup("left");
+                }
             }
             if (e.altKey && e.key === "ArrowRight") {
                 e.preventDefault();
-                activeGroup = "right";
+                if (rightFlatItemsLength > 0) {
+                    setActiveIndex(Math.min(activeIndex, rightFlatItemsLength - 1));
+                    setActiveGroup("right");
+                }
             }
-
-            const flatItems = activeGroup === "left" ? leftFlatItems : rightFlatItems;
-            const index = activeGroup === "left" ? activeLeftIndex : activeRightIndex;
-
-            const newActiveItem = flatItems[index];
-            setActiveItem(newActiveItem);
-            isFirstRun = false;
         };
 
         const current = inputRef.current;
@@ -112,10 +135,12 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
         return () => {
             current.removeEventListener("keydown", handleKeyboardNavigation);
         };
-    }, [inputRef, serverColumnRef, results, setActiveItem]);
+    }, [activeIndex, activeGroup, inputRef, leftFlatItemsLength, rightFlatItemsLength]);
 
     // Handle scroll on active item change
     useEffect(() => {
+        const activeItem = activeGroup === "left" ? leftFlatItems[activeIndex] : rightFlatItems[activeIndex];
+
         const activeElement = document.getElementById(activeItem?.id);
         if (!activeElement) {
             return;
@@ -132,7 +157,7 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
         const scrollToY = activeElementPage * columnElement.clientHeight - activeElement.clientHeight;
 
         columnElement.scrollTo(0, scrollToY);
-    }, [activeItem?.id, activeItem?.type, databaseColumnRef, serverColumnRef]);
+    }, [activeGroup, activeIndex, databaseColumnRef, leftFlatItems, rightFlatItems, serverColumnRef]);
 
     // Prevent space from closing the dropdown (reactstrap issue)
     // https://github.com/reactstrap/reactstrap/issues/1945

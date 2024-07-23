@@ -43,7 +43,7 @@ export interface StudioSearchItem {
     innerActions?: SearchInnerAction[];
 }
 
-export type StudioSearchResultItem = {
+export interface StudioSearchResultItem {
     id: string;
     type: StudioSearchItemType;
     text: string;
@@ -53,7 +53,7 @@ export type StudioSearchResultItem = {
     indices?: readonly RangeTuple[];
     innerActionText?: string;
     innerActionIndices?: readonly RangeTuple[];
-};
+}
 
 export type OngoingTaskWithBroker = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask & {
     BrokerType?: Raven.Client.Documents.Operations.ETL.Queue.QueueBrokerType;
