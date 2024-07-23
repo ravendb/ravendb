@@ -819,7 +819,11 @@ namespace RachisTests
                     Assert.NotNull(processingNode);
 
                     // wait for the node to become candidate
+<<<<<<< HEAD
                     await WaitAndAssertForValueAsync(() => processingNode.ServerStore.Engine.CurrentCommittedState.State, RachisState.Candidate);
+=======
+                    await WaitAndAssertForValueAsync(() => processingNode.ServerStore.Engine.CurrentPublishedState(), RachisState.Candidate);
+>>>>>>> e74b544acac (RavenDB-22457)
                     if (options.DatabaseMode == RavenDatabaseMode.Sharded)
                     {
                         // set up action to halt the ack
@@ -865,9 +869,15 @@ namespace RachisTests
                     // wait for nodes to stabilize
                     await WaitAndAssertForValueAsync(() =>
                     {
+<<<<<<< HEAD
                         if (processingNode.ServerStore.Engine.CurrentCommittedState.State == RachisState.Candidate || resurrectedNode.ServerStore.Engine.CurrentCommittedState.State == RachisState.Candidate)
                             return false;
                         if (processingNode.ServerStore.Engine.CurrentCommittedState.State == RachisState.Passive || resurrectedNode.ServerStore.Engine.CurrentCommittedState.State == RachisState.Passive)
+=======
+                        if (processingNode.ServerStore.Engine.CurrentPublishedState() == RachisState.Candidate || resurrectedNode.ServerStore.Engine.CurrentPublishedState() == RachisState.Candidate)
+                            return false;
+                        if (processingNode.ServerStore.Engine.CurrentPublishedState() == RachisState.Passive || resurrectedNode.ServerStore.Engine.CurrentPublishedState() == RachisState.Passive)
+>>>>>>> e74b544acac (RavenDB-22457)
                             return false;
                         return true;
                     }, true, timeout: 60_000, interval: 333);

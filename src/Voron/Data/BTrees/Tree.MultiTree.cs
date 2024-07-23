@@ -38,9 +38,8 @@ namespace Voron.Data.BTrees
             if (!value.HasValue)
                 throw new ArgumentNullException(nameof(value));
 
-            int maxNodeSize = (Paging.PageMaxSpace / 2 - 1); // merge toward main, temp code!
-            if (value.Size > maxNodeSize)
-                throw new ArgumentException("Cannot add a value to child tree that is over " + maxNodeSize + " bytes in size", nameof(value));
+            if (value.Size > Constants.Tree.NodeMaxSize)
+                throw new ArgumentException("Cannot add a value to child tree that is over " + Constants.Tree.NodeMaxSize + " bytes in size", nameof(value));
             if (value.Size == 0)
                 throw new ArgumentException("Cannot add empty value to child tree");
 
@@ -53,7 +52,7 @@ namespace Voron.Data.BTrees
             var page = FindPageFor(key, out _);
             if (page == null || page.LastMatch != 0)
             {
-                MultiAddOnNewValue(key, value, maxNodeSize);
+                MultiAddOnNewValue(key, value, Constants.Tree.NodeMaxSize);
                 return;
             }
 
@@ -106,13 +105,13 @@ namespace Voron.Data.BTrees
                 var requiredSpace = nestedPage.PageSize + // existing page
                                     nestedPage.GetRequiredSpace(value, 0); // new node
 
-                if (requiredSpace + Constants.Tree.NodeHeaderSize <= maxNodeSize)
+                if (requiredSpace + Constants.Tree.NodeHeaderSize <= Constants.Tree.NodeMaxSize)
                 {
                     // ... and it won't require to create an overflow, so we can just expand the current value, no need to create a nested tree yet
 
                     EnsureNestedPagePointer(page, item, ref nestedPage, ref nestedPagePtr);
 
-                    var newPageSize = (ushort)Math.Min(Bits.PowerOf2(requiredSpace), maxNodeSize - Constants.Tree.NodeHeaderSize);
+                    var newPageSize = (ushort)Math.Min(Bits.PowerOf2(requiredSpace), Constants.Tree.NodeMaxSize - Constants.Tree.NodeHeaderSize);
 
                     ExpandMultiTreeNestedPageSize(key, value, nestedPagePtr, newPageSize, nestedPage.PageSize);
 

@@ -7,25 +7,6 @@ namespace Voron.Impl.Paging
 {
     public static unsafe class Paging
     {        
-        public const int PageMaxSpace = Constants.Storage.PageSize - Constants.Tree.PageHeaderSize;
-        // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
-        public const int MaxKeySize = 2038 - RequiredSpaceForNewNode;
-
-        public const int RequiredSpaceForNewNode = Constants.Tree.NodeHeaderSize + Constants.Tree.NodeOffsetSize;
-
-        public const int PageMinSpace = (int)(PageMaxSpace * 0.33);
-        public const int NodeMaxSize = PageMaxSpace / 2 - 1;
-
-      
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsKeySizeValid(int keySize)
-        {
-            if (keySize > MaxKeySize)
-                return false;
-
-            return true;
-        }
-   
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetNumberOfOverflowPages(long overflowSize)
         {
