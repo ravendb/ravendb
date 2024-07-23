@@ -145,11 +145,21 @@ namespace Raven.Server.Rachis
 
         public RachisState CurrentStateIn(ClusterOperationContext ctx)
         {
-            if (ctx.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState is ClusterStateRecord r)
+            return CurrentStateIn(ctx.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord);
+        }
+        
+        public RachisState CurrentPublishedState()
+        {
+            return CurrentStateIn(_persistentState.CurrentStateRecord);
+        }
+
+        private static RachisState CurrentStateIn(EnvironmentStateRecord environmentStateRecord)
+        {
+            if (environmentStateRecord.ClientState is ClusterStateRecord r)
                 return r.State;
             return RachisState.Passive;
         }
-        
+
         public void UpdateStateIn(ClusterOperationContext ctx, RachisState state)
         {
             var cur = (ClusterStateRecord)ctx.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState ??

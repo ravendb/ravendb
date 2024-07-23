@@ -373,7 +373,7 @@ namespace Voron.Data.BTrees
             if (_llt.Flags is TransactionFlags.Read)
                 ThrowCannotAddInReadTx();
 
-            if (Paging.IsKeySizeValid(key.Size) == false)
+            if (key.Size > Constants.Tree.MaxKeySize)
                 ThrowInvalidKeySize(key);
 
             var foundPage = FindPageFor(key, node: out TreeNodeHeader* node, cursor: out TreeCursorConstructor cursorConstructor, allowCompressed: true);
@@ -535,7 +535,7 @@ namespace Voron.Data.BTrees
         private static void ThrowInvalidKeySize(Slice key)
         {
             throw new ArgumentException(
-                $"Key size is too big, must be at most {Paging.MaxKeySize} bytes, but was {(key.Size + Paging.RequiredSpaceForNewNode)}",
+                $"Key size is too big, must be at most {Constants.Tree.MaxKeySize} bytes, but was {(key.Size + Constants.Tree.RequiredSpaceForNewNode)}",
                 nameof(key));
         }
 
@@ -576,7 +576,7 @@ namespace Voron.Data.BTrees
 
         public bool ShouldGoToOverflowPage(int len)
         {
-            return len + Constants.Tree.NodeHeaderSize > (Paging.PageMaxSpace / 2 - 1); // merge toward the v6.0 branch, temp code!
+            return len + Constants.Tree.NodeHeaderSize > (Constants.Tree.PageMaxSpace / 2 - 1); // merge toward the v6.0 branch, temp code!
         }
 
         private long WriteToOverflowPages(int overflowSize, out byte* dataPos)

@@ -465,7 +465,7 @@ namespace SlowTests.Voron.Storage
 
         private OverflowsAddResult AddOverflows(Transaction tx, Tree tree, int treeNumber, Random r)
         {
-            var minOverflowSize = Paging.NodeMaxSize - Constants.Tree.NodeHeaderSize + 1;
+            var minOverflowSize = Constants.Tree.NodeMaxSize - Constants.Tree.NodeHeaderSize + 1;
             var entriesAdded = new List<string>();
             var overflowsAdded = 0;
             
