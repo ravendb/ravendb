@@ -1491,7 +1491,7 @@ namespace Voron.Impl.Journal
                     }
 
 
-                    if (CurrentFile == null || CurrentFile.GetAvailable4Kbs(_env.CurrentStateRecord) < journalEntry.NumberOf4Kbs)
+                    if (CurrentFile == null || CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) < journalEntry.NumberOf4Kbs)
                     {
                         CurrentFile = NextFile(journalEntry.NumberOf4Kbs);
                         if (_logger.IsInfoEnabled)
@@ -1510,7 +1510,7 @@ namespace Voron.Impl.Journal
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Writing {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
 
-                    if (CurrentFile.GetAvailable4Kbs(_env.CurrentStateRecord) == 0)
+                    if (CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) == 0)
                     {
                         CurrentFile = null;
                     }
