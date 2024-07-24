@@ -30,7 +30,7 @@ class getGlobalStudioConfigurationCommand extends commandBase {
     }
 
     private processHeaders(response: JQueryXHR) {
-        accessManager.default.allowEncryptedDatabasesOverHttp(response.getResponseHeader("AllowEncryptedDatabasesOverHttp") == "true");
+        accessManager.default.allowEncryptedDatabasesOverHttp(response.getResponseHeader("AllowEncryptedDatabasesOverHttp") === "true");
     }
 }
 
