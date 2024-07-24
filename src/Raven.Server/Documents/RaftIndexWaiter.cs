@@ -6,14 +6,14 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents;
 
-public class IndexWaiter : IDisposable
+public class RaftIndexWaiter : IDisposable
 {
     private long _lastCompletedIndex;
     private readonly AsyncManualResetEvent _notifiedListeners;
 
     public long LastIndex => Interlocked.Read(ref _lastCompletedIndex);
 
-    public IndexWaiter(CancellationToken token)
+    public RaftIndexWaiter(CancellationToken token)
     {
         _notifiedListeners = new AsyncManualResetEvent(token);
     }
