@@ -15,13 +15,13 @@ where TNotification : RaftIndexNotification
     protected readonly ConcurrentQueue<ErrorHolder> Errors = new ConcurrentQueue<ErrorHolder>();
     private readonly ConcurrentQueue<TNotification> _recentNotifications = new ConcurrentQueue<TNotification>();
     private int _numberOfErrors;
-    private readonly IndexWaiter _raftIndexWaiter;
+    private readonly RaftIndexWaiter _raftIndexWaiter;
 
     public long LastModifiedIndex => _raftIndexWaiter.LastIndex;
 
     protected AbstractRaftIndexNotifications(CancellationToken token)
     {
-        _raftIndexWaiter = new IndexWaiter(token);
+        _raftIndexWaiter = new RaftIndexWaiter(token);
     }
 
     public virtual void Dispose()

@@ -191,7 +191,7 @@ namespace Raven.Server.Documents
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
                 
                 RachisLogIndexNotifications = new DatabaseRaftIndexNotifications(_serverStore.Engine.StateMachine._rachisLogIndexNotifications, DatabaseShutdown);
-                ClusterWideTransactionIndexWaiter = new IndexWaiter(DatabaseShutdown);
+                ClusterWideTransactionIndexWaiter = new RaftIndexWaiter(DatabaseShutdown);
                 CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, environmentPath, e, stacktrace) =>
                 {
                     serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId, environmentPath, stacktrace);
@@ -470,7 +470,7 @@ namespace Raven.Server.Documents
         private long _lastCompletedClusterTransaction;
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
 
-        public readonly IndexWaiter ClusterWideTransactionIndexWaiter;
+        public readonly RaftIndexWaiter ClusterWideTransactionIndexWaiter;
         public bool IsEncrypted => MasterKey != null;
 
         private PoolOfThreads.LongRunningWork _clusterTransactionsThread;
