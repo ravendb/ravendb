@@ -1891,7 +1891,7 @@ namespace Raven.Server.Rachis
             long current = CurrentTermIn(ctx);
             if (term != current)
             {
-                throw new RachisConcurrencyException($"The term was changed from {term:#,#;;0} to {current:#,#;;0}");
+                throw new TermValidationException($"The term was changed from {term:#,#;;0} to {current:#,#;;0}");
             }
         }
 
