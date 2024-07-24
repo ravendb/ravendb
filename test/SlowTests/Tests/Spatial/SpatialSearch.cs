@@ -24,7 +24,7 @@ namespace SlowTests.Tests.Spatial
             public SpatialIdx()
             {
                 Map = docs => from e in docs
-                    select new { e.Capacity, e.Venue, e.Date, Coordinates = CreateSpatialField(e.Latitude, e.Longitude) };
+                    select new {e.Capacity, e.Venue, e.Date, Coordinates = CreateSpatialField(e.Latitude, e.Longitude)};
 
                 Index(x => x.Venue, FieldIndexing.Search);
             }
@@ -64,7 +64,6 @@ namespace SlowTests.Tests.Spatial
                 }
             }
         }
-
         public enum CultureInfoTest
         {
             Invariant,
@@ -164,9 +163,9 @@ namespace SlowTests.Tests.Spatial
                     var events = session.Advanced.DocumentQuery<Event>("SpatialIdx")
                         .Statistics(out stats)
                         .OpenSubclause()
-                        .WhereGreaterThanOrEqual("Capacity", 0)
-                        .AndAlso()
-                        .WhereLessThanOrEqual("Capacity", 2000)
+                            .WhereGreaterThanOrEqual("Capacity", 0)
+                            .AndAlso()
+                            .WhereLessThanOrEqual("Capacity", 2000)
                         .CloseSubclause()
                         .WithinRadiusOf("Coordinates", 6.0, 38.96939, -77.386398)
                         .OrderByDescending(x => x.Date)
@@ -187,9 +186,9 @@ namespace SlowTests.Tests.Spatial
                     var events = session.Advanced.DocumentQuery<Event>("SpatialIdx")
                         .Statistics(out stats)
                         .OpenSubclause()
-                        .WhereGreaterThanOrEqual("Capacity", 0)
-                        .AndAlso()
-                        .WhereLessThanOrEqual("Capacity", 2000)
+                            .WhereGreaterThanOrEqual("Capacity", 0)
+                            .AndAlso()
+                            .WhereLessThanOrEqual("Capacity", 2000)
                         .CloseSubclause()
                         .WithinRadiusOf("Coordinates", 6.0, 38.96939, -77.386398)
                         .OrderBy(x => x.Date)
@@ -216,6 +215,7 @@ namespace SlowTests.Tests.Spatial
 
                 using (var session = store.OpenSession())
                 {
+
                     session.Store(new Event("czestochowa", 50.776147, 19.136877));
                     session.Store(new Event("katowice", 50.259591, 19.024823));
                     session.Store(new Event("hadera", 32.437408, 34.925621));
@@ -225,7 +225,6 @@ namespace SlowTests.Tests.Spatial
                     session.Store(new Event("kalisz", 51.759978, 18.076977));
                     session.SaveChanges();
                 }
-
                 WaitForUserToContinueTheTest(store);
                 Indexes.WaitForIndexing(store);
 
@@ -237,7 +236,7 @@ namespace SlowTests.Tests.Spatial
                         // .AddOrder("Venue", false)
                         .ToList();
 
-                    var expectedOrder = new[] { "torun", "bydgoszcz", "plock", "kalisz", "czestochowa", "katowice" };
+                    var expectedOrder = new[] {"torun", "bydgoszcz", "plock", "kalisz", "czestochowa", "katowice"};
 
                     Assert.Equal(expectedOrder.Length, events.Count);
 
@@ -283,15 +282,13 @@ namespace SlowTests.Tests.Spatial
                         .AddOrder("Venue", false)
                         .ToList();
 
-                    //var expectedOrder = new[] { "a/2", "b/2", "c/2", "a/1", "b/1", "c/1", "a/3", "b/3", "c/3" };
-                    var expectedOrder = new[] { "/2", "/2", "/2", "/1", "/1", "/1", "/3", "/3", "/3" };
+                    var expectedOrder = new[] { "a/2", "b/2", "c/2", "a/1", "b/1", "c/1", "a/3", "b/3", "c/3" };
 
                     Assert.Equal(expectedOrder.Length, events.Count);
-                    Assert.DoesNotContain("d/1", events.Select(x => x.Venue));
 
                     for (int i = 0; i < events.Count; i++)
                     {
-                        Assert.True(events[i].Venue.EndsWith(expectedOrder[i]));
+                       Assert.Equal(expectedOrder[i], events[i].Venue);
                     }
                 }
 
@@ -302,9 +299,9 @@ namespace SlowTests.Tests.Spatial
                         .AddOrder("Venue", false)
                         .OrderByDistance("Coordinates", 38.96939, -77.386398)
                         .OrderByDistance("Coordinates", 38.96939, -77.386398)
+
                         .ToList();
 
-//                    var expectedOrder = new[] { "a/1", "a/2", "a/3", "b/1", "b/2", "b/3", "c/1", "c/2", "c/3" };
                     var expectedOrder = new[] { "a/1", "a/2", "a/3", "b/1", "b/2", "b/3", "c/1", "c/2", "c/3" };
 
                     Assert.Equal(expectedOrder.Length, events.Count);
@@ -313,8 +310,6 @@ namespace SlowTests.Tests.Spatial
                     {
                         Assert.Equal(expectedOrder[i], events[i].Venue);
                     }
-
-                    Assert.DoesNotContain("d/1", events.Select(x => x.Venue));
                 }
             }
         }

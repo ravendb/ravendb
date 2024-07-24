@@ -287,7 +287,6 @@ unsafe partial struct SortingMatch<TInner>
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
         {
-            return x.ToSpan().SequenceCompareTo(y.ToSpan());
             return _cmpTerm.Compare(x, y);
         }
     }

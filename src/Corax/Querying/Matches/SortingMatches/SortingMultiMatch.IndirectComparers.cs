@@ -1,16 +1,12 @@
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
-using Corax.Querying.Matches.SortingMatches.Meta;
-using Corax.Utils;
 using Sparrow;
 
 namespace Corax.Querying.Matches.SortingMatches;
 
 public unsafe partial struct SortingMultiMatch<TInner>
 {
-    //This is used as second degree comparer for alphanumerical
+//This is used as second degree comparer for alphanumerical
     private readonly struct IndirectComparer2<TComparer2, TComparer3> : IComparer<int>
         where TComparer2 : struct, IComparer<int>, IComparer<UnmanagedSpan>
         where TComparer3 : struct, IComparer<int>, IComparer<UnmanagedSpan>
@@ -30,7 +26,7 @@ public unsafe partial struct SortingMultiMatch<TInner>
             _maxDegreeOfInnerComparer += typeof(TComparer3) == typeof(NullComparer) ? 0 : 1;
             _maxDegreeOfInnerComparer += _nextComparers.Length;
         }
-        
+
         public int Compare(int x, int y)
         {
             var cmp = 0;
@@ -48,7 +44,7 @@ public unsafe partial struct SortingMultiMatch<TInner>
         }
     }
 
-private readonly struct IndirectComparer<TComparer1, TComparer2, TComparer3> : IComparer<long>, IComparer<int>
+    private readonly struct IndirectComparer<TComparer1, TComparer2, TComparer3> : IComparer<long>, IComparer<int>
         where TComparer1 : struct, IComparer<UnmanagedSpan>
         where TComparer2 : struct, IComparer<int>, IComparer<UnmanagedSpan>
         where TComparer3 : struct, IComparer<int>, IComparer<UnmanagedSpan>
@@ -76,7 +72,7 @@ private readonly struct IndirectComparer<TComparer1, TComparer2, TComparer3> : I
                 _maxDegreeOfInnerComparer = 2;
             else
                 _maxDegreeOfInnerComparer = 3;
-            
+
             _maxDegreeOfInnerComparer += _nextComparers.Length;
         }
 
@@ -98,7 +94,7 @@ private readonly struct IndirectComparer<TComparer1, TComparer2, TComparer3> : I
                     _ => _nextComparers[comparerId - 3].Compare(xIdx, yIdx)
                 };
             }
-            
+
             return cmp;
         }
 
