@@ -574,7 +574,7 @@ namespace Raven.Server.Documents.Revisions
             else if (documentDeleted && configuration.PurgeOnDelete) // doc is deleted or came from delete *and* configuration.PurgeOnDelete is true
             {
                 revisionsToDelete = GetAllRevisions(context, table, lowerIdPrefix,
-                    maxDeletesUponUpdate: null, skipForceCreated: false, result);
+                    maxDeletesUponUpdate: null, shouldSkip: null, result);
             }
             else
             {
@@ -632,7 +632,9 @@ namespace Raven.Server.Documents.Revisions
 
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
                 var result = new DeleteOldRevisionsResult();
-                var revisionsToDelete = GetAllRevisions(context, table, prefixSlice, maxDeletesUponUpdate, skipForceCreated, result);
+                var revisionsToDelete = GetAllRevisions(context, table, prefixSlice, maxDeletesUponUpdate,
+                    shouldSkip: skipForceCreated ? revision => revision.Flags.Contain(DocumentFlags.ForceCreated) : null,
+                    result);
                 var revisionsPreviousCount = GetRevisionsCount(context, prefixSlice);
                 var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, revisionsPreviousCount, revisionsToDelete, result, tombstoneFlags: DocumentFlags.None);
                 moreWork |= result.HasMore;
@@ -1184,7 +1186,9 @@ namespace Raven.Server.Documents.Revisions
 
 
         private IEnumerable<Document> GetAllRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice,
-            long? maxDeletesUponUpdate, bool skipForceCreated, DeleteOldRevisionsResult result)
+            long? maxDeletesUponUpdate, 
+            Func<Document, bool> shouldSkip,
+            DeleteOldRevisionsResult result)
         {
             var deleted = 0L;
 
@@ -1203,7 +1207,7 @@ namespace Raven.Server.Documents.Revisions
                     var tvr = read.Result.Reader;
                     var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
 
-                    if (skipForceCreated && revision.Flags.Contain(DocumentFlags.ForceCreated))
+                    if (shouldSkip != null && shouldSkip.Invoke(revision))
                     {
                         context.Transaction.ForgetAbout(revision);
                         revision.Dispose();

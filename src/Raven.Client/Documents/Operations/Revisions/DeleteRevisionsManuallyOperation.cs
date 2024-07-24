@@ -11,34 +11,46 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Revisions
 {
-    public class DeleteRevisionsManuallyOperation : IOperation
+    public class DeleteRevisionsManuallyOperation : IOperation<DeleteRevisionsManuallyOperation.Result>
     {
         private DeleteRevisionsRequest _request;
 
-        public DeleteRevisionsManuallyOperation(DeleteRevisionsRequest request)
+        public DeleteRevisionsManuallyOperation(List<string> revisionsChangeVecotors)
         {
-            if (request == null)
+            if (revisionsChangeVecotors == null)
             {
-                throw new ArgumentNullException(nameof(request), "request cannot be null.");
+                throw new ArgumentNullException(nameof(revisionsChangeVecotors), "'revisionsChangeVecotors' cannot be both null or empty.");
             }
 
-            if (request.MaxDeletes <= 0)
-            {
-                throw new ArgumentNullException(nameof(request), "request 'MaxDeletes' have to be greater then 0.");
-            }
-
-            if (request.DocumentIds.IsNullOrEmpty() && request.RevisionsChangeVecotors.IsNullOrEmpty())
-            {
-                throw new ArgumentNullException(nameof(request), "request 'DocumentIds' and 'RevisionsChangeVecotors' cannot be both null or empty.");
-            }
-
-            _request = request;
+            _request = new DeleteRevisionsRequest { RevisionsChangeVecotors = revisionsChangeVecotors };
         }
 
-        public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public DeleteRevisionsManuallyOperation(string documentId, long maxDeletes = 1024, DateTime? after = null, DateTime? before = null)
         {
-            var request = new DeleteRevisionsIntrenalRequest(_request);
-            return new DeleteRevisionsManuallyCommand(request);
+            if (string.IsNullOrEmpty(documentId))
+            {
+                throw new ArgumentNullException(nameof(documentId), "'revisionsChangeVecotors' cannot be both null or empty.");
+            }
+
+            _request = new DeleteRevisionsRequest
+            {
+                DocumentId = documentId,
+                MaxDeletes = maxDeletes,
+                After = after,
+                Before = before
+            };
+
+            _request.ValidateDocumentId();
+        }
+
+        public RavenCommand<Result> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        {
+            return new DeleteRevisionsManuallyCommand(_request);
+        }
+
+        public class Result
+        {
+            public long TotalDeletes { get; set; }
         }
     }
 }
