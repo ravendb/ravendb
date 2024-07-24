@@ -25,6 +25,7 @@ import licenseModel from "models/auth/licenseModel";
 import { EditAzureQueueStorageEtlInfoHub } from "viewmodels/database/tasks/EditAzureQueueStorageEtlInfoHub";
 import ongoingTaskAzureQueueStorageEtlEditModel from "models/database/tasks/ongoingTaskAzureQueueStorageEtlEditModel";
 import connectionStringAzureQueueStorageModel from "models/database/settings/connectionStringAzureQueueStorageModel";
+import popoverUtils = require("common/popoverUtils");
 
 class azureQueueStorageTaskTestMode {
     documentId = ko.observable<string>();
@@ -261,7 +262,15 @@ class editAzureQueueStorageEtlTask extends viewModelBase {
         super.compositionComplete();
 
         $('.edit-azure-queue-storage-etl-task [data-toggle="tooltip"]').tooltip();
+
+        popoverUtils.longWithHover($("#syntax-help"), {
+            html: true,
+            content: () => `Example: <code>${this.exampleConnectionString}</code>`,
+            placement: "top"
+        });
     }
+
+    private readonly exampleConnectionString = "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;QueueEndpoint=http://127.0.0.1:10001/devstoreaccount1;";
 
     private getAllConnectionStrings() {
         return new getConnectionStringsCommand(this.activeDatabase())

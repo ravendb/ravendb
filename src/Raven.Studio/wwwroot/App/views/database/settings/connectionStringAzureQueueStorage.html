@@ -21,7 +21,15 @@
 </div>
 <div data-bind="visible: authenticationType() === 'connectionString', with: connectionStringModel">
     <div class="form-group" data-bind="validationElement: connectionString">
-        <label class="control-label">Connection string<i class="required"></i></label>
+        <label class="control-label">
+            Connection string
+            <i class="required"></i>
+            <br />
+            <br />
+            <small id="syntax-help" class="text-primary">
+                Syntax <i class="icon-help"></i>
+            </small>
+        </label>
         <div class="flex-grow">
             <textarea class="form-control" rows="2" data-bind="textInput: connectionString" placeholder="Enter connection string for Azure Queue Storage"></textarea>
         </div>
