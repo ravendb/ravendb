@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
+using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -131,6 +132,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var obj = await client.GetObjectAsync(fileName);
                     Assert.Equal("value1", obj.Metadata["key1"]);
                     Assert.Equal("value2", obj.Metadata["key2"]);
+
+                    var size = await client.GetObjectSizeAsync(fileName);
+                    Assert.True(size.GetValue(SizeUnit.Bytes) > 0);
                 }
 
                 finally

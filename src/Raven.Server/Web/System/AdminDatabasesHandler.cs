@@ -473,8 +473,9 @@ namespace Raven.Server.Web.System
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
+                var cancelToken = CreateBackgroundOperationToken();
                 var configuration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
-                var restoreConfiguration = RestoreUtils.GetRestoreConfigurationAndSource(ServerStore, configuration, out var restoreSource);
+                var restoreConfiguration = RestoreUtils.GetRestoreConfigurationAndSource(ServerStore, configuration, out var restoreSource, cancelToken);
 
                 if (restoreConfiguration.ShardRestoreSettings != null)
                 {
@@ -496,8 +497,6 @@ namespace Raven.Server.Web.System
                 }
 
                 await ServerStore.EnsureNotPassiveAsync();
-
-                var cancelToken = CreateBackgroundOperationToken();
 
                 var operationId = ServerStore.Operations.GetNextOperationId();
 

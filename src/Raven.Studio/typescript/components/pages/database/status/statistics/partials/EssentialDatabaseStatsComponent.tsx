@@ -29,7 +29,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
     }
 
     return (
-        <div>
+        <div className="mt-3">
             <Row>
                 <Col>
                     <h2 className="on-base-background">

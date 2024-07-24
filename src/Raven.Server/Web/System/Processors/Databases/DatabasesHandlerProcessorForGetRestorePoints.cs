@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
@@ -61,7 +62,8 @@ internal sealed class DatabasesHandlerProcessorForGetRestorePoints : AbstractSer
             var connectionType = GetPeriodicBackupConnectionType();
             var settings = await GetSettingsAsync(context);
 
-            using var source = GetRestorePointsSource(context, connectionType, settings, out string path);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(RequestHandler.Server.ServerStore.ServerShutdown, RequestHandler.AbortRequestToken);
+            using var source = GetRestorePointsSource(context, connectionType, settings, out string path, cts.Token);
 
             var shardNumber = JsonDeserializationServer.LocalSettings(settings).ShardNumber;
             var restorePoints = await source.FetchRestorePoints(path, shardNumber);
@@ -82,7 +84,7 @@ internal sealed class DatabasesHandlerProcessorForGetRestorePoints : AbstractSer
         return RequestHandler.ServerStore.ClusterRequestExecutor.ExecuteAsync(command, context, token: token.Token);
     }
 
-    private RestorePointsBase GetRestorePointsSource(TransactionOperationContext context, PeriodicBackupConnectionType connectionType, BlittableJsonReaderObject settings, out string path)
+    private RestorePointsBase GetRestorePointsSource(TransactionOperationContext context, PeriodicBackupConnectionType connectionType, BlittableJsonReaderObject settings, out string path, CancellationToken token)
     {
         path = null;
 
@@ -105,15 +107,15 @@ internal sealed class DatabasesHandlerProcessorForGetRestorePoints : AbstractSer
             case PeriodicBackupConnectionType.S3:
                 var s3Settings = JsonDeserializationServer.S3Settings(settings);
                 path = s3Settings.RemoteFolderName;
-                return new S3RestorePoints(ServerStore.Configuration, context, s3Settings);
+                return new S3RestorePoints(ServerStore.Configuration, context, s3Settings, token);
             case PeriodicBackupConnectionType.Azure:
                 var azureSettings = JsonDeserializationServer.AzureSettings(settings);
                 path = azureSettings.RemoteFolderName;
-                return new AzureRestorePoints(ServerStore.Configuration, context, azureSettings);
+                return new AzureRestorePoints(ServerStore.Configuration, context, azureSettings, token);
             case PeriodicBackupConnectionType.GoogleCloud:
                 var googleCloudSettings = JsonDeserializationServer.GoogleCloudSettings(settings);
                 path = googleCloudSettings.RemoteFolderName;
-                return new GoogleCloudRestorePoints(ServerStore.Configuration, context, googleCloudSettings);
+                return new GoogleCloudRestorePoints(ServerStore.Configuration, context, googleCloudSettings, token);
             default:
                 throw new ArgumentOutOfRangeException(nameof(connectionType));
         }

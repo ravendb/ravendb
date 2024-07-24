@@ -60,49 +60,50 @@ export default function ConnectionStrings(props: ConnectionStringsUrlParameters)
     }
 
     return (
-        <Row className="content-margin gy-sm">
+        <div className="content-margin">
             {initialEditConnection && <EditConnectionStrings initialConnection={initialEditConnection} />}
-
-            <Col>
-                <AboutViewHeading title="Connection Strings" icon="manage-connection-strings" />
-                {hasDatabaseAdminAccess && (
-                    <>
-                        <div id={addNewButtonId} style={{ width: "fit-content" }}>
-                            <Button
-                                color="primary"
-                                onClick={() => dispatch(connectionStringsActions.openAddNewConnectionModal())}
-                                title="Add new connection string"
-                                disabled={hasNoneInLicense}
-                            >
-                                <Icon icon="plus" />
-                                Add new
-                            </Button>
-                        </div>
-                        {hasNoneInLicense && (
-                            <UncontrolledTooltip target={addNewButtonId}>
-                                Your license does not allow you to add any connection string.
-                            </UncontrolledTooltip>
-                        )}
-                    </>
-                )}
-                <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"} className="mt-2">
-                    {isEmpty ? (
-                        <EmptySet className="mw-100">No connection strings</EmptySet>
-                    ) : (
-                        allStudioEtlTypes.map((type) => (
-                            <ConnectionStringsPanels
-                                key={type}
-                                connections={connections[type]}
-                                connectionsType={type}
-                            />
-                        ))
+            <Row className="gy-sm">
+                <Col>
+                    <AboutViewHeading title="Connection Strings" icon="manage-connection-strings" />
+                    {hasDatabaseAdminAccess && (
+                        <>
+                            <div id={addNewButtonId} style={{ width: "fit-content" }}>
+                                <Button
+                                    color="primary"
+                                    onClick={() => dispatch(connectionStringsActions.openAddNewConnectionModal())}
+                                    title="Add new connection string"
+                                    disabled={hasNoneInLicense}
+                                >
+                                    <Icon icon="plus" />
+                                    Add new
+                                </Button>
+                            </div>
+                            {hasNoneInLicense && (
+                                <UncontrolledTooltip target={addNewButtonId}>
+                                    Your license does not allow you to add any connection string.
+                                </UncontrolledTooltip>
+                            )}
+                        </>
                     )}
-                </LazyLoad>
-            </Col>
-            <Col sm={12} lg={4}>
-                <ConnectionStringsInfoHub />
-            </Col>
-        </Row>
+                    <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"} className="mt-2">
+                        {isEmpty ? (
+                            <EmptySet className="mw-100">No connection strings</EmptySet>
+                        ) : (
+                            allStudioEtlTypes.map((type) => (
+                                <ConnectionStringsPanels
+                                    key={type}
+                                    connections={connections[type]}
+                                    connectionsType={type}
+                                />
+                            ))
+                        )}
+                    </LazyLoad>
+                </Col>
+                <Col sm={12} lg={4}>
+                    <ConnectionStringsInfoHub />
+                </Col>
+            </Row>
+        </div>
     );
 }
 

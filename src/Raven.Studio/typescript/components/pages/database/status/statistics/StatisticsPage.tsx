@@ -24,8 +24,8 @@ export function StatisticsPage() {
 
     return (
         <>
-            <StatsHeader />
             <div className="stats content-margin">
+                <StatsHeader />
                 <EssentialDatabaseStatsComponent rawJsonUrl={rawJsonUrl} />
 
                 {detailsVisible && <DetailedDatabaseStats key="db-stats" />}

@@ -24,7 +24,7 @@ public partial class ShardedDatabaseContext
     {
         private readonly ShardedDatabaseContext _context;
 
-        private readonly ConcurrentDictionary<ShardedDatabaseIdentifier, DatabaseChanges> _changes = new();
+        internal readonly ConcurrentDictionary<ShardedDatabaseIdentifier, DatabaseChanges> _changes = new();
 
         public ShardedOperations([NotNull] ShardedDatabaseContext context)
             : base(context.Changes, PlatformDetails.Is32Bits || context.Configuration.Storage.ForceUsing32BitsPager

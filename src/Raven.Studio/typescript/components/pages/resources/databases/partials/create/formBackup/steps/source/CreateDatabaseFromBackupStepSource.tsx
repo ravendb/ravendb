@@ -88,7 +88,8 @@ export default function CreateDatabaseFromBackupStepSource() {
                     Disable ongoing tasks after restore
                 </FormSwitch>
                 <FormSwitch control={control} name="sourceStep.isSkipIndexes" color="primary">
-                    <Icon icon="index" /> Skip indexes
+                    <Icon icon="index" />
+                    Skip indexes
                 </FormSwitch>
                 <IsEncryptedField isFirstRestorePointSnapshot={isFirstRestorePointSnapshot} />
             </Collapse>
