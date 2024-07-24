@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
     ConnectionFormData,
     EditConnectionStringFormProps,
@@ -11,7 +11,7 @@ import { yupObjectSchema } from "components/utils/yupUtils";
 import { Control, SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { FormInput, FormSelect } from "components/common/Form";
-import { Badge, Form, Label } from "reactstrap";
+import { Badge, Form, Label, PopoverBody } from "reactstrap";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionStringUsedByTasks from "components/pages/database/settings/connectionStrings/editForms/shared/ConnectionStringUsedByTasks";
@@ -22,6 +22,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { mapAzureQueueStorageConnectionStringSettingsToDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsToDto";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { Icon } from "components/common/Icon";
+import { PopoverWithHover } from "components/common/PopoverWithHover";
 
 type FormData = ConnectionFormData<AzureQueueStorageConnection>;
 
@@ -148,15 +149,28 @@ interface SelectedAuthFieldsProps {
 }
 
 function SelectedAuthFields({ control, authMethod }: SelectedAuthFieldsProps) {
+    const [syntaxHelpElement, setSyntaxHelpElement] = useState<HTMLElement>();
+
     if (authMethod === "connectionString") {
         return (
             <div className="mb-2">
-                <Label>Connection string</Label>
+                <div className="d-flex flex-grow align-items-baseline justify-content-between">
+                    <Label>Connection string</Label>
+                    <small ref={setSyntaxHelpElement} className="text-primary">
+                        Syntax <Icon icon="help" margin="m-0" />
+                    </small>
+                    <PopoverWithHover target={syntaxHelpElement}>
+                        <PopoverBody>
+                            Example: <code>{exampleConnectionString}</code>
+                        </PopoverBody>
+                    </PopoverWithHover>
+                </div>
                 <FormInput
                     control={control}
                     name="settings.connectionString.connectionStringValue"
                     type="textarea"
                     placeholder="Enter a connection string"
+                    rows={5}
                 />
             </div>
         );
@@ -253,7 +267,27 @@ const schema = yupObjectSchema<FormData>({
     authType: yup.string<AzureQueueStorageAuthenticationType>(),
     settings: yupObjectSchema<FormData["settings"]>({
         connectionString: yupObjectSchema<FormData["settings"]["connectionString"]>({
-            connectionStringValue: getStringRequiredSchema("connectionString"),
+            connectionStringValue: yup
+                .string()
+                .nullable()
+                .when("$authType", {
+                    is: "connectionString",
+                    then: (schema) =>
+                        schema
+                            .required()
+                            .test(
+                                "connectionString",
+                                "Please define all required fields: DefaultEndpointsProtocol, AccountName, AccountKey and QueueEndpoint",
+                                (value) => {
+                                    return (
+                                        value.includes("DefaultEndpointsProtocol") &&
+                                        value.includes("AccountName") &&
+                                        value.includes("AccountKey") &&
+                                        value.includes("QueueEndpoint")
+                                    );
+                                }
+                            ),
+                }),
         }),
         entraId: yupObjectSchema<FormData["settings"]["entraId"]>({
             clientId: getStringRequiredSchema("entraId"),
@@ -290,3 +324,6 @@ function getDefaultValues(initialConnection: AzureQueueStorageConnection, isForN
 
     return _.omit(initialConnection, "type", "usedByTasks");
 }
+
+const exampleConnectionString =
+    "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;QueueEndpoint=http://127.0.0.1:10001/devstoreaccount1;";

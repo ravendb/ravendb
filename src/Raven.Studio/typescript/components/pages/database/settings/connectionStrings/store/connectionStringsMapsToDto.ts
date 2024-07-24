@@ -112,8 +112,10 @@ export function mapAzureQueueStorageConnectionStringSettingsToDto(
     switch (connection.authType) {
         case "connectionString": {
             const connectionSettings = connection.settings[connection.authType];
+            const connectionStringWithoutNewLines = connectionSettings.connectionStringValue.replace(/\n/g, "");
+
             return {
-                ConnectionString: connectionSettings.connectionStringValue,
+                ConnectionString: connectionStringWithoutNewLines,
                 EntraId: null,
                 Passwordless: null,
             };

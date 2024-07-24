@@ -18,13 +18,28 @@ class AzureQueueStorageConnectionStringModel {
         this.connectionString.extend({
             required: {
                 onlyIf: condition
+            },
+            validation: {
+                validator: (value: string) => {
+                    if (!value) {
+                        return true;
+                    }
+                    
+                    return value.includes("DefaultEndpointsProtocol") &&
+                        value.includes("AccountName") &&
+                        value.includes("AccountKey") &&
+                        value.includes("QueueEndpoint")
+                },
+                message: "Please define all required fields: DefaultEndpointsProtocol, AccountName, AccountKey and QueueEndpoint"
             }
         });
     }
     
     toDto(): Raven.Client.Documents.Operations.ETL.Queue.AzureQueueStorageConnectionSettings {
+        const connectionStringWithoutNewLines = this.connectionString().replace(/\n/g, "");
+
         return {
-            ConnectionString: this.connectionString(),
+            ConnectionString: connectionStringWithoutNewLines,
             EntraId: null,
             Passwordless: null
         }
