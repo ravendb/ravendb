@@ -573,7 +573,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             return null;
         }
 
-        return this.processingItems[name].ewma.value();
+        return this.processingItems[name].ewma.value().toLocaleString();
     }
 
     private static showSpeed(name: string) {
