@@ -86,6 +86,8 @@ namespace Raven.Client
             public const string AttachmentHash = "Attachment-Hash";
 
             public const string AttachmentSize = "Attachment-Size";
+            public const string AttachmentRetireAt = "Attachment-Retire-At";
+            public const string AttachmentFlags = "Attachment-Flags";
 
             internal const string DatabaseMissing = "Database-Missing";
 

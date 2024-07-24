@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Server.Documents.Handlers.Processors.Attachments;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;

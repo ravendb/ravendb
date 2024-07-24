@@ -147,6 +147,10 @@ public class RavenDB_19696 : RavenTestBase
                 Assert.Equal("Users", metadata[Constants.Documents.Metadata.Collection]);
                 Assert.Equal(1000000, session.CountersFor(user).Get("Followers"));
                 Assert.NotEmpty(session.TimeSeriesFor(user, "Heartrate").Get());
+
+
+               var attachment =  session.Advanced.Attachments.Get(id, "profileImage");
+
             }
         }
     }

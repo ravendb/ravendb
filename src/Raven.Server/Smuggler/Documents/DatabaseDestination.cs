@@ -7,6 +7,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Amqp.Framing;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -836,18 +837,22 @@ namespace Raven.Server.Smuggler.Documents
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
                     hasAttachments = true;
-
+                    //TODO: egor add Size and flags, then pass them to PutAttachment() method
                     if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                         attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
-                        attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
+                        attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
+                        attachment.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false ||
+                        attachment.TryGet(nameof(AttachmentName.Size), out long size) == false ||
+                        attachment.TryGet(nameof(AttachmentName.RetireAt), out DateTime? retireAt) == false)
+
                         throw new ArgumentException($"The attachment info is missing a mandatory value: {attachment}");
 
                     if (isRevision == false)
                     {
-                        if (attachmentsStorage.AttachmentExists(context, hash) == false)
+                        if (flags == AttachmentFlags.None && attachmentsStorage.AttachmentExists(context, hash) == false)
                             _documentIdsOfMissingAttachments.Add(document.Id);
-
-                        attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, updateDocument: false, fromSmuggler: true);
+                        CollectionName collectionName = _database.DocumentsStorage.ExtractCollectionName(context, document.Data);
+                        attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, flags, size, retireAt, updateDocument: false, fromSmuggler: true, collection2: collectionName);
                         continue;
                     }
 
@@ -859,7 +864,7 @@ namespace Raven.Server.Smuggler.Documents
                     using (attachmentsStorage.GetAttachmentKey(_context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
                                base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, cv, out Slice keySlice))
                     {
-                        attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash);
+                        attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash, retireAt, flags, size, isRevision: true);
                     }
                 }
             }

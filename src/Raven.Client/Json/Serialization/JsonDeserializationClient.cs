@@ -188,6 +188,7 @@ namespace Raven.Client.Json.Serialization
         internal static readonly Func<BlittableJsonReaderObject, DeleteDatabaseResult> DeleteDatabaseResult = GenerateJsonDeserializationRoutine<DeleteDatabaseResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureExpirationOperationResult> ConfigureExpirationOperationResult = GenerateJsonDeserializationRoutine<ConfigureExpirationOperationResult>();
+        internal static readonly Func<BlittableJsonReaderObject, ConfigureRetireAttachmentsOperationResult> ConfigureRetireAttachmentsOperationResult = GenerateJsonDeserializationRoutine<ConfigureRetireAttachmentsOperationResult>();
         
         internal static readonly Func<BlittableJsonReaderObject, ConfigureDataArchivalOperationResult> ConfigureDataArchivalOperationResult = GenerateJsonDeserializationRoutine<ConfigureDataArchivalOperationResult>();
 

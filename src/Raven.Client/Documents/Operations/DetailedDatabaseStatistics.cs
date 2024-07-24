@@ -21,4 +21,8 @@ public sealed class DetailedDatabaseStatistics : DatabaseStatistics
     /// Total number of TimeSeries Deleted Ranges values in database.
     /// </summary>
     public long CountOfTimeSeriesDeletedRanges { get; set; }
+    ///// <summary>
+    ///// Total number of Retired Attachments values in database.
+    ///// </summary>
+    //public long CountOfRetiredAttachments { get; set; }
 }

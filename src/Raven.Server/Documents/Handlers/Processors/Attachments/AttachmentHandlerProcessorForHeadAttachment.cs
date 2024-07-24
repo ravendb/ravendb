@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
@@ -23,6 +24,11 @@ internal sealed class AttachmentHandlerProcessorForHeadAttachment : AbstractAtta
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return ValueTask.CompletedTask;
+            }
+
+            if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
+            {
+                throw new InvalidOperationException($"Cannot get attachment '{name}' on document '{documentId}' because it is retired. Please use dedicated API.");
             }
 
             if (changeVector == attachment.ChangeVector)

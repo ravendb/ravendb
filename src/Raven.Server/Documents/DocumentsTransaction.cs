@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Amazon.Runtime.Internal.Transform;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Changes;
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents
 
         private List<TimeSeriesChange> _timeSeriesNotifications;
 
-        private List<Slice> _attachmentHashesToMaybeDelete;
+        private Dictionary<bool, List<Slice>> _attachmentHashesToMaybeDelete;
 
         private bool _executeDocumentsMigrationAfterCommit;
 
@@ -180,11 +181,32 @@ namespace Raven.Server.Documents
             InnerTransaction.ForgetAbout(doc.StorageId);
         }
 
-        internal void CheckIfShouldDeleteAttachmentStream(Slice hash)
+        internal void CheckIfShouldDeleteAttachmentStream(Slice hash, bool fromRetire)
         {
             var clone = hash.Clone(InnerTransaction.Allocator);
-            _attachmentHashesToMaybeDelete ??= new();
-            _attachmentHashesToMaybeDelete.Add(clone);
+                _attachmentHashesToMaybeDelete ??= new();
+            if (fromRetire)
+            {
+                if (_attachmentHashesToMaybeDelete.TryGetValue(true, out var val) == false)
+                {
+                    _attachmentHashesToMaybeDelete.Add(true, new List<Slice>(){ clone });
+                    return;
+                }
+
+                val.Add(hash);
+                _attachmentHashesToMaybeDelete[true] = val;
+            }
+            else
+            {
+                if (_attachmentHashesToMaybeDelete.TryGetValue(false, out var val) == false)
+                {
+                    _attachmentHashesToMaybeDelete.Add(false, new List<Slice>() { clone });
+                    return;
+                }
+
+                val.Add(hash);
+                _attachmentHashesToMaybeDelete[false] = val;
+            }
         }
 
         internal void ExecuteDocumentsMigrationAfterCommit()

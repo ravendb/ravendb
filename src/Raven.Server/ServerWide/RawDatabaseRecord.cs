@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
@@ -544,7 +545,22 @@ namespace Raven.Server.ServerWide
                 return _dataArchivalConfiguration;
             }
         }
-                
+
+        private RetireAttachmentsConfiguration _retireAttachmentsConfiguration;
+
+        public RetireAttachmentsConfiguration RetireAttachmentsConfiguration
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.RetireAttachments;
+
+                if (_retireAttachmentsConfiguration == null && _record.TryGet(nameof(DatabaseRecord.RetireAttachments), out BlittableJsonReaderObject config) && config != null)
+                    _retireAttachmentsConfiguration = JsonDeserializationCluster.RetireAttachmentsConfiguration(config);
+
+                return _retireAttachmentsConfiguration;
+            }
+        }
 
         private List<ExternalReplication> _externalReplications;
 

@@ -6,6 +6,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Voron;
 using Voron.Impl;
 
@@ -16,7 +17,7 @@ namespace Raven.Server.Documents.Refresh
         private const string DocumentsByRefresh = "DocumentsByRefresh";
 
         public RefreshStorage(DocumentDatabase database, Transaction tx) 
-            : base(tx, database, DocumentsByRefresh, Constants.Documents.Metadata.Refresh)
+            : base(tx, database, LoggingSource.Instance.GetLogger<RefreshStorage>(database.Name),DocumentsByRefresh, Constants.Documents.Metadata.Refresh)
         {
         }
 
@@ -58,7 +59,7 @@ namespace Raven.Server.Documents.Refresh
 
         protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount)
         {
-            if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
+            if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
                 return;
 
             (bool allExpired, string id) = GetConflictedExpiration(options.Context, options.CurrentTime, clonedId);

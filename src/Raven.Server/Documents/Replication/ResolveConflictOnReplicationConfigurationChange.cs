@@ -506,13 +506,16 @@ namespace Raven.Server.Documents.Replication
                     if (found == false && resolvedAttachmentsMetadata.Any(x =>
                             x.Name == attachment.Name && 
                             x.Hash == attachment.Hash && 
-                            x.ContentType == attachment.ContentType))
+                            x.ContentType == attachment.ContentType &&
+                            x.Flags == attachment.Flags &&
+                            x.Size == attachment.Size &&
+                            x.RetireAt == attachment.RetireAt))
                     {
                         found = true;
                        // we have to generate a _new_ change vector for the attachment, since it is resolved, to ensure
                        // all nodes have the same change vector value after replication
                         var ad = _database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, attachment.DocumentId, 
-                            attachment.Name, attachment.ContentType, attachment.Hash,
+                            attachment.Name, attachment.ContentType, attachment.Hash, attachment.Flags, attachment.Size, attachment.RetireAt,
                             stream: null, expectedChangeVector: null,  updateDocument: false);
                         continue;
                     }

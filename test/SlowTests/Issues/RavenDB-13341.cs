@@ -198,7 +198,7 @@ namespace SlowTests.Issues
 
                     using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
                     {
-                        attachmentStorage.PutAttachment(context, documentId, attachmentName, contentType, attachment.Base64Hash.ToString(), null, stream, updateDocument: false);
+                        attachmentStorage.PutAttachment(context, documentId, attachmentName, contentType, attachment.Base64Hash.ToString(), flags: AttachmentFlags.None, stream.Length, retireAtDt: null, expectedChangeVector: null, stream, updateDocument: false);
                     }
 
                     tx.Commit();

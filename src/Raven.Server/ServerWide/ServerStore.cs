@@ -2070,6 +2070,20 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(editDataArchival);
         }
 
+        public Task<(long Index, object Result)> ModifyDatabaseAttachmentsRetire(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
+        {
+            var config = JsonDeserializationCluster.RetireAttachmentsConfiguration(configurationJson);
+            if (config.RetireFrequencyInSec <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Retire attachments frequency for database '{databaseName}' must be greater than 0.");
+            }
+
+            var editExpiration = new EditRetireAttachmentsCommand(config, databaseName, raftRequestId);
+
+            return SendToLeaderAsync(editExpiration);
+        }
+
         public Task<(long Index, object Result)> ModifyDocumentsCompression(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
             var documentsCompression = JsonDeserializationCluster.DocumentsCompressionConfiguration(configurationJson);

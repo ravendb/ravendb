@@ -11,6 +11,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Voron;
 using Voron.Impl;
 
@@ -20,19 +21,21 @@ namespace Raven.Server.Documents;
 public abstract unsafe class AbstractBackgroundWorkStorage
 {
     protected readonly DocumentDatabase Database;
+    protected readonly Logger Logger;
     protected readonly string MetadataPropertyName;
-    private readonly string _treeName;
+    protected readonly string _treeName;
 
-    protected AbstractBackgroundWorkStorage(Transaction tx, DocumentDatabase database, string treeName, string metadataPropertyName)
+    protected AbstractBackgroundWorkStorage(Transaction tx, DocumentDatabase database, Logger logger, string treeName, string metadataPropertyName)
     {
         tx.CreateTree(treeName);
-        
+
+        Logger = logger;
         Database = database;
         _treeName = treeName;
         MetadataPropertyName = metadataPropertyName;
     }
 
-    public void Put(DocumentsOperationContext context, Slice lowerId, string processDateString)
+    public virtual void Put(DocumentsOperationContext context, Slice lowerId, string processDateString)
     {
         if (DateTime.TryParseExact(processDateString, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind,
                 out DateTime processDate) == false)
@@ -94,26 +97,20 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 
                             try
                             {
-                                using (var document = Database.DocumentsStorage.Get(options.Context, clonedId,
-                                           DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector))
+                                using var myDoc = GetDocumentAndIdOrCollection(options, clonedId);
+                                if (myDoc == null)
                                 {
-                                    if (document == null ||
-                                        document.TryGetMetadata(out var metadata) == false ||
-                                        HasPassed(metadata, options.CurrentTime, MetadataPropertyName) ==
-                                        false)
-                                    {
-                                        toProcess.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id: null));
-                                        totalCount++;
-                                        continue;
-                                    }
-
-                                    if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
-                                        break;
-
-                                    toProcess.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, document.Id));
+                                    toProcess.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id: null));
                                     totalCount++;
-                                    options.Context.Transaction.ForgetAbout(document);
+                                    continue;
                                 }
+
+                                if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
+                                    break;
+
+                                toProcess.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, myDoc.Id));
+                                totalCount++;
+                                options.Context.Transaction.ForgetAbout(myDoc.Document);
                             }
                             catch (DocumentConflictException)
                             {
@@ -133,6 +130,19 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         }
     }
 
+    protected class MyStruct : IDisposable
+    {
+        public Document Document { get; set; }
+        public string Id { get; set; }
+
+
+        public void Dispose()
+        {
+            Document.Dispose();
+            Document = null;
+        }
+    }
+
     public class DocumentExpirationInfo
     {
         public Slice Ticks { get; }
@@ -149,6 +159,19 @@ public abstract unsafe class AbstractBackgroundWorkStorage
             LowerId = lowerId;
             Id = id;
         }
+    }
+
+    protected virtual MyStruct GetDocumentAndIdOrCollection(BackgroundWorkParameters options, Slice clonedId)
+    {
+        var document = Database.DocumentsStorage.Get(options.Context, clonedId, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector);
+        if (document == null ||
+            document.TryGetMetadata(out var metadata) == false ||
+            HasPassed(metadata, options.CurrentTime, MetadataPropertyName) == false)
+        {
+            return null;
+        }
+
+        return new MyStruct { Document = document, Id = document.Id };
     }
 
     protected abstract void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount);

@@ -377,11 +377,12 @@ namespace Raven.Server.Documents.Replication.Incoming
                             case AttachmentReplicationItem attachment:
 
                                 var result = AttachmentOrTombstone.GetAttachmentOrTombstone(context, attachment.Key);
+                                var isRevision = AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) == AttachmentType.Revision;
                                 if (_replicationInfo.ReplicatedAttachmentStreams?.TryGetValue(attachment.Base64Hash, out var attachmentStream) == true)
                                 {
                                     if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
                                     {
-                                        Debug.Assert(result.Attachment == null || AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) != AttachmentType.Revision,
+                                        Debug.Assert(result.Attachment == null || isRevision == false,
                                             "the stream should have been written when the revision was added by the document");
                                         database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
                                     }
@@ -405,7 +406,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 if (newChangeVector != null)
                                 {
                                     database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
-                                        contentType, attachment.Base64Hash, newChangeVector);
+                                        contentType, attachment.Base64Hash, attachment.RetiredAtUtc, attachment.Flags, attachment.AttachmentSize, isRevision, newChangeVector);
                                 }
 
                                 break;
@@ -428,7 +429,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     ConflictStatus.Update => attachmentTombstone.ChangeVector,
                                     _ => throw new ArgumentOutOfRangeException()
                                 };
-
+                                //TODO: egor add delete from retired tree as well! write test for that
                                 database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
                                     newChangeVector,
                                     attachmentTombstone.LastModifiedTicks);

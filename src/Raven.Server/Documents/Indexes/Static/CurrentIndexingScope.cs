@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (attachmentName == null)
                     return DynamicNullObject.Null;
 
-                var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(QueryContext.Documents, documentId, attachmentName, AttachmentType.Document, null);
+                Attachment attachment = _documentsStorage.AttachmentsStorage.GetAttachment(QueryContext.Documents, documentId, attachmentName, AttachmentType.Document, null);
                 if (attachment == null)
                     return DynamicNullObject.Null;
 

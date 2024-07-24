@@ -295,6 +295,8 @@ namespace Raven.Server.Documents
 
         public DataArchivist DataArchivist { get; private set; }
 
+        public RetireAttachmentsSender RetireAttachmentsSender { get; private set; }
+
         public TimeSeriesPolicyRunner TimeSeriesPolicyRunner { get; private set; }
 
         public PeriodicBackupRunner PeriodicBackupRunner { get; private set; }
@@ -1745,6 +1747,7 @@ namespace Raven.Server.Documents
             DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(record);
             ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
             DataArchivist = DataArchivist.LoadConfiguration(this, record, DataArchivist);
+            RetireAttachmentsSender = RetireAttachmentsSender.LoadConfigurations(this, record, RetireAttachmentsSender);
             TimeSeriesPolicyRunner = TimeSeriesPolicyRunner.LoadConfigurations(this, record, TimeSeriesPolicyRunner);
             UpdateCompressionConfigurationFromDatabaseRecord(record);
         }
