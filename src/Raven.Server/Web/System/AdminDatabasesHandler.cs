@@ -307,11 +307,19 @@ namespace Raven.Server.Web.System
                 return;
             }
 
-            var addToInitLog = new Action<string>(txt =>
+            var addToInitLog = new Action<LogMode, string>((logMode, txt) =>
             {
                 var msg = $"[Recreating indexes] {DateTime.UtcNow} :: Database '{databaseName}' : {txt}";
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(msg);
+
+                switch (logMode)
+                {
+                    case LogMode.Operations when Logger.IsOperationsEnabled:
+                        Logger.Operations(msg);
+                        break;
+                    case LogMode.Information when Logger.IsInfoEnabled:
+                        Logger.Info(msg);
+                        break;
+                }
             });
 
             using (var documentDatabase = DatabasesLandlord.CreateDocumentDatabase(databaseName, databaseConfiguration, ServerStore, addToInitLog))
