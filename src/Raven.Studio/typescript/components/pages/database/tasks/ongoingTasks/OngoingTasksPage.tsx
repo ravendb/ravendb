@@ -436,291 +436,291 @@ export function OngoingTasksPage() {
                 )}
             </StickyHeader>
             <Row className="gy-sm">
-            <div className="flex-vertical">
-                <div className="scroll flex-grow">
+                <div className="flex-vertical">
+                    <div className="scroll flex-grow">
                         {allTasksCount === 0 && (
                             <EmptySet>No tasks have been created for this Database Group.</EmptySet>
                         )}
 
-                    {externalReplications.length > 0 && (
-                        <div key="external-replications">
-                            <HrHeader className="external-replication" count={externalReplications.length}>
-                                <Icon icon="external-replication" /> External Replication
-                            </HrHeader>
+                        {externalReplications.length > 0 && (
+                            <div key="external-replications">
+                                <HrHeader className="external-replication" count={externalReplications.length}>
+                                    <Icon icon="external-replication" /> External Replication
+                                </HrHeader>
 
-                            {externalReplications.map((x) => (
-                                <ExternalReplicationPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
-                            ))}
-                        </div>
-                    )}
+                                {externalReplications.map((x) => (
+                                    <ExternalReplicationPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
+                                ))}
+                            </div>
+                        )}
 
-                    {ravenEtls.length > 0 && (
-                        <div key="raven-etls">
-                            <HrHeader className="ravendb-etl" count={ravenEtls.length}>
-                                <Icon icon="etl" />
-                                RavenDB ETL
-                            </HrHeader>
+                        {ravenEtls.length > 0 && (
+                            <div key="raven-etls">
+                                <HrHeader className="ravendb-etl" count={ravenEtls.length}>
+                                    <Icon icon="etl" />
+                                    RavenDB ETL
+                                </HrHeader>
 
-                            {ravenEtls.map((x) => (
-                                <RavenEtlPanel
-                                    {...sharedPanelProps}
-                                    key={taskKey(x.shared)}
-                                    data={x}
-                                    onToggleDetails={startTrackingProgress}
-                                    showItemPreview={showItemPreview}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {sqlEtls.length > 0 && (
-                        <div key="sql-etls">
-                            <HrHeader className="sql-etl" count={sqlEtls.length}>
-                                <Icon icon="sql-etl" />
-                                SQL ETL
-                            </HrHeader>
-
-                            {sqlEtls.map((x) => (
-                                <SqlEtlPanel
-                                    {...sharedPanelProps}
-                                    key={taskKey(x.shared)}
-                                    data={x}
-                                    onToggleDetails={startTrackingProgress}
-                                    showItemPreview={showItemPreview}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {olapEtls.length > 0 && (
-                        <div key="olap-etls">
-                            <HrHeader className="olap-etl" count={olapEtls.length}>
-                                <Icon icon="olap-etl" />
-                                OLAP ETL
-                            </HrHeader>
-
-                            {olapEtls.map((x) => (
-                                <OlapEtlPanel
-                                    {...sharedPanelProps}
-                                    key={taskKey(x.shared)}
-                                    data={x}
-                                    onToggleDetails={startTrackingProgress}
-                                    showItemPreview={showItemPreview}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {kafkaEtls.length > 0 && (
-                        <div key="kafka-etls">
-                            <HrHeader className="kafka-etl" count={kafkaEtls.length}>
-                                <Icon icon="kafka-etl" />
-                                KAFKA ETL
-                            </HrHeader>
-
-                            {kafkaEtls.map((x) => (
-                                <KafkaEtlPanel
-                                    {...sharedPanelProps}
-                                    key={taskKey(x.shared)}
-                                    data={x}
-                                    onToggleDetails={startTrackingProgress}
-                                    showItemPreview={showItemPreview}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {rabbitMqEtls.length > 0 && (
-                        <div key="rabbitmq-etls">
-                            <HrHeader className="rabbitmq-etl" count={rabbitMqEtls.length}>
-                                <Icon icon="rabbitmq-etl" />
-                                RABBITMQ ETL
-                            </HrHeader>
-
-                            {rabbitMqEtls.map((x) => (
-                                <RabbitMqEtlPanel
-                                    {...sharedPanelProps}
-                                    key={taskKey(x.shared)}
-                                    data={x}
-                                    onToggleDetails={startTrackingProgress}
-                                    showItemPreview={showItemPreview}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {azureQueueStorageEtls.length > 0 && (
-                        <div key="azure-queue-storage-etls">
-                            <HrHeader className="azure-queue-storage-etl" count={azureQueueStorageEtls.length}>
-                                <Icon icon="azure-queue-storage-etl" />
-                                AZURE QUEUE STORAGE ETL
-                            </HrHeader>
-
-                            {azureQueueStorageEtls.map((x) => (
-                                <AzureQueueStorageEtlPanel
-                                    {...sharedPanelProps}
-                                    key={taskKey(x.shared)}
-                                    data={x}
-                                    onToggleDetails={startTrackingProgress}
-                                    showItemPreview={showItemPreview}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {kafkaSinks.length > 0 && (
-                        <div key="kafka-sinks">
-                            <HrHeader className="kafka-sink" count={kafkaSinks.length}>
-                                <Icon icon="kafka-sink" />
-                                KAFKA SINK
-                            </HrHeader>
-
-                            {kafkaSinks.map((x) => (
-                                <KafkaSinkPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
-                            ))}
-                        </div>
-                    )}
-
-                    {rabbitMqSinks.length > 0 && (
-                        <div key="rabbitmq-sinks">
-                            <HrHeader className="rabbitmq-sink" count={rabbitMqSinks.length}>
-                                <Icon icon="rabbitmq-sink" />
-                                RABBITMQ SINK
-                            </HrHeader>
-
-                            {rabbitMqSinks.map((x) => (
-                                <RabbitMqSinkPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
-                            ))}
-                        </div>
-                    )}
-
-                    {elasticSearchEtls.length > 0 && (
-                        <div key="elastic-search-etls">
-                            <HrHeader className="elastic-etl" count={elasticSearchEtls.length}>
-                                <Icon icon="elastic-search-etl" />
-                                Elasticsearch ETL
-                            </HrHeader>
-
-                            {elasticSearchEtls.map((x) => (
-                                <ElasticSearchEtlPanel
-                                    {...sharedPanelProps}
-                                    key={taskKey(x.shared)}
-                                    data={x}
-                                    onToggleDetails={startTrackingProgress}
-                                    showItemPreview={showItemPreview}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {backups.length > 0 && (
-                        <div key="backups">
-                            <HrHeader className="periodic-backup" count={backups.length}>
-                                <Icon icon="backup" />
-                                Periodic Backup
-                            </HrHeader>
-
-                            {backups.map((x) => (
-                                <PeriodicBackupPanel
-                                    sourceView="OngoingTasks"
-                                    forceReload={reload}
-                                    allowSelect
-                                    {...sharedPanelProps}
-                                    key={taskKey(x.shared)}
-                                    data={x}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {subscriptionsDatabaseCount > 0 && (
-                        <div key="subscriptions">
-                            <HrHeader
-                                className="subscription"
-                                count={
-                                    subscriptionsDatabaseLimitStatus === "notReached"
-                                        ? subscriptionsDatabaseCount
-                                        : null
-                                }
-                            >
-                                <Icon icon="subscription" />
-                                Subscription
-                                {subscriptionsDatabaseLimitStatus !== "notReached" && (
-                                    <CounterBadge
-                                        count={subscriptionsDatabaseCount}
-                                        limit={subscriptionsDatabaseLimit}
-                                        className="ms-3"
-                                    />
-                                )}
-                            </HrHeader>
-
-                            {subscriptions.map((x) => {
-                                const connectionDetails = tasks.subscriptionConnectionDetails.find(
-                                    (details) => x.shared.taskId === details.SubscriptionId
-                                );
-
-                                return (
-                                    <SubscriptionPanel
+                                {ravenEtls.map((x) => (
+                                    <RavenEtlPanel
                                         {...sharedPanelProps}
-                                        connections={connectionDetails}
-                                        dropSubscription={(workerId) =>
-                                            dropSubscription(
-                                                x.shared.taskId,
-                                                x.shared.taskName,
-                                                x.shared.responsibleNodeTag,
-                                                workerId
-                                            )
-                                        }
-                                        onToggleDetails={async (newState) => {
-                                            if (newState) {
-                                                await refreshSubscriptionInfo(x.shared.taskId, x.shared.taskName);
-                                            }
-                                        }}
-                                        refreshSubscriptionInfo={() =>
-                                            refreshSubscriptionInfo(x.shared.taskId, x.shared.taskName)
-                                        }
+                                        key={taskKey(x.shared)}
+                                        data={x}
+                                        onToggleDetails={startTrackingProgress}
+                                        showItemPreview={showItemPreview}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {sqlEtls.length > 0 && (
+                            <div key="sql-etls">
+                                <HrHeader className="sql-etl" count={sqlEtls.length}>
+                                    <Icon icon="sql-etl" />
+                                    SQL ETL
+                                </HrHeader>
+
+                                {sqlEtls.map((x) => (
+                                    <SqlEtlPanel
+                                        {...sharedPanelProps}
+                                        key={taskKey(x.shared)}
+                                        data={x}
+                                        onToggleDetails={startTrackingProgress}
+                                        showItemPreview={showItemPreview}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {olapEtls.length > 0 && (
+                            <div key="olap-etls">
+                                <HrHeader className="olap-etl" count={olapEtls.length}>
+                                    <Icon icon="olap-etl" />
+                                    OLAP ETL
+                                </HrHeader>
+
+                                {olapEtls.map((x) => (
+                                    <OlapEtlPanel
+                                        {...sharedPanelProps}
+                                        key={taskKey(x.shared)}
+                                        data={x}
+                                        onToggleDetails={startTrackingProgress}
+                                        showItemPreview={showItemPreview}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {kafkaEtls.length > 0 && (
+                            <div key="kafka-etls">
+                                <HrHeader className="kafka-etl" count={kafkaEtls.length}>
+                                    <Icon icon="kafka-etl" />
+                                    KAFKA ETL
+                                </HrHeader>
+
+                                {kafkaEtls.map((x) => (
+                                    <KafkaEtlPanel
+                                        {...sharedPanelProps}
+                                        key={taskKey(x.shared)}
+                                        data={x}
+                                        onToggleDetails={startTrackingProgress}
+                                        showItemPreview={showItemPreview}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {rabbitMqEtls.length > 0 && (
+                            <div key="rabbitmq-etls">
+                                <HrHeader className="rabbitmq-etl" count={rabbitMqEtls.length}>
+                                    <Icon icon="rabbitmq-etl" />
+                                    RABBITMQ ETL
+                                </HrHeader>
+
+                                {rabbitMqEtls.map((x) => (
+                                    <RabbitMqEtlPanel
+                                        {...sharedPanelProps}
+                                        key={taskKey(x.shared)}
+                                        data={x}
+                                        onToggleDetails={startTrackingProgress}
+                                        showItemPreview={showItemPreview}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {azureQueueStorageEtls.length > 0 && (
+                            <div key="azure-queue-storage-etls">
+                                <HrHeader className="azure-queue-storage-etl" count={azureQueueStorageEtls.length}>
+                                    <Icon icon="azure-queue-storage-etl" />
+                                    AZURE QUEUE STORAGE ETL
+                                </HrHeader>
+
+                                {azureQueueStorageEtls.map((x) => (
+                                    <AzureQueueStorageEtlPanel
+                                        {...sharedPanelProps}
+                                        key={taskKey(x.shared)}
+                                        data={x}
+                                        onToggleDetails={startTrackingProgress}
+                                        showItemPreview={showItemPreview}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {kafkaSinks.length > 0 && (
+                            <div key="kafka-sinks">
+                                <HrHeader className="kafka-sink" count={kafkaSinks.length}>
+                                    <Icon icon="kafka-sink" />
+                                    KAFKA SINK
+                                </HrHeader>
+
+                                {kafkaSinks.map((x) => (
+                                    <KafkaSinkPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
+                                ))}
+                            </div>
+                        )}
+
+                        {rabbitMqSinks.length > 0 && (
+                            <div key="rabbitmq-sinks">
+                                <HrHeader className="rabbitmq-sink" count={rabbitMqSinks.length}>
+                                    <Icon icon="rabbitmq-sink" />
+                                    RABBITMQ SINK
+                                </HrHeader>
+
+                                {rabbitMqSinks.map((x) => (
+                                    <RabbitMqSinkPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
+                                ))}
+                            </div>
+                        )}
+
+                        {elasticSearchEtls.length > 0 && (
+                            <div key="elastic-search-etls">
+                                <HrHeader className="elastic-etl" count={elasticSearchEtls.length}>
+                                    <Icon icon="elastic-search-etl" />
+                                    Elasticsearch ETL
+                                </HrHeader>
+
+                                {elasticSearchEtls.map((x) => (
+                                    <ElasticSearchEtlPanel
+                                        {...sharedPanelProps}
+                                        key={taskKey(x.shared)}
+                                        data={x}
+                                        onToggleDetails={startTrackingProgress}
+                                        showItemPreview={showItemPreview}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {backups.length > 0 && (
+                            <div key="backups">
+                                <HrHeader className="periodic-backup" count={backups.length}>
+                                    <Icon icon="backup" />
+                                    Periodic Backup
+                                </HrHeader>
+
+                                {backups.map((x) => (
+                                    <PeriodicBackupPanel
+                                        sourceView="OngoingTasks"
+                                        forceReload={reload}
+                                        allowSelect
+                                        {...sharedPanelProps}
                                         key={taskKey(x.shared)}
                                         data={x}
                                     />
-                                );
-                            })}
-                        </div>
-                    )}
+                                ))}
+                            </div>
+                        )}
 
-                    {hubDefinitions.length > 0 && (
-                        <div key="replication-hubs">
-                            <HrHeader className="pull-replication-hub" count={hubDefinitions.length}>
-                                <Icon icon="pull-replication-hub" />
-                                Replication Hub
-                            </HrHeader>
-
-                            {hubDefinitions.map((def) => (
-                                <ReplicationHubDefinitionPanel
-                                    {...sharedPanelProps}
-                                    key={taskKey(def.shared)}
-                                    data={def}
-                                    connectedSinks={replicationHubs.filter(
-                                        (x) => x.shared.taskId === def.shared.taskId
+                        {subscriptionsDatabaseCount > 0 && (
+                            <div key="subscriptions">
+                                <HrHeader
+                                    className="subscription"
+                                    count={
+                                        subscriptionsDatabaseLimitStatus === "notReached"
+                                            ? subscriptionsDatabaseCount
+                                            : null
+                                    }
+                                >
+                                    <Icon icon="subscription" />
+                                    Subscription
+                                    {subscriptionsDatabaseLimitStatus !== "notReached" && (
+                                        <CounterBadge
+                                            count={subscriptionsDatabaseCount}
+                                            limit={subscriptionsDatabaseLimit}
+                                            className="ms-3"
+                                        />
                                     )}
-                                />
-                            ))}
-                        </div>
-                    )}
+                                </HrHeader>
 
-                    {replicationSinks.length > 0 && (
-                        <div key="replication-sinks">
-                            <HrHeader className="pull-replication-sink" count={replicationSinks.length}>
-                                <Icon icon="pull-replication-agent" />
-                                Replication Sink
-                            </HrHeader>
+                                {subscriptions.map((x) => {
+                                    const connectionDetails = tasks.subscriptionConnectionDetails.find(
+                                        (details) => x.shared.taskId === details.SubscriptionId
+                                    );
 
-                            {replicationSinks.map((x) => (
-                                <ReplicationSinkPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
-                            ))}
-                        </div>
-                    )}
+                                    return (
+                                        <SubscriptionPanel
+                                            {...sharedPanelProps}
+                                            connections={connectionDetails}
+                                            dropSubscription={(workerId) =>
+                                                dropSubscription(
+                                                    x.shared.taskId,
+                                                    x.shared.taskName,
+                                                    x.shared.responsibleNodeTag,
+                                                    workerId
+                                                )
+                                            }
+                                            onToggleDetails={async (newState) => {
+                                                if (newState) {
+                                                    await refreshSubscriptionInfo(x.shared.taskId, x.shared.taskName);
+                                                }
+                                            }}
+                                            refreshSubscriptionInfo={() =>
+                                                refreshSubscriptionInfo(x.shared.taskId, x.shared.taskName)
+                                            }
+                                            key={taskKey(x.shared)}
+                                            data={x}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {hubDefinitions.length > 0 && (
+                            <div key="replication-hubs">
+                                <HrHeader className="pull-replication-hub" count={hubDefinitions.length}>
+                                    <Icon icon="pull-replication-hub" />
+                                    Replication Hub
+                                </HrHeader>
+
+                                {hubDefinitions.map((def) => (
+                                    <ReplicationHubDefinitionPanel
+                                        {...sharedPanelProps}
+                                        key={taskKey(def.shared)}
+                                        data={def}
+                                        connectedSinks={replicationHubs.filter(
+                                            (x) => x.shared.taskId === def.shared.taskId
+                                        )}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {replicationSinks.length > 0 && (
+                            <div key="replication-sinks">
+                                <HrHeader className="pull-replication-sink" count={replicationSinks.length}>
+                                    <Icon icon="pull-replication-agent" />
+                                    Replication Sink
+                                </HrHeader>
+
+                                {replicationSinks.map((x) => (
+                                    <ReplicationSinkPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
             </Row>
             <div id="modalContainer" className="bs5" />
         </div>
