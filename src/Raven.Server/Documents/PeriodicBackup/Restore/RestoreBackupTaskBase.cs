@@ -308,20 +308,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             databaseName, overwrite: false);
                     }
 
-                    var addToInitLog = new Action<LogMode, string>((logMode, txt) => // init log is not save in mem during RestoreBackup
+                    var addToInitLog = new Action<string>(txt => // init log is not save in mem during RestoreBackup
                     {
                         var msg = $"[RestoreBackup] {DateTime.UtcNow} :: Database '{databaseName}' : {txt}";
-
-                        switch (logMode)
-                        {
-                            case LogMode.Operations when Logger.IsOperationsEnabled:
-                                Logger.Operations(msg);
-                                break;
-
-                            case LogMode.Information when Logger.IsInfoEnabled:
-                                Logger.Info(msg);
-                                break;
-                        }
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info(msg);
                     });
 
                     var configuration = _serverStore
@@ -408,7 +399,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                     try
                     {
-                        await _serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, addToInitLog: (_, message) => result.AddInfo(message));
+                        await _serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, addToInitLog: message => result.AddInfo(message));
                     }
                     catch (Exception e)
                     {

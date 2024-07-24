@@ -282,10 +282,10 @@ namespace Voron
             var header = stackalloc TransactionHeader[1];
             bool hadIntegrityIssues;
 
-            Options.AddToInitLog?.Invoke(LogMode.Information, "Starting Recovery");
+            Options.AddToInitLog?.Invoke("Starting Recovery");
             hadIntegrityIssues = _journal.RecoverDatabase(header, Options.AddToInitLog);
             var successString = hadIntegrityIssues ? "(with integrity issues)" : "(successfully)";
-            Options.AddToInitLog?.Invoke(LogMode.Information, $"Recovery Ended {successString}");
+            Options.AddToInitLog?.Invoke($"Recovery Ended {successString}");
 
             if (hadIntegrityIssues)
             {

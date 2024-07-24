@@ -234,7 +234,7 @@ namespace Voron
 
         public Func<string, bool> ShouldUseKeyPrefix { get; set; }
 
-        public Action<LogMode, string> AddToInitLog;
+        public Action<string> AddToInitLog;
 
         public event Action<StorageEnvironmentOptions> OnDirectoryInitialize;
 

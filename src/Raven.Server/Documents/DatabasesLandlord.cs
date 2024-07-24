@@ -576,7 +576,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false, Action<LogMode, string> addToInitLog = null, [CallerMemberName] string caller = null)
+        public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false, Action<string> addToInitLog = null, [CallerMemberName] string caller = null)
         {
             IDisposable release = null;
             try
@@ -611,7 +611,6 @@ namespace Raven.Server.Documents
                         return database;
                     }
                 }
-
                 return CreateDatabase(databaseName, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, caller, addToInitLog);
             }
             finally
@@ -672,7 +671,7 @@ namespace Raven.Server.Documents
             throw new ObjectDisposedException("The server is being disposed, cannot load database " + databaseName);
         }
 
-        private Task<DocumentDatabase> CreateDatabase(StringSegment databaseName, DateTime? wakeup, bool ignoreDisabledDatabase, bool ignoreBeenDeleted, bool ignoreNotRelevant, string caller, Action<LogMode, string> addToInitLog = null)
+        private Task<DocumentDatabase> CreateDatabase(StringSegment databaseName, DateTime? wakeup, bool ignoreDisabledDatabase, bool ignoreBeenDeleted, bool ignoreNotRelevant, string caller, Action<string> addToInitLog = null)
         {
             var config = CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant);
             if (config == null)
@@ -690,14 +689,14 @@ namespace Raven.Server.Documents
             if (await _databaseSemaphore.WaitAsync(timeToWait) == false)
                 throw new DatabaseConcurrentLoadTimeoutException("Too many databases loading concurrently, timed out waiting for them to load.");
 
-            return await CreateDatabaseUnderResourceSemaphore(databaseName, config, wakeup, caller: caller);
+            return await CreateDatabaseUnderResourceSemaphore(databaseName, config, wakeup);
         }
 
-        private Task<DocumentDatabase> CreateDatabaseUnderResourceSemaphore(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, Action<LogMode, string> addToInitLog = null, string caller = null)
+        private Task<DocumentDatabase> CreateDatabaseUnderResourceSemaphore(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, Action<string> addToInitLog = null, string caller = null)
         {
             try
             {
-                var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config, wakeup, addToInitLog, caller), TaskCreationOptions.RunContinuationsAsynchronously);
+                var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config, wakeup, addToInitLog), TaskCreationOptions.RunContinuationsAsynchronously);
                 var database = DatabasesCache.GetOrAdd(databaseName, task);
                 if (database == task)
                 {
@@ -726,7 +725,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private DocumentDatabase ActuallyCreateDatabase(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, Action<LogMode, string> addToInitLog = null, string caller = null)
+        private DocumentDatabase ActuallyCreateDatabase(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, Action<string> addToInitLog = null)
         {
             IDisposable release = null;
             try
@@ -737,7 +736,7 @@ namespace Raven.Server.Documents
                 //if false, this means we have started disposing, so we shouldn't create a database now
                 release = EnterReadLockImmediately(databaseName);
 
-                var db = CreateDocumentsStorage(databaseName, config, wakeup, addToInitLog, caller);
+                var db = CreateDocumentsStorage(databaseName, config, wakeup, addToInitLog);
                 _serverStore.NotificationCenter.Add(
                     DatabaseChanged.Create(databaseName.Value, DatabaseChangeType.Load));
 
@@ -796,27 +795,17 @@ namespace Raven.Server.Documents
         public ConcurrentDictionary<string, ConcurrentQueue<string>> InitLog =
             new ConcurrentDictionary<string, ConcurrentQueue<string>>(StringComparer.OrdinalIgnoreCase);
 
-        private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup, Action<LogMode, string> addToInitLog, string caller = null)
+        private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup, Action<string> addToInitLog)
         {
-            void AddToInitLog(LogMode logMode, string txt)
+            void AddToInitLog(string txt)
             {
-                addToInitLog?.Invoke(logMode, txt);
+                addToInitLog?.Invoke(txt);
                 string msg = txt;
                 msg = $"[Load Database] {DateTime.UtcNow} :: Database '{databaseName}' : {msg}";
-
                 if (InitLog.TryGetValue(databaseName.Value, out var q))
                     q.Enqueue(msg);
-
-                switch (logMode)
-                {
-                    case LogMode.Operations when _logger.IsOperationsEnabled:
-                        _logger.Operations(msg);
-                        break;
-
-                    case LogMode.Information when _logger.IsInfoEnabled:
-                        _logger.Info(msg);
-                        break;
-                }
+                if (_logger.IsInfoEnabled)
+                    _logger.Info(msg);
             }
 
             DocumentDatabase documentDatabase = null;
@@ -828,7 +817,7 @@ namespace Raven.Server.Documents
                     s => new ConcurrentQueue<string>(),
                     (s, existing) => new ConcurrentQueue<string>());
 
-                AddToInitLog(LogMode.Operations,$"Starting database initialization. Action taken by '{caller}'");
+                AddToInitLog("Starting database initialization");
 
                 var sp = Stopwatch.StartNew();
                 documentDatabase = new DocumentDatabase(config.ResourceName, config, _serverStore, AddToInitLog);
@@ -842,10 +831,11 @@ namespace Raven.Server.Documents
 
                 ForTestingPurposes?.AfterDatabaseInitialize?.Invoke();
 
-                AddToInitLog(LogMode.Operations, "Finish database initialization");
+                AddToInitLog("Finish database initialization");
                 DeleteDatabaseCachedInfo(documentDatabase.Name, throwOnError: false);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Started database {config.ResourceName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
 
-                AddToInitLog(LogMode.Information, $"Started database {config.ResourceName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
                 OnDatabaseLoaded(config.ResourceName);
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
