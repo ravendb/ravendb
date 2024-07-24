@@ -999,7 +999,7 @@ namespace Raven.Server.Documents
         public ConcurrentDictionary<string, ConcurrentQueue<string>> InitLog =
             new ConcurrentDictionary<string, ConcurrentQueue<string>>(StringComparer.OrdinalIgnoreCase);
 
-        public static DocumentDatabase CreateDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
+        public static DocumentDatabase CreateDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<LogMode, string> addToInitLog)
         {
             return ShardHelper.IsShardName(name) ?
                 new ShardedDocumentDatabase(name, configuration, serverStore, addToInitLog) :
@@ -1008,15 +1008,24 @@ namespace Raven.Server.Documents
 
         private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup, Action<string> addToInitLog)
         {
-            void AddToInitLog(string txt)
+            void AddToInitLog(LogMode logMode, string txt)
             {
                 addToInitLog?.Invoke(txt);
                 string msg = txt;
                 msg = $"[Load Database] {DateTime.UtcNow} :: Database '{databaseName}' : {msg}";
                 if (InitLog.TryGetValue(databaseName.Value, out var q))
                     q.Enqueue(msg);
-                if (_logger.IsInfoEnabled)
-                    _logger.Info(msg);
+
+                switch (logMode)
+                {
+                    case LogMode.Operations when _logger.IsOperationsEnabled:
+                        _logger.Operations(msg);
+                        break;
+
+                    case LogMode.Information when _logger.IsInfoEnabled:
+                        _logger.Info(msg);
+                        break;
+                }
             }
 
             DocumentDatabase documentDatabase = null;
@@ -1028,7 +1037,7 @@ namespace Raven.Server.Documents
                     s => new ConcurrentQueue<string>(),
                     (s, existing) => new ConcurrentQueue<string>());
 
-                AddToInitLog("Starting database initialization");
+                AddToInitLog(LogMode.Operations, "Starting database initialization");
 
                 var sp = Stopwatch.StartNew();
 
@@ -1043,7 +1052,7 @@ namespace Raven.Server.Documents
 
                 ForTestingPurposes?.AfterDatabaseInitialize?.Invoke();
 
-                AddToInitLog("Finish database initialization");
+                AddToInitLog(LogMode.Operations, "Finish database initialization");
                 DeleteDatabaseCachedInfo(documentDatabase.Name, throwOnError: false);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Started database {config.ResourceName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
