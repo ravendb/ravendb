@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Voron;
@@ -21,19 +22,20 @@ public partial class RevisionsStorage
         return configuration.AllowDeleteRevisionsManually;
     }
 
-    public Task DeleteRevisionsByChangeVectorManuallyAsync(List<string> cvs, long maxDeletes, bool shouldThrowIfChangeVectorsNotFound = true)
+    public async Task<long> DeleteRevisionsByChangeVectorManuallyAsync(List<string> cvs)
     {
         if (cvs == null || cvs.Count == 0)
-            return Task.CompletedTask;
+            return 0;
 
-        if (cvs.Count > maxDeletes)
-            return Task.FromException(new InvalidOperationException($"You are trying to delete more revisions then the limit: {maxDeletes}"));
-
-        return _database.TxMerger.Enqueue(new DeleteRevisionsByChangeVectorManuallyMergedCommand(cvs, shouldThrowIfChangeVectorsNotFound));
+        var cmd = new DeleteRevisionsByChangeVectorManuallyMergedCommand(cvs);
+        await _database.TxMerger.Enqueue(cmd);
+        return cmd.Result.HasValue ? cmd.Result.Value : 0;
     }
 
-    private void DeleteRevisionsByChangeVectorManuallyInternal(DocumentsOperationContext context, List<string> cvs, bool shouldThrowIfChangeVectorsNotFound)
+    private long DeleteRevisionsByChangeVectorManuallyInternal(DocumentsOperationContext context, List<string> cvs)
     {
+        var deleted = 0L;
+
         var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
 
         var table = new Table(context.DocumentDatabase.DocumentsStorage.RevisionsStorage.RevisionsSchema, context.Transaction.InnerTransaction);
@@ -50,10 +52,7 @@ public partial class RevisionsStorage
             {
                 if (table.ReadByKey(cvSlice, out TableValueReader tvr) == false)
                 {
-                    if (shouldThrowIfChangeVectorsNotFound == false)
-                        continue;
-
-                    throw new InvalidOperationException($"Revision with the cv \"{cv}\" doesn't exist");
+                    continue;
                 }
 
                 revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
@@ -78,24 +77,27 @@ public partial class RevisionsStorage
 
                 DeleteRevisionFromTable(context, collectionTable, writeTables, revision, collectionName, context.GetChangeVector(cv), lastModifiedTicks, revision.Flags);
                 IncrementCountOfRevisions(context, lowerIdPrefix, -1);
+                deleted++;
             }
         }
+
+        return deleted;
     }
 
     internal sealed class DeleteRevisionsByChangeVectorManuallyMergedCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
         private readonly List<string> _cvs;
-        private readonly bool _shouldThrowIfChangeVectorsNotFound;
 
-        public DeleteRevisionsByChangeVectorManuallyMergedCommand(List<string> cvs, bool shouldThrowIfChangeVectorsNotFound)
+        public long? Result { get; private set; } // deleted revisions
+
+        public DeleteRevisionsByChangeVectorManuallyMergedCommand(List<string> cvs)
         {
             _cvs = cvs;
-            _shouldThrowIfChangeVectorsNotFound = shouldThrowIfChangeVectorsNotFound;
         }
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            context.DocumentDatabase.DocumentsStorage.RevisionsStorage.DeleteRevisionsByChangeVectorManuallyInternal(context, _cvs, _shouldThrowIfChangeVectorsNotFound);
+            Result = context.DocumentDatabase.DocumentsStorage.RevisionsStorage.DeleteRevisionsByChangeVectorManuallyInternal(context, _cvs);
             return 1;
         }
 
@@ -106,18 +108,18 @@ public partial class RevisionsStorage
         }
     }
 
-    public Task DeleteRevisionsByDocumentIdManuallyAsync(List<string> ids, long maxDeletes)
+    public async Task<long> DeleteRevisionsByDocumentIdManuallyAsync(string id, long maxDeletes, DateTime? after, DateTime? before)
     {
-        if (ids == null || ids.Count == 0)
-            return Task.CompletedTask;
+        if (string.IsNullOrEmpty(id))
+            return 0;
 
-        return _database.TxMerger.Enqueue(new DeleteRevisionsByDocumentIdManuallyMergedCommand(ids, maxDeletes));
+        var cmd = new DeleteRevisionsByDocumentIdManuallyMergedCommand(id, maxDeletes, after, before);
+        await _database.TxMerger.Enqueue(cmd);
+        return cmd.Result.HasValue ? cmd.Result.Value : 0;
     }
 
-    private void DeleteRevisionsByDocumentIdManuallyInternal(DocumentsOperationContext context, string id, long maxDeletes, ref long remainingDeletes)
+    private long DeleteRevisionsByDocumentIdManuallyInternal(DocumentsOperationContext context, string id, long maxDeletes, DateTime? after, DateTime? before)
     {
-        var result = new DeleteOldRevisionsResult();
-
         using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
         using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
         {
@@ -126,55 +128,38 @@ public partial class RevisionsStorage
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Tried to delete revisions for '{id}' but no revisions found.");
-                return;
+                return 0;
             }
 
             if (context.DocumentDatabase.DocumentsStorage.RevisionsStorage.IsAllowedToDeleteRevisionsManually(collectionName.Name) == false)
                 throw new InvalidOperationException($"You are trying to delete revisions of '{id}' but it isn't allowed by its revisions configuration.");
 
-            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
-            var newEtag = _documentsStorage.GenerateNextEtag();
-            var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
-
-            var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
-            var revisionsToDelete = GetAllRevisions(context, table, prefixSlice, remainingDeletes, skipForceCreated: false, result);
-            var revisionsPreviousCount = GetRevisionsCount(context, prefixSlice);
-            if (revisionsPreviousCount > remainingDeletes)
-                throw new InvalidOperationException($"You are trying to delete more revisions then the limit: {maxDeletes} (stopped on '{id})'.");
-
-            var deleted = DeleteRevisionsInternal(context, table, lowerId, collectionName, changeVector, lastModifiedTicks, revisionsPreviousCount, revisionsToDelete,
-                result, tombstoneFlags: DocumentFlags.FromResharding | DocumentFlags.Artificial);
-
-            remainingDeletes -= deleted;
-            var hasMore = result.HasMore && result.Remaining > 0;
-            if (hasMore)
-                throw new InvalidOperationException($"You are trying to delete more revisions then the limit: {maxDeletes} (stopped on '{id}').");
-
-            IncrementCountOfRevisions(context, prefixSlice, -deleted);
+            return ForceDeleteAllRevisionsForInternal(context, lowerId, prefixSlice, collectionName, maxDeletes, 
+                shouldSkip: after.HasValue || before.HasValue ? revision => IsRevisionInRange(revision, after, before) == false : null);
         }
     }
 
     internal sealed class DeleteRevisionsByDocumentIdManuallyMergedCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
-        private readonly List<string> _ids;
+        private readonly string _id;
 
         private readonly long _maxDeletes;
 
-        public DeleteRevisionsByDocumentIdManuallyMergedCommand(List<string> ids, long maxDeletes)
+        private readonly DateTime? _after, _before;
+
+        public long? Result { get; private set; } // deleted revisions
+
+        public DeleteRevisionsByDocumentIdManuallyMergedCommand(string ids, long maxDeletes, DateTime? after, DateTime? before)
         {
-            _ids = ids;
+            _id = ids;
             _maxDeletes = maxDeletes;
+            _after = after;
+            _before = before;
         }
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            long remainingDeletes = _maxDeletes;
-
-            foreach (var id in _ids)
-            {
-                context.DocumentDatabase.DocumentsStorage.RevisionsStorage.DeleteRevisionsByDocumentIdManuallyInternal(context, id, _maxDeletes, ref remainingDeletes);
-            }
-
+            Result = context.DocumentDatabase.DocumentsStorage.RevisionsStorage.DeleteRevisionsByDocumentIdManuallyInternal(context, _id, _maxDeletes, _after, _before);
             return 1;
         }
 

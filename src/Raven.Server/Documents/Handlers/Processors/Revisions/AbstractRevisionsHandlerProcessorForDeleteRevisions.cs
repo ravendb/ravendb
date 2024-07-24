@@ -1,10 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.IdentityModel.Tokens;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 
 namespace Raven.Server.Documents.Handlers.Processors.Revisions
@@ -17,11 +22,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         {
         }
 
-        protected abstract Task DeleteRevisions(DeleteRevisionsIntrenalRequest request, OperationCancelToken token);
+        protected abstract Task<long> DeleteRevisions(DeleteRevisionsRequest request, OperationCancelToken token);
 
         public override async ValueTask ExecuteAsync()
         {
-            DeleteRevisionsIntrenalRequest request;
+            DeleteRevisionsRequest request;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -30,10 +35,29 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 request = JsonDeserializationServer.DeleteRevisions(json);
             }
 
+            request.Validate();
+
+            long deletedCount;
+
             using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
-                await DeleteRevisions(request, token);
+                deletedCount = await DeleteRevisions(request, token);
+            }
+
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+                RequestHandler.LogAuditFor("Database", "DELETE", $"{RequestHandler.DatabaseName} - {deletedCount} revisions had been deleted manually.");
+
+            using (ContextPool.AllocateOperationContext(out TOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(DeleteRevisionsManuallyOperation.Result.TotalDeletes));
+                writer.WriteInteger(deletedCount);
+
+                writer.WriteEndObject();
             }
         }
+
     }
 }

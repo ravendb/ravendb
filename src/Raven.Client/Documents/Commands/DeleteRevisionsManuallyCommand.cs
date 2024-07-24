@@ -5,20 +5,26 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Json.Serialization;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    internal class DeleteRevisionsManuallyCommand : RavenCommand
+    internal class DeleteRevisionsManuallyCommand : RavenCommand<DeleteRevisionsManuallyOperation.Result>
     {
-        private DeleteRevisionsIntrenalRequest _request;
+        private DeleteRevisionsRequest _request;
 
-        public DeleteRevisionsManuallyCommand(DeleteRevisionsIntrenalRequest request)
+        public DeleteRevisionsManuallyCommand(DeleteRevisionsRequest request)
         {
             _request = request;
         }
+
+        public override bool IsReadRequest => false;
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
@@ -32,27 +38,49 @@ namespace Raven.Client.Documents.Commands
                     DocumentConventions.Default)
             };
         }
-    }
 
-    public class DeleteRevisionsRequest
-    {
-        public long MaxDeletes { get; set; } = 1024;
-        public List<string> DocumentIds { get; set; }
-        public List<string> RevisionsChangeVecotors { get; set; }
-    }
-
-    internal class DeleteRevisionsIntrenalRequest : DeleteRevisionsRequest
-    {
-        public bool ThrowIfChangeVectorsNotFound { get; set; } = true;
-
-        public DeleteRevisionsIntrenalRequest(){ }
-
-        public DeleteRevisionsIntrenalRequest(DeleteRevisionsRequest other)
+        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
         {
-            // copy constructor
-            MaxDeletes = other.MaxDeletes;
-            DocumentIds = other.DocumentIds;
-            RevisionsChangeVecotors = other.RevisionsChangeVecotors;
+            Result = JsonDeserializationClient.DeleteRevisionsManuallyResult(response);
+        }
+    }
+
+    internal class DeleteRevisionsRequest
+    {
+        // Either!
+        public List<string> RevisionsChangeVecotors { get; set; }
+
+        // Or!
+        public string DocumentId { get; set; }
+        public long MaxDeletes { get; set; } = 1024;
+        public DateTime? After { get; set; } // start
+        public DateTime? Before { get; set; } // end
+
+        internal void Validate()
+        {
+            if (string.IsNullOrEmpty(DocumentId) && RevisionsChangeVecotors.IsNullOrEmpty())
+            {
+                throw new ArgumentNullException($"{nameof(RevisionsChangeVecotors)}, {nameof(DocumentId)}", "request 'DocumentIds' and 'RevisionsChangeVecotors' cannot be both null or empty.");
+            }
+
+            if (string.IsNullOrEmpty(DocumentId) == false && RevisionsChangeVecotors.IsNullOrEmpty() == false)
+            {
+                throw new ArgumentException($"{nameof(RevisionsChangeVecotors)}, {nameof(DocumentId)}", "The request contains values for both 'DocumentId' and 'RevisionsChangeVectors'. You can only provide one of them, the other must be null or empty.");
+            }
+
+            if (string.IsNullOrEmpty(DocumentId) == false)
+            {
+                ValidateDocumentId();
+            }
+        }
+
+        internal void ValidateDocumentId()
+        {
+            if (MaxDeletes <= 0)
+                throw new ArgumentException(nameof(DocumentId), "request 'MaxDeletes' have to be greater then 0.");
+
+            if (After.HasValue && Before.HasValue && After >= Before)
+                throw new ArgumentException(nameof(DocumentId), "'After' must be greater then 'Before'.");
         }
     }
 }
