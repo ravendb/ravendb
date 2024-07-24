@@ -104,32 +104,32 @@ namespace Raven.Server.Config.Categories
             [ConfigurationEntry("Monitoring.OpenTelemetry.ConsoleExporter", ConfigurationEntryScope.ServerWideOnly)]
             public bool ConsoleExporter { get; set; }
             
-            [Description("Expose metric related to server storage.")]
+            [Description("Expose metrics related to server storage.")]
             [DefaultValue(true)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.Storage.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool ServerStorage { get; set; }
             
-            [Description("Expose metric related to CPU credits.")]
+            [Description("Expose metrics related to CPU credits.")]
             [DefaultValue(false)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.CPUCredits.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool CPUCredits { get; set; }
             
-            [Description("Expose metric related to resources usage.")]
+            [Description("Expose metrics related to resources usage.")]
             [DefaultValue(true)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.Resources.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool Resources { get; set; }
 
-            [Description("Expose metric related to aggregated database statistics.")]
+            [Description("Expose metrics related to aggregated database statistics.")]
             [DefaultValue(true)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.TotalDatabases.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool TotalDatabases { get; set; }
             
-            [Description("Expose metric related to requests.")]
+            [Description("Expose metrics related to requests.")]
             [DefaultValue(true)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.Requests.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool Requests { get; set; }
             
-            [Description("Expose metric related to GC.")]
+            [Description("Expose metrics related to GC.")]
             [DefaultValue(false)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.GC.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool GcEnabled { get; set; }
