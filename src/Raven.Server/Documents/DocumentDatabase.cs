@@ -503,7 +503,7 @@ namespace Raven.Server.Documents
                 }
 
                 //To make sure we mark compare exchange tombstone for cleaning  
-                _hasClusterTransaction.Wait(TimeSpan.FromMinutes(5), DatabaseShutdown);
+                _hasClusterTransaction.Wait(Configuration.Cluster.MaxClusterTransactionCompareExchangeTombstoneCheckInterval.AsTimeSpan, DatabaseShutdown);
                 if (DatabaseShutdown.IsCancellationRequested)
                     return;
 
