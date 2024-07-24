@@ -248,11 +248,15 @@ namespace Raven.Client.Documents.Session
 
                     var val = CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetSingleValue(value, materializeMetadata: false, _session.Conventions);
                     if (includingMissingAtomicGuards &&
-                        val.Key.StartsWith(Constants.CompareExchange.RvnAtomicPrefix, StringComparison.OrdinalIgnoreCase) &&
+                       ClusterWideTransactionHelper.IsAtomicGuardKey(val.Key) &&
                         val.ChangeVector != null)
                     {
                         _missingDocumentsToAtomicGuardIndex ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                        _missingDocumentsToAtomicGuardIndex.Add(val.Key.Substring(Constants.CompareExchange.RvnAtomicPrefix.Length), val.ChangeVector);
+                        _missingDocumentsToAtomicGuardIndex.Add(ClusterWideTransactionHelper.ExtractDocumentIdFromAtomicGuard(val.Key), val.ChangeVector);
+                    }
+                    else if (val.Index < 0)
+                    {
+                        RegisterMissingCompareExchangeInclude(val.Key);
                     }
                     else
                     {
@@ -293,10 +297,21 @@ namespace Raven.Client.Documents.Session
             _compareExchangeIncludes[value.Key] = value;
         }
 
-        private static void AssertNotAtomicGuard(CompareExchangeValue<BlittableJsonReaderObject> value)
+        private void RegisterMissingCompareExchangeInclude(string key)
         {
-            if (value.Key.StartsWith(Constants.CompareExchange.RvnAtomicPrefix, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException($"'{value.Key}' is an atomic guard and you cannot load it via the session");
+            AssertNotAtomicGuard(key);
+
+            if (_session.NoTracking)
+                return;
+            
+            _compareExchangeIncludes[key] = new CompareExchangeValue<BlittableJsonReaderObject>(key, -1, null);
+        }
+
+        private static void AssertNotAtomicGuard(CompareExchangeValue<BlittableJsonReaderObject> value) => AssertNotAtomicGuard(value.Key);
+        private static void AssertNotAtomicGuard(string key)
+        {
+            if (key.StartsWith(Constants.CompareExchange.RvnAtomicPrefix, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"'{key}' is an atomic guard and you cannot load it via the session");
         }
 
         private bool TryGetCompareExchangeValueFromSession(string key, out CompareExchangeSessionValue value)

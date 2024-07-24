@@ -8,7 +8,6 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
@@ -17,6 +16,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
+using Raven.Client.Util;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Schemas.Documents;
 using Constants = Raven.Client.Constants;
@@ -81,12 +81,12 @@ namespace Raven.Server.Documents
                 using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterContext))
                 using (clusterContext.OpenReadTransaction())
                 {
-                    var (indexFromCluster, val) = _parent._documentDatabase.CompareExchangeStorage.GetCompareExchangeValue(clusterContext, ClusterTransactionCommand.GetAtomicGuardKey(id));
+                    var (indexFromCluster, val) = _parent._documentDatabase.CompareExchangeStorage.GetCompareExchangeValue(clusterContext, ClusterWideTransactionHelper.GetAtomicGuardKey(id));
                     if (indexFromChangeVector != indexFromCluster)
                     {
                         throw new ConcurrencyException(
                             $"Cannot PUT document '{id}' because its change vector's cluster transaction index is set to {indexFromChangeVector} " +
-                            $"but the compare exchange guard ('{ClusterTransactionCommand.GetAtomicGuardKey(id)}') is {(val == null ? "missing" : $"set to {indexFromCluster}")}")
+                            $"but the compare exchange guard ('{ClusterWideTransactionHelper.GetAtomicGuardKey(id)}') is {(val == null ? "missing" : $"set to {indexFromCluster}")}")
                         {
                             Id = id
                         };

@@ -271,28 +271,26 @@ namespace Raven.Server.Documents
 
             var database = await task;
 
-            switch (changeType)
-            {
-                case ClusterDatabaseChangeType.RecordChanged:
-                    await database.StateChangedAsync(index);
-                    if (type == ClusterStateMachine.SnapshotInstalled)
+                    switch (changeType)
                     {
-                        database.NotifyOnPendingClusterTransaction(index, changeType);
-                    }
-                    break;
+                        case ClusterDatabaseChangeType.RecordChanged:
+                            await database.StateChangedAsync(index);
+                            if (type == ClusterStateMachine.SnapshotInstalled)
+                            {
+                                database.NotifyOnPendingClusterTransaction();
+                            }
+                            break;
 
                 case ClusterDatabaseChangeType.ValueChanged:
                     await database.ValueChangedAsync(index, type, changeState);
                     break;
 
                 case ClusterDatabaseChangeType.PendingClusterTransactions:
-                case ClusterDatabaseChangeType.ClusterTransactionCompleted:
-
                     if (ForTestingPurposes?.BeforeHandleClusterTransactionOnDatabaseChanged != null)
                         await ForTestingPurposes.BeforeHandleClusterTransactionOnDatabaseChanged.Invoke(_serverStore);
 
                     database.SetIds(rawRecord);
-                    database.NotifyOnPendingClusterTransaction(index, changeType);
+                    database.NotifyOnPendingClusterTransaction();
                     break;
                 default:
                     ThrowUnknownClusterDatabaseChangeType(changeType);
@@ -1259,7 +1257,6 @@ namespace Raven.Server.Documents
             RecordRestored,
             ValueChanged,
             PendingClusterTransactions,
-            ClusterTransactionCompleted
         }
 
         public bool UnloadDirectly(StringSegment databaseName, DateTime? wakeup = null, [CallerMemberName] string caller = null)
