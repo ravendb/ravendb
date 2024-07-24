@@ -79,7 +79,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
             throw new NotSupportedException($"Unhandled method type: {_method}");
 
         if (SupportsShowingRequestInTrafficWatch && TrafficWatchManager.HasRegisteredClients)
-            RequestHandler.AddStringToHttpContext(parameters.Ids.ToString(), TrafficWatchChangeType.Documents); // TODO [ppekrol]
+            RequestHandler.AddStringToHttpContext(IdsToString(parameters.Ids), TrafficWatchChangeType.Documents);
 
         (long NumberOfResults, long TotalDocumentsSizeInBytes) responseWriteStats;
         int pageSize;
@@ -167,6 +167,24 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
             if (idsLeftCount > 0)
             {
                 sb.Append($" ... (and {idsLeftCount} more)");
+            }
+
+            return sb.ToString();
+        }
+
+        static string IdsToString(List<ReadOnlyMemory<char>> ids)
+        {
+            if (ids == null || ids.Count == 0)
+                return string.Empty;
+
+            var sb = new StringBuilder();
+            for (int i = 0; i < ids.Count; i++)
+            {
+                if (i != 0)
+                    sb.Append(",");
+
+                ReadOnlyMemory<char> id = ids[i];
+                sb.Append(id.ToString());
             }
 
             return sb.ToString();
