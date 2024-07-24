@@ -92,7 +92,7 @@ internal class DatabaseCompareExchangeActions : AbstractDatabaseCompareExchangeA
             if (_backupKind is null or BackupKind.None)
             {
                 // waiting for the commands to be applied
-                await _database.RachisLogIndexNotifications.WaitForIndexNotification(_lastClusterTransactionIndex.Value, _token);
+                await _database.ClusterWideTransactionIndexWaiter.WaitAsync(_lastClusterTransactionIndex.Value, _token);
             }
             else
             {

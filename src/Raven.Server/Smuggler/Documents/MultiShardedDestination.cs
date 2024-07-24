@@ -227,7 +227,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
             {
-                if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
+                if (ClusterWideTransactionHelper.IsAtomicGuardKey(key, out var docId))
                 {
                     var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, docId);
                     await _actions[shardNumber].WriteKeyValueAsync(key, value, existingDocument);
@@ -239,7 +239,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public async ValueTask WriteTombstoneKeyAsync(string key)
             {
-                if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
+                if (ClusterWideTransactionHelper.IsAtomicGuardKey(key, out var docId))
                 {
                     var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, docId);
                     await _actions[shardNumber].WriteTombstoneKeyAsync(key);

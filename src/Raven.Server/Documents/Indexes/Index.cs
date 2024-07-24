@@ -3452,7 +3452,6 @@ namespace Raven.Server.Documents.Indexes
                                         token.Token);
                                 }
 
-                                long lastRaftId = DocumentDatabase.RachisLogIndexNotifications.LastModifiedIndex;
                                 try
                                 {
                                     var enumerator = documents.GetEnumerator();
@@ -3521,7 +3520,7 @@ namespace Raven.Server.Documents.Indexes
                                 using (fillScope?.Start())
                                 {
                                     includeDocumentsCommand.Fill(resultToFill.Includes, query.ReturnOptions?.MissingIncludeAsNull ?? false);
-                                    includeCompareExchangeValuesCommand?.Materialize(lastRaftId);
+                                    includeCompareExchangeValuesCommand?.Materialize(maxAllowedAtomicGuardIndex: null);
                                 }
 
                                 if (includeCountersCommand != null)

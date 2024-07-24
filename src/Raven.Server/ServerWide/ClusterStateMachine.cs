@@ -307,7 +307,7 @@ namespace Raven.Server.ServerWide
             });
         }
 
-        public long LastNotifiedIndex => Interlocked.Read(ref _rachisLogIndexNotifications.LastModifiedIndex);
+        public long LastNotifiedIndex => _rachisLogIndexNotifications.LastModifiedIndex;
 
         public readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
 
@@ -1013,18 +1013,13 @@ namespace Raven.Server.ServerWide
                 var errors = clusterTransaction.ExecuteCompareExchangeCommands(rawRecord.GetClusterTransactionId(), context, index, compareExchangeItems);
                 if (errors == null)
                 {
-                    DatabasesLandlord.ClusterDatabaseChangeType notify;
                     var clusterTransactionResult = new ClusterTransactionResult();
                     if (clusterTransaction.HasDocumentsInTransaction)
                     {
                         clusterTransactionResult.GeneratedResult = clusterTransaction.SaveCommandsBatch(context, rawRecord, index);
-                        notify = DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions;
-                    }
-                    else
-                    {
-                        notify = DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted;
                     }
 
+                    var notify = DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions;
                     NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify, null);
 
                     return clusterTransactionResult;
@@ -2629,8 +2624,11 @@ namespace Raven.Server.ServerWide
                 // we do this under the write tx lock before we update the last applied index
                 _rachisLogIndexNotifications.AddTask(index);
 
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+                var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
+                tx.OnDispose += _ =>
                 {
+                    if (tx.Committed == false)
+                        return;
                     ExecuteAsyncTask(index, () => Changes.OnDatabaseChanges(databaseName, index, type, change, changeState));
                 };
             };

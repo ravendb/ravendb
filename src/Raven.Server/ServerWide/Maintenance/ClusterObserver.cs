@@ -636,23 +636,10 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private CompareExchangeTombstonesCleanupState GetMaxCompareExchangeTombstonesEtagToDelete<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> context, string databaseName, MergedDatabaseObservationState mergedState, out long maxEtag) where TRavenTransaction : RavenTransaction
         {
-            List<long> periodicBackupTaskIds;
-            maxEtag = long.MaxValue;
-            bool isSharded;
+            maxEtag = -1;
 
-            if (mergedState.RawDatabase != null)
-            {
-                periodicBackupTaskIds = mergedState.RawDatabase.PeriodicBackupsTaskIds;
-                isSharded = mergedState.RawDatabase.IsSharded;
-            }
-            else
-            {
-                using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(context, databaseName))
-                {
-                    periodicBackupTaskIds = rawRecord.PeriodicBackupsTaskIds;
-                    isSharded = rawRecord.IsSharded;
-                }
-            }
+            var periodicBackupTaskIds = mergedState.RawDatabase.PeriodicBackupsTaskIds;
+            var isSharded = mergedState.RawDatabase.IsSharded;
 
             foreach (var (shardNumber, state) in mergedState.States)
             {
@@ -693,7 +680,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             continue;
                         }
 
-                        if (lastRaftIndex < maxEtag)
+                        if (maxEtag == -1 || lastRaftIndex < maxEtag)
                             maxEtag = lastRaftIndex.Value;
 
                         if (maxEtag == 0)
@@ -701,37 +688,42 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
                 }
 
-                if (state != null)
+                // we are checking this here, not in the main loop, to avoid returning 'NoMoreTombstones' when maxEtag is 0
+                foreach (var nodeTag in state.DatabaseTopology.AllNodes)
                 {
-                    // we are checking this here, not in the main loop, to avoid returning 'NoMoreTombstones' when maxEtag is 0
-                    foreach (var nodeTag in state.DatabaseTopology.AllNodes)
-                    {
-                        if (state.Current.ContainsKey(nodeTag) == false) // we have a state change, do not remove anything
-                            return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
-                    }
+                    if (state.Current.ContainsKey(nodeTag) == false) // we have a state change, do not remove anything
+                        return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+                }
 
-                    foreach (var nodeTag in state.DatabaseTopology.AllNodes)
-                    {
-                        var hasState = state.Current.TryGetValue(nodeTag, out var nodeReport);
-                        Debug.Assert(hasState, $"Could not find state for node '{nodeTag}' for database '{state.Name}'.");
-                        if (hasState == false)
-                            return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+                foreach (var nodeTag in state.DatabaseTopology.AllNodes)
+                {
+                    var hasState = state.Current.TryGetValue(nodeTag, out var nodeReport);
+                    Debug.Assert(hasState, $"Could not find state for node '{nodeTag}' for database '{state.Name}'.");
+                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                    if (hasState == false)
+                        return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
 
-                        if (nodeReport.Report.TryGetValue(state.Name, out var report) == false)
+                    var hasReport = nodeReport.Report.TryGetValue(state.Name, out var report);
+                    Debug.Assert(hasReport, $"Could not find report for node '{nodeTag}' for database '{state.Name}'.");
+                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                    if (hasReport == false)
+                        return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+
+                    var clusterWideTransactionIndex = report.LastClusterWideTransactionRaftIndex;
+                    if (maxEtag == -1 || clusterWideTransactionIndex < maxEtag)
+                        maxEtag = clusterWideTransactionIndex;
+
+                    foreach (var kvp in report.LastIndexStats)
+                    {
+                        var lastIndexedCompareExchangeReferenceTombstoneEtag = kvp.Value.LastIndexedCompareExchangeReferenceTombstoneEtag;
+                        if (lastIndexedCompareExchangeReferenceTombstoneEtag == null)
                             continue;
 
-                        foreach (var kvp in report.LastIndexStats)
-                        {
-                            var lastIndexedCompareExchangeReferenceTombstoneEtag = kvp.Value.LastIndexedCompareExchangeReferenceTombstoneEtag;
-                            if (lastIndexedCompareExchangeReferenceTombstoneEtag == null)
-                                continue;
+                        if (maxEtag == -1 || lastIndexedCompareExchangeReferenceTombstoneEtag < maxEtag)
+                            maxEtag = lastIndexedCompareExchangeReferenceTombstoneEtag.Value;
 
-                            if (lastIndexedCompareExchangeReferenceTombstoneEtag < maxEtag)
-                                maxEtag = lastIndexedCompareExchangeReferenceTombstoneEtag.Value;
-
-                            if (maxEtag == 0)
-                                return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
-                        }
+                        if (maxEtag == 0)
+                            return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
                     }
                 }
             }
