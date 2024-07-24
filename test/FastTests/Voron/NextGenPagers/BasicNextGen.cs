@@ -71,6 +71,34 @@ public class BasicNextGen : StorageTest
     
     
     [RavenFact(RavenTestCategory.Voron)]
+    public void WithAsyncCommit_AndRestart()
+    {
+        RequireFileBasedPager();
+        Options.ManualFlushing = true;
+        using (var tx2 = Env.WriteTransaction())
+        {
+            tx2.LowLevelTransaction.AllocatePage(1);
+            tx2.Commit();
+        }
+        using (var tx3 = Env.WriteTransaction())
+        {
+            tx3.LowLevelTransaction.AllocatePage(1);
+
+            using Transaction tx4 = tx3.BeginAsyncCommitAndStartNewTransaction(new TransactionPersistentContext());
+
+            tx4.LowLevelTransaction.AllocatePage(1);
+
+            using (tx3)
+            {
+                tx3.EndAsyncCommit();
+            }
+            tx4.Commit();
+        }
+        RestartDatabase();
+    }
+
+    
+    [RavenFact(RavenTestCategory.Voron)]
     public void EncryptedStorageAnd_Flush()
     {
         RequireFileBasedPager();

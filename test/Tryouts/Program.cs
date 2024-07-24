@@ -16,6 +16,7 @@ using Sparrow.Server.Platform;
 using SlowTests.Authentication;
 using SlowTests.Issues;
 using SlowTests.Server.Documents.PeriodicBackup;
+using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftAntimalwareEngine;
 
 namespace Tryouts;
 
@@ -37,7 +38,7 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new EncryptedBackupTest(testOutputHelper))
+                using (var test = new RavenDB_18554(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
                     //test.CanRoundTripSmallContainer("GreaterThan42B");
@@ -46,7 +47,7 @@ public static class Program
                     //    SearchEngine = RavenSearchEngineMode.Lucene,
                     //    DatabaseMode = RavenDatabaseMode.Single,
                     //});
-                    await test.snapshot_encrypted_db_and_restore_to_encrypted_DB_2();
+                    await test.QueriesShouldFailoverIfIndexIsCompactingCluster ();
                 }
             }
             catch (Exception e)
@@ -54,6 +55,7 @@ public static class Program
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(e);
                 Console.ForegroundColor = ConsoleColor.White;
+                break;
             }
         }
     }

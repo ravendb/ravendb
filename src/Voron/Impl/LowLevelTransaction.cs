@@ -971,6 +971,11 @@ namespace Voron.Impl
                 throw;
             }
 
+            Debug.Assert(_asyncCommitNextTransaction.Committed == false, "_asyncCommitNextTransaction.Committed == false");
+            // we need to update the state of the file position in the journal file, which happens in stage2 (async)
+            // before we can actually commit the current transaction
+            _asyncCommitNextTransaction.UpdateJournal(CurrentStateRecord.Journal.Current, CurrentStateRecord.Journal.Last4KWritePosition);
+            
             if (AsyncCommit.Result)
                 Environment.LastWorkTime = DateTime.UtcNow;
 
